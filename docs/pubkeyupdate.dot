@@ -1,0 +1,19 @@
+strict digraph { 
+  node [shape=record]
+
+  pubKey [
+    label = "UTxO with datum | ATMS verification key"
+    ]
+
+  newPubKey [
+    label = "UTxO with datum | ATMS verification key"
+    ]
+
+  tx [label = "Verification key update tx |
+        redeemer: signature
+        tx in: ATMS vkey UTxO
+      "]
+
+  pubKey -> tx [label = "consumes"]
+  tx -> newPubKey
+}
