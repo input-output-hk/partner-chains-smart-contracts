@@ -3,7 +3,6 @@ on:
     paths:
       - '**.hs'
       - '**.nix'
-      - 'nix/sources.json'
       - 'trustless-sidechain.cabal'
     branches:
       - master
@@ -12,7 +11,6 @@ on:
     paths:
       - '**.hs'
       - '**.nix'
-      - 'nix/sources.json'
       - 'trustless-sidechain.cabal'
 jobs:
   check-formatting:
@@ -65,7 +63,7 @@ jobs:
       - uses: cachix/cachix-action@v10
         with:
           name: mlabs
-          authToken: '${{ secrets.CACHIXKEY }}'
+          authToken: '${{ secrets.MLABS_CACHIX_R }}'
       - name: Cache cabal folder
         id: cabal
         uses: actions/cache@v2.1.4
