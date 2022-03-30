@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:trustless-sidechain"
+
+    - path: "./test"
+      component: "test:trustless-sidechain"
