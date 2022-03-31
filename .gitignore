@@ -1,6 +1,5 @@
 # Node artifact files
 node_modules/
-node_modules
 dist/
 dist-newstyle/
 
@@ -8,8 +7,8 @@ dist-newstyle/
 result
 result-*
 
-# direnv
-#.envrc
+.direnv
+.envrc
 *.sw*
 */Session.vim
 
@@ -50,19 +49,3 @@ cabal.project.local*
 
 # Notes
 *.txt
-
-# Instance data
-.ethrecorddata-*
-.confighashes
-
-geth-node/chaindata/geth/*
-geth-node/chaindata/history
-*.ipc
-
-token-metadatas/*
-*.sk
-
-scripts
-txs
-keys
-protocol.json

@@ -1,0 +1,146 @@
+cabal-version:      3.0
+name:               trustless-sidechain
+version:            0.1
+synopsis:           TODO
+description:        TODO
+homepage:           https://github.com/mlabs-haskell/trustless-sidechain
+bug-reports:        https://github.com/mlabs-haskell/trustless-sidechain
+license:
+license-file:
+author:             MLabs
+maintainer:         TODO
+copyright:          TODO
+category:           TODO
+build-type:         Simple
+tested-with:        GHC ==8.10.4
+extra-source-files: README.md
+
+source-repository head
+  type:     git
+  location:
+    https://github.com/mlabs-haskell/trustless-sidechain
+
+-- Common sections
+
+common common-lang
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
+
+  build-depends:
+    , base                     ^>=4.14
+    , record-dot-preprocessor
+    , record-hasfield
+
+  default-extensions:
+    NoImplicitPrelude
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+
+  default-language:   Haskell2010
+
+-- Libraries
+
+library
+  import:          common-lang
+  exposed-modules:
+    TrustlessSidechain
+  build-depends:
+    , aeson               ^>=1.5.0.0
+    , bytestring          ^>=0.10.12.0
+    , cardano-prelude
+    , containers
+    , data-default-class
+    , freer-extras
+    , freer-simple
+    , lens
+    , playground-common
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-pab
+    , plutus-tx
+    , plutus-tx-plugin
+    , prettyprinter
+    , row-types
+    , serialise
+    , servant
+    , servant-server
+    , text                ^>=1.2.4.0
+    , vector              ^>=0.12.1.2
+    , wai
+    , warp
+  hs-source-dirs:  src
+
+test-suite trustless-sidechain-test
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  ghc-options:    -fplugin-opt PlutusTx.Plugin:defer-errors
+  build-depends:
+    , aeson                        ^>=1.5.0.0
+    , base
+    , base-compat
+    , bytestring                   ^>=0.10.12.0
+    , cardano-prelude
+    , containers
+    , data-default-class
+    , either
+    , freer-extras
+    , freer-simple
+    , lens
+    , trustless-sidechain
+    , playground-common
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-pab
+    , plutus-tx
+    , plutus-tx-plugin
+    , prettyprinter
+    , QuickCheck
+    , quickcheck-instances
+    , row-types
+    , serialise
+    , servant
+    , servant-server
+    , tasty
+    , tasty-quickcheck
+    , text                         ^>=1.2.4.0
+    , vector                       ^>=0.12.1.2
+    , wai
+    , warp
+
+  hs-source-dirs: test
