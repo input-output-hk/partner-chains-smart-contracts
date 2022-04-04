@@ -4,22 +4,21 @@
 
 ### Initialise sidechain
 
-Mainchain utilizes four components to handle interactions with a sidechain:
+Mainchain utilizes the following components to handle interactions with a sidechain:
 
-- minting policy validating the mint or burn of FUEL tokens on mainchain
-- script address for committee candidates
-- script address for cross chain transaction bundle's Merkle root
-- script address for the ATMS verification key
+- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain
+- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots
+- `CommitteeCandidateValidator`: script address for committee candidates
+- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s
+- `ATMSVerificationKeyValidator`: script address for the ATMS verification key
 
-All of these policies/validators are parameterised by the sidechain parameters.
+All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
 ```haskell
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinInteger
+  { chainId :: BuiltinInteger -- TODO: do we need anything else here?
   }
 ```
-
-TODO: might need to add other information
 
 ### Transfer FUEL tokens from mainchain to sidechain
 
@@ -42,6 +41,8 @@ data BurnParams = BurnParams
 
 ### Transfer FUEL tokens from sidechain to mainchain
 
+**Workflow:**
+
 1. Sidechain collects unhandled transactions
 2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed with ATMS multisig
 3. Bridge broadcasts Merkle root to chain
@@ -49,14 +50,24 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-Merkle root is stored on-chain in an append-only distributed map[^1] of `merkleRoot` as key and with `signature` as value.
+Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
 
 ```haskell
-data InsertMerkleRoot = InsertMerkleRoot
+data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , signature :: ByteString
   }
 ```
+
+Minting policy verifies the following:
+
+- signature can be verified with the ATMS verification key
+
+Validator script verifies the following:
+
+- UTxOs containing an `MPTRootToken` cannot be unlocked from the script address
+
+![MPTRootToken minting](MPTRoot.svg)
 
 **Endpoint params for claiming:**
 
@@ -71,10 +82,10 @@ data MintParams = MintParams
 
 Minting policy verifies the following:
 
-- merkleRoot, calculated from from the proof, can be found in the distributed map of Merkle-roots, and it is signed by the latest ATMS verification key
+- `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
 - chainId matches the minting policy chainId
 - recipient and amount matches the actual tx body contents
-- the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set (the actual hash might be subject to change)
+- the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set[^1] (the actual hash might be subject to change)
 - a new entry with the value of `blake2(tx.recipient, tx.amount, merkleRoot)` is created in the distributed set
 
 ![SC to MC](SC-MC.svg)
@@ -91,6 +102,8 @@ ByteString (if the minting amout is positive, we expect this to be a signature, 
 
 ### Register committee candidate
 
+**Workflow:**
+
 1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature
 2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId
 
@@ -105,6 +118,8 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 ### Deregister committee member/candidate
 
+**Workflow:**
+
 1. The UTxO with the registration information can be redeemed by the original sender
 2. The Bridge monitoring the committee candidate script address interprets this as a deregister action
 
@@ -113,7 +128,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
 - verifies the signature on the new ATMS key (must be signed by the old committee)
-- verifies the N FT of the UTxO holding the old verification key at the script address
+- verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - outputs a new UTxO with the updated ATMS key containing the NFT to the same script address
 
@@ -126,10 +141,6 @@ data UpdateVKey = UpdateVKey
 
 ![Public key update](pubkeyupdate.svg)
 
-## TODO:
-
-- Claiming transactions from a bundles with an earlier ATMS
-
 ## Appendix
 
-[^1]: Distributed map and set implementation details are still WIP, but we plan to use something like this: https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md
+[^1]: Distributed set implementation details are still WIP, but we plan to use something like this: https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md
