@@ -8,8 +8,8 @@ dist-newstyle/
 result
 result-*
 
-# direnv
-#.envrc
+.direnv
+.envrc
 *.sw*
 */Session.vim
 

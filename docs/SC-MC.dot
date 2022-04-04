@@ -1,25 +1,30 @@
 strict digraph { 
   node [shape=record]
 
-  bridge [label = "Bridge"]
 
-  pubKey [
-    headlabel = "UTxO with datum"
+  atmsKey [
     label = "UTxO with datum |
-      ATMS public key\l
-      NFT (to prove authenticity)"
-    ]
+      latest ATMS public key\l
+      NFT (to prove authenticity)\l
+    "]
+
+  merkleRoot [
+    label = "UTxO with datum\n(elem of distributed set) |
+      Merkle root\l
+      Signature of committee\l
+    "]
 
   burnTx [label = 
     "Mint Tx |
-      redeemer: ATMS signature\l
-      tx body: minted tokens
+      redeemer: Merkle proof\l
+      tx body: minted tokens\l
     "]
 
   wallet [label = "User Wallet"]
 
-  bridge -> burnTx -> wallet
+  burnTx -> wallet
 
-  pubKey -> burnTx [style = dashed, label = "Reference input"]
+  atmsKey -> burnTx [style = dashed, label = "Reference input"]
+  merkleRoot -> burnTx [style = dashed, label = "Reference input"]
 
 }
