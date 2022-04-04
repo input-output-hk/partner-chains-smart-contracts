@@ -1,15 +1,8 @@
 strict digraph { 
   node [shape=record]
 
-
-  atmsKey [
-    label = "UTxO with datum |
-      latest ATMS public key\l
-      NFT (to prove authenticity)\l
-    "]
-
   merkleRoot [
-    label = "UTxO with datum\n(elem of distributed set) |
+    label = "UTxO with datum |
       Merkle root\l
       Signature of committee\l
     "]
@@ -24,7 +17,6 @@ strict digraph {
 
   burnTx -> wallet
 
-  atmsKey -> burnTx [style = dashed, label = "Reference input"]
   merkleRoot -> burnTx [style = dashed, label = "Reference input"]
 
 }
