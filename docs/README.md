@@ -4,10 +4,11 @@
 
 ### Initialise sidechain
 
-Mainchain utilizes three components to handle interactions with a sidechain:
+Mainchain utilizes four components to handle interactions with a sidechain:
 
 - minting policy validating the mint or burn of FUEL tokens on mainchain
-- script address for block producer candidates
+- script address for committee candidates
+- script address for cross chain transaction bundle's Merkle root
 - script address for the ATMS verification key
 
 All of these policies/validators are parameterised by the sidechain parameters.
@@ -26,7 +27,7 @@ TODO: might need to add other information
 
 1. Call the burn endpoint of the contract with BurnParams
 2. A transaction will be submitted to mainchain with the burnt amount in the tx body and the sidechain recipient in the redeemer
-3. The Bridge component observing the mainchain can verify the transaction by direct observation and create an appropriate sidechain transaction
+3. The Bridge component observing the mainchain where the given minting policy is handled, verifies the transaction and creates an appropriate sidechain transaction
 
 **Endpoint params:**
 
@@ -41,64 +42,78 @@ data BurnParams = BurnParams
 
 ### Transfer FUEL tokens from sidechain to mainchain
 
-1. Sidechain transaction settled
-2. Sidechain block producers serialise and sign the CrossChainTx with ATMS threshold multisignature
-3. Bridge component submits the Cardano transaction with the minted amount in the tx body, and the ATMS signature as the redeemer
-4. Minting policy verifies the following:
+1. Sidechain collects unhandled transactions
+2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed with ATMS multisig
+3. Bridge broadcasts Merkle root to chain
+4. Txs can be claimed individually
 
-- signature can be verified using the ATMS verification key (as a reference input)
-- chainId matches the minting policy chainId
-- recipient in the CrossChainTx matches that of the actual tx body
-- minted amount in the CrossChainTx matches that of the actual tx body
-- inputUtxo is consumed (this is in order to avoid replay attacks)
+**Endpoint params for merkle root insertion:**
 
-**Cross chain transaction (serialised as CBOR and signed by ATMS):**
+Merkle root is stored on-chain in an append-only distributed map[^1] of `merkleRoot` as key and with `signature` as value.
 
 ```haskell
-data CrossChainTx = CrossChainTx
-  { chainId :: Integer
-  , amount :: Integer
-  , recipient :: ByteString
-  , inputUtxo :: TxOutRef
-  }
-```
-
-**Endpoint params:**
-
-```haskell
-data MintParams = MintParams
-  { recipient :: Address,
-  , amount :: Integer
+data InsertMerkleRoot = InsertMerkleRoot
+  { merkleRoot :: ByteString
   , signature :: ByteString
   }
 ```
 
+**Endpoint params for claiming:**
+
+```haskell
+data MintParams = MintParams
+  { amount :: Integer
+  , recipient :: ByteString
+  , merkleProof :: MerkleProof
+  , chainId :: Integer
+  }
+```
+
+Minting policy verifies the following:
+
+- merkleRoot, calculated from from the proof, can be found in the distributed map of Merkle-roots, and it is signed by the latest ATMS verification key
+- chainId matches the minting policy chainId
+- recipient and amount matches the actual tx body contents
+- the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set (the actual hash might be subject to change)
+- a new entry with the value of `blake2(tx.recipient, tx.amount, merkleRoot)` is created in the distributed set
+
 ![SC to MC](SC-MC.svg)
 
-As in both minting and burning scenarios the expected type of the redeemer is ByteString, we don't use sum type to distinguish them so we can save space. If the minting amout is positive, we expect signature, otherwise a recipient address.
+**Minting policy redeemer:**
 
-### Register block producer candidate
+```haskell
+data FUELRedeemer
+  = MainToSide ByteString -- Recipient address of the sidechain
+  | SideToMain MerkleProof
+```
 
-1. An SPO registering as a block producer for the sidechain sends BlockProducerRegistration and its signature (TODO: how and what to sign)
-2. The Bridge monitoring the script address is validating the SPO credentials, chainId
-3. UTxOs at this script address can only be unlocked by the PubKey in the datum script sender (or we could make it an `alwaysFail` script)
+ByteString (if the minting amout is positive, we expect this to be a signature, otherwise a recipient address)
+
+### Register committee candidate
+
+1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature
+2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId
 
 **Datum:**
 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
-  { pubKey :: PubKey
+  { pubKey :: PubKey -- own public key
+  , signature :: Credentials -- TODO: what signature we need exactly
   }
 ```
 
-TODO: might need to add other information
+### Deregister committee member/candidate
+
+1. The UTxO with the registration information can be redeemed by the original sender
+2. The Bridge monitoring the committee candidate script address interprets this as a deregister action
 
 ### Update ATMS verification key
 
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
-- verifies the signature on the new ATMS key (must be signed by the old block producers)
-- verifies the NFT of the UTxO holding the old verification key at the script address
+- verifies the signature on the new ATMS key (must be signed by the old committee)
+- verifies the N FT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - outputs a new UTxO with the updated ATMS key containing the NFT to the same script address
 
@@ -111,6 +126,10 @@ data UpdateVKey = UpdateVKey
 
 ![Public key update](pubkeyupdate.svg)
 
-## Failure scenarios
+## TODO:
 
-In case the ATMS verification key is changed while the transaction is being processed, a transaction with the old signature could not be verified. In this scenario, the cross-chain transaction request must be reinitilised with a new signature.
+- Claiming transactions from a bundles with an earlier ATMS
+
+## Appendix
+
+[^1]: Distributed map and set implementation details are still WIP, but we plan to use something like this: https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md
