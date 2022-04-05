@@ -112,6 +112,7 @@ ByteString (if the minting amout is positive, we expect this to be a signature, 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
   { pubKey :: PubKey -- own public key
+  , sidechainPubKey :: ByteString -- public key in the sidechain's desired format
   , signature :: Credentials -- TODO: what signature we need exactly
   }
 ```
