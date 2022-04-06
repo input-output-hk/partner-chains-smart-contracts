@@ -16,7 +16,8 @@ All of these policies/validators are parameterised by the sidechain parameters, 
 
 ```haskell
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinInteger -- TODO: do we need anything else here?
+  { chainId :: BuiltinInteger
+  , genesisHash :: BuiltinByteString
   }
 ```
 

@@ -3,5 +3,8 @@ cradle:
     - path: "./src"
       component: "lib:trustless-sidechain"
 
+    - path: "./app"
+      component: "exe:trustless-sidechain-pab"
+
     - path: "./test"
-      component: "test:trustless-sidechain"
+      component: "test:trustless-sidechain-test"
