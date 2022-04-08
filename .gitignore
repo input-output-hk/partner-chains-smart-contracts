@@ -51,7 +51,6 @@ cabal.project.local*
 *.txt
 
 # Bpi
-/scripts
 /data
 /signing-keys
 /txs
