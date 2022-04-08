@@ -50,8 +50,8 @@ $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 
 data BlockProducerRegistration = BlockProducerRegistration
-  { -- | own public key
-    pubKey :: PubKeyHash -- own public key
+  { -- | SPO cold verification key hash
+    spoPkh :: PubKeyHash -- own public key
   , -- | public key in the sidechain's desired format
     sidechainPubKey :: BuiltinByteString
   }
@@ -61,8 +61,8 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> BuiltinByteString -> Ledger.ScriptContext -> Bool
-mkCommitteeCanditateValidator _ BlockProducerRegistration {pubKey} _ ctx =
-  traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info pubKey
+mkCommitteeCanditateValidator _ BlockProducerRegistration {spoPkh} _ ctx =
+  traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info spoPkh
   where
     info = Ledger.scriptContextTxInfo ctx
 
@@ -94,7 +94,7 @@ type CommitteeCandidateRegistrySchema =
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
-  , stakingPubKey :: PubKeyHash
+  , spoPkh :: PubKeyHash
   , sidechainPubKey :: BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
@@ -103,7 +103,7 @@ data RegisterParams = RegisterParams
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
   { sidechainParams :: SidechainParams
-  , stakingPubKey :: PubKeyHash
+  , spoPkh :: PubKeyHash
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -112,21 +112,21 @@ $(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
 
 register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
-register RegisterParams {sidechainParams, stakingPubKey, sidechainPubKey} = do
+register RegisterParams {sidechainParams, spoPkh, sidechainPubKey} = do
   let val = Ada.lovelaceValueOf 1
       validator = committeeCanditateValidator sidechainParams
       valHash = validatorHash validator
       datum =
         Datum $
           PlutusTx.toBuiltinData $
-            BlockProducerRegistration stakingPubKey sidechainPubKey
+            BlockProducerRegistration spoPkh sidechainPubKey
       tx =
         Constraints.mustPayToOtherScript valHash datum val
-          <> Constraints.mustBeSignedBy (PaymentPubKeyHash stakingPubKey)
+          <> Constraints.mustBeSignedBy (PaymentPubKeyHash spoPkh)
   void $ submitTxConstraints @CommitteeCandidateRegistry validator tx
 
 deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
-deregister DeregisterParams {sidechainParams, stakingPubKey} = do
+deregister DeregisterParams {sidechainParams, spoPkh} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = committeeCanditateValidator sidechainParams
       valAddr = validatorAddress validator
@@ -143,7 +143,7 @@ deregister DeregisterParams {sidechainParams, stakingPubKey} = do
           <> Constraints.unspentOutputs valUtxos
       tx =
         mconcat $
-          Constraints.mustBeSignedBy (PaymentPubKeyHash stakingPubKey) :
+          Constraints.mustBeSignedBy (PaymentPubKeyHash spoPkh) :
           map
             (`Constraints.mustSpendScriptOutput` Scripts.unitRedeemer)
             (Map.keys ownEntries)
@@ -155,9 +155,9 @@ deregister DeregisterParams {sidechainParams, stakingPubKey} = do
   where
     isOwnEntry :: ChainIndexTxOut -> Bool
     isOwnEntry PublicKeyChainIndexTxOut {} = False
-    isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Left _} = False -- TODO: this might not be enough
+    isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Left _} = False
     isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Right (Datum d)} =
       case PlutusTx.fromBuiltinData d of
         Nothing -> False
-        Just BlockProducerRegistration {pubKey = pubKey'} ->
-          stakingPubKey == pubKey'
+        Just BlockProducerRegistration {spoPkh = spoPkh'} ->
+          spoPkh == spoPkh'
