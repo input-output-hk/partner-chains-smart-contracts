@@ -12,13 +12,6 @@ import BotPlutusInterface.Types (
   endpointsToSchemas,
  )
 import Cardano.Api (NetworkId (Testnet), NetworkMagic (..))
-import Cardano.PlutusExample.Game (
-  GameSchema,
-  GuessParams,
-  LockParams,
-  guess,
-  lock,
- )
 import Data.Aeson qualified as JSON
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.ByteString.Lazy qualified as LazyByteString
@@ -27,24 +20,33 @@ import Data.Maybe (fromMaybe)
 import Playground.Types (FunctionSchema)
 import Schema (FormSchema)
 import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+  CommitteeCandidateRegistrySchema,
+  DeregisterParams,
+  RegisterParams,
+  deregister,
+  register,
+ )
 import Prelude
 
-instance HasDefinitions GameContracts where
-  getDefinitions :: [GameContracts]
+instance HasDefinitions TrustlessSidechainContracts where
+  getDefinitions :: [TrustlessSidechainContracts]
   getDefinitions = []
 
-  getSchema :: GameContracts -> [FunctionSchema FormSchema]
-  getSchema _ = endpointsToSchemas @GameSchema
+  getSchema :: TrustlessSidechainContracts -> [FunctionSchema FormSchema]
+  getSchema _ = endpointsToSchemas @CommitteeCandidateRegistrySchema
 
-  getContract :: (GameContracts -> SomeBuiltin)
+  getContract :: (TrustlessSidechainContracts -> SomeBuiltin)
   getContract = \case
-    Lock params -> SomeBuiltin $ lock params
-    Guess params -> SomeBuiltin $ guess params
+    RegisterCommitteeCandidate params -> SomeBuiltin $ register params
+    DeregisterCommitteeCandidate params -> SomeBuiltin $ deregister params
 
-data GameContracts = Lock LockParams | Guess GuessParams
+data TrustlessSidechainContracts
+  = RegisterCommitteeCandidate RegisterParams
+  | DeregisterCommitteeCandidate DeregisterParams
   deriving stock (Show)
 
-$(deriveJSON defaultOptions ''GameContracts)
+$(deriveJSON defaultOptions ''TrustlessSidechainContracts)
 
 main :: IO ()
 main = do
@@ -61,13 +63,13 @@ main = do
           , pcTipPollingInterval = 10_000_000
           , pcSlotConfig = def
           , pcOwnPubKeyHash = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-          , pcScriptFileDir = "./scripts"
+          , pcScriptFileDir = "./data"
           , pcSigningKeyFileDir = "./signing-keys"
           , pcTxFileDir = "./txs"
           , pcDryRun = True
           , pcLogLevel = Debug
           , pcProtocolParamsFile = "./protocol.json"
-          , pcForceBudget = Just (1000, 1000)
+          , pcForceBudget = Just (8_000_000, 40000)
           , pcEnableTxEndpoint = True
           }
-  BotPlutusInterface.runPAB @GameContracts pabConf
+  BotPlutusInterface.runPAB @TrustlessSidechainContracts pabConf

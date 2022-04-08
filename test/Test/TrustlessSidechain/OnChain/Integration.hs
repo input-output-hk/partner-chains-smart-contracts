@@ -1,59 +1,73 @@
-
 module Test.TrustlessSidechain.OnChain.Integration (test) where
 
-import Control.Exception (ErrorCall, Exception (fromException))
-import Control.Lens ((^.))
-import Control.Monad (void)
-import Data.Default (Default (def))
-import Data.Map (Map)
-import Data.Map qualified as Map
-import Data.Maybe (isJust)
-import Data.Text (Text)
-import Ledger (CardanoTx, ChainIndexTxOut, PaymentPubKeyHash, TxOutRef, Value, ciTxOutValue, pubKeyHashAddress)
-import Ledger.Ada qualified as Ada
-import Ledger.Constraints (MkTxError (OwnPubKeyMissing))
-import Ledger.Constraints qualified as Constraints
-import Plutus.Contract (Contract, ContractError (ConstraintResolutionContractError), submitTx, utxosAt)
-import Plutus.Contract qualified as Contract
-import Plutus.PAB.Effects.Contract.Builtin (EmptySchema)
-import Plutus.V1.Ledger.Ada (lovelaceValueOf)
+-- import Control.Monad (void)
+-- import Plutus.Contract (waitNSlots)
+
+-- DeregisterParams (DeregisterParams),
+
+import Data.Default (def)
+import Ledger (PaymentPubKeyHash (PaymentPubKeyHash))
+import Plutus.Contract (ownPaymentPubKeyHash)
 import Test.Plutip.Config (PlutipConfig (bpiForceBudget))
-import Test.Plutip.Contract (ValueOrdering (VLt), assertExecution, initAda, initAndAssertAda, initAndAssertAdaWith, initLovelace, withContract, withContractAs)
-import Test.Plutip.LocalCluster (withCluster)
-import Test.Plutip.Predicate (errorSatisfies, failReasonSatisfies, shouldFail, shouldSucceed, shouldThrow, shouldYield, stateIs, stateSatisfies, yieldSatisfies)
-import Test.Plutip.Predicate qualified as Predicate
+import Test.Plutip.Contract (assertExecution, initAda, withContract)
+import Test.Plutip.LocalCluster (withConfiguredCluster)
+import Test.Plutip.Predicate (shouldSucceed)
 import Test.Tasty (TestTree)
-import Text.Printf (printf)
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+  RegisterParams (RegisterParams),
+  SidechainParams (SidechainParams),
+ )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import Prelude
 
-
-sidechainParams :: CommitteeCandidateValidator.SidechainParams
+sidechainParams :: SidechainParams
 sidechainParams =
   SidechainParams
-    { chainId :: BuiltinInteger
-    , genesisHash :: BuiltinByteString
+    { chainId = ""
+    , genesisHash = ""
     }
 
 test :: TestTree
 test =
-  withCluster
+  withConfiguredCluster
+    (def {bpiForceBudget = Just (8_000_000, 40000)})
     "Plutip integration test"
     [ assertExecution
         "CommitteeCandidateValidator.register"
         (initAda 100)
-        (withContract $ const (
-            CommitteeCandidateValidator.register 
-              (RegisterParams sidechainParams "")))
-        [ shouldSucceed ]
-    , assertExecution
-        "CommitteeCandidateValidator.deregister"
-        (initAda 100)
-        (withContract $ const (do
-            CommitteeCandidateValidator.register (RegisterParams sidechainParams "")
-            void $ awaitNSlots 1
-            CommitteeCandidateValidator.unregister (DeregisterParams sidechainParams)
-            )
+        ( withContract $
+            const
+              ( do
+                  PaymentPubKeyHash pkh <- ownPaymentPubKeyHash
+                  let stakingPkh = pkh
+                      sidechainPubKey = ""
+                  CommitteeCandidateValidator.register
+                    ( RegisterParams
+                        sidechainParams
+                        stakingPkh
+                        sidechainPubKey
+                    )
+              )
         )
-        [ shouldSucceed ]
+        [shouldSucceed]
+        -- , assertExecution
+        --     "CommitteeCandidateValidator.deregister"
+        --     (initAda 100)
+        --     ( withContract $
+        --         const
+        --           ( do
+        --               let stakingPkh = ""
+        --                   sidechainPubKey = ""
+        --               CommitteeCandidateValidator.register
+        --                 ( RegisterParams
+        --                     sidechainParams
+        --                     stakingPkh
+        --                     sidechainPubKey
+        --                 )
+        --               void $ waitNSlots 1
+        --               CommitteeCandidateValidator.deregister
+        --                 (DeregisterParams sidechainParams stakingPkh)
+        --           )
+        --     )
+        --     [shouldSucceed]
     ]
-

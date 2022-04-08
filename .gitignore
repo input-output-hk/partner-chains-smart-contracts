@@ -49,3 +49,10 @@ cabal.project.local*
 
 # Notes
 *.txt
+
+# Bpi
+/scripts
+/data
+/signing-keys
+/txs
+/protocol.json

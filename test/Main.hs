@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Test.Tasty
-import Test.TrustlessSidechain.OnChain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import Test.TrustlessSidechain.OnChain.Integration as Integration
 import Prelude (IO)
 
 -- | @since 0.1
@@ -16,4 +16,4 @@ tests :: TestTree
 tests =
   testGroup
     "TrustlessSidechain"
-    [CommitteeCandidateValidator.test]
+    [Integration.test]

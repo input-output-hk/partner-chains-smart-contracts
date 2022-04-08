@@ -74,8 +74,9 @@ library
   import:          common-lang
   exposed-modules: TrustlessSidechain.OnChain.CommitteeCandidateValidator
   build-depends:
-    , aeson               ^>=1.5.0.0
-    , bytestring          ^>=0.10.12.0
+    , aeson                      ^>=1.5.0.0
+    , bytestring                 ^>=0.10.12.0
+    , cardano-api
     , cardano-prelude
     , containers
     , data-default-class
@@ -87,6 +88,7 @@ library
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-ledger-constraints
     , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
@@ -95,16 +97,16 @@ library
     , serialise
     , servant
     , servant-server
-    , text                ^>=1.2.4.0
-    , vector              ^>=0.12.1.2
+    , text                       ^>=1.2.4.0
+    , vector                     ^>=0.12.1.2
     , wai
     , warp
 
   hs-source-dirs:  src
 
 executable trustless-sidechain-pab
-  import:        common-lang
-  main-is:       Main.hs
+  import:         common-lang
+  main-is:        Main.hs
   build-depends:
     , aeson                 ^>=1.5.0.0
     , bot-plutus-interface
@@ -116,32 +118,34 @@ executable trustless-sidechain-pab
     , servant-client-core
     , trustless-sidechain
 
+  hs-source-dirs: app
+
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
-  main-is:        Spec.hs
-  other-modules:
-    Spec
-    Test.TrustlessSidechain.OnChain.Integration
-
+  main-is:        Main.hs
+  other-modules:  Test.TrustlessSidechain.OnChain.Integration
   ghc-options:    -fplugin-opt PlutusTx.Plugin:defer-errors
   build-depends:
-    , aeson                 ^>=1.5.0.0
+    , aeson                      ^>=1.5.0.0
     , base
     , base-compat
-    , bytestring            ^>=0.10.12.0
+    , bytestring                 ^>=0.10.12.0
     , cardano-prelude
     , containers
+    , data-default
     , data-default-class
     , either
     , freer-extras
     , freer-simple
     , lens
     , playground-common
+    , plutip
     , plutus-contract
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-ledger-constraints
     , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
@@ -154,9 +158,9 @@ test-suite trustless-sidechain-test
     , servant-server
     , tasty
     , tasty-quickcheck
-    , text                  ^>=1.2.4.0
+    , text                       ^>=1.2.4.0
     , trustless-sidechain
-    , vector                ^>=0.12.1.2
+    , vector                     ^>=0.12.1.2
     , wai
     , warp
 
