@@ -1,8 +1,9 @@
 # Trustless sidechain
 
-## Cardano specification
+This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, but this might not be available in time for Cardano, so we decided to implement the contract in two phases:
 
-### Initialise sidechain
+- phase 1: using append only signature scheme
+- phase 2: using ATMS signature scheme
 
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
@@ -10,15 +11,21 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots
 - `CommitteeCandidateValidator`: script address for committee candidates
 - `MPTRootTokenValidator`: script address for storing `MPTRootToken`s
-- `ATMSVerificationKeyValidator`: script address for the ATMS verification key
+- `CommitteeHashValidator`: script address for the committee members' hash
+<!-- - `ATMSVerificationKeyValidator`: script address for the ATMS verification key -->
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
 ```haskell
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinInteger -- TODO: do we need anything else here?
+  { chainId :: BuiltinInteger
+  , genesisHash :: BuiltinByteString
   }
 ```
+
+### Initialise contract
+
+For initialisation, we need to set the first <!-- ATMS verification key --> committee hash on chain with a NFT (consuming some arbitrary utxo).
 
 ### Transfer FUEL tokens from mainchain to sidechain
 
@@ -44,7 +51,7 @@ data BurnParams = BurnParams
 **Workflow:**
 
 1. Sidechain collects unhandled transactions
-2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed with ATMS multisig
+2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed <!--with ATMS multisig--> by the committee members with an appended signature
 3. Bridge broadcasts Merkle root to chain
 4. Txs can be claimed individually
 
@@ -52,16 +59,27 @@ data BurnParams = BurnParams
 
 Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
 
+<!--
+
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , signature :: ByteString
   }
 ```
+-->
+
+```haskell
+data SignedMerkleRoot = SignedMerkleRoot
+  { merkleRoot :: ByteString
+  , signature :: ByteString
+  , committeePkhs :: [PubKeyHash] -- Public keys of all committee members
+  }
+```
 
 Minting policy verifies the following:
 
-- signature can be verified with the ATMS verification key
+- signature can be verified with the <!--ATMS verification key--> submitted public key hashes of committee members, and the concatenated and hashed value of these correspond to the one saved on-chain
 
 Validator script verifies the following:
 
@@ -94,11 +112,9 @@ Minting policy verifies the following:
 
 ```haskell
 data FUELRedeemer
-  = MainToSide ByteString -- Recipient address of the sidechain
+  = MainToSide ByteString -- Recipient address on the sidechain
   | SideToMain MerkleProof
 ```
-
-ByteString (if the minting amout is positive, we expect this to be a signature, otherwise a recipient address)
 
 ### Register committee candidate
 
@@ -112,6 +128,7 @@ ByteString (if the minting amout is positive, we expect this to be a signature, 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
   { pubKey :: PubKey -- own public key
+  , sidechainPubKey :: ByteString -- public key in the sidechain's desired format
   , signature :: Credentials -- TODO: what signature we need exactly
   }
 ```
@@ -123,23 +140,46 @@ data BlockProducerRegistration = BlockProducerRegistration
 1. The UTxO with the registration information can be redeemed by the original sender
 2. The Bridge monitoring the committee candidate script address interprets this as a deregister action
 
-### Update ATMS verification key
+### Update <!--ATMS verification key--> committee hash
+
+For phase 1, we use this committee hash to verify signatures for sidechain to mainchain transfers.This is a hash of concatenated public key hashes of the committee members.
 
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
-- verifies the signature on the new ATMS key (must be signed by the old committee)
+- verifies the signature on the new <!--ATMS key--> committee hash (must be signed by the old committee)
 - verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
-- outputs a new UTxO with the updated ATMS key containing the NFT to the same script address
+- outputs a new UTxO with the updated <!--ATMS key--> committee hash containing the NFT to the same script address
 
+**Endpoint params:**
+
+<!--
 ```haskell
 data UpdateVKey = UpdateVKey
   { newVKey :: ByteString,
   , signature :: ByteString
   }
 ```
+-->
+
+```haskell
+data UpdateCommitteeHash = UpdateCommitteeHash
+  { newCommitteeHash :: ByteString,
+  , signature :: ByteString
+  , committeePkhs :: [PubKeyHash] -- Public keys of the current committee members
+  }
+```
 
 ![Public key update](pubkeyupdate.svg)
+
+**Redeemer:**
+
+```haskell
+data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
+  { signature :: BuiltinByteString
+  , committeePkhs :: [PubKeyHash]
+  }
+```
 
 ## Appendix
 
