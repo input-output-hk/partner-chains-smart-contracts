@@ -7,6 +7,10 @@
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, haskell-nix, plutip, ... }:
@@ -39,7 +43,8 @@
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-        in (nixpkgsFor system).haskell-nix.cabalProject {
+        in
+        (nixpkgsFor system).haskell-nix.cabalProject {
           src = ./.;
           compiler-nix-name = ghcVersion;
           inherit (plutip) cabalProjectLocal;
@@ -64,7 +69,8 @@
             additional = ps: [ ps.plutip ];
           };
         };
-    in {
+    in
+    {
       project = perSystem projectFor;
       flake = perSystem (system: (projectFor system).flake { });
 
@@ -75,11 +81,12 @@
       checks = perSystem (system: self.flake.${system}.checks);
 
       check = perSystem (system:
-        (nixpkgsFor system).runCommand "combined-check" {
-          nativeBuildInputs = builtins.attrValues self.checks.${system}
-            ++ builtins.attrValues self.flake.${system}.packages
-            ++ [ self.flake.${system}.devShell.inputDerivation ];
-        } "touch $out");
+        (nixpkgsFor system).runCommand "combined-check"
+          {
+            nativeBuildInputs = builtins.attrValues self.checks.${system}
+              ++ builtins.attrValues self.flake.${system}.packages
+              ++ [ self.flake.${system}.devShell.inputDerivation ];
+          } "touch $out");
 
       devShell = perSystem (system: self.flake.${system}.devShell);
 
