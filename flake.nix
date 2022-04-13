@@ -70,17 +70,16 @@
 
       packages = perSystem (system: self.flake.${system}.packages);
 
+      apps = perSystem (system: self.flake.${system}.apps);
+
       checks = perSystem (system: self.flake.${system}.checks);
 
       check = perSystem (system:
-        (nixpkgsFor system).runCommand "combined-test" {
-          checkz = builtins.attrValues self.checks.${system}
-            ++ builtins.attrValues self.packages.${system}
-            ++ [ self.devShells.${system}.inputDerivation ];
-        } ''
-          echo $checkz
-          touch $out
-        '');
+        (nixpkgsFor system).runCommand "combined-check" {
+          nativeBuildInputs = builtins.attrValues self.checks.${system}
+            ++ builtins.attrValues self.flake.${system}.packages
+            ++ [ self.flake.${system}.devShell.inputDerivation ];
+        } "touch $out");
 
       devShell = perSystem (system: self.flake.${system}.devShell);
     };
