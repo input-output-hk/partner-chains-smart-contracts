@@ -1,10 +1,13 @@
 strict digraph { 
   node [shape=record]
 
-  atmsVKey [
-    label = "UTxO with datum | ATMS verification key"
-    ]
+//  atmsVKey [
+//    label = "UTxO with datum | ATMS verification key"
+//    ]
 
+  atmsVKey [
+    label = "UTxO with datum | committee hash"
+    ]
 
   mintToken [label = 
     "Mint MPTRootToken |

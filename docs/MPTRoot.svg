@@ -11,10 +11,10 @@
 <!-- atmsVKey -->
 <g id="node1" class="node">
 <title>atmsVKey</title>
-<polygon fill="none" stroke="black" points="29,-164.5 29,-200.5 289,-200.5 289,-164.5 29,-164.5"/>
-<text text-anchor="middle" x="87.5" y="-178.8" font-family="Times,serif" font-size="14.00">UTxO with datum</text>
-<polyline fill="none" stroke="black" points="146,-164.5 146,-200.5 "/>
-<text text-anchor="middle" x="217.5" y="-178.8" font-family="Times,serif" font-size="14.00">ATMS verification key</text>
+<polygon fill="none" stroke="black" points="48.5,-164.5 48.5,-200.5 269.5,-200.5 269.5,-164.5 48.5,-164.5"/>
+<text text-anchor="middle" x="107" y="-178.8" font-family="Times,serif" font-size="14.00">UTxO with datum</text>
+<polyline fill="none" stroke="black" points="165.5,-164.5 165.5,-200.5 "/>
+<text text-anchor="middle" x="217.5" y="-178.8" font-family="Times,serif" font-size="14.00">committee hash</text>
 </g>
 <!-- mintToken -->
 <g id="node2" class="node">
