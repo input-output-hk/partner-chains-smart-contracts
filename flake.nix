@@ -2,14 +2,17 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip";
+    plutip = {
+      url = "github:mlabs-haskell/plutip?rev=dd1656081fdd438890a15ab3e66b4713edcac1e4";
+    };
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
+    cardano-node.follows = "plutip/bot-plutus-interface/cardano-node";
   };
 
-  outputs = { self, nixpkgs, haskell-nix, plutip, ... }:
+  outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:
     let
       supportedSystems = with nixpkgs.lib.systems.supported;
         tier1 ++ tier2 ++ tier3;
@@ -39,7 +42,8 @@
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-        in (nixpkgsFor system).haskell-nix.cabalProject {
+        in
+        (nixpkgsFor system).haskell-nix.cabalProject {
           src = ./.;
           compiler-nix-name = ghcVersion;
           inherit (plutip) cabalProjectLocal;
@@ -47,7 +51,15 @@
             src = "${plutip}";
             subdirs = [ "." ];
           }];
-          modules = plutip.haskellModules;
+          modules = plutip.haskellModules ++ [{
+            packages = {
+              trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
+                [
+                  inputs.cardano-node.packages.${system}.cardano-node
+                  inputs.cardano-node.packages.${system}.cardano-cli
+                ];
+            };
+          }];
           shell = {
             withHoogle = true;
             exactDeps = true;
@@ -59,12 +71,15 @@
               hlint
               haskellPackages.cabal-fmt
               nixpkgs-fmt
+              inputs.cardano-node.packages.${system}.cardano-node
+              inputs.cardano-node.packages.${system}.cardano-cli
             ];
             tools.haskell-language-server = { };
             additional = ps: [ ps.plutip ];
           };
         };
-    in {
+    in
+    {
       project = perSystem projectFor;
       flake = perSystem (system: (projectFor system).flake { });
 
@@ -75,11 +90,12 @@
       checks = perSystem (system: self.flake.${system}.checks);
 
       check = perSystem (system:
-        (nixpkgsFor system).runCommand "combined-check" {
-          nativeBuildInputs = builtins.attrValues self.checks.${system}
-            ++ builtins.attrValues self.flake.${system}.packages
-            ++ [ self.flake.${system}.devShell.inputDerivation ];
-        } "touch $out");
+        (nixpkgsFor system).runCommand "combined-check"
+          {
+            nativeBuildInputs = builtins.attrValues self.checks.${system}
+              ++ builtins.attrValues self.flake.${system}.packages
+              ++ [ self.flake.${system}.devShell.inputDerivation ];
+          } "touch $out");
 
       devShell = perSystem (system: self.flake.${system}.devShell);
     };
