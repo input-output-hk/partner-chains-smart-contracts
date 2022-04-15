@@ -2,17 +2,22 @@
 
 module Test.TrustlessSidechain.OnChain.Integration (test) where
 
+import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
-import Ledger (PaymentPubKeyHash (PaymentPubKeyHash))
+import Data.ByteString qualified as ByteString
+import Ledger.Crypto (PubKey)
+import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (waitNSlots)
 import Test.Plutip.Contract (assertExecution, initAda, withContract)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldSucceed)
 import Test.Tasty (TestTree)
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   DeregisterParams (DeregisterParams),
   RegisterParams (RegisterParams),
   SidechainParams (SidechainParams),
+  serialiseBprm,
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import Prelude
@@ -24,19 +29,30 @@ sidechainParams =
     , genesisHash = ""
     }
 
+spoPrivKey :: Wallet.XPrv
+spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
+
+spoPubKey :: PubKey
+spoPubKey = Crypto.toPublicKey spoPrivKey
+
 test :: TestTree
 test =
   withCluster
     "Plutip integration test"
     [ assertExecution
         "CommitteeCandidateValidator.register"
-        (initAda 100 <> initAda 1)
+        (initAda 100)
         ( withContract $
-            \[PaymentPubKeyHash pkh] -> -- Using a regular signing key instead of an SPO cold key
+            const
               ( do
+                  oref <- CommitteeCandidateValidator.getInputUtxo
                   let sidechainPubKey = ""
+                      msg =
+                        serialiseBprm $
+                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                      sig = Crypto.sign' msg spoPrivKey
                   CommitteeCandidateValidator.register
-                    (RegisterParams sidechainParams pkh sidechainPubKey)
+                    (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
               )
         )
         [shouldSucceed]
@@ -44,14 +60,19 @@ test =
         "CommitteeCandidateValidator.deregister"
         (initAda 100 <> initAda 1)
         ( withContract $
-            \[PaymentPubKeyHash pkh] -> -- Using a regular signing key instead of an SPO cold key
+            const
               ( do
+                  oref <- CommitteeCandidateValidator.getInputUtxo
                   let sidechainPubKey = ""
+                      msg =
+                        serialiseBprm $
+                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                      sig = Crypto.sign' msg spoPrivKey
                   CommitteeCandidateValidator.register
-                    (RegisterParams sidechainParams pkh sidechainPubKey)
+                    (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
                   void $ waitNSlots 1
                   CommitteeCandidateValidator.deregister
-                    (DeregisterParams sidechainParams pkh)
+                    (DeregisterParams sidechainParams spoPubKey)
               )
         )
         [shouldSucceed]

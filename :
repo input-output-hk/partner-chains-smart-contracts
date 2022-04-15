@@ -17,7 +17,7 @@ import GHC.Generics (Generic)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
+import Ledger.Crypto (PubKey, getPubKey)
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef (TxOutRef))
 import Ledger.TxId (TxId (TxId))
@@ -56,7 +56,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
   , -- | Signature of the SPO
-    bprSignature :: !Signature
+    bprSignature :: !BuiltinByteString
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: !TxOutRef
   }
@@ -91,7 +91,7 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
     sidechainPubKey = bprSidechainPubKey datum
     inputUtxo = bprInputUtxo datum
     spoPubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
-    sig = getSignature $ bprSignature datum
+    sig = bprSignature datum
 
     msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig
@@ -126,8 +126,7 @@ data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams
   , spoPubKey :: !PubKey
   , sidechainPubKey :: !BuiltinByteString
-  , signature :: !Signature
-  , inputUtxo :: !TxOutRef
+  , signature :: !BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -143,24 +142,15 @@ data DeregisterParams = DeregisterParams
 $(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
 
-getInputUtxo :: Contract () CommitteeCandidateRegistrySchema Text TxOutRef
-getInputUtxo = do
-  ownPkh <- ownPaymentPubKeyHash
-  let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
-  ownUtxos <- utxosAt ownAddr
-  case Map.toList ownUtxos of
-    (oref, _) : _ -> pure oref
-    _ -> throwError "No UTxO found at the address"
-
 register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
-register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
+register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
-  let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
-  ownUtxos <- utxosAt ownAddr
   let val = Ada.lovelaceValueOf 1
       validator = committeeCanditateValidator sidechainParams
-      datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
+      ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
+      datum = BlockProducerRegistration spoPubKey sidechainPubKey
       tx = Constraints.mustPayToTheScript datum val
+  ownUtxos <- utxosAt ownAddr
 
   void $ submitTxConstraintsSpending @CommitteeCandidateRegistry validator ownUtxos tx
 
