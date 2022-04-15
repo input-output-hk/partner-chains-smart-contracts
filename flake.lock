@@ -80,11 +80,11 @@
         "servant-purescript": "servant-purescript"
       },
       "locked": {
-        "lastModified": 1649774386,
-        "narHash": "sha256-Jxc3orzzPfFjdhhyhJoeYQ5x96DJeXbeZS403P2t7VU=",
+        "lastModified": 1650017310,
+        "narHash": "sha256-BoafRdjznGxmaEBd7nlkeQsQyQVr09Jpw5mVy6t8qzU=",
         "owner": "mlabs-haskell",
         "repo": "bot-plutus-interface",
-        "rev": "e7bee9d2f3451c4863be8b909a9d9cc5e472eee2",
+        "rev": "5e504bdb31aad0bd63f481c5fa43cbe9322c84b5",
         "type": "github"
       },
       "original": {

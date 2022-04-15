@@ -10,6 +10,7 @@
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
     cardano-node.follows = "plutip/bot-plutus-interface/cardano-node";
+    plutip.inputs.bot-plutus-interface.url = "github:mlabs-haskell/bot-plutus-interface?rev=5e504bdb31aad0bd63f481c5fa43cbe9322c84b5";
   };
 
   outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:

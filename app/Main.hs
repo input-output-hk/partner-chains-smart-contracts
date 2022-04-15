@@ -70,7 +70,6 @@ main = do
           , pcDryRun = False
           , pcLogLevel = Debug
           , pcProtocolParamsFile = "./protocol.json"
-          , pcForceBudget = Just (8_000_000, 40000)
           , pcEnableTxEndpoint = True
           }
   BotPlutusInterface.runPAB @TrustlessSidechainContracts pabConf
