@@ -50,16 +50,15 @@ PlutusTx.makeLift ''SidechainParams
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
-    bprSpoPkh :: !PubKeyHash -- own public key
+    bprSpoPkh :: !PubKeyHash -- own cold verification key hash
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
   }
 
-PlutusTx.makeLift ''BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
-mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> BuiltinByteString -> Ledger.ScriptContext -> Bool
+mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
 mkCommitteeCanditateValidator _ datum _ ctx =
   traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info spoPkh
   where
@@ -72,11 +71,11 @@ committeeCanditateValidator sidechainParams =
     ($$(PlutusTx.compile [||mkCommitteeCanditateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
     $$(PlutusTx.compile [||wrap||])
   where
-    wrap = Scripts.wrapValidator @BlockProducerRegistration @BuiltinByteString
+    wrap = Scripts.wrapValidator @BlockProducerRegistration @()
 
 data CommitteeCandidateRegistry
 instance ValidatorTypes CommitteeCandidateRegistry where
-  type RedeemerType CommitteeCandidateRegistry = BuiltinByteString
+  type RedeemerType CommitteeCandidateRegistry = ()
   type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 script :: SidechainParams -> Ledger.Script

@@ -36,11 +36,7 @@ test =
               ( do
                   let sidechainPubKey = ""
                   CommitteeCandidateValidator.register
-                    ( RegisterParams
-                        sidechainParams
-                        pkh
-                        sidechainPubKey
-                    )
+                    (RegisterParams sidechainParams pkh sidechainPubKey)
               )
         )
         [shouldSucceed]
@@ -52,11 +48,7 @@ test =
               ( do
                   let sidechainPubKey = ""
                   CommitteeCandidateValidator.register
-                    ( RegisterParams
-                        sidechainParams
-                        pkh
-                        sidechainPubKey
-                    )
+                    (RegisterParams sidechainParams pkh sidechainPubKey)
                   void $ waitNSlots 1
                   CommitteeCandidateValidator.deregister
                     (DeregisterParams sidechainParams pkh)
