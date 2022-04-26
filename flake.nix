@@ -3,14 +3,13 @@
 
   inputs = {
     plutip = {
-      url = "github:mlabs-haskell/plutip?rev=dd1656081fdd438890a15ab3e66b4713edcac1e4";
+      url = "github:mlabs-haskell/plutip?rev=2bc02503312be2ba40b58b91aff1ccf9746abe80";
     };
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
     cardano-node.follows = "plutip/bot-plutus-interface/cardano-node";
-    plutip.inputs.bot-plutus-interface.url = "github:mlabs-haskell/bot-plutus-interface?rev=5e504bdb31aad0bd63f481c5fa43cbe9322c84b5";
   };
 
   outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:

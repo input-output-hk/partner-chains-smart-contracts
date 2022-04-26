@@ -41,7 +41,7 @@ test =
     "Plutip integration test"
     [ assertExecution
         "CommitteeCandidateValidator.register"
-        (initAda 100)
+        (initAda [100])
         ( withContract $
             const
               ( do
@@ -58,7 +58,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "CommitteeCandidateValidator.deregister"
-        (initAda 100 <> initAda 1)
+        (initAda [100] <> initAda [1])
         ( withContract $
             const
               ( do
