@@ -98,6 +98,9 @@
               ++ builtins.attrValues self.flake.${system}.packages
               ++ [ self.flake.${system}.devShell.inputDerivation ];
           } "touch $out");
+      checks = perSystem (system: self.flake.${system}.checks // {
+        formatCheck = formatCheckFor system;
+      });
 
       devShell = perSystem (system: self.flake.${system}.devShell);
 
