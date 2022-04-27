@@ -21,6 +21,7 @@ source-repository head
 
 -- Common sections
 
+
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
@@ -80,8 +81,6 @@ library
     , cardano-prelude
     , containers
     , data-default-class
-    , freer-extras
-    , freer-simple
     , lens
     , playground-common
     , plutus-contract
@@ -92,15 +91,9 @@ library
     , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
-    , prettyprinter
     , row-types
     , serialise
-    , servant
-    , servant-server
     , text                       ^>=1.2.4.0
-    , vector                     ^>=0.12.1.2
-    , wai
-    , warp
 
   hs-source-dirs:  src
 
@@ -125,43 +118,20 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:  Test.TrustlessSidechain.OnChain.Integration
-  ghc-options:    -fplugin-opt PlutusTx.Plugin:defer-errors
+  ghc-options:
+    -fplugin-opt PlutusTx.Plugin:defer-errors -Wall -threaded -rtsopts
+
   build-depends:
-    , aeson                      ^>=1.5.0.0
-    , base
-    , base-compat
-    , bytestring                 ^>=0.10.12.0
-    , cardano-prelude
-    , containers
+    , bytestring
+    , cardano-api
     , data-default
-    , data-default-class
-    , either
-    , freer-extras
-    , freer-simple
-    , lens
-    , playground-common
     , plutip
     , plutus-contract
-    , plutus-core
     , plutus-ledger
-    , plutus-ledger-api
-    , plutus-ledger-constraints
-    , plutus-pab
-    , plutus-tx
-    , plutus-tx-plugin
-    , prettyprinter
     , QuickCheck
     , quickcheck-instances
-    , row-types
-    , serialise
-    , servant
-    , servant-server
     , tasty
     , tasty-quickcheck
-    , text                       ^>=1.2.4.0
     , trustless-sidechain
-    , vector                     ^>=0.12.1.2
-    , wai
-    , warp
 
   hs-source-dirs: test

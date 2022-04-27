@@ -25,7 +25,6 @@ import Ledger.Typed.Scripts (
   TypedValidator,
   ValidatorTypes,
   validatorAddress,
-  validatorHash,
  )
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, ownPaymentPubKeyHash, submitTxConstraintsSpending, submitTxConstraintsWith, throwError, utxosAt, type (.\/))
@@ -40,8 +39,8 @@ import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinByteString
-  , genesisHash :: BuiltinByteString
+  { chainId :: !BuiltinByteString
+  , genesisHash :: !BuiltinByteString
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -51,20 +50,20 @@ PlutusTx.makeLift ''SidechainParams
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
-    bprSpoPkh :: PubKeyHash -- own public key
+    bprSpoPkh :: !PubKeyHash -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: BuiltinByteString
+    bprSidechainPubKey :: !BuiltinByteString
   }
 
-PlutusTx.makeLift ''BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
-mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> BuiltinByteString -> Ledger.ScriptContext -> Bool
+mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
 mkCommitteeCanditateValidator _ datum _ ctx =
-  traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info $ bprSpoPkh datum
+  traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info spoPkh
   where
     info = Ledger.scriptContextTxInfo ctx
+    spoPkh = bprSpoPkh datum
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
 committeeCanditateValidator sidechainParams =
@@ -72,11 +71,11 @@ committeeCanditateValidator sidechainParams =
     ($$(PlutusTx.compile [||mkCommitteeCanditateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
     $$(PlutusTx.compile [||wrap||])
   where
-    wrap = Scripts.wrapValidator @BlockProducerRegistration @BuiltinByteString
+    wrap = Scripts.wrapValidator @BlockProducerRegistration @()
 
 data CommitteeCandidateRegistry
 instance ValidatorTypes CommitteeCandidateRegistry where
-  type RedeemerType CommitteeCandidateRegistry = BuiltinByteString
+  type RedeemerType CommitteeCandidateRegistry = ()
   type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 script :: SidechainParams -> Ledger.Script
@@ -93,17 +92,17 @@ type CommitteeCandidateRegistrySchema =
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: SidechainParams
-  , spoPkh :: PubKeyHash
-  , sidechainPubKey :: BuiltinByteString
+  { sidechainParams :: !SidechainParams
+  , spoPkh :: !PubKeyHash
+  , sidechainPubKey :: !BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: SidechainParams
-  , spoPkh :: PubKeyHash
+  { sidechainParams :: !SidechainParams
+  , spoPkh :: !PubKeyHash
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -116,14 +115,10 @@ register RegisterParams {sidechainParams, spoPkh, sidechainPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let val = Ada.lovelaceValueOf 1
       validator = committeeCanditateValidator sidechainParams
-      valHash = validatorHash validator
       ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
-      datum =
-        Datum $
-          PlutusTx.toBuiltinData $
-            BlockProducerRegistration spoPkh sidechainPubKey
+      datum = BlockProducerRegistration spoPkh sidechainPubKey
       tx =
-        Constraints.mustPayToOtherScript valHash datum val
+        Constraints.mustPayToTheScript datum val
           <> Constraints.mustBeSignedBy (PaymentPubKeyHash spoPkh)
   ownUtxos <- utxosAt ownAddr
 
