@@ -2,14 +2,16 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip = {
-      url = "github:mlabs-haskell/plutip?rev=2bc02503312be2ba40b58b91aff1ccf9746abe80";
-    };
+    plutip.url = "github:mlabs-haskell/plutip?rev=2bc02503312be2ba40b58b91aff1ccf9746abe80";
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
     cardano-node.follows = "plutip/bot-plutus-interface/cardano-node";
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:
@@ -98,5 +100,7 @@
           } "touch $out");
 
       devShell = perSystem (system: self.flake.${system}.devShell);
+
+      herculesCI.ciSystems = [ "x86_64-linux" ];
     };
 }
