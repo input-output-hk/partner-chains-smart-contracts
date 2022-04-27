@@ -2,18 +2,19 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip";
+    plutip.url = "github:mlabs-haskell/plutip?rev=2bc02503312be2ba40b58b91aff1ccf9746abe80";
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
+    cardano-node.follows = "plutip/bot-plutus-interface/cardano-node";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, plutip, ... }:
+  outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:
     let
       supportedSystems = with nixpkgs.lib.systems.supported;
         tier1 ++ tier2 ++ tier3;
@@ -52,7 +53,15 @@
             src = "${plutip}";
             subdirs = [ "." ];
           }];
-          modules = plutip.haskellModules;
+          modules = plutip.haskellModules ++ [{
+            packages = {
+              trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
+                [
+                  inputs.cardano-node.packages.${system}.cardano-node
+                  inputs.cardano-node.packages.${system}.cardano-cli
+                ];
+            };
+          }];
           shell = {
             withHoogle = true;
             exactDeps = true;
@@ -64,6 +73,8 @@
               hlint
               haskellPackages.cabal-fmt
               nixpkgs-fmt
+              inputs.cardano-node.packages.${system}.cardano-node
+              inputs.cardano-node.packages.${system}.cardano-cli
             ];
             tools.haskell-language-server = { };
             additional = ps: [ ps.plutip ];
