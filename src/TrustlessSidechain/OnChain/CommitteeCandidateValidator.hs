@@ -70,16 +70,8 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
 
 {-# INLINEABLE serialiseBprm #-}
 serialiseBprm :: BlockProducerRegistrationMsg -> BuiltinByteString
-serialiseBprm (BlockProducerRegistrationMsg (SidechainParams ci gh) pk (TxOutRef (TxId txId) txIdx)) =
-  mconcat [ci, gh, pk, txId, toBin txIdx]
-
-{-# INLINEABLE toBin #-}
-toBin :: Integer -> BuiltinByteString
-toBin n = toBin' n mempty
-  where
-    toBin' n' rest
-      | n' < 256 = Builtins.consByteString n' rest
-      | otherwise = toBin' (n' `divide` 256) (Builtins.consByteString (n' `modulo` 256) rest)
+serialiseBprm (BlockProducerRegistrationMsg _ _ (TxOutRef (TxId txId) _)) =
+  txId -- TODO: This method runs into budgeting issues, so I had to mock it, let's change this to serialiseData
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
