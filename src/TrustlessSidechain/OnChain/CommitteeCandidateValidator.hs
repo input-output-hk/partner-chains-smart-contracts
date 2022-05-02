@@ -31,7 +31,6 @@ import Plutus.Contract (Contract, Endpoint, ownPaymentPubKeyHash, submitTxConstr
 import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
-import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import Schema (
   ToSchema,
