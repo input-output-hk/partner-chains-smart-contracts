@@ -124,6 +124,7 @@ test-suite trustless-sidechain-test
   build-depends:
     , bytestring
     , cardano-api
+    , cardano-crypto
     , data-default
     , plutip
     , plutus-contract

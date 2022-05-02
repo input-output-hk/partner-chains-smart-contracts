@@ -16,11 +16,11 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
-import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash))
 import Ledger.Constraints qualified as Constraints
-import Ledger.Crypto (PubKeyHash)
+import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut))
+import Ledger.Tx (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef (TxOutRef))
+import Ledger.TxId (TxId (TxId))
 import Ledger.Typed.Scripts (
   TypedValidator,
   ValidatorTypes,
@@ -28,6 +28,7 @@ import Ledger.Typed.Scripts (
  )
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, Endpoint, ownPaymentPubKeyHash, submitTxConstraintsSpending, submitTxConstraintsWith, throwError, utxosAt, type (.\/))
+import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
@@ -50,20 +51,41 @@ PlutusTx.makeLift ''SidechainParams
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
-    bprSpoPkh :: !PubKeyHash -- own cold verification key hash
+    bptSpoPubKey :: !PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
+  , -- | Signature of the SPO
+    bprSignature :: !Signature
+  , -- | A UTxO that must be spent by the transaction
+    bprInputUtxo :: !TxOutRef
   }
+
+data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
+  { bprmSidechainParams :: !SidechainParams
+  , bprmSidechainPubKey :: !BuiltinByteString
+  , -- | A UTxO that must be spent by the transaction
+    bprmInputUtxo :: !TxOutRef
+  }
+
+{-# INLINEABLE serialiseBprm #-}
+serialiseBprm :: BlockProducerRegistrationMsg -> BuiltinByteString
+serialiseBprm (BlockProducerRegistrationMsg _ _ (TxOutRef (TxId txId) _)) =
+  txId -- TODO: This method runs into budgeting issues, so I had to mock it, let's change this to serialiseData
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
-mkCommitteeCanditateValidator _ datum _ ctx =
-  traceIfFalse "Can only be redeemed by the owner." $ Ledger.txSignedBy info spoPkh
+mkCommitteeCanditateValidator sidechainParams datum _ _ =
+  traceIfFalse "Signature must be valid" isSignatureValid
   where
-    info = Ledger.scriptContextTxInfo ctx
-    spoPkh = bprSpoPkh datum
+    sidechainPubKey = bprSidechainPubKey datum
+    inputUtxo = bprInputUtxo datum
+    spoPubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
+    sig = getSignature $ bprSignature datum
+
+    msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+    isSignatureValid = verifySignature spoPubKey msg sig
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
 committeeCanditateValidator sidechainParams =
@@ -93,8 +115,10 @@ type CommitteeCandidateRegistrySchema =
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams
-  , spoPkh :: !PubKeyHash
+  , spoPubKey :: !PubKey
   , sidechainPubKey :: !BuiltinByteString
+  , signature :: !Signature
+  , inputUtxo :: !TxOutRef
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -102,7 +126,7 @@ data RegisterParams = RegisterParams
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
   { sidechainParams :: !SidechainParams
-  , spoPkh :: !PubKeyHash
+  , spoPubKey :: !PubKey
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -110,22 +134,29 @@ data DeregisterParams = DeregisterParams
 $(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
 
-register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
-register RegisterParams {sidechainParams, spoPkh, sidechainPubKey} = do
+getInputUtxo :: Contract () CommitteeCandidateRegistrySchema Text TxOutRef
+getInputUtxo = do
   ownPkh <- ownPaymentPubKeyHash
+  let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
+  ownUtxos <- utxosAt ownAddr
+  case Map.toList ownUtxos of
+    (oref, _) : _ -> pure oref
+    _ -> throwError "No UTxO found at the address"
+
+register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
+register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
+  ownPkh <- ownPaymentPubKeyHash
+  let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
+  ownUtxos <- utxosAt ownAddr
   let val = Ada.lovelaceValueOf 1
       validator = committeeCanditateValidator sidechainParams
-      ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
-      datum = BlockProducerRegistration spoPkh sidechainPubKey
-      tx =
-        Constraints.mustPayToTheScript datum val
-          <> Constraints.mustBeSignedBy (PaymentPubKeyHash spoPkh)
-  ownUtxos <- utxosAt ownAddr
+      datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
+      tx = Constraints.mustPayToTheScript datum val
 
   void $ submitTxConstraintsSpending @CommitteeCandidateRegistry validator ownUtxos tx
 
 deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
-deregister DeregisterParams {sidechainParams, spoPkh} = do
+deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = committeeCanditateValidator sidechainParams
       valAddr = validatorAddress validator
@@ -142,7 +173,6 @@ deregister DeregisterParams {sidechainParams, spoPkh} = do
           <> Constraints.unspentOutputs valUtxos
       tx =
         mconcat $
-          Constraints.mustBeSignedBy (PaymentPubKeyHash spoPkh) :
           map
             (`Constraints.mustSpendScriptOutput` Scripts.unitRedeemer)
             (Map.keys ownEntries)
@@ -158,5 +188,5 @@ deregister DeregisterParams {sidechainParams, spoPkh} = do
     isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Right (Datum d)} =
       case PlutusTx.fromBuiltinData d of
         Nothing -> False
-        Just BlockProducerRegistration {bprSpoPkh} ->
-          spoPkh == bprSpoPkh
+        Just BlockProducerRegistration {bptSpoPubKey} ->
+          spoPubKey == bptSpoPubKey

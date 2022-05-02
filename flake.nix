@@ -72,6 +72,7 @@
               cabal-install
               hlint
               haskellPackages.cabal-fmt
+              haskellPackages.fourmolu
               nixpkgs-fmt
               inputs.cardano-node.packages.${system}.cardano-node
               inputs.cardano-node.packages.${system}.cardano-cli
@@ -80,6 +81,20 @@
             additional = ps: [ ps.plutip ];
           };
         };
+      formatCheckFor = system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+        pkgs.runCommand "format-check"
+          { nativeBuildInputs = [ self.devShell.${system}.nativeBuildInputs ]; } ''
+          cd ${self}
+          export LC_CTYPE=C.UTF-8
+          export LC_ALL=C.UTF-8
+          export LANG=C.UTF-8
+          export IN_NIX_SHELL='pure'
+          make format_check cabalfmt_check nixpkgsfmt_check lint
+          mkdir $out
+        '';
     in
     {
       project = perSystem projectFor;
@@ -89,8 +104,6 @@
 
       apps = perSystem (system: self.flake.${system}.apps);
 
-      checks = perSystem (system: self.flake.${system}.checks);
-
       check = perSystem (system:
         (nixpkgsFor system).runCommand "combined-check"
           {
@@ -98,6 +111,9 @@
               ++ builtins.attrValues self.flake.${system}.packages
               ++ [ self.flake.${system}.devShell.inputDerivation ];
           } "touch $out");
+      checks = perSystem (system: self.flake.${system}.checks // {
+        formatCheck = formatCheckFor system;
+      });
 
       devShell = perSystem (system: self.flake.${system}.devShell);
 

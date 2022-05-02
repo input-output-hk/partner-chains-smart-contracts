@@ -19,8 +19,7 @@ CONTRACT_INST_ID=$(curl --location --request POST 'localhost:9080/api/contract/a
   }' )
   # }' | jq -r .unContractInstanceId )
 
-echo $CONTRACT_INST_ID
 
-# ech "{ \"tag\": \"Subscribe\", \"contents\": { \"Left\": { \"unContractInstanceId\":\"$CONTRACT_INST_ID\" } } }" | websocat -n ws://localhost:9080/ws 
+echo "{ \"tag\": \"Subscribe\", \"contents\": { \"Left\": { \"unContractInstanceId\":\"$CONTRACT_INST_ID\" } } }" | websocat -n ws://localhost:9080/ws 
 
 

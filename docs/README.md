@@ -121,15 +121,16 @@ data FUELRedeemer
 **Workflow:**
 
 1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature
-2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId
+2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId, and the consumed inputUtxo
 
 **Datum:**
 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
   { pubKey :: PubKey -- own public key
+  , inputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
   , sidechainPubKey :: ByteString -- public key in the sidechain's desired format
-  , signature :: Credentials -- TODO: what signature we need exactly
+  , signature :: Signature
   }
 ```
 
@@ -137,7 +138,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 **Workflow:**
 
-1. The UTxO with the registration information can be redeemed by the original sender
+1. The UTxO with the registration information can be redeemed by the original sender (doesn't have to check the inputUtxo)
 2. The Bridge monitoring the committee candidate script address interprets this as a deregister action
 
 ### Update <!--ATMS verification key--> committee hash
