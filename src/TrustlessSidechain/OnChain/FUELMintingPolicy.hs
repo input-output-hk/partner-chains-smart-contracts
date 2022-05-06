@@ -5,6 +5,11 @@ module TrustlessSidechain.OnChain.FUELMintingPolicy where
 import Ledger (MintingPolicy, ScriptContext, mkMintingPolicyScript)
 import Ledger.Typed.Scripts (wrapMintingPolicy)
 
+import Plutus.Contract (
+  Endpoint,
+  type (.\/),
+ )
+
 import PlutusTx
 import PlutusTx.Prelude
 
@@ -32,3 +37,25 @@ fuelMintingPolicy param =
     ($$(compile [||wrap . mkFUELMintingPolicy||]) `applyCode` liftCode param)
   where
     wrap = wrapMintingPolicy
+
+type FUELMintingPolicySchema =
+  Endpoint "burn" BurnParams .\/ Endpoint "mint" MintParams
+
+data BurnParams = BurnParams
+  { -- | Burnt amount in FUEL (Negative)
+    amount :: Integer 
+  , -- | SideChain address
+    recipient :: BuiltinByteString
+  , -- | passed for parametrization
+    sidechainParams :: SidechainParams
+  }
+
+data MintParams = MintParams
+  { -- | Minted amount in FUEL (Positive)
+    amount :: Integer
+  , -- | MainChain address
+    recipient :: BuiltinByteString
+  , -- | passed for parametrization
+    sidechainParams :: SidechainParams
+    -- , proof :: MerkleProof
+  }
