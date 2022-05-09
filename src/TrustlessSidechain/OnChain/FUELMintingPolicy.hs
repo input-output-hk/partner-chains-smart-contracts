@@ -7,6 +7,7 @@ import Data.Text (Text)
 
 import Ledger (
   MintingPolicy,
+  Redeemer (Redeemer),
   ScriptContext,
  )
 import Ledger qualified
@@ -64,13 +65,14 @@ data BurnParams = BurnParams
   }
 
 burn :: BurnParams -> Contract () FUELMintingPolicySchema Text ()
-burn BurnParams {amount, sidechainParams, recipient = _} = do
+burn BurnParams {amount, sidechainParams, recipient} = do
   let policy = fuelMintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
+      redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
   tx <-
     Contract.submitTxConstraintsWith @FUELRedeemer
       (Constraint.mintingPolicy policy)
-      (Constraint.mustMintValue value)
+      (Constraint.mustMintValueWithRedeemer redeemer value)
   Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
 
 data MintParams = MintParams
@@ -84,4 +86,12 @@ data MintParams = MintParams
   }
 
 mint :: MintParams -> Contract () FUELMintingPolicySchema Text ()
-mint _ = pure ()
+mint MintParams {amount, sidechainParams, recipient = _} = do
+  let policy = fuelMintingPolicy sidechainParams
+      value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
+      redeemer = Redeemer $ toBuiltinData SideToMain
+  tx <-
+    Contract.submitTxConstraintsWith @FUELRedeemer
+      (Constraint.mintingPolicy policy)
+      (Constraint.mustMintValueWithRedeemer redeemer value)
+  Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
