@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
@@ -7,15 +8,18 @@ import Data.Text (Text)
 import Ledger (
   MintingPolicy,
   ScriptContext,
-  mkMintingPolicyScript,
  )
-import Ledger.Typed.Scripts (wrapMintingPolicy)
+import Ledger qualified
+import Ledger.Constraints qualified as Constraint
+import Ledger.Typed.Scripts qualified as Script
+import Ledger.Value qualified as Value
 
 import Plutus.Contract (
   Contract,
   Endpoint,
   type (.\/),
  )
+import Plutus.Contract qualified as Contract
 
 import PlutusTx
 import PlutusTx.Prelude
@@ -33,6 +37,8 @@ data FUELRedeemer
 
 makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
+instance Script.ValidatorTypes FUELRedeemer
+
 {-# INLINEABLE mkFUELMintingPolicy #-}
 mkFUELMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
 mkFUELMintingPolicy _ (MainToSide _) _ = True
@@ -40,17 +46,17 @@ mkFUELMintingPolicy _ SideToMain _ = True
 
 fuelMintingPolicy :: SidechainParams -> MintingPolicy
 fuelMintingPolicy param =
-  mkMintingPolicyScript
+  Ledger.mkMintingPolicyScript
     ($$(compile [||wrap . mkFUELMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = wrapMintingPolicy
+    wrap = Script.wrapMintingPolicy
 
 type FUELMintingPolicySchema =
   Endpoint "burn" BurnParams .\/ Endpoint "mint" MintParams
 
 data BurnParams = BurnParams
   { -- | Burnt amount in FUEL (Negative)
-    amount :: Integer 
+    amount :: Integer
   , -- | SideChain address
     recipient :: BuiltinByteString
   , -- | passed for parametrization
@@ -58,7 +64,14 @@ data BurnParams = BurnParams
   }
 
 burn :: BurnParams -> Contract () FUELMintingPolicySchema Text ()
-burn _ = pure ()
+burn BurnParams {amount, sidechainParams, recipient = _} = do
+  let policy = fuelMintingPolicy sidechainParams
+      value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
+  tx <-
+    Contract.submitTxConstraintsWith @FUELRedeemer
+      (Constraint.mintingPolicy policy)
+      (Constraint.mustMintValue value)
+  Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
 
 data MintParams = MintParams
   { -- | Minted amount in FUEL (Positive)
