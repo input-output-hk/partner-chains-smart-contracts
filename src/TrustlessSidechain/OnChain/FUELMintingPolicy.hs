@@ -3,6 +3,7 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
+import Control.Monad (when)
 import Data.Text (Text)
 
 import Ledger (
@@ -84,6 +85,7 @@ burn BurnParams {amount, sidechainParams, recipient} = do
   let policy = fuelMintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
+  when (amount > 0) $ throwError "Can't burn a positive amount"
   tx <-
     Contract.submitTxConstraintsWith @FUELRedeemer
       (Constraint.mintingPolicy policy)
@@ -105,6 +107,7 @@ mint MintParams {amount, sidechainParams, recipient = _} = do
   let policy = fuelMintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData SideToMain
+  when (amount < 0) $ throwError "Can't mint a negative amount"
   tx <-
     Contract.submitTxConstraintsWith @FUELRedeemer
       (Constraint.mintingPolicy policy)
