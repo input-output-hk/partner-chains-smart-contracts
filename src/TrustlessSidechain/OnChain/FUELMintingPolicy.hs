@@ -52,12 +52,14 @@ mkFUELMintingPolicy
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
-    traceIfFalse "Did not burn FUEL" $ verifyFUEL txInfoMint ownSymbol
+    case Value.flattenValue txInfoMint of
+      [(sym, name, amount)] ->
+        traceIfFalse "Can't burn a positive amount" (amount < 0)
+          && traceIfFalse "Token Symbol is incorrect" (sym == ownSymbol)
+          && traceIfFalse "Token Name is incorrect" (name == ownTokenName)
+      _ -> False
     where
-      verifyFUEL mintedVal ownSym =
-        case Value.flattenValue mintedVal of
-          [(sym, name, amt)] -> amt < 0 && sym == ownSym && name == Value.TokenName "FUEL"
-          _ -> False
+      ownTokenName = Value.TokenName "FUEL"
 mkFUELMintingPolicy _ SideToMain ScriptContext {scriptContextPurpose = Minting _} = True
 mkFUELMintingPolicy _ _ _ = False
 
