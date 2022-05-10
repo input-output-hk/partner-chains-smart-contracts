@@ -8,7 +8,9 @@ import Data.Text (Text)
 import Ledger (
   MintingPolicy,
   Redeemer (Redeemer),
-  ScriptContext,
+  ScriptContext (..),
+  ScriptPurpose (..),
+  TxInfo (..),
  )
 import Ledger qualified
 import Ledger.Constraints qualified as Constraint
@@ -42,8 +44,21 @@ instance Script.ValidatorTypes FUELRedeemer
 
 {-# INLINEABLE mkFUELMintingPolicy #-}
 mkFUELMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
-mkFUELMintingPolicy _ (MainToSide _) _ = True
-mkFUELMintingPolicy _ SideToMain _ = True
+mkFUELMintingPolicy
+  _
+  (MainToSide _)
+  ScriptContext
+    { scriptContextPurpose = Minting ownSymbol
+    , scriptContextTxInfo = TxInfo {txInfoMint}
+    } =
+    traceIfFalse "Did not burn FUEL" $ verifyFUEL txInfoMint ownSymbol
+    where
+      verifyFUEL mintedVal ownSym =
+        case Value.flattenValue mintedVal of
+          [(sym, name, amt)] -> amt < 0 && sym == ownSym && name == Value.TokenName "FUEL"
+          _ -> False
+mkFUELMintingPolicy _ SideToMain ScriptContext {scriptContextPurpose = Minting _} = True
+mkFUELMintingPolicy _ _ _ = False
 
 fuelMintingPolicy :: SidechainParams -> MintingPolicy
 fuelMintingPolicy param =
