@@ -27,7 +27,7 @@ import Ledger.Typed.Scripts (
   validatorAddress,
  )
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.Contract (Contract, Endpoint, ownPaymentPubKeyHash, submitTxConstraintsSpending, submitTxConstraintsWith, throwError, utxosAt, type (.\/))
+import Plutus.Contract (Contract, Endpoint, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt, type (.\/))
 import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
@@ -148,12 +148,16 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature,
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
   ownUtxos <- utxosAt ownAddr
+
   let val = Ada.lovelaceValueOf 1
       validator = committeeCanditateValidator sidechainParams
+      lookups =
+        Constraints.unspentOutputs ownUtxos
+          <> Constraints.typedValidatorLookups validator
       datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
-      tx = Constraints.mustPayToTheScript datum val
+      tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
-  void $ submitTxConstraintsSpending @CommitteeCandidateRegistry validator ownUtxos tx
+  void $ submitTxConstraintsWith lookups tx
 
 deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
