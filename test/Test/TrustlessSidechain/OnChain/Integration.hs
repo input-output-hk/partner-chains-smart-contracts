@@ -3,11 +3,11 @@
 module Test.TrustlessSidechain.OnChain.Integration (test) where
 
 import Cardano.Crypto.Wallet qualified as Wallet
-import Control.Monad (void)
 import Data.ByteString qualified as ByteString
+import Ledger (getCardanoTxId)
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (waitNSlots)
+import Plutus.Contract (awaitTxConfirmed)
 import Test.Plutip.Contract (assertExecution, initAda, withContract)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldSucceed)
@@ -68,11 +68,17 @@ test =
                         serialiseBprm $
                           BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
                       sig = Crypto.sign' msg spoPrivKey
-                  CommitteeCandidateValidator.register
-                    (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
-                  void $ waitNSlots 1
-                  CommitteeCandidateValidator.deregister
-                    (DeregisterParams sidechainParams spoPubKey)
+                  regTx <-
+                    CommitteeCandidateValidator.register
+                      (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
+
+                  awaitTxConfirmed (getCardanoTxId regTx)
+
+                  deregTx <-
+                    CommitteeCandidateValidator.deregister
+                      (DeregisterParams sidechainParams spoPubKey)
+
+                  awaitTxConfirmed (getCardanoTxId deregTx)
               )
         )
         [shouldSucceed]

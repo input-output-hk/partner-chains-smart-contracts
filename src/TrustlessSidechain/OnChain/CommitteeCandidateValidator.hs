@@ -6,9 +6,11 @@
 module TrustlessSidechain.OnChain.CommitteeCandidateValidator where
 
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
+import Cardano.Crypto.Wallet qualified as Wallet
 import Codec.Serialise (serialise)
-import Control.Monad (void, when)
+import Control.Monad (when)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.Map qualified as Map
@@ -18,8 +20,9 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
+import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef (TxOutRef))
+import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef (TxOutRef))
 import Ledger.TxId (TxId (TxId))
 import Ledger.Typed.Scripts (
   TypedValidator,
@@ -134,6 +137,12 @@ data DeregisterParams = DeregisterParams
 $(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
 
+mockSpoPrivKey :: Wallet.XPrv
+mockSpoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
+
+mockSpoPubKey :: PubKey
+mockSpoPubKey = Crypto.toPublicKey mockSpoPrivKey
+
 getInputUtxo :: Contract () CommitteeCandidateRegistrySchema Text TxOutRef
 getInputUtxo = do
   ownPkh <- ownPaymentPubKeyHash
@@ -143,7 +152,17 @@ getInputUtxo = do
     (oref, _) : _ -> pure oref
     _ -> throwError "No UTxO found at the address"
 
-register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
+mkSignature :: RegisterParams -> RegisterParams
+mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} =
+  let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+      sig = Crypto.sign' msg mockSpoPrivKey
+   in params {signature = sig}
+
+registerWithMock :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
+registerWithMock =
+  register . mkSignature
+
+register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
 register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
@@ -157,9 +176,9 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature,
       datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
       tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
-  void $ submitTxConstraintsWith lookups tx
+  submitTxConstraintsWith lookups tx
 
-deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text ()
+deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = committeeCanditateValidator sidechainParams
@@ -184,13 +203,20 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
   when (Prelude.null ownEntries) $
     throwError "No candidate registration can be found with this staking public key."
 
-  void $ submitTxConstraintsWith @CommitteeCandidateRegistry lookups tx
+  submitTxConstraintsWith @CommitteeCandidateRegistry lookups tx
   where
     isOwnEntry :: ChainIndexTxOut -> Bool
     isOwnEntry PublicKeyChainIndexTxOut {} = False
     isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Left _} = False
     isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Right (Datum d)} =
-      case PlutusTx.fromBuiltinData d of
-        Nothing -> False
-        Just BlockProducerRegistration {bptSpoPubKey} ->
-          spoPubKey == bptSpoPubKey
+      maybe False isSignatureValid (PlutusTx.fromBuiltinData d)
+
+    isSignatureValid :: BlockProducerRegistration -> Bool
+    isSignatureValid datum =
+      let sidechainPubKey = bprSidechainPubKey datum
+          inputUtxo = bprInputUtxo datum
+          pubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
+          sig = getSignature $ bprSignature datum
+
+          msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+       in spoPubKey == bptSpoPubKey datum && verifySignature pubKey msg sig

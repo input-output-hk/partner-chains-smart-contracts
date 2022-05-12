@@ -25,7 +25,7 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   DeregisterParams,
   RegisterParams,
   deregister,
-  register,
+  registerWithMock,
  )
 import Prelude
 
@@ -38,7 +38,7 @@ instance HasDefinitions TrustlessSidechainContracts where
 
   getContract :: (TrustlessSidechainContracts -> SomeBuiltin)
   getContract = \case
-    RegisterCommitteeCandidate params -> SomeBuiltin $ register params
+    RegisterCommitteeCandidate params -> SomeBuiltin $ registerWithMock params
     DeregisterCommitteeCandidate params -> SomeBuiltin $ deregister params
 
 data TrustlessSidechainContracts
