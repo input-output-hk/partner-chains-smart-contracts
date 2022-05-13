@@ -17,10 +17,10 @@ extra-source-files: README.md
 
 source-repository head
   type:     git
-  location:
-    https://github.com/mlabs-haskell/trustless-sidechain
+  location: https://github.com/mlabs-haskell/trustless-sidechain
 
 -- Common sections
+
 
 common common-lang
   ghc-options:
@@ -73,74 +73,67 @@ common common-lang
 
 library
   import:          common-lang
-  exposed-modules:
-    TrustlessSidechain
+  exposed-modules: TrustlessSidechain.OnChain.CommitteeCandidateValidator
   build-depends:
-    , aeson               ^>=1.5.0.0
-    , bytestring          ^>=0.10.12.0
+    , aeson                      ^>=1.5.0.0
+    , bytestring                 ^>=0.10.12.0
+    , cardano-api
+    , cardano-crypto
     , cardano-prelude
     , containers
     , data-default-class
-    , freer-extras
-    , freer-simple
     , lens
     , playground-common
     , plutus-contract
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-ledger-constraints
     , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
-    , prettyprinter
     , row-types
     , serialise
-    , servant
-    , servant-server
-    , text                ^>=1.2.4.0
-    , vector              ^>=0.12.1.2
-    , wai
-    , warp
+    , text                       ^>=1.2.4.0
+
   hs-source-dirs:  src
+
+executable trustless-sidechain-pab
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , aeson                 ^>=1.5.0.0
+    , bot-plutus-interface
+    , bytestring
+    , cardano-api
+    , data-default
+    , playground-common
+    , plutus-ledger
+    , servant-client-core
+    , trustless-sidechain
+
+  hs-source-dirs: app
 
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
-  main-is:        Spec.hs
-  ghc-options:    -fplugin-opt PlutusTx.Plugin:defer-errors
+  main-is:        Main.hs
+  other-modules:  Test.TrustlessSidechain.OnChain.Integration
+  ghc-options:
+    -fplugin-opt PlutusTx.Plugin:defer-errors -Wall -threaded -rtsopts
+
   build-depends:
-    , aeson                        ^>=1.5.0.0
-    , base
-    , base-compat
-    , bytestring                   ^>=0.10.12.0
-    , cardano-prelude
-    , containers
-    , data-default-class
-    , either
-    , freer-extras
-    , freer-simple
-    , lens
-    , trustless-sidechain
-    , playground-common
+    , bytestring
+    , cardano-api
+    , cardano-crypto
+    , data-default
+    , plutip
     , plutus-contract
-    , plutus-core
     , plutus-ledger
-    , plutus-ledger-api
-    , plutus-pab
-    , plutus-tx
-    , plutus-tx-plugin
-    , prettyprinter
     , QuickCheck
     , quickcheck-instances
-    , row-types
-    , serialise
-    , servant
-    , servant-server
     , tasty
     , tasty-quickcheck
-    , text                         ^>=1.2.4.0
-    , vector                       ^>=0.12.1.2
-    , wai
-    , warp
+    , trustless-sidechain
 
   hs-source-dirs: test
