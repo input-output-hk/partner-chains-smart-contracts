@@ -8,10 +8,12 @@ import Data.Text (Text)
 
 import Ledger (
   MintingPolicy,
+  PaymentPubKeyHash (PaymentPubKeyHash),
+  PubKeyHash (PubKeyHash),
   Redeemer (Redeemer),
-  ScriptContext (..),
-  ScriptPurpose (..),
-  TxInfo (..),
+  ScriptContext (ScriptContext),
+  ScriptPurpose (Minting),
+  TxInfo (TxInfo),
  )
 import Ledger qualified
 import Ledger.Constraints qualified as Constraint
@@ -105,7 +107,7 @@ data MintParams = MintParams
   }
 
 mint :: MintParams -> Contract () FUELMintingPolicySchema Text ()
-mint MintParams {amount, sidechainParams, recipient = _} = do
+mint MintParams {amount, sidechainParams, recipient} = do
   let policy = fuelMintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData SideToMain
@@ -113,5 +115,7 @@ mint MintParams {amount, sidechainParams, recipient = _} = do
   tx <-
     Contract.submitTxConstraintsWith @FUELRedeemer
       (Constraint.mintingPolicy policy)
-      (Constraint.mustMintValueWithRedeemer redeemer value)
+      ( Constraint.mustMintValueWithRedeemer redeemer value
+          <> Constraint.mustPayToPubKey (PaymentPubKeyHash $ PubKeyHash recipient) value
+      )
   Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
