@@ -28,7 +28,7 @@ common common-lang
     -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
-    -fplugin-opt PlutusTx.Plugin:defer-errors 
+    -fplugin-opt PlutusTx.Plugin:defer-errors
 
   build-depends:
     , base                     ^>=4.14
@@ -120,9 +120,7 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:  Test.TrustlessSidechain.OnChain.Integration
-  ghc-options:
-    -Wall -threaded -rtsopts
-
+  ghc-options:    -Wall -threaded -rtsopts
   build-depends:
     , bytestring
     , cardano-api
