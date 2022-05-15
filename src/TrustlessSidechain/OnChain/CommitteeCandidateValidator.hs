@@ -5,7 +5,7 @@
 
 module TrustlessSidechain.OnChain.CommitteeCandidateValidator where
 
-import TrustlessSidechain.OffChain.Types (SidechainParams, RegisterParams (..))
+import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams)
 
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 import Cardano.Crypto.Wallet qualified as Wallet
@@ -16,8 +16,8 @@ import Data.ByteString.Short qualified as SBS
 import Ledger qualified
 import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Crypto qualified as Crypto
-import Ledger.Tx (TxOutRef (TxOutRef))
 import Ledger.Scripts qualified as Scripts
+import Ledger.Tx (TxOutRef (TxOutRef))
 import Ledger.TxId (TxId (TxId))
 import Ledger.Typed.Scripts (
   TypedValidator,
@@ -27,7 +27,6 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
@@ -95,10 +94,8 @@ mockSpoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 mockSpoPubKey :: PubKey
 mockSpoPubKey = Crypto.toPublicKey mockSpoPrivKey
 
-
 mkSignature :: RegisterParams -> RegisterParams
 mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} =
   let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
    in params {signature = sig}
-

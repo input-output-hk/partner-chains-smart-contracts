@@ -1,15 +1,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
+
 module TrustlessSidechain.OffChain.CommitteeCandidateValidator where
 
 import TrustlessSidechain.OffChain.Schema (CommitteeCandidateRegistrySchema)
-import TrustlessSidechain.OffChain.Types (RegisterParams (..), DeregisterParams (..), )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (CommitteeCandidateRegistry, BlockProducerRegistration (BlockProducerRegistration) )
+import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator (BlockProducerRegistration (BlockProducerRegistration), CommitteeCandidateRegistry)
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator ( 
-      BlockProducerRegistration(bprInputUtxo, bprSidechainPubKey, bptSpoPubKey, bprSignature ),
-      BlockProducerRegistrationMsg (BlockProducerRegistrationMsg)
-  )
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+  BlockProducerRegistration (bprInputUtxo, bprSidechainPubKey, bprSignature, bptSpoPubKey),
+  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
+ )
 
 import Control.Monad (when)
 import Data.Map qualified as Map

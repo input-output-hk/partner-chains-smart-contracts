@@ -1,8 +1,7 @@
 module TrustlessSidechain.OffChain.Schema where
 
-import TrustlessSidechain.OffChain.Types (RegisterParams, DeregisterParams)
 import Plutus.Contract (Endpoint, type (.\/))
+import TrustlessSidechain.OffChain.Types (DeregisterParams, RegisterParams)
 
 type CommitteeCandidateRegistrySchema =
   Endpoint "register" RegisterParams .\/ Endpoint "deregister" DeregisterParams
-

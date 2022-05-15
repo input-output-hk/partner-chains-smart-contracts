@@ -1,19 +1,20 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module TrustlessSidechain.OffChain.Types where
 
-import Ledger.Crypto (PubKey, Signature)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Ledger.Crypto (PubKey, Signature)
 import Schema (
   ToSchema,
  )
 
+import Ledger.Tx (TxOutRef)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import Ledger.Tx (TxOutRef)
 
-import Prelude qualified
 import GHC.Generics (Generic)
+import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
@@ -47,4 +48,3 @@ data DeregisterParams = DeregisterParams
 
 $(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
-
