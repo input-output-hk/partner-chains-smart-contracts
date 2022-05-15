@@ -8,8 +8,7 @@ import Data.Text (Text)
 
 import Ledger (
   MintingPolicy,
-  PaymentPubKeyHash (PaymentPubKeyHash),
-  PubKeyHash (PubKeyHash),
+  PaymentPubKeyHash,
   Redeemer (Redeemer),
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
@@ -100,7 +99,7 @@ data MintParams = MintParams
   { -- | Minted amount in FUEL (Positive)
     amount :: Integer
   , -- | MainChain address
-    recipient :: BuiltinByteString
+    recipient :: PaymentPubKeyHash
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
     -- , proof :: MerkleProof
@@ -116,6 +115,6 @@ mint MintParams {amount, sidechainParams, recipient} = do
     Contract.submitTxConstraintsWith @FUELRedeemer
       (Constraint.mintingPolicy policy)
       ( Constraint.mustMintValueWithRedeemer redeemer value
-          <> Constraint.mustPayToPubKey (PaymentPubKeyHash $ PubKeyHash recipient) value
+          <> Constraint.mustPayToPubKey recipient value
       )
   Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx

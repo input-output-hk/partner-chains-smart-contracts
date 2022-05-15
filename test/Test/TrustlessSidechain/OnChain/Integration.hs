@@ -7,7 +7,7 @@ import Data.ByteString qualified as ByteString
 import Ledger (getCardanoTxId)
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (awaitTxConfirmed)
+import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
 import Test.Plutip.Contract (assertExecution, initAda, withContract)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldSucceed)
@@ -90,14 +90,20 @@ test =
     , assertExecution
         "FUELMintingPolicy.burn"
         (initAda [2, 1])
-        ( do
-            _ <- withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams)
-            withContract $ const $ FUELMintingPolicy.burn (BurnParams (-1) "" sidechainParams)
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.mint"
         (initAda [2])
-        (withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams))
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+        )
         [shouldSucceed]
     ]
