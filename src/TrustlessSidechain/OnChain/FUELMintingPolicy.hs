@@ -48,20 +48,25 @@ instance Script.ValidatorTypes FUELRedeemer
 mkFUELMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
 mkFUELMintingPolicy
   _
-  (MainToSide _)
+  mode
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
-    case Value.flattenValue txInfoMint of
-      [(sym, name, amount)] ->
-        traceIfFalse "Can't burn a positive amount" (amount < 0)
-          && traceIfFalse "Token Symbol is incorrect" (sym == ownSymbol)
-          && traceIfFalse "Token Name is incorrect" (name == ownTokenName)
-      _ -> False
+    case mode of
+      MainToSide _ ->
+        verifyTokenAmount $ traceIfFalse "Can't burn a positive amount" . (< 0)
+      SideToMain ->
+        verifyTokenAmount $ traceIfFalse "Can't mint a negative amount" . (> 0)
     where
+      verifyTokenAmount verify =
+        case Value.flattenValue txInfoMint of
+          [(sym, name, amount)] ->
+            verify amount
+              && traceIfFalse "Token Symbol is incorrect" (sym == ownSymbol)
+              && traceIfFalse "Token Name is incorrect" (name == ownTokenName)
+          _ -> False
       ownTokenName = Value.TokenName "FUEL"
-mkFUELMintingPolicy _ SideToMain ScriptContext {scriptContextPurpose = Minting _} = True
 mkFUELMintingPolicy _ _ _ = False
 
 fuelMintingPolicy :: SidechainParams -> MintingPolicy
