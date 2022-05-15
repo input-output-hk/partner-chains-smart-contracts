@@ -123,7 +123,7 @@ test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:  Test.TrustlessSidechain.OnChain.Integration
+  other-modules:  Test.TrustlessSidechain.OffChain.Integration
   ghc-options:
     -fplugin-opt PlutusTx.Plugin:defer-errors -Wall -threaded -rtsopts
 
