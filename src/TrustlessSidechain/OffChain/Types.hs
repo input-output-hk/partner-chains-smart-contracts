@@ -14,8 +14,8 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 import GHC.Generics (Generic)
-import Prelude qualified
 import Ledger (PaymentPubKeyHash)
+import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
@@ -68,7 +68,7 @@ data MintParams = MintParams
   { -- | Minted amount in FUEL (Positive)
     amount :: Integer
   , -- | MainChain address
-    recipient :: PaymentPubKeyHash 
+    recipient :: PaymentPubKeyHash
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
     -- , proof :: MerkleProof
