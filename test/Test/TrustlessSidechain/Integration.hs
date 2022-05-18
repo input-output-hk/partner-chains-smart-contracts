@@ -94,7 +94,8 @@ test =
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
-              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldSucceed]
@@ -112,7 +113,7 @@ test =
         (initAda [1, 1, 1] <> initAda [1]) -- mint, fee, ??? <> collateral
         ( do
             void $
-              withContract $ \[pkh1] ->
+              withContract $ \[pkh1] -> do
                 FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
             withContractAs 1 $
               const $
@@ -124,7 +125,8 @@ test =
         (initAda [1, 1, 1] <> initAda [])
         ( withContract $ \[pkh1] ->
             do
-              FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+              t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+              awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldFail]
