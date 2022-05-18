@@ -90,7 +90,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.burn"
-        (initAda [2, 1])
+        (initAda [1, 1, 1]) -- mint, fee, collateral
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
@@ -100,7 +100,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.mint"
-        (initAda [2])
+        (initAda [1, 1]) -- mint, fee
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
@@ -109,11 +109,11 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.mint FUEL to other"
-        (initAda [2, 1] <> initAda [1])
+        (initAda [1, 1, 1] <> initAda [1]) -- mint, fee, ??? <> collateral
         ( do
             void $
               withContract $ \[pkh1] ->
-                FUELMintingPolicy.mint $ MintParams 2 pkh1 sidechainParams
+                FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
             withContractAs 1 $
               const $
                 FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
@@ -121,7 +121,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.burn unowned FUEL"
-        (initAda [2, 1] <> initAda [])
+        (initAda [1, 1, 1] <> initAda [])
         ( withContract $ \[pkh1] ->
             do
               FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
