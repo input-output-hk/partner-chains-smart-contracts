@@ -12,8 +12,12 @@ import Test.Plutip.Contract (assertExecution, initAda, withContract)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldSucceed)
 import Test.Tasty (TestTree)
+import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OffChain.Types (
+  BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
+  MintParams (MintParams),
   RegisterParams (RegisterParams),
   SidechainParams (..),
  )
@@ -21,9 +25,6 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   serialiseBprm,
  )
-
--- import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import Prelude
 
 sidechainParams :: SidechainParams
@@ -85,5 +86,18 @@ test =
                   awaitTxConfirmed (getCardanoTxId deregTx)
               )
         )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burn"
+        (initAda [2, 1])
+        ( do
+            _ <- withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams)
+            withContract $ const $ FUELMintingPolicy.burn (BurnParams (-1) "" sidechainParams)
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.mint"
+        (initAda [2])
+        (withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams))
         [shouldSucceed]
     ]

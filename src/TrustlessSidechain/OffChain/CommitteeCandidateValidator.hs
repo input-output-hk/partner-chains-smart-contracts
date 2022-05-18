@@ -2,16 +2,6 @@
 
 module TrustlessSidechain.OffChain.CommitteeCandidateValidator where
 
-import TrustlessSidechain.OffChain.Schema (CommitteeCandidateRegistrySchema)
-import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (BlockProducerRegistration (BlockProducerRegistration), CommitteeCandidateRegistry)
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  BlockProducerRegistration (bprInputUtxo, bprSidechainPubKey, bprSignature, bptSpoPubKey),
-  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
- )
-
 import Control.Monad (when)
 import Data.Map qualified as Map
 import Data.Text (Text)
@@ -30,10 +20,18 @@ import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
+import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSignature, bptSpoPubKey),
+  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
+  CommitteeCandidateRegistry,
+ )
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import Prelude (Semigroup ((<>)))
 import Prelude qualified
 
-getInputUtxo :: Contract () CommitteeCandidateRegistrySchema Text TxOutRef
+getInputUtxo :: Contract () TrustlessSidechainSchema Text TxOutRef
 getInputUtxo = do
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
@@ -42,7 +40,7 @@ getInputUtxo = do
     (oref, _) : _ -> pure oref
     _ -> throwError "No UTxO found at the address"
 
-register :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
+register :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
@@ -58,7 +56,7 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature,
 
   submitTxConstraintsWith lookups tx
 
-deregister :: DeregisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
+deregister :: DeregisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
@@ -101,6 +99,6 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
           msg = CommitteeCandidateValidator.serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
        in spoPubKey == bptSpoPubKey datum && verifySignature pubKey msg sig
 
-registerWithMock :: RegisterParams -> Contract () CommitteeCandidateRegistrySchema Text CardanoTx
+registerWithMock :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 registerWithMock =
   register . CommitteeCandidateValidator.mkSignature

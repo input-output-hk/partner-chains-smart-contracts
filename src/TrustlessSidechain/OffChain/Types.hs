@@ -38,6 +38,8 @@ data RegisterParams = RegisterParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
+$(deriveJSON defaultOptions ''RegisterParams)
+
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
   { sidechainParams :: !SidechainParams
@@ -46,5 +48,31 @@ data DeregisterParams = DeregisterParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
-$(deriveJSON defaultOptions ''RegisterParams)
 $(deriveJSON defaultOptions ''DeregisterParams)
+
+data BurnParams = BurnParams
+  { -- | Burnt amount in FUEL (Negative)
+    amount :: Integer
+  , -- | SideChain address
+    recipient :: BuiltinByteString
+  , -- | passed for parametrization
+    sidechainParams :: SidechainParams
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''BurnParams)
+
+data MintParams = MintParams
+  { -- | Minted amount in FUEL (Positive)
+    amount :: Integer
+  , -- | MainChain address
+    recipient :: BuiltinByteString
+  , -- | passed for parametrization
+    sidechainParams :: SidechainParams
+    -- , proof :: MerkleProof
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''MintParams)
