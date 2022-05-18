@@ -20,13 +20,11 @@ import Data.Maybe (fromMaybe)
 import Playground.Types (FunctionSchema)
 import Schema (FormSchema)
 import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  CommitteeCandidateRegistrySchema,
-  DeregisterParams,
-  RegisterParams,
-  deregister,
-  registerWithMock,
- )
+import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
+
+import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
+import TrustlessSidechain.OffChain.Types (DeregisterParams, RegisterParams)
+
 import Prelude
 
 instance HasDefinitions TrustlessSidechainContracts where
@@ -34,7 +32,7 @@ instance HasDefinitions TrustlessSidechainContracts where
   getDefinitions = []
 
   getSchema :: TrustlessSidechainContracts -> [FunctionSchema FormSchema]
-  getSchema _ = endpointsToSchemas @CommitteeCandidateRegistrySchema
+  getSchema _ = endpointsToSchemas @TrustlessSidechainSchema
 
   getContract :: (TrustlessSidechainContracts -> SomeBuiltin)
   getContract = \case

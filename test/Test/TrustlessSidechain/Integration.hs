@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.TrustlessSidechain.OnChain.Integration (test) where
+module Test.TrustlessSidechain.Integration (test) where
 
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
@@ -13,19 +13,19 @@ import Test.Plutip.Contract (assertExecution, initAda, withContract, withContrac
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
 import Test.Tasty (TestTree)
+import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OffChain.Types (
+  BurnParams (BurnParams),
+  DeregisterParams (DeregisterParams),
+  MintParams (MintParams),
+  RegisterParams (RegisterParams),
+  SidechainParams (..),
+ )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
-  DeregisterParams (DeregisterParams),
-  RegisterParams (RegisterParams),
-  SidechainParams (SidechainParams),
   serialiseBprm,
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.OnChain.FUELMintingPolicy (
-  BurnParams (BurnParams),
-  MintParams (MintParams),
- )
-import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import Prelude
 
 sidechainParams :: SidechainParams
