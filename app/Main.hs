@@ -20,10 +20,10 @@ import Data.Maybe (fromMaybe)
 import Playground.Types (FunctionSchema)
 import Schema (FormSchema)
 import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
-import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister,registerWithMock)
-
-import TrustlessSidechain.OffChain.Schema (CommitteeCandidateRegistrySchema)
-import TrustlessSidechain.OffChain.Types ( DeregisterParams, RegisterParams)
+import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
+import TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint)
+import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
+import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams)
 
 import Prelude
 
@@ -32,16 +32,20 @@ instance HasDefinitions TrustlessSidechainContracts where
   getDefinitions = []
 
   getSchema :: TrustlessSidechainContracts -> [FunctionSchema FormSchema]
-  getSchema _ = endpointsToSchemas @CommitteeCandidateRegistrySchema
+  getSchema _ = endpointsToSchemas @TrustlessSidechainSchema
 
   getContract :: (TrustlessSidechainContracts -> SomeBuiltin)
   getContract = \case
     RegisterCommitteeCandidate params -> SomeBuiltin $ registerWithMock params
     DeregisterCommitteeCandidate params -> SomeBuiltin $ deregister params
+    MintFUELToken params -> SomeBuiltin $ mint params
+    BurnFUELToken params -> SomeBuiltin $ burn params
 
 data TrustlessSidechainContracts
   = RegisterCommitteeCandidate RegisterParams
   | DeregisterCommitteeCandidate DeregisterParams
+  | MintFUELToken MintParams
+  | BurnFUELToken BurnParams
   deriving stock (Show)
 
 $(deriveJSON defaultOptions ''TrustlessSidechainContracts)
