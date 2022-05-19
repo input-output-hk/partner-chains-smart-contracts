@@ -30,7 +30,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
-    bptSpoPubKey :: !PubKey -- own cold verification key hash
+    bprSpoPubKey :: !PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
   , -- | Signature of the SPO
@@ -60,7 +60,7 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
   where
     sidechainPubKey = bprSidechainPubKey datum
     inputUtxo = bprInputUtxo datum
-    spoPubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
+    spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
     sig = getSignature $ bprSignature datum
 
     msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo

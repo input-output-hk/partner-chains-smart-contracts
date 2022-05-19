@@ -127,10 +127,10 @@ data FUELRedeemer
 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
-  { pubKey :: PubKey -- own public key
-  , inputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
-  , sidechainPubKey :: ByteString -- public key in the sidechain's desired format
-  , signature :: Signature
+  { bprSpoPubKey :: PubKey -- own public key
+  , bprInputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
+  , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
+  , bprSignature :: Signature
   }
 ```
 

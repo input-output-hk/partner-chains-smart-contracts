@@ -23,7 +23,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSignature, bptSpoPubKey),
+  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSignature, bprSpoPubKey),
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CommitteeCandidateRegistry,
  )
@@ -93,11 +93,11 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
     isSignatureValid datum =
       let sidechainPubKey = bprSidechainPubKey datum
           inputUtxo = bprInputUtxo datum
-          pubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
+          pubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
           sig = getSignature $ bprSignature datum
 
           msg = CommitteeCandidateValidator.serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
-       in spoPubKey == bptSpoPubKey datum && verifySignature pubKey msg sig
+       in spoPubKey == bprSpoPubKey datum && verifySignature pubKey msg sig
 
 registerWithMock :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 registerWithMock =
