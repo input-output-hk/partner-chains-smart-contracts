@@ -3,32 +3,18 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
-import Control.Monad (when)
-import Data.Text (Text)
-
 import Ledger (
   MintingPolicy,
-  Redeemer (Redeemer),
   ScriptContext (..),
   ScriptPurpose (..),
   TxInfo (..),
  )
 import Ledger qualified
-import Ledger.Constraints qualified as Constraint
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
-
-import Plutus.Contract (
-  Contract,
-  Endpoint,
-  type (.\/),
- )
-import Plutus.Contract qualified as Contract
-
-import PlutusTx
+import PlutusTx (applyCode, compile, liftCode, makeIsDataIndexed)
 import PlutusTx.Prelude
-
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (SidechainParams)
+import TrustlessSidechain.OffChain.Types (SidechainParams)
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
@@ -43,9 +29,9 @@ makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
 instance Script.ValidatorTypes FUELRedeemer
 
-{-# INLINEABLE mkFUELMintingPolicy #-}
-mkFUELMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
-mkFUELMintingPolicy
+{-# INLINEABLE mkMintingPolicy #-}
+mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
+mkMintingPolicy
   _
   (MainToSide _)
   ScriptContext
@@ -60,58 +46,12 @@ mkFUELMintingPolicy
       _ -> False
     where
       ownTokenName = Value.TokenName "FUEL"
-mkFUELMintingPolicy _ SideToMain ScriptContext {scriptContextPurpose = Minting _} = True
-mkFUELMintingPolicy _ _ _ = False
+mkMintingPolicy _ SideToMain ScriptContext {scriptContextPurpose = Minting _} = True
+mkMintingPolicy _ _ _ = False
 
-fuelMintingPolicy :: SidechainParams -> MintingPolicy
-fuelMintingPolicy param =
+mintingPolicy :: SidechainParams -> MintingPolicy
+mintingPolicy param =
   Ledger.mkMintingPolicyScript
-    ($$(compile [||wrap . mkFUELMintingPolicy||]) `applyCode` liftCode param)
+    ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
     wrap = Script.wrapMintingPolicy
-
-type FUELMintingPolicySchema =
-  Endpoint "burn" BurnParams .\/ Endpoint "mint" MintParams
-
-data BurnParams = BurnParams
-  { -- | Burnt amount in FUEL (Negative)
-    amount :: Integer
-  , -- | SideChain address
-    recipient :: BuiltinByteString
-  , -- | passed for parametrization
-    sidechainParams :: SidechainParams
-  }
-
-burn :: BurnParams -> Contract () FUELMintingPolicySchema Text ()
-burn BurnParams {amount, sidechainParams, recipient} = do
-  let policy = fuelMintingPolicy sidechainParams
-      value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-      redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
-  when (amount > 0) $ Contract.throwError "Can't burn a positive amount"
-  tx <-
-    Contract.submitTxConstraintsWith @FUELRedeemer
-      (Constraint.mintingPolicy policy)
-      (Constraint.mustMintValueWithRedeemer redeemer value)
-  Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
-
-data MintParams = MintParams
-  { -- | Minted amount in FUEL (Positive)
-    amount :: Integer
-  , -- | MainChain address
-    recipient :: BuiltinByteString
-  , -- | passed for parametrization
-    sidechainParams :: SidechainParams
-    -- , proof :: MerkleProof
-  }
-
-mint :: MintParams -> Contract () FUELMintingPolicySchema Text ()
-mint MintParams {amount, sidechainParams, recipient = _} = do
-  let policy = fuelMintingPolicy sidechainParams
-      value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-      redeemer = Redeemer $ toBuiltinData SideToMain
-  when (amount < 0) $ Contract.throwError "Can't mint a negative amount"
-  tx <-
-    Contract.submitTxConstraintsWith @FUELRedeemer
-      (Constraint.mintingPolicy policy)
-      (Constraint.mustMintValueWithRedeemer redeemer value)
-  Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx

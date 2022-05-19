@@ -75,6 +75,10 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
+    TrustlessSidechain.OffChain.CommitteeCandidateValidator
+    TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.Schema
+    TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
 
@@ -122,7 +126,7 @@ test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:  Test.TrustlessSidechain.OnChain.Integration
+  other-modules:  Test.TrustlessSidechain.Integration
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
     , bytestring
