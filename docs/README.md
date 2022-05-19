@@ -73,7 +73,7 @@ data SignedMerkleRoot = SignedMerkleRoot
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , signature :: ByteString
-  , committeePkhs :: [PubKeyHash] -- Public keys of all committee members
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 ```
 
@@ -165,9 +165,9 @@ data UpdateVKey = UpdateVKey
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { newCommitteeHash :: ByteString,
+  { newCommitteePubKeys :: [PubKey],
   , signature :: ByteString
-  , committeePkhs :: [PubKeyHash] -- Public keys of the current committee members
+  , committeePubKeys :: [PubKey] -- Public keys of the current committee members
   }
 ```
 
@@ -178,7 +178,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signature :: BuiltinByteString
-  , committeePkhs :: [PubKeyHash]
+  , committeePubKeys :: [PubKey]
   }
 ```
 
