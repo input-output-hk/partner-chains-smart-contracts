@@ -41,7 +41,7 @@ getInputUtxo = do
     _ -> throwError "No UTxO found at the address"
 
 register :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
+register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, sidechainSig, inputUtxo} = do
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
   ownUtxos <- utxosAt ownAddr
@@ -51,7 +51,7 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature,
       lookups =
         Constraints.unspentOutputs ownUtxos
           <> Constraints.typedValidatorLookups validator
-      datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
+      datum = BlockProducerRegistration spoPubKey sidechainPubKey spoSig sidechainSig inputUtxo
       tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
   submitTxConstraintsWith lookups tx
