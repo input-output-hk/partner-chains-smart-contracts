@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.OffChain.FUELMintingPolicy where
 
