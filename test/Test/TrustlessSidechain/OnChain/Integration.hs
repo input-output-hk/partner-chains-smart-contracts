@@ -20,6 +20,11 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   serialiseBprm,
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OnChain.FUELMintingPolicy (
+  BurnParams (BurnParams),
+  MintParams (MintParams),
+ )
+import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import Prelude
 
 sidechainParams :: SidechainParams
@@ -81,5 +86,18 @@ test =
                   awaitTxConfirmed (getCardanoTxId deregTx)
               )
         )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burn"
+        (initAda [2, 1])
+        ( do
+            _ <- withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams)
+            withContract $ const $ FUELMintingPolicy.burn (BurnParams (-1) "" sidechainParams)
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.mint"
+        (initAda [2])
+        (withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams))
         [shouldSucceed]
     ]
