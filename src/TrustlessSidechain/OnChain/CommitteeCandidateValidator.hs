@@ -34,7 +34,9 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
   , -- | Signature of the SPO
-    bprSignature :: !Signature
+    bprSpoSignature :: !Signature
+  , -- | Signature of the SPO
+    bprSidechainSignature :: !Signature
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: !TxOutRef
   }
@@ -61,7 +63,7 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
     sidechainPubKey = bprSidechainPubKey datum
     inputUtxo = bprInputUtxo datum
     spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
-    sig = getSignature $ bprSignature datum
+    sig = getSignature $ bprSpoSignature datum
 
     msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig

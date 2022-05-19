@@ -120,7 +120,7 @@ data FUELRedeemer
 
 **Workflow:**
 
-1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature
+1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature (where the signed message contains the sidechain parameters, sidechain public key and the input utxo in CBOR format)
 2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId, and the consumed inputUtxo
 
 **Datum:**
@@ -130,7 +130,8 @@ data BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey :: PubKey -- own public key
   , bprInputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
   , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
-  , bprSignature :: Signature
+  , bprSpoSignature :: Signature -- Signature of the SPO private key
+  , bprSidechainSignature :: Signature -- Signature of the sidechain private key
   }
 ```
 
