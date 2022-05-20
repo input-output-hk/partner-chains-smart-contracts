@@ -3,14 +3,15 @@
 module Test.TrustlessSidechain.Integration (test) where
 
 import Cardano.Crypto.Wallet qualified as Wallet
+import Control.Monad (void)
 import Data.ByteString qualified as ByteString
 import Ledger (getCardanoTxId)
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (awaitTxConfirmed)
-import Test.Plutip.Contract (assertExecution, initAda, withContract)
+import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
+import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)
-import Test.Plutip.Predicate (shouldSucceed)
+import Test.Plutip.Predicate (shouldFail, shouldSucceed)
 import Test.Tasty (TestTree)
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -89,15 +90,44 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.burn"
-        (initAda [2, 1])
-        ( do
-            _ <- withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams)
-            withContract $ const $ FUELMintingPolicy.burn (BurnParams (-1) "" sidechainParams)
+        (initAda [1, 1, 1]) -- mint, fee, collateral
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              awaitTxConfirmed $ getCardanoTxId t
+              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.mint"
-        (initAda [2])
-        (withContract $ const $ FUELMintingPolicy.mint (MintParams 1 "" sidechainParams))
+        (initAda [1, 1]) -- mint, fee
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+        )
         [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.mint FUEL to other"
+        (initAda [1, 1, 1] <> initAda [1]) -- mint, fee, ??? <> collateral
+        ( do
+            void $
+              withContract $ \[pkh1] -> do
+                FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+            withContractAs 1 $
+              const $
+                FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burn unowned FUEL"
+        (initAda [1, 1, 1] <> initAda [])
+        ( withContract $ \[pkh1] ->
+            do
+              t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+              awaitTxConfirmed $ getCardanoTxId t
+              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+        )
+        [shouldFail]
     ]

@@ -81,6 +81,7 @@ library
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
+    TrustlessSidechain.OnChain.Types
 
   build-depends:
     , aeson                      ^>=1.5.0.0
