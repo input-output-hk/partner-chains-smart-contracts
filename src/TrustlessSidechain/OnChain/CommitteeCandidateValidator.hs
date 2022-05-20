@@ -100,4 +100,4 @@ mkSignature :: RegisterParams -> RegisterParams
 mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} =
   let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
-   in params {signature = sig}
+   in params {spoSig = sig}

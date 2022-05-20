@@ -23,7 +23,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSpoSignature, bprSpoPubKey),
+  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSpoPubKey, bprSpoSignature),
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CommitteeCandidateRegistry,
  )
