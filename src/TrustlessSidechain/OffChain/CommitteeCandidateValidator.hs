@@ -23,7 +23,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSignature, bptSpoPubKey),
+  BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSpoPubKey, bprSpoSignature),
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CommitteeCandidateRegistry,
  )
@@ -41,7 +41,7 @@ getInputUtxo = do
     _ -> throwError "No UTxO found at the address"
 
 register :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature, inputUtxo} = do
+register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, sidechainSig, inputUtxo} = do
   ownPkh <- ownPaymentPubKeyHash
   let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
   ownUtxos <- utxosAt ownAddr
@@ -51,7 +51,7 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, signature,
       lookups =
         Constraints.unspentOutputs ownUtxos
           <> Constraints.typedValidatorLookups validator
-      datum = BlockProducerRegistration spoPubKey sidechainPubKey signature inputUtxo
+      datum = BlockProducerRegistration spoPubKey sidechainPubKey spoSig sidechainSig inputUtxo
       tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
   submitTxConstraintsWith lookups tx
@@ -93,11 +93,11 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
     isSignatureValid datum =
       let sidechainPubKey = bprSidechainPubKey datum
           inputUtxo = bprInputUtxo datum
-          pubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
-          sig = getSignature $ bprSignature datum
+          pubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
+          sig = getSignature $ bprSpoSignature datum
 
           msg = CommitteeCandidateValidator.serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
-       in spoPubKey == bptSpoPubKey datum && verifySignature pubKey msg sig
+       in spoPubKey == bprSpoPubKey datum && verifySignature pubKey msg sig
 
 registerWithMock :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 registerWithMock =

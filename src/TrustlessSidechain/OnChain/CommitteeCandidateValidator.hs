@@ -30,11 +30,13 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
-    bptSpoPubKey :: !PubKey -- own cold verification key hash
+    bprSpoPubKey :: !PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
     bprSidechainPubKey :: !BuiltinByteString
   , -- | Signature of the SPO
-    bprSignature :: !Signature
+    bprSpoSignature :: !Signature
+  , -- | Signature of the SPO
+    bprSidechainSignature :: !Signature
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: !TxOutRef
   }
@@ -60,8 +62,8 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
   where
     sidechainPubKey = bprSidechainPubKey datum
     inputUtxo = bprInputUtxo datum
-    spoPubKey = getLedgerBytes $ getPubKey $ bptSpoPubKey datum
-    sig = getSignature $ bprSignature datum
+    spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
+    sig = getSignature $ bprSpoSignature datum
 
     msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig
@@ -98,4 +100,4 @@ mkSignature :: RegisterParams -> RegisterParams
 mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} =
   let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
-   in params {signature = sig}
+   in params {spoSig = sig}

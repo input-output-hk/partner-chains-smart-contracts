@@ -38,6 +38,9 @@ sidechainParams =
 spoPrivKey :: Wallet.XPrv
 spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 
+sidechainPrivKey :: Wallet.XPrv
+sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
+
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
 
@@ -56,9 +59,10 @@ test =
                       msg =
                         serialiseBprm $
                           BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
-                      sig = Crypto.sign' msg spoPrivKey
+                      spoSig = Crypto.sign' msg spoPrivKey
+                      sidechainSig = Crypto.sign' msg sidechainPrivKey
                   CommitteeCandidateValidator.register
-                    (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
+                    (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
               )
         )
         [shouldSucceed]
@@ -73,10 +77,11 @@ test =
                       msg =
                         serialiseBprm $
                           BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
-                      sig = Crypto.sign' msg spoPrivKey
+                      spoSig = Crypto.sign' msg spoPrivKey
+                      sidechainSig = Crypto.sign' msg sidechainPrivKey
                   regTx <-
                     CommitteeCandidateValidator.register
-                      (RegisterParams sidechainParams spoPubKey sidechainPubKey sig oref)
+                      (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
 
                   awaitTxConfirmed (getCardanoTxId regTx)
 

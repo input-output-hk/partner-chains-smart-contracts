@@ -33,7 +33,8 @@ data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams
   , spoPubKey :: !PubKey
   , sidechainPubKey :: !BuiltinByteString
-  , signature :: !Signature
+  , spoSig :: !Signature
+  , sidechainSig :: !Signature
   , inputUtxo :: !TxOutRef
   }
   deriving stock (Generic, Prelude.Show)

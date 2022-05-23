@@ -73,7 +73,7 @@ data SignedMerkleRoot = SignedMerkleRoot
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , signature :: ByteString
-  , committeePkhs :: [PubKeyHash] -- Public keys of all committee members
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 ```
 
@@ -120,17 +120,18 @@ data FUELRedeemer
 
 **Workflow:**
 
-1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature
+1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature (where the signed message contains the sidechain parameters, sidechain public key and the input utxo in CBOR format)
 2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId, and the consumed inputUtxo
 
 **Datum:**
 
 ```haskell
 data BlockProducerRegistration = BlockProducerRegistration
-  { pubKey :: PubKey -- own public key
-  , inputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
-  , sidechainPubKey :: ByteString -- public key in the sidechain's desired format
-  , signature :: Signature
+  { bprSpoPubKey :: PubKey -- own public key
+  , bprInputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
+  , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
+  , bprSpoSignature :: Signature -- Signature of the SPO private key
+  , bprSidechainSignature :: Signature -- Signature of the sidechain private key
   }
 ```
 
@@ -165,9 +166,9 @@ data UpdateVKey = UpdateVKey
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { newCommitteeHash :: ByteString,
+  { newCommitteePubKeys :: [PubKey],
   , signature :: ByteString
-  , committeePkhs :: [PubKeyHash] -- Public keys of the current committee members
+  , committeePubKeys :: [PubKey] -- Public keys of the current committee members
   }
 ```
 
@@ -178,7 +179,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signature :: BuiltinByteString
-  , committeePkhs :: [PubKeyHash]
+  , committeePubKeys :: [PubKey]
   }
 ```
 
