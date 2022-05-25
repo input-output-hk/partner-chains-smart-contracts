@@ -2,16 +2,17 @@
 
 This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, but this might not be available in time for Cardano, so we decided to implement the contract in two phases:
 
-- phase 1: using append only signature scheme
-- phase 2: using ATMS signature scheme
+- [phase 1](https://github.com/mlabs-haskell/trustless-sidechain/milestone/1): MVP using append only signature scheme
+- [phase 1.5](https://github.com/mlabs-haskell/trustless-sidechain/milestone/3): script optimisations and security improvements
+- [phase 2](https://github.com/mlabs-haskell/trustless-sidechain/milestone/2): using ATMS signature scheme
 
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
-- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain
-- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots
-- `CommitteeCandidateValidator`: script address for committee candidates
-- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s
-- `CommitteeHashValidator`: script address for the committee members' hash
+- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2.-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#3.2.-individual-claiming))
+- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#3.1.-merkle-root-insertion))
+- `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4.-register-committee-candidate), [5.](#5.-deregister-committee-member%2Fcandidate))
+- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#3.1.-merkle-root-insertion))
+- `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1.-initialise-contract), [6.](#6.-update-committee-hash))
 <!-- - `ATMSVerificationKeyValidator`: script address for the ATMS verification key -->
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
@@ -23,11 +24,11 @@ data SidechainParams = SidechainParams
   }
 ```
 
-### Initialise contract
+### 1. Initialise contract
 
-For initialisation, we need to set the first <!-- ATMS verification key --> committee hash on chain with a NFT (consuming some arbitrary utxo).
+For initialisation, we need to set the first <!-- ATMS verification key --> committee hash on chain using a NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated each when the committee changes, see [6.](#6.-update-committee-hash) for more details.
 
-### Transfer FUEL tokens from mainchain to sidechain
+### 2. Transfer FUEL tokens from mainchain to sidechain
 
 **Workflow:**
 
@@ -46,7 +47,7 @@ data BurnParams = BurnParams
 
 ![MC to SC](MC-SC.svg)
 
-### Transfer FUEL tokens from sidechain to mainchain
+### 3. Transfer FUEL tokens from sidechain to mainchain
 
 **Workflow:**
 
@@ -54,6 +55,8 @@ data BurnParams = BurnParams
 2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed <!--with ATMS multisig--> by the committee members with an appended signature
 3. Bridge broadcasts Merkle root to chain
 4. Txs can be claimed individually
+
+#### 3.1. Merkle root insertion
 
 **Endpoint params for merkle root insertion:**
 
@@ -87,6 +90,8 @@ Validator script verifies the following:
 
 ![MPTRootToken minting](MPTRoot.svg)
 
+#### 3.2. Individual claiming
+
 **Endpoint params for claiming:**
 
 ```haskell
@@ -116,7 +121,7 @@ data FUELRedeemer
   | SideToMain MerkleProof
 ```
 
-### Register committee candidate
+### 4. Register committee candidate
 
 **Workflow:**
 
@@ -135,16 +140,14 @@ data BlockProducerRegistration = BlockProducerRegistration
   }
 ```
 
-### Deregister committee member/candidate
+### 5. Deregister committee member/candidate
 
 **Workflow:**
 
 1. The UTxO with the registration information can be redeemed by the original sender (doesn't have to check the inputUtxo)
 2. The Bridge monitoring the committee candidate script address interprets this as a deregister action
 
-### Update <!--ATMS verification key--> committee hash
-
-For phase 1, we use this committee hash to verify signatures for sidechain to mainchain transfers.This is a hash of concatenated public key hashes of the committee members.
+### 6. Update <!--ATMS verification key--> committee hash
 
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
