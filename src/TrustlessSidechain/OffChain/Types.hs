@@ -78,3 +78,15 @@ data MintParams = MintParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''MintParams)
+
+-- | Endpoint parameters for committee candidate hash updating
+data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { newCommitteePubKeys :: [PubKey]
+  , signature :: !BuiltinByteString
+  , -- | Public keys of the current committee members.
+    committeePubKeys :: [PubKey]
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
