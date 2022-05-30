@@ -79,7 +79,7 @@ data MintParams = MintParams
 
 $(deriveJSON defaultOptions ''MintParams)
 
-data RootParams = RootParams
+data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
   , signature :: BuiltinByteString
@@ -88,5 +88,4 @@ data RootParams = RootParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
-$(deriveJSON defaultOptions ''RootParams)
-
+$(deriveJSON defaultOptions ''SaveRootParams)

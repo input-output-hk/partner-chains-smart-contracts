@@ -2,10 +2,10 @@
 
 module TrustlessSidechain.OnChain.Types where
 
+import Ledger (PubKey)
 import Ledger.Typed.Scripts qualified as Script
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Prelude (BuiltinByteString)
-import Ledger (PubKey)
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
@@ -20,7 +20,6 @@ makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
 instance Script.ValidatorTypes FUELRedeemer
 
-
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
   , signature :: BuiltinByteString
@@ -30,4 +29,3 @@ data SignedMerkleRoot = SignedMerkleRoot
 makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
 instance Script.ValidatorTypes SignedMerkleRoot
-

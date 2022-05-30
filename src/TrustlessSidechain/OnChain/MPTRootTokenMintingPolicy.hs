@@ -12,11 +12,11 @@ import Ledger (
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Bytes (getLedgerBytes)
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-import TrustlessSidechain.OnChain.Types (SignedMerkleRoot(..))
-import Plutus.V1.Ledger.Bytes (getLedgerBytes)
+import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
 
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
@@ -34,8 +34,9 @@ mkMintingPolicy
     and
       [ verifyTokenAmount $ traceIfFalse "Amount must be 1" . (== 1)
       , any
-          (\pubKey ->
-              verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature)
+          ( \pubKey ->
+              verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
+          )
           committeePubKeys
       ]
     where
