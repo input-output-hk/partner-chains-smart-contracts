@@ -2,7 +2,7 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip?rev=2bc02503312be2ba40b58b91aff1ccf9746abe80";
+    plutip.url = "github:mlabs-haskell/plutip?rev=2d6a065e1ce6f7036deb52087af221ee922e5159";
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";

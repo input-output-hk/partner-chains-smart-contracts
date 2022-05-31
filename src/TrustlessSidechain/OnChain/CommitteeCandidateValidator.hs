@@ -23,9 +23,10 @@ import Ledger.Typed.Scripts (
   TypedValidator,
   ValidatorTypes,
  )
-import Ledger.Typed.Scripts qualified as Scripts
+import Ledger.Typed.Scripts qualified as TypedScripts
 import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 data BlockProducerRegistration = BlockProducerRegistration
@@ -65,24 +66,24 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
     spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
     sig = getSignature $ bprSpoSignature datum
 
-    msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+    msg = Builtins.serialiseData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
 committeeCanditateValidator sidechainParams =
-  Scripts.mkTypedValidator @CommitteeCandidateRegistry
+  TypedScripts.mkTypedValidator @CommitteeCandidateRegistry
     ($$(PlutusTx.compile [||mkCommitteeCanditateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
     $$(PlutusTx.compile [||wrap||])
   where
-    wrap = Scripts.wrapValidator @BlockProducerRegistration @()
+    wrap = TypedScripts.mkUntypedValidator @BlockProducerRegistration @()
 
 data CommitteeCandidateRegistry
 instance ValidatorTypes CommitteeCandidateRegistry where
   type RedeemerType CommitteeCandidateRegistry = ()
   type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
-script :: SidechainParams -> Ledger.Script
-script = Scripts.unValidatorScript . Scripts.validatorScript . committeeCanditateValidator
+script :: SidechainParams -> Scripts.Script
+script = Scripts.unValidatorScript . TypedScripts.validatorScript . committeeCanditateValidator
 
 scriptSBS :: SidechainParams -> SBS.ShortByteString
 scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams

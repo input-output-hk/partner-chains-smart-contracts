@@ -4,13 +4,14 @@
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
 import Ledger (
-  MintingPolicy,
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
   TxInfo (TxInfo),
  )
 import Ledger qualified
-import Ledger.Typed.Scripts qualified as Script
+import Ledger.Scripts qualified as Scripts
+import Ledger.Typed.Scripts (MintingPolicy)
+import Ledger.Typed.Scripts qualified as TypedScripts
 import Ledger.Value qualified as Value
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
@@ -44,7 +45,7 @@ mkMintingPolicy _ _ _ = False
 
 mintingPolicy :: SidechainParams -> MintingPolicy
 mintingPolicy param =
-  Ledger.mkMintingPolicyScript
+  Scripts.mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = Script.wrapMintingPolicy
+    wrap = TypedScripts.mkUntypedMintingPolicy
