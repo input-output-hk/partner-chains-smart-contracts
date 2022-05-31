@@ -14,8 +14,8 @@ import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  BurnParams (BurnParams, amount, recipient, sidechainParams),
-  MintParams (MintParams, amount, recipient, sidechainParams),
+  BurnParams (..),
+  MintParams (..),
  )
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))

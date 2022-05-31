@@ -57,6 +57,7 @@ data BurnParams = BurnParams
     amount :: Integer
   , -- | SideChain address
     recipient :: BuiltinByteString
+  , sidechainSig :: BuiltinByteString
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
   }
