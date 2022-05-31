@@ -28,6 +28,8 @@ data SidechainParams = SidechainParams
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 
+PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
+
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams

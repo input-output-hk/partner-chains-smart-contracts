@@ -16,9 +16,10 @@ import Ledger.Typed.Scripts (
  )
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt)
-import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
+import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
 import Plutus.V1.Ledger.Scripts (Datum (Datum))
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
@@ -96,7 +97,7 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
           pubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
           sig = getSignature $ bprSpoSignature datum
 
-          msg = CommitteeCandidateValidator.serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+          msg = Builtins.serialiseData $ toBuiltinData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
        in spoPubKey == bprSpoPubKey datum && verifySignature pubKey msg sig
 
 registerWithMock :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx

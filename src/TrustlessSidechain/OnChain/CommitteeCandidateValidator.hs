@@ -17,14 +17,14 @@ import Ledger qualified
 import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (TxOutRef (TxOutRef))
-import Ledger.TxId (TxId (TxId))
+import Ledger.Tx (TxOutRef)
 import Ledger.Typed.Scripts (
   TypedValidator,
   ValidatorTypes,
  )
 import Ledger.Typed.Scripts qualified as TypedScripts
-import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
+import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
+import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
@@ -42,6 +42,8 @@ data BlockProducerRegistration = BlockProducerRegistration
     bprInputUtxo :: !TxOutRef
   }
 
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
+
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: !SidechainParams
   , bprmSidechainPubKey :: !BuiltinByteString
@@ -49,12 +51,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
     bprmInputUtxo :: !TxOutRef
   }
 
-{-# INLINEABLE serialiseBprm #-}
-serialiseBprm :: BlockProducerRegistrationMsg -> BuiltinByteString
-serialiseBprm (BlockProducerRegistrationMsg _ _ (TxOutRef (TxId txId) _)) =
-  txId -- TODO: This method runs into budgeting issues, so I had to mock it, let's change this to serialiseData
-
-PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
@@ -66,7 +63,7 @@ mkCommitteeCanditateValidator sidechainParams datum _ _ =
     spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
     sig = getSignature $ bprSpoSignature datum
 
-    msg = Builtins.serialiseData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+    msg = Builtins.serialiseData $ toBuiltinData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
@@ -99,6 +96,6 @@ mockSpoPubKey = Crypto.toPublicKey mockSpoPrivKey
 
 mkSignature :: RegisterParams -> RegisterParams
 mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} =
-  let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
+  let msg = Builtins.serialiseData $ toBuiltinData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
    in params {spoSig = sig}

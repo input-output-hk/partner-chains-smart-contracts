@@ -138,6 +138,8 @@ test-suite trustless-sidechain-test
     , plutip
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
     , QuickCheck
     , quickcheck-instances
     , tasty

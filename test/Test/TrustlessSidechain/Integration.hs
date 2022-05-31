@@ -9,6 +9,8 @@ import Ledger (getCardanoTxId)
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
+import Plutus.V1.Ledger.Api (toBuiltinData)
+import PlutusTx.Builtins qualified as Builtins
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
@@ -24,7 +26,6 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
-  serialiseBprm,
  )
 import Prelude
 
@@ -57,8 +58,9 @@ test =
                   oref <- CommitteeCandidateValidator.getInputUtxo
                   let sidechainPubKey = ""
                       msg =
-                        serialiseBprm $
-                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                        Builtins.serialiseData $
+                          toBuiltinData $
+                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
                       sidechainSig = Crypto.sign' msg sidechainPrivKey
                   CommitteeCandidateValidator.register
@@ -75,8 +77,9 @@ test =
                   oref <- CommitteeCandidateValidator.getInputUtxo
                   let sidechainPubKey = ""
                       msg =
-                        serialiseBprm $
-                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                        Builtins.serialiseData $
+                          toBuiltinData $
+                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
                       sidechainSig = Crypto.sign' msg sidechainPrivKey
                   regTx <-
