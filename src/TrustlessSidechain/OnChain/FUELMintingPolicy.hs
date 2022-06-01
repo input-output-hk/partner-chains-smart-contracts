@@ -3,6 +3,10 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
+import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
+import Codec.Serialise (serialise)
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Ledger (
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
@@ -49,3 +53,12 @@ mintingPolicy param =
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
     wrap = TypedScripts.mkUntypedMintingPolicy
+
+script :: SidechainParams -> Scripts.Script
+script = Scripts.unMintingPolicyScript . mintingPolicy
+
+scriptSBS :: SidechainParams -> SBS.ShortByteString
+scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams
+
+policyScript :: SidechainParams -> PlutusScript PlutusScriptV2
+policyScript = PlutusScriptSerialised . scriptSBS

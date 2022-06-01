@@ -16,8 +16,7 @@ import Ledger.Typed.Scripts (
  )
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt)
-import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
-import Plutus.V1.Ledger.Scripts (Datum (Datum))
+import Plutus.V2.Ledger.Api (Datum (Datum), LedgerBytes (getLedgerBytes), toBuiltinData)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))

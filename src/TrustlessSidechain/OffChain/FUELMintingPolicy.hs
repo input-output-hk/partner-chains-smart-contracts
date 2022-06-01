@@ -9,8 +9,8 @@ import Ledger.Constraints qualified as Constraint
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
-import Plutus.Script.Utils.V1.Scripts qualified as ScriptUtils
-import Plutus.V1.Ledger.Api (Redeemer (Redeemer))
+import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.V2.Ledger.Api (Redeemer (Redeemer))
 import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)

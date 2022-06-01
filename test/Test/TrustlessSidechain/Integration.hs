@@ -9,7 +9,7 @@ import Ledger (getCardanoTxId)
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
-import Plutus.V1.Ledger.Api (toBuiltinData)
+import Plutus.V2.Ledger.Api (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)

@@ -122,7 +122,22 @@ executable trustless-sidechain-pab
     , servant-client-core
     , trustless-sidechain
 
-  hs-source-dirs: app
+  hs-source-dirs: app/bpi
+
+executable trustless-sidechain-export
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , servant-client-core
+    , trustless-sidechain
+
+  hs-source-dirs: app/export-scripts
 
 test-suite trustless-sidechain-test
   import:         common-lang

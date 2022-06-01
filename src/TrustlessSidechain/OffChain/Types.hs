@@ -19,8 +19,8 @@ import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: !BuiltinByteString
-  , genesisHash :: !BuiltinByteString
+  { chainId :: BuiltinByteString
+  , genesisHash :: BuiltinByteString
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)

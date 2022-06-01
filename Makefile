@@ -41,11 +41,11 @@ FOURMOLU_EXTENSIONS := -o -XTypeApplications -o -XTemplateHaskell -o -XImportQua
 # Add folder locations to the list to be reformatted.
 format:
 	@ echo "> Formatting all .hs files"
-	fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs")
+	fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs") $$(find app/ -iregex ".*.hs")
 
 format_check:
 	@ echo "> Checking format of all .hs files"
-	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs")
+	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs") $$(find app/ -iregex ".*.hs")
 
 NIX_SOURCES := $(shell fd -enix)
 

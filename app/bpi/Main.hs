@@ -23,7 +23,12 @@ import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
 import TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint)
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
-import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams)
+import TrustlessSidechain.OffChain.Types (
+  BurnParams,
+  DeregisterParams,
+  MintParams,
+  RegisterParams,
+ )
 
 import Prelude
 
