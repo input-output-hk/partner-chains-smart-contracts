@@ -118,7 +118,8 @@ Minting policy verifies the following:
 
 ```haskell
 data FUELRedeemer
-  = MainToSide ByteString -- Recipient address on the sidechain
+  = MainToSide ByteString ByteString
+  -- ^ Recipient address on the sidechain and the signature of its owner (see 2.)
   | SideToMain MerkleProof
 ```
 
