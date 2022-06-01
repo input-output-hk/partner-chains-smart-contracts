@@ -24,7 +24,10 @@ instance Script.ValidatorTypes FUELRedeemer
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee
 -}
-data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
+data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { signature :: !BuiltinByteString
   , committeePubKeys :: [PubKey]
+  , newCommitteeHash :: !BuiltinByteString
   }
+
+makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]

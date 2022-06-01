@@ -81,8 +81,10 @@ $(deriveJSON defaultOptions ''MintParams)
 
 -- | Endpoint parameters for committee candidate hash updating
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { newCommitteePubKeys :: [PubKey]
-  , signature :: !BuiltinByteString
+  { -- | The public keys of the new committee.
+    newCommitteePubKeys :: [PubKey]
+  , -- | The signature for the new committee hash.
+    signature :: !BuiltinByteString
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
   }

@@ -1,0 +1,1 @@
+module TrustlessSidechain.OffChain.UpdateCommitteeHash where

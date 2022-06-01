@@ -8,4 +8,4 @@ type TrustlessSidechainSchema =
     .\/ Endpoint "deregister" DeregisterParams
     .\/ Endpoint "burn" BurnParams
     .\/ Endpoint "mint" MintParams
-    .\/ Endpoint "update committee hash" UpdateCommitteeHashParams
+    .\/ Endpoint "update committee" UpdateCommitteeHashParams
