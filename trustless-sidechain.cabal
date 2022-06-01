@@ -76,10 +76,10 @@ library
   import:          common-lang
   exposed-modules:
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
-    TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
+    TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.Types
