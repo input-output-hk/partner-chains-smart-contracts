@@ -184,6 +184,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signature :: BuiltinByteString
   , committeePubKeys :: [PubKey]
+  , newCommitteeHash :: BuiltinByteString
   }
 ```
 
