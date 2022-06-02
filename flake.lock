@@ -376,17 +376,17 @@
         "typed-protocols": "typed-protocols"
       },
       "locked": {
-        "lastModified": 1654018775,
-        "narHash": "sha256-unLDveovnfIExwD4feGrwSnZ8nR0OkNpfvhpr2thMVE=",
+        "lastModified": 1654174929,
+        "narHash": "sha256-olQTROeb+ldjE5rixo9RyKza5IHEPuqZy+79JpOLl1g=",
         "owner": "mlabs-haskell",
         "repo": "bot-plutus-interface",
-        "rev": "d5fbc717de501e31261bbc4d8095a3475468b3a0",
+        "rev": "643f1bb85c6df2658fb89a9b07c6d9965c905c22",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "bot-plutus-interface",
-        "rev": "d5fbc717de501e31261bbc4d8095a3475468b3a0",
+        "rev": "643f1bb85c6df2658fb89a9b07c6d9965c905c22",
         "type": "github"
       }
     },
@@ -8753,17 +8753,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1654021572,
-        "narHash": "sha256-VTanp0HNSsH9j2p9EKFOA6bTZyyBGNtyq7PKrI4mqi8=",
+        "lastModified": 1654174993,
+        "narHash": "sha256-uUkSk1KwtmFKOHj1f6zLs52ldbASRt3lk1BtjMu6lcI=",
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "ba788986315661c4a9506d161138a71cebb95220",
+        "rev": "46f34d1b930b16aa75624f533eefcfd76d5db6aa",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "ba788986315661c4a9506d161138a71cebb95220",
+        "rev": "46f34d1b930b16aa75624f533eefcfd76d5db6aa",
         "type": "github"
       }
     },
@@ -8851,17 +8851,17 @@
     "plutus-apps_5": {
       "flake": false,
       "locked": {
-        "lastModified": 1654014204,
-        "narHash": "sha256-PjwEmvlo9JuIQ40ylBH9UJvVBbbb6YmXy3DMLaqs578=",
-        "owner": "gege251",
+        "lastModified": 1654169877,
+        "narHash": "sha256-rkOmV6O0n/7vbyDT0nSiou3yHjjrI+hvprXp4KBvE9A=",
+        "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "d40efd6707aa30525b3ebc695e4ba890d944cde3",
+        "rev": "5fb99da7bb5a3e5d6ca02527802856c51835f6e0",
         "type": "github"
       },
       "original": {
-        "owner": "gege251",
+        "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "d40efd6707aa30525b3ebc695e4ba890d944cde3",
+        "rev": "5fb99da7bb5a3e5d6ca02527802856c51835f6e0",
         "type": "github"
       }
     },
