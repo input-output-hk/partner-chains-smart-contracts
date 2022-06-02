@@ -41,6 +41,7 @@ writeScripts scParams = do
           , bprmInputUtxo = TxOutRef (TxId "00112233445566778899") 0
           }
 
+  putStrLn $ "Data block producer registration msg: " ++ show (toBuiltinData msg)
   putStrLn $ "Serialised block producer registration msg: " ++ serialise msg
   results <-
     sequence

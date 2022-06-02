@@ -55,16 +55,19 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegist
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
-mkCommitteeCanditateValidator _ datum _ _ =
+mkCommitteeCanditateValidator scParams datum _ _ =
   traceIfFalse "Signature must be valid" isSignatureValid
   where
-    -- sidechainPubKey = bprSidechainPubKey datum
-    -- inputUtxo = bprInputUtxo datum
+    sidechainPubKey = bprSidechainPubKey datum
+    inputUtxo = bprInputUtxo datum
     spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
     sig = getSignature $ bprSpoSignature datum
 
-    -- msg = Builtins.serialiseData $ toBuiltinData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
-    isSignatureValid = verifySignature spoPubKey "" sig
+    msg =
+      Builtins.serialiseData $
+        toBuiltinData $
+          BlockProducerRegistrationMsg scParams sidechainPubKey inputUtxo
+    isSignatureValid = verifySignature spoPubKey msg sig
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
 committeeCanditateValidator sidechainParams =
