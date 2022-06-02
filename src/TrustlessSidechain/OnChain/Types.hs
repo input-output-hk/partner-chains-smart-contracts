@@ -8,7 +8,9 @@ import PlutusTx.Prelude (BuiltinByteString)
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
-  = MainToSide !BuiltinByteString -- Recipient address
+  = MainToSide
+      !BuiltinByteString -- Recipient address
+      !BuiltinByteString -- Sidechain signature
   | SideToMain -- !MerkleProof
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
