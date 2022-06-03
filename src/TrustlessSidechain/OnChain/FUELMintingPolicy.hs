@@ -7,16 +7,15 @@ import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Ledger (
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
-  TxInfo (TxInfo),
- )
-import Ledger qualified
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts (MintingPolicy)
-import Ledger.Typed.Scripts qualified as TypedScripts
 import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy)
+import Plutus.V2.Ledger.Contexts (
+  ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
+  ScriptPurpose (Minting),
+  TxInfo (TxInfo, txInfoMint),
+ )
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
@@ -52,7 +51,7 @@ mintingPolicy param =
   Scripts.mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = TypedScripts.mkUntypedMintingPolicy
+    wrap = mkUntypedMintingPolicy
 
 script :: SidechainParams -> Scripts.Script
 script = Scripts.unMintingPolicyScript . mintingPolicy

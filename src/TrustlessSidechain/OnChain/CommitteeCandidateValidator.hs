@@ -5,29 +5,29 @@
 
 module TrustlessSidechain.OnChain.CommitteeCandidateValidator where
 
-import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams)
-
 import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
 import Cardano.Crypto.Wallet qualified as Wallet
 import Codec.Serialise (serialise)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Ledger qualified
 import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (TxOutRef)
 import Ledger.Typed.Scripts (
-  TypedValidator,
   ValidatorTypes,
  )
 import Ledger.Typed.Scripts qualified as TypedScripts
-import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
+import Plutus.Script.Utils.V2.Scripts.Validators (mkUntypedValidator)
+import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), mkValidatorScript, toBuiltinData)
+import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams)
+import Prelude qualified
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
@@ -41,6 +41,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: TxOutRef
   }
+  deriving stock (Prelude.Show)
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
@@ -50,11 +51,12 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }
+  deriving stock (Prelude.Show)
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
-mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
+mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
 mkCommitteeCanditateValidator scParams datum _ _ =
   traceIfFalse "Signature must be valid" isSignatureValid
   where
@@ -69,13 +71,14 @@ mkCommitteeCanditateValidator scParams datum _ _ =
           BlockProducerRegistrationMsg scParams sidechainPubKey inputUtxo
     isSignatureValid = verifySignature spoPubKey msg sig
 
-committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
+committeeCanditateValidator :: SidechainParams -> TypedScripts.Validator
 committeeCanditateValidator sidechainParams =
-  TypedScripts.mkTypedValidator @CommitteeCandidateRegistry
-    ($$(PlutusTx.compile [||mkCommitteeCanditateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
-    $$(PlutusTx.compile [||wrap||])
+  mkValidatorScript
+    ( $$(PlutusTx.compile [||toValidator||])
+        `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams
+    )
   where
-    wrap = TypedScripts.mkUntypedValidator @BlockProducerRegistration @()
+    toValidator = mkUntypedValidator . mkCommitteeCanditateValidator
 
 data CommitteeCandidateRegistry
 instance ValidatorTypes CommitteeCandidateRegistry where
@@ -83,7 +86,7 @@ instance ValidatorTypes CommitteeCandidateRegistry where
   type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 script :: SidechainParams -> Scripts.Script
-script = Scripts.unValidatorScript . TypedScripts.validatorScript . committeeCanditateValidator
+script = Scripts.unValidatorScript . committeeCanditateValidator
 
 scriptSBS :: SidechainParams -> SBS.ShortByteString
 scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams

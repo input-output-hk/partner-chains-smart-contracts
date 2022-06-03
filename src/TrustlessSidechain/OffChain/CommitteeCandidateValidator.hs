@@ -11,11 +11,8 @@ import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (Signature (getSignature), getPubKey)
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef)
-import Ledger.Typed.Scripts (
-  validatorAddress,
- )
-import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt)
+import Plutus.Script.Utils.V2.Address qualified as UtilsAddress
 import Plutus.V2.Ledger.Api (Datum (Datum), LedgerBytes (getLedgerBytes), toBuiltinData)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
@@ -48,19 +45,23 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, si
 
   let val = Ada.lovelaceValueOf 1
       validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
+      valHash = Scripts.validatorHash validator
       lookups =
         Constraints.unspentOutputs ownUtxos
-          <> Constraints.typedValidatorLookups validator
-      datum = BlockProducerRegistration spoPubKey sidechainPubKey spoSig sidechainSig inputUtxo
-      tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
+          <> Constraints.otherScript validator
+      datum =
+        Datum $
+          toBuiltinData $
+            BlockProducerRegistration spoPubKey sidechainPubKey spoSig sidechainSig inputUtxo
+      tx = Constraints.mustPayToOtherScript valHash datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
-  submitTxConstraintsWith lookups tx
+  submitTxConstraintsWith @CommitteeCandidateRegistry lookups tx
 
 deregister :: DeregisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
-      valAddr = validatorAddress validator
+      valAddr = UtilsAddress.mkValidatorAddress validator
       ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
 
   ownUtxos <- utxosAt ownAddr
@@ -69,7 +70,7 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
   let ownEntries = Map.filter isOwnEntry valUtxos
 
       lookups =
-        Constraints.otherScript (Scripts.validatorScript validator)
+        Constraints.otherScript validator
           <> Constraints.unspentOutputs ownUtxos
           <> Constraints.unspentOutputs valUtxos
       tx =

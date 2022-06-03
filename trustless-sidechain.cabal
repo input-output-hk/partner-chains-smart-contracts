@@ -128,13 +128,17 @@ executable trustless-sidechain-export
   import:         common-lang
   main-is:        Main.hs
   build-depends:
+    , attoparsec
     , base16-bytestring
     , bytestring
     , cardano-api
+    , cardano-crypto
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-script-utils
     , plutus-tx
     , servant-client-core
+    , text
     , trustless-sidechain
 
   hs-source-dirs: app/export-scripts

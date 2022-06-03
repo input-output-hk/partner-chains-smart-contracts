@@ -6,10 +6,10 @@ import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
 import Data.ByteString qualified as ByteString
 import Ledger (getCardanoTxId)
-import Ledger.Crypto (PubKey)
+import Ledger.Crypto (PubKey (getPubKey))
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
-import Plutus.V2.Ledger.Api (toBuiltinData)
+import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)
@@ -39,11 +39,14 @@ sidechainParams =
 spoPrivKey :: Wallet.XPrv
 spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 
+spoPubKey :: PubKey
+spoPubKey = Crypto.toPublicKey spoPrivKey
+
 sidechainPrivKey :: Wallet.XPrv
 sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
 
-spoPubKey :: PubKey
-spoPubKey = Crypto.toPublicKey spoPrivKey
+sidechainPubKey :: Builtins.BuiltinByteString
+sidechainPubKey = getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
 
 test :: TestTree
 test =
@@ -56,8 +59,7 @@ test =
             const
               ( do
                   oref <- CommitteeCandidateValidator.getInputUtxo
-                  let sidechainPubKey = ""
-                      msg =
+                  let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
                             BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
@@ -75,8 +77,7 @@ test =
             const
               ( do
                   oref <- CommitteeCandidateValidator.getInputUtxo
-                  let sidechainPubKey = ""
-                      msg =
+                  let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
                             BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
