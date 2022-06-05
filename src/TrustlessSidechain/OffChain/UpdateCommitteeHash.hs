@@ -49,7 +49,7 @@ import PlutusTx.Prelude
 
 import Data.Text (Text)
 
-import Prelude qualified 
+import Prelude qualified
 
 {- | 'findCommitteeHashOutput' searches through the utxos to find the output
  that corresponds to NFT which identifies the committee hash on the block
@@ -64,9 +64,9 @@ findCommitteeHashOutput uch =
     Contract.utxosAt $
       UpdateCommitteeHash.updateCommitteeHashAddress uch
   where
-    go :: 
-        Map TxOutRef ChainIndexTxOut -> 
-        Maybe (TxOutRef, ChainIndexTxOut, UpdateCommitteeHashDatum)
+    go ::
+      Map TxOutRef ChainIndexTxOut ->
+      Maybe (TxOutRef, ChainIndexTxOut, UpdateCommitteeHashDatum)
     go utxos = do
       let f :: (TxOutRef, ChainIndexTxOut) -> Bool
           f (_, o) = Value.assetClassValueOf (Getter.view ciTxOutValue o) (cToken uch) == 1
@@ -78,8 +78,9 @@ findCommitteeHashOutput uch =
           =<< getDatum <$> Fold.preview (ciTxOutDatum . _Right) o
       return (oref, o, dat)
 
--- | 'updateCommitteeHash' is the endpoint to submit the transaction to update
--- the committee hash 
+{- | 'updateCommitteeHash' is the endpoint to submit the transaction to update
+ the committee hash
+-}
 updateCommitteeHash :: UpdateCommitteeHashParams -> Contract w s Text ()
 updateCommitteeHash uchp =
   findCommitteeHashOutput uch >>= \case
@@ -96,8 +97,8 @@ updateCommitteeHash uchp =
             val = uncurry Value.singleton (unAssetClass $ cToken uch) 1
             lookups =
               Constraints.unspentOutputs (Map.singleton oref o)
-                Prelude.<> Constraints.otherScript 
-                    (UpdateCommitteeHash.updateCommitteeHashValidator uch)
+                Prelude.<> Constraints.otherScript
+                  (UpdateCommitteeHash.updateCommitteeHashValidator uch)
                 Prelude.<> Constraints.typedValidatorLookups
                   (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
 
