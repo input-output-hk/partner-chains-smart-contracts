@@ -18,12 +18,20 @@ import Ledger.Address (Address)
 import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Crypto qualified as Crypto
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), CurrencySymbol, TokenName, Value)
+import Plutus.V1.Ledger.Value (
+  AssetClass,
+  Value,
+ )
 import Plutus.V1.Ledger.Value qualified as Value
 
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 
-import Plutus.V1.Ledger.Contexts (ScriptContext (scriptContextTxInfo), TxInInfo (txInInfoResolved), TxInfo, TxOut (txOutDatumHash, txOutValue))
+import Plutus.V1.Ledger.Contexts (
+  ScriptContext (scriptContextTxInfo),
+  TxInInfo (txInInfoResolved),
+  TxInfo,
+  TxOut (txOutDatumHash, txOutValue),
+ )
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -36,29 +44,14 @@ import PlutusTx.Prelude
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the contract.
 newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { -- | 'cSymbol' is the 'CurrencySymbol' of the NFT that is used to
-    -- identify the transaction. We don't need the 'TokenName' as we will just use
-    -- the empty string as the token name
-    cSymbol :: CurrencySymbol
+  { -- | 'cToken' is the 'AssetClass' of the NFT that is used to
+    -- identify the transaction.
+    cToken :: AssetClass
   }
   deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''UpdateCommitteeHash
-
-{- | 'committeeHashTokenName' is the token name of the committeeHash. As mentioned
- before, this is an NFT and we just use the empty string as the token name.
--}
-{-# INLINEABLE committeeHashTokenName #-}
-committeeHashTokenName :: TokenName
-committeeHashTokenName = ""
-
-{- | 'committeeHashAsset' is the 'AssetClass' for the NFT which identifies the
- committeeHash.
--}
-{-# INLINEABLE committeeHashAsset #-}
-committeeHashAsset :: UpdateCommitteeHash -> AssetClass
-committeeHashAsset cmtHsh = AssetClass (cSymbol cmtHsh, committeeHashTokenName)
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
  committee hash by concatenating all public keys together and appending them.
@@ -105,8 +98,11 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatu
 {-# INLINEABLE verifyMultiSignature #-}
 verifyMultiSignature ::
   [PubKey] -> BuiltinByteString -> BuiltinByteString -> Bool
-verifyMultiSignature pubKeys msg sig =
-  any (\pubKey -> verifySignature (Bytes.getLedgerBytes (Crypto.getPubKey pubKey)) msg sig) pubKeys
+verifyMultiSignature pubKeys msg sig = any f pubKeys
+  where
+    f pubKey =
+      let pubKey' = Bytes.getLedgerBytes (Crypto.getPubKey pubKey)
+       in verifySignature pubKey' msg sig
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
 
@@ -117,23 +113,46 @@ verifyMultiSignature pubKeys msg sig =
   3. The committee provided really is the current committee
 
   4. The new output transaction contains the new committee hash
+
+TODO an optimization. Instead of putting the new committee hash in the
+redeemer, we could just:
+
+    1. check if the committee hash is included in the datum (we already do
+    this)
+
+    2. check if what is in the datum is signed by the current committee
+
+Note [Committee hash in output datum]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Normally, the producer of a utxo is only required to include the datum hash,
+and not the datum itself (but can optionally do so). In this case, we rely on
+the fact that the producer actually does include the datum; and enforce this
+with 'outputDatum'.
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
-mkUpdateCommitteeHashValidator :: UpdateCommitteeHash -> UpdateCommitteeHashDatum -> UpdateCommitteeHashRedeemer -> ScriptContext -> Bool
+mkUpdateCommitteeHashValidator ::
+  UpdateCommitteeHash ->
+  UpdateCommitteeHashDatum ->
+  UpdateCommitteeHashRedeemer ->
+  ScriptContext ->
+  Bool
 mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
   traceIfFalse "Token missing from input" inputHasToken
     && traceIfFalse "Token missing from output" outputHasToken
     && traceIfFalse "Committee signature missing" signedByCurrentCommittee
     && traceIfFalse "Wrong committee" isCurrentCommittee
-    && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+    && traceIfFalse
+      "Wrong output datum"
+      (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
     ownInput :: TxOut
-    ownInput = case Contexts.findOwnInput ctx of
-      Nothing -> traceError "Committee hash input missing"
-      Just i -> txInInfoResolved i
+    ownInput =
+      txInInfoResolved $
+        fromMaybe (traceError "Committee hash input missing") $
+          Contexts.findOwnInput ctx
 
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
@@ -141,7 +160,11 @@ mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
       _ -> traceError "Expected exactly one committee output"
 
     outputDatum :: UpdateCommitteeHashDatum
-    outputDatum = fromMaybe (traceError "Committee output datum missing") $ txOutDatumHash ownOutput >>= flip Contexts.findDatum info >>= PlutusTx.fromBuiltinData . getDatum
+    outputDatum =
+      fromMaybe (traceError "Committee output datum missing") $
+        txOutDatumHash ownOutput
+          >>= flip Contexts.findDatum info
+          >>= PlutusTx.fromBuiltinData . getDatum
 
     inputHasToken :: Bool
     inputHasToken = hasNft (txOutValue ownInput)
@@ -150,9 +173,14 @@ mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
     outputHasToken = hasNft (txOutValue ownOutput)
 
     hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (committeeHashAsset cmtHsh) == 1
+    hasNft val = Value.assetClassValueOf val (cToken cmtHsh) == 1
+
     signedByCurrentCommittee :: Bool
-    signedByCurrentCommittee = verifyMultiSignature (committeePubKeys red) (newCommitteeHash red) (signature red)
+    signedByCurrentCommittee =
+      verifyMultiSignature
+        (committeePubKeys red)
+        (newCommitteeHash red)
+        (signature red)
 
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
@@ -162,6 +190,7 @@ instance ValidatorTypes UpdatingCommitteeHash where
   type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
 
+-- | 'typedUpdateCommitteeHashValidator' is the typed validator of the script
 typedUpdateCommitteeHashValidator :: UpdateCommitteeHash -> TypedValidator UpdatingCommitteeHash
 typedUpdateCommitteeHashValidator updateCommitteeHash =
   Scripts.mkTypedValidator @UpdatingCommitteeHash
