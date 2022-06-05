@@ -14,7 +14,7 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 import GHC.Generics (Generic)
-import Ledger (PaymentPubKeyHash)
+import Ledger (CurrencySymbol, PaymentPubKeyHash, TokenName)
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -87,6 +87,10 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
     signature :: !BuiltinByteString
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
+  , -- | The token name of the NFT identifying this committee hash
+    token :: !TokenName
+  , -- | The currency symbol of the NFT identifying this committee hash
+    symbol :: !CurrencySymbol
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
