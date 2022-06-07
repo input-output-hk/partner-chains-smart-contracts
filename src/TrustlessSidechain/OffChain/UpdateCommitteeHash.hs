@@ -1,18 +1,24 @@
 module TrustlessSidechain.OffChain.UpdateCommitteeHash where
 
 import TrustlessSidechain.OffChain.Types (
+  GenesisCommitteeHashParams,
   UpdateCommitteeHashParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
+
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (
     UpdateCommitteeHashRedeemer
   ),
  )
-
 import TrustlessSidechain.OnChain.Types qualified as OnChainTypes
 
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
+  GenesisMintCommitteeHash (
+    GenesisMintCommitteeHash,
+    gcToken,
+    gcTxOutRef
+  ),
   UpdateCommitteeHash (UpdateCommitteeHash, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
   UpdatingCommitteeHash,
@@ -49,6 +55,7 @@ import PlutusTx.Prelude
 
 import Data.Text (Text)
 
+import Data.Void (Void)
 import Prelude qualified
 
 {- | 'findCommitteeHashOutput' searches through the utxos to find the output
@@ -74,19 +81,26 @@ findCommitteeHashOutput uch =
       -- N.B. on the on-chain code, we assert that the datum is actually
       -- contained in the output -- see Note [Committee hash in output datum]
       dat <-
-        Class.fromBuiltinData
-          =<< getDatum <$> Fold.preview (ciTxOutDatum . _Right) o
+        Class.fromBuiltinData . getDatum
+          =<< Fold.preview (ciTxOutDatum . _Right) o
       return (oref, o, dat)
 
 {- | 'updateCommitteeHash' is the endpoint to submit the transaction to update
- the committee hash
+ the committee hash.
 -}
 updateCommitteeHash :: UpdateCommitteeHashParams -> Contract w s Text ()
 updateCommitteeHash uchp =
   findCommitteeHashOutput uch >>= \case
     Just (oref, o, dat)
+      -- check if we have the right committee off chain. this gets checked
+      -- on chain as well, but we'd prefer to error earlier than later.
       | committeeHash dat == cCommitteeHash -> do
-        let redeemer =
+        let ndat =
+              UpdateCommitteeHashDatum
+                { UpdateCommitteeHash.committeeHash = nCommitteeHash
+                }
+            val = Value.assetClassValue (cToken uch) 1
+            redeemer =
               Redeemer $
                 Class.toBuiltinData $
                   UpdateCommitteeHashRedeemer
@@ -94,7 +108,6 @@ updateCommitteeHash uchp =
                     , OnChainTypes.committeePubKeys = OffChainTypes.committeePubKeys uchp
                     , OnChainTypes.newCommitteeHash = nCommitteeHash
                     }
-            val = uncurry Value.singleton (unAssetClass $ cToken uch) 1
             lookups =
               Constraints.unspentOutputs (Map.singleton oref o)
                 Prelude.<> Constraints.otherScript
@@ -128,8 +141,60 @@ updateCommitteeHash uchp =
     cCommitteeHash :: BuiltinByteString
     cCommitteeHash = UpdateCommitteeHash.aggregateKeys (OffChainTypes.committeePubKeys uchp)
 
-    ndat :: UpdateCommitteeHashDatum
-    ndat =
-      UpdateCommitteeHashDatum
-        { UpdateCommitteeHash.committeeHash = nCommitteeHash
-        }
+{- | 'genesisCommitteeHash' intializes the committee hash given the parameters in 'GenesisCommitteeHashParams'.
+ The intialization step is two steps:
+
+  (1) Create an NFT which identifies the committee hash
+
+  (2) Spend that NFT to a script output which contains the committee hash
+-}
+genesisCommitteeHash :: GenesisCommitteeHashParams -> Contract w s Text AssetClass
+genesisCommitteeHash gch =
+  fmap Indexed.itoList (Contract.utxosAt (OffChainTypes.genesisAddress gch)) >>= \case
+    [] -> Contract.throwError "no UTxO found"
+    utxo@(oref, _) : _ -> do
+      -- (1)
+      let tn = OffChainTypes.genesisToken gch
+          sm = (UpdateCommitteeHash.committeeHashCurSymbol gmch)
+
+          gmch = GenesisMintCommitteeHash {gcToken = tn, gcTxOutRef = oref}
+
+          val = Value.singleton sm tn 1
+
+          lookups1 =
+            Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy gmch)
+              Prelude.<> Constraints.unspentOutputs (uncurry Map.singleton utxo)
+
+          tx1 =
+            Constraints.mustSpendPubKeyOutput oref
+              Prelude.<> Constraints.mustMintValue val
+
+      ledgerTx1 <- Contract.submitTxConstraintsWith @Void lookups1 tx1
+      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
+
+      Contract.logInfo $ "minted " ++ Prelude.show val
+
+      let nft = Value.assetClass sm tn
+
+      -- (2). N.B. minting always pays back to yourself, so
+      -- 'Contract.submitTxConstraints' suffices here.
+      let uch = UpdateCommitteeHash {cToken = nft}
+          ndat =
+            UpdateCommitteeHashDatum
+              { committeeHash =
+                  UpdateCommitteeHash.aggregateKeys $
+                    OffChainTypes.genesisCommitteePubKeys gch
+              }
+
+          tx2 = Constraints.mustPayToTheScript ndat val
+
+      ledgerTx2 <-
+        Contract.submitTxConstraints @UpdatingCommitteeHash
+          (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
+          tx2
+
+      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+
+      Contract.logInfo @Text $ "initialized committee hash"
+
+      return nft

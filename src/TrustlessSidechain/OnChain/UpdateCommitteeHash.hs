@@ -10,29 +10,33 @@ import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
  )
 
-import Ledger.Typed.Scripts (TypedValidator, Validator, ValidatorTypes)
+import Ledger.Typed.Scripts (MintingPolicy, TypedValidator, Validator, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts
 
 import Ledger.Address (Address)
+import Ledger.Contexts qualified as Contexts
 
 import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Value (
   AssetClass,
+  CurrencySymbol,
+  TokenName,
   Value,
  )
 import Plutus.V1.Ledger.Value qualified as Value
 
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
+import Plutus.V1.Ledger.Scripts qualified as Scripts
 
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoResolved),
-  TxInfo,
+  TxInInfo (txInInfoOutRef, txInInfoResolved),
+  TxInfo (txInfoInputs, txInfoMint),
   TxOut (txOutDatumHash, txOutValue),
+  TxOutRef,
  )
-import Plutus.V1.Ledger.Contexts qualified as Contexts
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
@@ -41,6 +45,8 @@ import Prelude qualified
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
+
+-- * Updating the committee hash
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the contract.
 newtype UpdateCommitteeHash = UpdateCommitteeHash
@@ -208,3 +214,57 @@ updateCommitteeHashValidator = Scripts.validatorScript . typedUpdateCommitteeHas
 -- | 'updateCommitteeHashAddress' is the address of the script
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
 updateCommitteeHashAddress = Scripts.validatorAddress . typedUpdateCommitteeHashValidator
+
+-- * Initializing the committee hash
+
+-- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
+data GenesisMintCommitteeHash = GenesisMintCommitteeHash
+  { -- | 'gcToken' is the token name of the NFT to start the committee hash
+    gcToken :: !TokenName
+  , -- | 'TxOutRef' is the output reference to mint the NFT initially.
+    gcTxOutRef :: !TxOutRef
+  }
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+PlutusTx.makeLift ''GenesisMintCommitteeHash
+
+{- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
+ the committee hash.
+-}
+mkCommitteeHashPolicy :: GenesisMintCommitteeHash -> () -> ScriptContext -> Bool
+mkCommitteeHashPolicy gmch _red ctx =
+  traceIfFalse "UTxO not consumed" hasUtxo
+    && traceIfFalse "wrong amount minted" checkMintedAmount
+  where
+    info :: TxInfo
+    info = scriptContextTxInfo ctx
+
+    tn :: TokenName
+    tn = gcToken gmch
+
+    oref :: TxOutRef
+    oref = gcTxOutRef gmch
+
+    hasUtxo :: Bool
+    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
+
+    checkMintedAmount :: Bool
+    checkMintedAmount = case Value.flattenValue (txInfoMint info) of
+      [(_cs, tn', amt)] -> tn' == tn && amt == 1
+      -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
+      -- since the ledger rules ensure that the minting policy will only
+      -- be run if some of the asset is actually being minted: see
+      -- https://playground.plutus.iohkdev.io/doc/plutus/tutorials/basic-minting-policies.html.
+      _ -> False
+
+-- | 'committeeHashPolicy' is the minting policy
+committeeHashPolicy :: GenesisMintCommitteeHash -> MintingPolicy
+committeeHashPolicy gch =
+  Scripts.mkMintingPolicyScript $
+    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkCommitteeHashPolicy||])
+      `PlutusTx.applyCode` PlutusTx.liftCode gch
+
+-- | 'committeeHashCurSymbol' is the currency symbol
+committeeHashCurSymbol :: GenesisMintCommitteeHash -> CurrencySymbol
+committeeHashCurSymbol gmch = Contexts.scriptCurrencySymbol $ committeeHashPolicy gmch

@@ -9,12 +9,12 @@ import Schema (
   ToSchema,
  )
 
-import Ledger.Tx (TxOutRef)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 import GHC.Generics (Generic)
 import Ledger (CurrencySymbol, PaymentPubKeyHash, TokenName)
+import Ledger.Tx (Address, TxOutRef)
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -96,3 +96,17 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
+
+-- | Endpoint parameters for starting the committee hash
+data GenesisCommitteeHashParams = GenesisCommitteeHashParams
+  { -- | Public keys of the initial committee members.
+    genesisCommitteePubKeys :: [PubKey]
+  , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
+    -- N.B. this address should contain
+    genesisAddress :: !Address
+  , -- | 'genesisToken' is the Token name for the NFT
+    genesisToken :: !TokenName
+  }
+  deriving stock (Generic, Prelude.Show)
+
+$(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
