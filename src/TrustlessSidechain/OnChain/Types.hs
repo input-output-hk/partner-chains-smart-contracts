@@ -2,6 +2,7 @@
 
 module TrustlessSidechain.OnChain.Types where
 
+import Ledger (PubKey)
 import Ledger.Typed.Scripts qualified as Script
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Prelude (BuiltinByteString)
@@ -21,3 +22,13 @@ data FUELRedeemer
 makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
 instance Script.ValidatorTypes FUELRedeemer
+
+data SignedMerkleRoot = SignedMerkleRoot
+  { merkleRoot :: BuiltinByteString
+  , signature :: BuiltinByteString
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  }
+
+makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
+
+instance Script.ValidatorTypes SignedMerkleRoot

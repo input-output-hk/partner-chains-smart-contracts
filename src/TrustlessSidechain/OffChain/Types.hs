@@ -80,3 +80,14 @@ data MintParams = MintParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''MintParams)
+
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , signature :: BuiltinByteString
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''SaveRootParams)
