@@ -6,6 +6,7 @@ import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
 import Data.ByteString qualified as ByteString
 import Ledger (getCardanoTxId)
+import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
@@ -18,15 +19,23 @@ import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPol
 import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
+  GenesisCommitteeHashParams (GenesisCommitteeHashParams),
   MintParams (MintParams),
   RegisterParams (RegisterParams),
   SidechainParams (..),
+  UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   serialiseBprm,
  )
+
+import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+
 import Prelude
+
+import Test.Plutip.Internal.Types qualified as PlutipInternal
 
 sidechainParams :: SidechainParams
 sidechainParams =
@@ -44,6 +53,7 @@ sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
 
+-- | 'test' is the suite of tests.
 test :: TestTree
 test =
   withCluster
@@ -133,6 +143,208 @@ test =
               t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
               awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+        )
+        [shouldFail]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash"
+        (initAda [2, 2])
+        ( withContract $ \[] -> do
+            -- create a committee:
+            let committeePrivKeys :: [Wallet.XPrv]
+                committeePubKeys :: [PubKey]
+
+                committeePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 10]
+                committeePubKeys = map Crypto.toPublicKey committeePrivKeys
+
+            -- Executingthe endpoint:
+            h <- ownPaymentPubKeyHash
+            let addr = Address.pubKeyHashAddress h Nothing
+                tokenName = "Update committee hash test"
+                gch =
+                  GenesisCommitteeHashParams
+                    committeePubKeys
+                    addr
+                    tokenName
+
+            UpdateCommitteeHash.genesisCommitteeHash gch
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet"
+        (initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let committeePrivKeys :: [Wallet.XPrv]
+                committeePubKeys :: [PubKey]
+
+                committeePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                committeePubKeys = map Crypto.toPublicKey committeePrivKeys
+
+            let nCommitteePrivKeys :: [Wallet.XPrv]
+                nCommitteePubKeys :: [PubKey]
+
+                nCommitteePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCommitteePubKeys = map Crypto.toPublicKey nCommitteePrivKeys
+
+            withContract $ \_ -> do
+              -- Executing the genesis transaction endpoint [more or less
+              -- duplicated code from the previous test case]
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      committeePubKeys
+                      addr
+                      tokenName
+
+              nft <- UpdateCommitteeHash.genesisCommitteeHash gch
+
+              -- updating the committee hash
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCommitteePubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash committeePrivKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      nCommitteePubKeys
+                      sig
+                      committeePubKeys
+                      nft
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet"
+        (initAda [3, 2] <> initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let committeePrivKeys :: [Wallet.XPrv]
+                committeePubKeys :: [PubKey]
+
+                committeePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                committeePubKeys = map Crypto.toPublicKey committeePrivKeys
+
+            let nCommitteePrivKeys :: [Wallet.XPrv]
+                nCommitteePubKeys :: [PubKey]
+
+                nCommitteePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCommitteePubKeys = map Crypto.toPublicKey nCommitteePrivKeys
+
+            -- Executing the genesis transaction endpoint [more or less
+            -- duplicated code from the previous test case]
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ <- withContract $ \_ -> do
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      committeePubKeys
+                      addr
+                      tokenName
+
+              UpdateCommitteeHash.genesisCommitteeHash gch
+
+            -- Let another wallet update the committee hash.
+            withContractAs 1 $ \_ -> do
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCommitteePubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash committeePrivKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      nCommitteePubKeys
+                      sig
+                      committeePubKeys
+                      nft
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet with the wrong committee"
+        (initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let committeePrivKeys :: [Wallet.XPrv]
+                committeePubKeys :: [PubKey]
+
+                committeePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                committeePubKeys = map Crypto.toPublicKey committeePrivKeys
+
+            let nCommitteePrivKeys :: [Wallet.XPrv]
+                nCommitteePubKeys :: [PubKey]
+
+                nCommitteePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCommitteePubKeys = map Crypto.toPublicKey nCommitteePrivKeys
+
+            withContract $ \_ -> do
+              -- Executing the genesis transaction endpoint [more or less
+              -- duplicated code from the previous test case]
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      committeePubKeys
+                      addr
+                      tokenName
+
+              nft <- UpdateCommitteeHash.genesisCommitteeHash gch
+
+              -- updating the committee hash
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCommitteePubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash committeePrivKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      nCommitteePubKeys
+                      sig
+                      nCommitteePubKeys
+                      nft
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldFail]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet with the wrong committee"
+        (initAda [3, 2] <> initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let committeePrivKeys :: [Wallet.XPrv]
+                committeePubKeys :: [PubKey]
+
+                committeePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                committeePubKeys = map Crypto.toPublicKey committeePrivKeys
+
+            let nCommitteePrivKeys :: [Wallet.XPrv]
+                nCommitteePubKeys :: [PubKey]
+
+                nCommitteePrivKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCommitteePubKeys = map Crypto.toPublicKey nCommitteePrivKeys
+
+            -- Executing the genesis transaction endpoint [more or less
+            -- duplicated code from the previous test case]
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ <- withContract $ \_ -> do
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      committeePubKeys
+                      addr
+                      tokenName
+
+              UpdateCommitteeHash.genesisCommitteeHash gch
+
+            -- Let another wallet update the committee hash.
+            withContractAs 1 $ \_ -> do
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCommitteePubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash committeePrivKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      nCommitteePubKeys
+                      sig
+                      nCommitteePubKeys
+                      nft
+              UpdateCommitteeHash.updateCommitteeHash uchp
         )
         [shouldFail]
     ]
