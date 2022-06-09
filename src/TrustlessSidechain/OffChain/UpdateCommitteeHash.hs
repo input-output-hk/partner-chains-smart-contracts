@@ -1,5 +1,6 @@
 module TrustlessSidechain.OffChain.UpdateCommitteeHash where
 
+import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   GenesisCommitteeHashParams,
   UpdateCommitteeHashParams,
@@ -29,7 +30,7 @@ import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Logging qualified as Logging
 import Plutus.V1.Ledger.Api (Datum (getDatum))
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass, unAssetClass))
+import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Value qualified as Value
 
 import Data.Map (Map)
@@ -88,11 +89,11 @@ findCommitteeHashOutput uch =
 {- | 'updateCommitteeHash' is the endpoint to submit the transaction to update
  the committee hash.
 -}
-updateCommitteeHash :: UpdateCommitteeHashParams -> Contract w s Text ()
+updateCommitteeHash :: UpdateCommitteeHashParams -> Contract () TrustlessSidechainSchema Text ()
 updateCommitteeHash uchp =
   findCommitteeHashOutput uch >>= \case
     Just (oref, o, dat)
-      -- check if we have the right committee off chain. this gets checked
+      -- we check if we have the right committee off chain. This gets checked
       -- on chain as well, but we'd prefer to error earlier than later.
       | committeeHash dat == cCommitteeHash -> do
         let ndat =
@@ -127,10 +128,7 @@ updateCommitteeHash uchp =
     uch :: UpdateCommitteeHash
     uch =
       UpdateCommitteeHash
-        { cToken =
-            AssetClass
-              { unAssetClass = (OffChainTypes.symbol uchp, OffChainTypes.token uchp)
-              }
+        { cToken = OffChainTypes.token uchp
         }
 
     -- new committee hash from the endpoint parameters
@@ -148,7 +146,7 @@ updateCommitteeHash uchp =
 
   (2) Spend that NFT to a script output which contains the committee hash
 -}
-genesisCommitteeHash :: GenesisCommitteeHashParams -> Contract w s Text AssetClass
+genesisCommitteeHash :: GenesisCommitteeHashParams -> Contract () TrustlessSidechainSchema Text AssetClass
 genesisCommitteeHash gch =
   fmap Indexed.itoList (Contract.utxosAt (OffChainTypes.genesisAddress gch)) >>= \case
     [] -> Contract.throwError "no UTxO found"

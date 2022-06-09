@@ -17,7 +17,7 @@ import Ledger.Address (Address)
 import Ledger.Contexts qualified as Contexts
 
 import Plutus.V1.Ledger.Bytes qualified as Bytes
-import Plutus.V1.Ledger.Crypto (PubKey)
+import Plutus.V1.Ledger.Crypto (PubKey, Signature (getSignature))
 import Plutus.V1.Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Value (
   AssetClass,
@@ -29,6 +29,9 @@ import Plutus.V1.Ledger.Value qualified as Value
 
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
+
+import Cardano.Crypto.Wallet (XPrv)
+import Ledger.Crypto qualified as Crypto
 
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
@@ -44,7 +47,7 @@ import Prelude qualified
 
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Prelude
+import PlutusTx.Prelude as PlutusTx
 
 -- * Updating the committee hash
 
@@ -60,14 +63,35 @@ newtype UpdateCommitteeHash = UpdateCommitteeHash
 PlutusTx.makeLift ''UpdateCommitteeHash
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
- committee hash by concatenating all public keys together and appending them.
+ committee hash by essentially computing the merkle root of all public keys
+ together.
  We call the output of this function an /aggregate public key/.
 
- TODO: this is a very simple scheme...
+ TODO: this is a very simple scheme, and we would most likely want to update
+ this scheme later...
 -}
 {-# INLINEABLE aggregateKeys #-}
 aggregateKeys :: [PubKey] -> BuiltinByteString
-aggregateKeys = Builtins.blake2b_256 . foldMap (Bytes.getLedgerBytes . Crypto.getPubKey)
+aggregateKeys [] = traceError "Empty committee"
+aggregateKeys lst = go $ map (Bytes.getLedgerBytes . Crypto.getPubKey) lst
+  where
+    -- Why did we not just do something like?
+    -- @aggregateKeys
+    --  =
+    --  Builtins.blake2b_256
+    --  . mconcat
+    --  . map (Bytes.getLedgerBytes . Crypto.getPubKey)
+    -- @
+    -- To cut the story short -- this didn't work in the Plutip integration
+    -- tests, so we jumped straight to the merkle root solution instead.
+    go :: [BuiltinByteString] -> BuiltinByteString
+    go [a] = a
+    go as = go $ merges as
+
+    merges :: [BuiltinByteString] -> [BuiltinByteString]
+    merges [] = []
+    merges [a] = [Builtins.blake2b_256 a]
+    merges (a : b : cs) = Builtins.blake2b_256 (a `appendByteString` b) : merges cs
 
 {- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
  key, and returns true or false to determinig whether the public keys were
@@ -96,19 +120,32 @@ instance Eq UpdateCommitteeHashDatum where
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
 {- | 'verifyMultiSignature' is a wrapper for how we verify multi signatures.
- For now, to simplify things we just test if any of the committee has signed
- the message.
 
- TODO: do a proper multisign later.
+ TODO: For now, to simplify things we just test if any of the committee has
+ signed the message, and we should do a proper multisign later.
 -}
 {-# INLINEABLE verifyMultiSignature #-}
 verifyMultiSignature ::
   [PubKey] -> BuiltinByteString -> BuiltinByteString -> Bool
-verifyMultiSignature pubKeys msg sig = any f pubKeys
+verifyMultiSignature pubKeys msg sig = any go pubKeys
   where
-    f pubKey =
+    go pubKey =
       let pubKey' = Bytes.getLedgerBytes (Crypto.getPubKey pubKey)
-       in verifySignature pubKey' msg sig
+       in PlutusTx.verifySignature pubKey' msg sig
+
+{- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
+Warning: there should be a non-empty number of private keys.
+
+We put this function here (even though it isn't used in the on chain code)
+because it corresponds to the 'verifyMultiSignature'
+
+TODO: For now, to simplify things we just make the first person sign the message.
+
+TODO: do a proper multisign later.
+-}
+multiSign :: BuiltinByteString -> [XPrv] -> BuiltinByteString
+multiSign msg (prvKey : _) = getSignature (Crypto.sign' msg prvKey)
+multiSign _ _ = traceError "Empty multisign"
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
 
@@ -147,9 +184,7 @@ mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
     && traceIfFalse "Token missing from output" outputHasToken
     && traceIfFalse "Committee signature missing" signedByCurrentCommittee
     && traceIfFalse "Wrong committee" isCurrentCommittee
-    && traceIfFalse
-      "Wrong output datum"
-      (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+    && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -191,7 +226,11 @@ mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
+{- | 'UpdatingCommitteeHash' is the type to associate the 'DatumType' and
+ 'RedeemerType' to the acutal types used at run time.
+-}
 data UpdatingCommitteeHash
+
 instance ValidatorTypes UpdatingCommitteeHash where
   type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer

@@ -13,7 +13,7 @@ import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 import GHC.Generics (Generic)
-import Ledger (CurrencySymbol, PaymentPubKeyHash, TokenName)
+import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
 import Ledger.Tx (Address, TxOutRef)
 import Prelude qualified
 
@@ -87,17 +87,15 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
     signature :: !BuiltinByteString
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
-  , -- | The token name of the NFT identifying this committee hash
-    token :: !TokenName
-  , -- | The currency symbol of the NFT identifying this committee hash
-    symbol :: !CurrencySymbol
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
 
--- | Endpoint parameters for starting the committee hash
+-- | Endpoint parameters for initializing the committee hash
 data GenesisCommitteeHashParams = GenesisCommitteeHashParams
   { -- | Public keys of the initial committee members.
     genesisCommitteePubKeys :: [PubKey]
