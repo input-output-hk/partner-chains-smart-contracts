@@ -199,6 +199,6 @@ genesisCommitteeHash gch =
 
       void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
-      Contract.logInfo $ "minted " ++ Prelude.show val
+      Contract.logInfo $ "Minted " ++ Prelude.show val ++ " and paid to script validator"
 
       return nft

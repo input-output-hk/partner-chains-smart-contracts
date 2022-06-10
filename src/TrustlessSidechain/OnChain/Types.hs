@@ -28,11 +28,10 @@ instance Script.ValidatorTypes FUELRedeemer
  committee
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  {  
-    -- | The 'signature' is the current committee's signature for the
+  { -- | The 'signature' is the current committee's signature for the
     -- 'newCommitteeHash'
     signature :: !BuiltinByteString
-  ,  -- | 'committeePubKeys' is the current committee public keys
+  , -- | 'committeePubKeys' is the current committee public keys
     committeePubKeys :: [PubKey]
   , -- | 'newCommitteeHash' is the hash of the new committee
     newCommitteeHash :: !BuiltinByteString
