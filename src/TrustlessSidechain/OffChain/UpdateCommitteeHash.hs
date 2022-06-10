@@ -56,7 +56,6 @@ import PlutusTx.Prelude
 
 import Data.Text (Text)
 
-import Data.Void (Void)
 import Prelude qualified
 
 {- | 'findCommitteeHashOutput' searches through the utxos to find the output
@@ -145,6 +144,8 @@ updateCommitteeHash uchp =
   (1) Create an NFT which identifies the committee hash
 
   (2) Spend that NFT to a script output which contains the committee hash
+
+This creates a transaction which executes both of these steps with a single transaction.
 -}
 genesisCommitteeHash :: GenesisCommitteeHashParams -> Contract () TrustlessSidechainSchema Text AssetClass
 genesisCommitteeHash gch =
@@ -159,24 +160,9 @@ genesisCommitteeHash gch =
 
           val = Value.singleton sm tn 1
 
-          lookups1 =
-            Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy gmch)
-              Prelude.<> Constraints.unspentOutputs (uncurry Map.singleton utxo)
+          nft = Value.assetClass sm tn
 
-          tx1 =
-            Constraints.mustSpendPubKeyOutput oref
-              Prelude.<> Constraints.mustMintValue val
-
-      ledgerTx1 <- Contract.submitTxConstraintsWith @Void lookups1 tx1
-      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx1
-
-      Contract.logInfo $ "minted " ++ Prelude.show val
-
-      let nft = Value.assetClass sm tn
-
-      -- (2). N.B. minting always pays back to yourself, so
-      -- 'Contract.submitTxConstraints' suffices here.
-      let uch = UpdateCommitteeHash {cToken = nft}
+          uch = UpdateCommitteeHash {cToken = nft}
           ndat =
             UpdateCommitteeHashDatum
               { committeeHash =
@@ -184,15 +170,21 @@ genesisCommitteeHash gch =
                     OffChainTypes.genesisCommitteePubKeys gch
               }
 
-          tx2 = Constraints.mustPayToTheScript ndat val
+          lookups =
+            Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy gmch)
+              Prelude.<> Constraints.unspentOutputs (uncurry Map.singleton utxo)
+              Prelude.<> Constraints.typedValidatorLookups
+                (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
 
-      ledgerTx2 <-
-        Contract.submitTxConstraints @UpdatingCommitteeHash
-          (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
-          tx2
+          tx =
+            Constraints.mustSpendPubKeyOutput oref
+              Prelude.<> Constraints.mustMintValue val
+              Prelude.<> Constraints.mustPayToTheScript ndat val
 
-      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx2
+      ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
 
-      Contract.logInfo @Text $ "initialized committee hash"
+      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+      Contract.logInfo $ "minted " ++ Prelude.show val
 
       return nft
