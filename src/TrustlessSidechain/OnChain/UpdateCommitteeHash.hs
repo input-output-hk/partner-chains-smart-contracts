@@ -5,7 +5,6 @@
 
 module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 
--- import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
  )
@@ -179,7 +178,7 @@ mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
-mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
+mkUpdateCommitteeHashValidator uch dat red ctx =
   traceIfFalse "Token missing from input" inputHasToken
     && traceIfFalse "Token missing from output" outputHasToken
     && traceIfFalse "Committee signature missing" signedByCurrentCommittee
@@ -214,7 +213,7 @@ mkUpdateCommitteeHashValidator cmtHsh dat red ctx =
     outputHasToken = hasNft (txOutValue ownOutput)
 
     hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (cToken cmtHsh) == 1
+    hasNft val = Value.assetClassValueOf val (cToken uch) == 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
