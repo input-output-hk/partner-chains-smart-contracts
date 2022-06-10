@@ -57,6 +57,8 @@ data BurnParams = BurnParams
     amount :: Integer
   , -- | SideChain address
     recipient :: BuiltinByteString
+  , -- | Signature of the address owner
+    sidechainSig :: BuiltinByteString
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
   }
@@ -79,16 +81,23 @@ data MintParams = MintParams
 
 $(deriveJSON defaultOptions ''MintParams)
 
--- | Endpoint parameters for committee candidate hash updating
+{- | Endpoint parameters for committee candidate hash updating
+
+ TODO: it might not be a bad idea to factor out the 'signature' and
+ 'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
+ 'SaveRootParams' in a different data type. I'd imagine there will be lots of
+ duplciated code when it comes to verifying that the committee has approved
+ of these transactions either way.
+-}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
   , -- | The signature for the new committee hash.
     signature :: !BuiltinByteString
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
-  , -- | The asset class of the NFT identifying this committee hash
-    token :: !AssetClass
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -100,11 +109,20 @@ data GenesisCommitteeHashParams = GenesisCommitteeHashParams
   { -- | Public keys of the initial committee members.
     genesisCommitteePubKeys :: [PubKey]
   , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
-    -- N.B. this address should contain
     genesisAddress :: !Address
-  , -- | 'genesisToken' is the Token name for the NFT
+  , -- | 'genesisToken' is the token name for the NFT
     genesisToken :: !TokenName
   }
   deriving stock (Generic, Prelude.Show)
 
 $(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
+
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , signature :: BuiltinByteString
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+$(deriveJSON defaultOptions ''SaveRootParams)

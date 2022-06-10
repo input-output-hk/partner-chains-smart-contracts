@@ -77,11 +77,13 @@ library
   exposed-modules:
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
 

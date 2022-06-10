@@ -43,6 +43,7 @@ import Control.Lens.Prism (_Right)
 
 import Ledger (Redeemer (Redeemer), TxOutRef)
 import Ledger.Constraints as Constraints
+import Ledger.Crypto (PubKey)
 import Ledger.Tx (
   ChainIndexTxOut,
   ciTxOutDatum,
@@ -104,8 +105,8 @@ updateCommitteeHash uchp =
               Redeemer $
                 Class.toBuiltinData $
                   UpdateCommitteeHashRedeemer
-                    { OnChainTypes.signature = OffChainTypes.signature uchp
-                    , OnChainTypes.committeePubKeys = OffChainTypes.committeePubKeys uchp
+                    { OnChainTypes.signature = sig
+                    , OnChainTypes.committeePubKeys = cmtPubKeys
                     , OnChainTypes.newCommitteeHash = nCommitteeHash
                     }
             lookups =
@@ -136,7 +137,20 @@ updateCommitteeHash uchp =
 
     -- current committee hash from the endpoint parameters
     cCommitteeHash :: BuiltinByteString
-    cCommitteeHash = UpdateCommitteeHash.aggregateKeys (OffChainTypes.committeePubKeys uchp)
+    cCommitteeHash = UpdateCommitteeHash.aggregateKeys cmtPubKeys
+
+    -- gets from the record the public keys -- note that we need the explicit
+    -- type annotation to make use of DuplicatedRecordFields since in the
+    -- module 'TrustlessSidechain.OffChain.Types' we have duplicated record
+    -- fields with 'TrustlessSidechain.OffChain.Types.SaveRootParams' and
+    -- 'TrustlessSidechain.OffChain.Types.UpdateCommitteeHashParams'
+    cmtPubKeys :: [PubKey]
+    cmtPubKeys = OffChainTypes.committeePubKeys (uchp :: UpdateCommitteeHashParams)
+
+    -- gets from the record the signature -- note that we need the explicit
+    -- type signature from the same reason of 'cmtPubKeys'
+    sig :: BuiltinByteString
+    sig = OffChainTypes.signature (uchp :: UpdateCommitteeHashParams)
 
 {- | 'genesisCommitteeHash' intializes the committee hash given the parameters in 'GenesisCommitteeHashParams'.
  The intialization step is two steps:
