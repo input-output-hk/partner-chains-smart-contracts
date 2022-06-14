@@ -164,8 +164,7 @@ redeemer, we could just:
 
     2. check if what is in the datum is signed by the current committee
 
-Note [Committee hash in output datum]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Note [Committee hash in output datum]:
 Normally, the producer of a utxo is only required to include the datum hash,
 and not the datum itself (but can optionally do so). In this case, we rely on
 the fact that the producer actually does include the datum; and enforce this

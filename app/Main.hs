@@ -22,8 +22,9 @@ import Schema (FormSchema)
 import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
 import TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint)
+import TrustlessSidechain.OffChain.UpdateCommitteeHash (updateCommitteeHash)
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
-import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams)
+import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams, UpdateCommitteeHashParams)
 
 import Prelude
 
@@ -40,12 +41,14 @@ instance HasDefinitions TrustlessSidechainContracts where
     DeregisterCommitteeCandidate params -> SomeBuiltin $ deregister params
     MintFUELToken params -> SomeBuiltin $ mint params
     BurnFUELToken params -> SomeBuiltin $ burn params
+    UpdateCommitteeHash params -> SomeBuiltin $ updateCommitteeHash params
 
 data TrustlessSidechainContracts
   = RegisterCommitteeCandidate RegisterParams
   | DeregisterCommitteeCandidate DeregisterParams
   | MintFUELToken MintParams
   | BurnFUELToken BurnParams
+  | UpdateCommitteeHash UpdateCommitteeHashParams
   deriving stock (Show)
 
 $(deriveJSON defaultOptions ''TrustlessSidechainContracts)

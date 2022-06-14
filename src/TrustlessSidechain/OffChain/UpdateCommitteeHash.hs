@@ -166,7 +166,7 @@ genesisCommitteeHash gch =
   fmap Indexed.itoList (Contract.utxosAt (OffChainTypes.genesisAddress gch)) >>= \case
     [] -> Contract.throwError "no UTxO found"
     utxo@(oref, _) : _ -> do
-      -- (1)
+      -- (1) / (2)
       let tn = OffChainTypes.genesisToken gch
           sm = (UpdateCommitteeHash.committeeHashCurSymbol gmch)
 
