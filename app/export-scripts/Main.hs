@@ -10,22 +10,35 @@ import Cardano.Api (
   writeFileTextEnvelope,
  )
 import Cardano.Api.Shelley (fromPlutusData)
+import Cardano.Crypto.DSIGN.Class (
+  SignKeyDSIGN,
+  deriveVerKeyDSIGN,
+  genKeyDSIGN,
+  rawSerialiseSigDSIGN,
+  rawSerialiseVerKeyDSIGN,
+  signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (MonadPlus (mzero), void)
+import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson.Extras (tryDecode)
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
+import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
+import Data.ByteString.Hash (blake2b)
 import Data.Either (fromRight)
 import Data.Kind (Type)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer)
-import Ledger.Crypto (PubKey (getPubKey))
+import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
-  LedgerBytes (getLedgerBytes),
   ToData (toBuiltinData),
   TxId (TxId),
   TxOutRef (TxOutRef),
@@ -86,7 +99,15 @@ writeScripts scParams inputUtxo = do
       serialised = Builtins.serialiseData $ toBuiltinData msg
 
       spoSig = Crypto.sign' serialised spoPrivKey
-      sidechainSig = Crypto.sign' serialised sidechainPrivKey
+
+      hashedMsg = blake2b $ Builtins.fromBuiltin serialised
+      ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
+
+      sidechainSig =
+        Crypto.Signature
+          . Builtins.toBuiltin
+          . rawSerialiseSigDSIGN
+          $ signDSIGN () ecdsaMsg sidechainPrivKey
 
       committeeRegDatum =
         BlockProducerRegistration
@@ -98,10 +119,20 @@ writeScripts scParams inputUtxo = do
           }
       committeeDeregRed = unitRedeemer
 
-  putStrLn "CommitteeCandidateValidator"
-  putStrLn $ "datum" ++ show committeeRegDatum
-  putStrLn $ "registration msg" ++ show msg
-  putStrLn $ "serialised registration msg: " ++ printBuiltinBS serialised
+  printTitle "CommitteeCandidateValidator"
+
+  printTitle "Datum"
+  print committeeRegDatum
+
+  printTitle "Registration msg"
+  print msg
+
+  printTitle "Registration msg hashed"
+  printBS hashedMsg
+
+  printTitle "Serialised registration msg"
+  printBuiltinBS serialised
+
   results <-
     sequence
       [ writeFileTextEnvelope
@@ -120,9 +151,17 @@ writeScripts scParams inputUtxo = do
     Left _ -> print results
     Right _ -> return ()
 
-printBuiltinBS :: Builtins.BuiltinByteString -> String
+printTitle :: String -> IO ()
+printTitle title =
+  putStrLn $ unlines ["", title, replicate (length title) '-']
+
+printBS :: ByteString.ByteString -> IO ()
+printBS =
+  putStrLn . Char8.unpack . Base16.encode
+
+printBuiltinBS :: Builtins.BuiltinByteString -> IO ()
 printBuiltinBS =
-  Char8.unpack . Base16.encode . Builtins.fromBuiltin
+  printBS . Builtins.fromBuiltin
 
 writeData :: forall (a :: Type). ToData a => FilePath -> a -> IO ((Either (FileError ()) ()))
 writeData path =
@@ -137,11 +176,17 @@ spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
 
-sidechainPrivKey :: Wallet.XPrv
-sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
+sidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
+sidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
 
 sidechainPubKey :: SidechainPubKey
-sidechainPubKey = SidechainPubKey $ getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
+sidechainPubKey =
+  SidechainPubKey
+    . bimap Builtins.toBuiltin Builtins.toBuiltin
+    . ByteString.splitAt 32
+    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
+    . deriveVerKeyDSIGN
+    $ sidechainPrivKey
 
 txOutRefParser :: Parser TxOutRef
 txOutRefParser = do

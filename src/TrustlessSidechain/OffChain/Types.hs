@@ -30,8 +30,9 @@ makeLift ''GenesisHash
 
 $(deriveJSON defaultOptions ''GenesisHash)
 
-newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: PlutusTx.BuiltinByteString}
-  deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: (PlutusTx.BuiltinByteString, PlutusTx.BuiltinByteString)}
+  -- deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
+  deriving (Prelude.Show)
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
   deriving anyclass (NFData, ToSchema)
