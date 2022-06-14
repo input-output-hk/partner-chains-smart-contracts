@@ -14,9 +14,9 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
 import GHC.Generics (Generic)
 import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
-import Ledger.Tx (TxOutRef)
 import Ledger.Address (Address)
-import Ledger.Orphans  ()
+import Ledger.Orphans ()
+import Ledger.Tx (TxOutRef)
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -116,11 +116,11 @@ data GenesisCommitteeHashParams = GenesisCommitteeHashParams
     genesisToken :: !TokenName
   }
   deriving stock (Generic, Prelude.Show)
-  -- TODO: I'm not too sure why we can't derive 'ToSchema'? Apparently, the problem is
-  -- that 'Address' is NOT an instance of 'ToSchema', but according to the local
-  -- Haddock documentation it is? Probably a version problem I'd assume..
-  -- deriving anyclass (ToSchema)
 
+-- TODO: I'm not too sure why we can't derive 'ToSchema'? Apparently, the problem is
+-- that 'Address' is NOT an instance of 'ToSchema', but according to the local
+-- Haddock documentation it is? Probably a version problem I'd assume..
+-- deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 
