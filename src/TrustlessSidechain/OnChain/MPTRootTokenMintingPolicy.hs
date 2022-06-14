@@ -31,14 +31,12 @@ mkMintingPolicy
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
-    and
-      [ verifyTokenAmount $ traceIfFalse "Amount must be 1" . (== 1)
-      , any
-          ( \pubKey ->
-              verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
-          )
-          committeePubKeys
-      ]
+    verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1))
+      && any
+        ( \pubKey ->
+            verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
+        )
+        committeePubKeys
     where
       verifyTokenAmount verify =
         case Value.flattenValue txInfoMint of
