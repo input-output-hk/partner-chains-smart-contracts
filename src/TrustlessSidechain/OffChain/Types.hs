@@ -5,7 +5,13 @@ module TrustlessSidechain.OffChain.Types where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.String (IsString)
+import Data.Bifunctor (bimap)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as ByteString
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as Char8
+import Data.Either (fromRight)
+import Data.String (IsString (fromString))
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
@@ -16,12 +22,11 @@ import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import PlutusTx.Prelude qualified as PlutusTx
-import Prettyprinter (Pretty)
 import Schema (ToSchema)
 import Prelude qualified
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: PlutusTx.BuiltinByteString}
-  deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
+  deriving (IsString, Prelude.Show) via LedgerBytes
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
   deriving anyclass (NFData, ToSchema)
@@ -31,11 +36,30 @@ makeLift ''GenesisHash
 $(deriveJSON defaultOptions ''GenesisHash)
 
 newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: (PlutusTx.BuiltinByteString, PlutusTx.BuiltinByteString)}
-  -- deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
-  deriving (Prelude.Show)
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
   deriving anyclass (NFData, ToSchema)
+
+instance IsString SidechainPubKey where
+  fromString =
+    mkSidechainPubKey
+      . fromRight (error ())
+      . Base16.decode
+      . fromString
+
+instance Prelude.Show SidechainPubKey where
+  show =
+    Char8.unpack
+      . Base16.encode
+      . PlutusTx.fromBuiltin
+      . uncurry PlutusTx.appendByteString
+      . getSidechainPubKey
+
+mkSidechainPubKey :: ByteString -> SidechainPubKey
+mkSidechainPubKey =
+  SidechainPubKey
+    . bimap PlutusTx.toBuiltin PlutusTx.toBuiltin
+    . ByteString.splitAt 32
 
 makeLift ''SidechainPubKey
 

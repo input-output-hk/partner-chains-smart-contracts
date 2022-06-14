@@ -85,6 +85,7 @@ library
 
   build-depends:
     , aeson                      ^>=1.5.0.0
+    , base16-bytestring
     , bytestring                 ^>=0.10.12.0
     , cardano-api
     , cardano-crypto
@@ -158,14 +159,17 @@ test-suite trustless-sidechain-test
     , bytestring
     , cardano-api
     , cardano-crypto
+    , cardano-crypto-class
     , data-default
     , plutip
     , plutus-contract
+    , plutus-core
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
     , QuickCheck
     , quickcheck-instances
+    , secp256k1-haskell
     , tasty
     , tasty-quickcheck
     , trustless-sidechain

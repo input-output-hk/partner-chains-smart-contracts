@@ -2,14 +2,28 @@
 
 module Test.TrustlessSidechain.Integration (test) where
 
+import Cardano.Crypto.DSIGN.Class (
+  SignKeyDSIGN,
+  deriveVerKeyDSIGN,
+  genKeyDSIGN,
+  rawSerialiseSigDSIGN,
+  rawSerialiseVerKeyDSIGN,
+  signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
+import Crypto.Secp256k1 qualified as SECP
+import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
+import Data.ByteString.Hash (blake2b)
+import Data.Maybe (fromMaybe)
 import Ledger (getCardanoTxId)
-import Ledger.Crypto (PubKey (getPubKey))
+import Ledger.Crypto (PubKey )
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
-import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), toBuiltinData)
+import Plutus.V2.Ledger.Api (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)
@@ -43,11 +57,17 @@ spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
 
-sidechainPrivKey :: Wallet.XPrv
-sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
+sidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
+sidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
 
 sidechainPubKey :: SidechainPubKey
-sidechainPubKey = SidechainPubKey $ getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
+sidechainPubKey =
+  SidechainPubKey
+    . bimap Builtins.toBuiltin Builtins.toBuiltin
+    . ByteString.splitAt 32
+    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
+    . deriveVerKeyDSIGN
+    $ sidechainPrivKey
 
 test :: TestTree
 test =
@@ -65,7 +85,18 @@ test =
                           toBuiltinData $
                             BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
-                      sidechainSig = Crypto.sign' msg sidechainPrivKey
+
+                      ecdsaMsg =
+                        fromMaybe undefined
+                          . SECP.msg
+                          . blake2b
+                          $ Builtins.fromBuiltin msg
+
+                      sidechainSig =
+                        Crypto.Signature
+                          . Builtins.toBuiltin
+                          . rawSerialiseSigDSIGN
+                          $ signDSIGN () ecdsaMsg sidechainPrivKey
                   CommitteeCandidateValidator.register
                     (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
               )
@@ -83,7 +114,18 @@ test =
                           toBuiltinData $
                             BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
-                      sidechainSig = Crypto.sign' msg sidechainPrivKey
+
+                      ecdsaMsg =
+                        fromMaybe undefined
+                          . SECP.msg
+                          . blake2b
+                          $ Builtins.fromBuiltin msg
+
+                      sidechainSig =
+                        Crypto.Signature
+                          . Builtins.toBuiltin
+                          . rawSerialiseSigDSIGN
+                          $ signDSIGN () ecdsaMsg sidechainPrivKey
                   regTx <-
                     CommitteeCandidateValidator.register
                       (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
