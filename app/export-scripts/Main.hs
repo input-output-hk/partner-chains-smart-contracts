@@ -33,7 +33,11 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
-import TrustlessSidechain.OffChain.Types (SidechainParams (SidechainParams, chainId, genesisHash))
+import TrustlessSidechain.OffChain.Types (
+  GenesisHash (GenesisHash),
+  SidechainParams (SidechainParams, chainId, genesisHash),
+  SidechainPubKey (SidechainPubKey),
+ )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistration (
     BlockProducerRegistration,
@@ -57,8 +61,8 @@ import Prelude hiding (takeWhile)
 mockSidechainParams :: SidechainParams
 mockSidechainParams =
   SidechainParams
-    { chainId = "00"
-    , genesisHash = "11"
+    { chainId = 42
+    , genesisHash = GenesisHash $ toBuiltin $ ByteString.replicate 32 11
     }
 
 main :: IO ()
@@ -136,8 +140,8 @@ spoPubKey = Crypto.toPublicKey spoPrivKey
 sidechainPrivKey :: Wallet.XPrv
 sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
 
-sidechainPubKey :: Builtins.BuiltinByteString
-sidechainPubKey = getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
+sidechainPubKey :: SidechainPubKey
+sidechainPubKey = SidechainPubKey $ getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
 
 txOutRefParser :: Parser TxOutRef
 txOutRefParser = do

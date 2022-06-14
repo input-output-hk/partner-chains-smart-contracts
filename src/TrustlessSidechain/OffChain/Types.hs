@@ -3,24 +3,47 @@
 
 module TrustlessSidechain.OffChain.Types where
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Ledger.Crypto (PubKey, Signature)
-import Schema (
-  ToSchema,
- )
-
-import Ledger.Tx (TxOutRef)
-import PlutusTx qualified
-import PlutusTx.Prelude hiding (Semigroup ((<>)))
-
+import Data.String (IsString)
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
+import Ledger.Crypto (PubKey, Signature)
+import Ledger.Tx (TxOutRef)
+import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
+import PlutusTx (FromData, ToData, UnsafeFromData)
+import PlutusTx qualified
+import PlutusTx.Lift (makeLift)
+import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import PlutusTx.Prelude qualified as PlutusTx
+import Prettyprinter (Pretty)
+import Schema (ToSchema)
 import Prelude qualified
+
+newtype GenesisHash = GenesisHash {getGenesisHash :: PlutusTx.BuiltinByteString}
+  deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''GenesisHash
+
+$(deriveJSON defaultOptions ''GenesisHash)
+
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: PlutusTx.BuiltinByteString}
+  deriving (IsString, Prelude.Show, Pretty) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''SidechainPubKey
+
+$(deriveJSON defaultOptions ''SidechainPubKey)
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinByteString
-  , genesisHash :: BuiltinByteString
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -34,7 +57,7 @@ PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams
   , spoPubKey :: !PubKey
-  , sidechainPubKey :: !BuiltinByteString
+  , sidechainPubKey :: !SidechainPubKey
   , spoSig :: !Signature
   , sidechainSig :: !Signature
   , inputUtxo :: !TxOutRef

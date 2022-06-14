@@ -15,9 +15,7 @@ import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (TxOutRef)
-import Ledger.Typed.Scripts (
-  ValidatorTypes,
- )
+import Ledger.Typed.Scripts (ValidatorTypes)
 import Ledger.Typed.Scripts qualified as TypedScripts
 import Plutus.Script.Utils.V2.Scripts.Validators (mkUntypedValidator)
 import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), mkValidatorScript, toBuiltinData)
@@ -26,14 +24,14 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams)
+import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams, SidechainPubKey)
 import Prelude qualified
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: BuiltinByteString
+    bprSidechainPubKey :: SidechainPubKey
   , -- | Signature of the SPO
     bprSpoSignature :: Signature
   , -- | Signature of the SPO
@@ -47,7 +45,7 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: SidechainParams
-  , bprmSidechainPubKey :: BuiltinByteString
+  , bprmSidechainPubKey :: SidechainPubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }

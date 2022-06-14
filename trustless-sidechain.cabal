@@ -91,6 +91,7 @@ library
     , cardano-prelude
     , containers
     , data-default-class
+    , deepseq
     , lens
     , playground-common
     , plutus-contract
@@ -102,6 +103,7 @@ library
     , plutus-script-utils
     , plutus-tx
     , plutus-tx-plugin
+    , prettyprinter
     , row-types
     , serialise
     , text                       ^>=1.2.4.0

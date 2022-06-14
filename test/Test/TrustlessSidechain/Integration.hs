@@ -23,6 +23,7 @@ import TrustlessSidechain.OffChain.Types (
   MintParams (MintParams),
   RegisterParams (RegisterParams),
   SidechainParams (..),
+  SidechainPubKey (SidechainPubKey),
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
@@ -32,7 +33,7 @@ import Prelude
 sidechainParams :: SidechainParams
 sidechainParams =
   SidechainParams
-    { chainId = ""
+    { chainId = 0
     , genesisHash = ""
     }
 
@@ -45,8 +46,8 @@ spoPubKey = Crypto.toPublicKey spoPrivKey
 sidechainPrivKey :: Wallet.XPrv
 sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
 
-sidechainPubKey :: Builtins.BuiltinByteString
-sidechainPubKey = getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
+sidechainPubKey :: SidechainPubKey
+sidechainPubKey = SidechainPubKey $ getLedgerBytes $ getPubKey $ Crypto.toPublicKey sidechainPrivKey
 
 test :: TestTree
 test =
