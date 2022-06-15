@@ -16,13 +16,12 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoOutRef, txInInfoResolved),
+  TxInInfo (txInInfoOutRef),
   TxInfo (txInfoInputs, txInfoMint),
   TxOut (txOutDatumHash, txOutValue),
   TxOutRef,
  )
 import Plutus.V1.Ledger.Crypto (PubKey, Signature (getSignature))
-import Plutus.V1.Ledger.Crypto qualified as Crypto
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
@@ -161,6 +160,12 @@ Normally, the producer of a utxo is only required to include the datum hash,
 and not the datum itself (but can optionally do so). In this case, we rely on
 the fact that the producer actually does include the datum; and enforce this
 with 'outputDatum'.
+
+Note [Input has Token and Output has Token]:
+In an older iteration, we used to check if the tx's input has the token, but
+this is implicitly covered when checking if the output spends the token. Hence,
+we don't need to check if the input tx's spends the token which is a nice
+little optimization.
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
@@ -170,20 +175,13 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "Token missing from input" inputHasToken
-    && traceIfFalse "Token missing from output" outputHasToken
+  traceIfFalse "Token missing from output" outputHasToken
     && traceIfFalse "Committee signature missing" signedByCurrentCommittee
     && traceIfFalse "Wrong committee" isCurrentCommittee
     && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-
-    ownInput :: TxOut
-    ownInput =
-      txInInfoResolved $
-        fromMaybe (traceError "Committee hash input missing") $
-          Contexts.findOwnInput ctx
 
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
@@ -196,9 +194,6 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         txOutDatumHash ownOutput
           >>= flip Contexts.findDatum info
           >>= PlutusTx.fromBuiltinData . getDatum
-
-    inputHasToken :: Bool
-    inputHasToken = hasNft (txOutValue ownInput)
 
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
