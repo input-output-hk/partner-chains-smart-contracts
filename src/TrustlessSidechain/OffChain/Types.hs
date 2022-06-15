@@ -116,11 +116,10 @@ data GenesisCommitteeHashParams = GenesisCommitteeHashParams
     genesisToken :: !TokenName
   }
   deriving stock (Generic, Prelude.Show)
-
--- TODO: I'm not too sure why we can't derive 'ToSchema'? Apparently, the problem is
--- that 'Address' is NOT an instance of 'ToSchema', but according to the local
--- Haddock documentation it is? Probably a version problem I'd assume..
--- deriving anyclass (ToSchema)
+-- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
+-- support having sum types which take an argument; so there is no
+-- 'Schema.ToSchema' for 'Address'. Oops!
+-- @deriving anyclass (ToSchema)@
 
 $(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 
