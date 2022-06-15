@@ -5,7 +5,6 @@ module TrustlessSidechain.OnChain.Types where
 import Ledger.Typed.Scripts qualified as Script
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Prelude (BuiltinByteString)
-
 import Ledger.Crypto (PubKey)
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.

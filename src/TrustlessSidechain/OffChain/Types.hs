@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
-
 module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -8,10 +7,8 @@ import Ledger.Crypto (PubKey, Signature)
 import Schema (
   ToSchema,
  )
-
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-
 import GHC.Generics (Generic)
 import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
 import Ledger.Address (Address)

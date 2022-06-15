@@ -8,13 +8,10 @@ module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
  )
-
 import Ledger.Typed.Scripts (MintingPolicy, TypedValidator, Validator, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts
-
 import Ledger.Address (Address)
 import Ledger.Contexts qualified as Contexts
-
 import Plutus.V1.Ledger.Bytes qualified as Bytes
 import Plutus.V1.Ledger.Crypto (PubKey, Signature (getSignature))
 import Plutus.V1.Ledger.Crypto qualified as Crypto
@@ -25,13 +22,10 @@ import Plutus.V1.Ledger.Value (
   Value,
  )
 import Plutus.V1.Ledger.Value qualified as Value
-
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-
 import Cardano.Crypto.Wallet (XPrv)
 import Ledger.Crypto qualified as Crypto
-
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
@@ -39,11 +33,9 @@ import Plutus.V1.Ledger.Contexts (
   TxOut (txOutDatumHash, txOutValue),
   TxOutRef,
  )
-
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Prelude qualified
-
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
