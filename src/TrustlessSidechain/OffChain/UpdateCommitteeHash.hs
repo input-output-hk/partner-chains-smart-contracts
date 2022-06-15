@@ -1,5 +1,30 @@
 module TrustlessSidechain.OffChain.UpdateCommitteeHash where
 
+import Control.Lens.Fold qualified as Fold
+import Control.Lens.Getter qualified as Getter
+import Control.Lens.Indexed qualified as Indexed
+import Control.Lens.Prism (_Right)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Text (Text)
+import Ledger (Redeemer (Redeemer), TxOutRef)
+import Ledger.Constraints as Constraints
+import Ledger.Crypto (PubKey)
+import Ledger.Tx (
+  ChainIndexTxOut,
+  ciTxOutDatum,
+  ciTxOutValue,
+ )
+import Ledger.Tx qualified as Tx
+import Plutus.Contract (AsContractError, Contract)
+import Plutus.Contract qualified as Contract
+import Plutus.Contract.Logging qualified as Logging
+import Plutus.V1.Ledger.Api (Datum (getDatum))
+import Plutus.V1.Ledger.Value (AssetClass)
+import Plutus.V1.Ledger.Value qualified as Value
+import PlutusPrelude (void)
+import PlutusTx.IsData.Class qualified as Class
+import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   GenesisCommitteeHashParams,
@@ -23,31 +48,6 @@ import TrustlessSidechain.OnChain.UpdateCommitteeHash (
   UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import Plutus.Contract (AsContractError, Contract)
-import Plutus.Contract qualified as Contract
-import Plutus.Contract.Logging qualified as Logging
-import Plutus.V1.Ledger.Api (Datum (getDatum))
-import Plutus.V1.Ledger.Value (AssetClass)
-import Plutus.V1.Ledger.Value qualified as Value
-import Data.Map (Map)
-import Data.Map qualified as Map
-import Control.Lens.Fold qualified as Fold
-import Control.Lens.Getter qualified as Getter
-import Control.Lens.Indexed qualified as Indexed
-import Control.Lens.Prism (_Right)
-import Ledger (Redeemer (Redeemer), TxOutRef)
-import Ledger.Constraints as Constraints
-import Ledger.Crypto (PubKey)
-import Ledger.Tx (
-  ChainIndexTxOut,
-  ciTxOutDatum,
-  ciTxOutValue,
- )
-import Ledger.Tx qualified as Tx
-import PlutusPrelude (void)
-import PlutusTx.IsData.Class qualified as Class
-import PlutusTx.Prelude
-import Data.Text (Text)
 import Prelude qualified
 
 {- | 'findCommitteeHashOutput' searches through the utxos to find the output

@@ -1,19 +1,20 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Ledger.Crypto (PubKey, Signature)
-import Schema (
-  ToSchema,
- )
-import PlutusTx qualified
-import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import GHC.Generics (Generic)
 import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
 import Ledger.Address (Address)
+import Ledger.Crypto (PubKey, Signature)
 import Ledger.Orphans ()
 import Ledger.Tx (TxOutRef)
+import PlutusTx qualified
+import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import Schema (
+  ToSchema,
+ )
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -113,6 +114,7 @@ data GenesisCommitteeHashParams = GenesisCommitteeHashParams
     genesisToken :: !TokenName
   }
   deriving stock (Generic, Prelude.Show)
+
 -- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
 -- support having sum types which take an argument; so there is no
 -- 'Schema.ToSchema' for 'Address'. Oops!
