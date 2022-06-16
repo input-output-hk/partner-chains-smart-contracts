@@ -121,7 +121,6 @@ main = do
 
       serialised = Builtins.serialiseData $ toBuiltinData msg
 
-  print spoPrivKey
   printTitle "CommitteeCandidateValidator"
 
   printTitle "Datum"
