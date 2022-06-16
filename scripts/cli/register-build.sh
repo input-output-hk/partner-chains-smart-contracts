@@ -1,4 +1,8 @@
 #!/bin/sh
+set -e
+
+me=$(realpath $0)
+
 SKEY_PATH=$1
 VKEY_PATH=$2
 
@@ -7,14 +11,12 @@ GENESIS_HASH=112233
 SPO_SKEY=$3
 SIDECHAIN_SKEY=$4
 
-ROOT_DIR=$(realpath ../../)
-SCRIPTS_DIR=$(pwd)
+SCRIPTS_DIR=$(dirname $me)
+ROOT_DIR=$SCRIPTS_DIR/../..
 EXPORTS_DIR=$ROOT_DIR/exports
 TMP_DIR=$SCRIPTS_DIR/tmp
 
-if [ ! -d $TMP_DIR ]; then
-  mkdir $TMP_DIR
-fi
+mkdir -p $TMP_DIR
 
 cardano-cli address build --payment-script-file $EXPORTS_DIR/CommitteeCandidateValidator.plutus --testnet-magic 9 > $EXPORTS_DIR/CommitteeCandidateValidator.addr
 cardano-cli address build --payment-verification-key-file $VKEY_PATH --testnet-magic 9 > $TMP_DIR/ownWallet.addr
@@ -24,7 +26,9 @@ ADDR=$(cat $TMP_DIR/ownWallet.addr)
 cardano-cli query utxo --address $ADDR --testnet-magic 9 --out-file $TMP_DIR/ownUtxos.json
 TX_IN=$(cat $TMP_DIR/ownUtxos.json | jq -r "keys | .[0]")
 
-cd $ROOT_DIR && cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY && cd $SCRIPTS_DIR
+cd $ROOT_DIR
+cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY
+cd $SCRIPTS_DIR
 
 
 cardano-cli transaction build \
