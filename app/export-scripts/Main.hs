@@ -10,17 +10,18 @@ import Cardano.Api (
   writeFileTextEnvelope,
  )
 import Cardano.Api.Shelley (fromPlutusData)
+import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
   deriveVerKeyDSIGN,
   genKeyDSIGN,
+  rawDeserialiseSignKeyDSIGN,
   rawSerialiseSigDSIGN,
   rawSerialiseVerKeyDSIGN,
   signDSIGN,
  )
 import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (MonadPlus (mzero), void)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson.Extras (tryDecode)
@@ -32,20 +33,21 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b)
 import Data.Either (fromRight)
 import Data.Kind (Type)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer)
-import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
+  LedgerBytes (LedgerBytes),
   ToData (toBuiltinData),
   TxId (TxId),
   TxOutRef (TxOutRef),
-  toBuiltin,
  )
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
+import System.Environment (getArgs)
+import System.Exit (die)
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
   SidechainParams (SidechainParams, chainId, genesisHash),
@@ -71,68 +73,74 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as Commi
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import Prelude hiding (takeWhile)
 
-mockSidechainParams :: SidechainParams
-mockSidechainParams =
-  SidechainParams
-    { chainId = 42
-    , genesisHash = GenesisHash $ toBuiltin $ ByteString.replicate 32 11
-    }
-
 main :: IO ()
 main = do
-  putStrLn "Insert input UTxO (format: TX_ID#TX_IDX )"
-  inputUtxo <- fromRight (error "Unable to parse input UTxO") . parseTxOutRef <$> getLine
-  writeScripts mockSidechainParams inputUtxo
+  args <- getArgs
+
+  (inputUtxoRaw, chainIdRaw, genesisHashRaw, maybeSpoPrivKey, maybeSidechainPrivKey) <- case args of
+    [a1, a2, a3] -> pure (a1, a2, a3, Nothing, Nothing)
+    [a1, a2, a3, a4] -> pure (a1, a2, a3, Just a4, Nothing)
+    [a1, a2, a3, a4, a5] -> pure (a1, a2, a3, Just a4, Just a5)
+    _ ->
+      die
+        "The following arguments are required: INPUT_UTXO CHAIN_ID GENESIS_HASH\n \
+        \folowed by two optional arguments: SPO_SKEY SIDECHAIN_SKEY"
+
+  let inputUtxo = fromRight (error "Unable to parse input UTxO") $ parseTxOutRef inputUtxoRaw
+      gHash =
+        GenesisHash
+          . Builtins.toBuiltin
+          . fromRight (error "Unable to parse genesisHash")
+          . Base16.decode
+          . Char8.pack
+          $ genesisHashRaw
+
+      scParams =
+        SidechainParams
+          { chainId = read chainIdRaw
+          , genesisHash = gHash
+          }
+
+      spoPrivKey = maybe mockSpoPrivKey toSpoPrivKey maybeSpoPrivKey
+      sidechainPrivKey = maybe mockSidechainPrivKey toSidechainPrivKey maybeSidechainPrivKey
+
+      registrationData =
+        BlockProducerRegistration
+          { bprSpoPubKey = toSpoPubKey spoPrivKey
+          , bprSidechainPubKey = toSidechainPubKey sidechainPrivKey
+          , bprSpoSignature = signWithSPOKey spoPrivKey msg
+          , bprSidechainSignature = signWithSidechainKey sidechainPrivKey msg
+          , bprInputUtxo = inputUtxo
+          }
+      msg =
+        BlockProducerRegistrationMsg
+          { bprmSidechainParams = scParams
+          , bprmSidechainPubKey = toSidechainPubKey sidechainPrivKey
+          , bprmInputUtxo = inputUtxo
+          }
+
+      serialised = Builtins.serialiseData $ toBuiltinData msg
+
+  print spoPrivKey
+  printTitle "CommitteeCandidateValidator"
+
+  printTitle "Datum"
+  print registrationData
+
+  printTitle "Registration msg"
+  print msg
+
+  printTitle "Serialised registration msg"
+  printBuiltinBS serialised
+
+  writeScripts scParams registrationData
   where
     parseTxOutRef =
       parseOnly txOutRefParser
         . Text.pack
 
-writeScripts :: SidechainParams -> TxOutRef -> IO ()
-writeScripts scParams inputUtxo = do
-  let msg =
-        BlockProducerRegistrationMsg
-          { bprmSidechainParams = scParams
-          , bprmSidechainPubKey = sidechainPubKey
-          , bprmInputUtxo = inputUtxo
-          }
-      serialised = Builtins.serialiseData $ toBuiltinData msg
-
-      spoSig = Crypto.sign' serialised spoPrivKey
-
-      hashedMsg = blake2b $ Builtins.fromBuiltin serialised
-      ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
-
-      sidechainSig =
-        Crypto.Signature
-          . Builtins.toBuiltin
-          . rawSerialiseSigDSIGN
-          $ signDSIGN () ecdsaMsg sidechainPrivKey
-
-      committeeRegDatum =
-        BlockProducerRegistration
-          { bprSpoPubKey = spoPubKey
-          , bprSidechainPubKey = sidechainPubKey
-          , bprSpoSignature = spoSig
-          , bprSidechainSignature = sidechainSig
-          , bprInputUtxo = inputUtxo
-          }
-      committeeDeregRed = unitRedeemer
-
-  printTitle "CommitteeCandidateValidator"
-
-  printTitle "Datum"
-  print committeeRegDatum
-
-  printTitle "Registration msg"
-  print msg
-
-  printTitle "Registration msg hashed"
-  printBS hashedMsg
-
-  printTitle "Serialised registration msg"
-  printBuiltinBS serialised
-
+writeScripts :: SidechainParams -> BlockProducerRegistration -> IO ()
+writeScripts scParams registrationData = do
   results <-
     sequence
       [ writeFileTextEnvelope
@@ -143,13 +151,92 @@ writeScripts scParams inputUtxo = do
           "exports/FUELMintingPolicy.plutus"
           Nothing
           (FUELMintingPolicy.policyScript scParams)
-      , writeData "exports/CommitteeCandidateValidator.datum" committeeRegDatum
-      , writeData "exports/CommitteeCandidateValidator.redeemer" committeeDeregRed
+      , writeData "exports/CommitteeCandidateValidator.datum" registrationData
+      , writeData "exports/CommitteeCandidateValidator.redeemer" unitRedeemer
       ]
 
   case sequence results of
     Left _ -> print results
     Right _ -> return ()
+
+-- Keys
+
+signWithSPOKey ::
+  SignKeyDSIGN Ed25519DSIGN ->
+  BlockProducerRegistrationMsg ->
+  Crypto.Signature
+signWithSPOKey skey msg =
+  let serialised = Builtins.fromBuiltin $ Builtins.serialiseData $ toBuiltinData msg
+   in Crypto.Signature
+        . Builtins.toBuiltin
+        . rawSerialiseSigDSIGN
+        $ signDSIGN () serialised skey
+
+signWithSidechainKey ::
+  SignKeyDSIGN EcdsaSecp256k1DSIGN ->
+  BlockProducerRegistrationMsg ->
+  Crypto.Signature
+signWithSidechainKey skey msg =
+  let serialised = Builtins.serialiseData $ toBuiltinData msg
+      hashedMsg = blake2b $ Builtins.fromBuiltin serialised
+      ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
+   in Crypto.Signature
+        . Builtins.toBuiltin
+        . rawSerialiseSigDSIGN
+        $ signDSIGN () ecdsaMsg skey
+
+toSpoPrivKey :: String -> SignKeyDSIGN Ed25519DSIGN
+toSpoPrivKey =
+  genKeyDSIGN @Ed25519DSIGN
+    . mkSeedFromBytes
+    . fromRight (error "Invalid spo key hex")
+    . Base16.decode
+    . Char8.pack
+
+toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
+toSpoPubKey =
+  Crypto.PubKey
+    . LedgerBytes
+    . Builtins.toBuiltin
+    . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
+    . deriveVerKeyDSIGN
+
+toSidechainPrivKey :: String -> SignKeyDSIGN EcdsaSecp256k1DSIGN
+toSidechainPrivKey =
+  fromJust (error "Unable to parse sidechain private key")
+    . rawDeserialiseSignKeyDSIGN @EcdsaSecp256k1DSIGN
+    . fromRight (error "Invalid sidechain key hex")
+    . Base16.decode
+    . Char8.pack
+
+toSidechainPubKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> SidechainPubKey
+toSidechainPubKey =
+  SidechainPubKey
+    . bimap Builtins.toBuiltin Builtins.toBuiltin
+    . ByteString.splitAt 32
+    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
+    . deriveVerKeyDSIGN
+
+txOutRefParser :: Parser TxOutRef
+txOutRefParser = do
+  txId <- TxId <$> decodeHash (takeWhile (/= '#'))
+  void $ char '#'
+
+  txIx <- decimal
+  pure $ TxOutRef txId txIx
+
+-- Helpers
+
+writeData :: forall (a :: Type). ToData a => FilePath -> a -> IO ((Either (FileError ()) ()))
+writeData path =
+  writeFileJSON path
+    . scriptDataToJson ScriptDataJsonDetailedSchema
+    . fromPlutusData
+    . PlutusTx.toData
+
+decodeHash :: Parser Text -> Parser Builtins.BuiltinByteString
+decodeHash rawParser =
+  rawParser >>= \parsed -> either (const mzero) (pure . Builtins.toBuiltin) (tryDecode parsed)
 
 printTitle :: String -> IO ()
 printTitle title =
@@ -163,39 +250,10 @@ printBuiltinBS :: Builtins.BuiltinByteString -> IO ()
 printBuiltinBS =
   printBS . Builtins.fromBuiltin
 
-writeData :: forall (a :: Type). ToData a => FilePath -> a -> IO ((Either (FileError ()) ()))
-writeData path =
-  writeFileJSON path
-    . scriptDataToJson ScriptDataJsonDetailedSchema
-    . fromPlutusData
-    . PlutusTx.toData
+-- Mock data
 
-spoPrivKey :: Wallet.XPrv
-spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
+mockSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
+mockSpoPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
 
-spoPubKey :: PubKey
-spoPubKey = Crypto.toPublicKey spoPrivKey
-
-sidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
-sidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
-
-sidechainPubKey :: SidechainPubKey
-sidechainPubKey =
-  SidechainPubKey
-    . bimap Builtins.toBuiltin Builtins.toBuiltin
-    . ByteString.splitAt 32
-    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
-    . deriveVerKeyDSIGN
-    $ sidechainPrivKey
-
-txOutRefParser :: Parser TxOutRef
-txOutRefParser = do
-  txId <- TxId <$> decodeHash (takeWhile (/= '#'))
-  void $ char '#'
-
-  txIx <- decimal
-  pure $ TxOutRef txId txIx
-
-decodeHash :: Parser Text -> Parser Builtins.BuiltinByteString
-decodeHash rawParser =
-  rawParser >>= \parsed -> either (const mzero) (pure . toBuiltin) (tryDecode parsed)
+mockSidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
+mockSidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123

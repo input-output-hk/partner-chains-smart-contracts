@@ -135,6 +135,7 @@ executable trustless-sidechain-export
     , base16-bytestring
     , bytestring
     , cardano-api
+    , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
     , plutus-core
