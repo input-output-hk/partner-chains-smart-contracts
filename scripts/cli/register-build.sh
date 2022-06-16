@@ -24,7 +24,7 @@ cardano-cli address build --payment-verification-key-file "$VKEY_PATH" --testnet
 ADDR=$(cat $TMP_DIR/ownWallet.addr)
 
 cardano-cli query utxo --address $ADDR --testnet-magic 9 --out-file $TMP_DIR/ownUtxos.json
-TX_IN=$(cat $TMP_DIR/ownUtxos.json | jq -r "keys | .[0]")
+TX_IN=$(jq -r "keys[0]" $TMP_DIR/ownUtxos.json )
 
 cd $ROOT_DIR
 cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY
