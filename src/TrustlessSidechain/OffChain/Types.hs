@@ -4,17 +4,17 @@
 module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import GHC.Generics (Generic)
+import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
+import Ledger.Address (Address)
 import Ledger.Crypto (PubKey, Signature)
-import Schema (
-  ToSchema,
- )
-
+import Ledger.Orphans ()
 import Ledger.Tx (TxOutRef)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-
-import GHC.Generics (Generic)
-import Ledger (PaymentPubKeyHash)
+import Schema (
+  ToSchema,
+ )
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -57,6 +57,8 @@ data BurnParams = BurnParams
     amount :: Integer
   , -- | SideChain address
     recipient :: BuiltinByteString
+  , -- | Signature of the address owner
+    sidechainSig :: BuiltinByteString
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
   }
@@ -78,3 +80,54 @@ data MintParams = MintParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''MintParams)
+
+{- | Endpoint parameters for committee candidate hash updating
+
+ TODO: it might not be a bad idea to factor out the 'signature' and
+ 'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
+ 'SaveRootParams' in a different data type. I'd imagine there will be lots of
+ duplciated code when it comes to verifying that the committee has approved
+ of these transactions either way.
+-}
+data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { -- | The public keys of the new committee.
+    newCommitteePubKeys :: [PubKey]
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
+  , -- | The signature for the new committee hash.
+    signature :: !BuiltinByteString
+  , -- | Public keys of the current committee members.
+    committeePubKeys :: [PubKey]
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
+
+-- | Endpoint parameters for initializing the committee hash
+data GenesisCommitteeHashParams = GenesisCommitteeHashParams
+  { -- | Public keys of the initial committee members.
+    genesisCommitteePubKeys :: [PubKey]
+  , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
+    genesisAddress :: !Address
+  , -- | 'genesisToken' is the token name for the NFT
+    genesisToken :: !TokenName
+  }
+  deriving stock (Generic, Prelude.Show)
+
+-- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
+-- support having sum types which take an argument; so there is no
+-- 'Schema.ToSchema' for 'Address'. Oops!
+-- @deriving anyclass (ToSchema)@
+
+$(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
+
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , signature :: BuiltinByteString
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+$(deriveJSON defaultOptions ''SaveRootParams)

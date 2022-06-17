@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.FUELMintingPolicy where
+module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 
 import Ledger (
   MintingPolicy,
@@ -12,25 +12,31 @@ import Ledger (
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
+import Plutus.V1.Ledger.Bytes (getLedgerBytes)
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
+import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
 
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
 mkMintingPolicy
   _
-  mode
+  SignedMerkleRoot
+    { merkleRoot
+    , signature
+    , committeePubKeys
+    }
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
-    case mode of
-      MainToSide _ _ ->
-        verifyTokenAmount $ traceIfFalse "Can't burn a positive amount" . (< 0)
-      SideToMain ->
-        verifyTokenAmount $ traceIfFalse "Can't mint a negative amount" . (> 0)
+    verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1))
+      && any
+        ( \pubKey ->
+            verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
+        )
+        committeePubKeys
     where
       verifyTokenAmount verify =
         case Value.flattenValue txInfoMint of
@@ -39,7 +45,7 @@ mkMintingPolicy
               && traceIfFalse "Token Symbol is incorrect" (sym == ownSymbol)
               && traceIfFalse "Token Name is incorrect" (name == ownTokenName)
           _ -> False
-      ownTokenName = Value.TokenName "FUEL"
+      ownTokenName = Value.TokenName merkleRoot
 mkMintingPolicy _ _ _ = False
 
 mintingPolicy :: SidechainParams -> MintingPolicy

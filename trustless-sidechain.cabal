@@ -64,6 +64,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    TypeFamilies
     TypeOperators
     TypeSynonymInstances
     UndecidableInstances
@@ -77,11 +78,16 @@ library
   exposed-modules:
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
+    TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
+    TrustlessSidechain.OnChain.UpdateCommitteeHash
 
   build-depends:
     , aeson                      ^>=1.5.0.0
