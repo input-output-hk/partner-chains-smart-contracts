@@ -33,19 +33,29 @@ nix-cabal-repl:
 
 # Target to use as dependency to fail if not inside nix-shell.
 requires_nix_shell:
-	@ [ "$(IN_NIX_SHELL)" ] || echo "The $(MAKECMDGOALS) target must be run from inside a nix shell"
-	@ [ "$(IN_NIX_SHELL)" ] || (echo "    run 'nix develop' first" && false)
+	@ [ "$(IN_NIX_SHELL)" ] || { \
+	echo "The $(MAKECMDGOALS) target must be run from inside a nix shell"; \
+	echo "    run 'nix develop' first"; \
+	false; \
+	}
 
-FOURMOLU_EXTENSIONS := -o -XTypeApplications -o -XTemplateHaskell -o -XImportQualifiedPost -o -XPatternSynonyms -o -fplugin=RecordDotPreprocessor
+FOURMOLU_EXTENSIONS := \
+	-o -XTypeApplications \
+	-o -XTemplateHaskell \
+	-o -XImportQualifiedPost \
+	-o -XPatternSynonyms \
+	-o -fplugin=RecordDotPreprocessor
 
 # Add folder locations to the list to be reformatted.
 format:
 	@ echo "> Formatting all .hs files"
-	fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs")
+	fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence \
+		$$(find src/ test/ app/ -iname "*.hs")
 
 format_check:
 	@ echo "> Checking format of all .hs files"
-	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs")
+	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence \
+		$$(find src/ test/ app/ -iname "*.hs")
 
 NIX_SOURCES := $(shell fd -enix)
 
@@ -64,4 +74,4 @@ cabalfmt_check: requires_nix_shell
 	cabal-fmt --check $(CABAL_SOURCES)
 
 lint: requires_nix_shell
-	hlint $$(find src/  -iregex ".*.hs") $$(find test/ -iregex ".*.hs")
+	hlint $$(find src/ test/ app/ -iname "*.hs")

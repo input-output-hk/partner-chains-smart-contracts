@@ -35,20 +35,17 @@
           inherit (haskell-nix) config;
         };
 
-      deferPluginErrors = true;
-
       ghcVersion = "ghc8107";
 
       projectFor = system:
         let
-          pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
           project = (nixpkgsFor system).haskell-nix.cabalProject {
             src = ./.;
             compiler-nix-name = ghcVersion;
             inherit (plutip) cabalProjectLocal;
             extraSources = plutip.extraSources ++ [{
-              src = "${plutip}";
+              src = plutip;
               subdirs = [ "." ];
             }];
             modules = plutip.haskellModules ++ [{
@@ -64,6 +61,7 @@
               withHoogle = true;
               exactDeps = true;
               nativeBuildInputs = with pkgs'; [
+                bashInteractive
                 git
                 haskellPackages.apply-refact
                 fd
