@@ -1,7 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | This module is an implementation of a merkle tree suitable for on chain
- and off chain code.
+ and off chain code. This is meant to be imported qualified i.e.,
+
+ > import TrustlessSidechain.MerkleTree qualified as MT
 
  It is based off of [hydra-poc](https://github.com/input-output-hk/hydra-poc)
  with some improvements.
