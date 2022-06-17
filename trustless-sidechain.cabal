@@ -64,6 +64,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    TypeFamilies
     TypeOperators
     TypeSynonymInstances
     UndecidableInstances
@@ -84,6 +85,7 @@ library
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
 
