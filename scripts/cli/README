@@ -1,0 +1,15 @@
+How to use:
+
+* first run:
+  $ ./init.sh <KEYNAME.skey> [vkey=KEYNAME.vkey [SPO_SKEY] [SIDECHAIN_SKEY]]
+
+* subsequent runs:
+  just build:
+    $ ./someScript.sh
+  build & submit:
+    $ ./someScript.sh submit
+
+* some scripts rely on each other, for example, a burn relies on a prior mint.
+  there is no attempt to specify these relations in the shell scripts, rather,
+  it's the responsibility of the runner making sure submitted transactions are
+  confirmed, and subsequent transactions can be run.

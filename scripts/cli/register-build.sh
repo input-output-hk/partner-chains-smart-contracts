@@ -1,51 +1,28 @@
 #!/bin/sh
 set -e
 
-me=$(realpath $0)
+this=$(realpath $0)
+SUBMIT=$1
 
-SKEY_PATH=$1
-VKEY_PATH=$2
-
-CHAIN_ID=123
-GENESIS_HASH=112233
-SPO_SKEY=$3
-SIDECHAIN_SKEY=$4
-
-SCRIPTS_DIR=$(dirname $me)
-ROOT_DIR=$(realpath $SCRIPTS_DIR/../..)
-EXPORTS_DIR=$ROOT_DIR/exports
+SCRIPTS_DIR=$(dirname $this)
 TMP_DIR=$SCRIPTS_DIR/tmp
 
-mkdir -p $TMP_DIR
+. $TMP_DIR/env
 
-cardano-cli address build --payment-script-file $EXPORTS_DIR/CommitteeCandidateValidator.plutus --testnet-magic 9 > $EXPORTS_DIR/CommitteeCandidateValidator.addr
-cardano-cli address build --payment-verification-key-file "$VKEY_PATH" --testnet-magic 9 > $TMP_DIR/ownWallet.addr
-
-ADDR=$(cat $TMP_DIR/ownWallet.addr)
-
-cardano-cli query utxo --address $ADDR --testnet-magic 9 --out-file $TMP_DIR/ownUtxos.json
-TX_IN=$(jq -r "keys[0]" $TMP_DIR/ownUtxos.json )
-
-cd $ROOT_DIR
-cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY
-cd $SCRIPTS_DIR
-
-
-cardano-cli transaction build \
+cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
-  --tx-in $TX_IN \
-  --tx-out $(cat $EXPORTS_DIR/CommitteeCandidateValidator.addr)+1020000 \
+  --tx-in $(get_utxos $(get_own_wallet_addr) | head -1) \
+  --tx-out $(get_script_addr $EXPORTS_DIR/CommitteeCandidateValidator.plutus)+1050000 \
   --tx-out-datum-hash-file $EXPORTS_DIR/CommitteeCandidateValidator.datum \
-  --change-address $ADDR \
-  --testnet-magic 9 \
-  --out-file $TMP_DIR/tx.raw
+  --change-address $(get_own_wallet_addr) \
+  --out-file $TMP_DIR/register.raw
 
-cardano-cli transaction sign \
-  --tx-body-file $TMP_DIR/tx.raw \
+[ "$SUBMIT" = "submit" ] && {
+cardano-cli transaction sign $TESTNET_MAGIC \
+  --tx-body-file $TMP_DIR/register.raw \
   --signing-key-file "$SKEY_PATH" \
-  --testnet-magic 9 \
-  --out-file $TMP_DIR/tx.sig
+  --out-file $TMP_DIR/register.sig
 
-cardano-cli transaction submit \
-  --testnet-magic 9 \
-  --tx-file $TMP_DIR/tx.sig
+cardano-cli transaction submit $TESTNET_MAGIC \
+  --tx-file $TMP_DIR/register.sig
+}

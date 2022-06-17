@@ -1,66 +1,53 @@
 #!/bin/sh
 set -e
 
-me=$(realpath $0)
+this=$(realpath $0)
+SUBMIT=$1
 
-SKEY_PATH=$1
-VKEY_PATH=$2
-
-CHAIN_ID=123
-GENESIS_HASH=112233
-SPO_SKEY=$3
-SIDECHAIN_SKEY=$4
-
-SCRIPTS_DIR=$(dirname $me)
-ROOT_DIR=$(realpath $SCRIPTS_DIR/../..)
-EXPORTS_DIR=$ROOT_DIR/exports
+SCRIPTS_DIR=$(dirname $this)
 TMP_DIR=$SCRIPTS_DIR/tmp
 
+. $TMP_DIR/env
+
 POLICY=$EXPORTS_DIR/FUELMintingPolicy
-FUELTN="4655454c"
+TOKEN=$(cardano-cli transaction policyid --script-file $POLICY.plutus).$(printf FUEL | xxd -p)
 
-ADDR=$(cat $TMP_DIR/ownWallet.addr)
-
-# mint
-$SCRIPTS_DIR/mint-build.sh
-
-
-# await tx confirmed
-query_utxos() {
-  cardano-cli query utxo --address $ADDR --testnet-magic 9 \
-    --out-file $TMP_DIR/tmp.json
-}
-
-get_utxos() {
-  jq -r "keys[0]" $TMP_DIR/ownUTXOs.json
-}
-
-OLD_TX_IN=$(get_utxos)
-
-while [ $OLD_TX_IN = get_utxos ]
-do query_utxos
+# God I wish we had constraint lookups
+for o in $(get_utxos $(get_own_wallet_addr)) # also writes json to $TMP_DIR/pipe
+do
+  [ $TX_IN_ADA ] && [ $TX_IN_TOK ] && break
+  if test "$TOKEN" = "$(
+    jq -r \
+    " .[\"$o\"].value | del(.lovelace)
+                      | [..|keys?]
+                      | flatten
+                      | join(\".\")
+    " $TMP_DIR/pipe
+  )"
+  then TX_IN_TOK=${TX_IN_TOK:-$o}
+  else TX_IN_ADA=${TX_IN_ADA:-$o}
+  fi
 done
 
-
-# burn
-cardano-cli transaction build \
+cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
-  --tx-in $TX_IN \
-  --tx-in-collateral $TX_IN \
-  --tx-out $(cat $POLICY.addr)+1020000 \
-  --mint "-1 $(cardano-cli transaction policyid --script-file $POLICY.plutus).$FUELTN" \
+  --tx-in $TX_IN_ADA \
+  --tx-in $TX_IN_TOK \
+  --tx-in-collateral $TX_IN_ADA \
+  --tx-out "$(get_own_wallet_addr)+1050000" \
+  --mint "-1 $TOKEN" \
   --mint-script-file $POLICY.plutus \
   --mint-redeemer-file $POLICY.burn.redeemer \
-  --change-address $ADDR \
-  --testnet-magic 9 \
-  --out-file $TMP_DIR/tx.raw
+  --change-address $(get_own_wallet_addr) \
+  --protocol-params-file $TMP_DIR/protocolParams.json \
+  --out-file $TMP_DIR/burn.raw
 
-cardano-cli transaction sign \
-  --tx-body-file $TMP_DIR/tx.raw \
+[ "$SUBMIT" = "submit" ] && {
+cardano-cli transaction sign $TESTNET_MAGIC \
+  --tx-body-file $TMP_DIR/burn.raw \
   --signing-key-file "$SKEY_PATH" \
-  --testnet-magic 9 \
-  --out-file $TMP_DIR/tx.sig
+  --out-file $TMP_DIR/burn.sig
 
-cardano-cli transaction submit \
-  --testnet-magic 9 \
-  --tx-file $TMP_DIR/tx.sig
+cardano-cli transaction submit $TESTNET_MAGIC \
+  --tx-file $TMP_DIR/burn.sig
+}
