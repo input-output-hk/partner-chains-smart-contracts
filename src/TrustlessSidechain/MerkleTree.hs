@@ -2,6 +2,19 @@
 
 {- | This module is an implementation of a merkle tree suitable for on chain
  and off chain code.
+
+ It is based off of [hydra-poc](https://github.com/input-output-hk/hydra-poc)
+ with some improvements.
+
+ Ultimately, the decision to write our own merkle tree came down to:
+
+    1.  We'd like to optimize things later, so it's better if we write our code
+    ourselves (so we can actually optimize!)
+
+    2.  There were some low hanging fruit optimizations that we could perform
+    already
+
+    3.  We can document ours nicely :)
 -}
 module TrustlessSidechain.MerkleTree (
   -- * Types
