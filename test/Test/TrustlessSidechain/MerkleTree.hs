@@ -13,9 +13,8 @@ import Test.QuickCheck.Modifiers (NonEmptyList (getNonEmpty))
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.QuickCheck qualified as QuickCheck
-import TrustlessSidechain.MerkleTree (MerkleTree)
 import TrustlessSidechain.MerkleTree qualified as MT
-import Prelude
+import Prelude qualified
 
 -- | 'MerkleListTestCase' new type wrapper to help generate test cases.
 newtype MerkleListTestCase = MerkleListTestCase (NonEmpty BuiltinByteString)
