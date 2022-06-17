@@ -2,6 +2,7 @@ module Main (main) where
 
 import Test.Tasty
 import Test.TrustlessSidechain.Integration as Integration
+import Test.TrustlessSidechain.MerkleTree as MerkleTree
 import Prelude (IO)
 
 -- | @since 0.1
@@ -16,4 +17,6 @@ tests :: TestTree
 tests =
   testGroup
     "TrustlessSidechain"
-    [Integration.test]
+    [ Integration.test
+    , MerkleTree.test
+    ]

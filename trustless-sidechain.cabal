@@ -75,6 +75,7 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
+    TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
@@ -131,7 +132,10 @@ test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:  Test.TrustlessSidechain.Integration
+  other-modules:
+    Test.TrustlessSidechain.Integration
+    Test.TrustlessSidechain.MerkleTree
+
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
     , bytestring
@@ -140,7 +144,9 @@ test-suite trustless-sidechain-test
     , data-default
     , plutip
     , plutus-contract
+    , plutus-core
     , plutus-ledger
+    , plutus-tx
     , QuickCheck
     , quickcheck-instances
     , tasty
