@@ -1,8 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
--- | This module is a bunch of tests for our MerkleTree implementation. For
--- now, it's just property based tests.
+{- | This module is a bunch of tests for our MerkleTree implementation. For
+ now, it's just property based tests.
+-}
 module Test.TrustlessSidechain.MerkleTree (test) where
 
 import PlutusPrelude (NonEmpty ((:|)))
