@@ -9,6 +9,11 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 
 . $TMP_DIR/env
 
+[ -f $TMP_DIR/mint.sig ] || {
+  echo "WARNING: a mint transaction was not invoked for this session"
+  echo "         but one may exist on chain."
+}
+
 POLICY=$EXPORTS_DIR/FUELMintingPolicy
 TOKEN=$(cardano-cli transaction policyid --script-file $POLICY.plutus).$(printf FUEL | xxd -p)
 

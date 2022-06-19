@@ -8,6 +8,11 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 
 . $TMP_DIR/env
 
+[ -f $TMP_DIR/register.sig ] || {
+  echo "WARNING: a register transaction was not invoked for this session"
+  echo "         but one may exist on chain."
+}
+
 # this assumes signatures are valid, otherwise we need to implement equivalents
 # of ownEntries, isSignatureValid, etc..
 
