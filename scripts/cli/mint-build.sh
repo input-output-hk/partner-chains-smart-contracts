@@ -12,12 +12,10 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 POLICY=$EXPORTS_DIR/FUELMintingPolicy
 TOKEN=$(cardano-cli transaction policyid --script-file $POLICY.plutus).$(printf FUEL | xxd -p)
 
-TX_IN=$(get_utxos $(get_own_wallet_addr) | head -1)
-
 cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
-  --tx-in $TX_IN \
-  --tx-in-collateral $TX_IN \
+  --tx-in $(get_utxo $(get_own_wallet_addr) input "1050000 lovelace") \
+  --tx-in-collateral $(get_utxo $(get_own_wallet_addr) collateral) \
   --tx-out "$(get_own_wallet_addr)+1050000+1 $TOKEN" \
   --mint "1 $TOKEN" \
   --mint-script-file $POLICY.plutus \

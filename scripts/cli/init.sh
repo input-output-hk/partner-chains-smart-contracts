@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -ex
 
 [ $# -ge 1 ] || {
 	echo "usage: $0 <SKEY_PATH> [VKEY_PATH [SPO_SKEY] [SIDECHAIN_SKEY]]"
@@ -9,6 +9,7 @@ this=$(realpath $0)
 
 SCRIPTS_DIR=$(dirname $this)
 TMP_DIR=$SCRIPTS_DIR/tmp
+ROOT_DIR=$(realpath $SCRIPTS_DIR/../..)
 
 mkdir -p $TMP_DIR
 > $TMP_DIR/pipe
@@ -24,8 +25,8 @@ GENESIS_HASH=112233
 
 TESTNET_MAGIC="--testnet-magic 9"
 
-ROOT_DIR=$(realpath $SCRIPTS_DIR/../..)
-EXPORTS_DIR=$(realpath $SCRIPTS_DIR/../..)/exports
+ROOT_DIR=$ROOT_DIR
+EXPORTS_DIR=$ROOT_DIR/exports
 
 get_own_wallet_addr() {
   cat $TMP_DIR/ownWallet.addr
@@ -35,9 +36,16 @@ get_script_addr() {
   cardano-cli address build --payment-script-file \$1 \$TESTNET_MAGIC
 }
 
-get_utxos() {
+# WARNING: bashisms(select)
+get_utxo() {
+  echo "need a utxo\${2:+ for \$2}\${3:+ with at least \$3}" >&2
+  cardano-cli query utxo --address \$1 \$TESTNET_MAGIC >&2
   cardano-cli query utxo --address \$1 \$TESTNET_MAGIC --out-file $TMP_DIR/pipe
-  jq -r "keys[]" $TMP_DIR/pipe
+  select hash in \$(jq -r "keys[]" $TMP_DIR/pipe)
+  do
+    echo \$hash
+    break
+  done
 }
 ENV
 
@@ -46,7 +54,7 @@ ENV
 cardano-cli address build --payment-verification-key-file "$VKEY_PATH" $TESTNET_MAGIC --out-file $TMP_DIR/ownWallet.addr
 cardano-cli query protocol-parameters $TESTNET_MAGIC --out-file $TMP_DIR/protocolParams.json
 
-TX_IN=$(get_utxos $(get_own_wallet_addr) | head -1)
+TX_IN=$(get_utxo $(get_own_wallet_addr) exports)
 
 cd $ROOT_DIR
   cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY

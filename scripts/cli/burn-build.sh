@@ -12,22 +12,8 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 POLICY=$EXPORTS_DIR/FUELMintingPolicy
 TOKEN=$(cardano-cli transaction policyid --script-file $POLICY.plutus).$(printf FUEL | xxd -p)
 
-# God I wish we had constraint lookups
-for o in $(get_utxos $(get_own_wallet_addr)) # also writes json to $TMP_DIR/pipe
-do
-  [ $TX_IN_ADA ] && [ $TX_IN_TOK ] && break
-  if test "$TOKEN" = "$(
-    jq -r \
-    " .[\"$o\"].value | del(.lovelace)
-                      | [..|keys?]
-                      | flatten
-                      | join(\".\")
-    " $TMP_DIR/pipe
-  )"
-  then TX_IN_TOK=${TX_IN_TOK:-$o}
-  else TX_IN_ADA=${TX_IN_ADA:-$o}
-  fi
-done
+TX_IN_TOK=$(get_utxo $(get_own_wallet_addr) burn "1 $TOKEN")
+TX_IN_ADA=$(get_utxo $(get_own_wallet_addr) "fees & collateral")
 
 cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \

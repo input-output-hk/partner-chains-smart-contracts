@@ -11,5 +11,3 @@ How to use:
   there is no attempt to specify these relations in the shell scripts, rather,
   it's the responsibility of the runner making sure submitted transactions are
   confirmed, and subsequent transactions can be run.
-
-TODO: scripts should prompt for txin hashes instead of taking the first one

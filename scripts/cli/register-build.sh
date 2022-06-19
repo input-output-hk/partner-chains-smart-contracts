@@ -11,7 +11,7 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 
 cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
-  --tx-in $(get_utxos $(get_own_wallet_addr) | head -1) \
+  --tx-in $(get_utxo $(get_own_wallet_addr) input "1050000 lovelace") \
   --tx-out $(get_script_addr $EXPORTS_DIR/CommitteeCandidateValidator.plutus)+1050000 \
   --tx-out-datum-hash-file $EXPORTS_DIR/CommitteeCandidateValidator.datum \
   --change-address $(get_own_wallet_addr) \
