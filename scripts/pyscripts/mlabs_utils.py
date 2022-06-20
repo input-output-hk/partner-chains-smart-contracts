@@ -5,8 +5,29 @@ from typing import List
 
 ## General python Operations
 
+# CARDANO_CLI_PATH = '/nix/store/lay4bvzmlknbr1h6ph4bc1bhnww9gbdg-devshell-dir/bin/'
+CARDANO_CLI_PATH = ''
+
 def run(cmd):
     return bytes.decode(subprocess.check_output(cmd.split(' '), shell=True), 'utf-8')
+
+def run_cli(command, key=''):
+    with subprocess.Popen(CARDANO_CLI_PATH + command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) as process:
+        stdout, stderr = process.communicate()
+        stdout = stdout.decode("utf-8")
+        stderr = stderr.decode("utf-8")
+        print(stdout)
+        print(stderr)
+        if not stderr == '':
+            return (-1)
+    if not key == '':
+        try:
+            result = json.loads(stdout)[key]
+            return result
+        except:
+            print('Error: Request return not in JSON format or key ', key, ' doesn\'t exist')
+            return(-1)
+    return stdout
 
 def write_file(path, content):
     with open(path, 'w') as file:
@@ -20,7 +41,7 @@ def read_file(path):
 ## Cardano cli and other Tools
 
 def build_transaction(
-        tx_ins: List[],
+        tx_ins: List,
         tx_out,
         change_address,
         out_file,
@@ -39,14 +60,14 @@ def build_transaction(
 
     cmd += f'--out-file {out_file} '
 
-    run(cmd)
+    run_cli(cmd)
 
 ## Sidechain Operations
 def register_build(
     skey_path: str,
-    vkey_path: str,
-    spo_key,
-    sidechain_skey,
+    addr_path: str,
+    spo_key_file,
+    sidechain_skey_file,
     chain_id = 123,
     genesis_hash=112233,
     network='testnet-magic 9'
@@ -63,22 +84,42 @@ def register_build(
         os.mkdir(tmp_dir)
     if not os.path.exists(exports_dir):
         os.mkdir(exports_dir)
+    if not os.path.exists(addr_path):
+        print('ERROR: Payment address file not found')
+    if not os.path.exists(spo_key_file):
+        print('ERROR: SPO cold.skey file not found')
+    if not os.path.exists(sidechain_skey_file):
+        print('ERROR: Sidechain SKEY file not found')
+
+    with open(addr_path, 'r') as file:
+        addr = file.read().strip()
+
+    with open(spo_key_file, 'r') as file:
+        spo_key = json.load(file)['cborHex']
+
+    with open(sidechain_skey_file, 'r') as file:
+        sidechain_skey = file.read().strip()
 
     # we can think on more generic things here
     cmd = f'cardano-cli address build --payment-script-file {exports_dir}/CommitteeCandidateValidator.plutus --{network}'
-    committee_candidate_validator_addr = run(cmd)
+    committee_candidate_validator_addr = run_cli(cmd)
     write_file(f'{exports_dir}/CommitteeCandidateValidator.addr', committee_candidate_validator_addr)
 
 
-    cmd = f'cardano-cli address build --payment-verification-key-file {vkey_path} --{network}'
-    own_wallet = run(cmd) 
-    write_file(f'{tmp_dir}/ownWallet.addr', own_wallet)
+    # cmd = f'cardano-cli address build --payment-verification-key-file {vkey_path} --{network}'
+    # print(cmd)
 
-    addr = own_wallet
+    # own_wallet = run_cli(cmd)
+    # write_file(f'{tmp_dir}/ownWallet.addr', own_wallet)
+
+    # addr = own_wallet
 
     cmd = f'cardano-cli query utxo --address {addr} --{network} --out-file {tmp_dir}/ownUtxos.json'
-    run(cmd)
-    tx_in = json.loads(read_file(f'{tmp_dir}/ownUtxos.json'))['keys'][0]
+
+    run_cli(cmd)
+    tx_in = json.loads(read_file(f'{tmp_dir}/ownUtxos.json')).keys()
+    tx_in = list(tx_in)
+    tx_in = tx_in[0]
 
     os.chdir(root_dir)
     cmd = f'cabal run trustless-sidechain-export -- {tx_in} {chain_id} {genesis_hash} {spo_key} {sidechain_skey}'
