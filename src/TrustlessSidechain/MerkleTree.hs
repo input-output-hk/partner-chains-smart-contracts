@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 {- | This module is an implementation of a merkle tree suitable for on chain
  and off chain code. This is meant to be imported qualified i.e.,
@@ -45,6 +46,8 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import Prelude qualified
+import Schema qualified 
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 
 {- | 'RootHash' is the hash that is the root of a 'MerkleTree'.
 
@@ -53,22 +56,68 @@ import Prelude qualified
  haven't; and also represents hashes of subtrees of a merkle tree.
 -}
 newtype RootHash = RootHash {unRootHash :: BuiltinByteString}
-  deriving stock (Prelude.Show, Prelude.Eq)
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving anyclass (Schema.ToSchema)
 
 makeIsDataIndexed ''RootHash [('RootHash, 0)]
+deriveJSON defaultOptions ''RootHash
 
 instance Eq RootHash where
   RootHash l == RootHash r = l == r
+
+-- | Internal data type. 'Side' is used in 'Up' to decide whether a *sibling* of a node is on the
+-- left or right side. 
+--
+-- In a picture,
+-- >     ...
+-- >    parent
+-- >     /  \
+-- >   you   sibling
+-- > ...      ...     
+--
+-- >     ...
+-- >    parent
+-- >     /  \
+-- > sibling you   
+-- > ...      ...     
+-- 
+-- are siblings.
+data Side = L | R
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving anyclass (Schema.ToSchema)
+makeIsDataIndexed ''Side [('L, 0), ('R, 1)]
+deriveJSON defaultOptions ''Side
+
+-- | Internal data type. 'Up' is a single step up from a leaf of a 'MerkleTree' to recompute the
+-- root hash. In particular, this data type recovers information of the
+-- sibling.
+--
+-- E.g. given the merkle tree, 
+-- >       1234
+-- >      /    \
+-- >   12       34
+-- >  /  \      / \
+-- >  1   2    3   4
+-- we will represent the path from @2@ to the root @1234@ by the list
+--  @[Up L 1, Up R 34]@ -- see 'lookupMP' for more details.
+data Up = Up { siblingSide :: Side, sibling :: RootHash } 
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving anyclass (Schema.ToSchema)
+
+makeIsDataIndexed ''Up [('Up, 0)]
+deriveJSON defaultOptions ''Up
 
 {- | 'MerkleProof' is the proof to decide whether a 'BuiltinByteString' was
  included in a 'RootHash'.
 
  See 'memberMP' for details.
 -}
-newtype MerkleProof = MerkleProof {unMerkleProof :: [Either RootHash RootHash]}
-  deriving stock (Prelude.Show, Prelude.Eq)
-
+newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving anyclass (Schema.ToSchema)
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
+deriveJSON defaultOptions ''MerkleProof
+
 
 -- | 'hash' is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
@@ -244,7 +293,7 @@ lookupMP bt mt = fmap MerkleProof $ go [] mt
     hsh :: RootHash
     hsh = hash bt
 
-    go :: [Either RootHash RootHash] -> MerkleTree -> Maybe [Either RootHash RootHash]
+    go :: [Up] -> MerkleTree -> Maybe [Up]
     go prf = \case
       -- Invariant:
       --
@@ -259,7 +308,7 @@ lookupMP bt mt = fmap MerkleProof $ go [] mt
       Bin _h l r ->
         let l' = rootHash l
             r' = rootHash r
-         in go (Left l' : prf) r <|> go (Right r' : prf) l
+         in go (Up L l' : prf) r <|> go (Up R r' : prf) l
       Tip h
         | hsh == h -> Just prf
         | otherwise -> Nothing
@@ -286,11 +335,11 @@ memberMP :: BuiltinByteString -> MerkleProof -> RootHash -> Bool
 memberMP bt prf rth = rth == go (hash bt) (unMerkleProof prf)
   where
     -- This just undoes the process given in 'lookupMP'.
-    go :: RootHash -> [Either RootHash RootHash] -> RootHash
+    go :: RootHash -> [Up] -> RootHash
     go acc [] = acc
-    go acc (p : ps) = case p of
-      Left l -> go (mergeRootHashes l acc) ps
-      Right r -> go (mergeRootHashes acc r) ps
+    go acc (p : ps) = case siblingSide p of
+      L -> go (mergeRootHashes (sibling p) acc) ps
+      R -> go (mergeRootHashes acc (sibling p)) ps
 
 {- Properties.
     Suppose lst is an arbitrary non empty list.
