@@ -36,7 +36,7 @@ import Data.Kind (Type)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Ledger (unitRedeemer)
+import Ledger (unitRedeemer, validatorHash)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   LedgerBytes (LedgerBytes),
@@ -122,6 +122,9 @@ main = do
       serialised = Builtins.serialiseData $ toBuiltinData msg
 
   printTitle "CommitteeCandidateValidator"
+
+  printTitle "Script hash"
+  print (validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams))
 
   printTitle "Datum"
   print registrationData
