@@ -219,10 +219,6 @@ Properties.
     Let lst be an arbitrary non empty list.
         height (fromNonEmpty lst) <= floor(log_2 (length lst)) + 2
 
-TODO: I'm pretty sure this is true, and the reason why I'm interested in this exact bound is because
-this is what the hydra-poc people use -- so I would like to be sure that we are at least better
-theoretically.
-
 Practically, here are some benchmarks from the hydra-poc (who use a different
 method to build the tree -- they go top down): The hydra-poc guys have:
 
