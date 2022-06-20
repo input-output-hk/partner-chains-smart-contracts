@@ -40,7 +40,7 @@ module TrustlessSidechain.MerkleTree (
   hash,
 ) where
 
-import PlutusPrelude (NonEmpty ((:|)), (<|>))
+import PlutusPrelude (NonEmpty, (<|>))
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Builtins qualified as Builtins
@@ -159,7 +159,7 @@ rootHash = \case
   Bin h _ _ -> h
   Tip h -> h
 
-{- | /O(log n)/. Throws an error when the list is empty, but otherwise executes
+{- | /O(n log n)/. Throws an error when the list is empty, but otherwise executes
  'fromNonEmpty'.
 
  > 'fromList' [] == error
@@ -168,9 +168,20 @@ rootHash = \case
 {-# INLINEABLE fromList #-}
 fromList :: [BuiltinByteString] -> MerkleTree
 fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
-fromList (a : as) = fromNonEmpty $ a :| as
+fromList lst = mergeAll . map (Tip . hash) $ lst 
+  where
+    mergeAll :: [MerkleTree] -> MerkleTree
+    mergeAll [r] = r
+    mergeAll rs = mergeAll $ mergePairs rs
 
-{- | /O(log n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
+    mergePairs :: [MerkleTree] -> [MerkleTree]
+    mergePairs (a : b : cs) =
+      let a' = rootHash a
+          b' = rootHash b
+       in Bin (mergeRootHashes a' b') a b : mergePairs cs
+    mergePairs cs = cs
+
+{- | /O(n log n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
  'BuiltinByteString'.
 
  An example of using 'fromNonEmpty':
@@ -192,18 +203,7 @@ fromList (a : as) = fromNonEmpty $ a :| as
 -}
 {-# INLINEABLE fromNonEmpty #-}
 fromNonEmpty :: NonEmpty BuiltinByteString -> MerkleTree
-fromNonEmpty = mergeAll . map (Tip . hash) . PlutusPrelude.toList
-  where
-    mergeAll :: [MerkleTree] -> MerkleTree
-    mergeAll [r] = r
-    mergeAll rs = mergeAll $ mergePairs rs
-
-    mergePairs :: [MerkleTree] -> [MerkleTree]
-    mergePairs (a : b : cs) =
-      let a' = rootHash a
-          b' = rootHash b
-       in Bin (mergeRootHashes a' b') a b : mergePairs cs
-    mergePairs cs = cs
+fromNonEmpty = fromList . PlutusPrelude.toList
 
 {-
 N.B. This technique of going "bottom up" to create the tree is well known
