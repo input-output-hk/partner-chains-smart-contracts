@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Main (main) where
 
 import Cardano.Api (
@@ -71,6 +69,7 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 import Prelude hiding (takeWhile)
 
 main :: IO ()
@@ -155,6 +154,8 @@ writeScripts scParams registrationData = do
           (FUELMintingPolicy.policyScript scParams)
       , writeData "exports/CommitteeCandidateValidator.datum" registrationData
       , writeData "exports/CommitteeCandidateValidator.redeemer" unitRedeemer
+      , writeData "exports/FUELMintingPolicy.mint.redeemer" SideToMain
+      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide ""
       ]
 
   case sequence results of
