@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {- | This module is an implementation of a merkle tree suitable for on chain
  and off chain code. This is meant to be imported qualified i.e.,
@@ -40,14 +40,14 @@ module TrustlessSidechain.MerkleTree (
   hash,
 ) where
 
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 import PlutusPrelude (NonEmpty, (<|>))
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
+import Schema qualified
 import Prelude qualified
-import Schema qualified 
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 
 {- | 'RootHash' is the hash that is the root of a 'MerkleTree'.
 
@@ -65,42 +65,45 @@ deriveJSON defaultOptions ''RootHash
 instance Eq RootHash where
   RootHash l == RootHash r = l == r
 
--- | Internal data type. 'Side' is used in 'Up' to decide whether a *sibling* of a node is on the
--- left or right side. 
---
--- In a picture,
--- >     ...
--- >    parent
--- >     /  \
--- >   you   sibling
--- > ...      ...     
---
--- >     ...
--- >    parent
--- >     /  \
--- > sibling you   
--- > ...      ...     
--- 
--- are siblings.
+{- | Internal data type. 'Side' is used in 'Up' to decide whether a *sibling* of a node is on the
+ left or right side.
+
+ In a picture,
+ >     ...
+ >    parent
+ >     /  \
+ >   you   sibling
+ > ...      ...
+
+ >     ...
+ >    parent
+ >     /  \
+ > sibling you
+ > ...      ...
+
+ are siblings.
+-}
 data Side = L | R
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
 makeIsDataIndexed ''Side [('L, 0), ('R, 1)]
 deriveJSON defaultOptions ''Side
 
--- | Internal data type. 'Up' is a single step up from a leaf of a 'MerkleTree' to recompute the
--- root hash. In particular, this data type recovers information of the
--- sibling.
---
--- E.g. given the merkle tree, 
--- >       1234
--- >      /    \
--- >   12       34
--- >  /  \      / \
--- >  1   2    3   4
--- we will represent the path from @2@ to the root @1234@ by the list
---  @[Up L 1, Up R 34]@ -- see 'lookupMP' for more details.
-data Up = Up { siblingSide :: Side, sibling :: RootHash } 
+{- | Internal data type. 'Up' is a single step up from a leaf of a 'MerkleTree' to recompute the
+ root hash. In particular, this data type recovers information of the
+ sibling.
+
+ E.g. given the merkle tree,
+ >       1234
+ >      /    \
+ >   12       34
+ >  /  \      / \
+ >  1   2    3   4
+ we will represent the path from @2@ to the root @1234@ by the list
+  @[Up L 1, Up R 34]@ -- see 'lookupMP' for more details.
+-}
+data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
 
@@ -115,9 +118,9 @@ deriveJSON defaultOptions ''Up
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
-
 
 -- | 'hash' is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
@@ -168,7 +171,7 @@ rootHash = \case
 {-# INLINEABLE fromList #-}
 fromList :: [BuiltinByteString] -> MerkleTree
 fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
-fromList lst = mergeAll . map (Tip . hash) $ lst 
+fromList lst = mergeAll . map (Tip . hash) $ lst
   where
     mergeAll :: [MerkleTree] -> MerkleTree
     mergeAll [r] = r
