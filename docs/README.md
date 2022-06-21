@@ -33,7 +33,7 @@ For initialisation, we need to set the first <!-- ATMS verification key --> comm
 **Workflow:**
 
 1. Call the burn endpoint of the contract with BurnParams
-2. A transaction will be submitted to mainchain with the burnt amount in the tx body and the sidechain recipient in the redeemer
+2. A transaction will be submitted to mainchain with the burnt amount in the tx body and the sidechain recipient and the signature in the redeemer
 3. The Bridge component observing the mainchain where the given minting policy is handled, verifies the transaction and creates an appropriate sidechain transaction
 
 **Endpoint params:**
@@ -41,6 +41,7 @@ For initialisation, we need to set the first <!-- ATMS verification key --> comm
 ```haskell
 data BurnParams = BurnParams
   { recipient :: ByteString
+  , sidechainSig :: ByteString
   , amount :: Integer
   }
 ```
@@ -117,7 +118,8 @@ Minting policy verifies the following:
 
 ```haskell
 data FUELRedeemer
-  = MainToSide ByteString -- Recipient address on the sidechain
+  = MainToSide ByteString ByteString
+  -- ^ Recipient address on the sidechain and the signature of its owner (see 2.)
   | SideToMain MerkleProof
 ```
 
@@ -183,6 +185,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signature :: BuiltinByteString
   , committeePubKeys :: [PubKey]
+  , newCommitteeHash :: BuiltinByteString
   }
 ```
 

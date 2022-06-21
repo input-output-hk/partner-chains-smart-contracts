@@ -13,19 +13,18 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.Either (fromRight)
 import Data.String (IsString (fromString))
 import GHC.Generics (Generic)
-import Ledger (PaymentPubKeyHash)
+import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
+import Ledger.Address (Address)
 import Ledger.Crypto (PubKey, Signature)
-import Ledger.Tx (TxOutRef)
-import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
-import PlutusTx (FromData, ToData, UnsafeFromData)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
+import Plutus.V2.Ledger.Tx (TxOutRef)
+import PlutusTx (FromData, ToData, UnsafeFromData, makeLift)
 import PlutusTx qualified
-import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import PlutusTx.Prelude qualified as PlutusTx
 import Schema (ToSchema)
 import Prelude qualified
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: PlutusTx.BuiltinByteString}
+newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
   deriving (IsString, Prelude.Show) via LedgerBytes
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
@@ -35,7 +34,7 @@ makeLift ''GenesisHash
 
 $(deriveJSON defaultOptions ''GenesisHash)
 
-newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: (PlutusTx.BuiltinByteString, PlutusTx.BuiltinByteString)}
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: (BuiltinByteString, BuiltinByteString)}
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
   deriving anyclass (NFData, ToSchema)
@@ -51,14 +50,14 @@ instance Prelude.Show SidechainPubKey where
   show =
     Char8.unpack
       . Base16.encode
-      . PlutusTx.fromBuiltin
-      . uncurry PlutusTx.appendByteString
+      . fromBuiltin
+      . uncurry appendByteString
       . getSidechainPubKey
 
 mkSidechainPubKey :: ByteString -> SidechainPubKey
 mkSidechainPubKey =
   SidechainPubKey
-    . bimap PlutusTx.toBuiltin PlutusTx.toBuiltin
+    . bimap toBuiltin toBuiltin
     . ByteString.splitAt 32
 
 makeLift ''SidechainPubKey
@@ -107,6 +106,8 @@ data BurnParams = BurnParams
     amount :: Integer
   , -- | SideChain address
     recipient :: BuiltinByteString
+  , -- | Signature of the address owner
+    sidechainSig :: BuiltinByteString
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
   }
@@ -128,3 +129,54 @@ data MintParams = MintParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''MintParams)
+
+{- | Endpoint parameters for committee candidate hash updating
+
+ TODO: it might not be a bad idea to factor out the 'signature' and
+ 'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
+ 'SaveRootParams' in a different data type. I'd imagine there will be lots of
+ duplciated code when it comes to verifying that the committee has approved
+ of these transactions either way.
+-}
+data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { -- | The public keys of the new committee.
+    newCommitteePubKeys :: [PubKey]
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
+  , -- | The signature for the new committee hash.
+    signature :: !BuiltinByteString
+  , -- | Public keys of the current committee members.
+    committeePubKeys :: [PubKey]
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
+
+-- | Endpoint parameters for initializing the committee hash
+data GenesisCommitteeHashParams = GenesisCommitteeHashParams
+  { -- | Public keys of the initial committee members.
+    genesisCommitteePubKeys :: [PubKey]
+  , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
+    genesisAddress :: !Address
+  , -- | 'genesisToken' is the token name for the NFT
+    genesisToken :: !TokenName
+  }
+  deriving stock (Generic, Prelude.Show)
+
+-- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
+-- support having sum types which take an argument; so there is no
+-- 'Schema.ToSchema' for 'Address'. Oops!
+-- @deriving anyclass (ToSchema)@
+
+$(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
+
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , signature :: BuiltinByteString
+  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+$(deriveJSON defaultOptions ''SaveRootParams)

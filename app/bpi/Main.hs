@@ -28,7 +28,9 @@ import TrustlessSidechain.OffChain.Types (
   DeregisterParams,
   MintParams,
   RegisterParams,
+  UpdateCommitteeHashParams,
  )
+import TrustlessSidechain.OffChain.UpdateCommitteeHash (updateCommitteeHash)
 
 import Prelude
 
@@ -45,12 +47,14 @@ instance HasDefinitions TrustlessSidechainContracts where
     DeregisterCommitteeCandidate params -> SomeBuiltin $ deregister params
     MintFUELToken params -> SomeBuiltin $ mint params
     BurnFUELToken params -> SomeBuiltin $ burn params
+    UpdateCommitteeHash params -> SomeBuiltin $ updateCommitteeHash params
 
 data TrustlessSidechainContracts
   = RegisterCommitteeCandidate RegisterParams
   | DeregisterCommitteeCandidate DeregisterParams
   | MintFUELToken MintParams
   | BurnFUELToken BurnParams
+  | UpdateCommitteeHash UpdateCommitteeHashParams
   deriving stock (Show)
 
 $(deriveJSON defaultOptions ''TrustlessSidechainContracts)

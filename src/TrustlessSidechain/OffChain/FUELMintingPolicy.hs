@@ -15,17 +15,17 @@ import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  BurnParams (BurnParams, amount, recipient, sidechainParams),
+  BurnParams (BurnParams, amount, recipient, sidechainParams, sidechainSig),
   MintParams (MintParams, amount, recipient, sidechainParams),
  )
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-burn BurnParams {amount, sidechainParams, recipient} = do
+burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
   let policy = FUELMintingPolicy.mintingPolicy sidechainParams
       value = Value.singleton (ScriptUtils.scriptCurrencySymbol policy) "FUEL" amount
-      redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
+      redeemer = Redeemer $ toBuiltinData (MainToSide recipient sidechainSig)
   when (amount > 0) $ Contract.throwError "Can't burn a positive amount"
   Contract.submitTxConstraintsWith @FUELRedeemer
     (Constraint.mintingPolicy policy)

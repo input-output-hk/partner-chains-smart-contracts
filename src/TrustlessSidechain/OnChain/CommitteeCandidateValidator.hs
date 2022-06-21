@@ -14,44 +14,18 @@ import Data.ByteString.Short qualified as SBS
 import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (TxOutRef)
-import Ledger.Typed.Scripts (ValidatorTypes)
 import Ledger.Typed.Scripts qualified as TypedScripts
 import Plutus.Script.Utils.V2.Scripts.Validators (mkUntypedValidator)
 import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), mkValidatorScript, toBuiltinData)
 import Plutus.V2.Ledger.Contexts (ScriptContext)
-import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams, SidechainPubKey)
-import Prelude qualified
-
-data BlockProducerRegistration = BlockProducerRegistration
-  { -- | SPO cold verification key hash
-    bprSpoPubKey :: PubKey -- own cold verification key hash
-  , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: SidechainPubKey
-  , -- | Signature of the SPO
-    bprSpoSignature :: Signature
-  , -- | Signature of the SPO
-    bprSidechainSignature :: Signature
-  , -- | A UTxO that must be spent by the transaction
-    bprInputUtxo :: TxOutRef
-  }
-  deriving stock (Prelude.Show)
-
-PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
-
-data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams
-  , bprmSidechainPubKey :: SidechainPubKey
-  , -- | A UTxO that must be spent by the transaction
-    bprmInputUtxo :: TxOutRef
-  }
-  deriving stock (Prelude.Show)
-
-PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
+import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams)
+import TrustlessSidechain.OnChain.Types (
+  BlockProducerRegistration (..),
+  BlockProducerRegistrationMsg (..),
+ )
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
@@ -77,11 +51,6 @@ committeeCanditateValidator sidechainParams =
     )
   where
     toValidator = mkUntypedValidator . mkCommitteeCanditateValidator
-
-data CommitteeCandidateRegistry
-instance ValidatorTypes CommitteeCandidateRegistry where
-  type RedeemerType CommitteeCandidateRegistry = ()
-  type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 script :: SidechainParams -> Scripts.Script
 script = Scripts.unValidatorScript . committeeCanditateValidator

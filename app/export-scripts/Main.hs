@@ -51,7 +51,9 @@ import TrustlessSidechain.OffChain.Types (
   SidechainParams (SidechainParams, chainId, genesisHash),
   SidechainPubKey (SidechainPubKey),
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (
     BlockProducerRegistration,
     bprInputUtxo,
@@ -66,10 +68,8 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
     bprmSidechainParams,
     bprmSidechainPubKey
   ),
+  FUELRedeemer (MainToSide, SideToMain),
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 import Prelude hiding (takeWhile)
 
 main :: IO ()
@@ -155,7 +155,7 @@ writeScripts scParams registrationData = do
       , writeData "exports/CommitteeCandidateValidator.datum" registrationData
       , writeData "exports/CommitteeCandidateValidator.redeemer" unitRedeemer
       , writeData "exports/FUELMintingPolicy.mint.redeemer" SideToMain
-      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide ""
+      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide "" ""
       ]
 
   case sequence results of

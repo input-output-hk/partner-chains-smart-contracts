@@ -19,8 +19,14 @@ source-repository head
   type:     git
   location: https://github.com/mlabs-haskell/trustless-sidechain
 
--- Common sections
+flag defer-plugin-errors
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
 
+  default:     False
+  manual:      True
+
+-- Common sections
 
 common common-lang
   ghc-options:
@@ -29,6 +35,9 @@ common common-lang
     -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
     -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
   build-depends:
     , base                     ^>=4.14
@@ -64,6 +73,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    TypeFamilies
     TypeOperators
     TypeSynonymInstances
     UndecidableInstances
@@ -77,11 +87,16 @@ library
   exposed-modules:
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
+    TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
+    TrustlessSidechain.OnChain.UpdateCommitteeHash
 
   build-depends:
     , aeson                      ^>=1.5.0.0
