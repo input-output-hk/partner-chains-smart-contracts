@@ -145,8 +145,6 @@ makeIsDataIndexed ''MerkleTree [('Bin, 0), ('Tip, 1)]
 
 -- Note [Merkle Tree Invariants]:
 --      1. @Bin h l r@ satisfies @h = rootHash l `mergeRootHashes` rootHash r@
---
---      2. @height (fromList lst)@ is in /O(length\; lst)/
 
 -- | 'height' is used for QuickCheck to verify invariants.
 {-# INLINEABLE height #-}
