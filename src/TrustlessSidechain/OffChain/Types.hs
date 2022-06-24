@@ -86,7 +86,7 @@ $(deriveJSON defaultOptions ''MintParams)
  TODO: it might not be a bad idea to factor out the 'signature' and
  'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
  'SaveRootParams' in a different data type. I'd imagine there will be lots of
- duplciated code when it comes to verifying that the committee has approved
+ duplicated code when it comes to verifying that the committee has approved
  of these transactions either way.
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
