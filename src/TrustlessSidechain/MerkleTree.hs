@@ -31,8 +31,8 @@ module TrustlessSidechain.MerkleTree (
   fromNonEmpty,
 
   -- * Creating and querying Merkle proofs / the root hash
-  lookupMP,
-  memberMP,
+  lookupMp,
+  memberMp,
   rootHash,
 
   -- * Internal
@@ -102,7 +102,7 @@ deriveJSON defaultOptions ''Side
  >  /  \      / \
  >  1   2    3   4
  we will represent the path from @2@ to the root @1234@ by the list
-  @[Up L 1, Up R 34]@ -- see 'lookupMP' for more details.
+  @[Up L 1, Up R 34]@ -- see 'lookupMp' for more details.
 -}
 data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
@@ -114,7 +114,7 @@ deriveJSON defaultOptions ''Up
 {- | 'MerkleProof' is the proof to decide whether a 'BuiltinByteString' was
  included in a 'RootHash'.
 
- See 'memberMP' for details.
+ See 'memberMp' for details.
 -}
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
@@ -138,7 +138,7 @@ mergeRootHashes :: RootHash -> RootHash -> RootHash
 mergeRootHashes l r = hash $ (Builtins.appendByteString `PlutusPrelude.on` unRootHash) l r
 
 {- | 'MerkleTree' is a tree of hashes. See 'fromList' and 'fromNonEmpty' for
- building a 'MerkleTree', and see 'lookupMP' and 'memberMP' for creating and
+ building a 'MerkleTree', and see 'lookupMp' and 'memberMp' for creating and
  verifying 'MerkleProof'.
 -}
 data MerkleTree
@@ -228,7 +228,7 @@ See: Note [Hydra-Poc People Merkle Tree Comparisons]
  'Nothing' if the merkle tree does not contain the hash of the
  'BuiltinByteString'
 
- An example of using 'lookupMP':
+ An example of using 'lookupMp':
 
  > {\-# LANGUAGE OverloadedStrings #-\}
  > import Data.Maybe (isJust)
@@ -237,17 +237,17 @@ See: Note [Hydra-Poc People Merkle Tree Comparisons]
  > dogs = MT.fromList [ "maltese", "pomeranian", "yorkie" ]
  >
  > main = do
- >     print $ isJust $ lookupMP "maltese" dogs
- >     print $ isJust $ lookupMP "golden retriever" dogs
+ >     print $ isJust $ lookupMp "maltese" dogs
+ >     print $ isJust $ lookupMp "golden retriever" dogs
 
  The output of this program:
 
  >   True
  >   False
 -}
-{-# INLINEABLE lookupMP #-}
-lookupMP :: BuiltinByteString -> MerkleTree -> Maybe MerkleProof
-lookupMP bt mt = fmap MerkleProof $ go [] mt
+{-# INLINEABLE lookupMp #-}
+lookupMp :: BuiltinByteString -> MerkleTree -> Maybe MerkleProof
+lookupMp bt mt = fmap MerkleProof $ go [] mt
   where
     hsh :: RootHash
     hsh = hash bt
@@ -285,17 +285,17 @@ lookupMP bt mt = fmap MerkleProof $ go [] mt
 {- | /O(n)/ in the length of the 'MerkleProof' (which is /O(log n)/ of
  the size of the original 'MerkleTree' of the given 'RootHash').
 
- An example of using 'memberMP':
+ An example of using 'memberMp':
 
  > let merkleTree = fromList ["maltese", "pomeranian", "yorkie"]
- > let Just prf = lookupMP "maltese" merkleTree
- > memberMP "maltese" prf (rootHash merkleTree) == True
+ > let Just prf = lookupMp "maltese" merkleTree
+ > memberMp "maltese" prf (rootHash merkleTree) == True
 -}
-{-# INLINEABLE memberMP #-}
-memberMP :: BuiltinByteString -> MerkleProof -> RootHash -> Bool
-memberMP bt prf rth = rth == go (hash bt) (unMerkleProof prf)
+{-# INLINEABLE memberMp #-}
+memberMp :: BuiltinByteString -> MerkleProof -> RootHash -> Bool
+memberMp bt prf rth = rth == go (hash bt) (unMerkleProof prf)
   where
-    -- This just undoes the process given in 'lookupMP'.
+    -- This just undoes the process given in 'lookupMp'.
     go :: RootHash -> [Up] -> RootHash
     go acc [] = acc
     go acc (p : ps) = case siblingSide p of
@@ -305,7 +305,7 @@ memberMP bt prf rth = rth == go (hash bt) (unMerkleProof prf)
 {- Properties.
     Suppose lst is an arbitrary non empty list.
     Let tree = fromNonEmpty lst
-        Just prf = lookupMP x tree <==> memberMP x prf (rootHash tree) = True
+        Just prf = lookupMp x tree <==> memberMp x prf (rootHash tree) = True
 -}
 
 {-
@@ -402,14 +402,14 @@ And our method has running time like:
 | 500  | 3.66             | 2.55             | 75.18             | 63.70             |
 Benchmark on-chain-cost: FINISH
 
-where 'member' is 'memberMP' here and 'builder' is 'fromList'.
+where 'member' is 'memberMp' here and 'builder' is 'fromList'.
 
 We see that the bottom up implementation of 'fromList' is almost 10x more
 efficient on some cases, and I'm fairly certain the last 3 cases of the
 hydra-poc guys are botched and didn't actually run whereas our implementation
 actually did run.
 
-I'll note that the hydra-poc people have a slightly more efficient 'memberMP'
+I'll note that the hydra-poc people have a slightly more efficient 'memberMp'
 I suspect this is just "lucky" with the test cases because in some cases our
 member function is faster as well. This follows from [Merkle Tree Height Bound].
 -}

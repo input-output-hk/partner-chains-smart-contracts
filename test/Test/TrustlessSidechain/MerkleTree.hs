@@ -71,40 +71,40 @@ prop_logProofLength = forAllNonEmptyBuiltinByteString $
      in MT.height tree <= Prelude.floor (Prelude.logBase @Prelude.Double 2 (Prelude.fromIntegral (length lst'))) + 2
 
 {- | Property.
-  x \in lst ==> isJust (MT.lookupMP x (MT.fromNonEmpty lst))
+  x \in lst ==> isJust (MT.lookupMp x (MT.fromNonEmpty lst))
 -}
-prop_lookupMPHasProof :: Property
-prop_lookupMPHasProof =
+prop_lookupMpHasProof :: Property
+prop_lookupMpHasProof =
   forAllNonEmptyBuiltinByteStringWithElem $
-    \(lst@(_a :| _as), x) -> isJust $ MT.lookupMP x $ MT.fromNonEmpty lst
+    \(lst@(_a :| _as), x) -> isJust $ MT.lookupMp x $ MT.fromNonEmpty lst
 
 {- | Property.
-  x \in lst <== isJust (MT.lookupMP x (MT.fromNonEmpty lst))
+  x \in lst <== isJust (MT.lookupMp x (MT.fromNonEmpty lst))
 
  but we test this via the contrapositive.
 -}
-prop_notInLookupMPFail :: Property
-prop_notInLookupMPFail =
+prop_notInLookupMpFail :: Property
+prop_notInLookupMpFail =
   forAllNonEmptyBuiltinByteStringWithoutElem $
     \(lst@(_ :| _), x) ->
       let tree = MT.fromNonEmpty lst
-       in isNothing (MT.lookupMP x tree)
+       in isNothing (MT.lookupMp x tree)
 
 {- | Property.
  Suppose lst is an arbitrary non empty list.
   Let tree = fromNonEmpty lst
 
-  Just prf = lookupMP x tree ==> memberMP x prf (rootHash tree) = True
+  Just prf = lookupMp x tree ==> memberMp x prf (rootHash tree) = True
 
  TODO: Didn't test the converse -- it's a bit trickier to test, and the large search space
  makes me doubt the usefulness of QuickCheck for this.
 -}
-prop_inListMemberMP :: Property
-prop_inListMemberMP =
+prop_inListMemberMp :: Property
+prop_inListMemberMp =
   forAllNonEmptyBuiltinByteStringWithElem $ \(lst@(_a :| _as), x) ->
     let tree = MT.fromNonEmpty lst
-        Just prf = MT.lookupMP x tree
-     in MT.memberMP x prf (MT.rootHash tree)
+        Just prf = MT.lookupMp x tree
+     in MT.memberMp x prf (MT.rootHash tree)
 
 -- This is needed because of QuickCheck. It's explained in the QuickCheck
 -- documentation.
