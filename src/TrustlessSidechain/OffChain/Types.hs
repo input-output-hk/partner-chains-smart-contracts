@@ -15,6 +15,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import Schema (
   ToSchema,
  )
+import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
 -- | Parameters uniquely identifying a sidechain
@@ -74,7 +75,9 @@ data MintParams = MintParams
     recipient :: PaymentPubKeyHash
   , -- | passed for parametrization
     sidechainParams :: SidechainParams
-    -- , proof :: MerkleProof
+  , -- | This is to prove to the main chain that the given unhandled
+    -- transaction from the sidechain has actually happened in the sidechain
+    proof :: MerkleProof
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)

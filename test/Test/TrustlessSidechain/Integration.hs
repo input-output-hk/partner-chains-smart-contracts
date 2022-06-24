@@ -11,9 +11,11 @@ import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
+import Test.Plutip.Internal.Types qualified as PlutipInternal
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
 import Test.Tasty (TestTree)
+import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OffChain.Types (
@@ -26,18 +28,13 @@ import TrustlessSidechain.OffChain.Types (
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
-
+import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   serialiseBprm,
  )
-
-import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-
 import Prelude
-
-import Test.Plutip.Internal.Types qualified as PlutipInternal
 
 sidechainParams :: SidechainParams
 sidechainParams =
@@ -111,7 +108,14 @@ test =
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
-              t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              t <-
+                FUELMintingPolicy.mint $
+                  MintParams
+                    { OffChainTypes.amount = 1
+                    , OffChainTypes.recipient = h
+                    , OffChainTypes.sidechainParams = sidechainParams
+                    , OffChainTypes.proof = MT.emptyMp
+                    }
               awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
         )
@@ -122,7 +126,13 @@ test =
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
-              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              FUELMintingPolicy.mint $
+                MintParams
+                  { OffChainTypes.amount = 1
+                  , OffChainTypes.recipient = h
+                  , OffChainTypes.sidechainParams = sidechainParams
+                  , OffChainTypes.proof = MT.emptyMp
+                  }
         )
         [shouldSucceed]
     , assertExecution
@@ -131,7 +141,13 @@ test =
         ( do
             void $
               withContract $ \[pkh1] -> do
-                FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+                FUELMintingPolicy.mint $
+                  MintParams
+                    { OffChainTypes.amount = 1
+                    , OffChainTypes.recipient = pkh1
+                    , OffChainTypes.sidechainParams = sidechainParams
+                    , OffChainTypes.proof = MT.emptyMp
+                    }
             withContractAs 1 $
               const $
                 FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
@@ -142,7 +158,14 @@ test =
         (initAda [1, 1, 1] <> initAda [])
         ( withContract $ \[pkh1] ->
             do
-              t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+              t <-
+                FUELMintingPolicy.mint $
+                  MintParams
+                    { OffChainTypes.amount = 1
+                    , OffChainTypes.recipient = pkh1
+                    , OffChainTypes.sidechainParams = sidechainParams
+                    , OffChainTypes.proof = MT.emptyMp
+                    }
               awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
         )

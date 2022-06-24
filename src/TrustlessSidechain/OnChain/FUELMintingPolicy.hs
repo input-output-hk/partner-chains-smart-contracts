@@ -17,10 +17,23 @@ import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
+{- | 'mkMintingPolicy' verifies the following
+
+  1. MPTRootToken with the name of the Merkle root of the transaction
+  calculated from the proof) can be found in the MPTRootTokenValidator.
+
+  TODO: it doesn't do this yet.
+
+  2. chainId the minting policy id
+
+  TODO: it doesn't do this yet.
+
+  3. recipient and amount matches the actual tx body contents
+-}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
-  _
+  _sc
   mode
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
@@ -29,7 +42,7 @@ mkMintingPolicy
     case mode of
       MainToSide _ _ ->
         verifyTokenAmount $ traceIfFalse "Can't burn a positive amount" . (< 0)
-      SideToMain ->
+      SideToMain _ ->
         verifyTokenAmount $ traceIfFalse "Can't mint a negative amount" . (> 0)
     where
       verifyTokenAmount verify =

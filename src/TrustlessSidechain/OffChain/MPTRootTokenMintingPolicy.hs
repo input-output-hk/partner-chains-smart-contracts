@@ -27,5 +27,8 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, signature, committeePubKey
   Contract.submitTxConstraintsWith @SignedMerkleRoot
     (Constraint.mintingPolicy policy)
     ( Constraint.mustMintValueWithRedeemer redeemer value
-        <> Constraint.mustPayToOtherScript (Validator.hash sidechainParams) Ledger.unitDatum value
+        <> Constraint.mustPayToOtherScript
+          (Validator.hash sidechainParams)
+          Ledger.unitDatum
+          value
     )
