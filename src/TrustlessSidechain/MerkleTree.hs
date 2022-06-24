@@ -1,5 +1,22 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fexpose-all-unfoldings #-}
+
+-- N.B. The pragma @{-# OPTIONS_GHC -fexpose-all-unfoldings #-}@ is needed
+-- because apparently some parts of the implementation of
+-- 'PlutusTx.IsData.Class.FromData' (which is automatically derived via
+-- TemplateHaskell magic) of some of the newtypes aren't getting inlined
+-- properly. This is the sledgehammer to guarantee that these are inlined --
+-- albeit, this is apparently an experimental flag, so stability might not be
+-- guaranteed...
+--
+-- Some alternatives would be to
+--
+--  1. Use the pragma @{-# OPTIONS_GHC -fno-specialise #-}@ in the
+--  module which imports these types, and in this module as well.
+--
+--  2. Get rid of the newtype wrapper completely and just replace it with a
+--  type alias -- but the STANDARDS.md says we shouldn't do this :)
 
 {- | This module is an implementation of a merkle tree suitable for on chain
  and off chain code. This is meant to be imported qualified i.e.,
