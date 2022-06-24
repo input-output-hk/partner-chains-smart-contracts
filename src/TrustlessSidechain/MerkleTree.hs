@@ -123,9 +123,9 @@ newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
 
--- | 'emptyMp' is an empty 'MerkleProof'. 
+-- | 'emptyMp' is an empty 'MerkleProof'.
 emptyMp :: MerkleProof
-emptyMp = MerkleProof { unMerkleProof = [] }
+emptyMp = MerkleProof {unMerkleProof = []}
 
 -- | 'hash' is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
