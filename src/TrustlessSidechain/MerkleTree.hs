@@ -24,6 +24,7 @@ module TrustlessSidechain.MerkleTree (
   RootHash (RootHash, unRootHash),
   MerkleProof (MerkleProof, unMerkleProof),
   MerkleTree,
+  emptyMp,
 
   -- * Building the Merkle Tree
   fromList,
@@ -121,6 +122,10 @@ newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
 
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
+
+-- | 'emptyMp' is an empty 'MerkleProof'. 
+emptyMp :: MerkleProof
+emptyMp = MerkleProof { unMerkleProof = [] }
 
 -- | 'hash' is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
