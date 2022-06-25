@@ -19,12 +19,12 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (BlockProducerRegistration, bprInputUtxo, bprSidechainPubKey, bprSpoPubKey, bprSpoSignature),
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CommitteeCandidateRegistry,
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import Prelude (Semigroup ((<>)))
 import Prelude qualified
 

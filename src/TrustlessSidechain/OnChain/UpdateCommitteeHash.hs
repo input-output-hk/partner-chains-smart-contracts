@@ -34,8 +34,13 @@ import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.OnChain.Types (
+  GenesisMintCommitteeHash,
+  UpdateCommitteeHash,
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature), UpdateCommitteeHash, GenesisMintCommitteeHash, gcToken, gcTxOutRef, cToken
+  UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
+  cToken,
+  gcToken,
+  gcTxOutRef,
  )
 
 -- * Updating the committee hash
