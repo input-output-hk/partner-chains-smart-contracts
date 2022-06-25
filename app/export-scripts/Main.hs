@@ -31,7 +31,7 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b)
 import Data.Either (fromRight)
 import Data.Kind (Type)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer, validatorHash)
@@ -206,7 +206,7 @@ toSpoPubKey =
 
 toSidechainPrivKey :: String -> SignKeyDSIGN EcdsaSecp256k1DSIGN
 toSidechainPrivKey =
-  fromJust (error "Unable to parse sidechain private key")
+  fromMaybe (error "Unable to parse sidechain private key")
     . rawDeserialiseSignKeyDSIGN @EcdsaSecp256k1DSIGN
     . fromRight (error "Invalid sidechain key hex")
     . Base16.decode
