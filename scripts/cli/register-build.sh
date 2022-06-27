@@ -1,37 +1,29 @@
 #!/bin/sh
-SKEY_PATH=$1
-VKEY_PATH=$2
+set -e
 
-CHAIN_ID=123
-GENESIS_HASH=112233
-SPO_SKEY=$3
-SIDECHAIN_SKEY=$4
+this=$(realpath $0)
+SUBMIT=$1
 
-ROOT_DIR=$(realpath ../../)
-SCRIPTS_DIR=$(pwd)
-EXPORTS_DIR=$ROOT_DIR/exports
+SCRIPTS_DIR=$(dirname $this)
 TMP_DIR=$SCRIPTS_DIR/tmp
 
-if [ ! -d $TMP_DIR ]; then
-  mkdir $TMP_DIR
-fi
+. $TMP_DIR/env
 
-cardano-cli address build --payment-script-file $EXPORTS_DIR/CommitteeCandidateValidator.plutus --testnet-magic 9 > $EXPORTS_DIR/CommitteeCandidateValidator.addr
-cardano-cli address build --payment-verification-key-file $VKEY_PATH --testnet-magic 9 > $TMP_DIR/ownWallet.addr
-
-ADDR=$(cat $TMP_DIR/ownWallet.addr)
-
-cardano-cli query utxo --address $ADDR --testnet-magic 9 --out-file $TMP_DIR/ownUtxos.json
-TX_IN=$(cat $TMP_DIR/ownUtxos.json | jq -r "keys | .[0]")
-
-cd $ROOT_DIR && cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY && cd $SCRIPTS_DIR
-
-
-cardano-cli transaction build \
+cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
-  --tx-in $TX_IN \
-  --tx-out $(cat $EXPORTS_DIR/CommitteeCandidateValidator.addr)+1020000 \
-  --tx-out-datum-hash-file $EXPORTS_DIR/CommitteeCandidateValidator.datum \
-  --change-address $ADDR \
-  --testnet-magic 9 \
-  --out-file $TMP_DIR/tx.raw 
+  --tx-in $(get_utxo $(get_own_wallet_addr) input "1050000 lovelace") \
+  --tx-out $(get_script_addr $EXPORTS_DIR/CommitteeCandidateValidator.plutus)+2120520 \
+  --tx-out-inline-datum-file $EXPORTS_DIR/CommitteeCandidateValidator.datum \
+  --protocol-params-file $TMP_DIR/protocolParams.json \
+  --change-address $(get_own_wallet_addr) \
+  --out-file $TMP_DIR/register.raw
+
+[ "$SUBMIT" = "submit" ] && {
+cardano-cli transaction sign $TESTNET_MAGIC \
+  --tx-body-file $TMP_DIR/register.raw \
+  --signing-key-file "$SKEY_PATH" \
+  --out-file $TMP_DIR/register.sig
+
+cardano-cli transaction submit $TESTNET_MAGIC \
+  --tx-file $TMP_DIR/register.sig
+}

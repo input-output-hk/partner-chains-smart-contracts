@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Main (main) where
 
 import Cardano.Api (
@@ -33,7 +31,7 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b)
 import Data.Either (fromRight)
 import Data.Kind (Type)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer, validatorHash)
@@ -71,6 +69,7 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 import Prelude hiding (takeWhile)
 
 main :: IO ()
@@ -155,6 +154,8 @@ writeScripts scParams registrationData = do
           (FUELMintingPolicy.policyScript scParams)
       , writeData "exports/CommitteeCandidateValidator.datum" registrationData
       , writeData "exports/CommitteeCandidateValidator.redeemer" unitRedeemer
+      , writeData "exports/FUELMintingPolicy.mint.redeemer" SideToMain
+      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide ""
       ]
 
   case sequence results of
@@ -205,7 +206,7 @@ toSpoPubKey =
 
 toSidechainPrivKey :: String -> SignKeyDSIGN EcdsaSecp256k1DSIGN
 toSidechainPrivKey =
-  fromJust (error "Unable to parse sidechain private key")
+  fromMaybe (error "Unable to parse sidechain private key")
     . rawDeserialiseSignKeyDSIGN @EcdsaSecp256k1DSIGN
     . fromRight (error "Invalid sidechain key hex")
     . Base16.decode

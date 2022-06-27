@@ -20,7 +20,7 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Hash (blake2b)
 import Data.Maybe (fromMaybe)
 import Ledger (getCardanoTxId)
-import Ledger.Crypto (PubKey )
+import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
 import Plutus.V2.Ledger.Api (toBuiltinData)
