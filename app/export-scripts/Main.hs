@@ -31,10 +31,11 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b)
 import Data.Either (fromRight)
 import Data.Kind (Type)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer, validatorHash)
+import Ledger.Address (scriptHashAddress)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   LedgerBytes (LedgerBytes),
@@ -117,13 +118,16 @@ main = do
           , bprmSidechainPubKey = toSidechainPubKey sidechainPrivKey
           , bprmInputUtxo = inputUtxo
           }
-
+      scriptHash=validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams)
       serialised = Builtins.serialiseData $ toBuiltinData msg
 
   printTitle "CommitteeCandidateValidator"
 
   printTitle "Script hash"
-  print (validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams))
+  print scriptHash
+
+  printTitle "Script address"
+  print (scriptHashAddress scriptHash)
 
   printTitle "Datum"
   print registrationData
@@ -206,7 +210,7 @@ toSpoPubKey =
 
 toSidechainPrivKey :: String -> SignKeyDSIGN EcdsaSecp256k1DSIGN
 toSidechainPrivKey =
-  fromJust (error "Unable to parse sidechain private key")
+  fromMaybe (error "Unable to parse sidechain private key")
     . rawDeserialiseSignKeyDSIGN @EcdsaSecp256k1DSIGN
     . fromRight (error "Invalid sidechain key hex")
     . Base16.decode
