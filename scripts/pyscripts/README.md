@@ -1,8 +1,11 @@
 
+# How to run:
 
-# List of scripts
+    python main.py -h
+    python main.py {verb} -h
 
+# Scripts:
 
-* Register SPO
-  * help : python register-build.py -h
-  * python register-build.py -SKP {skey_path} -VKP {vkey_path} -SPOK {spo_key} -SideK {sidechain_skey}
+* main.py: entrypoint
+* utils.py: cardano interfacing
+* solver.py: WIP constraint solver for getting input utxos etc..
