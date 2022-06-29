@@ -15,7 +15,6 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
 import Crypto.Secp256k1 qualified as SECP
-import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Hash (blake2b_256)
 import Data.Maybe (fromMaybe)
@@ -63,8 +62,6 @@ sidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
 sidechainPubKey :: SidechainPubKey
 sidechainPubKey =
   SidechainPubKey
-    . bimap Builtins.toBuiltin Builtins.toBuiltin
-    . ByteString.splitAt 32
     . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
     . deriveVerKeyDSIGN
     $ sidechainPrivKey

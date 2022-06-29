@@ -24,7 +24,6 @@ import Control.Monad (MonadPlus (mzero), void)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson.Extras (tryDecode)
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
-import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -215,8 +214,6 @@ toSidechainPrivKey =
 toSidechainPubKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> SidechainPubKey
 toSidechainPubKey =
   SidechainPubKey
-    . bimap Builtins.toBuiltin Builtins.toBuiltin
-    . ByteString.splitAt 32
     . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
     . deriveVerKeyDSIGN
 
