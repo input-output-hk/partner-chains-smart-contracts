@@ -2,16 +2,6 @@
 
 module Test.TrustlessSidechain.Integration (test) where
 
-import Cardano.Crypto.DSIGN.Class (
-  SignKeyDSIGN,
-  deriveVerKeyDSIGN,
-  genKeyDSIGN,
-  rawSerialiseSigDSIGN,
-  rawSerialiseVerKeyDSIGN,
-  signDSIGN,
- )
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)
 import Crypto.Secp256k1 qualified as SECP
@@ -56,14 +46,15 @@ spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
 
-sidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
-sidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
+sidechainPrivKey :: SECP.SecKey
+sidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
 
 sidechainPubKey :: SidechainPubKey
 sidechainPubKey =
   SidechainPubKey
-    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
-    . deriveVerKeyDSIGN
+    . Builtins.toBuiltin
+    . SECP.exportPubKey False
+    . SECP.derivePubKey
     $ sidechainPrivKey
 
 test :: TestTree
@@ -92,8 +83,8 @@ test =
                       sidechainSig =
                         Crypto.Signature
                           . Builtins.toBuiltin
-                          . rawSerialiseSigDSIGN
-                          $ signDSIGN () ecdsaMsg sidechainPrivKey
+                          . SECP.exportSig
+                          $ SECP.signMsg sidechainPrivKey ecdsaMsg
                   CommitteeCandidateValidator.register
                     (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
               )
@@ -121,8 +112,8 @@ test =
                       sidechainSig =
                         Crypto.Signature
                           . Builtins.toBuiltin
-                          . rawSerialiseSigDSIGN
-                          $ signDSIGN () ecdsaMsg sidechainPrivKey
+                          . SECP.exportSig
+                          $ SECP.signMsg sidechainPrivKey ecdsaMsg
                   regTx <-
                     CommitteeCandidateValidator.register
                       (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)

@@ -13,12 +13,10 @@ import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
   deriveVerKeyDSIGN,
   genKeyDSIGN,
-  rawDeserialiseSignKeyDSIGN,
   rawSerialiseSigDSIGN,
   rawSerialiseVerKeyDSIGN,
   signDSIGN,
  )
-import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Control.Monad (MonadPlus (mzero), void)
 import Crypto.Secp256k1 qualified as SECP
@@ -175,7 +173,7 @@ signWithSPOKey skey msg =
         $ signDSIGN () serialised skey
 
 signWithSidechainKey ::
-  SignKeyDSIGN EcdsaSecp256k1DSIGN ->
+  SECP.SecKey ->
   BlockProducerRegistrationMsg ->
   Crypto.Signature
 signWithSidechainKey skey msg =
@@ -184,8 +182,8 @@ signWithSidechainKey skey msg =
       ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
    in Crypto.Signature
         . Builtins.toBuiltin
-        . rawSerialiseSigDSIGN
-        $ signDSIGN () ecdsaMsg skey
+        . SECP.exportSig
+        $ SECP.signMsg skey ecdsaMsg
 
 toSpoPrivKey :: String -> SignKeyDSIGN Ed25519DSIGN
 toSpoPrivKey =
@@ -203,19 +201,20 @@ toSpoPubKey =
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
     . deriveVerKeyDSIGN
 
-toSidechainPrivKey :: String -> SignKeyDSIGN EcdsaSecp256k1DSIGN
+toSidechainPrivKey :: String -> SECP.SecKey
 toSidechainPrivKey =
   fromMaybe (error "Unable to parse sidechain private key")
-    . rawDeserialiseSignKeyDSIGN @EcdsaSecp256k1DSIGN
+    . SECP.secKey
     . fromRight (error "Invalid sidechain key hex")
     . Base16.decode
     . Char8.pack
 
-toSidechainPubKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> SidechainPubKey
+toSidechainPubKey :: SECP.SecKey -> SidechainPubKey
 toSidechainPubKey =
   SidechainPubKey
-    . rawSerialiseVerKeyDSIGN @EcdsaSecp256k1DSIGN
-    . deriveVerKeyDSIGN
+    . Builtins.toBuiltin
+    . SECP.exportPubKey True
+    . SECP.derivePubKey
 
 txOutRefParser :: Parser TxOutRef
 txOutRefParser = do
@@ -255,5 +254,5 @@ printBuiltinBS =
 mockSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
 mockSpoPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
 
-mockSidechainPrivKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN
-mockSidechainPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
+mockSidechainPrivKey :: SECP.SecKey
+mockSidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
