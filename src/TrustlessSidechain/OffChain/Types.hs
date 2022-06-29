@@ -5,13 +5,7 @@ module TrustlessSidechain.OffChain.Types where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.Bifunctor (bimap)
-import Data.ByteString (ByteString)
-import Data.ByteString qualified as ByteString
-import Data.ByteString.Base16 qualified as Base16
-import Data.ByteString.Char8 qualified as Char8
-import Data.Either (fromRight)
-import Data.String (IsString (fromString))
+import Data.String (IsString)
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
@@ -35,31 +29,11 @@ makeLift ''GenesisHash
 
 $(deriveJSON defaultOptions ''GenesisHash)
 
-newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: (PlutusTx.BuiltinByteString, PlutusTx.BuiltinByteString)}
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: PlutusTx.BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
   deriving stock (Generic)
   deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
   deriving anyclass (NFData, ToSchema)
-
-instance IsString SidechainPubKey where
-  fromString =
-    mkSidechainPubKey
-      . fromRight (error ())
-      . Base16.decode
-      . fromString
-
-instance Prelude.Show SidechainPubKey where
-  show =
-    Char8.unpack
-      . Base16.encode
-      . PlutusTx.fromBuiltin
-      . uncurry PlutusTx.appendByteString
-      . getSidechainPubKey
-
-mkSidechainPubKey :: ByteString -> SidechainPubKey
-mkSidechainPubKey =
-  SidechainPubKey
-    . bimap PlutusTx.toBuiltin PlutusTx.toBuiltin
-    . ByteString.splitAt 32
 
 makeLift ''SidechainPubKey
 
