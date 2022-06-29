@@ -182,7 +182,8 @@ signWithSidechainKey skey msg =
       ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
    in Crypto.Signature
         . Builtins.toBuiltin
-        . SECP.exportSig
+        . SECP.getCompactSig
+        . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
 
 toSpoPrivKey :: String -> SignKeyDSIGN Ed25519DSIGN
