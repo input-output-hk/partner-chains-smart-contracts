@@ -9,7 +9,7 @@ def doexport(args):
         assert status == 'ok', addr
         status, json = utils.get_utxos(addr, magic=79)
         assert status == 'ok', json
-        args.tx_in = json.keys()[0]
+        args.tx_in = [*json.keys()][0]
     result = utils.export(
         args.tx_in,
         args.chain_id,
@@ -47,22 +47,22 @@ def dobuild(args):
             "args": ([],"", "", "mint"),
             "kwargs": {
                 "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
-                "mint_script": join(exports, 'FUELMintingPolicy.plutus'),
-                "mint_redeemer": join(exports, 'FUELMintingPolicy.mint.redeemer'),
+                "mint_script": exports('FUELMintingPolicy.plutus'),
+                "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
             }
         },
         "burn" : {
             "args": ([],"", "", "burn"),
             "kwargs": {
                 "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
-                "mint_script": join(exports, 'FUELMintingPolicy.plutus'),
-                "mint_redeemer": join(exports, 'FUELMintingPolicy.burn.redeemer'),
+                "mint_script": exports('FUELMintingPolicy.plutus'),
+                "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
             }
         },
     }
     for action in args.actions:
         options = custom[action]
-        result = build(*options['args'], **options['kwargs'], **config)
+        result = utils.build(*options['args'], **options['kwargs'], **config)
         print(result)
 
 
