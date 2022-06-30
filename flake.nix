@@ -7,7 +7,7 @@
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
-    cardano-node.url = "github:input-output-hk/cardano-node?rev=6471c31f8b61798df57a9f3345548703295cac9e";
+    cardano-node.url = "github:input-output-hk/cardano-node/1.35.0";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
