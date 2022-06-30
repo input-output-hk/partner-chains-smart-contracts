@@ -30,39 +30,27 @@ def dobuild(args):
     }
     custom =  {
         "register" : {
-            "args": ([],"", "", "register"),
-            "kwargs": {
-                "inline_datum": exports('CommitteeCandidateValidator.datum'),
-            }
+            "inline_datum": exports('CommitteeCandidateValidator.datum'),
         },
         "deregister" : {
-            "args": ([],"", "", "deregister"),
-            "kwargs": {
-                "script": exports('CommitteeCandidateValidator.plutus'),
-                "datum": exports('CommitteeCandidateValidator.datum'),
-                "redeemer": exports('CommitteeCandidateValidator.redeemer'),
-            }
+            "script": exports('CommitteeCandidateValidator.plutus'),
+            "datum": exports('CommitteeCandidateValidator.datum'),
+            "redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
-            "args": ([],"", "", "mint"),
-            "kwargs": {
-                "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
-                "mint_script": exports('FUELMintingPolicy.plutus'),
-                "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
-            }
+            "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_script": exports('FUELMintingPolicy.plutus'),
+            "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
         },
         "burn" : {
-            "args": ([],"", "", "burn"),
-            "kwargs": {
-                "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
-                "mint_script": exports('FUELMintingPolicy.plutus'),
-                "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
-            }
+            "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_script": exports('FUELMintingPolicy.plutus'),
+            "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
         },
     }
     for action in args.actions:
         options = custom[action]
-        result = utils.build(*options['args'], **options['kwargs'], **config)
+        result = solver.build(action, **options, **config)
         print(result)
 
 
