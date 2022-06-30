@@ -55,3 +55,6 @@ cabal.project.local*
 /signing-keys
 /txs
 /protocol.json
+
+# Test scripts
+/exports/
