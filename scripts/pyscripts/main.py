@@ -115,12 +115,10 @@ if __name__ == '__main__':
                         )
     export.add_argument('-SPOK', '--spo-key-file',
                         dest='spo_key',
-                        default='',
                         help='Provide spo_key',
                         type=str
                         )
     export.add_argument('-SideK', '--sidechain-skey-file',
-                        default='',
                         dest='sidechain_skey',
                         help='Provide sidechain_skey',
                         type=str
