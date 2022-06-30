@@ -1,5 +1,5 @@
-#!/bin/sh
-set -ex
+#!/usr/bin/env bash
+set -e
 
 [ $# -ge 1 ] || {
 	echo "usage: $0 <SKEY_PATH> [VKEY_PATH [SPO_SKEY] [SIDECHAIN_SKEY]]"

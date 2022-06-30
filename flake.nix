@@ -69,6 +69,7 @@
               git
               haskellPackages.apply-refact
               fd
+              jq
               cabal-install
               hlint
               haskellPackages.cabal-fmt
