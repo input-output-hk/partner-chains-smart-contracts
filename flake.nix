@@ -70,6 +70,7 @@
               haskellPackages.apply-refact
               fd
               jq
+              unixtools.xxd
               cabal-install
               hlint
               haskellPackages.cabal-fmt
