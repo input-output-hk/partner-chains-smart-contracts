@@ -48,8 +48,7 @@ def write_file(path, content):
         file.write(content)
 def read_file(path):
     with open(path, 'r') as file:
-        res = file.read()
-    return res
+        return file.read()
 
 ## Cardano cli and other Tools
 
@@ -98,13 +97,14 @@ def get_value(script, name):
         f'--script-file={script}',
     ]
     status, out = run_cli(cmd)
-    if status == 'error': return
+    assert status == 'ok', out
     name = ''.join([hex(ord(c))[2:] for c in name])
     out = out.strip()
     return f'{out}.{name}'
 
 
 def export(tx_in, chain_id, genesis_hash, spo_key=None, sidechain_key=None):
+    os.makedirs(os.path.join(get_project_root(), 'exports'), exist_ok=True)
     cmd = [
         'cabal', 'run', 'trustless-sidechain-export', '--',
         f'{tx_in}', f'{chain_id}', f'{genesis_hash}',
@@ -112,6 +112,10 @@ def export(tx_in, chain_id, genesis_hash, spo_key=None, sidechain_key=None):
     cmd += spo_key and [f'{spo_key}'] or []
     cmd += spo_key and sidechain_key and [f'{sidechain_key}'] or []
     return run_cli(cmd, cwd=get_project_root())
+
+@cache
+def exports(file):
+    return os.path.join(get_project_root(), 'exports', file)
 
 def build(
         tx_ins: List, # hash#index
@@ -152,7 +156,7 @@ def build(
 
         f'--change-address={own_addr}',
         f'--protocol-params-file={params}',
-        f'--out-file={out_file}.raw',
+        f'--out-file={exports(out_file+".raw")}',
     ]
 
     cmd = [arg for arg in cmd if arg != None] # get rid of null-options
@@ -169,9 +173,9 @@ def sign(out_file, magic=9, secret_keyfile=None):
     cmd = [
         'cardano-cli', 'transaction', 'sign',
         f'--testnet-magic={magic}',
-        f'--tx-body-file={out_file}.raw',
+        f'--tx-body-file={exports(out_file+".raw")}',
         f'--signing-key-file={secret_keyfile}',
-        f'--out-file={out_file}.sig'
+        f'--out-file={exports(out_file+".sig")}'
     ]
     return run_cli(cmd)
 
@@ -179,6 +183,6 @@ def submit(out_file, magic=9):
     cmd = [
         'cardano-cli', 'transaction', 'submit',
         f'--testnet-magic={magic}',
-        f'--tx-file={out_file}.sig',
+        f'--tx-file={exports(out_file+".sig")}',
     ]
     return run_cli(cmd)

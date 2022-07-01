@@ -20,7 +20,7 @@ def doexport(args):
     print(result)
 
 def dobuild(args):
-    exports = lambda x: join(utils.get_project_root(), 'exports', x)
+    exports = utils.exports
     config = {
         "secret_keyfile" : args.skey_path,
         "public_keyfile" : args.addr_path,
