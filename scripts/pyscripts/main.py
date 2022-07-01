@@ -5,11 +5,11 @@ from os.path import join, splitext
 
 def doexport(args):
     if args.tx_in is None:
-        status, addr = utils.get_address(args.addr_path, magic=79)
+        status, addr = utils.get_address(args.addr_path, magic=args.magic)
         assert status == 'ok', addr
-        status, json = utils.get_utxos(addr, magic=79)
+        status, json = utils.get_utxos(addr, args.magic)
         assert status == 'ok', json
-        args.tx_in = [*json.keys()][0]
+        args.tx_in = next(iter(json.keys()))
     result = utils.export(
         args.tx_in,
         args.chain_id,
@@ -24,10 +24,13 @@ def dobuild(args):
     config = {
         "secret_keyfile" : args.skey_path,
         "public_keyfile" : args.addr_path,
-        "magic" : 79,
+        "magic" : args.magic,
         "era" : "babbage",
         "with_submit" : args.submit,
     }
+    status, addr = utils.get_address(args.addr_path, magic=args.magic)
+    assert status == 'ok', addr
+    config['own_addr'] = addr
     custom =  {
         "register" : {
             "inline_datum": exports('CommitteeCandidateValidator.datum'),
@@ -38,12 +41,12 @@ def dobuild(args):
             "redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
-            "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_val": '1 ' + utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
         },
         "burn" : {
-            "mint_val": utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_val": '-1 ' + utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
         },
@@ -69,6 +72,12 @@ if __name__ == '__main__':
                         dest='addr_path',
                         help='Provide payment address path',
                         type=str
+                        )
+    parser.add_argument('-MAGIC', '--testned-magic',
+                        dest='magic',
+                        help='Provide testnet magic number',
+                        type=int,
+                        default=79
                         )
 
     subparser = parser.add_subparsers(dest='verb')
