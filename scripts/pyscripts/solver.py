@@ -1,5 +1,6 @@
 import utils
 import math
+import functools
 
 """
 This could probably use some backtracking solution, instead of mutating available utxos.
@@ -67,7 +68,7 @@ def want(token, utxos): # (Token, [Map utxo {value: {TokenName : Nat}}]) -> [utx
 
 def balance(want, have): # (Nat, Map utxo Nat) -> [utxo]
     utxos = sorted(have.items(), reverse=True, key=lambda kv: kv[1])
-    valid = filter(lambda kv: kv[1] > want, utxos)
+    valid = filter(lambda kv: kv[1] >= want, utxos)
     try:
         utxo, _ = next(valid)
         return [utxo]
@@ -75,8 +76,8 @@ def balance(want, have): # (Nat, Map utxo Nat) -> [utxo]
         acc = []
         scan = (acc := acc + [utxo] for utxo in utxos)
         for summation in scan:
-            valid, amount = reduce(add_utxos, ([], 0), summation)
-            if amount > want: return valid
+            valid, amount = functools.reduce(add_utxos, summation, initial=([], 0))
+            if amount >= want: return valid
         return []
 
 def add_utxos(acc, pair):
