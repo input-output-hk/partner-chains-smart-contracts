@@ -66,6 +66,9 @@
             withHoogle = false;
             exactDeps = true;
             nativeBuildInputs = with pkgs'; [
+              coreutils-full
+              direnv
+              lesspipe
               git
               haskellPackages.apply-refact
               fd
