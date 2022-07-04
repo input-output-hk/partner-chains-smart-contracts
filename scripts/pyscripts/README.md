@@ -6,6 +6,16 @@
 
 # Examples:
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register deregister
+## Build and submit register-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register
+## Build and submit deregister-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s deregister
+## Build and submit mint-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s mint
+## Build and submit burn-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s burn
+## Export
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr export
 
 # Scripts:
 
