@@ -56,6 +56,8 @@ module TrustlessSidechain.MerkleTree (
   height,
   mergeRootHashes,
   hash,
+  hashLeaf,
+  hashInternalNode,
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -144,15 +146,29 @@ deriveJSON defaultOptions ''MerkleProof
 emptyMp :: MerkleProof
 emptyMp = MerkleProof {unMerkleProof = []}
 
--- | 'hash' is a wrapper around the desired hashing function.
+-- | 'hash' is an internal function which is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
 hash :: BuiltinByteString -> RootHash
 hash = RootHash . Builtins.blake2b_256
 
--- | 'mergeRootHashes' is how we combine two 'BuiltinByteString' in the 'MerkleTree'
+{- | 'hashLeaf' is an internal function used to hash a leaf for the merkle
+ tree. See: Note [2nd Preimage Attack on The Merkle Tree]
+-}
+{-# INLINEABLE hashLeaf #-}
+hashLeaf :: BuiltinByteString -> RootHash
+hashLeaf = hash . Builtins.consByteString 0
+
+{- | 'hashInternalNode' is an internal function used to hash an internal node
+ in the Merkle tree. See: Note [2nd Preimage Attack on The Merkle Tree]
+-}
+{-# INLINEABLE hashInternalNode #-}
+hashInternalNode :: BuiltinByteString -> RootHash
+hashInternalNode = hash . Builtins.consByteString 1
+
+-- | 'mergeRootHashes' is an internal function which combines two 'BuiltinByteString' in the 'MerkleTree'
 {-# INLINEABLE mergeRootHashes #-}
 mergeRootHashes :: RootHash -> RootHash -> RootHash
-mergeRootHashes l r = hash $ (Builtins.appendByteString `PlutusPrelude.on` unRootHash) l r
+mergeRootHashes l r = hashInternalNode $ (Builtins.appendByteString `PlutusPrelude.on` unRootHash) l r
 
 {- | 'MerkleTree' is a tree of hashes. See 'fromList' and 'fromNonEmpty' for
  building a 'MerkleTree', and see 'lookupMp' and 'memberMp' for creating and
@@ -191,7 +207,7 @@ rootHash = \case
 {-# INLINEABLE fromList #-}
 fromList :: [BuiltinByteString] -> MerkleTree
 fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
-fromList lst = mergeAll . map (Tip . hash) $ lst
+fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
   where
     mergeAll :: [MerkleTree] -> MerkleTree
     mergeAll [r] = r
@@ -223,6 +239,9 @@ fromList lst = mergeAll . map (Tip . hash) $ lst
  >    hash (hash "p1" ++ hash "p2")             |
  >      /                    \                  |
  > hash "p1"                hash "p2"       hash "p3"
+
+ N.B. it doesn't exactly do this anymore since this permits second preimage
+ attacks: see Note [2nd Preimage Attack on The Merkle Tree].
 -}
 {-# INLINEABLE fromNonEmpty #-}
 fromNonEmpty :: NonEmpty BuiltinByteString -> MerkleTree
@@ -242,7 +261,7 @@ See: Note [Hydra-Poc People Merkle Tree Comparisons]
  a merkle proof exists.
 
  The function will return the corresponding proof as @('Just' value)@, or
- 'Nothing' if the merkle tree does not contain the hash of the
+ 'Nothing' if the Merkle tree does not contain the hash of the
  'BuiltinByteString'
 
  An example of using 'lookupMp':
@@ -267,7 +286,7 @@ lookupMp :: BuiltinByteString -> MerkleTree -> Maybe MerkleProof
 lookupMp bt mt = fmap MerkleProof $ go [] mt
   where
     hsh :: RootHash
-    hsh = hash bt
+    hsh = hashLeaf bt
 
     go :: [Up] -> MerkleTree -> Maybe [Up]
     go prf = \case
@@ -310,7 +329,7 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
 -}
 {-# INLINEABLE memberMp #-}
 memberMp :: BuiltinByteString -> MerkleProof -> RootHash -> Bool
-memberMp bt prf rth = rth == go (hash bt) (unMerkleProof prf)
+memberMp bt prf rth = rth == go (hashLeaf bt) (unMerkleProof prf)
   where
     -- This just undoes the process given in 'lookupMp'.
     go :: RootHash -> [Up] -> RootHash
@@ -326,13 +345,84 @@ memberMp bt prf rth = rth == go (hash bt) (unMerkleProof prf)
 -}
 
 {-
+ Note [2nd Preimage Attack on The Merkle Tree]
+
+ A previous implementation was susceptible to a 2nd Preimage Attack. Let's
+ recall how the Merkle root was constructed previously. Given a nonempty list of /leaves/,
+ we computed the Merkle root by
+
+    1. Hashing all the leaves
+
+    2. Linearly scan through the leaves and replace adjacent leaves with the
+    hash of the two leaves appended together
+
+    3. Repeat 2. until we are left with one hash.
+
+ For example, given the non empty list @[a,b,c,d]@, we would compute the Merkle
+ root as follows (where @h@ denotes the hash function and @++@ denotes append):
+
+ >     h(h(h(a)++h(b))++h(h(c)++h(d)))
+ >         /                   \
+ >  h(h(a)++h(b))        h(h(c)++h(d))
+ >   /        \           /          \
+ > h(a)      h(b)       h(c)        h(d)
+
+ Now, it's easy to see that an adversary can give a distinct nonempty list which would
+ form the same Merkle root (which in our example is
+ @h(h(h(a)++h(b))++h(h(c)++h(d)))@).
+ Consider the non empty list @[h(a)++h(b), h(c)++h(d)]@, and we observe that the Merkle root is computed like
+
+ > h(h(h(a)++h(b))++h(h(c)++h(d)))
+ >     /                   \
+ > h(h(a)++h(b))        h(h(c)++h(d))
+
+ which has the same root as our original Merkle tree.
+
+ From this result, it is easy to see how one can generate data and proofs for a
+ Merkle tree which weren't originally in the Merkle tree.
+
+ To fix this, it's quite simple. We change the procedure to
+
+    1. Prepend a 0 byte to all the leaves, then hash all the leaves individually
+
+    2. Linearly scan through the leaves and replace adjacent leaves with the
+    hash of the two leaves appended together prepended with a 1 byte i.e., two
+    adjacent leaves @leaf0@ and @leaf1@ is replaced by the single leaf @hash(1
+    ++ leaf0 ++ leaf1)@
+
+    3. Repeat 2. until we are left with one hash.
+
+ As an example, given the nonempty list @[a,b,c,d]@, we would compute the Merkle root as
+
+ >       h(1++h(1++h(0++a)++h(0++b))++h(1++h(0++c)++h(0++d)))
+ >             /                                    \
+ >  h(1++h(0++a)++h(0++b))                  h(1++h(0++c)++h(0++d))
+ >   /        \                                 /          \
+ > h(0++a)      h(0++b)                     h(0++c)        h(0++d)
+
+ Why does this fix this? If we assume that the underlying hash function @h@ is
+ collision resistant, this essentially implies that the @h@ is injective. This
+ means that an adverary MUST choose the preimage of one the horizontal "levels"
+ as the nonempty list without the @0@ or @1@ prepended. So, if the adversary
+ chose any of the levels, the algorithm would prepend a @0@ to it, which would
+ mean the root would be different if the adversary picked anything but the
+ original leafs i.e., this is collision resistant.
+-}
+
+{-
 Note [Hydra-Poc People Merkle Tree Comparisons]
 
-We discuss some comparisions between us and the hydra-poc people. The main
-difference between us and hydra-poc people is how the merkle tree is actually
-constructed. They do a top down approach (compute the length of the list,
-divide by 2, then split the list into the first half / second half, then keep
-going), where as we do a "bottom up" approach.
+We discuss some comparisions between us and the hydra-poc people.
+
+We first note that the hydra-poc people's implementation is susceptible to a
+2nd preimage attack whereas ours isn't -- see: Note [2nd Preimage Attack on The
+Merkle Tree]
+
+The second main difference how the merkle tree is actually constructed, and we
+spend the remaining of this note discussing this aspect. They do a top down
+approach (compute the length of the list, divide by 2, then split the list into
+the first half / second half, then keep going), where as we do a "bottom up"
+approach.
 
 N.B. This technique of going "bottom up" to create the tree is well known
 when implementing merge sort

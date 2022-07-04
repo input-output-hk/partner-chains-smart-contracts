@@ -32,8 +32,8 @@ import Plutus.V1.Ledger.Value (
  )
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
-import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
+import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
  )
@@ -56,32 +56,18 @@ PlutusTx.makeLift ''UpdateCommitteeHash
  committee hash by essentially computing the merkle root of all public keys
  together.
  We call the output of this function an /aggregate public key/.
-
- TODO: this is a very simple scheme, and we would most likely want to update
- this scheme later...
 -}
 {-# INLINEABLE aggregateKeys #-}
 aggregateKeys :: [PubKey] -> BuiltinByteString
 aggregateKeys [] = traceError "Empty committee"
-aggregateKeys lst = go $ map (Bytes.getLedgerBytes . Crypto.getPubKey) lst
-  where
-    -- Why did we not just do something like?
-    -- @aggregateKeys
-    --  =
-    --  Builtins.blake2b_256
-    --  . mconcat
-    --  . map (Bytes.getLedgerBytes . Crypto.getPubKey)
-    -- @
-    -- To cut the story short -- this didn't work in the Plutip integration
-    -- tests, so we jumped straight to the merkle root solution instead.
-    go :: [BuiltinByteString] -> BuiltinByteString
-    go [a] = a
-    go as = go $ merges as
+aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (Bytes.getLedgerBytes . Crypto.getPubKey) lst
 
-    merges :: [BuiltinByteString] -> [BuiltinByteString]
-    merges [] = []
-    merges [a] = [Builtins.blake2b_256 a]
-    merges (a : b : cs) = Builtins.blake2b_256 (a `appendByteString` b) : merges cs
+{- Note [Aggregate Keys Append Scheme]
+ In early versions, we used a "simple append scheme" i.e., we implemented this function with
+  > aggregateKeys = Builtins.blake2b_256 . mconcat . map (Bytes.getLedgerBytes . Crypto.getPubKey)
+  but this didn't work in the Plutip integration tests (budget exceeded errors), so we jumped straight
+  to the merkle root solution instead.
+ -}
 
 {- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
  key, and returns true or false to determinig whether the public keys were
