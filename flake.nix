@@ -2,13 +2,12 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip?rev=46f34d1b930b16aa75624f533eefcfd76d5db6aa";
+    plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
-    cardano-node.url = "github:input-output-hk/cardano-node?rev=6471c31f8b61798df57a9f3345548703295cac9e";
-    cardano-wallet.url = "github:input-output-hk/cardano-wallet?rev=538375cb3efa0c66604ff0b13b6ecc0c4a694d64";
+    cardano-node.url = "github:input-output-hk/cardano-node/1.35.0";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -67,9 +66,14 @@
             withHoogle = false;
             exactDeps = true;
             nativeBuildInputs = with pkgs'; [
+              coreutils-full
+              direnv
+              lesspipe
               git
               haskellPackages.apply-refact
               fd
+              jq
+              unixtools.xxd
               cabal-install
               hlint
               haskellPackages.cabal-fmt

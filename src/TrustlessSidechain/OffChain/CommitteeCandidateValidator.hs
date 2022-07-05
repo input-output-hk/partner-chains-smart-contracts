@@ -98,7 +98,7 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
           sig = getSignature $ bprSpoSignature datum
 
           msg = Builtins.serialiseData $ toBuiltinData $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
-       in spoPubKey == bprSpoPubKey datum && verifySignature pubKey msg sig
+       in spoPubKey == bprSpoPubKey datum && verifyEd25519Signature pubKey msg sig
 
 registerWithMock :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 registerWithMock =

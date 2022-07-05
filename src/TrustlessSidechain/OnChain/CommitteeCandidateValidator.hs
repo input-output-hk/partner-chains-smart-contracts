@@ -67,7 +67,7 @@ mkCommitteeCanditateValidator scParams datum _ _ =
       Builtins.serialiseData $
         toBuiltinData $
           BlockProducerRegistrationMsg scParams sidechainPubKey inputUtxo
-    isSignatureValid = verifySignature spoPubKey msg sig
+    isSignatureValid = verifyEd25519Signature spoPubKey msg sig
 
 committeeCanditateValidator :: SidechainParams -> TypedScripts.Validator
 committeeCanditateValidator sidechainParams =
