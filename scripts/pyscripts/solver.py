@@ -35,17 +35,14 @@ def build(action, **kwargs):
         else:
             to_mint = f'{amount} {name}'
 
-    for utxo in tx_ins:
-        if utxo in utxos: del utxos[utxo]
-
     amount = 0
     for _ in range(10):
-        tx_in = want({"name": "lovelace", "amount": amount}, utxos)
+        tx_in = want({"name": "lovelace", "amount": amount}, utxos.copy())
         tx_out = f"{kwargs['own_addr']}+{amount}" + (f'+{to_mint}' if to_mint else '')
         tx_coll = tx_in[0]
 
         status, out = utils.build(tx_ins + tx_in, tx_out, tx_coll, action, **kwargs)
-        if status == 'ok': return status, out
+        if status == 'ok': break
 
         _, _, lovelace = out.strip().rpartition(' ')
         try:
@@ -60,25 +57,42 @@ def build(action, **kwargs):
 def want(token, utxos): # (Token, [Map utxo {value: {TokenName : Nat}}]) -> [utxo]
     tokens = {}
     name = token['name']
+
+    def inj(proj):
+        return lambda utxo, value: tokens.update({utxo : int(proj(value))})
+
+    add_token = inj(lambda value: value[name])
+
+    if name != 'lovelace': # we're dealing with a native token
+        name, _, hex = name.partition('.')
+        add_token = inj(lambda value: value[name][hex])
+
     for utxo, data in utxos.items():
         value = data['value']
-        if name in value: tokens[utxo] = int(value[name])
+        if name in value: add_token(utxo, value)
 
     return balance(token['amount'], tokens)
 
 def balance(want, have): # (Nat, Map utxo Nat) -> [utxo]
     utxos = sorted(have.items(), reverse=True, key=lambda kv: kv[1])
     valid = filter(lambda kv: kv[1] >= want, utxos)
+
+    # there is one utxo which is valid
     try:
         utxo, _ = next(valid)
+        have[utxo] -= want
         return [utxo]
+
+    # need to combine utxos
     except StopIteration:
         acc = []
         scan = (acc := acc + [utxo] for utxo in utxos)
         for summation in scan:
             valid, amount = functools.reduce(add_utxos, summation, initial=([], 0))
-            if amount >= want: return valid
-        return []
+            if amount >= want:
+                for utxo in valid[:-1]: have[utxo] = 0
+                have[valid[-1]] = amount - want
+                return valid
 
 def add_utxos(acc, pair):
     utxos, amount = acc

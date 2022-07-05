@@ -125,7 +125,7 @@ def build(
         era='babbage',
         magic=9,
         with_submit=False,
-        **kw # script, datum, redeemer, inline_datum, mint_val, mint_script, mint_redeemer
+        **kw # script, datum, redeemer, inline_datum, mint_val, mint_script, mint_redeemer, secret_keyfile
   ):
     status, own_addr = get_address(kw['public_keyfile'], magic)
     assert status == 'ok'
@@ -164,8 +164,8 @@ def build(
     status, out = run_cli(cmd)
 
     if with_submit:
-        status, out = status == 'ok' and sign(out_file, magic, **kw) or status, out
-        status, out = status == 'ok' and submit(out_file, magic) or status, out
+        if status == 'ok': status, out = sign(out_file, magic, kw['secret_keyfile'])
+        if status == 'ok': status, out = submit(out_file, magic)
 
     return status, out
 
