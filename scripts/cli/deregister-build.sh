@@ -2,6 +2,7 @@
 set -e
 
 this=$(realpath $0)
+SUBMIT=$1
 
 SCRIPTS_DIR=$(dirname $this)
 TMP_DIR=$SCRIPTS_DIR/tmp
