@@ -1,9 +1,24 @@
 
+# How to run:
 
-# List of scripts
+    python main.py -h
+    python main.py {verb} -h
 
+# Examples:
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register deregister
+## Build and submit register-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register
+## Build and submit deregister-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s deregister
+## Build and submit mint-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s mint
+## Build and submit burn-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s burn
+## Export
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr export
 
-* Register SPO
-  * help : python register-build-option1.py -h
-  * python register-build-option1.py -SKP {skey_path} -VKP {vkey_path} -SPOK {spo_key} -SideK {sidechain_skey}
-  * python register-build-option2.py {skey_path} {vkey_path} {spo_key} {sidechain_skey}
+# Scripts:
+
+* main.py: entrypoint
+* utils.py: cardano interfacing
+* solver.py: WIP constraint solver for getting input utxos etc..
