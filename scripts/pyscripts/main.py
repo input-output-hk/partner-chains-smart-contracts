@@ -41,12 +41,12 @@ def dobuild(args):
             "redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
-            "mint_val": '1 ' + utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_val": (1, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
         },
         "burn" : {
-            "mint_val": '-1 ' + utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL'),
+            "mint_val": (-1, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
         },

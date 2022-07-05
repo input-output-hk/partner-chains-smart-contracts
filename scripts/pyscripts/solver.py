@@ -29,11 +29,11 @@ def build(action, **kwargs):
         tx_ins.append(next(iter(tx.keys())))
 
     if mint:
-        if mint.startswith('-'):
-            amount, name = mint.split()
-            tx_ins += want({"name": name, "amount": int(amount)}, utxos)
+        amount, name = mint
+        if mint[0] < 0:
+            tx_ins += want({"name": name, "amount": amount}, utxos)
         else:
-            to_mint = mint
+            to_mint = f'{amount} {name}'
 
     for utxo in tx_ins:
         if utxo in utxos: del utxos[utxo]

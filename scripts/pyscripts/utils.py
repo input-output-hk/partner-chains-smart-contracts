@@ -150,7 +150,7 @@ def build(
 
         option_then(kw.get('inline_datum'), lambda x: f'--tx-out-inline-datum-file={x}'),
 
-        option_then(kw.get('mint_val'), lambda x: f'--mint={x}'),
+        option_then(kw.get('mint_val'), lambda x: f'--mint={x[0]} {x[1]}'),
         option_then(kw.get('mint_script'), lambda x: f'--mint-script-file={x}'),
         option_then(kw.get('mint_redeemer'), lambda x: f'--mint-redeemer-file={x}'),
 
