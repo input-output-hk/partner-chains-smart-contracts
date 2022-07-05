@@ -32,6 +32,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (unitRedeemer, validatorHash)
+import Ledger.Address (scriptHashAddress)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   LedgerBytes (LedgerBytes),
@@ -114,13 +115,16 @@ main = do
           , bprmSidechainPubKey = toSidechainPubKey sidechainPrivKey
           , bprmInputUtxo = inputUtxo
           }
-
+      scriptHash = validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams)
       serialised = Builtins.serialiseData $ toBuiltinData msg
 
   printTitle "CommitteeCandidateValidator"
 
   printTitle "Script hash"
-  print (validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams))
+  print scriptHash
+
+  printTitle "Script address"
+  print (scriptHashAddress scriptHash)
 
   printTitle "Datum"
   print registrationData
