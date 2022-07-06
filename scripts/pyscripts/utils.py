@@ -125,7 +125,7 @@ def build(
         era='babbage',
         magic=9,
         with_submit=False,
-        **kw # script, datum, redeemer, inline_datum, mint_val, mint_script, mint_redeemer, secret_keyfile
+        **kw # in_script, in_datum, in_inline_datum, in_redeemer, out_inline_datum, mint_val, mint_script, mint_redeemer, secret_keyfile
   ):
     status, own_addr = get_address(kw['public_keyfile'], magic)
     assert status == 'ok'
@@ -136,9 +136,10 @@ def build(
         f'--{era}-era',
         f'--testnet-magic={magic}',
 
-        option_then(kw.get('script'), lambda x: f'--tx-in-script-file={x}'),
-        option_then(kw.get('datum'), lambda x: f'--tx-in-datum-file={x}'),
-        option_then(kw.get('redeemer'), lambda x: f'--tx-in-redeemer-file={x}'),
+        option_then(kw.get('in_script'), lambda x: f'--tx-in-script-file={x}'),
+        option_then(kw.get('in_datum'), lambda x: f'--tx-in-datum-file={x}'),
+        option_then(kw.get('in_inline_datum'), lambda _: f'--tx-in-inline-datum-present'),
+        option_then(kw.get('in_redeemer'), lambda x: f'--tx-in-redeemer-file={x}'),
     ]
 
     for tx_in in tx_ins:
@@ -148,7 +149,7 @@ def build(
         f'--tx-in-collateral={tx_coll}',
         f'--tx-out={tx_out}',
 
-        option_then(kw.get('inline_datum'), lambda x: f'--tx-out-inline-datum-file={x}'),
+        option_then(kw.get('out_inline_datum'), lambda x: f'--tx-out-inline-datum-file={x}'),
 
         option_then(kw.get('mint_val'), lambda x: f'--mint={x[0]} {x[1]}'),
         option_then(kw.get('mint_script'), lambda x: f'--mint-script-file={x}'),

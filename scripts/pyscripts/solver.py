@@ -16,8 +16,15 @@ happens twice, but it's safe to do it with a fuel (10 times maybe) and break on 
 
 def build(action, **kwargs):
     _, utxos = utils.get_utxos(kwargs['own_addr'])
-    script = kwargs.get('script')
+    script = kwargs.get('in_script')
     mint = kwargs.get('mint_val')
+
+    out_addr = kwargs.get('own_addr')
+    if kwargs.get('out_script'):
+        status, addr = utils.get_address(kwargs.get('out_script'), type='script', magic=kwargs['magic'])
+        assert status == 'ok', addr
+        out_addr = addr
+            
 
     tx_ins = []
     to_mint = None
@@ -38,7 +45,7 @@ def build(action, **kwargs):
     amount = 0
     for _ in range(10):
         tx_in = want({"name": "lovelace", "amount": amount}, utxos.copy())
-        tx_out = f"{kwargs['own_addr']}+{amount}" + (f'+{to_mint}' if to_mint else '')
+        tx_out = f"{out_addr}+{amount}" + (f'+{to_mint}' if to_mint else '')
         tx_coll = tx_in[0]
 
         status, out = utils.build(tx_ins + tx_in, tx_out, tx_coll, action, **kwargs)
