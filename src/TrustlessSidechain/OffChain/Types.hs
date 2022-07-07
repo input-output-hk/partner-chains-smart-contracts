@@ -125,7 +125,8 @@ $(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
-  , signature :: BuiltinByteString
+  , signatures :: [BuiltinByteString]
+  , threshold :: Integer
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
   deriving stock (Generic, Prelude.Show)

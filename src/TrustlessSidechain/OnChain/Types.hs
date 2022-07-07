@@ -6,7 +6,7 @@ module TrustlessSidechain.OnChain.Types where
 import Ledger.Crypto (PubKey)
 import Ledger.Typed.Scripts qualified as Script
 import PlutusTx (makeIsDataIndexed)
-import PlutusTx.Prelude (BuiltinByteString)
+import PlutusTx.Prelude (BuiltinByteString, Integer)
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
@@ -41,7 +41,8 @@ makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 
 
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
-  , signature :: BuiltinByteString
+  , signatures :: [BuiltinByteString]
+  , threshold :: !Integer -- Natural: the number of committee pubkeys needed to sign off
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 
