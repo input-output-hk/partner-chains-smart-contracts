@@ -22,7 +22,7 @@ TMP_DIR=$SCRIPTS_DIR/tmp
 cardano-cli transaction build $TESTNET_MAGIC \
   --babbage-era \
   --tx-in-script-file $EXPORTS_DIR/CommitteeCandidateValidator.plutus \
-  --tx-in-datum-file $EXPORTS_DIR/CommitteeCandidateValidator.datum \
+  --tx-in-inline-datum-present \
   --tx-in-redeemer-file $EXPORTS_DIR/CommitteeCandidateValidator.redeemer \
   --tx-in $(get_utxo $(get_script_addr $EXPORTS_DIR/CommitteeCandidateValidator.plutus) "script input") \
   --tx-in $(get_utxo $(get_own_wallet_addr) input "as much lovelace as script input") \
