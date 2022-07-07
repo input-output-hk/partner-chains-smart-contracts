@@ -33,12 +33,13 @@ def dobuild(args):
     config['own_addr'] = addr
     custom =  {
         "register" : {
-            "inline_datum": exports('CommitteeCandidateValidator.datum'),
+            "out_inline_datum": exports('CommitteeCandidateValidator.datum'),
+            "out_script": exports('CommitteeCandidateValidator.plutus'),
         },
         "deregister" : {
-            "script": exports('CommitteeCandidateValidator.plutus'),
-            "datum": exports('CommitteeCandidateValidator.datum'),
-            "redeemer": exports('CommitteeCandidateValidator.redeemer'),
+            "in_script": exports('CommitteeCandidateValidator.plutus'),
+            "in_inline_datum": True,
+            "in_redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
             "mint_val": (1, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
