@@ -14,10 +14,8 @@ verifyMultisig pubKeys threshold message signatures =
         s : sigs -> (s :) <$> didPubkeySign pk sigs -- don't discard
       tryPubKeys (needed, _) [] = needed <= 0
       tryPubKeys (needed, sigs) (pubkey : nextPKs) =
-        if needed <= 0
-          then True
-          else case didPubkeySign pubkey sigs of
-            Nothing -> tryPubKeys (needed, sigs) nextPKs -- KO skip this pubkey and reuse same sig list
-            Just sigs' -> tryPubKeys (needed - 1, sigs') nextPKs -- OK update threshold and sigs list
-            -- note. we don't need to nub both sigs and pubkeys which would waste time in general
+        needed <= 0 || case didPubkeySign pubkey sigs of
+          Nothing -> tryPubKeys (needed, sigs) nextPKs -- KO skip this pubkey and reuse same sig list
+          Just sigs' -> tryPubKeys (needed - 1, sigs') nextPKs -- OK update threshold and sigs list
+          -- note. we don't need to nub both sigs and pubkeys which would waste time in general
    in tryPubKeys (threshold, nub signatures) pubKeys
