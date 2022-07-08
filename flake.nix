@@ -36,57 +36,52 @@
           inherit (haskell-nix) config;
         };
 
-      deferPluginErrors = true;
-
       ghcVersion = "ghc8107";
 
       projectFor = system:
         let
-          pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-        in
-        (nixpkgsFor system).haskell-nix.cabalProject {
-          src = ./.;
-          compiler-nix-name = ghcVersion;
-          inherit (plutip) cabalProjectLocal;
-          extraSources = plutip.extraSources ++ [{
-            src = "${plutip}";
-            subdirs = [ "." ];
-          }];
-          modules = plutip.haskellModules ++ [{
-            packages = {
-              trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
-                [
-                  inputs.cardano-node.packages.${system}.cardano-node
-                  inputs.cardano-node.packages.${system}.cardano-cli
-                ];
+          project = (nixpkgsFor system).haskell-nix.cabalProject {
+            src = ./.;
+            compiler-nix-name = ghcVersion;
+            inherit (plutip) cabalProjectLocal;
+            extraSources = plutip.extraSources ++ [{
+              src = plutip;
+              subdirs = [ "." ];
+            }];
+            modules = plutip.haskellModules ++ [{
+              packages = {
+                trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
+                  [
+                    inputs.cardano-node.packages.${system}.cardano-node
+                    inputs.cardano-node.packages.${system}.cardano-cli
+                  ];
+              };
+            }];
+            shell = {
+              withHoogle = false;
+              exactDeps = true;
+              nativeBuildInputs = with pkgs'; [
+                bashInteractive
+                coreutils-full
+                direnv
+                lesspipe
+                git
+                haskellPackages.apply-refact
+                fd
+                jq
+                unixtools.xxd
+                cabal-install
+                hlint
+                haskellPackages.cabal-fmt
+                haskellPackages.fourmolu
+                nixpkgs-fmt
+                inputs.cardano-node.packages.${system}.cardano-node
+              ];
             };
-          }];
-          shell = {
-            withHoogle = false;
-            exactDeps = true;
-            nativeBuildInputs = with pkgs'; [
-              coreutils-full
-              direnv
-              lesspipe
-              git
-              haskellPackages.apply-refact
-              fd
-              jq
-              unixtools.xxd
-              cabal-install
-              hlint
-              haskellPackages.cabal-fmt
-              haskellPackages.fourmolu
-              nixpkgs-fmt
-              python3
-              inputs.cardano-node.packages.${system}.cardano-node
-              inputs.cardano-node.packages.${system}.cardano-cli
-            ];
-            tools.haskell-language-server = { };
-            additional = ps: [ ps.plutip ];
           };
-        };
+        in
+        project;
       formatCheckFor = system:
         let
           pkgs = nixpkgsFor system;

@@ -9,6 +9,7 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Hash (blake2b_256)
 import Data.Maybe (fromMaybe)
 import Ledger (getCardanoTxId)
+import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
@@ -23,15 +24,25 @@ import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPol
 import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
+  GenesisCommitteeHashParams (GenesisCommitteeHashParams),
   MintParams (MintParams),
   RegisterParams (RegisterParams),
   SidechainParams (..),
   SidechainPubKey (SidechainPubKey),
+  UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
+
+import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
  )
+
+import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+
 import Prelude
+
+import Test.Plutip.Internal.Types qualified as PlutipInternal
 
 sidechainParams :: SidechainParams
 sidechainParams =
@@ -57,6 +68,7 @@ sidechainPubKey =
     . SECP.derivePubKey
     $ sidechainPrivKey
 
+-- | 'test' is the suite of tests.
 test :: TestTree
 test =
   withCluster
@@ -136,7 +148,7 @@ test =
               h <- ownPaymentPubKeyHash
               t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
               awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
@@ -157,7 +169,7 @@ test =
                 FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
             withContractAs 1 $
               const $
-                FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+                FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
@@ -167,7 +179,218 @@ test =
             do
               t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
               awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+        )
+        [shouldFail]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash"
+        (initAda [2, 2])
+        ( withContract $ \[] -> do
+            -- create a committee:
+            let cmtPrvKeys :: [Wallet.XPrv]
+                cmtPubKeys :: [PubKey]
+
+                cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 10]
+                cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+
+            -- Executingthe endpoint:
+            h <- ownPaymentPubKeyHash
+            let addr = Address.pubKeyHashAddress h Nothing
+                tokenName = "Update committee hash test"
+                gch =
+                  GenesisCommitteeHashParams
+                    { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
+                    , OffChainTypes.genesisAddress = addr
+                    , OffChainTypes.genesisToken = tokenName
+                    }
+
+            UpdateCommitteeHash.genesisCommitteeHash gch
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet"
+        (initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let cmtPrvKeys :: [Wallet.XPrv]
+                cmtPubKeys :: [PubKey]
+
+                cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+
+            let nCmtPrvKeys :: [Wallet.XPrv]
+                nCmtPubKeys :: [PubKey]
+
+                nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
+
+            withContract $ \_ -> do
+              -- Executing the genesis transaction endpoint [more or less
+              -- duplicated code from the previous test case]
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
+                      , OffChainTypes.genesisAddress = addr
+                      , OffChainTypes.genesisToken = tokenName
+                      }
+
+              nft <- UpdateCommitteeHash.genesisCommitteeHash gch
+
+              -- updating the committee hash
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCmtPubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
+                      , OffChainTypes.token = nft
+                      , OffChainTypes.committeePubKeys = cmtPubKeys
+                      , OffChainTypes.signature = sig
+                      }
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet"
+        (initAda [3, 2] <> initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let cmtPrvKeys :: [Wallet.XPrv]
+                cmtPubKeys :: [PubKey]
+
+                cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+
+            let nCmtPrvKeys :: [Wallet.XPrv]
+                nCmtPubKeys :: [PubKey]
+
+                nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
+
+            -- Executing the genesis transaction endpoint [more or less
+            -- duplicated code from the previous test case]
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ _ <- withContract $ \_ -> do
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
+                      , OffChainTypes.genesisAddress = addr
+                      , OffChainTypes.genesisToken = tokenName
+                      }
+
+              UpdateCommitteeHash.genesisCommitteeHash gch
+
+            -- Let another wallet update the committee hash.
+            withContractAs 1 $ \_ -> do
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCmtPubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
+                      , OffChainTypes.token = nft
+                      , OffChainTypes.committeePubKeys = cmtPubKeys
+                      , OffChainTypes.signature = sig
+                      }
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldSucceed]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet with the wrong committee"
+        (initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let cmtPrvKeys :: [Wallet.XPrv]
+                cmtPubKeys :: [PubKey]
+
+                cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+
+            let nCmtPrvKeys :: [Wallet.XPrv]
+                nCmtPubKeys :: [PubKey]
+
+                nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
+
+            withContract $ \_ -> do
+              -- Executing the genesis transaction endpoint [more or less
+              -- duplicated code from the previous test case]
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
+                      , OffChainTypes.genesisAddress = addr
+                      , OffChainTypes.genesisToken = tokenName
+                      }
+
+              nft <- UpdateCommitteeHash.genesisCommitteeHash gch
+
+              -- updating the committee hash
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCmtPubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
+                      , OffChainTypes.token = nft
+                      , OffChainTypes.committeePubKeys = nCmtPubKeys
+                      , OffChainTypes.signature = sig
+                      }
+              UpdateCommitteeHash.updateCommitteeHash uchp
+        )
+        [shouldFail]
+    , assertExecution
+        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet with the wrong committee"
+        (initAda [3, 2] <> initAda [3, 2])
+        ( do
+            -- Creating the committees:
+            let cmtPrvKeys :: [Wallet.XPrv]
+                cmtPubKeys :: [PubKey]
+
+                cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. 100]
+                cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+
+            let nCmtPrvKeys :: [Wallet.XPrv]
+                nCmtPubKeys :: [PubKey]
+
+                nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
+                nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
+
+            -- Executing the genesis transaction endpoint [more or less
+            -- duplicated code from the previous test case]
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ _ <- withContract $ \_ -> do
+              h <- ownPaymentPubKeyHash
+              let addr = Address.pubKeyHashAddress h Nothing
+                  tokenName = "Update committee hash test"
+                  gch =
+                    GenesisCommitteeHashParams
+                      { genesisCommitteePubKeys = cmtPubKeys
+                      , genesisAddress = addr
+                      , genesisToken = tokenName
+                      }
+
+              UpdateCommitteeHash.genesisCommitteeHash gch
+
+            -- Let another wallet update the committee hash.
+            withContractAs 1 $ \_ -> do
+              let nCommitteeHash = UpdateCommitteeHash.aggregateKeys nCmtPubKeys
+                  sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+
+                  uchp =
+                    UpdateCommitteeHashParams
+                      { newCommitteePubKeys = nCmtPubKeys
+                      , token = nft
+                      , committeePubKeys = nCmtPubKeys
+                      , signature = sig
+                      }
+              UpdateCommitteeHash.updateCommitteeHash uchp
         )
         [shouldFail]
     ]
