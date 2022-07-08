@@ -1,6 +1,6 @@
 module TrustlessSidechain.OnChain.Utils where
 
-import PlutusTx.Prelude (Bool (..), BuiltinByteString, Integer, Maybe (..), nub, verifySignature, (||) , (-), (<$>), (<=))
+import PlutusTx.Prelude (Bool (..), BuiltinByteString, Integer, Maybe (..), nub, verifySignature, (-), (<$>), (<=), (||))
 
 -- Check enough pubkeys match a signature without counting duplicate pubkeys or signatures (potential security risk)
 verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
