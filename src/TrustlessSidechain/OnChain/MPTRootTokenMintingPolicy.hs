@@ -34,7 +34,7 @@ mkMintingPolicy
     verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1))
       && any
         ( \pubKey ->
-            verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
+            verifyEd25519Signature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
         )
         committeePubKeys
     where

@@ -28,7 +28,7 @@ import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
-import Data.ByteString.Hash (blake2b)
+import Data.ByteString.Hash (blake2b_256)
 import Data.Either (fromRight)
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
@@ -181,7 +181,7 @@ signWithSidechainKey ::
   Crypto.Signature
 signWithSidechainKey skey msg =
   let serialised = Builtins.serialiseData $ toBuiltinData msg
-      hashedMsg = blake2b $ Builtins.fromBuiltin serialised
+      hashedMsg = blake2b_256 $ Builtins.fromBuiltin serialised
       ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
    in Crypto.Signature
         . Builtins.toBuiltin

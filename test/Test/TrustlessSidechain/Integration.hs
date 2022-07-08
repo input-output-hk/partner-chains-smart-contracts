@@ -17,7 +17,7 @@ import Control.Monad (void)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Bifunctor (bimap)
 import Data.ByteString qualified as ByteString
-import Data.ByteString.Hash (blake2b)
+import Data.ByteString.Hash (blake2b_256)
 import Data.Maybe (fromMaybe)
 import Ledger (getCardanoTxId)
 import Ledger.Address qualified as Address
@@ -100,7 +100,7 @@ test =
                       ecdsaMsg =
                         fromMaybe undefined
                           . SECP.msg
-                          . blake2b
+                          . blake2b_256
                           $ Builtins.fromBuiltin msg
 
                       sidechainSig =
@@ -129,7 +129,7 @@ test =
                       ecdsaMsg =
                         fromMaybe undefined
                           . SECP.msg
-                          . blake2b
+                          . blake2b_256
                           $ Builtins.fromBuiltin msg
 
                       sidechainSig =
@@ -283,7 +283,7 @@ test =
 
             -- Executing the genesis transaction endpoint [more or less
             -- duplicated code from the previous test case]
-            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ <- withContract $ \_ -> do
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ _ <- withContract $ \_ -> do
               h <- ownPaymentPubKeyHash
               let addr = Address.pubKeyHashAddress h Nothing
                   tokenName = "Update committee hash test"
@@ -376,7 +376,7 @@ test =
 
             -- Executing the genesis transaction endpoint [more or less
             -- duplicated code from the previous test case]
-            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ <- withContract $ \_ -> do
+            PlutipInternal.ExecutionResult (Right (nft, _)) _ _ _ <- withContract $ \_ -> do
               h <- ownPaymentPubKeyHash
               let addr = Address.pubKeyHashAddress h Nothing
                   tokenName = "Update committee hash test"

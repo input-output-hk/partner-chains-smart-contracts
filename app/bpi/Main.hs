@@ -65,14 +65,13 @@ main = do
     fromMaybe (error "protocol.json file not found") . JSON.decode
       <$> LazyByteString.readFile "protocol.json"
   let pabConf =
-        PABConfig
+        (def :: PABConfig)
           { pcCliLocation = Local
           , pcNetwork = Testnet (NetworkMagic 1097911063)
           , pcChainIndexUrl = BaseUrl Http "localhost" 9083 ""
           , pcPort = 9080
           , pcProtocolParams = Just protocolParams
           , pcTipPollingInterval = 10_000_000
-          , pcSlotConfig = def
           , pcCollectStats = False
           , pcOwnPubKeyHash = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
           , pcOwnStakePubKeyHash = Nothing
