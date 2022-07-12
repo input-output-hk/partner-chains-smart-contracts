@@ -57,5 +57,6 @@ cardano-cli query protocol-parameters $TESTNET_MAGIC --out-file $TMP_DIR/protoco
 TX_IN=$(get_utxo $(get_own_wallet_addr) exports)
 
 cd $ROOT_DIR
+  mkdir -p $EXPORTS_DIR
   cabal run trustless-sidechain-export -- $TX_IN $CHAIN_ID $GENESIS_HASH $SPO_SKEY $SIDECHAIN_SKEY
 cd $SCRIPTS_DIR
