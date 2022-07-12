@@ -76,8 +76,12 @@
                 haskellPackages.cabal-fmt
                 haskellPackages.fourmolu
                 nixpkgs-fmt
+                python3
                 inputs.cardano-node.packages.${system}.cardano-node
+                inputs.cardano-node.packages.${system}.cardano-cli
               ];
+              tools.haskell-language-server = { };
+              additional = ps: [ ps.plutip ];
             };
           };
         in
