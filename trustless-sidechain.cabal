@@ -4,7 +4,7 @@ version:            0.1
 copyright:          TODO
 maintainer:         TODO
 author:             MLabs
-tested-with:        ghc ==8.10.4
+tested-with:        GHC ==8.10.4
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
 bug-reports:        https://github.com/mlabs-haskell/trustless-sidechain
 synopsis:           TODO
@@ -14,168 +14,237 @@ build-type:         Simple
 extra-source-files: README.md
 
 source-repository head
-    type:     git
-    location: https://github.com/mlabs-haskell/trustless-sidechain
+  type:     git
+  location: https://github.com/mlabs-haskell/trustless-sidechain
 
 flag defer-plugin-errors
-    description:
-        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
 
-    default:     False
-    manual:      True
+  default:     False
+  manual:      True
 
 library
-    exposed-modules:
-        TrustlessSidechain.MerkleTree
-        TrustlessSidechain.OffChain.CommitteeCandidateValidator
-        TrustlessSidechain.OffChain.FUELMintingPolicy
-        TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
-        TrustlessSidechain.OffChain.Schema
-        TrustlessSidechain.OffChain.Types
-        TrustlessSidechain.OffChain.UpdateCommitteeHash
-        TrustlessSidechain.OnChain.CommitteeCandidateValidator
-        TrustlessSidechain.OnChain.FUELMintingPolicy
-        TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
-        TrustlessSidechain.OnChain.MPTRootTokenValidator
-        TrustlessSidechain.OnChain.Types
-        TrustlessSidechain.OnChain.UpdateCommitteeHash
-        TrustlessSidechain.OnChain.Utils
+  exposed-modules:
+    TrustlessSidechain.MerkleTree
+    TrustlessSidechain.OffChain.CommitteeCandidateValidator
+    TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.OffChain.Schema
+    TrustlessSidechain.OffChain.Types
+    TrustlessSidechain.OffChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.CommitteeCandidateValidator
+    TrustlessSidechain.OnChain.FUELMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.OnChain.MPTRootTokenValidator
+    TrustlessSidechain.OnChain.Types
+    TrustlessSidechain.OnChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.Utils
 
-    hs-source-dirs:     src
-    default-language:   Haskell2010
-    default-extensions:
-        NoImplicitPrelude BangPatterns BinaryLiterals ConstraintKinds
-        DataKinds DeriveFunctor DeriveGeneric DeriveTraversable
-        DerivingStrategies DerivingVia DuplicateRecordFields EmptyCase
-        FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving
-        HexFloatLiterals ImportQualifiedPost InstanceSigs KindSignatures
-        LambdaCase MultiParamTypeClasses NumericUnderscores
-        OverloadedStrings ScopedTypeVariables StandaloneDeriving
-        TupleSections TypeApplications TypeFamilies TypeOperators
-        TypeSynonymInstances UndecidableInstances
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
 
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-        -fobject-code -fno-ignore-interface-pragmas
-        -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
-        -fplugin-opt PlutusTx.Plugin:defer-errors
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
+    -fplugin-opt PlutusTx.Plugin:defer-errors
 
-    build-depends:
-        aeson ^>=1.5.0.0,
-        base ^>=4.14,
-        bytestring ^>=0.10.12.0,
-        cardano-api,
-        cardano-crypto,
-        cardano-prelude,
-        containers,
-        data-default-class,
-        lens,
-        playground-common,
-        plutus-contract,
-        plutus-core,
-        plutus-ledger,
-        plutus-ledger-api,
-        plutus-ledger-constraints,
-        plutus-pab,
-        plutus-tx,
-        plutus-tx-plugin,
-        record-dot-preprocessor,
-        record-hasfield,
-        row-types,
-        serialise,
-        text ^>=1.2.4.0,
-        optparse-applicative
+  build-depends:
+    , aeson                      ^>=1.5.0.0
+    , base                       ^>=4.14
+    , bytestring                 ^>=0.10.12.0
+    , cardano-api
+    , cardano-crypto
+    , cardano-prelude
+    , containers
+    , data-default-class
+    , lens
+    , optparse-applicative
+    , playground-common
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-ledger-constraints
+    , plutus-pab
+    , plutus-tx
+    , plutus-tx-plugin
+    , record-dot-preprocessor
+    , record-hasfield
+    , row-types
+    , serialise
+    , text                       ^>=1.2.4.0
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 executable trustless-sidechain-pab
-    main-is:            Main.hs
-    hs-source-dirs:     app
-    default-language:   Haskell2010
-    default-extensions:
-        NoImplicitPrelude BangPatterns BinaryLiterals ConstraintKinds
-        DataKinds DeriveFunctor DeriveGeneric DeriveTraversable
-        DerivingStrategies DerivingVia DuplicateRecordFields EmptyCase
-        FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving
-        HexFloatLiterals ImportQualifiedPost InstanceSigs KindSignatures
-        LambdaCase MultiParamTypeClasses NumericUnderscores
-        OverloadedStrings ScopedTypeVariables StandaloneDeriving
-        TupleSections TypeApplications TypeFamilies TypeOperators
-        TypeSynonymInstances UndecidableInstances
+  main-is:            Main.hs
+  hs-source-dirs:     app
+  default-language:   Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
 
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-        -fobject-code -fno-ignore-interface-pragmas
-        -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
-        -fplugin-opt PlutusTx.Plugin:defer-errors
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
+    -fplugin-opt PlutusTx.Plugin:defer-errors
 
-    build-depends:
-        aeson ^>=1.5.0.0,
-        base ^>=4.14,
-        bot-plutus-interface,
-        bytestring,
-        cardano-api,
-        data-default,
-        playground-common,
-        plutus-ledger,
-        record-dot-preprocessor,
-        record-hasfield,
-        servant-client-core,
-        trustless-sidechain
+  build-depends:
+    , aeson                    ^>=1.5.0.0
+    , base                     ^>=4.14
+    , bot-plutus-interface
+    , bytestring
+    , cardano-api
+    , data-default
+    , playground-common
+    , plutus-ledger
+    , record-dot-preprocessor
+    , record-hasfield
+    , servant-client-core
+    , trustless-sidechain
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
 test-suite trustless-sidechain-test
-    type:               exitcode-stdio-1.0
-    main-is:            Main.hs
-    hs-source-dirs:     test
-    other-modules:
-        Test.TrustlessSidechain.Integration
-        Test.TrustlessSidechain.MerkleTree
-        Test.TrustlessSidechain.MultiSig
+  type:               exitcode-stdio-1.0
+  main-is:            Main.hs
+  hs-source-dirs:     test
+  other-modules:
+    Test.TrustlessSidechain.Integration
+    Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.MultiSig
 
-    default-language:   Haskell2010
-    default-extensions:
-        NoImplicitPrelude BangPatterns BinaryLiterals ConstraintKinds
-        DataKinds DeriveFunctor DeriveGeneric DeriveTraversable
-        DerivingStrategies DerivingVia DuplicateRecordFields EmptyCase
-        FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving
-        HexFloatLiterals ImportQualifiedPost InstanceSigs KindSignatures
-        LambdaCase MultiParamTypeClasses NumericUnderscores
-        OverloadedStrings ScopedTypeVariables StandaloneDeriving
-        TupleSections TypeApplications TypeFamilies TypeOperators
-        TypeSynonymInstances UndecidableInstances
+  default-language:   Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
 
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-        -fobject-code -fno-ignore-interface-pragmas
-        -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
-        -fplugin-opt PlutusTx.Plugin:defer-errors -Wall -threaded -rtsopts
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
+    -fplugin-opt PlutusTx.Plugin:defer-errors -Wall -threaded -rtsopts
 
-    build-depends:
-        base ^>=4.14,
-        bytestring,
-        cardano-api,
-        cardano-crypto,
-        data-default,
-        plutip,
-        plutus-contract,
-        plutus-core,
-        plutus-ledger,
-        plutus-tx,
-        QuickCheck,
-        quickcheck-instances,
-        record-dot-preprocessor,
-        record-hasfield,
-        tasty,
-        tasty-quickcheck,
-        tasty-hunit,
-        trustless-sidechain
+  build-depends:
+    , base                     ^>=4.14
+    , bytestring
+    , cardano-api
+    , cardano-crypto
+    , data-default
+    , plutip
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-tx
+    , QuickCheck
+    , quickcheck-instances
+    , record-dot-preprocessor
+    , record-hasfield
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , trustless-sidechain
 
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
