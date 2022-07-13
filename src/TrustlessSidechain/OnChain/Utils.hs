@@ -1,21 +1,36 @@
-module TrustlessSidechain.OnChain.Utils where
+-- Validate enough signatures are signed by legit pubkeys
+-- Note. this assumes the signatures are sorted (this is O(n) to check rather than O(n^2) nub)
+-- Also, This will be faster if the pubkeys and signatures are in the same order
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
-import PlutusTx.Prelude (Bool (..), BuiltinByteString, Integer, Maybe (..), nub, verifySignature, (-), (<$>), (<=), (||))
+module TrustlessSidechain.OnChain.Utils (verifyMulti, verifyMultisig) where
 
+import PlutusTx.Prelude (Bool (..), BuiltinByteString, Eq, Integer, Maybe (..), and, tail, verifySignature, zipWith, (&&), (-), (<), (<$>), (<=), (||))
+
+-- ? can we require a single list [(Pubkey , Signature)] to validate
+
+{-# INLINEABLE verifyMulti #-}
 -- Check enough pubkeys match a signature without counting duplicate pubkeys or signatures (potential security risk)
-verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
-verifyMultisig pubKeys threshold message signatures =
+verifyMulti :: Eq b => (a -> b -> Bool) -> Integer -> [a] -> [b] -> Bool
+verifyMulti isOK threshold pubKeys signatures =
   -- discard signatures once matched. looping the sig list should be faster since it should be the smaller list
   -- threads the updated siglist for subsequent pubkeys
-  let didPubkeySign :: BuiltinByteString -> [BuiltinByteString] -> Maybe [BuiltinByteString]
-      didPubkeySign pk = \case
+  let didPubkeySign pk = \case
         [] -> Nothing
-        s : sigs | verifySignature pk message s -> Just sigs -- discard matched signature
+        s : sigs | isOK pk s -> Just sigs -- discard matched signature and report match
         s : sigs -> (s :) <$> didPubkeySign pk sigs -- don't discard
-      tryPubKeys (needed, _) [] = needed <= 0
-      tryPubKeys (needed, sigs) (pubkey : nextPKs) =
-        needed <= 0 || case didPubkeySign pubkey sigs of
-          Nothing -> tryPubKeys (needed, sigs) nextPKs -- KO skip this pubkey and reuse same sig list
-          Just sigs' -> tryPubKeys (needed - 1, sigs') nextPKs -- OK update threshold and sigs list
-          -- note. we don't need to nub both sigs and pubkeys which would waste time in general
-   in tryPubKeys (threshold, nub signatures) pubKeys
+   in threshold <= 0 || case pubKeys of
+        [] -> False
+        p : pks -> case didPubkeySign p signatures of
+          Nothing -> verifyMulti isOK threshold pks signatures -- KO skip pubkey and reuse siglist
+          Just sgs -> verifyMulti isOK (threshold - 1) pks sgs -- OK update threshold and siglist
+
+{-# INLINEABLE verifyMultisig #-}
+verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
+-- note. we need to test nub of either signatures or pubkeys
+--   | O(n^2) nub the signatures
+--   | O(n)   require signatures to be sorted then test each elem greater than last O(n)
+verifyMultisig pubKeys threshold message signatures =
+  let sigsSorted = and (zipWith (<) signatures (tail signatures)) -- insert (<) between all elements
+   in sigsSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifySignature` message) threshold pubKeys signatures

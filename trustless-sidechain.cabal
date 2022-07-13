@@ -108,6 +108,7 @@ library
     , row-types
     , serialise
     , text                       ^>=1.2.4.0
+    , optparse-applicative
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -181,6 +182,7 @@ test-suite trustless-sidechain-test
   other-modules:
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.MultiSig
 
   default-language:   Haskell2010
   default-extensions:
@@ -241,6 +243,7 @@ test-suite trustless-sidechain-test
     , record-hasfield
     , tasty
     , tasty-quickcheck
+    , tasty-hunit
     , trustless-sidechain
 
   if flag(defer-plugin-errors)
