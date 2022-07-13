@@ -11,9 +11,9 @@
 ## Build and submit deregister-transaction
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s deregister
 ## Build and submit mint-transaction
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s mint
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s mint --mintAmount 1
 ## Build and submit burn-transaction
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s burn
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s burn --burnAmount 1
 ## Export
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr export
 

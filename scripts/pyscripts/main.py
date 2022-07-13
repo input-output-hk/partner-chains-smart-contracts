@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import solver
 import utils
@@ -42,12 +44,12 @@ def dobuild(args):
             "in_redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
-            "mint_val": (1, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
+            "mint_val": (args.mintAmount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
         },
         "burn" : {
-            "mint_val": (-1, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
+            "mint_val": (-args.burnAmount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
         },
@@ -81,6 +83,7 @@ if __name__ == '__main__':
                         default=79
                         )
 
+
     subparser = parser.add_subparsers(dest='verb')
 
     build = subparser.add_parser('build')
@@ -89,10 +92,23 @@ if __name__ == '__main__':
                        help='Also sign and submit transactions after building',
                        dest='submit'
                        )
+
     build.add_argument('actions',
                        nargs='+',
                        help='Legal values: [register|deregister|mint|build].. order is dependent',
                        type=str
+                       )
+    build.add_argument('-b', '--burnAmount',
+                       nargs='?',
+                       help='amount to burn; natural number',
+                       default=1,
+                       type=int
+                       )
+    build.add_argument('-m', '--mintAmount',
+                       nargs='?',
+                       help='amount to burn; natural number',
+                       default=1,
+                       type=int
                        )
 
     export = subparser.add_parser('export')
