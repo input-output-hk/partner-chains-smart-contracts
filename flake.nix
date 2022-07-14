@@ -53,8 +53,8 @@
               packages = {
                 trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
                   [
-                    inputs.cardano-node.packages.${system}.cardano-node
-                    inputs.cardano-node.packages.${system}.cardano-cli
+                    project.hsPkgs.cardano-cli.components.exes.cardano-cli
+                    project.hsPkgs.cardano-node.components.exes.cardano-node
                   ];
               };
             }];
@@ -77,8 +77,8 @@
                 haskellPackages.fourmolu
                 nixpkgs-fmt
                 python3
-                inputs.cardano-node.packages.${system}.cardano-node
-                inputs.cardano-node.packages.${system}.cardano-cli
+                project.hsPkgs.cardano-cli.components.exes.cardano-cli
+                project.hsPkgs.cardano-node.components.exes.cardano-node
               ];
               tools.haskell-language-server = { };
               additional = ps: [ ps.plutip ];
