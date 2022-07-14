@@ -76,7 +76,9 @@ data SignedMerkleRoot = SignedMerkleRoot
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
+  , lastMerkleRoot :: ByteString
   , signature :: ByteString
+  , beneficiary :: ByteString -- Sidechain address
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 ```
@@ -84,6 +86,7 @@ data SignedMerkleRoot = SignedMerkleRoot
 Minting policy verifies the following:
 
 - signature can be verified with the <!--ATMS verification key--> submitted public key hashes of committee members, and the concatenated and hashed value of these correspond to the one saved on-chain
+- UTxO with the last Merkle root is referenced in the transaction
 
 Validator script verifies the following:
 
@@ -157,6 +160,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 - verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - outputs a new UTxO with the updated <!--ATMS key--> committee hash containing the NFT to the same script address
+- reference to the last Merkle root is referenced in the transaction
 
 **Endpoint params:**
 
@@ -174,6 +178,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
   { newCommitteePubKeys :: [PubKey],
   , signature :: ByteString
   , committeePubKeys :: [PubKey] -- Public keys of the current committee members
+  , lastMerkleRoot :: ByteString
   }
 ```
 
