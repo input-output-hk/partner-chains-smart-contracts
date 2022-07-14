@@ -14,7 +14,7 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Ledger qualified
-import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
+import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (TxOutRef (TxOutRef))
@@ -24,7 +24,6 @@ import Ledger.Typed.Scripts (
   ValidatorTypes,
  )
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 
@@ -39,6 +38,8 @@ data BlockProducerRegistration = BlockProducerRegistration
     bprSidechainSignature :: !Signature
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: !TxOutRef
+  , -- | Owner public key hash
+    bprOwnPkh :: PubKeyHash
   }
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
@@ -57,16 +58,12 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
-mkCommitteeCanditateValidator sidechainParams datum _ _ =
-  traceIfFalse "Signature must be valid" isSignatureValid
+mkCommitteeCanditateValidator _ datum _ ctx =
+  traceIfFalse "Must be signed by the original submitter" isSigned
   where
-    sidechainPubKey = bprSidechainPubKey datum
-    inputUtxo = bprInputUtxo datum
-    spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
-    sig = getSignature $ bprSpoSignature datum
-
-    msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
-    isSignatureValid = verifySignature spoPubKey msg sig
+    info = Ledger.scriptContextTxInfo ctx
+    pkh = bprOwnPkh datum
+    isSigned = Ledger.txSignedBy info pkh
 
 committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
 committeeCanditateValidator sidechainParams =
