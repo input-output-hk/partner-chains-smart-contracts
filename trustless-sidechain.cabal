@@ -163,5 +163,6 @@ test-suite trustless-sidechain-test
     , tasty
     , tasty-quickcheck
     , trustless-sidechain
+    , containers
 
   hs-source-dirs: test

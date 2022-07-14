@@ -3,6 +3,7 @@
 module TrustlessSidechain.OffChain.FUELMintingPolicy where
 
 import Control.Monad (when)
+import Data.Map qualified as Map
 import Data.Text (Text)
 import Ledger (CardanoTx, Redeemer (Redeemer))
 import Ledger qualified
@@ -19,6 +20,7 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
+import Prelude qualified --(Semigroup(..))
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
@@ -30,14 +32,20 @@ burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
     (Constraint.mintingPolicy policy)
     (Constraint.mustMintValueWithRedeemer redeemer value)
 
-mint :: MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-mint MintParams {amount, sidechainParams, recipient} = do
+mintWithUtxo :: Maybe (Map.Map Ledger.TxOutRef Ledger.ChainIndexTxOut) -> MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
+mintWithUtxo utxo MintParams {amount, sidechainParams, recipient} = do
   let policy = FUELMintingPolicy.mintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData SideToMain
+      lookups = case utxo of
+        Nothing -> Constraint.mintingPolicy policy
+        Just u -> Constraint.mintingPolicy policy Prelude.<> Constraint.unspentOutputs u
+      tx =
+        ( Constraint.mustMintValueWithRedeemer redeemer value
+            <> Constraint.mustPayToPubKey recipient value
+        )
   when (amount < 0) $ Contract.throwError "Can't mint a negative amount"
-  Contract.submitTxConstraintsWith @FUELRedeemer
-    (Constraint.mintingPolicy policy)
-    ( Constraint.mustMintValueWithRedeemer redeemer value
-        <> Constraint.mustPayToPubKey recipient value
-    )
+  Contract.submitTxConstraintsWith @FUELRedeemer lookups tx
+
+mint :: MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
+mint = mintWithUtxo Nothing
