@@ -3,24 +3,45 @@
 
 module TrustlessSidechain.OffChain.Types where
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.String (IsString)
 import GHC.Generics (Generic)
 import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
 import Ledger.Address (Address)
 import Ledger.Crypto (PubKey, Signature)
-import Ledger.Orphans ()
-import Ledger.Tx (TxOutRef)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
+import Plutus.V2.Ledger.Tx (TxOutRef)
+import PlutusTx (FromData, ToData, UnsafeFromData, makeLift)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import Schema (
-  ToSchema,
- )
+import Schema (ToSchema)
 import Prelude qualified
+
+newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''GenesisHash
+
+$(deriveJSON defaultOptions ''GenesisHash)
+
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''SidechainPubKey
+
+$(deriveJSON defaultOptions ''SidechainPubKey)
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: !BuiltinByteString
-  , genesisHash :: !BuiltinByteString
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -28,11 +49,13 @@ data SidechainParams = SidechainParams
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 
+PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
+
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
   { sidechainParams :: !SidechainParams
   , spoPubKey :: !PubKey
-  , sidechainPubKey :: !BuiltinByteString
+  , sidechainPubKey :: !SidechainPubKey
   , spoSig :: !Signature
   , sidechainSig :: !Signature
   , inputUtxo :: !TxOutRef

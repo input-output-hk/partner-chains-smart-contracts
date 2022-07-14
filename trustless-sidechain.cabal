@@ -101,12 +101,14 @@ library
 
   build-depends:
     , aeson                      ^>=1.5.0.0
+    , base16-bytestring
     , bytestring                 ^>=0.10.12.0
     , cardano-api
     , cardano-crypto
     , cardano-prelude
     , containers
     , data-default-class
+    , deepseq
     , lens
     , playground-common
     , plutus-contract
@@ -115,8 +117,10 @@ library
     , plutus-ledger-api
     , plutus-ledger-constraints
     , plutus-pab
+    , plutus-script-utils
     , plutus-tx
     , plutus-tx-plugin
+    , prettyprinter
     , row-types
     , serialise
     , text                       ^>=1.2.4.0
@@ -137,7 +141,30 @@ executable trustless-sidechain-pab
     , servant-client-core
     , trustless-sidechain
 
-  hs-source-dirs: app
+  hs-source-dirs: app/bpi
+
+executable trustless-sidechain-export
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , attoparsec
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , cardano-binary
+    , cardano-crypto
+    , cardano-crypto-class
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-script-utils
+    , plutus-tx
+    , secp256k1-haskell
+    , servant-client-core
+    , text
+    , trustless-sidechain
+
+  hs-source-dirs: app/export-scripts
 
 test-suite trustless-sidechain-test
   import:         common-lang
@@ -152,14 +179,17 @@ test-suite trustless-sidechain-test
     , bytestring
     , cardano-api
     , cardano-crypto
+    , cardano-crypto-class
     , data-default
     , plutip
     , plutus-contract
     , plutus-core
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-tx
     , QuickCheck
     , quickcheck-instances
+    , secp256k1-haskell
     , tasty
     , tasty-quickcheck
     , trustless-sidechain

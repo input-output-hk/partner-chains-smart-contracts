@@ -2,11 +2,12 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip?rev=b4ea356ac39a117b7f43ee7b36ddedf4ec052581";
+    plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
 
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
+    cardano-node.url = "github:input-output-hk/cardano-node/1.35.0";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -52,26 +53,32 @@
               packages = {
                 trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
                   [
-                    project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                    project.hsPkgs.cardano-node.components.exes.cardano-node
+                    inputs.cardano-node.packages.${system}.cardano-node
+                    inputs.cardano-node.packages.${system}.cardano-cli
                   ];
               };
             }];
             shell = {
-              withHoogle = true;
+              withHoogle = false;
               exactDeps = true;
               nativeBuildInputs = with pkgs'; [
                 bashInteractive
+                coreutils-full
+                direnv
+                lesspipe
                 git
                 haskellPackages.apply-refact
                 fd
+                jq
+                unixtools.xxd
                 cabal-install
                 hlint
                 haskellPackages.cabal-fmt
                 haskellPackages.fourmolu
                 nixpkgs-fmt
-                project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                project.hsPkgs.cardano-node.components.exes.cardano-node
+                python3
+                inputs.cardano-node.packages.${system}.cardano-node
+                inputs.cardano-node.packages.${system}.cardano-cli
               ];
               tools.haskell-language-server = { };
               additional = ps: [ ps.plutip ];

@@ -2,7 +2,14 @@ module TrustlessSidechain.OffChain.Schema where
 
 import Plutus.Contract (Endpoint, type (.\/))
 
-import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams, SaveRootParams, UpdateCommitteeHashParams)
+import TrustlessSidechain.OffChain.Types (
+  BurnParams,
+  DeregisterParams,
+  MintParams,
+  RegisterParams,
+  SaveRootParams,
+  UpdateCommitteeHashParams,
+ )
 
 type TrustlessSidechainSchema =
   Endpoint "register" RegisterParams

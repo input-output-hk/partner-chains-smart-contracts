@@ -32,21 +32,13 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHashRedeemer (
-    UpdateCommitteeHashRedeemer
-  ),
- )
-import TrustlessSidechain.OnChain.Types qualified as OnChainTypes
-import TrustlessSidechain.OnChain.UpdateCommitteeHash (
-  GenesisMintCommitteeHash (
-    GenesisMintCommitteeHash,
-    gcToken,
-    gcTxOutRef
-  ),
+  GenesisMintCommitteeHash (GenesisMintCommitteeHash, gcToken, gcTxOutRef),
   UpdateCommitteeHash (UpdateCommitteeHash, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
+  UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
   UpdatingCommitteeHash,
  )
+import TrustlessSidechain.OnChain.Types qualified as OnChainTypes
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
 
@@ -89,7 +81,7 @@ updateCommitteeHash uchp =
       | committeeHash dat == cCommitteeHash -> do
         let ndat =
               UpdateCommitteeHashDatum
-                { UpdateCommitteeHash.committeeHash = nCommitteeHash
+                { committeeHash = nCommitteeHash
                 }
             val = Value.assetClassValue (cToken uch) 1
             redeemer =
@@ -104,9 +96,6 @@ updateCommitteeHash uchp =
               Constraints.unspentOutputs (Map.singleton oref o)
                 Prelude.<> Constraints.otherScript
                   (UpdateCommitteeHash.updateCommitteeHashValidator uch)
-                Prelude.<> Constraints.typedValidatorLookups
-                  (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
-
             tx =
               Constraints.mustSpendScriptOutput oref redeemer
                 Prelude.<> Constraints.mustPayToTheScript ndat val
@@ -178,8 +167,8 @@ genesisCommitteeHash gch =
           lookups =
             Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy gmch)
               Prelude.<> Constraints.unspentOutputs (uncurry Map.singleton utxo)
-              Prelude.<> Constraints.typedValidatorLookups
-                (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
+              Prelude.<> Constraints.otherScript
+                (UpdateCommitteeHash.updateCommitteeHashValidator uch)
 
           tx =
             Constraints.mustSpendPubKeyOutput oref

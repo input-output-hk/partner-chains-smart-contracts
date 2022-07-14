@@ -2,37 +2,26 @@
 
 module TrustlessSidechain.OnChain.MPTRootTokenValidator where
 
-import Ledger (
-  ScriptContext,
- )
 import Ledger qualified
-import Ledger.Typed.Scripts qualified as Script
+import Plutus.Script.Utils.V2.Scripts qualified as Script
+import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-
-data MPT
-instance Script.ValidatorTypes MPT where
-  type RedeemerType MPT = ()
-  type DatumType MPT = ()
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: SidechainParams -> () -> () -> ScriptContext -> Bool
 mkValidator _ () () _ = False
 
-typedValidator :: SidechainParams -> Script.TypedValidator MPT
-typedValidator p =
-  Script.mkTypedValidator @MPT
-    ($$(PlutusTx.compile [||mkValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
-    $$(PlutusTx.compile [||wrap||])
+validator :: SidechainParams -> Script.Validator
+validator p =
+  Ledger.mkValidatorScript
+    ($$(compile [||untypedValidator||]) `applyCode` liftCode p)
   where
-    wrap = Script.wrapValidator @() @()
-
-validator :: SidechainParams -> Ledger.Validator
-validator = Script.validatorScript . typedValidator
+    untypedValidator = Script.mkUntypedValidator . mkValidator
 
 hash :: SidechainParams -> Ledger.ValidatorHash
-hash = Script.validatorHash . typedValidator
+hash = Script.validatorHash . validator
 
 address :: SidechainParams -> Ledger.Address
 address = Ledger.scriptHashAddress . hash

@@ -4,7 +4,6 @@ module Main (main) where
 
 import BotPlutusInterface qualified
 import BotPlutusInterface.Types (
-  CLILocation (Local),
   HasDefinitions (..),
   LogLevel (Debug),
   PABConfig (..),
@@ -19,11 +18,16 @@ import Data.Default (def)
 import Data.Maybe (fromMaybe)
 import Playground.Types (FunctionSchema)
 import Schema (FormSchema)
-import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
 import TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint)
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
-import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams, UpdateCommitteeHashParams)
+import TrustlessSidechain.OffChain.Types (
+  BurnParams,
+  DeregisterParams,
+  MintParams,
+  RegisterParams,
+  UpdateCommitteeHashParams,
+ )
 import TrustlessSidechain.OffChain.UpdateCommitteeHash (updateCommitteeHash)
 
 import Prelude
@@ -59,23 +63,18 @@ main = do
     fromMaybe (error "protocol.json file not found") . JSON.decode
       <$> LazyByteString.readFile "protocol.json"
   let pabConf =
-        PABConfig
-          { pcCliLocation = Local
-          , pcNetwork = Testnet (NetworkMagic 1097911063)
-          , pcChainIndexUrl = BaseUrl Http "localhost" 9083 ""
-          , pcPort = 9080
-          , pcProtocolParams = protocolParams
-          , pcTipPollingInterval = 10_000_000
-          , pcSlotConfig = def
-          , pcCollectStats = False
+        (def @PABConfig)
+          { pcNetwork = Testnet (NetworkMagic 1097911063)
+          , pcProtocolParams = Just protocolParams
           , pcOwnPubKeyHash = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-          , pcOwnStakePubKeyHash = Nothing
           , pcScriptFileDir = "./data"
+          , pcMetadataDir = "./metadata"
           , pcSigningKeyFileDir = "./signing-keys"
           , pcTxFileDir = "./txs"
           , pcDryRun = False
           , pcLogLevel = Debug
           , pcProtocolParamsFile = "./protocol.json"
           , pcEnableTxEndpoint = True
+          , pcCollectLogs = True
           }
   BotPlutusInterface.runPAB @TrustlessSidechainContracts pabConf

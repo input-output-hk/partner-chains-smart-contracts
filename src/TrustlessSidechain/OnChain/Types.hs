@@ -1,12 +1,50 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module TrustlessSidechain.OnChain.Types where
 
-import Ledger.Crypto (PubKey)
-import Ledger.Typed.Scripts qualified as Script
-import PlutusTx (makeIsDataIndexed)
-import PlutusTx.Prelude (BuiltinByteString)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
+import Ledger.Crypto (PubKey, Signature)
+import Ledger.Typed.Scripts (ValidatorTypes (..))
+import Ledger.Value (AssetClass, TokenName)
+import Plutus.V2.Ledger.Contexts (TxOutRef)
+import PlutusTx qualified
+import PlutusTx.Prelude (BuiltinByteString, Eq ((==)))
+import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainPubKey)
+import Prelude qualified
+
+data BlockProducerRegistration = BlockProducerRegistration
+  { -- | SPO cold verification key hash
+    bprSpoPubKey :: PubKey -- own cold verification key hash
+  , -- | public key in the sidechain's desired format
+    bprSidechainPubKey :: SidechainPubKey
+  , -- | Signature of the SPO
+    bprSpoSignature :: Signature
+  , -- | Signature of the SPO
+    bprSidechainSignature :: Signature
+  , -- | A UTxO that must be spent by the transaction
+    bprInputUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show)
+
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
+
+data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
+  { bprmSidechainParams :: SidechainParams
+  , bprmSidechainPubKey :: SidechainPubKey
+  , -- | A UTxO that must be spent by the transaction
+    bprmInputUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show)
+
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
+
+data CommitteeCandidateRegistry
+instance ValidatorTypes CommitteeCandidateRegistry where
+  type RedeemerType CommitteeCandidateRegistry = ()
+  type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
@@ -20,9 +58,28 @@ data FUELRedeemer
 -- recorded in the mainchain. Signature is added to make sure the address does
 -- not refer to a script.
 
-makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
+PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
-instance Script.ValidatorTypes FUELRedeemer
+instance ValidatorTypes FUELRedeemer where
+  type RedeemerType FUELRedeemer = FUELRedeemer
+
+{- | Datum for the committee hash. This /committee hash/ is used to verify
+ signatures for sidechain to mainchain transfers. This is a hash of
+ concatenated public key hashes of the committee members
+
+ TODO: this isn't actually used to verify signatures in the FUEL minting /
+ burning policies (perhaps this will be used in a later iteration)
+-}
+newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
+  { committeeHash :: BuiltinByteString
+  }
+
+instance Eq UpdateCommitteeHashDatum where
+  {-# INLINEABLE (==) #-}
+  UpdateCommitteeHashDatum cmtHsh == UpdateCommitteeHashDatum cmtHsh' =
+    cmtHsh == cmtHsh'
+
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee
@@ -37,7 +94,39 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
     newCommitteeHash :: !BuiltinByteString
   }
 
-makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
+
+{- | 'UpdatingCommitteeHash' is the type to associate the 'DatumType' and
+ 'RedeemerType' to the acutal types used at run time.
+-}
+data UpdatingCommitteeHash
+
+instance ValidatorTypes UpdatingCommitteeHash where
+  type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
+  type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
+
+-- | 'UpdateCommitteeHash' is used as the parameter for the contract.
+newtype UpdateCommitteeHash = UpdateCommitteeHash
+  { -- | 'cToken' is the 'AssetClass' of the NFT that is used to
+    -- identify the transaction.
+    cToken :: AssetClass
+  }
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+PlutusTx.makeLift ''UpdateCommitteeHash
+
+-- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
+data GenesisMintCommitteeHash = GenesisMintCommitteeHash
+  { -- | 'gcToken' is the token name of the NFT to start the committee hash
+    gcToken :: !TokenName
+  , -- | 'TxOutRef' is the output reference to mint the NFT initially.
+    gcTxOutRef :: !TxOutRef
+  }
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+PlutusTx.makeLift ''GenesisMintCommitteeHash
 
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
@@ -45,6 +134,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 
-makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
+PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
-instance Script.ValidatorTypes SignedMerkleRoot
+instance ValidatorTypes SignedMerkleRoot where
+  type RedeemerType SignedMerkleRoot = SignedMerkleRoot
