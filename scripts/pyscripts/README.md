@@ -15,8 +15,10 @@ You need to run export first before you can call the register, mint, etc endpoin
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register
 ## Only build deregister-transaction
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build deregister
-## Build and submit mint-transaction when the address is ~/testnet/mykey.vkey
-    python main.py -SKP ~/testnet/mykey.skey build -s mint
+## Build and submit 1 token mint-transaction when the address is mykey.vkey
+    python main.py -SKP ~/testnet/mykey.skey build -s mint --mintAmount 1
+## Build 8 token burn-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build burn --burnAmount 8
 
 # Scripts:
 
