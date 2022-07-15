@@ -152,6 +152,7 @@ test-suite trustless-sidechain-test
     , bytestring
     , cardano-api
     , cardano-crypto
+    , containers
     , data-default
     , plutip
     , plutus-contract
@@ -163,6 +164,5 @@ test-suite trustless-sidechain-test
     , tasty
     , tasty-quickcheck
     , trustless-sidechain
-    , containers
 
   hs-source-dirs: test
