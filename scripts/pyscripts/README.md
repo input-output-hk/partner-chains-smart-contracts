@@ -5,20 +5,21 @@
     python main.py {verb} -h
 
 # Examples:
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register deregister
+
+You need to run export first before you can call the register, mint, etc endpoints
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr export
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build register mint
+
+# More examples:
 ## Build and submit register-transaction
     python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s register
-## Build and submit deregister-transaction
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s deregister
-## Build and submit mint-transaction
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s mint --mintAmount 1
-## Build and submit burn-transaction
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build -s burn --burnAmount 1
-## Export
-    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr export
+## Only build deregister-transaction
+    python main.py -SKP ~/testnet/mykey.skey -ADDR ~/testnet/mykey.addr build deregister
+## Build and submit mint-transaction when the address is ~/testnet/mykey.vkey
+    python main.py -SKP ~/testnet/mykey.skey build -s mint
 
 # Scripts:
 
 * main.py: entrypoint
 * utils.py: cardano interfacing
-* solver.py: WIP constraint solver for getting input utxos etc..
+* solver.py: constraint solver for getting input utxos etc..

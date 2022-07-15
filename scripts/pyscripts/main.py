@@ -76,7 +76,7 @@ if __name__ == '__main__':
                         help='Provide payment address path',
                         type=str
                         )
-    parser.add_argument('-MAGIC', '--testned-magic',
+    parser.add_argument('-MAGIC', '--testnet-magic',
                         dest='magic',
                         help='Provide testnet magic number',
                         type=int,
