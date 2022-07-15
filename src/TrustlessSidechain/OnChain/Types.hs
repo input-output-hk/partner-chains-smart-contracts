@@ -49,8 +49,8 @@ instance ValidatorTypes CommitteeCandidateRegistry where
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
   = MainToSide
-      !BuiltinByteString -- Recipient's sidechain address
-      !BuiltinByteString -- Recipient's sidechain signature
+      BuiltinByteString -- Recipient's sidechain address
+      BuiltinByteString -- Recipient's sidechain signature
   | SideToMain -- !MerkleProof
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
