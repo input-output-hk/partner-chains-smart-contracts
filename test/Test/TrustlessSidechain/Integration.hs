@@ -138,16 +138,16 @@ test =
         "FUELMintingPolicy.burnOneshot double Mint"
         (initAda [100, 100, 100]) -- mint, fee, collateral
         ( do
-              withContract $
-                const $ do
-                  h <- ownPaymentPubKeyHash
-                  utxo <- CommitteeCandidateValidator.getInputUtxo
-                  utxos <- utxosAt (Ledger.pubKeyHashAddress h Nothing)
-                  let scpOS = sidechainParams {genesisMint = Just utxo}
-                  t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
-                  awaitTxConfirmed $ getCardanoTxId t
-                  t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
-                  awaitTxConfirmed $ getCardanoTxId t2
+            withContract $
+              const $ do
+                h <- ownPaymentPubKeyHash
+                utxo <- CommitteeCandidateValidator.getInputUtxo
+                utxos <- utxosAt (Ledger.pubKeyHashAddress h Nothing)
+                let scpOS = sidechainParams {genesisMint = Just utxo}
+                t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t
+                t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t2
         )
         [shouldFail]
     , assertExecution
