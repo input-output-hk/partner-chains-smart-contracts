@@ -80,7 +80,7 @@ if __name__ == '__main__':
                         dest='magic',
                         help='Provide testnet magic number',
                         type=int,
-                        default=79
+                        default=9
                         )
 
 
