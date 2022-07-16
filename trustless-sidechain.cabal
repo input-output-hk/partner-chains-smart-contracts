@@ -78,12 +78,14 @@ library
   exposed-modules:
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
+    TrustlessSidechain.OffChain.DistributedSet
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
+    TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator
@@ -97,9 +99,11 @@ library
     , cardano-crypto
     , cardano-prelude
     , containers
+    , data-default
     , data-default-class
     , lens
     , playground-common
+    , plutus-chain-index-core
     , plutus-contract
     , plutus-core
     , plutus-ledger

@@ -49,3 +49,12 @@ data SignedMerkleRoot = SignedMerkleRoot
 makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
 instance Script.ValidatorTypes SignedMerkleRoot
+
+{- | The Redeemer that is passed to the on-chain validator to insert the
+ following suggested string (provided it does not exist)
+-}
+newtype DistributedSetRedeemer = DistributedSetRedeemer
+  { dsStr :: BuiltinByteString
+  }
+
+makeIsDataIndexed ''DistributedSetRedeemer [('DistributedSetRedeemer, 0)]

@@ -5,7 +5,7 @@ module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import GHC.Generics (Generic)
-import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
+import Ledger (AssetClass, CurrencySymbol, PaymentPubKeyHash, TokenName)
 import Ledger.Address (Address)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Orphans ()
@@ -134,3 +134,16 @@ data SaveRootParams = SaveRootParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 $(deriveJSON defaultOptions ''SaveRootParams)
+
+-- | 'DistributedSetParams' are parameters for the distributed set.
+data DistributedSetParams = DistributedSetParams
+  { -- | The 'TxOutRef' which is used as the "genesis" transaction to create
+    -- the distributed set.
+    dspTxOutRef :: TxOutRef
+  , -- | The 'BuiltinByteString' to insert
+    dspStr :: BuiltinByteString
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''DistributedSetParams)
