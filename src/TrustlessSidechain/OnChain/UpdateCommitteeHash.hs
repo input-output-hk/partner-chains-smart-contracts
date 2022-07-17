@@ -29,7 +29,7 @@ import Plutus.V2.Ledger.Contexts (
   TxOutRef,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatumHash))
+import Plutus.V2.Ledger.Tx (OutputDatum (..))
 import PlutusTx qualified
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
@@ -153,10 +153,10 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     outputDatum =
       fromMaybe (traceError "Committee output datum missing") $
         case txOutDatum ownOutput of
-          OutputDatumHash dh ->
-            Contexts.findDatum dh info
-              >>= PlutusTx.fromBuiltinData . getDatum
-          _ -> Nothing
+          NoOutputDatum -> Nothing
+          OutputDatum d -> Just d
+          OutputDatumHash dh -> Contexts.findDatum dh info
+          >>= PlutusTx.fromBuiltinData . getDatum
 
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
