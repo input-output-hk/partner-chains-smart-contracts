@@ -24,7 +24,7 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoInputs, txInfoMint),
+  TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -208,7 +208,7 @@ mkCommitteeHashPolicy gmch _red ctx =
     oref = gcTxOutRef gmch
 
     hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
+    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoReferenceInputs info
 
     checkMintedAmount :: Bool
     checkMintedAmount = case Value.flattenValue (txInfoMint info) of
