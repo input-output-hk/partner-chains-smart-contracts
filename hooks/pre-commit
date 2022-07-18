@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+# If there are whitespace errors, print the offending file names and fail.
+git diff-index --cached --check HEAD --
+
+# Catch formatting errors
+
+changed=$(git diff-index --cached --name-status HEAD -- | grep -v ^D | cut -f2)
+
+case $changed in *.hs*|*.lhs*)
+     make -s format_check
+     make -s lint # not fatal
+esac
+case $changed in *.cabal*)
+     make -s cabalfmt_check
+esac
+case $changed in *.nix*)
+     make -s nixpkgsfmt_check
+esac
