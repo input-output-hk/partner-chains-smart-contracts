@@ -167,12 +167,12 @@ nodeNexts inpstr inpnode
   | unTokenName tn `isPrefixOf` inpstr =
     case dsLeaf $ nodeDatum inpnode of
       Nothing
-        | if lengthOfByteString inpstr == 0 then True else indexByteString inpstr 0 `notElem` dsBranches (nodeDatum inpnode) ->
+        | if lengthOfByteString inpStrSuf == 0 then True else indexByteString inpStrSuf 0 `notElem` dsBranches (nodeDatum inpnode) ->
           let nnode =
                 inpnode
                   { nodeDatum =
                       (nodeDatum inpnode)
-                        { dsLeaf = Just $ dropByteString (lengthOfByteString $ unTokenName tn) inpstr
+                        { dsLeaf = Just inpStrSuf
                         }
                   }
            in Just [nnode]
@@ -761,7 +761,7 @@ transaction (where we may vary the edge size) we can compnute the total
 
 > 2 * ((7 * 32) + 2^8 + 2^8 * k)  + ceil(31 / k) * (7 * 32)
 
-And routine calculations show that @k = 4@ minimizes this function.
+And routine calculations show that @k = 4@ minimizes this function with result 4800.
 -}
 
 {-
@@ -771,4 +771,6 @@ And routine calculations show that @k = 4@ minimizes this function.
 >
 > writeValidator :: FilePath -> Plutus.Validator -> IO (Either (FileError ()) ())
 > writeValidator file = writeFileTextEnvelope @(PlutusScript PlutusScriptV1) file Nothing . PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . Plutus.getValidator
+
+> writeValidator  "serializedScript" $ DS.insertValidator  (DS.DistributedSet "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 -}

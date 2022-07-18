@@ -139,6 +139,7 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Test.TrustlessSidechain.DistributedSet
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
 
@@ -156,6 +157,7 @@ test-suite trustless-sidechain-test
     , QuickCheck
     , quickcheck-instances
     , tasty
+    , tasty-hunit
     , tasty-quickcheck
     , trustless-sidechain
 

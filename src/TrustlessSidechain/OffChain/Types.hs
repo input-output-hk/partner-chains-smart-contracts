@@ -5,7 +5,7 @@ module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import GHC.Generics (Generic)
-import Ledger (AssetClass, CurrencySymbol, PaymentPubKeyHash, TokenName)
+import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
 import Ledger.Address (Address)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Orphans ()
