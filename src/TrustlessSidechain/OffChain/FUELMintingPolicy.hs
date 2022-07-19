@@ -132,12 +132,6 @@ burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
       replicate how the side chain producers computed the leaf, and verifying
       if the MerkleProof provided in the endpoint is the given Merkle Root.
 
-      N.B. this isn't necessarily unique? But we only want to mint these
-      transactions once I suppose.. so technically, an adversary could try to
-      submit these transactions with different roots to "double mint" FUEL but
-      the distributed set should solve this problem [see step (3) on the
-      distributed set]
-
       (3) Build the transaction by:
 
           - Providing a reference input to the transaction with the
