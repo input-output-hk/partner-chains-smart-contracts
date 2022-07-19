@@ -5,7 +5,7 @@ module Test.TrustlessSidechain.Integration (test) where
 import Cardano.Crypto.Wallet qualified as Wallet
 import Data.ByteString qualified as ByteString
 import Data.Functor
-import Ledger (getCardanoTxId, pubKeyHashAddress)
+import Ledger (getCardanoTxId)
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
@@ -125,7 +125,7 @@ test =
             const $ do
               h <- ownPaymentPubKeyHash
               utxo <- CommitteeCandidateValidator.getInputUtxo
-              utxos <- utxosAt (Ledger.pubKeyHashAddress h Nothing)
+              utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
               let scpOS = sidechainParams {genesisMint = Just utxo}
               t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
               awaitTxConfirmed $ getCardanoTxId t
@@ -140,7 +140,7 @@ test =
               const $ do
                 h <- ownPaymentPubKeyHash
                 utxo <- CommitteeCandidateValidator.getInputUtxo
-                utxos <- utxosAt (Ledger.pubKeyHashAddress h Nothing)
+                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
                 let scpOS = sidechainParams {genesisMint = Just utxo}
                 t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
                 awaitTxConfirmed $ getCardanoTxId t
