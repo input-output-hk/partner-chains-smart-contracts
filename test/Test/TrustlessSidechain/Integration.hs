@@ -4,7 +4,7 @@ module Test.TrustlessSidechain.Integration (test) where
 
 import Cardano.Crypto.Wallet qualified as Wallet
 import Data.ByteString qualified as ByteString
-import Data.Functor
+import Data.Functor (void)
 import Ledger (getCardanoTxId)
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)

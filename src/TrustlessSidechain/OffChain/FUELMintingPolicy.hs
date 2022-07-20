@@ -37,9 +37,9 @@ mintWithUtxo utxo MintParams {amount, sidechainParams, recipient} = do
   let policy = FUELMintingPolicy.mintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData SideToMain
-      lookups = case utxo of
-        Nothing -> Constraint.mintingPolicy policy
-        Just u -> Constraint.mintingPolicy policy Prelude.<> Constraint.unspentOutputs u
+      lookups =
+        Constraint.mintingPolicy policy
+          Prelude.<> maybe Prelude.mempty Constraint.unspentOutputs utxo
       tx =
         ( Constraint.mustMintValueWithRedeemer redeemer value
             <> Constraint.mustPayToPubKey recipient value
