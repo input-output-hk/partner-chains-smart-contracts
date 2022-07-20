@@ -17,7 +17,7 @@ import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
-import TrustlessSidechain.OnChain.Utils
+import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool

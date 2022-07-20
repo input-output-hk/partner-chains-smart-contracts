@@ -1,7 +1,6 @@
 -- Validate enough signatures are signed by legit pubkeys
 -- Note. this assumes the signatures are sorted (this is O(n) to check rather than O(n^2) nub)
 -- Also, This will be faster if the pubkeys and signatures are in the same order
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.OnChain.Utils (verifyMulti, verifyMultisig) where

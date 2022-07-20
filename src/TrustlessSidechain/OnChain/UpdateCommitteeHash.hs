@@ -3,8 +3,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
-{-# Options -Wwarn #-}
-
 module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 
 import Cardano.Crypto.Wallet (XPrv)
@@ -23,7 +21,7 @@ import Plutus.V1.Ledger.Contexts (
   TxOut (txOutDatumHash, txOutValue),
   TxOutRef,
  )
-import Plutus.V1.Ledger.Crypto (PubKey) -- , Signature (getSignature))
+import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
@@ -97,19 +95,6 @@ instance Eq UpdateCommitteeHashDatum where
     cmtHsh == cmtHsh'
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
-
-{- | 'verifyMultiSignature' is a wrapper for how we verify multi signatures.
-
- TODO: For now, to simplify things we just test if any of the committee has
- signed the message, and we should do a proper multisign later.
-verifyMultiSignature ::
-  [PubKey] -> BuiltinByteString -> BuiltinByteString -> Bool
-verifyMultiSignature pubKeys msg sig = any go pubKeys
-  where
-    go pubKey =
-      let pubKey' = Bytes.getLedgerBytes (Crypto.getPubKey pubKey)
-       in PlutusTx.verifySignature pubKey' msg sig
--}
 
 {- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
 Warning: there should be a non-empty number of private keys.
