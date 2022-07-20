@@ -1,12 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Test.TrustlessSidechain.MultiSig where
 
 import PlutusTx.Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
-
---import Test.Tasty.QuickCheck qualified as QuickCheck
 import TrustlessSidechain.OnChain.Utils qualified as U
 import Prelude qualified
 
@@ -38,5 +34,3 @@ unitTests =
             let notLazy = Prelude.error "verifyMultisig is not lazy" -- admittedly there may be a better way then error
              in vmbs (==) 2 ["pk1", "pk2", notLazy] ["pk1", "pk2", notLazy] @?= True
         ]
-
--- t = defaultMain (testGroup "Tests" [unitTests])
