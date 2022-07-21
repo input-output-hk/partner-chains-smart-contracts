@@ -15,7 +15,8 @@ happens twice, but it's safe to do it with a fuel (10 times maybe) and break on 
 """
 
 def build(action, **kwargs):
-    _, utxos = utils.get_utxos(kwargs['own_addr'])
+    _, utxos = utils.get_utxos(kwargs['own_addr'], kwargs['magic'])
+    print(f'Own utxos: {utxos}')
     script = kwargs.get('in_script')
     mint = kwargs.get('mint_val')
 
@@ -33,6 +34,7 @@ def build(action, **kwargs):
         status, addr = utils.get_address(script, type='script', magic=kwargs['magic'])
         assert status == 'ok', addr
         _, tx = utils.get_utxos(addr, kwargs['magic'])
+        print(f'Script utxos: {utxos}')
         tx_ins.append(next(iter(tx.keys())))
 
     if mint:
@@ -43,6 +45,7 @@ def build(action, **kwargs):
             to_mint = f'{amount} {name}'
 
     amount = 0
+    assert type(utxos) is dict and len(dict) > 0, "Not enough UTxOs to build the transaction"
     for _ in range(10):
         tx_in = want({"name": "lovelace", "amount": amount}, utxos.copy())
         tx_out = f"{out_addr}+{amount}" + (f'+{to_mint}' if to_mint else '')
