@@ -2,9 +2,9 @@ module Main (main) where
 
 import Test.Tasty
 
+import Test.TrustlessSidechain.DistributedSet as DistributedSet
 import Test.TrustlessSidechain.Integration as Integration
 import Test.TrustlessSidechain.MerkleTree as MerkleTree
-import Test.TrustlessSidechain.DistributedSet as DistributedSet
 import Prelude (IO)
 
 -- | @since 0.1

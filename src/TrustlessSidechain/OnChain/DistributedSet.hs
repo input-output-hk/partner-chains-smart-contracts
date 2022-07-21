@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | Implementation of a distributed set an on-chain distributed set to admit
@@ -24,7 +25,7 @@ import Plutus.V1.Ledger.Scripts (
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
   CurrencySymbol,
-  TokenName (TokenName, unTokenName),
+  TokenName (unTokenName),
   Value (getValue),
  )
 import Plutus.V1.Ledger.Value qualified as Value
@@ -34,24 +35,61 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
-import TrustlessSidechain.OnChain.Types (DistributedSetRedeemer (dsStr))
+import TrustlessSidechain.OnChain.Types (DsRedeemer (dsStr))
 import Prelude qualified
 
-type Chr = Integer
+-- | 'Byte' is an internal type alias to denote an element of a ByteString
+type Byte = Integer
 
--- | 'DSDatum' is sits at the datum. We often just call this a Node.
-data DistributedSetDatum = DistributedSetDatum
-  { -- | 'dsLeaf' denotes a string in the set which is
-    -- > the prefix stored in the TokenName ++ dsLeaf
-    dsLeaf :: Maybe BuiltinByteString
-  , -- | 'dsBranches' denotes that this 'DistributedSetDatum' has an edge to a
-    -- 'DistributedSetDatum' which has dsPrefix as @this dsPrefix ++ the edge@
-    dsBranches :: ![Chr]
+{- | 'NonEmpty' is an internal type to implicitly maintain the invariant the
+ the list is non empty.
+-}
+type NonEmpty a = [a]
+
+{- | 'DSDatum' is sits at the datum. We often just call this a Node. See Note
+ [Node Representation] for more details
+-}
+data DsDatum = DsDatum
+  { -- | 'True' iff 'dsPrefix' is considered an element of this set
+    dsLeaf :: !Bool
+  , -- | The edges to other nodes
+    dsBranches :: Maybe (BuiltinByteString, NonEmpty Byte)
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
-makeIsDataIndexed ''DistributedSetDatum [('DistributedSetDatum, 0)]
-deriveJSON defaultOptions ''DistributedSetDatum
+-- Note [Node Representation]
+-- Implicitly, this forms an M-ary tree for which:
+--
+--      (1) There is a root node with 'prefix' as @""@.
+--
+--      (2) A leaf is a node for which 'branches' is 'Nothing'.
+--
+--      (3) If 'branches' is @Just (branchPrefix, ds)@, then for every @d@
+--      in @ds@, there must exist a unique node which satisifies
+--
+--      > prefix = this prefix ++ branchPrefix ++ d
+--
+--
+-- Definition.
+--  We say that @str@ is in the distributed set iff there exists a node for
+--  which 'leaf' is @True@ and @prefix@ is @str@.
+--
+-- Claim 1.
+--  For every string @str@ not in the distributed set, there exists a unique node that satisfies the
+--  following.
+--
+--      (a) 'prefix' is a prefix of @str@
+--
+--      (b) if @'prefix' == str@, then @'leaf'@ is false
+--
+--      (c) If @'branches' = Just (branchPrefix, ds)@, then for every @d@ in
+--      @ds@, @branchPrefix ++ [d]@ cannot be a prefix of @drop (length prefix)
+--      str@. See 'existsNextNode' for an implementation.
+-- Proof.
+--  The only complication is showing (c), but this follows from (3).
+
+makeIsDataIndexed ''DsDatum [('DsDatum, 0)]
+deriveJSON defaultOptions ''DsDatum
 
 {- | 'hash' is an internal function to store the hash of the to put in the set.
  This is just a thin wrapper around the 'Builtins.blake2b_256' hash function
@@ -62,21 +100,31 @@ deriveJSON defaultOptions ''DistributedSetDatum
 hash :: BuiltinByteString -> BuiltinByteString
 hash = Builtins.blake2b_256
 
-newtype DistributedSet = DistributedSet
+newtype Ds = Ds
   { -- | 'dsSymbol' is the 'CurrencySymbol' for the minting policy that
     -- creates tokens which idenfity branches.
     dsSymbol :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
-makeIsDataIndexed ''DistributedSet [('DistributedSet, 0)]
-deriveJSON defaultOptions ''DistributedSet
-PlutusTx.makeLift ''DistributedSet
+makeIsDataIndexed ''Ds [('Ds, 0)]
+deriveJSON defaultOptions ''Ds
+PlutusTx.makeLift ''Ds
 
--- | @'isPrefixOf' str0 str1@ returns true iff @str0@ is a prefix of @str1@
-{-# INLINEABLE isPrefixOf #-}
-isPrefixOf :: BuiltinByteString -> BuiltinByteString -> Bool
-isPrefixOf str0 str1 = str0Len <= str1Len && str0 == takeByteString str0Len str1
+-- | 'Node' is an internal data type of the tree node used in the validator.
+data Node = Node
+  { nPrefix :: !BuiltinByteString
+  , nLeaf :: !Bool
+  , nBranches :: Maybe (BuiltinByteString, NonEmpty Byte)
+  }
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+-- * Standard helper functions
+
+-- | @'isPrefixOfByteString' str0 str1@ returns true iff @str0@ is a prefix of @str1@
+{-# INLINEABLE isPrefixOfByteString #-}
+isPrefixOfByteString :: BuiltinByteString -> BuiltinByteString -> Bool
+isPrefixOfByteString str0 str1 = str0Len <= str1Len && str0 == takeByteString str0Len str1
   where
     str0Len, str1Len :: Integer
     str0Len = lengthOfByteString str0
@@ -93,172 +141,291 @@ normalizeOrder = normalizeOrderBy compare
  In particular, this is a wrapper for a sorting algorithm for which we know
  that the order after sorting is unique.
 
- N.B. looking at the source, the sorting algorithm used internally is /O(n
- \log n)/ and is also a smooth sort i.e., performs better when the input is
- partially sorted (which can be particularly helpful as a performance
- guideline to construct the transaction)
+ We do a naive /O(n^2)/ sort to keep the script size down (inputs are small
+ anyways).
 -}
 {-# INLINEABLE normalizeOrderBy #-}
-normalizeOrderBy :: (a -> a -> Ordering) -> [a] -> [a]
-normalizeOrderBy = sortBy
+normalizeOrderBy :: forall a. (a -> a -> Ordering) -> [a] -> [a]
+normalizeOrderBy cmp = go
+  where
+    le :: a -> a -> Bool
+    le a b = case a `cmp` b of
+      GT -> False
+      _ -> True
 
--- | 'uncons' copies the Prelude version.
+    isSorted :: [a] -> Bool
+    isSorted (s0 : s1 : ss) = s0 `le` s1 && isSorted (s1 : ss)
+    isSorted _ = True
+
+    go :: [a] -> [a]
+    go lst
+      | isSorted lst = lst
+      | otherwise = go $ bubble lst
+
+    bubble :: [a] -> [a]
+    bubble (s0 : s1 : ss)
+      | s0 `le` s1 = s0 : bubble (s1 : ss)
+      | otherwise = s1 : bubble (s0 : ss)
+    bubble lst = lst
+
+-- | 'uncons' copies the Prelude 'Prelude.uncons'.
 {-# INLINEABLE uncons #-}
 uncons :: [a] -> Maybe (a, [a])
 uncons (a : as) = Just (a, as)
 uncons _ = Nothing
 
--- | 'tailByteString' computes the tail of a 'BuiltinByteString'
+-- | 'tailByteString' computes the tail of a 'BuiltinByteString'.
 {-# INLINEABLE tailByteString #-}
 tailByteString :: BuiltinByteString -> BuiltinByteString
-tailByteString = dropByteString 1
+tailByteString str
+  | nullByteString str = traceError "error 'tailByteString': empty ByteString"
+  | otherwise = dropByteString 1 str
 
--- | 'Node' is an internal data type of the tree node used in the validator.
-data Node = Node
-  { nodeTokenName :: !TokenName
-  , nodeDatum :: !DistributedSetDatum
-  }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+-- | 'headByteString' computes the tail of a 'headByteString'.
+{-# INLINEABLE headByteString #-}
+headByteString :: BuiltinByteString -> Byte
+headByteString str
+  | nullByteString str = traceError "error 'headByteString': empty ByteString"
+  -- this check is probably redundent because plutus will do it anyways / throw an error
+  | otherwise = indexByteString str 0
 
-instance Eq DistributedSetDatum where
+-- | 'lastByteString' computes the bytestring that is the same except with the last element removed
+{-# INLINEABLE initByteString #-}
+initByteString :: BuiltinByteString -> BuiltinByteString
+initByteString str
+  | nullByteString str = traceError "error 'initByteString': empty initByteString"
+  -- this check is probably redundent because plutus will do it anyways / throw an error
+  | otherwise = takeByteString (lengthOfByteString str - 1) str
+
+-- | 'lastByteString' returns the last character in the list.
+{-# INLINEABLE lastByteString #-}
+lastByteString :: BuiltinByteString -> Byte
+lastByteString str
+  | nullByteString str = traceError "error 'lastByteString': empty lastByteString"
+  -- this check is probably redundent because plutus will do it anyways / throw an error
+  | otherwise = indexByteString str (lengthOfByteString str - 1)
+
+-- | 'singletonByteString' returns a bytestring which just contains the single byte provided.
+{-# INLINEABLE singletonByteString #-}
+singletonByteString :: Byte -> BuiltinByteString
+singletonByteString b = consByteString b emptyByteString
+
+-- | 'snocByteString' appends the character to the end of the string.
+{-# INLINEABLE snocByteString #-}
+snocByteString :: BuiltinByteString -> Byte -> BuiltinByteString
+snocByteString str b = appendByteString str (singletonByteString b)
+
+{-# INLINEABLE nullByteString #-}
+
+-- | @'nullByteString' str@ returns 'True' iff @str@ has length @0@.
+nullByteString :: BuiltinByteString -> Bool
+nullByteString str = lengthOfByteString str == 0
+
+instance Eq DsDatum where
   {-# INLINEABLE (==) #-}
   a == b =
     dsLeaf a == dsLeaf b
-      && ((==) `PlutusPrelude.on` normalizeOrder . dsBranches) a b
+      && case (dsBranches a, dsBranches b) of
+        (Nothing, Nothing) -> True
+        (Just (pre0, ds0), Just (pre1, ds1)) ->
+          pre0 == pre1 && ((==) `PlutusPrelude.on` normalizeOrder) ds0 ds1
+        _ -> False
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
-  a == b = nodeTokenName a == nodeTokenName b && nodeDatum a == nodeDatum b
+  a == b =
+    nPrefix a == nPrefix b && nLeaf a == nLeaf b
+      && case (nBranches a, nBranches b) of
+        (Nothing, Nothing) -> True
+        (Just (pre0, ds0), Just (pre1, ds1)) ->
+          pre0 == pre1 && ((==) `PlutusPrelude.on` normalizeOrder) ds0 ds1
+        _ -> False
 
 makeIsDataIndexed ''Node [('Node, 0)]
 deriveJSON defaultOptions ''Node
 
-{- | @'nodeNext' strToInsert node@ returns the list of nodes which would insert
- the given @strToInsert@ into this node (and returning 'Nothing' if this is
- not possible).
+-- * Node
 
- This needs to check that:
-
-      (1) 'nodeTokenName' of 'Node' is a prefix of @strToInsert@
-
-      (2) 'dsBranches . nodeDatum' of 'Node' does NOT contain the first
-      character of @dropByteString (lengthOfByteString nodeTokenName)
-      strToInsert@ (otherwise, this should be inserted further down the
-      tree).
-
- Then, to build the list of nodes (which replaces the original node to insert
- in the set), we have some cases
-
-      (1) If the 'dsLeaf' field of the given @node@ is 'Nothing', then just
-      put string to be inserted there. N.B. note that we only actually store
-      the suffix of the string to be inserted since the prefix will be stored
-      in the 'TokenName'
-
-      (2) Otherwise, we create a new node for the longest common prefix of
-      'dsLeaf' and the string to be inserted (dropping the prefix from the
-      'TokenName'), and put the first non common character of each of the
-      strings in two nodes at the end.
--}
-nodeNexts ::
-  BuiltinByteString ->
-  Node ->
-  Maybe [Node]
-nodeNexts inpstr inpnode
-  | unTokenName tn `isPrefixOf` inpstr =
-    case dsLeaf $ nodeDatum inpnode of
-      Nothing
-        | if lengthOfByteString inpStrSuf == 0 then True else indexByteString inpStrSuf 0 `notElem` dsBranches (nodeDatum inpnode) ->
-          let nnode =
-                inpnode
-                  { nodeDatum =
-                      (nodeDatum inpnode)
-                        { dsLeaf = Just inpStrSuf
-                        }
-                  }
-           in Just [nnode]
-      Just leafSuf
-        | leafSuf /= inpStrSuf ->
-          uncurry (uncurry (go inpnode (lengthOfByteString $ unTokenName tn))) $
-            if lengthOfByteString leafSuf > lengthOfByteString inpStrSuf
-              then ((unTokenName tn `appendByteString` leafSuf, leafSuf), inpStrSuf)
-              else ((inpstr, inpStrSuf), leafSuf)
-      _ -> Nothing
-  | otherwise = Nothing
+-- 'existsNextNode' tests if there is a node which is the "next node" (See Note
+-- [Node Representation]) which may or may not provide proof of existence or
+-- absence from the set.
+--
+-- Preconditions:
+--  - @prefix node `isPrefixOfByteString` str@ must be true (i.e., you should check
+--  this independently as this predicate is indeterminate otherwise).
+existsNextNode :: BuiltinByteString -> Node -> Bool
+existsNextNode str node =
+  -- You need to check this guard on your own! The author wanted to avoid having
+  -- this be a partial funciton..
+  -- > | pre `isPrefixOfByteString` str =
+  case nBranches node of
+    Just (branchPrefix, ds) ->
+      let strSuf' = dropByteString (lengthOfByteString branchPrefix) strSuf
+       in branchPrefix `isPrefixOfByteString` strSuf
+            && if not (nullByteString strSuf')
+              then any (\d -> headByteString strSuf' == d) ds
+              else False
+    Nothing -> False
   where
-    tn = nodeTokenName inpnode
-    inpStrSuf = dropByteString (lengthOfByteString $ unTokenName tn) inpstr
+    pre = nPrefix node
+    strSuf = dropByteString (lengthOfByteString pre) str
 
-    -- the recursive case
-    go :: Node -> Integer -> BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Maybe [Node]
-    go node strLen str str1Suf str2Suf
-      | if lengthOfByteString str2Suf == 0 then True else indexByteString str1Suf 0 /= indexByteString str2Suf 0 =
-        if indexByteString str1Suf 0 `elem` dsBranches (nodeDatum node)
-          then Nothing
-          else
-            let a =
-                  node
-                    { nodeTokenName = TokenName $ takeByteString strLen str
-                    , nodeDatum =
-                        (nodeDatum node)
-                          { dsLeaf = Just str2Suf
-                          , dsBranches = indexByteString str1Suf 0 : dsBranches (nodeDatum node)
-                          }
-                    }
-                b = goA str (strLen + 1) (tailByteString str1Suf) emptyNode
-             in Just [a, b]
+{- | @'elemNode' str node@ returns True iff we can be certain that @node@ can
+ prove that @str@ is in the set and otherwise throws an exception. See Note
+ [Node Representation].
+-}
+elemNode :: BuiltinByteString -> Node -> Bool
+elemNode str node = if nPrefix node == str && nLeaf node then True else traceError "inconclusive 'elemNode'"
+
+{- | @'elemNode' str node@ returns True iff we can be certain that @node@ can
+ prove that @str@ is in the set and otherwise throws an exception. See Note
+ [Node Representation].
+-}
+notElemNode :: BuiltinByteString -> Node -> Bool
+notElemNode str node = if (pre `isPrefixOfByteString` str) && (pre /= str || not (nLeaf node)) && not (existsNextNode str node) then True else traceError "inconclusive 'notElemNode'"
+  where
+    pre = nPrefix node
+
+-- | 'lcp' computes the longest common prefix of two strings.
+lcp :: BuiltinByteString -> BuiltinByteString -> BuiltinByteString
+lcp s t = takeByteString (go 0) s
+  where
+    go ! ix
+      | ix >= lengthOfByteString s || ix >= lengthOfByteString t = ix
       | otherwise =
-        if indexByteString str1Suf 0 `elem` dsBranches (nodeDatum node)
-          then Nothing
-          else
-            ( node
-                { nodeTokenName = TokenName $ takeByteString strLen str
-                , nodeDatum =
-                    (nodeDatum node)
-                      { dsLeaf = Nothing
-                      , dsBranches = indexByteString str1Suf 0 : dsBranches (nodeDatum node)
-                      }
+        if s `indexByteString` ix == t `indexByteString` ix
+          then go (ix + 1)
+          else ix
+
+-- @'insertNode' str node@ returns the list of nodes which should replace
+-- @node@ in order to insert @str@ in the tree.
+--
+-- Preconditions:
+--
+--      - @notElemNode str node@ must be True (otherwise, this returns
+--      Nothing).
+--
+-- This is mostly just tedious case analysis.
+insertNode :: BuiltinByteString -> Node -> Maybe [Node]
+insertNode str node =
+  flip (PlutusPrelude.bool Nothing) (isPrefixOfByteString (nPrefix node) str && notElemNode str node) $
+    Just $
+      if str == pre
+        then [node {nLeaf = True}]
+        else case nBranches node of
+          -- Notes:
+          --  @strSuf@ is non empty (otherwise we'd contradict @str /= pre@).
+          Just (branchPrefix, ds) ->
+            let -- Generates the nodes corresponding to the string.
+                -- Assumes that
+                -- > inp = p ++ inpSuf
+                -- where @inpSuf = ic : inpSuf'@
+                -- and there exists a unique node which satisfies
+                -- > nPrefix = s
+                -- > nBranches = Just (t, ic : _)
+                -- where @s ++ t = p@.
+                fromHeadStrNodes :: BuiltinByteString -> BuiltinByteString -> [Node]
+                fromHeadStrNodes p inp =
+                  let inpSuf = dropByteString (lengthOfByteString p) inp
+                      inpSuf' = tailByteString inpSuf
+                   in if nullByteString inpSuf'
+                        then
+                          [ Node
+                              { nPrefix = inp
+                              , nLeaf = True
+                              , nBranches = Nothing
+                              }
+                          ]
+                        else
+                          [ Node
+                              { nPrefix = snocByteString p $ headByteString inpSuf
+                              , nLeaf = False
+                              , nBranches = Just (initByteString inpSuf', [lastByteString inpSuf'])
+                              }
+                          , Node
+                              { nPrefix = snocByteString p (headByteString inpSuf) `appendByteString` inpSuf' -- this can be just @inp@
+                              , nLeaf = True
+                              , nBranches = Nothing
+                              }
+                          ]
+
+                fromHeadPreStr :: [Node]
+                fromHeadPreStr = fromHeadStrNodes pre str
+             in if nullByteString branchPrefix
+                  then node {nBranches = Just (branchPrefix, headByteString strSuf : ds)} : fromHeadPreStr
+                  else
+                    let branchPrefixLcpStrSuf = branchPrefix `lcp` strSuf
+                     in if nullByteString branchPrefixLcpStrSuf
+                          then
+                            [ node
+                                { nBranches = Just (branchPrefixLcpStrSuf, [headByteString strSuf, headByteString branchPrefix])
+                                }
+                            , Node
+                                { nPrefix = snocByteString pre $ headByteString branchPrefix
+                                , nLeaf = False
+                                , nBranches = Just (tailByteString branchPrefix, ds)
+                                }
+                            ]
+                              ++ fromHeadPreStr
+                          else
+                            let strSuf' = dropByteString (lengthOfByteString branchPrefixLcpStrSuf) strSuf
+                                branchPrefix' = dropByteString (lengthOfByteString branchPrefixLcpStrSuf) branchPrefix
+
+                                fromHeadPreLcpStr = fromHeadStrNodes (pre `appendByteString` branchPrefixLcpStrSuf) str
+                             in if nullByteString strSuf'
+                                  then
+                                    [ node
+                                        { nBranches = Just (initByteString branchPrefixLcpStrSuf, [lastByteString branchPrefixLcpStrSuf])
+                                        }
+                                    , Node
+                                        { nPrefix = pre `appendByteString` branchPrefixLcpStrSuf
+                                        , nLeaf = True
+                                        , nBranches = Just (branchPrefix', ds)
+                                        }
+                                    ]
+                                  else
+                                    if nullByteString branchPrefix'
+                                      then
+                                        node
+                                          { nBranches = Just (branchPrefixLcpStrSuf, headByteString strSuf' : ds)
+                                          } :
+                                        fromHeadPreLcpStr
+                                      else
+                                        [ node
+                                            { nBranches = Just (branchPrefixLcpStrSuf, [headByteString branchPrefix', headByteString strSuf'])
+                                            }
+                                        , Node
+                                            { nPrefix = pre `appendByteString` snocByteString branchPrefixLcpStrSuf (headByteString branchPrefix')
+                                            , nLeaf = False
+                                            , nBranches = Just (tailByteString branchPrefix', ds)
+                                            }
+                                        ]
+                                          ++ fromHeadPreLcpStr
+          Nothing ->
+            [ node {nBranches = Just (initByteString strSuf, [lastByteString strSuf])}
+            , Node
+                { nPrefix = pre `appendByteString` strSuf
+                , nLeaf = True
+                , nBranches = Nothing
                 }
-                :
-            )
-              <$> go emptyNode (strLen + 1) str (tailByteString str1Suf) (tailByteString str2Suf)
-
-    -- constructs an "accept" state
-    goA :: BuiltinByteString -> Integer -> BuiltinByteString -> Node -> Node
-    goA str strLen strSuf node =
-      node
-        { nodeTokenName = TokenName $ takeByteString strLen str
-        , nodeDatum =
-            (nodeDatum node)
-              { dsLeaf = Just strSuf
-              , dsBranches = []
-              }
-        }
-
-    emptyNode :: Node
-    emptyNode =
-      Node
-        { nodeTokenName = TokenName emptyByteString
-        , nodeDatum =
-            DistributedSetDatum
-              { dsLeaf = Nothing
-              , dsBranches = []
-              }
-        }
+            ]
+  where
+    pre = nPrefix node
+    strSuf = dropByteString (lengthOfByteString pre) str
 
 {- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
- - done in the 'nodeNexts' function.
+ - done in the 'insertNode' function.
+ -
+ - We will note that there are alternative (probably better!) ways of doing
+ - this. The author postulates that doing a modified DFS just to test if the
+ - insertion is right (indeed, it is not unique) should suffice.
 -}
-mkInsertValidator :: DistributedSet -> DistributedSetDatum -> DistributedSetRedeemer -> ScriptContext -> Bool
+mkInsertValidator :: Ds -> DsDatum -> DsRedeemer -> ScriptContext -> Bool
 mkInsertValidator ds _dat red ctx =
-  traceIfFalse "error 'mkInsertValidator' incorrect new nodes" $ case nodeNexts nStr ownNode of
+  traceIfFalse "error 'mkInsertValidator' incorrect new nodes" $ case insertNode nStr ownNode of
     Nothing -> False
-    Just nnodes -> nnodes == nOwnNode : contNodes && mintedTns == map nodeTokenName contNodes
+    Just nnodes -> normalizeNodes nnodes == nOwnNode : contNodes && normalizeOrder (map unTokenName mintedTns) == map nPrefix contNodes
   where
-    -- The equality of @nnodes == nOwnNode:contNodes@ is a bit
-    -- careful.. By construction, @nnodes@ from @nodeNexts@ is in
-    -- lexicographical order so when we 'normalizeOrder'ed the
-    -- @contNodes@, it suffices to just test for equality.
-    --
     -- Similar reasoning for testing if we minted exactly the tokens
     -- for the new nodes.
 
@@ -293,8 +460,9 @@ mkInsertValidator ds _dat red ctx =
       d <- fmap getDatum (Contexts.findDatum dhash info) >>= PlutusTx.fromBuiltinData
       return $
         Node
-          { nodeTokenName = tn
-          , nodeDatum = d
+          { nPrefix = unTokenName tn
+          , nLeaf = dsLeaf d
+          , nBranches = dsBranches d
           }
       where
         err :: a
@@ -326,39 +494,41 @@ mkInsertValidator ds _dat red ctx =
     (nOwnNode, contNodes) =
       fromMaybe err $
         uncons $
-          normalizeOrderBy (compare `PlutusPrelude.on` nodeTokenName) $
+          normalizeNodes $
             fmap getTxOutNodeInfo $
               Contexts.getContinuingOutputs ctx
       where
         err :: a
         err = traceError "error 'mkInsertValidator' no continuing outputs"
 
-instance ValidatorTypes DistributedSet where
-  type DatumType DistributedSet = DistributedSetDatum
-  type RedeemerType DistributedSet = DistributedSetRedeemer
+    normalizeNodes = normalizeOrderBy (compare `PlutusPrelude.on` nPrefix)
+
+instance ValidatorTypes Ds where
+  type DatumType Ds = DsDatum
+  type RedeemerType Ds = DsRedeemer
 
 -- | The typed validator script for the distributed set.
-typedInsertValidator :: DistributedSet -> TypedValidator DistributedSet
+typedInsertValidator :: Ds -> TypedValidator Ds
 typedInsertValidator ds =
-  Scripts.mkTypedValidator @DistributedSet
+  Scripts.mkTypedValidator @Ds
     ( $$(PlutusTx.compile [||mkInsertValidator||])
         `PlutusTx.applyCode` PlutusTx.liftCode ds
     )
     $$(PlutusTx.compile [||wrap||])
   where
-    wrap = Scripts.wrapValidator @DistributedSetDatum @DistributedSetRedeemer
+    wrap = Scripts.wrapValidator @DsDatum @DsRedeemer
 
 -- | The regular validator script for the distributed set.
-insertValidator :: DistributedSet -> Validator
+insertValidator :: Ds -> Validator
 insertValidator = Scripts.validatorScript . typedInsertValidator
 
 -- | The address for the distributed set.
-insertAddress :: DistributedSet -> Address
+insertAddress :: Ds -> Address
 insertAddress = Scripts.validatorAddress . typedInsertValidator
 
 -- * Initializing the Distributed Set
 
-{- | 'DistributedSetMint' is the parameter for the minting policy. The
+{- | 'DsMint' is the parameter for the minting policy. The
  minting policy realizes the following requirements:
 
       (1) Creates an NFT (in particular, it creates an 'CurrencySymbol')
@@ -369,16 +539,16 @@ insertAddress = Scripts.validatorAddress . typedInsertValidator
       reach this branch. Note that 'dsmTxOutRef' is the 'TxOutRef' which is
       consumed initially to create the root of the tree.
 -}
-newtype DistributedSetMint = DistributedSetMint
+newtype DsMint = DsMint
   { dsmTxOutRef :: TxOutRef
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
-makeIsDataIndexed ''DistributedSetMint [('DistributedSetMint, 0)]
-deriveJSON defaultOptions ''DistributedSetMint
-PlutusTx.makeLift ''DistributedSetMint
+makeIsDataIndexed ''DsMint [('DsMint, 0)]
+deriveJSON defaultOptions ''DsMint
+PlutusTx.makeLift ''DsMint
 
-{- | 'mkDistributedSetPolicy' needs to verify the following. Either:
+{- | 'mkDsPolicy' needs to verify the following. Either:
 
       (1) [Growing the Distributed Set] Checks that we are spending an
       'AssetClass' with *this* 'CurrencySymbol', and mints exactly one
@@ -403,10 +573,10 @@ PlutusTx.makeLift ''DistributedSetMint
  same validator as the original @script@! Hence, @script@ needs to be written
  carefully to ensure that this is the case for security.
 -}
-mkDistributedSetPolicy :: DistributedSetMint -> () -> ScriptContext -> Bool
-mkDistributedSetPolicy gds _red ctx =
-  traceIfFalse "error 'mkDistributedSetPolicy' missing transaction inputs" checkInputs
-    && traceIfFalse "error 'mkDistributedSetPolicy' must mint exactly one TokenName" checkMintedAmount
+mkDsPolicy :: DsMint -> () -> ScriptContext -> Bool
+mkDsPolicy gds _red ctx =
+  traceIfFalse "error 'mkDsPolicy' missing transaction inputs" checkInputs
+    && traceIfFalse "error 'mkDsPolicy' must mint exactly one TokenName" checkMintedAmount
   where
     -- Aliases
     info :: TxInfo
@@ -438,15 +608,16 @@ mkDistributedSetPolicy gds _red ctx =
             | otherwise = False
        in go mintedtns
 
-distributedSetPolicy :: DistributedSetMint -> MintingPolicy
+distributedSetPolicy :: DsMint -> MintingPolicy
 distributedSetPolicy dsm =
   Scripts.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDistributedSetPolicy||])
+    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsPolicy||])
       `PlutusTx.applyCode` PlutusTx.liftCode dsm
 
-distributedSetCurSymbol :: DistributedSetMint -> CurrencySymbol
+distributedSetCurSymbol :: DsMint -> CurrencySymbol
 distributedSetCurSymbol = Contexts.scriptCurrencySymbol . distributedSetPolicy
 
+{-
 {- Note [Comparison to Stick Breaking Set]
     This was based off of the [Stick Breaking
     Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
@@ -710,13 +881,14 @@ distributedSetCurSymbol = Contexts.scriptCurrencySymbol . distributedSetPolicy
     exponentially small (as strings get larger).
 
  -}
+
 {-
 Note [Maximum Transaction Size Estimate]
 
 Here's an estimate of an upper bound the transaction size for our implementation:
 
 Each output is about
-> TxOutOverHead := (7 * 32) bytes
+> txOutOverHead := (7 * 32) bytes
 since the 'ScriptContext' must include:
 
  - 'Address' (can be around 2 * 32 bytes)
@@ -732,7 +904,7 @@ And we'll add (+1) just for good measure when counting overhead for
 constructors..
 
 In the worst case, the original input (and output) is going to be
-> TxOutOverHead + 2^8 + (2^8 * 1)  bytes
+> txOutOverHead + 32 + 2^8 + (2^8 * 1)  bytes
 since it must include
 
  - 'Address'
@@ -749,28 +921,32 @@ since it must include
 
 So in the worst case, when we insert a new string we have a new match which yields
 
-> 2 * (TxOutOverHead + 2^8 + 2^8*1) + 31 * TxOutOverHead = 7680 bytes
+> 2 * (txOutOverHead + 32 + 2^8 + 2^8*1) + 5 * txOutOverHead = 2656 bytes
 
-This is well under the 16384B transaciton size limit.. note that we assume
-the script takes 8000 bytes (as this script is quite large, but we're still
-under the limit
+where we note that routine inspection of the insertion code shows that we can
+insert generating less than 5 nodes.
 
-This just assumes one edge! If we try to minimize the size of this
-transaction (where we may vary the edge size) we can compnute the total
-(assuming edges are strings of length @k@)
-
-> 2 * ((7 * 32) + 2^8 + 2^8 * k)  + ceil(31 / k) * (7 * 32)
-
-And routine calculations show that @k = 4@ minimizes this function with result 4800.
+This is well under the 16384B transaction size limit..
 -}
 
 {-
- Remark: for testing the size the script, it's useful to have the following
+ Remark: for testing the size the scripts, it's useful to have the following
  wrapper function for seralizing the script.
 > import Ledger qualified as Plutus
+> import Data.ByteString.Char8 qualified as BS8
+> import Data.ByteString.Lazy qualified as LBS
+> import Data.ByteString.Short qualified as SBS
+> import Codec.Serialise (serialise)
+> import Cardano.Api
+> import Cardano.Api.Shelley (Address (..), PlutusScript (..))
 >
 > writeValidator :: FilePath -> Plutus.Validator -> IO (Either (FileError ()) ())
 > writeValidator file = writeFileTextEnvelope @(PlutusScript PlutusScriptV1) file Nothing . PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . Plutus.getValidator
+>
+> writeMintingPolicy :: FilePath -> Plutus.MintingPolicy -> IO (Either (FileError ()) ())
+> writeMintingPolicy file = writeFileTextEnvelope @(PlutusScript PlutusScriptV1) file Nothing . PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . Plutus.getMintingPolicy
 
-> writeValidator  "serializedScript" $ DS.insertValidator  (DS.DistributedSet "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+> writeValidator  "serializedScript" $ DS.insertValidator  (DS.Ds "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+> writeMintingPolicy  "serializedMinting" $ DS.distributedSetPolicy   (DS.DsMint  $ TxOutRef (Plutus.V1.Ledger.Api.TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") 0)
+-}
 -}
