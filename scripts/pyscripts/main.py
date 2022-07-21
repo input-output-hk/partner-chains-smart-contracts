@@ -3,7 +3,6 @@
 import argparse
 import solver
 import utils
-from os.path import join, splitext
 
 def doexport(args):
     if args.tx_in is None:
@@ -145,8 +144,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.vkey_path is None:
-        args.vkey_path = splitext(args.skey_path)[0] + '.vkey'
-    
+        status, vkey_path = utils.mk_vkey(args.skey_path)
+        assert status == 'ok', "Couldn't generate verification key"
+        args.vkey_path = vkey_path
+
     if args.mainnet:
         args.magic = 764824073
 

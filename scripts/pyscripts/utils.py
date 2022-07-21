@@ -3,6 +3,7 @@ import os
 import string
 import subprocess
 import tempfile
+from os.path import splitext
 from functools import cache
 from typing import List
 
@@ -70,6 +71,17 @@ def get_params_file(magic=9):
             f'--out-file={fd.name}',
         ]
         return on_ok(run_cli(cmd), lambda: fd.name)
+
+def mk_vkey(skey_path):
+    vkey_path = splitext(skey_path)[0] + '.vkey'
+    cmd = [
+        'cardano-cli', 'key', 'verification-key',
+        f'--signing-key-file={skey_path}',
+        f'--verification-key-file={vkey_path}',
+    ]
+
+    return on_ok(run_cli(cmd), lambda: vkey_path)
+    
 
 def get_utxos(addr, magic=9):
     with tempfile.NamedTemporaryFile(prefix='trustless-sidechain-', suffix='.json') as fd:
