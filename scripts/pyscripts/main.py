@@ -59,93 +59,100 @@ def dobuild(args):
         result = solver.build(action, **options, **config)
         print(result)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
+def add_common_arguments(parser):
     required = parser.add_argument_group('required arguments')
-    required.add_argument('-SKP', '--skey-file',
+    required.add_argument('-sk', '--signing-key-file',
                           dest='skey_path',
-                          help='Provide skey_path',
+                          help='Provide payment signing key path',
                           type=str,
                           required=True,
                           )
 
-    parser.add_argument('-ADDR', '--payment-addr-file',
-                        dest='addr_path',
-                        help='Provide payment address path',
+    parser.add_argument('-vk', '--payment-verification-key-file',
+                        dest='vkey_path',
+                        help='Provide payment verification key path. In case no key is given, it will be derived from the signing key to the same directory.',
                         type=str
                         )
-    parser.add_argument('-MAGIC', '--testnet-magic',
+    required.add_argument('-tm', '--testnet-magic',
                         dest='magic',
                         help='Provide testnet magic number',
                         type=int,
                         )
     required.add_argument('-mn', '--mainnet',
                         dest='mainnet',
-                        help='Use the mainnet magic id',
+                        help='Use the mainnet magic id (overrides testnet magic)',
                         action=argparse.BooleanOptionalAction,
                         )
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    
     subparser = parser.add_subparsers(dest='verb')
 
+    export = subparser.add_parser('export')
     build = subparser.add_parser('build')
-    build.add_argument('-s', '--submit',
-                       action='store_true',
-                       help='Also sign and submit transactions after building',
-                       dest='submit'
-                       )
+
+    add_common_arguments(export)
+    add_common_arguments(build)
 
     build.add_argument('actions',
                        nargs='+',
                        help='Legal values: [register|deregister|mint|build].. order is dependent',
                        type=str
                        )
-    build.add_argument('-b', '--burnAmount',
+
+    build.add_argument('-s', '--submit',
+                       action='store_true',
+                       help='Also sign and submit transactions after building',
+                       dest='submit'
+                       )
+
+    build.add_argument('-ba', '--burn-amount',
                        nargs='?',
                        help='amount to burn; natural number',
                        default=1,
                        type=int
                        )
-    build.add_argument('-m', '--mintAmount',
+    build.add_argument('-ma', '--mint-amount',
                        nargs='?',
                        help='amount to burn; natural number',
                        default=1,
                        type=int
                        )
 
-    export = subparser.add_parser('export')
-    export.add_argument('-TXIN', '--input-tx',
+    export.add_argument('-txin', '--tx-input',
                         dest='tx_in',
                         help='The input UTXO used to initiate the sidechain',
                         type=str
                         )
-    export.add_argument('-ChainID', '--sidechain-id',
+    export.add_argument('-ci', '--sidechain-id',
                         dest='chain_id',
-                        default=123,
-                        type=int
+                        type=int,
+                        required=True
                         )
-    export.add_argument('-ChainH', '--sidechain-genesis-hash',
+    export.add_argument('-gh', '--sidechain-genesis-hash',
                         dest='genesis_hash',
-                        default='112233',
-                        type=str
+                        type=str,
+                        required=True
                         )
-    export.add_argument('-SPOK', '--spo-key-file',
+    export.add_argument('-spk', '--spo-signing-key-file',
                         dest='spo_key',
                         help='Provide spo_key',
-                        type=str
+                        type=str,
+                        required=True
                         )
-    export.add_argument('-SideK', '--sidechain-skey-file',
+    export.add_argument('-sck', '--sidechain-signing-key-file',
                         dest='sidechain_skey',
                         help='Provide sidechain_skey',
-                        type=str
+                        type=str,
+                        required=True
                         )
 
     args = parser.parse_args()
     if args.vkey_path is None:
         status, vkey_path = utils.mk_vkey(args.skey_path)
-        assert status == 'ok', "Couldn't generate verification key"
+        assert status == 'ok', "Couldn't derive verification key"
         args.vkey_path = vkey_path
 
     if args.mainnet:
@@ -156,3 +163,4 @@ if __name__ == '__main__':
         'build': dobuild,
     }
     match.get(args.verb, lambda _: parser.print_usage())(args)
+
