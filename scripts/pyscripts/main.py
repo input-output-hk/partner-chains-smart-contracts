@@ -7,7 +7,7 @@ from os.path import join, splitext
 
 def doexport(args):
     if args.tx_in is None:
-        status, addr = utils.get_address(args.addr_path, magic=args.magic)
+        status, addr = utils.get_address(args.vkey_path, magic=args.magic)
         assert status == 'ok', addr
         status, json = utils.get_utxos(addr, args.magic)
         assert status == 'ok', json
@@ -25,12 +25,13 @@ def dobuild(args):
     exports = utils.exports
     config = {
         "secret_keyfile" : args.skey_path,
-        "public_keyfile" : args.addr_path,
+        "public_keyfile" : args.vkey_path,
         "magic" : args.magic,
         "era" : "babbage",
         "with_submit" : args.submit,
     }
-    status, addr = utils.get_address(args.addr_path, magic=args.magic)
+    status, addr = utils.get_address(args.vkey_path, magic=args.magic)
+    print(f'Own address: {addr}')
     assert status == 'ok', addr
     config['own_addr'] = addr
     custom =  {
@@ -80,7 +81,11 @@ if __name__ == '__main__':
                         dest='magic',
                         help='Provide testnet magic number',
                         type=int,
-                        default=9
+                        )
+    required.add_argument('-mn', '--mainnet',
+                        dest='mainnet',
+                        help='Use the mainnet magic id',
+                        action=argparse.BooleanOptionalAction,
                         )
 
 
@@ -139,9 +144,11 @@ if __name__ == '__main__':
                         )
 
     args = parser.parse_args()
-    if args.addr_path is None:
-        args.addr_path = splitext(args.skey_path)[0] + '.vkey'
-
+    if args.vkey_path is None:
+        args.vkey_path = splitext(args.skey_path)[0] + '.vkey'
+    
+    if args.mainnet:
+        args.magic = 764824073
 
     match = {
         'export': doexport,
