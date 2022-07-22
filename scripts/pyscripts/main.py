@@ -4,6 +4,13 @@ import argparse
 import solver
 import utils
 from os.path import join, splitext
+import json
+
+def get_general_config():
+    with open('config.json', 'r') as f:
+        general_config = json.loads(f.read())
+    return general_config
+
 
 def doexport(args):
     if args.tx_in is None:
@@ -23,14 +30,15 @@ def doexport(args):
 
 def dobuild(args):
     exports = utils.exports
+    general_config = get_general_config()
     config = {
         "secret_keyfile" : args.skey_path,
         "public_keyfile" : args.addr_path,
-        "magic" : args.magic,
+        "magic" : configs['magic'],
         "era" : "babbage",
         "with_submit" : args.submit,
     }
-    status, addr = utils.get_address(args.addr_path, magic=args.magic)
+    status, addr = utils.get_address(args.addr_path, magic=get_general_config['magic'])
     assert status == 'ok', addr
     config['own_addr'] = addr
     custom =  {
@@ -75,12 +83,6 @@ if __name__ == '__main__':
                         dest='addr_path',
                         help='Provide payment address path',
                         type=str
-                        )
-    parser.add_argument('-MAGIC', '--testned-magic',
-                        dest='magic',
-                        help='Provide testnet magic number',
-                        type=int,
-                        default=79
                         )
 
 
