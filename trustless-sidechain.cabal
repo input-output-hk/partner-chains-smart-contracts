@@ -98,6 +98,7 @@ library
     TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.Utils
 
   build-depends:
     , aeson                      ^>=1.5.0.0
@@ -146,6 +147,7 @@ test-suite trustless-sidechain-test
   other-modules:
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.MultiSig
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
@@ -162,6 +164,7 @@ test-suite trustless-sidechain-test
     , QuickCheck
     , quickcheck-instances
     , tasty
+    , tasty-hunit
     , tasty-quickcheck
     , trustless-sidechain
 

@@ -3,6 +3,7 @@ module Main (main) where
 import Test.Tasty
 import Test.TrustlessSidechain.Integration as Integration
 import Test.TrustlessSidechain.MerkleTree as MerkleTree
+import Test.TrustlessSidechain.MultiSig as MultiSig
 import Prelude (IO)
 
 -- | @since 0.1
@@ -19,4 +20,5 @@ tests =
     "TrustlessSidechain"
     [ Integration.test
     , MerkleTree.test
+    , MultiSig.test
     ]

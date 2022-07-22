@@ -21,7 +21,7 @@ import Plutus.V1.Ledger.Contexts (
   TxOut (txOutDatumHash, txOutValue),
   TxOutRef,
  )
-import Plutus.V1.Ledger.Crypto (PubKey, Signature (getSignature))
+import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Scripts (Datum (getDatum))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
@@ -35,8 +35,9 @@ import PlutusTx qualified
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteeHash),
  )
+import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 import Prelude qualified
 
 -- * Updating the committee hash
@@ -95,20 +96,6 @@ instance Eq UpdateCommitteeHashDatum where
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
-{- | 'verifyMultiSignature' is a wrapper for how we verify multi signatures.
-
- TODO: For now, to simplify things we just test if any of the committee has
- signed the message, and we should do a proper multisign later.
--}
-{-# INLINEABLE verifyMultiSignature #-}
-verifyMultiSignature ::
-  [PubKey] -> BuiltinByteString -> BuiltinByteString -> Bool
-verifyMultiSignature pubKeys msg sig = any go pubKeys
-  where
-    go pubKey =
-      let pubKey' = Bytes.getLedgerBytes (Crypto.getPubKey pubKey)
-       in PlutusTx.verifySignature pubKey' msg sig
-
 {- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
 Warning: there should be a non-empty number of private keys.
 
@@ -120,7 +107,7 @@ TODO: For now, to simplify things we just make the first person sign the message
 TODO: do a proper multisign later.
 -}
 multiSign :: BuiltinByteString -> [XPrv] -> BuiltinByteString
-multiSign msg (prvKey : _) = getSignature (Crypto.sign' msg prvKey)
+multiSign msg (prvKey : _) = Crypto.getSignature (Crypto.sign' msg prvKey)
 multiSign _ _ = traceError "Empty multisign"
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
@@ -189,11 +176,11 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      verifyMultiSignature
-        (committeePubKeys red)
+      verifyMultisig
+        ((Bytes.getLedgerBytes PlutusTx.. Crypto.getPubKey) `PlutusTx.map` (committeePubKeys red))
+        1
         (newCommitteeHash red)
-        (signature red)
-
+        (committeeSignatures red) -- TODO where are the other signatures?
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
@@ -207,6 +194,7 @@ instance ValidatorTypes UpdatingCommitteeHash where
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
 
 -- | 'typedUpdateCommitteeHashValidator' is the typed validator of the script
+{-# INLINEABLE typedUpdateCommitteeHashValidator #-}
 typedUpdateCommitteeHashValidator :: UpdateCommitteeHash -> TypedValidator UpdatingCommitteeHash
 typedUpdateCommitteeHashValidator updateCommitteeHash =
   Scripts.mkTypedValidator @UpdatingCommitteeHash
@@ -218,10 +206,12 @@ typedUpdateCommitteeHashValidator updateCommitteeHash =
     wrap = Scripts.wrapValidator @UpdateCommitteeHashDatum @UpdateCommitteeHashRedeemer
 
 -- | 'updateCommitteeHashValidator' is the validator of the script
+{-# INLINEABLE updateCommitteeHashValidator #-}
 updateCommitteeHashValidator :: UpdateCommitteeHash -> Validator
 updateCommitteeHashValidator = Scripts.validatorScript . typedUpdateCommitteeHashValidator
 
 -- | 'updateCommitteeHashAddress' is the address of the script
+{-# INLINEABLE updateCommitteeHashAddress #-}
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
 updateCommitteeHashAddress = Scripts.validatorAddress . typedUpdateCommitteeHashValidator
 
@@ -242,6 +232,7 @@ PlutusTx.makeLift ''GenesisMintCommitteeHash
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
+{-# INLINEABLE mkCommitteeHashPolicy #-}
 mkCommitteeHashPolicy :: GenesisMintCommitteeHash -> () -> ScriptContext -> Bool
 mkCommitteeHashPolicy gmch _red ctx =
   traceIfFalse "UTxO not consumed" hasUtxo
@@ -269,6 +260,7 @@ mkCommitteeHashPolicy gmch _red ctx =
       _ -> False
 
 -- | 'committeeHashPolicy' is the minting policy
+{-# INLINEABLE committeeHashPolicy #-}
 committeeHashPolicy :: GenesisMintCommitteeHash -> MintingPolicy
 committeeHashPolicy gch =
   Scripts.mkMintingPolicyScript $
@@ -276,5 +268,6 @@ committeeHashPolicy gch =
       `PlutusTx.applyCode` PlutusTx.liftCode gch
 
 -- | 'committeeHashCurSymbol' is the currency symbol
+{-# INLINEABLE committeeHashCurSymbol #-}
 committeeHashCurSymbol :: GenesisMintCommitteeHash -> CurrencySymbol
 committeeHashCurSymbol gmch = Contexts.scriptCurrencySymbol $ committeeHashPolicy gmch
