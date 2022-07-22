@@ -41,6 +41,7 @@ python main.py build register mint \
 python main.py build register \
 --signing-key-file ~/testnet/mykey.skey \
 --testnet-magic 9 \
+--submit
 ```
 
 ## Only build deregister-transaction
@@ -48,7 +49,7 @@ python main.py build register \
 ```
 python main.py build deregister \
 --signing-key-file ~/testnet/mykey.skey \
---testnet-magic 9 \
+--testnet-magic 9
 ```
 
 ## Build and submit 1 token mint-transaction when the address is mykey.vkey
@@ -57,7 +58,8 @@ python main.py build deregister \
 python main.py build mint \
 --signing-key-file ~/testnet/mykey.skey \
 --testnet-magic 9 \
---mint-amount 1
+--mint-amount 1 \
+--submit
 ```
 
 ## Build 8 token burn-transaction
