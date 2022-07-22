@@ -44,12 +44,12 @@ def dobuild(args):
             "in_redeemer": exports('CommitteeCandidateValidator.redeemer'),
         },
         "mint" : {
-            "mint_val": (args.mintAmount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
+            "mint_val": (args.mint_amount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.mint.redeemer'),
         },
         "burn" : {
-            "mint_val": (-args.burnAmount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
+            "mint_val": (-args.burn_amount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
             "mint_script": exports('FUELMintingPolicy.plutus'),
             "mint_redeemer": exports('FUELMintingPolicy.burn.redeemer'),
         },
@@ -110,12 +110,14 @@ if __name__ == '__main__':
 
     build.add_argument('-ba', '--burn-amount',
                        nargs='?',
+                       dest='burn_amount',
                        help='amount to burn; natural number',
                        default=1,
                        type=int
                        )
     build.add_argument('-ma', '--mint-amount',
                        nargs='?',
+                       dest='mint_amount',
                        help='amount to burn; natural number',
                        default=1,
                        type=int
