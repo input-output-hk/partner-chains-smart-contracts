@@ -135,8 +135,8 @@ data SaveRootParams = SaveRootParams
   deriving anyclass (ToSchema)
 $(deriveJSON defaultOptions ''SaveRootParams)
 
--- | 'DistributedSetParams' are parameters for the distributed set.
-data DistributedSetParams = DistributedSetParams
+-- | 'DsParams' are parameters for the distributed set.
+data DsParams = DistributedSetParams
   { -- | The 'TxOutRef' which is used as the "genesis" transaction to create
     -- the distributed set.
     dspTxOutRef :: TxOutRef
@@ -146,4 +146,4 @@ data DistributedSetParams = DistributedSetParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 
-$(deriveJSON defaultOptions ''DistributedSetParams)
+$(deriveJSON defaultOptions ''DsParams)

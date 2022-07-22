@@ -11,6 +11,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Ledger (Redeemer (Redeemer), TxOutRef)
 import Ledger.Constraints as Constraints
+import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (
   ChainIndexTxOut,
  )
@@ -29,24 +30,23 @@ import Plutus.V1.Ledger.Api (Datum (getDatum), MintingPolicy)
 import Plutus.V1.Ledger.Value (AssetClass, TokenName (TokenName, unTokenName))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude qualified
-import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Class qualified as Class
 import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  DistributedSetParams (dspStr, dspTxOutRef),
+  DsParams (dspStr, dspTxOutRef),
  )
 import TrustlessSidechain.OnChain.DistributedSet (
-  DistributedSet (DistributedSet, dsSymbol),
-  DistributedSetDatum,
-  DistributedSetMint (DistributedSetMint, dsmTxOutRef),
-  Node (Node, nodeDatum, nodeTokenName),
+  Ds (Ds, dsSymbol),
+  DsDatum (DsDatum, dsBranches, dsLeaf),
+  DsMint (DsMint, dsmTxOutRef),
+  Node (nBranches, nLeaf, nPrefix),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.Types (
-  DistributedSetRedeemer (
-    DistributedSetRedeemer,
+  DsRedeemer (
+    DsRedeemer,
     dsStr
   ),
  )
