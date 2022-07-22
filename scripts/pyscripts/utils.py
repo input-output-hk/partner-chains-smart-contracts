@@ -3,7 +3,7 @@ import os
 import string
 import subprocess
 import tempfile
-from os.path import splitext
+from os.path import (splitext, exists)
 from functools import cache
 from typing import List
 
@@ -74,13 +74,16 @@ def get_params_file(magic):
 
 def mk_vkey(skey_path):
     vkey_path = splitext(skey_path)[0] + '.vkey'
-    cmd = [
-        'cardano-cli', 'key', 'verification-key',
-        f'--signing-key-file={skey_path}',
-        f'--verification-key-file={vkey_path}',
-    ]
+    if exists(vkey_path):
+        return ('ok', vkey_path)
+    else:
+        cmd = [
+            'cardano-cli', 'key', 'verification-key',
+            f'--signing-key-file={skey_path}',
+            f'--verification-key-file={vkey_path}',
+        ]
 
-    return on_ok(run_cli(cmd), lambda: vkey_path)
+        return on_ok(run_cli(cmd), lambda: vkey_path)
     
 
 def get_utxos(addr, magic):
