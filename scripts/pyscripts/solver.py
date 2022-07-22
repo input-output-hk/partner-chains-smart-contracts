@@ -108,3 +108,4 @@ def add_utxos(acc, pair):
     utxos, amount = acc
     utxo, value = pair
     return utxos + [utxo], amount + value
+

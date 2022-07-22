@@ -158,7 +158,7 @@ if __name__ == '__main__':
         args.vkey_path = vkey_path
 
     if args.mainnet:
-        args.magic = 764824073
+        args.magic = utils.MAINNET_MAGIC
 
     match = {
         'export': doexport,
