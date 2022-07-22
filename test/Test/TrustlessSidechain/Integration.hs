@@ -3,13 +3,14 @@
 module Test.TrustlessSidechain.Integration (test) where
 
 import Cardano.Crypto.Wallet qualified as Wallet
-import Control.Monad (void)
 import Data.ByteString qualified as ByteString
+import Data.Functor (void)
 import Ledger (getCardanoTxId)
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
+import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
+
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
@@ -44,6 +45,7 @@ sidechainParams =
   SidechainParams
     { chainId = ""
     , genesisHash = ""
+    , genesisMint = Nothing
     }
 
 spoPrivKey :: Wallet.XPrv
@@ -116,6 +118,36 @@ test =
               FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
         )
         [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burnOneshotMint"
+        (initAda [100, 100, 100]) -- mint, fee, collateral
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              utxo <- CommitteeCandidateValidator.getInputUtxo
+              utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
+              let scpOS = sidechainParams {genesisMint = Just utxo}
+              t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+              awaitTxConfirmed $ getCardanoTxId t
+              FUELMintingPolicy.burn $ BurnParams (-1) "" "" scpOS
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burnOneshot double Mint"
+        (initAda [100, 100, 100]) -- mint, fee, collateral
+        ( do
+            withContract $
+              const $ do
+                h <- ownPaymentPubKeyHash
+                utxo <- CommitteeCandidateValidator.getInputUtxo
+                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
+                let scpOS = sidechainParams {genesisMint = Just utxo}
+                t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t
+                t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t2
+        )
+        [shouldFail]
     , assertExecution
         "FUELMintingPolicy.mint"
         (initAda [1, 1]) -- mint, fee
