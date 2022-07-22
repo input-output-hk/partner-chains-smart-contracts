@@ -106,35 +106,35 @@ utxosWithCurrency = foldUtxoRefsWithCurrency go Map.empty
           pageItems $
             page utxoRsp
 
-{- | 'findDistributedSetOutput' finds the transaction which we must insert to
+{- | 'findDsOutput' finds the transaction which we must insert to
  (if it exists).
 -}
-findDistributedSetOutput ::
+findDsOutput ::
   forall w s e.
   AsContractError e =>
-  DistributedSet ->
+  Ds ->
   TokenName ->
-  Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DistributedSetDatum, TokenName))
-findDistributedSetOutput ds tn = do
+  Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
+findDsOutput ds tn = do
   queryTn (Value.tokenName "") >>= \case
     Nothing -> return Nothing
-    Just v -> fmap Just $ go v (0, lengthOfByteString str)
+    Just v -> fmap Just $ go v
   where
     queryUtxos :: TokenName -> Contract w s e (Map TxOutRef ChainIndexTxOut)
     queryUtxos = utxosWithCurrency pq . Value.assetClass (dsSymbol ds)
 
-    queryTn :: TokenName -> Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DistributedSetDatum, TokenName))
+    queryTn :: TokenName -> Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
     queryTn inp =
       Indexed.itoList <$> queryUtxos inp >>= \case
         [] -> return Nothing
         [(ref, o)]
-          | Just (dat :: DistributedSetDatum) <- Class.fromBuiltinData . getDatum =<< Fold.preview (Tx.ciTxOutDatum . _Right) o
+          | Just (dat :: DsDatum) <- Class.fromBuiltinData . getDatum =<< Fold.preview (Tx.ciTxOutDatum . _Right) o
             , Getter.view Tx.ciTxOutAddress o == DistributedSet.insertAddress ds ->
             return $ Just (ref, o, dat, inp)
         _ ->
           Contract.throwError $
             Error._OtherContractError
-              Review.# "DistributedSet internal error: there should be at most 1 node with the given token name"
+              Review.# "Ds internal error: there should be at most 1 node with the given token name"
 
     pq :: PageQuery TxOutRef
     pq = PageQuery {pageQuerySize = Default.def, pageQueryLastItem = Nothing}
@@ -142,32 +142,111 @@ findDistributedSetOutput ds tn = do
     str :: BuiltinByteString
     str = unTokenName tn
 
-    -- Binary search which searches for the largest TokenName (in size) for
-    -- which the query returns 'Just' in the interval @(lo, hi]@.
-    --
-    -- Note this is possible because we have a trie data structure.
-    go :: (TxOutRef, ChainIndexTxOut, DistributedSetDatum, TokenName) -> (Integer, Integer) -> Contract w s e (TxOutRef, ChainIndexTxOut, DistributedSetDatum, TokenName)
-    go v (lo, hi)
-      | lo + 1 == hi = fromMaybe v <$> queryTn (takeTokenName hi tn)
+    go ::
+      (TxOutRef, ChainIndexTxOut, DsDatum, TokenName) ->
+      Contract w s e (TxOutRef, ChainIndexTxOut, DsDatum, TokenName)
+    go inp@(_ref, _o, dat, t) =
+      let n = DistributedSet.mkNode (unTokenName t) dat
+       in PlutusPrelude.join
+            <$> traverse
+              (queryTn . TokenName . flip takeByteString str)
+              (nextNodeStrLength str n)
+            >>= \case
+              Nothing -> return inp
+              Just inp' -> go inp'
+
+    -- finds the length of the next prefix to search for (provided it exists)
+    nextNodeStrLength :: BuiltinByteString -> Node -> Maybe Integer
+    nextNodeStrLength inp node
+      -- this is completely unnecessary for this use case here.
+      -- @| nPrefix node == inp = Nothing@
       | otherwise =
-        queryTn (takeTokenName mid tn) >>= \case
-          Just v' -> go v' (mid, hi)
-          Nothing -> go v (lo, mid)
-      where
-        mid = lo + ((hi - lo) `Builtins.divideInteger` 2)
+        nBranches node >>= \(branchPrefix, _ds) ->
+          lengthOfByteString (nPrefix node) + lengthOfByteString branchPrefix + 1
+            <$ PlutusPrelude.guard (DistributedSet.existsNextNode inp node)
+      -- N.B. the precondition of
+      -- 'DistributedSet.existsNextNode' is automatically
+      -- satisfied here.
+      | otherwise = Nothing
 
-        takeTokenName :: Integer -> TokenName -> TokenName
-        takeTokenName k = TokenName . takeByteString k . unTokenName
+-- | converts a 'Node' to the correpsonding 'DsDatum'
+nodeToDatum :: Node -> DsDatum
+nodeToDatum node =
+  DsDatum
+    { dsLeaf = nLeaf node
+    , dsBranches = nBranches node
+    }
 
--- | 'distributedSetInsert' is the offchain code to build the distributed set
-distributedSetInsert :: DistributedSetParams -> Contract () TrustlessSidechainSchema Text ()
-distributedSetInsert dsp =
-  findDistributedSetOutput ds (Value.tokenName $ Class.fromBuiltin str) >>= \case
+-- | 'dsInit' is the offchain code to build the distributed set
+dsInit :: DsParams -> Contract () TrustlessSidechainSchema Text AssetClass
+dsInit dsp = do
+  Contract.txOutFromRef oref >>= \case
+    Nothing -> Contract.throwError "error: bad distributed set init unspent transaction doesn't exist."
+    Just citxout -> do
+      let -- variables creating the token
+          sm = DistributedSet.dsCurSymbol dsm
+          tn = TokenName ""
+          val = Value.singleton sm tn 1
+          ast = Value.assetClass sm tn
+
+          dat =
+            DsDatum
+              { dsLeaf = False
+              , dsBranches = Nothing
+              }
+
+          -- lookups required to build the transaction
+          lookups =
+            Constraints.unspentOutputs (Map.singleton oref citxout)
+              Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
+              Prelude.<> Constraints.mintingPolicy mp
+
+          -- the transaction
+          tx =
+            Constraints.mustSpendPubKeyOutput oref
+              Prelude.<> Constraints.mustMintValue val
+              Prelude.<> Constraints.mustPayToTheScript dat val
+
+      ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups tx
+
+      PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+      Contract.logInfo @Text "Initialized distributed set"
+
+      return ast
+  where
+    -- Aliases:
+    oref :: TxOutRef
+    oref = dspTxOutRef dsp
+
+    ds :: Ds
+    ds = Ds {dsSymbol = DistributedSet.dsCurSymbol dsm}
+
+    dsm :: DsMint
+    dsm = DsMint {dsmTxOutRef = dspTxOutRef dsp}
+
+    mp :: MintingPolicy
+    mp = DistributedSet.dsPolicy dsm
+
+{-
+data DsParams = DistributedSetParams
+  { -- | The 'TxOutRef' which is used as the "genesis" transaction to create
+    -- the distributed set.
+    dspTxOutRef :: TxOutRef
+  , -- | The 'BuiltinByteString' to insert
+    dspStr :: BuiltinByteString
+  }
+  -}
+
+-- | 'dsInsert' is the offchain code to build the distributed set
+dsInsert :: DsParams -> Contract () TrustlessSidechainSchema Text ()
+dsInsert dsp =
+  findDsOutput ds (Value.tokenName $ Class.fromBuiltin str) >>= \case
     Nothing -> Contract.throwError "error: distributed set does not exist"
     Just (ref, o, dat, tn) ->
       let node :: Node
-          node = Node {nodeTokenName = tn, nodeDatum = dat}
-       in case DistributedSet.nodeNexts str node of
+          node = DistributedSet.mkNode (unTokenName tn) dat
+       in case DistributedSet.insertNode str node of
             Nothing -> Contract.throwError "error: inserting bad string"
             Just nodes -> do
               let lookups =
@@ -176,26 +255,40 @@ distributedSetInsert dsp =
                       Prelude.<> Constraints.mintingPolicy mp
 
                   redeemer :: Redeemer
-                  redeemer = Redeemer $ Class.toBuiltinData $ DistributedSetRedeemer {dsStr = str}
+                  redeemer = Redeemer $ Class.toBuiltinData $ DsRedeemer {dsStr = str}
 
-                  tx = Prelude.mappend (Constraints.mustSpendScriptOutput ref redeemer) $
-                    flip (Fold.foldMapOf Fold.folded) nodes $
-                      \n -> Constraints.mustPayToTheScript (nodeDatum n) $ Value.assetClassValue (Value.assetClass (dsSymbol ds) $ nodeTokenName n) 1
+                  tx =
+                    Prelude.mconcat
+                      [ Constraints.mustSpendScriptOutput ref redeemer
+                      , flip (Fold.foldMapOf Fold.folded) nodes $
+                          \n ->
+                            let nTn = TokenName $ nPrefix n
+                                scriptNode =
+                                  Constraints.mustPayToTheScript
+                                    (nodeToDatum n)
+                                    (Value.assetClassValue (Value.assetClass (dsSymbol ds) $ nTn) 1)
+                                mintTn =
+                                  Constraints.mustMintCurrency
+                                    (Scripts.mintingPolicyHash (DistributedSet.dsPolicy dsm))
+                                    nTn
+                                    1
+                             in scriptNode Prelude.<> mintTn
+                      ]
 
-              ledgerTx <- Contract.submitTxConstraintsWith @DistributedSet lookups tx
+              ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups tx
               PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
               Logging.logInfo @Text "added to the distributed set"
   where
     -- Aliases:
-    ds :: DistributedSet
-    ds = DistributedSet {dsSymbol = DistributedSet.distributedSetCurSymbol dsm}
+    ds :: Ds
+    ds = Ds {dsSymbol = DistributedSet.dsCurSymbol dsm}
 
-    dsm :: DistributedSetMint
-    dsm = DistributedSetMint {dsmTxOutRef = dspTxOutRef dsp}
+    dsm :: DsMint
+    dsm = DsMint {dsmTxOutRef = dspTxOutRef dsp}
 
     mp :: MintingPolicy
-    mp = DistributedSet.distributedSetPolicy dsm
+    mp = DistributedSet.dsPolicy dsm
 
     str :: BuiltinByteString
     str = dspStr dsp
