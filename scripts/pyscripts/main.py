@@ -159,6 +159,9 @@ if __name__ == '__main__':
 
     if args.mainnet:
         args.magic = utils.MAINNET_MAGIC
+    elif args.magic == None:
+        raise Exception("testnet-magic or mainnet argument is required")
+
 
     match = {
         'export': doexport,
