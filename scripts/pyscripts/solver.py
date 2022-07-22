@@ -45,7 +45,7 @@ def build(action, **kwargs):
             to_mint = f'{amount} {name}'
 
     amount = 0
-    assert type(utxos) is dict and len(dict) > 0, "Not enough UTxOs to build the transaction"
+    assert type(utxos) is dict and len(utxos) > 0, "Not enough UTxOs to build the transaction"
     for _ in range(10):
         tx_in = want({"name": "lovelace", "amount": amount}, utxos.copy())
         tx_out = f"{out_addr}+{amount}" + (f'+{to_mint}' if to_mint else '')
