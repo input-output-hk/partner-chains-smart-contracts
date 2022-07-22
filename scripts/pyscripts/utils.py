@@ -54,7 +54,7 @@ def read_file(path):
 ## Cardano cli and other Tools
 
 @cache
-def get_address(vkey_path, magic=9, type='verification-key'):
+def get_address(vkey_path, magic, type='verification-key'):
     cmd = [
         'cardano-cli', 'address', 'build',
         '--mainnet' if magic == 764824073 else f'--testnet-magic={magic}',
@@ -63,7 +63,7 @@ def get_address(vkey_path, magic=9, type='verification-key'):
     return run_cli(cmd)
 
 @cache
-def get_params_file(magic=9):
+def get_params_file(magic):
     with tempfile.NamedTemporaryFile(prefix='trustless-sidechain-', suffix='.json', delete=False) as fd:
         cmd = [
             'cardano-cli', 'query', 'protocol-parameters',
@@ -83,7 +83,7 @@ def mk_vkey(skey_path):
     return on_ok(run_cli(cmd), lambda: vkey_path)
     
 
-def get_utxos(addr, magic=9):
+def get_utxos(addr, magic):
     with tempfile.NamedTemporaryFile(prefix='trustless-sidechain-', suffix='.json') as fd:
         cmd = [
             'cardano-cli', 'query', 'utxo',
@@ -135,7 +135,7 @@ def build(
         tx_coll,      # hash#index
         out_file,     # filepath
         era='babbage',
-        magic=9,
+        magic,
         with_submit=False,
         **kw # in_script, in_datum, in_inline_datum, in_redeemer, out_inline_datum, mint_val, mint_script, mint_redeemer, secret_keyfile
   ):
@@ -182,7 +182,7 @@ def build(
 
     return status, out
 
-def sign(out_file, magic=9, secret_keyfile=None):
+def sign(out_file, magic, secret_keyfile=None):
     cmd = [
         'cardano-cli', 'transaction', 'sign',
         '--mainnet' if magic == 764824073 else f'--testnet-magic={magic}',
@@ -192,7 +192,7 @@ def sign(out_file, magic=9, secret_keyfile=None):
     ]
     return run_cli(cmd)
 
-def submit(out_file, magic=9):
+def submit(out_file, magic):
     cmd = [
         'cardano-cli', 'transaction', 'submit',
         '--mainnet' if magic == 764824073 else f'--testnet-magic={magic}',
