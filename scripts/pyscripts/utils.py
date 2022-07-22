@@ -134,8 +134,8 @@ def build(
         tx_out,       # addr+amount
         tx_coll,      # hash#index
         out_file,     # filepath
-        era='babbage',
         magic,
+        era='babbage',
         with_submit=False,
         **kw # in_script, in_datum, in_inline_datum, in_redeemer, out_inline_datum, mint_val, mint_script, mint_redeemer, secret_keyfile
   ):
