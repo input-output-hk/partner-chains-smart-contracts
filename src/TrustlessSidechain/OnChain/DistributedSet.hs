@@ -111,6 +111,15 @@ makeIsDataIndexed ''Ds [('Ds, 0)]
 deriveJSON defaultOptions ''Ds
 PlutusTx.makeLift ''Ds
 
+{-# INLINEABLE mkNode #-}
+mkNode :: BuiltinByteString -> DsDatum -> Node
+mkNode str d =
+  Node
+    { nPrefix = str
+    , nLeaf = dsLeaf d
+    , nBranches = dsBranches d
+    }
+
 -- | 'Node' is an internal data type of the tree node used in the validator.
 data Node = Node
   { nPrefix :: !BuiltinByteString
@@ -459,11 +468,7 @@ mkInsertValidator ds _dat red ctx =
       dhash <- txOutDatumHash txout
       d <- fmap getDatum (Contexts.findDatum dhash info) >>= PlutusTx.fromBuiltinData
       return $
-        Node
-          { nPrefix = unTokenName tn
-          , nLeaf = dsLeaf d
-          , nBranches = dsBranches d
-          }
+        mkNode (unTokenName tn) d
       where
         err :: a
         err = traceError "error 'mkInsertValidator' failed to query node info"
@@ -608,14 +613,14 @@ mkDsPolicy gds _red ctx =
             | otherwise = False
        in go mintedtns
 
-distributedSetPolicy :: DsMint -> MintingPolicy
-distributedSetPolicy dsm =
+dsPolicy :: DsMint -> MintingPolicy
+dsPolicy dsm =
   Scripts.mkMintingPolicyScript $
     $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsPolicy||])
       `PlutusTx.applyCode` PlutusTx.liftCode dsm
 
-distributedSetCurSymbol :: DsMint -> CurrencySymbol
-distributedSetCurSymbol = Contexts.scriptCurrencySymbol . distributedSetPolicy
+dsCurSymbol :: DsMint -> CurrencySymbol
+dsCurSymbol = Contexts.scriptCurrencySymbol . dsPolicy
 
 {-
 {- Note [Comparison to Stick Breaking Set]
