@@ -95,7 +95,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- | The asset class of the NFT identifying this committee hash
     token :: !AssetClass
   , -- | The signature for the new committee hash.
-    signature :: !BuiltinByteString
+    committeeSignatures :: [BuiltinByteString]
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
   }

@@ -35,7 +35,7 @@ import PlutusTx qualified
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteeHash),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 import Prelude qualified
@@ -180,7 +180,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         ((Bytes.getLedgerBytes PlutusTx.. Crypto.getPubKey) `PlutusTx.map` (committeePubKeys red))
         1
         (newCommitteeHash red)
-        [signature red] -- TODO where are the other signatures?
+        (committeeSignatures red) -- TODO where are the other signatures?
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 

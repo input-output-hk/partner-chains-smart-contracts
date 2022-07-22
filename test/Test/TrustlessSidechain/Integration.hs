@@ -213,7 +213,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -260,7 +260,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -306,7 +306,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = nCmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -353,7 +353,7 @@ test =
                       { newCommitteePubKeys = nCmtPubKeys
                       , token = nft
                       , committeePubKeys = nCmtPubKeys
-                      , signature = sig
+                      , committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
