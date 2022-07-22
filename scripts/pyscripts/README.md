@@ -52,7 +52,7 @@ python main.py build deregister \
 --testnet-magic 9
 ```
 
-## Build and submit 1 token mint-transaction when the address is mykey.vkey
+## Build and submit 1 token mint-transaction
 
 ```
 python main.py build mint \
