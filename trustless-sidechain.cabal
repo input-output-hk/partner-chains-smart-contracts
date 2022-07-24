@@ -86,6 +86,7 @@ library
   import:          common-lang
   exposed-modules:
     TrustlessSidechain.MerkleTree
+    TrustlessSidechain.SerializeScripts
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
@@ -121,6 +122,7 @@ library
     , row-types
     , serialise
     , text                       ^>=1.2.4.0
+    , base16-bytestring
 
   hs-source-dirs:  src
 

@@ -58,7 +58,7 @@
               };
             }];
             shell = {
-              withHoogle = true;
+              withHoogle = false;
               exactDeps = true;
               nativeBuildInputs = with pkgs'; [
                 bashInteractive

@@ -12,7 +12,7 @@ import Ledger (
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
-import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx (applyCode, compile, liftCode) -- , unsafeFromBuiltinData , toBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams (..))
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
@@ -46,4 +46,10 @@ mkMintingPolicy _ _ _ = False
 mintingPolicy :: SidechainParams -> MintingPolicy
 mintingPolicy param =
   Ledger.mkMintingPolicyScript
-    ($$(compile [||Script.wrapMintingPolicy . mkMintingPolicy||]) `applyCode` liftCode param)
+    ( $$(compile [||Script.wrapMintingPolicy . mkMintingPolicy||])
+        `applyCode` liftCode (param)
+    )
+
+-- CTL hacks
+--mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+--mkMintingPolicyUntyped a = mkMintingPolicy (unsafeFromBuiltinData a)
