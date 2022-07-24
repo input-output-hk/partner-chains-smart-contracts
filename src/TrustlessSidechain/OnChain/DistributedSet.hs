@@ -94,7 +94,7 @@ deriveJSON defaultOptions ''DsDatum
 {- | 'hash' is an internal function to store the hash of the to put in the set.
  This is just a thin wrapper around the 'Builtins.blake2b_256' hash function
 
- TODO: okay we need to actually hash things in the script still.
+ TODO: We need to actually hash things in the script still.
 -}
 {-# INLINEABLE hash #-}
 hash :: BuiltinByteString -> BuiltinByteString
@@ -155,27 +155,7 @@ normalizeOrder = normalizeOrderBy compare
 -}
 {-# INLINEABLE normalizeOrderBy #-}
 normalizeOrderBy :: forall a. (a -> a -> Ordering) -> [a] -> [a]
-normalizeOrderBy cmp = go
-  where
-    le :: a -> a -> Bool
-    le a b = case a `cmp` b of
-      GT -> False
-      _ -> True
-
-    isSorted :: [a] -> Bool
-    isSorted (s0 : s1 : ss) = s0 `le` s1 && isSorted (s1 : ss)
-    isSorted _ = True
-
-    go :: [a] -> [a]
-    go lst
-      | isSorted lst = lst
-      | otherwise = go $ bubble lst
-
-    bubble :: [a] -> [a]
-    bubble (s0 : s1 : ss)
-      | s0 `le` s1 = s0 : bubble (s1 : ss)
-      | otherwise = s1 : bubble (s0 : ss)
-    bubble lst = lst
+normalizeOrderBy = sortBy
 
 -- | 'uncons' copies the Prelude 'Prelude.uncons'.
 {-# INLINEABLE uncons #-}
@@ -257,7 +237,7 @@ deriveJSON defaultOptions ''Node
 
 -- 'existsNextNode' tests if there is a node which is the "next node" (See Note
 -- [Node Representation]) which may or may not provide proof of existence or
--- absence from the set.
+-- absence from the set (provided the precondition is satisfied).
 --
 -- Preconditions:
 --  - @prefix node `isPrefixOfByteString` str@ must be true (i.e., you should check
@@ -352,8 +332,10 @@ insertNode str node =
                               , nBranches = Just (initByteString inpSuf', [lastByteString inpSuf'])
                               }
                           , Node
-                              { nPrefix = snocByteString p (headByteString inpSuf) `appendByteString` inpSuf' -- this can be just @inp@
-                              , nLeaf = True
+                              { nPrefix = inp
+                              , -- If it makes things more clear, this is
+                                -- > snocByteString p (headByteString inpSuf) `appendByteString` inpSuf'
+                                nLeaf = True
                               , nBranches = Nothing
                               }
                           ]
@@ -433,7 +415,11 @@ mkInsertValidator :: Ds -> DsDatum -> DsRedeemer -> ScriptContext -> Bool
 mkInsertValidator ds _dat red ctx =
   traceIfFalse "error 'mkInsertValidator' incorrect new nodes" $ case insertNode nStr ownNode of
     Nothing -> False
-    Just nnodes -> normalizeNodes nnodes == nOwnNode : contNodes && normalizeOrder (map unTokenName mintedTns) == map nPrefix contNodes
+    Just nnodes ->
+      and
+        [ normalizeNodes nnodes == nOwnNode : contNodes
+        , normalizeOrder (map unTokenName mintedTns) == map nPrefix contNodes
+        ]
   where
     -- Similar reasoning for testing if we minted exactly the tokens
     -- for the new nodes.
@@ -455,12 +441,25 @@ mkInsertValidator ds _dat red ctx =
     -- Given a value, gets the 'TokenName's that correspond to the given
     -- 'CurrencySymbol' from 'dsSymbol'
     getTns :: Value -> Maybe [TokenName]
-    getTns = fmap AssocMap.keys . AssocMap.lookup curSymb . Value.getValue
+    getTns v =
+      AssocMap.toList <$> AssocMap.lookup curSymb (Value.getValue v)
+        >>= \kvs ->
+          if any ((/= 1) . snd) kvs
+            then Nothing
+            else Just $ map fst kvs
+
+    fromJust :: Maybe a -> a
+    fromJust v = case v of
+      Just v' -> v'
+      Nothing -> traceError err
+      where
+        err :: a
+        err = traceError "error 'mkInsertValidator' fromJust"
 
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.
     getTxOutNodeInfo :: TxOut -> Node
-    getTxOutNodeInfo txout = fromMaybe err $ do
+    getTxOutNodeInfo txout = fromJust $ do
       tn <-
         getTns (txOutValue txout) >>= \case
           [tn] -> return tn
@@ -469,24 +468,16 @@ mkInsertValidator ds _dat red ctx =
       d <- fmap getDatum (Contexts.findDatum dhash info) >>= PlutusTx.fromBuiltinData
       return $
         mkNode (unTokenName tn) d
-      where
-        err :: a
-        err = traceError "error 'mkInsertValidator' failed to query node info"
 
     ownNode :: Node
     ownNode =
-      fromMaybe err $
+      fromJust $
         Contexts.findOwnInput ctx >>= \inp ->
           let txout = txInInfoResolved inp
            in return $ getTxOutNodeInfo txout
-      where
-        err = traceError "error 'mkInsertValidator' in querying Spending input"
 
     mintedTns :: [TokenName]
-    mintedTns = normalizeOrder $ fromMaybe err $ getTns mint
-      where
-        err :: a
-        err = traceError "error 'mkInsertValidator' no minted currency symbols"
+    mintedTns = normalizeOrder $ fromJust $ getTns mint
 
     -- The continuing outputs with their 'TokenName' corresponding to the
     -- 'CurrencySymbol' from 'dsSymbol' AND the datum. This errors in the case
@@ -497,14 +488,11 @@ mkInsertValidator ds _dat red ctx =
     nOwnNode :: Node
     contNodes :: [Node]
     (nOwnNode, contNodes) =
-      fromMaybe err $
+      fromJust $
         uncons $
           normalizeNodes $
             fmap getTxOutNodeInfo $
               Contexts.getContinuingOutputs ctx
-      where
-        err :: a
-        err = traceError "error 'mkInsertValidator' no continuing outputs"
 
     normalizeNodes = normalizeOrderBy (compare `PlutusPrelude.on` nPrefix)
 
@@ -622,7 +610,6 @@ dsPolicy dsm =
 dsCurSymbol :: DsMint -> CurrencySymbol
 dsCurSymbol = Contexts.scriptCurrencySymbol . dsPolicy
 
-{-
 {- Note [Comparison to Stick Breaking Set]
     This was based off of the [Stick Breaking
     Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
@@ -709,13 +696,13 @@ dsCurSymbol = Contexts.scriptCurrencySymbol . dsPolicy
         Note [Adversary Proof of Work Attack]) to insert things in the set with
         common prefixes that differ all differ in a bit of the same index.
 
-        (2) Insertion code is a bit complex and requires scanning through all the
-        leaves and branches calculating the longest common prefix.
-        While this is upper bounded by by the size of the alphabet (recall this
-        is @2^8@), [other data
+        (2) Insertion code is a bit complex and requires scanning through all
+        the leaves and branches calculating the longest common prefix. While
+        this is upper bounded by by the size of the alphabet (recall this is
+        @2^8@), [other data
         structures](https://github.com/Plutonomicon/plutonomicon/blob/main/assoc.md)
         boast an honest to goodness constant time insertion (provided you know
-        where to insert it).
+        where to insert it). This actualy isn't that bad though.
 
         (3) the optimization of having branches that are strings is mainly
         helpful when strings of long common prefixes are inserted. I don't
@@ -953,5 +940,4 @@ This is well under the 16384B transaction size limit..
 
 > writeValidator  "serializedScript" $ DS.insertValidator  (DS.Ds "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 > writeMintingPolicy  "serializedMinting" $ DS.distributedSetPolicy   (DS.DsMint  $ TxOutRef (Plutus.V1.Ledger.Api.TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") 0)
--}
 -}

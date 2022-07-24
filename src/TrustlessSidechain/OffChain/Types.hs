@@ -136,7 +136,7 @@ data SaveRootParams = SaveRootParams
 $(deriveJSON defaultOptions ''SaveRootParams)
 
 -- | 'DsParams' are parameters for the distributed set.
-data DsParams = DistributedSetParams
+data DsParams = DsParams
   { -- | The 'TxOutRef' which is used as the "genesis" transaction to create
     -- the distributed set.
     dspTxOutRef :: TxOutRef
