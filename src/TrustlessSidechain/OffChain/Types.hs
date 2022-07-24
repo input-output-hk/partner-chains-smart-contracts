@@ -22,6 +22,7 @@ import Prelude qualified
 data SidechainParams = SidechainParams
   { chainId :: !BuiltinByteString
   , genesisHash :: !BuiltinByteString
+  , genesisMint :: (Maybe TxOutRef) -- any random UTxO to prevent subsequent minting
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -98,7 +99,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- | The asset class of the NFT identifying this committee hash
     token :: !AssetClass
   , -- | The signature for the new committee hash.
-    signature :: !BuiltinByteString
+    committeeSignatures :: [BuiltinByteString]
   , -- | Public keys of the current committee members.
     committeePubKeys :: [PubKey]
   }
@@ -128,7 +129,8 @@ $(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
-  , signature :: BuiltinByteString
+  , signatures :: [BuiltinByteString]
+  , threshold :: Integer
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
   deriving stock (Generic, Prelude.Show)

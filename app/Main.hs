@@ -22,9 +22,9 @@ import Schema (FormSchema)
 import Servant.Client.Core (BaseUrl (BaseUrl), Scheme (Http))
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator (deregister, registerWithMock)
 import TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint)
-import TrustlessSidechain.OffChain.UpdateCommitteeHash (updateCommitteeHash)
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (BurnParams, DeregisterParams, MintParams, RegisterParams, UpdateCommitteeHashParams)
+import TrustlessSidechain.OffChain.UpdateCommitteeHash (updateCommitteeHash)
 
 import Prelude
 

@@ -19,8 +19,14 @@ source-repository head
   type:     git
   location: https://github.com/mlabs-haskell/trustless-sidechain
 
--- Common sections
+flag defer-plugin-errors
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
 
+  default:     False
+  manual:      True
+
+-- Common sections
 
 common common-lang
   ghc-options:
@@ -29,6 +35,9 @@ common common-lang
     -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
     -fplugin-opt PlutusTx.Plugin:defer-errors
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
   build-depends:
     , base                     ^>=4.14
@@ -91,6 +100,7 @@ library
     TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.Utils
 
   build-depends:
     , aeson                      ^>=1.5.0.0
@@ -142,6 +152,7 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.DistributedSet
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.MultiSig
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:

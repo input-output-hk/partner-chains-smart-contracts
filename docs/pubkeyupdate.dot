@@ -9,6 +9,10 @@ strict digraph {
     label = "UTxO with datum | committee hash"
     ]
 
+  merkleRoot [
+    label = "UTxO with datum | Merkle root"
+    ]
+
 //  newPubKey [
 //    label = "UTxO with datum | ATMS verification key"
 //    ]
@@ -28,6 +32,7 @@ strict digraph {
 //      "]
 //
 
+  merkleRoot -> tx [style = dashed, label = "references"] 
   pubKey -> tx [label = "consumes"]
   tx -> newPubKey
 }
