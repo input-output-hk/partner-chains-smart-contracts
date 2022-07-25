@@ -1,7 +1,7 @@
 strict digraph { 
   node [shape=record]
 
-  burnTx [label = 
+  burnTx [label =
     "Burn Tx |
       redeemer: recipient address\l
       tx body: burnt tokens\l
