@@ -151,7 +151,7 @@ writeScripts scParams registrationData = do
       , writeData "exports/CommitteeCandidateValidator.datum" registrationData
       , writeData "exports/CommitteeCandidateValidator.redeemer" unitRedeemer
       , writeData "exports/FUELMintingPolicy.mint.redeemer" SideToMain
-      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide "" ""
+      , writeData "exports/FUELMintingPolicy.burn.redeemer" $ MainToSide ""
       ]
 
   case sequence results of
