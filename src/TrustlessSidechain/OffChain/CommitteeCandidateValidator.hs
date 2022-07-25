@@ -10,7 +10,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (Signature (getSignature), getPubKey)
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut (ScriptChainIndexTxOut), TxOutRef)
 import Plutus.Contract (Contract, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt)
 import Plutus.Script.Utils.V2.Address qualified as UtilsAddress
 import Plutus.V2.Ledger.Api (Datum (Datum), LedgerBytes (getLedgerBytes), toBuiltinData)
@@ -85,10 +85,9 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
   submitTxConstraintsWith @CommitteeCandidateRegistry lookups tx
   where
     isOwnEntry :: ChainIndexTxOut -> Bool
-    isOwnEntry PublicKeyChainIndexTxOut {} = False
-    isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Left _} = False
     isOwnEntry ScriptChainIndexTxOut {_ciTxOutDatum = Right (Datum d)} =
       maybe False isSignatureValid (PlutusTx.fromBuiltinData d)
+    isOwnEntry _ = False
 
     isSignatureValid :: BlockProducerRegistration -> Bool
     isSignatureValid datum =
