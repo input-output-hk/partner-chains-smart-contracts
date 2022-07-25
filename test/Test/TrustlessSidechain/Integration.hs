@@ -12,7 +12,7 @@ import Ledger (getCardanoTxId)
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash)
+import Plutus.Contract (awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
 import Plutus.V2.Ledger.Api (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
@@ -49,6 +49,7 @@ sidechainParams =
   SidechainParams
     { chainId = 0
     , genesisHash = ""
+    , genesisMint = Nothing
     }
 
 spoPrivKey :: Wallet.XPrv
@@ -152,6 +153,36 @@ test =
         )
         [shouldSucceed]
     , assertExecution
+        "FUELMintingPolicy.burnOneshotMint"
+        (initAda [100, 100, 100]) -- mint, fee, collateral
+        ( withContract $
+            const $ do
+              h <- ownPaymentPubKeyHash
+              utxo <- CommitteeCandidateValidator.getInputUtxo
+              utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
+              let scpOS = sidechainParams {genesisMint = Just utxo}
+              t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+              awaitTxConfirmed $ getCardanoTxId t
+              FUELMintingPolicy.burn $ BurnParams (-1) "" "" scpOS
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.burnOneshot double Mint"
+        (initAda [100, 100, 100]) -- mint, fee, collateral
+        ( do
+            withContract $
+              const $ do
+                h <- ownPaymentPubKeyHash
+                utxo <- CommitteeCandidateValidator.getInputUtxo
+                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
+                let scpOS = sidechainParams {genesisMint = Just utxo}
+                t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t
+                t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
+                awaitTxConfirmed $ getCardanoTxId t2
+        )
+        [shouldFail]
+    , assertExecution
         "FUELMintingPolicy.mint"
         (initAda [1, 1]) -- mint, fee
         ( withContract $
@@ -248,7 +279,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -295,7 +326,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -341,7 +372,7 @@ test =
                       { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
                       , OffChainTypes.token = nft
                       , OffChainTypes.committeePubKeys = nCmtPubKeys
-                      , OffChainTypes.signature = sig
+                      , OffChainTypes.committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -388,7 +419,7 @@ test =
                       { newCommitteePubKeys = nCmtPubKeys
                       , token = nft
                       , committeePubKeys = nCmtPubKeys
-                      , signature = sig
+                      , committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )

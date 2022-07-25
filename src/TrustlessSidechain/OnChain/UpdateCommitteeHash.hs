@@ -37,11 +37,12 @@ import TrustlessSidechain.OnChain.Types (
   GenesisMintCommitteeHash,
   UpdateCommitteeHash,
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashRedeemer (committeePubKeys, newCommitteeHash, signature),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteeHash),
   cToken,
   gcToken,
   gcTxOutRef,
  )
+import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 
 -- * Updating the committee hash
 
@@ -166,11 +167,11 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      verifyMultiSignature
-        (committeePubKeys red)
+      verifyMultisig
+        ((getLedgerBytes PlutusTx.. Crypto.getPubKey) `PlutusTx.map` (committeePubKeys red))
+        1
         (newCommitteeHash red)
-        (signature red)
-
+        (committeeSignatures red) -- TODO where are the other signatures?
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
@@ -185,6 +186,7 @@ updateCommitteeHashValidator updateCommitteeHash =
     untypedValidator = Scripts.mkUntypedValidator . mkUpdateCommitteeHashValidator
 
 -- | 'updateCommitteeHashAddress' is the address of the script
+{-# INLINEABLE updateCommitteeHashAddress #-}
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
 updateCommitteeHashAddress = Ledger.scriptHashAddress . Scripts.validatorHash . updateCommitteeHashValidator
 
@@ -193,6 +195,7 @@ updateCommitteeHashAddress = Ledger.scriptHashAddress . Scripts.validatorHash . 
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
+{-# INLINEABLE mkCommitteeHashPolicy #-}
 mkCommitteeHashPolicy :: GenesisMintCommitteeHash -> () -> ScriptContext -> Bool
 mkCommitteeHashPolicy gmch _red ctx =
   traceIfFalse "UTxO not consumed" hasUtxo
@@ -220,6 +223,7 @@ mkCommitteeHashPolicy gmch _red ctx =
       _ -> False
 
 -- | 'committeeHashPolicy' is the minting policy
+{-# INLINEABLE committeeHashPolicy #-}
 committeeHashPolicy :: GenesisMintCommitteeHash -> MintingPolicy
 committeeHashPolicy gch =
   Ledger.mkMintingPolicyScript $
@@ -227,5 +231,6 @@ committeeHashPolicy gch =
       `PlutusTx.applyCode` PlutusTx.liftCode gch
 
 -- | 'committeeHashCurSymbol' is the currency symbol
+{-# INLINEABLE committeeHashCurSymbol #-}
 committeeHashCurSymbol :: GenesisMintCommitteeHash -> CurrencySymbol
 committeeHashCurSymbol gmch = Ledger.scriptCurrencySymbol $ committeeHashPolicy gmch

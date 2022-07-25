@@ -88,7 +88,7 @@ updateCommitteeHash uchp =
               Redeemer $
                 Class.toBuiltinData $
                   UpdateCommitteeHashRedeemer
-                    { OnChainTypes.signature = sig
+                    { OnChainTypes.committeeSignatures = sigs
                     , OnChainTypes.committeePubKeys = cmtPubKeys
                     , OnChainTypes.newCommitteeHash = nCommitteeHash
                     }
@@ -129,8 +129,8 @@ updateCommitteeHash uchp =
 
     -- gets from the record the signature -- note that we need the explicit
     -- type signature from the same reason of 'cmtPubKeys'
-    sig :: BuiltinByteString
-    sig = OffChainTypes.signature (uchp :: UpdateCommitteeHashParams)
+    sigs :: [BuiltinByteString]
+    sigs = OffChainTypes.committeeSignatures (uchp :: UpdateCommitteeHashParams)
 
 {- | 'genesisCommitteeHash' intializes the committee hash given the parameters in 'GenesisCommitteeHashParams'.
  The intialization step is two steps:

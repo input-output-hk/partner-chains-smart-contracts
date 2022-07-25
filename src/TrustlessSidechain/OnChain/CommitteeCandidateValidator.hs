@@ -11,13 +11,13 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Ledger.Crypto (PubKey, Signature (getSignature), getPubKey)
+import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts qualified as TypedScripts
 import Plutus.Script.Utils.V2.Scripts.Validators (mkUntypedValidator)
-import Plutus.V2.Ledger.Api (LedgerBytes (getLedgerBytes), mkValidatorScript, toBuiltinData)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import Plutus.V2.Ledger.Api (mkValidatorScript, toBuiltinData)
+import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
@@ -29,19 +29,12 @@ import TrustlessSidechain.OnChain.Types (
 
 {-# INLINEABLE mkCommitteeCanditateValidator #-}
 mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
-mkCommitteeCanditateValidator scParams datum _ _ =
-  traceIfFalse "Signature must be valid" isSignatureValid
+mkCommitteeCanditateValidator _ datum _ ctx =
+  traceIfFalse "Must be signed by the original submitter" isSigned
   where
-    sidechainPubKey = bprSidechainPubKey datum
-    inputUtxo = bprInputUtxo datum
-    spoPubKey = getLedgerBytes $ getPubKey $ bprSpoPubKey datum
-    sig = getSignature $ bprSpoSignature datum
-
-    msg =
-      Builtins.serialiseData $
-        toBuiltinData $
-          BlockProducerRegistrationMsg scParams sidechainPubKey inputUtxo
-    isSignatureValid = verifyEd25519Signature spoPubKey msg sig
+    info = scriptContextTxInfo ctx
+    pkh = bprOwnPkh datum
+    isSigned = txSignedBy info pkh
 
 committeeCanditateValidator :: SidechainParams -> TypedScripts.Validator
 committeeCanditateValidator sidechainParams =

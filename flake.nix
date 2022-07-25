@@ -7,7 +7,6 @@
     nixpkgs.follows = "plutip/nixpkgs";
     haskell-nix.follows = "plutip/haskell-nix";
     iohk-nix.follows = "plutip/haskell-nix";
-    cardano-node.url = "github:input-output-hk/cardano-node/1.35.0";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -80,8 +79,13 @@
                 project.hsPkgs.cardano-cli.components.exes.cardano-cli
                 project.hsPkgs.cardano-node.components.exes.cardano-node
               ];
-              tools.haskell-language-server = { };
               additional = ps: [ ps.plutip ];
+              shellHook = ''
+                [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
+                     git config core.hooksPath hooks
+                }
+              '';
+              tools.haskell-language-server = { };
             };
           };
         in
