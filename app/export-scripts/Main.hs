@@ -74,14 +74,9 @@ main :: IO ()
 main = do
   args <- getArgs
 
-  (inputUtxoRaw, chainIdRaw, genesisHashRaw, maybeSpoPrivKey, maybeSidechainPrivKey) <- case args of
-    [a1, a2, a3] -> pure (a1, a2, a3, Nothing, Nothing)
-    [a1, a2, a3, a4] -> pure (a1, a2, a3, Just a4, Nothing)
-    [a1, a2, a3, a4, a5] -> pure (a1, a2, a3, Just a4, Just a5)
-    _ ->
-      die
-        "The following arguments are required: INPUT_UTXO CHAIN_ID GENESIS_HASH\n \
-        \folowed by two optional arguments: SPO_SKEY SIDECHAIN_SKEY"
+  (inputUtxoRaw, chainIdRaw, genesisHashRaw, rawSpoPrivKey, rawSidechainPrivKey) <- case args of
+    [a1, a2, a3, a4, a5] -> pure (a1, a2, a3, a4, a5)
+    _ -> die "The following arguments are required: INPUT_UTXO CHAIN_ID GENESIS_HASH SPO_SKEY SIDECHAIN_SKEY"
 
   let inputUtxo = fromRight (error "Unable to parse input UTxO") $ parseTxOutRef inputUtxoRaw
       gHash =
@@ -98,8 +93,8 @@ main = do
           , genesisHash = gHash
           }
 
-      spoPrivKey = maybe mockSpoPrivKey toSpoPrivKey maybeSpoPrivKey
-      sidechainPrivKey = maybe mockSidechainPrivKey toSidechainPrivKey maybeSidechainPrivKey
+      spoPrivKey = toSpoPrivKey rawSpoPrivKey
+      sidechainPrivKey = toSidechainPrivKey rawSidechainPrivKey
 
       registrationData =
         BlockProducerRegistration
@@ -253,11 +248,3 @@ printBS =
 printBuiltinBS :: Builtins.BuiltinByteString -> IO ()
 printBuiltinBS =
   printBS . Builtins.fromBuiltin
-
--- Mock data
-
-mockSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
-mockSpoPrivKey = genKeyDSIGN $ mkSeedFromBytes $ ByteString.replicate 32 123
-
-mockSidechainPrivKey :: SECP.SecKey
-mockSidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
