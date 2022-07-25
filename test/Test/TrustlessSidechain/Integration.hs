@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.TrustlessSidechain.Integration (test) where
@@ -24,7 +25,7 @@ import TrustlessSidechain.OffChain.Types (
   GenesisCommitteeHashParams (GenesisCommitteeHashParams),
   MintParams (MintParams),
   RegisterParams (RegisterParams),
-  SidechainParams (..),
+  SidechainParams (SidechainParams),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
@@ -108,16 +109,11 @@ test =
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
-              t <-
-                FUELMintingPolicy.mint $
-                  MintParams
-                    { OffChainTypes.amount = 1
-                    , OffChainTypes.recipient = h
-                    , OffChainTypes.sidechainParams = sidechainParams
-                    , OffChainTypes.proof = MT.emptyMp
-                    }
-              awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+              FUELMintingPolicy.mint
+                MintParams {amount = 1, recipient = h, proof = MT.emptyMp, sidechainParams}
+                >>= awaitTxConfirmed . getCardanoTxId
+              FUELMintingPolicy.burn
+                BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -126,13 +122,8 @@ test =
         ( withContract $
             const $ do
               h <- ownPaymentPubKeyHash
-              FUELMintingPolicy.mint $
-                MintParams
-                  { OffChainTypes.amount = 1
-                  , OffChainTypes.recipient = h
-                  , OffChainTypes.sidechainParams = sidechainParams
-                  , OffChainTypes.proof = MT.emptyMp
-                  }
+              FUELMintingPolicy.mint
+                MintParams {amount = 1, recipient = h, proof = MT.emptyMp, sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -141,16 +132,12 @@ test =
         ( do
             void $
               withContract $ \[pkh1] -> do
-                FUELMintingPolicy.mint $
-                  MintParams
-                    { OffChainTypes.amount = 1
-                    , OffChainTypes.recipient = pkh1
-                    , OffChainTypes.sidechainParams = sidechainParams
-                    , OffChainTypes.proof = MT.emptyMp
-                    }
+                FUELMintingPolicy.mint
+                  MintParams {amount = 1, recipient = pkh1, proof = MT.emptyMp, sidechainParams}
             withContractAs 1 $
               const $
-                FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+                FUELMintingPolicy.burn
+                  BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -158,16 +145,11 @@ test =
         (initAda [1, 1, 1] <> initAda [])
         ( withContract $ \[pkh1] ->
             do
-              t <-
-                FUELMintingPolicy.mint $
-                  MintParams
-                    { OffChainTypes.amount = 1
-                    , OffChainTypes.recipient = pkh1
-                    , OffChainTypes.sidechainParams = sidechainParams
-                    , OffChainTypes.proof = MT.emptyMp
-                    }
-              awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+              FUELMintingPolicy.mint
+                MintParams {amount = 1, recipient = pkh1, proof = MT.emptyMp, sidechainParams}
+                >>= awaitTxConfirmed . getCardanoTxId
+              FUELMintingPolicy.burn
+                BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
         )
         [shouldFail]
     , assertExecution
@@ -187,9 +169,9 @@ test =
                 tokenName = "Update committee hash test"
                 gch =
                   GenesisCommitteeHashParams
-                    { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
-                    , OffChainTypes.genesisAddress = addr
-                    , OffChainTypes.genesisToken = tokenName
+                    { genesisCommitteePubKeys = cmtPubKeys
+                    , genesisAddress = addr
+                    , genesisToken = tokenName
                     }
 
             UpdateCommitteeHash.genesisCommitteeHash gch
@@ -220,9 +202,9 @@ test =
                   tokenName = "Update committee hash test"
                   gch =
                     GenesisCommitteeHashParams
-                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
-                      , OffChainTypes.genesisAddress = addr
-                      , OffChainTypes.genesisToken = tokenName
+                      { genesisCommitteePubKeys = cmtPubKeys
+                      , genesisAddress = addr
+                      , genesisToken = tokenName
                       }
 
               nft <- UpdateCommitteeHash.genesisCommitteeHash gch
@@ -233,10 +215,10 @@ test =
 
                   uchp =
                     UpdateCommitteeHashParams
-                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
-                      , OffChainTypes.token = nft
-                      , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      { newCommitteePubKeys = nCmtPubKeys
+                      , token = nft
+                      , committeePubKeys = cmtPubKeys
+                      , signature = sig
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -266,9 +248,9 @@ test =
                   tokenName = "Update committee hash test"
                   gch =
                     GenesisCommitteeHashParams
-                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
-                      , OffChainTypes.genesisAddress = addr
-                      , OffChainTypes.genesisToken = tokenName
+                      { genesisCommitteePubKeys = cmtPubKeys
+                      , genesisAddress = addr
+                      , genesisToken = tokenName
                       }
 
               UpdateCommitteeHash.genesisCommitteeHash gch
@@ -280,10 +262,10 @@ test =
 
                   uchp =
                     UpdateCommitteeHashParams
-                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
-                      , OffChainTypes.token = nft
-                      , OffChainTypes.committeePubKeys = cmtPubKeys
-                      , OffChainTypes.signature = sig
+                      { newCommitteePubKeys = nCmtPubKeys
+                      , token = nft
+                      , committeePubKeys = cmtPubKeys
+                      , signature = sig
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
@@ -313,9 +295,9 @@ test =
                   tokenName = "Update committee hash test"
                   gch =
                     GenesisCommitteeHashParams
-                      { OffChainTypes.genesisCommitteePubKeys = cmtPubKeys
-                      , OffChainTypes.genesisAddress = addr
-                      , OffChainTypes.genesisToken = tokenName
+                      { genesisCommitteePubKeys = cmtPubKeys
+                      , genesisAddress = addr
+                      , genesisToken = tokenName
                       }
 
               nft <- UpdateCommitteeHash.genesisCommitteeHash gch
@@ -326,10 +308,10 @@ test =
 
                   uchp =
                     UpdateCommitteeHashParams
-                      { OffChainTypes.newCommitteePubKeys = nCmtPubKeys
-                      , OffChainTypes.token = nft
-                      , OffChainTypes.committeePubKeys = nCmtPubKeys
-                      , OffChainTypes.signature = sig
+                      { newCommitteePubKeys = nCmtPubKeys
+                      , token = nft
+                      , committeePubKeys = nCmtPubKeys
+                      , signature = sig
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
