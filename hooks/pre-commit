@@ -10,7 +10,7 @@ changed=$(git diff-index --cached --name-status HEAD -- | grep -v ^D | cut -f2)
 
 case $changed in *.hs*|*.lhs*)
      make -s format_check
-     make -s lint # not fatal
+     make -s lint
 esac
 case $changed in *.cabal*)
      make -s cabalfmt_check

@@ -72,4 +72,4 @@ cabalfmt_check: requires_nix_shell
 	cabal-fmt --check $(CABAL_SOURCES)
 
 lint: requires_nix_shell
-	hlint --no-summary --no-exit-code $(shell fd -ehs -elhs)
+	hlint --no-summary $(shell fd -ehs -elhs)
