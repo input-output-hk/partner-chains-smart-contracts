@@ -155,7 +155,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         case txOutDatum ownOutput of
           NoOutputDatum -> Nothing
           OutputDatum d -> Just d
-          OutputDatumHash dh -> Contexts.findDatum dh info
+          OutputDatumHash dh -> Contexts.findDatum dh info -- TODO: better return Nothing and disallow datumhashes entirely?
           >>= PlutusTx.fromBuiltinData . getDatum
 
     outputHasToken :: Bool
