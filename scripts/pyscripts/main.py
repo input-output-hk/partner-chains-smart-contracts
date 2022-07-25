@@ -5,18 +5,20 @@ import solver
 import utils
 
 def doexport(args):
-    if args.tx_in is None:
+    if args.genesis_tx_in is None:
         status, addr = utils.get_address(args.vkey_path, magic=args.magic)
         assert status == 'ok', addr
         status, json = utils.get_utxos(addr, args.magic)
         assert status == 'ok', json
         args.tx_in = next(iter(json.keys()))
     result = utils.export(
-        args.tx_in,
+        args.genesis_tx_in,
         args.chain_id,
         args.genesis_hash, # '0x01e3ce523edd00cefe9c06631a55a8877e5ae354eb1abcbb8d67e7a2ed87e95c'
+        args.own_pkh,
         args.spo_key,
         args.sidechain_skey,
+        args.register_tx_in,
     )
     print(result)
 
@@ -123,9 +125,14 @@ if __name__ == '__main__':
                        type=int
                        )
 
-    export.add_argument('-txin', '--tx-input',
-                        dest='tx_in',
-                        help='The input UTXO used to initiate the sidechain',
+    export.add_argument('-txin', '--genesis-tx-input',
+                        dest='genesis_tx_in',
+                        help='The input UTXO used to mint the initial mint of the tokens',
+                        type=str
+                        )
+    export.add_argument('-txin2', '--register-tx-input',
+                        dest='register_tx_in',
+                        help='The input UTXO used to register a committee candidate',
                         type=str
                         )
     export.add_argument('-ci', '--sidechain-id',
@@ -162,6 +169,9 @@ if __name__ == '__main__':
     elif args.magic == None:
         raise Exception("testnet-magic or mainnet argument is required")
 
+    status, own_pkh = utils.get_own_pkh(args.vkey_path)
+    assert status == 'ok', "Couldn't get verification key hash"
+    args.own_pkh = own_pkh
 
     match = {
         'export': doexport,

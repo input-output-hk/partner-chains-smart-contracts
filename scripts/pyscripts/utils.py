@@ -15,9 +15,9 @@ def option_then(o, f):
     return o and f(o)
 
 def on_ok(result, override):
-    status, err = result
+    status, payload = result
     if status == 'ok':
-        return status, override()
+        return status, override(payload)
     else:
         return result
 
@@ -86,7 +86,14 @@ def mk_vkey(skey_path):
         ]
 
         return on_ok(run_cli(cmd), lambda: vkey_path)
+
+def get_own_pkh(vkey_path):
+    cmd = [
+        'cardano-cli', 'address', 'key-hash',
+        f'--payment-verification-key-file={vkey_path}'
+    ]
     
+    return on_ok(run_cli(cmd), lambda x: x.strip())
 
 def get_utxos(addr, magic):
     with tempfile.NamedTemporaryFile(prefix='trustless-sidechain-', suffix='.json') as fd:
@@ -120,14 +127,13 @@ def get_value(script, name):
     return f'{out}.{name}'
 
 
-def export(tx_in, chain_id, genesis_hash, spo_key=None, sidechain_key=None):
+def export(genesis_tx_in, chain_id, genesis_hash, own_pkh, spo_key, sidechain_key, register_tx_in):
     os.makedirs(os.path.join(get_project_root(), 'exports'), exist_ok=True)
     cmd = [
         'cabal', 'run', 'trustless-sidechain-export', '--',
-        f'{tx_in}', f'{chain_id}', f'{genesis_hash}',
+        f'{genesis_tx_in}', f'{chain_id}', f'{genesis_hash}', f'{own_pkh}',
+        f'{spo_key}', f'{sidechain_key}', f'{register_tx_in}'
     ]
-    cmd += spo_key and [f'{spo_key}'] or []
-    cmd += spo_key and sidechain_key and [f'{sidechain_key}'] or []
     return run_cli(cmd, cwd=get_project_root())
 
 @cache

@@ -19,7 +19,9 @@ python main.py export \
 --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
 --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
 --sidechain-id 123 \
---sidechain-genesis-hash 112233
+--sidechain-genesis-hash 112233 \
+--genesis-tx-in 004bbb7e94b3ed5cd04d22fe4bf8f215a64c917bce12c68cbdc117d70efd4b98#0 \
+--register-tx-in 004bbb7e94b3ed5cd04d22fe4bf8f215a64c917bce12c68cbdc117d70efd4b98#0
 ```
 
 After that, you can build and optionally submit one or more transactions using the

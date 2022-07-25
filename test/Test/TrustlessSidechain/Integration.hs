@@ -149,7 +149,7 @@ test =
               h <- ownPaymentPubKeyHash
               t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
               awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
@@ -163,7 +163,7 @@ test =
               let scpOS = sidechainParams {genesisMint = Just utxo}
               t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
               awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" "" scpOS
+              FUELMintingPolicy.burn $ BurnParams (-1) "" scpOS
         )
         [shouldSucceed]
     , assertExecution
@@ -200,7 +200,7 @@ test =
                 FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
             withContractAs 1 $
               const $
-                FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+                FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldSucceed]
     , assertExecution
@@ -210,7 +210,7 @@ test =
             do
               t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
               awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" "" sidechainParams
+              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
         )
         [shouldFail]
     , assertExecution

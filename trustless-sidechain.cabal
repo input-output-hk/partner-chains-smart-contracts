@@ -155,6 +155,7 @@ executable trustless-sidechain-export
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , either
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
