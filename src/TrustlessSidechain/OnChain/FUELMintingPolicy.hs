@@ -32,7 +32,7 @@ mkMintingPolicy
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
     case mode of
-      MainToSide _ _ ->
+      MainToSide _ ->
         verifyTokenAmount $ traceIfFalse "Can't burn a positive amount" . (< 0)
       SideToMain ->
         verifyTokenAmount $ traceIfFalse "Can't mint a negative amount" . (> 0)

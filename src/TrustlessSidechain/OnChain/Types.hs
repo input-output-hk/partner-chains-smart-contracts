@@ -50,13 +50,11 @@ instance ValidatorTypes CommitteeCandidateRegistry where
 data FUELRedeemer
   = MainToSide
       BuiltinByteString -- Recipient's sidechain address
-      BuiltinByteString -- Recipient's sidechain signature
   | SideToMain -- !MerkleProof
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
 -- it's actually useful (and verified) on the sidechain, so it needs to be
--- recorded in the mainchain. Signature is added to make sure the address does
--- not refer to a script.
+-- recorded in the mainchain. 
 
 PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
