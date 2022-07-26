@@ -72,7 +72,8 @@ def get_params_file(magic):
             '--mainnet' if magic == MAINNET_MAGIC else f'--testnet-magic={magic}',
             f'--out-file={fd.name}',
         ]
-        return on_ok(run_cli(cmd), lambda: fd.name)
+        return on_ok(run_cli(cmd), lambda _: fd.name)
+
 
 def mk_vkey(skey_path):
     vkey_path = splitext(skey_path)[0] + '.vkey'
@@ -85,7 +86,7 @@ def mk_vkey(skey_path):
             f'--verification-key-file={vkey_path}',
         ]
 
-        return on_ok(run_cli(cmd), lambda: vkey_path)
+        return on_ok(run_cli(cmd), lambda _: vkey_path)
 
 def get_own_pkh(vkey_path):
     cmd = [
@@ -103,7 +104,7 @@ def get_utxos(addr, magic):
             f'--address={addr}',
             f'--out-file={fd.name}'
         ]
-        return on_ok(run_cli(cmd), lambda: json.load(fd))
+        return on_ok(run_cli(cmd), lambda _: json.load(fd))
 
 @cache
 def get_project_root():
@@ -177,6 +178,7 @@ def build(
         option_then(kw.get('mint_val'), lambda x: f'--mint={x[0]} {x[1]}'),
         option_then(kw.get('mint_script'), lambda x: f'--mint-script-file={x}'),
         option_then(kw.get('mint_redeemer'), lambda x: f'--mint-redeemer-file={x}'),
+        option_then(kw.get('required_signer'), lambda x: f'--required-signer-hash={x}'),
 
         f'--change-address={own_addr}',
         f'--protocol-params-file={params}',

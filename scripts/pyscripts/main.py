@@ -44,6 +44,7 @@ def dobuild(args):
             "in_script": exports('CommitteeCandidateValidator.plutus'),
             "in_inline_datum": True,
             "in_redeemer": exports('CommitteeCandidateValidator.redeemer'),
+            "required_signer": args.own_pkh,
         },
         "mint" : {
             "mint_val": (args.mint_amount, utils.get_value(exports('FUELMintingPolicy.plutus'), 'FUEL')),
