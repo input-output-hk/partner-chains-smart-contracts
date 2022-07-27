@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+die() {
+	code=$?
+	echo $* >&2 && exit $code
+}
+
 # If there are whitespace errors, print the offending file names and fail.
 git diff-index --cached --check HEAD --
 
@@ -22,7 +27,8 @@ set -e
 		-o -XPatternSynonyms
 		-o -fplugin=RecordDotPreprocessor
 	'
-	fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell
+	fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell \
+		|| die "Please check formatting in $haskell"
 	hlint --no-summary $haskell
 }
 # `test && cmd` would fail the script if the test fails
