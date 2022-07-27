@@ -3,15 +3,13 @@
 module TrustlessSidechain.OffChain.FUELMintingPolicy where
 
 import Control.Monad (when)
-import Data.Map qualified as Map
+import Data.Map (Map)
 import Data.Text (Text)
-import Ledger (CardanoTx, ChainIndexTxOut, TxOutRef, scriptCurrencySymbol)
+import Ledger (CardanoTx, ChainIndexTxOut, Redeemer (Redeemer), TxOutRef, scriptCurrencySymbol)
 import Ledger.Constraints qualified as Constraint
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
-import Plutus.V2.Ledger.Api (Redeemer (Redeemer))
 import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
@@ -21,7 +19,7 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
-import Prelude qualified --(Semigroup(..))
+import Prelude qualified
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 burn BurnParams {amount, sidechainParams, recipient} = do
@@ -33,10 +31,10 @@ burn BurnParams {amount, sidechainParams, recipient} = do
     (Constraint.mintingPolicy policy)
     (Constraint.mustMintValueWithRedeemer redeemer value)
 
-mintWithUtxo :: Maybe (Map.Map TxOutRef ChainIndexTxOut) -> MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
+mintWithUtxo :: Maybe (Map TxOutRef ChainIndexTxOut) -> MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 mintWithUtxo utxo MintParams {amount, sidechainParams, recipient} = do
   let policy = FUELMintingPolicy.mintingPolicy sidechainParams
-      value = Value.singleton (ScriptUtils.scriptCurrencySymbol policy) "FUEL" amount
+      value = Value.singleton (scriptCurrencySymbol policy) "FUEL" amount
       redeemer = Redeemer $ toBuiltinData SideToMain
       lookups =
         Constraint.mintingPolicy policy
