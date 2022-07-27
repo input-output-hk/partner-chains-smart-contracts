@@ -6,12 +6,12 @@ module TrustlessSidechain.OnChain.Types where
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger.Crypto (PubKey, Signature)
+import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Value (AssetClass, TokenName)
 import Plutus.V2.Ledger.Contexts (TxOutRef)
 import PlutusTx qualified
-import PlutusTx.Prelude (BuiltinByteString, Eq ((==)))
+import PlutusTx.Prelude (BuiltinByteString, Eq ((==)), Integer)
 import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainPubKey)
 import Prelude qualified
 
@@ -26,6 +26,8 @@ data BlockProducerRegistration = BlockProducerRegistration
     bprSidechainSignature :: Signature
   , -- | A UTxO that must be spent by the transaction
     bprInputUtxo :: TxOutRef
+  , -- | Owner public key hash
+    bprOwnPkh :: PubKeyHash
   }
   deriving stock (Prelude.Show)
 
@@ -48,13 +50,12 @@ instance ValidatorTypes CommitteeCandidateRegistry where
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
-  = MainToSide
-      BuiltinByteString -- Recipient's sidechain address
-  | SideToMain -- !MerkleProof
+  = MainToSide BuiltinByteString -- Recipient's sidechain address
+  | SideToMain -- MerkleProof
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
 -- it's actually useful (and verified) on the sidechain, so it needs to be
--- recorded in the mainchain. 
+-- recorded in the mainchain.
 
 PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
@@ -83,13 +84,12 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatu
  committee
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { -- | The 'signature' is the current committee's signature for the
-    -- 'newCommitteeHash'
-    signature :: !BuiltinByteString
+  { -- | The current committee's signatures for the 'newCommitteeHash'
+    committeeSignatures :: [BuiltinByteString]
   , -- | 'committeePubKeys' is the current committee public keys
     committeePubKeys :: [PubKey]
   , -- | 'newCommitteeHash' is the hash of the new committee
-    newCommitteeHash :: !BuiltinByteString
+    newCommitteeHash :: BuiltinByteString
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
@@ -117,9 +117,9 @@ PlutusTx.makeLift ''UpdateCommitteeHash
 -- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
 data GenesisMintCommitteeHash = GenesisMintCommitteeHash
   { -- | 'gcToken' is the token name of the NFT to start the committee hash
-    gcToken :: !TokenName
+    gcToken :: TokenName
   , -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    gcTxOutRef :: !TxOutRef
+    gcTxOutRef :: TxOutRef
   }
   deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -128,7 +128,8 @@ PlutusTx.makeLift ''GenesisMintCommitteeHash
 
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
-  , signature :: BuiltinByteString
+  , signatures :: [BuiltinByteString]
+  , threshold :: Integer -- Natural: the number of committee pubkeys needed to sign off
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
 

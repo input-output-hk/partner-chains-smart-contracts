@@ -26,7 +26,7 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
-import Data.Either (fromRight)
+import Data.Either.Combinators (mapLeft, maybeToRight)
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -36,6 +36,7 @@ import Ledger.Address (scriptHashAddress)
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   LedgerBytes (LedgerBytes),
+  PubKeyHash (PubKeyHash),
   ToData (toBuiltinData),
   TxId (TxId),
   TxOutRef (TxOutRef),
@@ -46,7 +47,7 @@ import System.Environment (getArgs)
 import System.Exit (die)
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  SidechainParams (SidechainParams, chainId, genesisHash),
+  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint),
   SidechainPubKey (SidechainPubKey),
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
@@ -55,6 +56,7 @@ import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (
     BlockProducerRegistration,
     bprInputUtxo,
+    bprOwnPkh,
     bprSidechainPubKey,
     bprSidechainSignature,
     bprSpoPubKey,
@@ -70,45 +72,41 @@ import TrustlessSidechain.OnChain.Types (
  )
 import Prelude hiding (takeWhile)
 
+data Args = Args
+  { genesisTxIn :: TxOutRef
+  , chainId :: Integer
+  , genesisHash :: GenesisHash
+  , ownPkh :: PubKeyHash
+  , spoPrivKey :: SignKeyDSIGN Ed25519DSIGN
+  , sidechainPrivKey :: SECP.SecKey
+  , registerTxIn :: TxOutRef
+  }
+
 main :: IO ()
 main = do
-  args <- getArgs
+  args <- either die pure . parseArgs =<< getArgs
 
-  (inputUtxoRaw, chainIdRaw, genesisHashRaw, rawSpoPrivKey, rawSidechainPrivKey) <- case args of
-    [a1, a2, a3, a4, a5] -> pure (a1, a2, a3, a4, a5)
-    _ -> die "The following arguments are required: INPUT_UTXO CHAIN_ID GENESIS_HASH SPO_SKEY SIDECHAIN_SKEY"
-
-  let inputUtxo = fromRight (error "Unable to parse input UTxO") $ parseTxOutRef inputUtxoRaw
-      gHash =
-        GenesisHash
-          . Builtins.toBuiltin
-          . fromRight (error "Unable to parse genesisHash")
-          . Base16.decode
-          . Char8.pack
-          $ genesisHashRaw
-
-      scParams =
+  let scParams =
         SidechainParams
-          { chainId = read chainIdRaw
-          , genesisHash = gHash
+          { chainId = args.chainId
+          , genesisHash = args.genesisHash
+          , genesisMint = Just args.genesisTxIn
           }
-
-      spoPrivKey = toSpoPrivKey rawSpoPrivKey
-      sidechainPrivKey = toSidechainPrivKey rawSidechainPrivKey
 
       registrationData =
         BlockProducerRegistration
-          { bprSpoPubKey = toSpoPubKey spoPrivKey
-          , bprSidechainPubKey = toSidechainPubKey sidechainPrivKey
-          , bprSpoSignature = signWithSPOKey spoPrivKey msg
-          , bprSidechainSignature = signWithSidechainKey sidechainPrivKey msg
-          , bprInputUtxo = inputUtxo
+          { bprSpoPubKey = toSpoPubKey args.spoPrivKey
+          , bprSidechainPubKey = toSidechainPubKey args.sidechainPrivKey
+          , bprSpoSignature = signWithSPOKey args.spoPrivKey msg
+          , bprSidechainSignature = signWithSidechainKey args.sidechainPrivKey msg
+          , bprInputUtxo = args.registerTxIn
+          , bprOwnPkh = args.ownPkh
           }
       msg =
         BlockProducerRegistrationMsg
           { bprmSidechainParams = scParams
-          , bprmSidechainPubKey = toSidechainPubKey sidechainPrivKey
-          , bprmInputUtxo = inputUtxo
+          , bprmSidechainPubKey = toSidechainPubKey args.sidechainPrivKey
+          , bprmInputUtxo = args.registerTxIn
           }
       scriptHash = validatorHash (CommitteeCandidateValidator.committeeCanditateValidator scParams)
       serialised = Builtins.serialiseData $ toBuiltinData msg
@@ -131,10 +129,6 @@ main = do
   printBuiltinBS serialised
 
   writeScripts scParams registrationData
-  where
-    parseTxOutRef =
-      parseOnly txOutRefParser
-        . Text.pack
 
 writeScripts :: SidechainParams -> BlockProducerRegistration -> IO ()
 writeScripts scParams registrationData = do
@@ -157,6 +151,46 @@ writeScripts scParams registrationData = do
   case sequence results of
     Left _ -> print results
     Right _ -> return ()
+
+parseArgs :: [String] -> Either String Args
+parseArgs =
+  \case
+    [ rawGenesisTxIn
+      , rawChainId
+      , rawGenesisHash
+      , rawOwnPkh
+      , rawSpoPrivKey
+      , rawSidechainPrivKey
+      , rawRegisterTxIn
+      ] ->
+        Args
+          <$> mapLeft ("Unable to parse genesis input UTxO: " <>) (parseTxOutRef rawGenesisTxIn)
+          <*> Right (read rawChainId)
+          <*> parseGenesisHash rawGenesisHash
+          <*> parsePkh rawOwnPkh
+          <*> toSpoPrivKey rawSpoPrivKey
+          <*> toSidechainPrivKey rawSidechainPrivKey
+          <*> mapLeft ("Unable to parse register input UTxO:" <>) (parseTxOutRef rawRegisterTxIn)
+    _ ->
+      Left
+        "The following arguments are required: \
+        \INPUT_UTXO CHAIN_ID GENESIS_HASH OWN_PKH SPO_SKEY SIDECHAIN_SKEY"
+  where
+    parseTxOutRef =
+      parseOnly txOutRefParser
+        . Text.pack
+
+    parseGenesisHash =
+      fmap (GenesisHash . Builtins.toBuiltin)
+        . mapLeft ("Unable to parse genesisHash: " <>)
+        . Base16.decode
+        . Char8.pack
+
+    parsePkh =
+      fmap (PubKeyHash . Builtins.toBuiltin)
+        . mapLeft ("Unable to parse verification key hash: " <>)
+        . Base16.decode
+        . Char8.pack
 
 -- Keys
 
@@ -185,11 +219,10 @@ signWithSidechainKey skey msg =
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
 
-toSpoPrivKey :: String -> SignKeyDSIGN Ed25519DSIGN
+toSpoPrivKey :: String -> Either String (SignKeyDSIGN Ed25519DSIGN)
 toSpoPrivKey =
-  genKeyDSIGN @Ed25519DSIGN
-    . mkSeedFromBytes
-    . fromRight (error "Invalid spo key hex")
+  fmap (genKeyDSIGN @Ed25519DSIGN . mkSeedFromBytes)
+    . mapLeft ("Invalid spo key hex: " <>)
     . Base16.decode
     . Char8.pack
 
@@ -201,13 +234,14 @@ toSpoPubKey =
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
     . deriveVerKeyDSIGN
 
-toSidechainPrivKey :: String -> SECP.SecKey
-toSidechainPrivKey =
-  fromMaybe (error "Unable to parse sidechain private key")
-    . SECP.secKey
-    . fromRight (error "Invalid sidechain key hex")
-    . Base16.decode
-    . Char8.pack
+toSidechainPrivKey :: String -> Either String SECP.SecKey
+toSidechainPrivKey raw = do
+  decoded <-
+    mapLeft ("Invalid sidechain key hex: " <>)
+      . Base16.decode
+      . Char8.pack
+      $ raw
+  maybeToRight "Unable to parse sidechain private key" $ SECP.secKey decoded
 
 toSidechainPubKey :: SECP.SecKey -> SidechainPubKey
 toSidechainPubKey =

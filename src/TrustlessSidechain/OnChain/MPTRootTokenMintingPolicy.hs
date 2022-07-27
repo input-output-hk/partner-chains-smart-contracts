@@ -17,6 +17,7 @@ import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
+import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
@@ -24,19 +25,16 @@ mkMintingPolicy
   _
   SignedMerkleRoot
     { merkleRoot
-    , signature
+    , signatures
     , committeePubKeys
+    , threshold
     }
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
     verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1))
-      && any
-        ( \pubKey ->
-            verifyEd25519Signature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
-        )
-        committeePubKeys
+      && verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
     where
       verifyTokenAmount verify =
         case Value.flattenValue txInfoMint of

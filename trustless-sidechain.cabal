@@ -98,6 +98,7 @@ library
     TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.Utils
 
   build-depends:
     , aeson                      ^>=1.5.0.0
@@ -154,6 +155,7 @@ executable trustless-sidechain-export
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , either
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
@@ -173,6 +175,7 @@ test-suite trustless-sidechain-test
   other-modules:
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.MultiSig
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
@@ -180,6 +183,7 @@ test-suite trustless-sidechain-test
     , cardano-api
     , cardano-crypto
     , cardano-crypto-class
+    , containers
     , data-default
     , plutip
     , plutus-contract
@@ -191,6 +195,7 @@ test-suite trustless-sidechain-test
     , quickcheck-instances
     , secp256k1-haskell
     , tasty
+    , tasty-hunit
     , tasty-quickcheck
     , trustless-sidechain
 
