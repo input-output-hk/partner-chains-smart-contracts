@@ -9,7 +9,6 @@ import Ledger.Constraints as Constraints
 import Ledger.Tx qualified as Tx
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
-import Plutus.V1.Ledger.Value (AssetClass, Value)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
 import PlutusTx.Prelude
@@ -47,57 +46,50 @@ import Prelude qualified
 -}
 initSidechain :: InitSidechainParams -> Contract () TrustlessSidechainSchema Text SidechainParams
 initSidechain isp =
-  Contract.txOutFromRef oref
-    >>= \case
-      Nothing -> Contract.throwError "bad 'initUtxo'"
-      Just o -> do
-        let ichm :: InitCommitteeHashMint
-            ichm = InitCommitteeHashMint {icTxOutRef = oref}
+  let oref = initUtxo isp
+   in Contract.txOutFromRef oref
+        >>= \case
+          Nothing -> Contract.throwError "bad 'initUtxo'"
+          Just o -> do
+            let ichm = InitCommitteeHashMint {icTxOutRef = oref}
 
-            nft :: AssetClass
-            nft = UpdateCommitteeHash.committeeHashAssetClass ichm
+                nft = UpdateCommitteeHash.committeeHashAssetClass ichm
 
-            val :: Value
-            val = Value.assetClassValue nft 1
+                val = Value.assetClassValue nft 1
 
-            uch :: UpdateCommitteeHash
-            uch = UpdateCommitteeHash {cToken = nft}
+                uch = UpdateCommitteeHash {cToken = nft}
 
-            ndat :: UpdateCommitteeHashDatum
-            ndat =
-              UpdateCommitteeHashDatum
-                { committeeHash =
-                    UpdateCommitteeHash.aggregateKeys $
-                      initCommittee isp
+                ndat =
+                  UpdateCommitteeHashDatum
+                    { committeeHash =
+                        UpdateCommitteeHash.aggregateKeys $
+                          initCommittee isp
+                    }
+
+                lookups =
+                  Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
+                    Prelude.<> Constraints.unspentOutputs (Map.singleton oref o)
+                    Prelude.<> Constraints.typedValidatorLookups
+                      (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
+
+                tx =
+                  Constraints.mustSpendPubKeyOutput oref
+                    Prelude.<> Constraints.mustMintValue val
+                    Prelude.<> Constraints.mustPayToTheScript ndat val
+
+            ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
+
+            void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+
+            Contract.logInfo $ "Minted " <> Prelude.show val <> " and paid to script validator"
+
+            return
+              SidechainParams
+                { chainId = initChainId isp
+                , genesisHash = initGenesisHash isp
+                , genesisUtxo = oref
+                , genesisMint = initMint isp
                 }
-
-            lookups =
-              Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
-                Prelude.<> Constraints.unspentOutputs (Map.singleton oref o)
-                Prelude.<> Constraints.typedValidatorLookups
-                  (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
-
-            tx =
-              Constraints.mustSpendPubKeyOutput oref
-                Prelude.<> Constraints.mustMintValue val
-                Prelude.<> Constraints.mustPayToTheScript ndat val
-
-        ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
-
-        void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-
-        Contract.logInfo $ "Minted " ++ Prelude.show val ++ " and paid to script validator"
-
-        return
-          SidechainParams
-            { chainId = initChainId isp
-            , genesisHash = initGenesisHash isp
-            , genesisUtxo = oref
-            , genesisMint = initMint isp
-            }
-  where
-    oref :: TxOutRef
-    oref = initUtxo isp
 
 {- | 'ownTxOutRef' gets a 'TxOutRef' from 'Contract.ownPaymentPubKeyHash'. This
  is used in the test suite for convience to make intializing the sidechain a
