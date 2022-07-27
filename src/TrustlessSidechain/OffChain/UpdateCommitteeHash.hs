@@ -20,7 +20,6 @@ import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Logging qualified as Logging
 import Plutus.V1.Ledger.Api (Datum (getDatum))
-import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
 import PlutusTx.IsData.Class qualified as Class
