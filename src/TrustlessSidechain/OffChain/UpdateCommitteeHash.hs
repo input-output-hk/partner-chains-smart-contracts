@@ -159,7 +159,7 @@ genesisCommitteeHash gch =
     utxo@(oref, _) : _ -> do
       -- (1) / (2)
       let tn = OffChainTypes.genesisToken gch
-          sm = (UpdateCommitteeHash.committeeHashCurSymbol gmch)
+          sm = UpdateCommitteeHash.committeeHashCurSymbol gmch
 
           gmch = GenesisMintCommitteeHash {gcToken = tn, gcTxOutRef = oref}
 

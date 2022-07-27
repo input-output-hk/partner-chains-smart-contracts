@@ -21,7 +21,7 @@ import Prelude qualified
 data SidechainParams = SidechainParams
   { chainId :: !BuiltinByteString
   , genesisHash :: !BuiltinByteString
-  , genesisMint :: (Maybe TxOutRef) -- any random UTxO to prevent subsequent minting
+  , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
