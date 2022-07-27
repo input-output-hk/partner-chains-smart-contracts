@@ -27,11 +27,12 @@ import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
   AssetClass,
   CurrencySymbol,
-  TokenName,
+  TokenName (TokenName),
   Value,
  )
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OnChain.Types (
@@ -217,42 +218,46 @@ updateCommitteeHashAddress = Scripts.validatorAddress . typedUpdateCommitteeHash
 
 -- * Initializing the committee hash
 
--- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
-data GenesisMintCommitteeHash = GenesisMintCommitteeHash
-  { -- | 'gcToken' is the token name of the NFT to start the committee hash
-    gcToken :: !TokenName
-  , -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    gcTxOutRef :: !TxOutRef
+-- | 'InitCommitteeHashMint' is used as the parameter for the minting policy
+newtype InitCommitteeHashMint = InitCommitteeHashMint
+  { -- | 'TxOutRef' is the output reference to mint the NFT initially.
+    icTxOutRef :: TxOutRef
   }
   deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-PlutusTx.makeLift ''GenesisMintCommitteeHash
+PlutusTx.makeLift ''InitCommitteeHashMint
+
+{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
+ the utxo which contains the committee hash. We use an empty bytestring for
+ this because the name really doesn't matter, so we mighaswell save a few
+ bytes by giving it the empty name.
+-}
+{-# INLINEABLE initCommitteeHashMintTn #-}
+initCommitteeHashMintTn :: TokenName
+initCommitteeHashMintTn = TokenName Builtins.emptyByteString
 
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
 {-# INLINEABLE mkCommitteeHashPolicy #-}
-mkCommitteeHashPolicy :: GenesisMintCommitteeHash -> () -> ScriptContext -> Bool
-mkCommitteeHashPolicy gmch _red ctx =
+mkCommitteeHashPolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
+mkCommitteeHashPolicy ichm _red ctx =
   traceIfFalse "UTxO not consumed" hasUtxo
     && traceIfFalse "wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
-    tn :: TokenName
-    tn = gcToken gmch
-
     oref :: TxOutRef
-    oref = gcTxOutRef gmch
+    oref = icTxOutRef ichm
 
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
     checkMintedAmount :: Bool
     checkMintedAmount = case Value.flattenValue (txInfoMint info) of
-      [(_cs, tn', amt)] -> tn' == tn && amt == 1
+      [(_cs, tn', amt)] -> tn' == initCommitteeHashMintTn && amt == 1
       -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
       -- since the ledger rules ensure that the minting policy will only
       -- be run if some of the asset is actually being minted: see
@@ -261,7 +266,7 @@ mkCommitteeHashPolicy gmch _red ctx =
 
 -- | 'committeeHashPolicy' is the minting policy
 {-# INLINEABLE committeeHashPolicy #-}
-committeeHashPolicy :: GenesisMintCommitteeHash -> MintingPolicy
+committeeHashPolicy :: InitCommitteeHashMint -> MintingPolicy
 committeeHashPolicy gch =
   Scripts.mkMintingPolicyScript $
     $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkCommitteeHashPolicy||])
@@ -269,5 +274,12 @@ committeeHashPolicy gch =
 
 -- | 'committeeHashCurSymbol' is the currency symbol
 {-# INLINEABLE committeeHashCurSymbol #-}
-committeeHashCurSymbol :: GenesisMintCommitteeHash -> CurrencySymbol
-committeeHashCurSymbol gmch = Contexts.scriptCurrencySymbol $ committeeHashPolicy gmch
+committeeHashCurSymbol :: InitCommitteeHashMint -> CurrencySymbol
+committeeHashCurSymbol ichm = Contexts.scriptCurrencySymbol $ committeeHashPolicy ichm
+
+{- | 'committeeHashCurSymbol' is the asset class. See 'initCommitteeHashMintTn'
+ for details on the token name
+-}
+{-# INLINEABLE committeeHashAssetClass #-}
+committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
+committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn

@@ -27,7 +27,6 @@ import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  GenesisCommitteeHashParams,
   UpdateCommitteeHashParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
@@ -38,11 +37,7 @@ import TrustlessSidechain.OnChain.Types (
  )
 import TrustlessSidechain.OnChain.Types qualified as OnChainTypes
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
-  GenesisMintCommitteeHash (
-    GenesisMintCommitteeHash,
-    gcToken,
-    gcTxOutRef
-  ),
+  InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef),
   UpdateCommitteeHash (UpdateCommitteeHash, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
   UpdatingCommitteeHash,
@@ -119,7 +114,13 @@ updateCommitteeHash uchp =
     uch :: UpdateCommitteeHash
     uch =
       UpdateCommitteeHash
-        { cToken = OffChainTypes.token uchp
+        { cToken =
+            UpdateCommitteeHash.committeeHashAssetClass
+              InitCommitteeHashMint
+                { icTxOutRef =
+                    OffChainTypes.genesisUtxo $
+                      OffChainTypes.sidechainParams (uchp :: UpdateCommitteeHashParams)
+                }
         }
 
     -- new committee hash from the endpoint parameters
@@ -142,54 +143,3 @@ updateCommitteeHash uchp =
     -- type signature from the same reason of 'cmtPubKeys'
     sigs :: [BuiltinByteString]
     sigs = OffChainTypes.committeeSignatures (uchp :: UpdateCommitteeHashParams)
-
-{- | 'genesisCommitteeHash' intializes the committee hash given the parameters in 'GenesisCommitteeHashParams'.
- The intialization step is two steps:
-
-  (1) Create an NFT which identifies the committee hash
-
-  (2) Spend that NFT to a script output which contains the committee hash
-
-This creates a transaction which executes both of these steps with a single transaction.
--}
-genesisCommitteeHash :: GenesisCommitteeHashParams -> Contract () TrustlessSidechainSchema Text AssetClass
-genesisCommitteeHash gch =
-  fmap Indexed.itoList (Contract.utxosAt (OffChainTypes.genesisAddress gch)) >>= \case
-    [] -> Contract.throwError "no UTxO found"
-    utxo@(oref, _) : _ -> do
-      -- (1) / (2)
-      let tn = OffChainTypes.genesisToken gch
-          sm = (UpdateCommitteeHash.committeeHashCurSymbol gmch)
-
-          gmch = GenesisMintCommitteeHash {gcToken = tn, gcTxOutRef = oref}
-
-          val = Value.singleton sm tn 1
-
-          nft = Value.assetClass sm tn
-
-          uch = UpdateCommitteeHash {cToken = nft}
-          ndat =
-            UpdateCommitteeHashDatum
-              { committeeHash =
-                  UpdateCommitteeHash.aggregateKeys $
-                    OffChainTypes.genesisCommitteePubKeys gch
-              }
-
-          lookups =
-            Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy gmch)
-              Prelude.<> Constraints.unspentOutputs (uncurry Map.singleton utxo)
-              Prelude.<> Constraints.typedValidatorLookups
-                (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
-
-          tx =
-            Constraints.mustSpendPubKeyOutput oref
-              Prelude.<> Constraints.mustMintValue val
-              Prelude.<> Constraints.mustPayToTheScript ndat val
-
-      ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
-
-      void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-
-      Contract.logInfo $ "Minted " ++ Prelude.show val ++ " and paid to script validator"
-
-      return nft

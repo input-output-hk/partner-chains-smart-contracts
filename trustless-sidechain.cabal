@@ -88,6 +88,7 @@ library
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.InitSidechain
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
@@ -166,6 +167,7 @@ test-suite trustless-sidechain-test
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , text
     , trustless-sidechain
 
   hs-source-dirs: test
