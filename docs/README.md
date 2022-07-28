@@ -19,7 +19,7 @@ All of these policies/validators are parameterised by the sidechain parameters, 
 
 ```haskell
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinByteString
+  { chainId :: BuiltinInteger
   , genesisHash :: BuiltinByteString
   , genesisOutRef :: TxOutRef
     -- ^ 'genesisOutRef' is an arbitrary 'TxOutRef' used to identify internal

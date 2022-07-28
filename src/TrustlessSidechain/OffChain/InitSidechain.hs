@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Ledger (TxOutRef)
 import Ledger.Address qualified as Address
-import Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
