@@ -169,6 +169,7 @@ let additions =
         , repo = "https://github.com/juspay/medea-ps.git"
         , version = "8b215851959aa8bbf33e6708df6bd683c89d1a5a"
         }
+
       , aeson =
         { dependencies =
           [ "aff"
@@ -210,7 +211,7 @@ let additions =
           , "untagged-union"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-aeson.git"
-        , version = "69bd18c4a9cffdebc45c55d2448740721a91854c"
+        , version = "286862a975f4bafbef15540c365bbbb0480e0bf7"
         }
       , aeson-helpers =
         { dependencies =
@@ -267,8 +268,21 @@ let additions =
         , repo = "https://github.com/hdgarrood/purescript-sequences"
         , version = "v3.0.2"
         }
-      , cardano-transaction-lib =
+      , purescript-toppokki =
         { dependencies =
+          [ "prelude"
+          , "record"
+          , "functions"
+          , "node-http"
+          , "aff-promise"
+          , "node-buffer"
+          , "node-fs-aff"
+          ]
+        , repo = "https://github.com/firefrorefiddle/purescript-toppokki"
+        , version = "6983e07bf0aa55ab779bcef12df3df339a2b5bd9"
+        }
+      , cardano-transaction-lib = {
+          dependencies =
           [ "aeson"
           , "aeson-helpers"
           , "aff"
@@ -281,7 +295,9 @@ let additions =
           , "checked-exceptions"
           , "console"
           , "const"
+          , "contravariant"
           , "control"
+          , "datetime"
           , "debug"
           , "effect"
           , "either"
@@ -289,6 +305,7 @@ let additions =
           , "enums"
           , "exceptions"
           , "foldable-traversable"
+          , "foreign"
           , "foreign-object"
           , "http-methods"
           , "identity"
@@ -306,18 +323,27 @@ let additions =
           , "node-fs"
           , "node-fs-aff"
           , "node-path"
+          , "node-process"
           , "nonempty"
+          , "optparse"
+          , "now"
+          , "numbers"
           , "ordered-collections"
+          , "orders"
+          , "parallel"
           , "partial"
           , "prelude"
           , "profunctor"
           , "profunctor-lenses"
+          , "purescript-toppokki"
           , "quickcheck"
+          , "quickcheck-combinators"
           , "quickcheck-laws"
           , "rationals"
           , "record"
           , "refs"
           , "spec"
+          , "spec-quickcheck"
           , "strings"
           , "tailrec"
           , "text-encoding"
@@ -333,7 +359,7 @@ let additions =
           , "variant"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "9d6d73a4285439f2ed8ec46fe4b2a1974fb89b0c"
+        , version = "27b38d402a9a9b2ef90129c195c9730c0091da35"
         }
       }
 in upstream // additions

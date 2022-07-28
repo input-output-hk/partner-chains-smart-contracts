@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# Options -Wwarn #-}
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
@@ -8,19 +9,21 @@ import Ledger (
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
   TxInfo (TxInfo),
+  TxOutRef
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
-import PlutusTx (applyCode, compile, liftCode) -- , unsafeFromBuiltinData , toBuiltinData)
+import PlutusTx -- (applyCode, compile, liftCode , unsafeFromBuiltinData , toBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams (..))
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
+--mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: (BuiltinByteString , BuiltinByteString , Maybe TxOutRef) -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
-  SidechainParams {genesisMint}
+  (_chainId , _genHash , genesisMint)
   mode
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
@@ -44,12 +47,12 @@ mkMintingPolicy
 mkMintingPolicy _ _ _ = False
 
 mintingPolicy :: SidechainParams -> MintingPolicy
-mintingPolicy param =
-  Ledger.mkMintingPolicyScript
-    ( $$(compile [||Script.wrapMintingPolicy . mkMintingPolicy||])
-        `applyCode` liftCode (param)
+mintingPolicy (SidechainParams chainId genMint genHash) = let
+  in Ledger.mkMintingPolicyScript
+    ( $$(compile [||Script.wrapMintingPolicy . mkMintingPolicyUntyped ||])
+        `applyCode` liftCode (toBuiltinData (chainId , genHash , genMint))
     )
 
--- CTL hacks
---mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
---mkMintingPolicyUntyped a = mkMintingPolicy (unsafeFromBuiltinData a)
+-- ctl hack
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> ScriptContext -> Bool
+mkMintingPolicyUntyped a b c = mkMintingPolicy (unsafeFromBuiltinData a) (unsafeFromBuiltinData b) c

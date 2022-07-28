@@ -12,13 +12,13 @@ import Data.ByteString.Lazy qualified as BS
 
 --import qualified Data.Text as Text
 --import qualified Data.Text.IO as Text
---import Data.ByteString.Base16 as Base16
+import Data.ByteString.Base16 as Base16
 
--- CTL uses raw serialized form of scripts as hex string, not CBOR
+-- CTL uses raw serialized form of scripts as hex string; Base-16 encoded CBOR
 serializeScript :: Codec.Serialise.Serialise a => FilePath -> a -> IO ()
 serializeScript name script =
   let --out = Text.decodeUtf8 . Base16.encode $ Codec.Serialise.serialise script
-      out = Codec.Serialise.serialise script
+      out = Base16.encode (Codec.Serialise.serialise script)
    in BS.writeFile ("ctl-scaffold/Scripts/" <> name) out
 
 serializeAllScripts :: IO ()

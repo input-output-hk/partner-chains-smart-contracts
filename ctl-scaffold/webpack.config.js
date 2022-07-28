@@ -5,6 +5,7 @@ const webpack = require("webpack");
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
+// exports.myscript = require("Scripts/myscript.plutus");
 module.exports = {
   mode: "development",
 
@@ -72,11 +73,10 @@ module.exports = {
       path: false,
       fs: false,
     },
-  },
-
-  alias: {
-    // alias for purescript to eg `require("Scripts/myscript.plutus");`
-    Scripts: path.resolve(__dirname, "Scripts"),
+    alias: {
+      // alias for purescript to eg `require("Scripts/myscript.plutus");`
+      Scripts: path.resolve(__dirname, "Scripts"),
+    },
   },
 
   plugins: [

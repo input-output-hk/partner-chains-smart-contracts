@@ -8,7 +8,7 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "9d6d73a4285439f2ed8ec46fe4b2a1974fb89b0c";
+      rev = "27b38d402a9a9b2ef90129c195c9730c0091da35";
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs: let
@@ -16,14 +16,24 @@
     perSystem = nixpkgs.lib.genAttrs defaultSystems;
     nixpkgsFor = system: import nixpkgs {
       inherit system;
-      overlays = [ cardano-transaction-lib.overlay.${system} ];
+      overlays = [ cardano-transaction-lib.overlay ];
     };
     psProjectFor = system: let
       projectName = "ctl-scaffold";
       pkgs = nixpkgsFor system;
-      src = ./.;
+      src = builtins.path {
+            path = self;
+            name = "${projectName}-src";
+            filter = path: ftype:
+              !(pkgs.lib.hasSuffix ".md" path) # filter out certain files, e.g. markdown
+              && !(ftype == "directory" && builtins.elem # or entire directories
+                (baseNameOf path) [ "doc" ]
+              );
+          };
       in pkgs.purescriptProject {
         inherit pkgs src projectName;
+        packageJson = ./package.json;
+        packageLock = ./package-lock.json;
       };
     in {
     packages = perSystem (system: {
@@ -31,6 +41,9 @@
       ctl-scaffold-bundle-web = (psProjectFor system).bundlePursProject {
         sources = [ "src" ];
         main = "Main";
+        entrypoint = "index.js"; # must be same as listed in webpack config
+        webpackConfig = "webpack.config.js";
+        bundledModuleName = "output.js";
       };
       ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
     });

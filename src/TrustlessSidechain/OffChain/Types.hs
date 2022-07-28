@@ -26,6 +26,9 @@ data SidechainParams = SidechainParams
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
 
+--instance ToData SidechainParams where
+--  toBuiltinData sp = 
+
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 
