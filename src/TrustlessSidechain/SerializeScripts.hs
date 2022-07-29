@@ -2,24 +2,20 @@
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module TrustlessSidechain.SerializeScripts where
 
-import TrustlessSidechain.OffChain.Types
+import Codec.Serialise (Serialise, serialise)
+import Data.ByteString.Base16.Lazy qualified as Base16
+import Data.ByteString.Lazy qualified as BS
+import TrustlessSidechain.OffChain.Types (SidechainParams (SidechainParams))
+import TrustlessSidechain.OffChain.Types qualified
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified
 import Prelude
-
---import qualified Cardano.Api
-import Codec.Serialise qualified (Serialise, serialise)
-import Data.ByteString.Lazy qualified as BS
-
---import qualified Data.Text as Text
---import qualified Data.Text.IO as Text
-import Data.ByteString.Base16 as Base16
 
 -- CTL uses raw serialized form of scripts as hex string; Base-16 encoded CBOR
 serializeScript :: Codec.Serialise.Serialise a => FilePath -> a -> IO ()
 serializeScript name script =
-  let --out = Text.decodeUtf8 . Base16.encode $ Codec.Serialise.serialise script
-      out = Base16.encode (Codec.Serialise.serialise script)
-   in BS.writeFile ("ctl-scaffold/Scripts/" <> name) out
+  let out = Base16.encode (serialise script)
+      file = "ctl-scaffold/Scripts/" <> name <> ".plutus"
+   in BS.writeFile file out
 
 serializeAllScripts :: IO ()
 serializeAllScripts = do
