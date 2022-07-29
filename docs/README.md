@@ -76,7 +76,7 @@ data SignedMerkleRoot = SignedMerkleRoot
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , lastMerkleRoot :: ByteString
-  , signature :: ByteString
+  , signatures :: [ByteString] -- Current committee signatures
   , beneficiary :: ByteString -- Sidechain address
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
