@@ -127,7 +127,7 @@ Minting policy verifies the following:
 
 - `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
 - chainId matches the minting policy chainId
-- recipient, amount, index and sidechainEpoch combined with merkleProof matches merkleRootHash
+- recipient, amount, index and sidechainEpoch combined with merkleProof match against merkleRootHash
 - the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set[^1] (the actual hash might be subject to change)
 - a new entry with the value of `blake2(tx.recipient, tx.amount, merkleRoot)` is created in the distributed set
 
