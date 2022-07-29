@@ -98,10 +98,12 @@ The merkle tree has to be constructed in the exact same way as it is done by [fo
 index - 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
 amount - 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
 recipient- arbitrary length bytestring that represents decoded bech32 cardano address
+sidechainEpoch - sidechain epoch for which merkle tree was created
 
 index = value padded to 4 bytes
 amount = value padded to 32 bytes
 recipient = arbitrary length bytestring
+sidechainEpoch = value padded to 8 bytes
 value = index ++ amount ++ sidechainEpoch ++ recipient 
 entry = blake2b(value)
 ```
@@ -187,9 +189,7 @@ data UpdateVKey = UpdateVKey
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { newCommitteePubKeys :: [PubKey],
-  , signature :: ByteString
-  , committeePubKeys :: [PubKey] -- Public keys of the current committee members
+  { committeePubKeys :: [PubKey] -- Public keys of the current committee members
   , lastMerkleRoot :: ByteString
   }
 ```
@@ -200,10 +200,19 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
-  { signature :: BuiltinByteString
-  , committeePubKeys :: [PubKey]
-  , newCommitteeHash :: BuiltinByteString
+  { signatures :: [BuiltinByteString]
+  , newCommitteePubKeys :: [PubKey]
   }
+```
+
+Signatures are constructed as follow:
+```
+newCommitteePubKeys - concatenated elements from a list where single element is newCommiteeMemberPubKey
+newCommiteeMemberPubKey - 33 bytes compressed ecdsa public key of the next committee member
+sidechainEpoch - sidechain epoch for which we obtain signature
+
+sidechainEpoch = value padded to 8 bytes
+signature = ecdsa.sign(data: blake2b(newCommitteePubKeys ++ sidechainEpoch), key: committeeMemberPrvKey)
 ```
 
 ## Appendix
