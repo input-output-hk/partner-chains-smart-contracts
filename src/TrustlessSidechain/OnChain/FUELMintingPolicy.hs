@@ -1,6 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# Options -Wwarn #-}
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
@@ -9,21 +8,25 @@ import Ledger (
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
   TxInfo (TxInfo),
-  TxOutRef
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
 import Ledger.Value qualified as Value
-import PlutusTx -- (applyCode, compile, liftCode , unsafeFromBuiltinData , toBuiltinData)
+import PlutusTx (
+  ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
+  applyCode,
+  compile,
+  liftCode,
+ )
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams (..))
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
 {-# INLINEABLE mkMintingPolicy #-}
---mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
-mkMintingPolicy :: (BuiltinByteString , BuiltinByteString , Maybe TxOutRef) -> FUELRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
-  (_chainId , _genHash , genesisMint)
+  SidechainParams {genesisMint}
   mode
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
@@ -47,12 +50,12 @@ mkMintingPolicy
 mkMintingPolicy _ _ _ = False
 
 mintingPolicy :: SidechainParams -> MintingPolicy
-mintingPolicy (SidechainParams chainId genMint genHash) = let
-  in Ledger.mkMintingPolicyScript
-    ( $$(compile [||Script.wrapMintingPolicy . mkMintingPolicyUntyped ||])
-        `applyCode` liftCode (toBuiltinData (chainId , genHash , genMint))
-    )
+mintingPolicy param =
+  Ledger.mkMintingPolicyScript
+    ($$(compile [||mkMintingPolicyUntyped||]) `applyCode` liftCode (toBuiltinData param))
 
 -- ctl hack
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> ScriptContext -> Bool
-mkMintingPolicyUntyped a b c = mkMintingPolicy (unsafeFromBuiltinData a) (unsafeFromBuiltinData b) c
+-- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
+{-# INLINEABLE mkMintingPolicyUntyped #-}
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped = Script.wrapMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData

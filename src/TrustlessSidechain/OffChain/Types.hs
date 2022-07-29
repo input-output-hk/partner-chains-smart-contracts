@@ -26,11 +26,9 @@ data SidechainParams = SidechainParams
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
 
---instance ToData SidechainParams where
---  toBuiltinData sp = 
-
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
+PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
