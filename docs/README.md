@@ -60,7 +60,7 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
+Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address. 
 
 <!--
 
@@ -92,6 +92,19 @@ Validator script verifies the following:
 - UTxOs containing an `MPTRootToken` cannot be unlocked from the script address
 
 ![MPTRootToken minting](MPTRoot.svg)
+
+The merkle tree has to be constructed in the exact same way as it is done by [following merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
+```
+index - 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+amount - 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+recipient- arbitrary length bytestring that represents decoded bech32 cardano address
+
+index = value padded to 4 bytes
+amount = value padded to 32 bytes
+recipient = arbitrary length bytestring
+value = index ++ amount ++ sidechainEpoch ++ recipient 
+entry = blake2b(value)
+```
 
 #### 3.2. Individual claiming
 
