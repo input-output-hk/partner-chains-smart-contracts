@@ -211,7 +211,7 @@ committeePubKeyN - 33 bytes compressed ecdsa public key of a committee member
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signatures :: [BuiltinByteString]
   , newCommitteePubKeys :: [PubKey]
-  , CommitteePubKeys :: [PubKey]
+  , committeePubKeys :: [PubKey]
   }
 ```
 
