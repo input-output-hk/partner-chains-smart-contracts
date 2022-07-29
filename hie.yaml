@@ -3,8 +3,11 @@ cradle:
     - path: "./src"
       component: "lib:trustless-sidechain"
 
-    - path: "./app"
+    - path: "./app/bpi"
       component: "exe:trustless-sidechain-pab"
+
+    - path: "./app/serialise"
+      component: "exe:trustless-sidechain-serialise"
 
     - path: "./test"
       component: "test:trustless-sidechain-test"

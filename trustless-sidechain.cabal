@@ -86,7 +86,6 @@ library
   import:          common-lang
   exposed-modules:
     TrustlessSidechain.MerkleTree
-    TrustlessSidechain.SerializeScripts
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
@@ -122,9 +121,19 @@ library
     , row-types
     , serialise
     , text                       ^>=1.2.4.0
-    , base16-bytestring
 
   hs-source-dirs:  src
+
+executable trustless-sidechain-serialise
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , base16-bytestring
+    , bytestring
+    , serialise
+    , trustless-sidechain
+
+  hs-source-dirs: app/serialise
 
 executable trustless-sidechain-pab
   import:         common-lang
@@ -140,7 +149,7 @@ executable trustless-sidechain-pab
     , servant-client-core
     , trustless-sidechain
 
-  hs-source-dirs: app
+  hs-source-dirs: app/bpi
 
 test-suite trustless-sidechain-test
   import:         common-lang
