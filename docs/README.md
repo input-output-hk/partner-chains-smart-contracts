@@ -60,7 +60,7 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address. 
+Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
 
 <!--
 
