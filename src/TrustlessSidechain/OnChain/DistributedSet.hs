@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -38,7 +39,9 @@ import PlutusTx.Prelude
 import TrustlessSidechain.OnChain.Types (DsRedeemer (dsStr))
 import Prelude qualified
 
--- | 'Byte' is an internal type alias to denote an element of a ByteString
+{- | 'Byte' is an internal type alias to denote an element of a ByteString.
+ Invariant: 'Byte' are values in [0, 2^8 - 1].
+-}
 type Byte = Integer
 
 {- | 'NonEmpty' is an internal type to implicitly maintain the invariant the
@@ -53,9 +56,148 @@ data DsDatum = DsDatum
   { -- | 'True' iff 'dsPrefix' is considered an element of this set
     dsLeaf :: !Bool
   , -- | The edges to other nodes
-    dsBranches :: Maybe (BuiltinByteString, NonEmpty Byte)
+    dsBranches :: Branch
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+newtype BitField = BitField {unBitField :: BuiltinByteString}
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+instance Eq BitField where
+  (==) = (==) `PlutusPrelude.on` unBitField
+
+data Branch
+  = Tip
+  | Bin BuiltinByteString BitField
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+instance Eq Branch where
+  Tip == Tip = True
+  Bin bs0 bf0 == Bin bs1 bf1 = bs0 == bs1 && bf0 == bf1
+  _ == _ = False
+
+makeIsDataIndexed ''BitField [('BitField, 0)]
+deriveJSON defaultOptions ''BitField
+
+makeIsDataIndexed ''Branch [('Tip, 0), ('Bin, 1)]
+deriveJSON defaultOptions ''Branch
+
+makeIsDataIndexed ''DsDatum [('DsDatum, 0)]
+deriveJSON defaultOptions ''DsDatum
+
+{- | @'testByte' b ix@ returns 'True' iff the @ix@th bit of @b@ is @1@ (and
+ returns 0 otherwise).
+
+ In the case that @ix@ is negative, this throws an exception.
+-}
+{-# INLINEABLE testByte #-}
+testByte :: Byte -> Integer -> Bool
+testByte byte ix
+  | ix < 0 = traceError "error 'testByte': negative index."
+  | otherwise = go byte ix
+  where
+    go b i
+      | i == 0 = (b `Builtins.remainderInteger` 2) == 1
+      | otherwise = go (b `Builtins.quotientInteger` 2) (i - 1)
+
+-- | @'orByte' a b@ returns the bitwise or of @a@ and @b@.
+{-# INLINEABLE orByte #-}
+orByte :: Byte -> Byte -> Byte
+orByte = go 0 0 
+  where
+    go acc st l r
+      | st <= 7 =
+        if l `Builtins.remainderInteger` 2 == 1 || r `Builtins.remainderInteger` 2 == 1
+          then go (acc + exps st) (st + 1) (l `Builtins.quotientInteger` 2) (r `Builtins.quotientInteger` 2)
+          else go acc (st + 1) (l `Builtins.quotientInteger` 2) (r `Builtins.quotientInteger` 2)
+      | otherwise = acc
+
+{- | @'exps' i@ is an internal function to which does computes @2^i@ for @0
+ <= i < 8@ and throws an exception of @i@ falls outside the domain.
+-}
+{-# INLINEABLE exps #-}
+exps :: Integer -> Integer
+-- For some reason, string literals don't seem to compile with Plutus, so we
+-- can't do a lookup table as the following implementation:
+-- > exps i = i `Builtins.indexByteString` (PlutusTx.Builtins.Internal.BuiltinByteString ("\001\002\004\008\016\032\064\128" :: Data.ByteString.ByteString))
+exps i
+  | i == 0 = 1
+  | i == 1 = 2
+  | i == 2 = 4
+  | i == 3 = 8
+  | i == 4 = 16
+  | i == 5 = 32
+  | i == 6 = 64
+  | i == 7 = 128
+  | otherwise = traceError "error 'exps' non-exhaustive."
+
+-- | @'setByte' b i@ sets the @i@th bit of @b@.
+{-# INLINEABLE setByte #-}
+setByte :: Byte -> Integer -> Byte
+setByte b ix = orByte b $ exps ix
+
+{- | @'testBitField' bf i@ returns 'True' iff the @i@th bit is 1 (and 'False'
+ otherwise). This throws an exception in the case that @i@ is negative
+-}
+{-# INLINEABLE testBitField #-}
+testBitField :: BitField -> Integer -> Bool
+testBitField bit i
+  | i < 0 = traceError "error 'testByte': negative index."
+  | otherwise = testByte (indexByteString (unBitField bit) (i `Builtins.quotientInteger` 8)) (i `Builtins.remainderInteger` 8)
+
+-- | @'setBitField' bf i@ sets the @i@th bit of @bf@
+{-# INLINEABLE setBitField #-}
+setBitField :: BitField -> Integer -> BitField
+setBitField bf i =
+  BitField $
+    ( \bs ->
+        takeByteString i' bs
+          `appendByteString` Builtins.consByteString
+            (setByte (Builtins.indexByteString bs i') (i `Builtins.remainderInteger` 8))
+            (dropByteString (i' + 1) bs)
+    )
+      $ unBitField bf
+  where
+    i' = i `Builtins.quotientInteger` 8
+
+{-# INLINEABLE zeroes256 #-}
+zeroes256 :: BitField
+-- Unfortunately, string literals don't compile for some reason, so we can't do something like this:
+-- > zeroes256 = BitField "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+zeroes256 =
+  BitField $
+    Builtins.consByteString 0 $
+      Builtins.consByteString 0 $
+        Builtins.consByteString 0 $
+          Builtins.consByteString 0 $
+            Builtins.consByteString 0 $
+              Builtins.consByteString 0 $
+                Builtins.consByteString 0 $
+                  Builtins.consByteString 0 $
+                    Builtins.consByteString 0 $
+                      Builtins.consByteString 0 $
+                        Builtins.consByteString 0 $
+                          Builtins.consByteString 0 $
+                            Builtins.consByteString 0 $
+                              Builtins.consByteString 0 $
+                                Builtins.consByteString 0 $
+                                  Builtins.consByteString 0 $
+                                    Builtins.consByteString 0 $
+                                      Builtins.consByteString 0 $
+                                        Builtins.consByteString 0 $
+                                          Builtins.consByteString 0 $
+                                            Builtins.consByteString 0 $
+                                              Builtins.consByteString 0 $
+                                                Builtins.consByteString 0 $
+                                                  Builtins.consByteString 0 $
+                                                    Builtins.consByteString 0 $
+                                                      Builtins.consByteString 0 $
+                                                        Builtins.consByteString 0 $
+                                                          Builtins.consByteString 0 $
+                                                            Builtins.consByteString 0 $
+                                                              Builtins.consByteString 0 $
+                                                                Builtins.consByteString 0 $
+                                                                  Builtins.consByteString 0 Builtins.emptyByteString
 
 -- Note [Node Representation]
 -- Implicitly, this forms an M-ary tree for which:
@@ -88,9 +230,6 @@ data DsDatum = DsDatum
 -- Proof.
 --  The only complication is showing (c), but this follows from (3).
 
-makeIsDataIndexed ''DsDatum [('DsDatum, 0)]
-deriveJSON defaultOptions ''DsDatum
-
 {- | 'hash' is an internal function to store the hash of the to put in the set.
  This is just a thin wrapper around the 'Builtins.blake2b_256' hash function
 
@@ -122,9 +261,9 @@ mkNode str d =
 
 -- | 'Node' is an internal data type of the tree node used in the validator.
 data Node = Node
-  { nPrefix :: !BuiltinByteString
-  , nLeaf :: !Bool
-  , nBranches :: Maybe (BuiltinByteString, NonEmpty Byte)
+  { nPrefix :: BuiltinByteString
+  , nLeaf :: Bool
+  , nBranches :: Branch
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
@@ -155,7 +294,7 @@ normalizeOrder = normalizeOrderBy compare
 -}
 {-# INLINEABLE normalizeOrderBy #-}
 normalizeOrderBy :: forall a. (a -> a -> Ordering) -> [a] -> [a]
-normalizeOrderBy = sortBy
+normalizeOrderBy _ = id
 
 -- | 'uncons' copies the Prelude 'Prelude.uncons'.
 {-# INLINEABLE uncons #-}
@@ -214,21 +353,13 @@ instance Eq DsDatum where
   {-# INLINEABLE (==) #-}
   a == b =
     dsLeaf a == dsLeaf b
-      && case (dsBranches a, dsBranches b) of
-        (Nothing, Nothing) -> True
-        (Just (pre0, ds0), Just (pre1, ds1)) ->
-          pre0 == pre1 && ((==) `PlutusPrelude.on` normalizeOrder) ds0 ds1
-        _ -> False
+      && dsBranches a == dsBranches b
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
   a == b =
     nPrefix a == nPrefix b && nLeaf a == nLeaf b
-      && case (nBranches a, nBranches b) of
-        (Nothing, Nothing) -> True
-        (Just (pre0, ds0), Just (pre1, ds1)) ->
-          pre0 == pre1 && ((==) `PlutusPrelude.on` normalizeOrder) ds0 ds1
-        _ -> False
+      && nBranches a == nBranches b
 
 makeIsDataIndexed ''Node [('Node, 0)]
 deriveJSON defaultOptions ''Node
@@ -248,13 +379,13 @@ existsNextNode str node =
   -- this be a partial funciton..
   -- > | pre `isPrefixOfByteString` str =
   case nBranches node of
-    Just (branchPrefix, ds) ->
+    Bin branchPrefix ds ->
       let strSuf' = dropByteString (lengthOfByteString branchPrefix) strSuf
        in branchPrefix `isPrefixOfByteString` strSuf
             && if not (nullByteString strSuf')
-              then any (\d -> headByteString strSuf' == d) ds
+              then testBitField ds $ headByteString strSuf'
               else False
-    Nothing -> False
+    Tip -> False
   where
     pre = nPrefix node
     strSuf = dropByteString (lengthOfByteString pre) str
@@ -279,7 +410,7 @@ notElemNode str node = if (pre `isPrefixOfByteString` str) && (pre /= str || not
 lcp :: BuiltinByteString -> BuiltinByteString -> BuiltinByteString
 lcp s t = takeByteString (go 0) s
   where
-    go ! ix
+    go ix
       | ix >= lengthOfByteString s || ix >= lengthOfByteString t = ix
       | otherwise =
         if s `indexByteString` ix == t `indexByteString` ix
@@ -304,7 +435,7 @@ insertNode str node =
         else case nBranches node of
           -- Notes:
           --  @strSuf@ is non empty (otherwise we'd contradict @str /= pre@).
-          Just (branchPrefix, ds) ->
+          Bin branchPrefix ds ->
             let -- Generates the nodes corresponding to the string.
                 -- Assumes that
                 -- > inp = p ++ inpSuf
@@ -322,39 +453,39 @@ insertNode str node =
                           [ Node
                               { nPrefix = inp
                               , nLeaf = True
-                              , nBranches = Nothing
+                              , nBranches = Tip
                               }
                           ]
                         else
                           [ Node
                               { nPrefix = snocByteString p $ headByteString inpSuf
                               , nLeaf = False
-                              , nBranches = Just (initByteString inpSuf', [lastByteString inpSuf'])
+                              , nBranches = Bin (initByteString inpSuf') $ setBitField zeroes256 (lastByteString inpSuf')
                               }
                           , Node
                               { nPrefix = inp
                               , -- If it makes things more clear, this is
                                 -- > snocByteString p (headByteString inpSuf) `appendByteString` inpSuf'
                                 nLeaf = True
-                              , nBranches = Nothing
+                              , nBranches = Tip
                               }
                           ]
 
                 fromHeadPreStr :: [Node]
                 fromHeadPreStr = fromHeadStrNodes pre str
              in if nullByteString branchPrefix
-                  then node {nBranches = Just (branchPrefix, headByteString strSuf : ds)} : fromHeadPreStr
+                  then node {nBranches = Bin branchPrefix (setBitField ds (headByteString strSuf))} : fromHeadPreStr
                   else
                     let branchPrefixLcpStrSuf = branchPrefix `lcp` strSuf
                      in if nullByteString branchPrefixLcpStrSuf
                           then
                             [ node
-                                { nBranches = Just (branchPrefixLcpStrSuf, [headByteString strSuf, headByteString branchPrefix])
+                                { nBranches = Bin branchPrefixLcpStrSuf $ setBitField (setBitField zeroes256 (headByteString strSuf)) $ headByteString branchPrefix
                                 }
                             , Node
                                 { nPrefix = snocByteString pre $ headByteString branchPrefix
                                 , nLeaf = False
-                                , nBranches = Just (tailByteString branchPrefix, ds)
+                                , nBranches = Bin (tailByteString branchPrefix) ds
                                 }
                             ]
                               ++ fromHeadPreStr
@@ -366,38 +497,42 @@ insertNode str node =
                              in if nullByteString strSuf'
                                   then
                                     [ node
-                                        { nBranches = Just (initByteString branchPrefixLcpStrSuf, [lastByteString branchPrefixLcpStrSuf])
+                                        { nBranches = Bin (initByteString branchPrefixLcpStrSuf) $ setBitField zeroes256 (lastByteString branchPrefixLcpStrSuf)
                                         }
                                     , Node
                                         { nPrefix = pre `appendByteString` branchPrefixLcpStrSuf
                                         , nLeaf = True
-                                        , nBranches = Just (branchPrefix', ds)
+                                        , nBranches = Bin branchPrefix' ds
                                         }
                                     ]
                                   else
                                     if nullByteString branchPrefix'
                                       then
                                         node
-                                          { nBranches = Just (branchPrefixLcpStrSuf, headByteString strSuf' : ds)
+                                          { nBranches = Bin branchPrefixLcpStrSuf $ setBitField ds (headByteString strSuf')
                                           } :
                                         fromHeadPreLcpStr
                                       else
                                         [ node
-                                            { nBranches = Just (branchPrefixLcpStrSuf, [headByteString branchPrefix', headByteString strSuf'])
+                                            { nBranches =
+                                                Bin
+                                                  branchPrefixLcpStrSuf
+                                                  ( setBitField (setBitField zeroes256 (headByteString branchPrefix')) (headByteString strSuf')
+                                                  )
                                             }
                                         , Node
                                             { nPrefix = pre `appendByteString` snocByteString branchPrefixLcpStrSuf (headByteString branchPrefix')
                                             , nLeaf = False
-                                            , nBranches = Just (tailByteString branchPrefix', ds)
+                                            , nBranches = Bin (tailByteString branchPrefix') ds
                                             }
                                         ]
                                           ++ fromHeadPreLcpStr
-          Nothing ->
-            [ node {nBranches = Just (initByteString strSuf, [lastByteString strSuf])}
+          Tip ->
+            [ node {nBranches = Bin (initByteString strSuf) (setBitField zeroes256 (lastByteString strSuf))}
             , Node
                 { nPrefix = pre `appendByteString` strSuf
                 , nLeaf = True
-                , nBranches = Nothing
+                , nBranches = Tip
                 }
             ]
   where
@@ -411,19 +546,13 @@ insertNode str node =
  - this. The author postulates that doing a modified DFS just to test if the
  - insertion is right (indeed, it is not unique) should suffice.
 -}
+{-# INLINEABLE mkInsertValidator #-}
 mkInsertValidator :: Ds -> DsDatum -> DsRedeemer -> ScriptContext -> Bool
 mkInsertValidator ds _dat red ctx =
   traceIfFalse "error 'mkInsertValidator' incorrect new nodes" $ case insertNode nStr ownNode of
     Nothing -> False
-    Just nnodes ->
-      and
-        [ normalizeNodes nnodes == nOwnNode : contNodes
-        , normalizeOrder (map unTokenName mintedTns) == map nPrefix contNodes
-        ]
+    Just nnodes -> normalizeNodes nnodes == nOwnNode : contNodes && normalizeOrder (map unTokenName mintedTns) == map nPrefix contNodes
   where
-    -- Similar reasoning for testing if we minted exactly the tokens
-    -- for the new nodes.
-
     -- Aliases:
     ------------------
     info :: TxInfo
@@ -442,7 +571,7 @@ mkInsertValidator ds _dat red ctx =
     -- 'CurrencySymbol' from 'dsSymbol'
     getTns :: Value -> Maybe [TokenName]
     getTns v =
-      AssocMap.toList <$> AssocMap.lookup curSymb (Value.getValue v)
+      (AssocMap.toList <$> AssocMap.lookup curSymb (Value.getValue v))
         >>= \kvs ->
           if any ((/= 1) . snd) kvs
             then Nothing
@@ -587,7 +716,7 @@ mkDsPolicy gds _red ctx =
       -- p1 correponds to (1), and p2 corresponds to (2).
       let p1, p2 :: Bool
           p1 = case fmap AssocMap.toList $ AssocMap.lookup ownCurSymb $ getValue $ txOutValue $ txInInfoResolved i of
-            Just ((_, amount) : _) -> amount > 0
+            Just ((_, amount) : _) -> amount == 1
             _ -> False
           p2 = txInInfoOutRef i == dsmTxOutRef gds
        in p1 || p2
