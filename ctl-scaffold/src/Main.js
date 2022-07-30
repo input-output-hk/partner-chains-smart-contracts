@@ -1,0 +1,1 @@
+exports.fuelMintingPolicy = require("Scripts/FUELMintingPolicy.plutus");
