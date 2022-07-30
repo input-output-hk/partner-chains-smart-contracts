@@ -34,6 +34,11 @@
         inherit pkgs src projectName;
         packageJson = ./package.json;
         packageLock = ./package-lock.json;
+        shell.packages = with pkgs; [
+          bashInteractive
+          fd
+          docker
+        ];
       };
     in {
     packages = perSystem (system: {
