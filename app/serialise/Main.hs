@@ -5,6 +5,7 @@ module Main (main) where
 import Codec.Serialise (Serialise, serialise)
 import Data.ByteString.Base16.Lazy qualified as Base16
 import Data.ByteString.Lazy qualified as BS
+import Ledger (scriptCurrencySymbol)
 import TrustlessSidechain.OffChain.Types (SidechainParams (SidechainParams))
 import TrustlessSidechain.OffChain.Types qualified
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified
@@ -22,4 +23,5 @@ main = do
   -- TODO implement CTL hack to allow parametrising from purescript
   let sp = SidechainParams {chainId = "", genesisHash = "", genesisMint = Nothing}
       mp = TrustlessSidechain.OnChain.FUELMintingPolicy.mintingPolicy sp
+  print $ scriptCurrencySymbol mp -- e95f98bad7a3a13bf8eccfb59b59d0907ec6784e66bc0a6b1f6876d6
   serializeScript "FUELMintingPolicy" mp
