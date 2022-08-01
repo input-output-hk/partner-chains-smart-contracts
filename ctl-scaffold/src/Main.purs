@@ -1,5 +1,4 @@
 module Main (main) where
-
 import Contract.Prelude
 
 import Contract.Config (testnetNamiConfig)
@@ -19,5 +18,6 @@ main ∷ Effect Unit
 main = launchAff_ $ runContract testnetNamiConfig do
   pol <- asMintingPolicy <$> textEnvelopeBytes fuelMintingPolicy PlutusScriptV1
   sym <- liftContractAffM "Currency Symbol Error" $ scriptCurrencySymbol pol
+--v  <- liftContractAffM "Couldn't hash validator" (mintingPolicyHash mp)
   logInfo' $ "Policy: " <> show pol
   logInfo' $ "Policy Symbol: " <> show sym

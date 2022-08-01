@@ -53,7 +53,8 @@
       ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
     });
     apps = perSystem (system: { ctl-scaffold-runtime = (nixpkgsFor system).launchCtlRuntime { }; });
-    devShell = perSystem (system: (psProjectFor system).devShell);
+    devShell = perSystem (system: (psProjectFor system).devShell
+      );
     checks = perSystem (system: let pkgs = nixpkgsFor system; in {
       ctl-scaffold = (psProjectFor system).runPursTest {
         sources = [ "src" "test" ];
