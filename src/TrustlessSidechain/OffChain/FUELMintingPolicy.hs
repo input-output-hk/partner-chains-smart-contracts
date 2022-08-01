@@ -36,7 +36,7 @@ import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  BurnParams (BurnParams, amount, recipient, sidechainParams, sidechainSig),
+  BurnParams (BurnParams, amount, recipient, sidechainParams),
   MintParams (MintParams, amount, recipient, sidechainParams),
   SidechainParams,
  )
@@ -108,10 +108,10 @@ sideChainLeafTransactionHash txRecipient txAmount =
         `appendByteString` Class.stringToBuiltinByteString (PlutusCore.show txAmount)
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
+burn BurnParams {amount, sidechainParams, recipient} = do
   let policy = FUELMintingPolicy.mintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-      redeemer = Redeemer $ toBuiltinData (MainToSide recipient sidechainSig)
+      redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
   when (amount > 0) $ Contract.throwError "Can't burn a positive amount"
   Contract.submitTxConstraintsWith @FUELRedeemer
     (Constraint.mintingPolicy policy)

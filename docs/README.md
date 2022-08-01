@@ -41,7 +41,6 @@ For initialisation, we need to set the first <!-- ATMS verification key --> comm
 ```haskell
 data BurnParams = BurnParams
   { recipient :: ByteString
-  , sidechainSig :: ByteString
   , amount :: Integer
   }
 ```
