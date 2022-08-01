@@ -7,7 +7,8 @@ import Ledger (
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
-import PlutusTx (applyCode, compile, liftCode)
+import Plutus.V1.Ledger.Scripts qualified as Scripts
+import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
@@ -36,3 +37,10 @@ hash = Script.validatorHash . typedValidator
 
 address :: SidechainParams -> Ledger.Address
 address = Ledger.scriptHashAddress . hash
+
+-- CTL hack
+mkValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorUntyped = Script.wrapValidator . mkValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableValidator :: Scripts.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])

@@ -8,6 +8,7 @@ module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 import Cardano.Crypto.Wallet (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+import Ledger qualified (fromCompiledCode)
 import Ledger.Address (Address)
 import Ledger.Contexts qualified as Contexts
 import Ledger.Crypto qualified as Crypto
@@ -197,13 +198,12 @@ instance ValidatorTypes UpdatingCommitteeHash where
 {-# INLINEABLE typedUpdateCommitteeHashValidator #-}
 typedUpdateCommitteeHashValidator :: UpdateCommitteeHash -> TypedValidator UpdatingCommitteeHash
 typedUpdateCommitteeHashValidator updateCommitteeHash =
-  Scripts.mkTypedValidator @UpdatingCommitteeHash
-    ( $$(PlutusTx.compile [||mkUpdateCommitteeHashValidator||])
-        `PlutusTx.applyCode` PlutusTx.liftCode updateCommitteeHash
-    )
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Scripts.wrapValidator @UpdateCommitteeHashDatum @UpdateCommitteeHashRedeemer
+  let wrap = Scripts.wrapValidator @UpdateCommitteeHashDatum @UpdateCommitteeHashRedeemer
+   in Scripts.mkTypedValidator @UpdatingCommitteeHash
+        ( $$(PlutusTx.compile [||mkUpdateCommitteeHashValidator||])
+            `PlutusTx.applyCode` PlutusTx.liftCode updateCommitteeHash
+        )
+        $$(PlutusTx.compile [||wrap||])
 
 -- | 'updateCommitteeHashValidator' is the validator of the script
 {-# INLINEABLE updateCommitteeHashValidator #-}
@@ -228,6 +228,7 @@ data GenesisMintCommitteeHash = GenesisMintCommitteeHash
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''GenesisMintCommitteeHash
+PlutusTx.makeIsDataIndexed ''GenesisMintCommitteeHash [('GenesisMintCommitteeHash, 0)]
 
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.
@@ -235,29 +236,20 @@ PlutusTx.makeLift ''GenesisMintCommitteeHash
 {-# INLINEABLE mkCommitteeHashPolicy #-}
 mkCommitteeHashPolicy :: GenesisMintCommitteeHash -> () -> ScriptContext -> Bool
 mkCommitteeHashPolicy gmch _red ctx =
-  traceIfFalse "UTxO not consumed" hasUtxo
-    && traceIfFalse "wrong amount minted" checkMintedAmount
-  where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+  let info = scriptContextTxInfo ctx :: TxInfo
 
-    tn :: TokenName
-    tn = gcToken gmch
+      hasUtxo = any ((gcTxOutRef gmch ==) . txInInfoOutRef) (txInfoInputs info) :: Bool
 
-    oref :: TxOutRef
-    oref = gcTxOutRef gmch
-
-    hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
-
-    checkMintedAmount :: Bool
-    checkMintedAmount = case Value.flattenValue (txInfoMint info) of
-      [(_cs, tn', amt)] -> tn' == tn && amt == 1
-      -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
-      -- since the ledger rules ensure that the minting policy will only
-      -- be run if some of the asset is actually being minted: see
-      -- https://playground.plutus.iohkdev.io/doc/plutus/tutorials/basic-minting-policies.html.
-      _ -> False
+      checkMintedAmount :: Bool
+      checkMintedAmount = case Value.flattenValue (txInfoMint info) of
+        [(_cs, tn', amt)] -> tn' == (gcToken gmch) && amt == 1
+        -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
+        -- since the ledger rules ensure that the minting policy will only
+        -- be run if some of the asset is actually being minted: see
+        -- https://playground.plutus.iohkdev.io/doc/plutus/tutorials/basic-minting-policies.html.
+        _ -> False
+   in traceIfFalse "UTxO not consumed" hasUtxo
+        && traceIfFalse "wrong amount minted" checkMintedAmount
 
 -- | 'committeeHashPolicy' is the minting policy
 {-# INLINEABLE committeeHashPolicy #-}
@@ -270,4 +262,11 @@ committeeHashPolicy gch =
 -- | 'committeeHashCurSymbol' is the currency symbol
 {-# INLINEABLE committeeHashCurSymbol #-}
 committeeHashCurSymbol :: GenesisMintCommitteeHash -> CurrencySymbol
-committeeHashCurSymbol gmch = Contexts.scriptCurrencySymbol $ committeeHashPolicy gmch
+committeeHashCurSymbol gmch = Contexts.scriptCurrencySymbol (committeeHashPolicy gmch)
+
+-- CTL hack
+mkCommitteHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteHashPolicyUntyped = Scripts.wrapMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+
+serialisableCommitteHashPolicy :: Scripts.Script
+serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])

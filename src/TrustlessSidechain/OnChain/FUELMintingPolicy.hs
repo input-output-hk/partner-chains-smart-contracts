@@ -59,3 +59,6 @@ mintingPolicy param =
 {-# INLINEABLE mkMintingPolicyUntyped #-}
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped = Script.wrapMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
+
+serialisableMintingPolicy :: Ledger.Script
+serialisableMintingPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
