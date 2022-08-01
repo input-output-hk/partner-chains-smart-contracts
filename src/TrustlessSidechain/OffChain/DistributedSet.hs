@@ -230,7 +230,7 @@ ownTxOutRef = do
  ways to optimize the system which apparently work according to plutip
 -}
 sortByOtherListOn :: forall a b. Prelude.Ord b => [b] -> (a -> Maybe b) -> [a] -> [a]
-sortByOtherListOn lstOrd prj lst = PreludeList.sortOn (fromMaybe Prelude.maxBound . (toIx PlutusPrelude.<=< prj)) lst
+sortByOtherListOn lstOrd prj = PreludeList.sortOn (fromMaybe Prelude.maxBound . (toIx PlutusPrelude.<=< prj))
   where
     toIx :: b -> Maybe Prelude.Int
     toIx b = lstOrdToIx Fold.^? At.at b . Prism._Just

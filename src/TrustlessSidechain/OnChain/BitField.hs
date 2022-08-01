@@ -90,28 +90,11 @@ exps0To7 :: Integer -> Integer
 -- >    | i == 6 = 64
 -- >    | i == 7 = 128
 -- >    | otherwise = traceError "error 'exps0To7' non-exhaustive."
-exps0To7 i =
-  if i < 4
-    then
-      if i < 2
-        then
-          if i < 1
-            then 1
-            else 2
-        else
-          if i < 3
-            then 4
-            else 8
-    else
-      if i < 6
-        then
-          if i < 5
-            then 16
-            else 32
-        else
-          if i < 7
-            then 64
-            else 128
+exps0To7 i
+  | i < 4 = if i < 2 then if i < 1 then 1 else 2 else if i < 3 then 4 else 8
+  | i < 6 = if i < 5 then 16 else 32
+  | i < 7 = 64
+  | otherwise = 128
 
 -- | @'setByte' b i@ sets the @i@th bit of @b@.
 {-# INLINEABLE setByte #-}

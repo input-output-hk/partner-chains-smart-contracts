@@ -59,7 +59,9 @@ insertDS str ds =
   let node = lookupDS str ds
       nnodes = DS.toListIb $ DS.insertNode (BuiltinByteString str) node
    in DS $
-        foldl (\acc n -> Map.alter (const (Just n)) (unBuiltinByteString $ nPrefix n) acc) (unDS ds) $
+        foldl
+          (\acc n -> Map.alter (const (Just n)) (unBuiltinByteString $ nPrefix n) acc)
+          (unDS ds)
           nnodes
 
 toListDS :: DS -> [ByteString]
