@@ -30,4 +30,4 @@ scriptsAreFresh:
         && OldestPSScript=$$ScriptDir$$(ls -rt $$ScriptDir/ | head -1) \
         && echo Checking that Scripts/ are fresh enough \
 	&& echo Newest hs file: $$NewestHSScript should be newer than oldest serialised script: $$OldestPSScript ! \
-	&& if [ $$NewestHSScript -ot $$OldestPSScript ] then; else echo If this fails, Please reserialise the scripts from the haskell side \
+	&& [ $$NewestHSScript -ot $$OldestPSScript ]
