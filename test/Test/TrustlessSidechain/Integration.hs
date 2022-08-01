@@ -430,9 +430,11 @@ test =
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
         [shouldFail]
-    , assertExecution
-        "Initializing the distributed set"
-        (initAda [10, 10, 10])
+    , -- N.B. these two test cases should be the worst case when inserting a
+      -- string in the distributed set.
+      assertExecution
+        "Inserting a string in the distributed set (worst case 1)"
+        (initAda [6, 6])
         ( do
             withContractAs 0 $ \_ -> do
               -- Initializing the distributed set
@@ -447,20 +449,33 @@ test =
                   dsm = DistributedSet.DsMint {DistributedSet.dsmTxOutRef = OffChainTypes.dspTxOutRef dsp}
 
               _ <- DistributedSet.dsInit dsp
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
 
-              _ <- DistributedSet.dsInsert dsp {dspStr = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
               _ <- DistributedSet.logDs ds
-              -- works
-              _ <- DistributedSet.dsInsert dsp {dspStr = "aaaaaaaaaaaabaaaaaaaaaaaaaaaaaaa"}
-              _ <- DistributedSet.dsInsert dsp {dspStr = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"}
-              -- doesn't work
-              -- These get budget overspent errors. Honestly, this looks
-              -- rather impossible to fix.
-              -- ACTUALLY I DO HAVE SOME IDEAS TO FIX THIS NOT ALL HOPE IS LOST YET.
-              --
-              -- _ <- DistributedSet.dsInsert dsp {dspStr = "aaaaaaaaaaaaaabaaaaaaaaaaaaaaaaa"}
-              -- _ <- DistributedSet.dsInsert dsp {dspStr = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaba"}
+              return ()
+        )
+        [shouldSucceed]
+    , assertExecution
+        "Inserting a string in the distributed set (worst case 2)"
+        (initAda [12, 12])
+        ( do
+            withContractAs 0 $ \_ -> do
+              -- Initializing the distributed set
+              oref <- DistributedSet.ownTxOutRef
+              let dsp =
+                    DsParams
+                      { dspTxOutRef = oref
+                      , dspStr = ""
+                      }
 
+                  ds = DistributedSet.Ds {DistributedSet.dsSymbol = DistributedSet.dsCurSymbol dsm}
+                  dsm = DistributedSet.DsMint {DistributedSet.dsmTxOutRef = OffChainTypes.dspTxOutRef dsp}
+
+              _ <- DistributedSet.dsInit dsp
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001"}
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001\000"}
+
+              _ <- DistributedSet.logDs ds
               return ()
         )
         [shouldSucceed]

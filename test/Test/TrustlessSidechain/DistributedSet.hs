@@ -1,10 +1,13 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-{- | This module is a bunch of tests for the key functions in the distributed set
+{- | This module is a bunch of tests for the key functions in the distributed set.
 
- TODO: the tests are a bit messy.. they were originally written for a plain
- ol' ByteString and have been cobbled together to work for the
- BuiltinByteString type.
+ It essentially generates a mock utxo set (using 'Map.Map') and tests its
+ equivalence to 'Data.Set.Set'.
+
+ TODO: the tests are a bit messy.. they were originally written for a plain ol'
+ ByteString (which works for 'Map.Map' that uses 'Prelude.Ord') and have been
+ cobbled together to work for the BuiltinByteString type.
 -}
 module Test.TrustlessSidechain.DistributedSet (test) where
 
@@ -15,16 +18,16 @@ import Data.List qualified as List
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
-import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word (Word8)
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.Prelude
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
-import Test.Tasty.QuickCheck (Property, QuickCheckMaxSize (QuickCheckMaxSize))
+import Test.Tasty.HUnit qualified as HUnit
+import Test.Tasty.QuickCheck (Gen, Positive (Positive), Property, QuickCheckMaxSize (QuickCheckMaxSize))
 import Test.Tasty.QuickCheck qualified as QuickCheck
-import TrustlessSidechain.OnChain.DistributedSet (Node (Node, nBranches, nLeaf, nPrefix))
+import TrustlessSidechain.OnChain.DistributedSet (Edge (Tip), Node (Node, nEdge, nPrefix))
 import TrustlessSidechain.OnChain.DistributedSet qualified as DS
 import Prelude (Int)
 import Prelude qualified
@@ -40,50 +43,57 @@ lookupDS str ds =
    in go root
   where
     go :: Node -> Node
-    go n = maybe n (\nLength -> go (Maybe.fromJust $ Map.lookup (B.take nLength str) $ unDS ds)) $ nextNodeStrLength str n
+    go n = maybe n (\npr -> go (Maybe.fromJust $ Map.lookup npr $ unDS ds)) $ nextNodePrefix str n
 
-nextNodeStrLength :: ByteString -> Node -> Maybe Int
-nextNodeStrLength str node
-  | unBuiltinByteString (nPrefix node) Prelude.== str = Nothing
-  | unBuiltinByteString (nPrefix node) `B.isPrefixOf` str =
-    nBranches node >>= \(branchPrefix, _ds) ->
-      B.length (unBuiltinByteString $ nPrefix node) Prelude.+ B.length (unBuiltinByteString branchPrefix) Prelude.+ 1 <$ Monad.guard (DS.existsNextNode (BuiltinByteString str) node)
-  -- N.B. this can be optimized a bit -- there's no need to contiuously check the
-  | otherwise = Nothing
+nextNodePrefix :: ByteString -> Node -> Maybe ByteString
+nextNodePrefix str node = fmap unBuiltinByteString $ DS.nextNodePrefix (BuiltinByteString str) node
 
-rootNode :: Node
-rootNode = Node {nPrefix = "", nLeaf = False, nBranches = Nothing}
+rootNode :: ByteString -> Node
+rootNode str = Node {nPrefix = "", nEdge = Tip $ BuiltinByteString str}
 
-initDS :: DS
-initDS = DS {unDS = Map.fromList [("", rootNode)]}
+initDS :: ByteString -> DS
+initDS str = DS {unDS = Map.fromList [("", rootNode str)]}
 
 insertDS :: ByteString -> DS -> DS
 insertDS str ds =
   let node = lookupDS str ds
-      nnodes = DS.insertNode (BuiltinByteString str) node
-   in DS $ foldl (\acc n -> Map.alter (const (Just n)) (unBuiltinByteString $ nPrefix n) acc) (unDS ds) $ Maybe.fromJust nnodes
+      nnodes = DS.toListIb $ DS.insertNode (BuiltinByteString str) node
+   in DS $
+        foldl (\acc n -> Map.alter (const (Just n)) (unBuiltinByteString $ nPrefix n) acc) (unDS ds) $
+          nnodes
 
 toListDS :: DS -> [ByteString]
-toListDS = foldMap (\n -> if nLeaf n then [unBuiltinByteString $ nPrefix n] else mempty) . Map.elems . unDS
+toListDS = foldMap (\n -> case nEdge n of Tip suf -> [unBuiltinByteString (nPrefix n) `B.append` unBuiltinByteString suf]; _ -> mempty) . Map.elems . unDS
+
+prop_set :: Positive Int -> Property
+prop_set (Positive n) = QuickCheck.property $
+  QuickCheck.forAll ((QuickCheck.arbitrary >>= \(Positive sz) -> Prelude.fmap Set.fromList $ (Monad.replicateM sz . Monad.replicateM n) (QuickCheck.arbitrary :: Gen Word8))) $
+    \set ->
+      let lst = map B.pack $ Set.toList set
+       in QuickCheck.forAll (QuickCheck.shuffle lst) $ \lst' -> lst Prelude.== List.sort (toListDS (fromListDS lst'))
 
 fromListDS :: [ByteString] -> DS
-fromListDS = foldl (flip insertDS) initDS
-
-prop_set :: Set [Word8] -> Property
-prop_set st = QuickCheck.property $ QuickCheck.forAll (QuickCheck.shuffle lst) $ \lst' -> lst Prelude.== List.sort (toListDS (fromListDS lst'))
-  where
-    lst = map B.pack $ Set.toList st
+fromListDS (a : as) = foldl (flip insertDS) (initDS a) as
+fromListDS [] = Prelude.error "error 'fromListDS' empty list"
 
 test :: TestTree
 test =
   Tasty.testGroup
     "DistributedSet"
     [ Tasty.testGroup
-        "Properties."
-        [ Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 256) $ QuickCheck.testProperty "Strings of size at most 256" $ QuickCheck.withMaxSuccess 1000 prop_set
-        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 64) $ QuickCheck.testProperty "Strings of size at most 64" $ QuickCheck.withMaxSuccess 1000 prop_set
-        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 8) $ QuickCheck.testProperty "Strings of size at most 8" $ QuickCheck.withMaxSuccess 1000 prop_set
-        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 4) $ QuickCheck.testProperty "Strings of size at most 4" $ QuickCheck.withMaxSuccess 1000 prop_set
-        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 2) $ QuickCheck.testProperty "Strings of size at most 2" $ QuickCheck.withMaxSuccess 1000 prop_set
+        "Properties"
+        [ Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 256) $ QuickCheck.testProperty "Strings of size at most 256" $ QuickCheck.withMaxSuccess 100 prop_set
+        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 64) $ QuickCheck.testProperty "Strings of size at most 64" $ QuickCheck.withMaxSuccess 100 prop_set
+        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 8) $ QuickCheck.testProperty "Strings of size at most 8" $ QuickCheck.withMaxSuccess 100 prop_set
+        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 4) $ QuickCheck.testProperty "Strings of size at most 4" $ QuickCheck.withMaxSuccess 100 prop_set
+        , Tasty.adjustOption (\(QuickCheckMaxSize _) -> QuickCheckMaxSize 2) $ QuickCheck.testProperty "Strings of size at most 2" $ QuickCheck.withMaxSuccess 100 prop_set
+        ]
+    , Tasty.testGroup
+        "Unit tests"
+        [ HUnit.testCase "Prefixes" $ do
+            let tst = ["ab", "aa"] in List.sort tst HUnit.@=? toListDS (fromListDS tst)
+            let tst = ["aa", "ab"] in List.sort tst HUnit.@=? toListDS (fromListDS tst)
+            let tst = ["ba", "ab"] in List.sort tst HUnit.@=? toListDS (fromListDS tst)
+            let tst = ["ab", "ba"] in List.sort tst HUnit.@=? toListDS (fromListDS tst)
         ]
     ]

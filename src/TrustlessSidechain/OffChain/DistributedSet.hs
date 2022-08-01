@@ -1,18 +1,21 @@
 module TrustlessSidechain.OffChain.DistributedSet where
 
+import Control.Lens.At qualified as At
 import Control.Lens.Fold qualified as Fold
 import Control.Lens.Getter qualified as Getter
 import Control.Lens.Indexed qualified as Indexed
 import Control.Lens.Prism (_Right)
+import Control.Lens.Prism qualified as Prism
 import Control.Lens.Review qualified as Review
 import Data.Default qualified as Default
+import Data.List qualified as PreludeList
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (Redeemer (Redeemer), TxOutRef)
-import Ledger.Address as Address
-import Ledger.Constraints as Constraints
+import Ledger.Address qualified as Address
+import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (Datum (Datum))
 import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (
@@ -28,7 +31,6 @@ import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Effects qualified as Effects
 import Plutus.Contract.Error qualified as Error
-import Plutus.Contract.Logging qualified as Logging
 import Plutus.Contract.Request qualified as Request
 import Plutus.V1.Ledger.Api (Datum (getDatum), MintingPolicy)
 import Plutus.V1.Ledger.Value (AssetClass, TokenName (TokenName, unTokenName))
@@ -43,9 +45,9 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsSymbol),
-  DsDatum (DsDatum, dsBranches, dsLeaf),
+  DsDatum (DsDatum, dsEdge),
   DsMint (DsMint, dsmTxOutRef),
-  Node (nBranches, nLeaf, nPrefix),
+  Node (nEdge, nPrefix),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.Types (
@@ -142,7 +144,7 @@ logDs ds = do
   Contract.logInfo @Text "Logging the distributed set END"
 
 {- | 'findDsOutput' finds the transaction which we must insert to
- (if it exists).
+ (if it exists) for the distributed set.
 -}
 findDsOutput ::
   forall w s e.
@@ -150,8 +152,7 @@ findDsOutput ::
   Ds ->
   TokenName ->
   Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
-findDsOutput ds tn = do
-  Contract.logInfo @Text "Starting findDsOutput"
+findDsOutput ds tn =
   queryTn (Value.tokenName "") >>= \case
     Nothing -> return Nothing
     Just v -> fmap Just $ go v
@@ -186,29 +187,17 @@ findDsOutput ds tn = do
       let n = DistributedSet.mkNode (unTokenName t) dat
        in PlutusPrelude.join
             <$> traverse
-              (queryTn . TokenName . flip takeByteString str)
-              (nextNodeStrLength str n)
+              (queryTn . TokenName)
+              (DistributedSet.nextNodePrefix str n)
             >>= \case
               Nothing -> return inp
               Just inp' -> go inp'
-
-    -- finds the length of the next prefix to search for (provided it exists)
-    nextNodeStrLength :: BuiltinByteString -> Node -> Maybe Integer
-    nextNodeStrLength inp node =
-      -- the following check (i.e., the precondition of
-      -- 'DistributedSet.existsNextNode') is completely unnecessary for this
-      -- use case here.
-      -- > | nPrefix node == inp = Nothing@
-      nBranches node >>= \(branchPrefix, _ds) ->
-        lengthOfByteString (nPrefix node) + lengthOfByteString branchPrefix + 1
-          <$ PlutusPrelude.guard (DistributedSet.existsNextNode inp node)
 
 -- | converts a 'Node' to the correpsonding 'DsDatum'
 nodeToDatum :: Node -> DsDatum
 nodeToDatum node =
   DsDatum
-    { dsLeaf = nLeaf node
-    , dsBranches = nBranches node
+    { dsEdge = nEdge node
     }
 
 {- | 'ownTxOutRef' finds a 'TxOutRef' corresponding to 'ownPaymentPubKeyHash'
@@ -224,12 +213,30 @@ ownTxOutRef = do
       [] -> Contract.throwError "no UTxO found"
       utxo : _ -> return $ fst utxo
 
--- We include this function to help with generating the 'DsParams' in the
--- test suite.
---
--- TODO: honestly, it might be a good idea to do this to mint the NFT for
--- the UpdateCommitteeHash endpoint as well (because last time I recall I
--- had some issues with the 'Address' data type and its Schema instance).
+{- | 'sortByOtherListOn lstOrd prj lst' sorts the elements in @lst@ according to
+ the total order given by the indices given in @lstOrd@ associated by @prj@.
+ If @lst@ contains an element not in @lstOrd@ (which is associated by @prj@),
+ then its index is considered to be @Prelude.maxBound@ i.e., this element is
+ appended to the end.
+
+ Complexity: /O(n\logn + m\logm)/ for /n,m/ size of @lst@ and @lstOrd@ resp.
+
+ N.B. there's some awkwardness with 'Ord' from Plutus and 'Prelude.Ord'.
+ 'Map' only works with Prelude's Ord instance.
+
+ N.B. Currently, we don't use this, but the idea was to use this to build
+ transactions with the inserted nodes "prenormalized" to make the onchain code
+ more efficient. But before the author got to implement this, he found other
+ ways to optimize the system which apparently work according to plutip
+-}
+sortByOtherListOn :: forall a b. Prelude.Ord b => [b] -> (a -> Maybe b) -> [a] -> [a]
+sortByOtherListOn lstOrd prj lst = PreludeList.sortOn (fromMaybe Prelude.maxBound . (toIx PlutusPrelude.<=< prj)) lst
+  where
+    toIx :: b -> Maybe Prelude.Int
+    toIx b = lstOrdToIx Fold.^? At.at b . Prism._Just
+
+    lstOrdToIx :: Map b Prelude.Int
+    lstOrdToIx = Map.fromList $ zip lstOrd [0 :: Prelude.Int ..]
 
 -- | 'dsInit' is the offchain code to build the distributed set
 dsInit :: DsParams -> Contract () TrustlessSidechainSchema Text AssetClass
@@ -240,14 +247,12 @@ dsInit dsp = do
       let -- variables creating the token
           sm = DistributedSet.dsCurSymbol dsm
           tn = TokenName $ dspStr dsp
-          val = Value.singleton sm tn 1
+          val = Value.assetClassValue ast 1
           ast = Value.assetClass sm tn
 
-          dat =
-            DsDatum
-              { dsLeaf = False
-              , dsBranches = Nothing
-              }
+          -- TODO: perhaps on chain code should verify this in the minting
+          -- policy as well.
+          dat = nodeToDatum DistributedSet.rootNode
 
           -- lookups required to build the transaction
           lookups =
@@ -256,12 +261,12 @@ dsInit dsp = do
               Prelude.<> Constraints.mintingPolicy mp
 
           -- the transaction
-          tx =
+          txConstraints =
             Constraints.mustSpendPubKeyOutput oref
               Prelude.<> Constraints.mustMintValue val
               Prelude.<> Constraints.mustPayToTheScript dat val
 
-      ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups tx
+      ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups txConstraints
 
       PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
@@ -284,57 +289,50 @@ dsInit dsp = do
 
 -- | 'dsInsert' is the offchain code to build the distributed set
 dsInsert :: DsParams -> Contract () TrustlessSidechainSchema Text ()
-dsInsert dsp = do
-  Contract.logInfo @Text $ "CURRENCY SYMBOL"
-  Contract.logInfo @Text $ Text.pack $ Prelude.show $ DistributedSet.dsCurSymbol dsm
+dsInsert dsp =
   findDsOutput ds (Value.tokenName $ Class.fromBuiltin str) >>= \case
     Nothing -> Contract.throwError "error: distributed set does not exist"
-    Just inp@(ref, o, dat, tn) ->
+    Just (ref, o, dat, tn) -> do
       let node :: Node
           node = DistributedSet.mkNode (unTokenName tn) dat
-       in case DistributedSet.insertNode str node of
-            Nothing -> Contract.throwError "error: inserting bad string"
-            Just nodes -> do
-              let lookups =
-                    Constraints.unspentOutputs (Map.singleton ref o)
-                      Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
-                      Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
-                      Prelude.<> Constraints.mintingPolicy mp
 
-                  redeemer :: Redeemer
-                  redeemer = Redeemer $ Class.toBuiltinData $ DsRedeemer {dsStr = str}
+          nodes = DistributedSet.insertNode str node
 
-                  tx =
-                    Prelude.mconcat
-                      [ Constraints.mustSpendScriptOutput ref redeemer
-                      , flip (Fold.foldMapOf Fold.folded) nodes $
-                          \n ->
-                            let nTn = TokenName $ nPrefix n
-                                val = Value.singleton (DistributedSet.dsCurSymbol dsm) nTn 1
-                             in if unTokenName nTn == nPrefix node
-                                  then
-                                    Constraints.mustPayToTheScript
-                                      (nodeToDatum n)
-                                      val
-                                  else
-                                    Constraints.mustPayToOtherScript
-                                      (Scripts.validatorHash (DistributedSet.insertValidator ds))
-                                      (Datum (Class.toBuiltinData (nodeToDatum n)))
-                                      val
-                                      Prelude.<> Constraints.mustMintValue val
-                      ]
+      -- Quickly check if we can really actually insert @str@ into this.
+      PlutusTx.Prelude.unless (nPrefix node `DistributedSet.isPrefixOfByteString` str && not (DistributedSet.elemNode str node)) $
+        Contract.throwError "error: inserting bad string"
 
-              Logging.logInfo @Text "Inserting the following node"
-              Logging.logInfo @Text $ Text.pack $ Prelude.show node
-              Logging.logInfo @Text $ Text.pack $ Prelude.show inp
-              Logging.logInfo @Text "Which results in nodes"
-              Logging.logInfo @Text $ Text.pack $ Prelude.show nodes
+      let lookups =
+            Constraints.unspentOutputs (Map.singleton ref o)
+              Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
+              Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
+              Prelude.<> Constraints.mintingPolicy mp
 
-              ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups tx
-              PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+          redeemer :: Redeemer
+          redeemer = Redeemer $ Class.toBuiltinData $ DsRedeemer {dsStr = str}
 
-              Logging.logInfo @Text "Transaction is as follows."
-              Logging.logInfo @Text $ Text.pack $ Prelude.show ledgerTx
+          txConstraints =
+            Prelude.mconcat
+              [ Constraints.mustSpendScriptOutput ref redeemer
+              , flip (Fold.foldMapOf Fold.folded) (DistributedSet.toListIb nodes) $
+                  \n ->
+                    let nTn = TokenName $ nPrefix n
+                        val = Value.singleton (DistributedSet.dsCurSymbol dsm) nTn 1
+                     in if unTokenName nTn == nPrefix node
+                          then
+                            Constraints.mustPayToTheScript
+                              (nodeToDatum n)
+                              val
+                          else
+                            Constraints.mustPayToOtherScript
+                              (Scripts.validatorHash (DistributedSet.insertValidator ds))
+                              (Datum (Class.toBuiltinData (nodeToDatum n)))
+                              val
+                              Prelude.<> Constraints.mustMintValue val
+              ]
+
+      ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups txConstraints
+      PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
   where
     -- Aliases:
     ds :: Ds

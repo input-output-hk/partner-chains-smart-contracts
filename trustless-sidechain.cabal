@@ -93,6 +93,7 @@ library
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OffChain.UpdateCommitteeHash
+    TrustlessSidechain.OnChain.BitField
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy
