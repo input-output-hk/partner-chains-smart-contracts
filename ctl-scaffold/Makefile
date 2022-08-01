@@ -2,15 +2,18 @@ SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 
+BROWSER_RUNTIME ?= 1
 ps-sources := $$(fd -epurs)
 ps-entrypoint := Main
-ps-bundle = spago bundle-module -m ${ps-entrypoint} --to output.js
 
-run-dev:
-	@${ps-bundle} && BROWSER_RUNTIME=1 webpack-dev-server --progress
+output.js: src/${ps-entrypoint}.purs
+	spago bundle-module -m ${ps-entrypoint} --to output.js
 
-run-build:
-	@${ps-bundle} && BROWSER_RUNTIME=1 webpack --mode=production
+run-dev: output.js
+	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack-dev-server --progress
+
+run-build: output.js
+	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
 
 check-format:
 	@purs-tidy check ${ps-sources}
