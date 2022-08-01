@@ -6,7 +6,7 @@ import Contract.Config (ConfigParams, testnetConfig, testnetNamiConfig)
 import Contract.Log (logInfo')
 import Contract.Monad (launchAff_, liftContractAffM, runContract)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts (MintingPolicy(..), PlutusScript(..))
+import Contract.Scripts (MintingPolicy(..), PlutusScript(..), mintingPolicyHash)
 import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
 import Contract.Value (scriptCurrencySymbol)
 
@@ -23,6 +23,7 @@ main ∷ Effect Unit
 main = launchAff_ $ runContract config do
   pol <- asMintingPolicy <$> textEnvelopeBytes fuelMintingPolicy PlutusScriptV1
   sym <- liftContractAffM "Currency Symbol Error" $ scriptCurrencySymbol pol
---v  <- liftContractAffM "Couldn't hash validator" (mintingPolicyHash mp)
+  mph <- liftContractAffM "Couldn't Hash Script" $ mintingPolicyHash pol
   logInfo' $ "Policy: " <> show pol
   logInfo' $ "Policy Symbol: " <> show sym
+  logInfo' $ "Policy Hash: " <> show mph
