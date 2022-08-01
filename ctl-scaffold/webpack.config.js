@@ -7,6 +7,17 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 // exports.myscript = require("Scripts/myscript.plutus");
 module.exports = {
+  mode: "development",
+ 
+  experiments: {
+    asyncWebAssembly: false,
+    layers: false,
+    lazyCompilation: false,
+    outputModule: true,
+    syncWebAssembly: true,
+    topLevelAwait: true,
+  },
+ 
   devtool: "eval-source-map",
 
   stats: { errorDetails: true },
