@@ -17,3 +17,4 @@ result-*
 .projectile
 /dist/
 output.js
+*.plutus
