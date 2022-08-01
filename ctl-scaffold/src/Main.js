@@ -1,8 +1,10 @@
 /* global BROWSER_RUNTIME */
 
-let script;
-if (typeof BROWSER_RUNTIME != "undefined" && BROWSER_RUNTIME) {
-  script = require("Scripts/FUELMintingPolicy.plutus");
+var script;
+var inBrowser = typeof BROWSER_RUNTIME !== 'undefined' && BROWSER_RUNTIME;
+
+if (inBrowser) {
+    script = require('Scripts/FUELMintingPolicy.plutus');
 } else {
   const fs = require("fs");
   const path = require("path");
@@ -12,3 +14,4 @@ if (typeof BROWSER_RUNTIME != "undefined" && BROWSER_RUNTIME) {
   );
 }
 exports.fuelMintingPolicy = script;
+exports.inBrowser = inBrowser;
