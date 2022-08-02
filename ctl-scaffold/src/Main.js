@@ -4,7 +4,7 @@ var script;
 var inBrowser = typeof BROWSER_RUNTIME !== 'undefined' && BROWSER_RUNTIME;
 
 if (inBrowser) {
-    script = require('Scripts/FUELMintingPolicy.plutus');
+  script = require('Scripts/FUELMintingPolicy.plutus');
 } else {
   const fs = require("fs");
   const path = require("path");

@@ -108,69 +108,7 @@ let upstream =
       https://github.com/purescript/package-sets/releases/download/psc-0.14.5-20211116/packages.dhall sha256:7ba810597a275e43c83411d2ab0d4b3c54d0b551436f4b1632e9ff3eb62e327a
 
 let additions =
-      {
-      , properties =
-          { dependencies = ["prelude", "console"]
-          , repo = "https://github.com/Risto-Stevcev/purescript-properties.git"
-          , version = "v0.2.0"
-          }
-      , lattice =
-          { dependencies = ["prelude", "console", "properties"]
-          , repo = "https://github.com/Risto-Stevcev/purescript-lattice.git"
-          , version = "v0.3.0"
-          }
-      , mote =
-          { dependencies = [ "these", "transformers", "arrays" ]
-          , repo = "https://github.com/garyb/purescript-mote"
-          , version = "v1.1.0"
-          }
-      , medea =
-          { dependencies =
-            [ "aff"
-            , "argonaut"
-            , "arrays"
-            , "bifunctors"
-            , "control"
-            , "effect"
-            , "either"
-            , "enums"
-            , "exceptions"
-            , "foldable-traversable"
-            , "foreign-object"
-            , "free"
-            , "integers"
-            , "lists"
-            , "maybe"
-            , "mote"
-            , "naturals"
-            , "newtype"
-            , "node-buffer"
-            , "node-fs-aff"
-            , "node-path"
-            , "nonempty"
-            , "ordered-collections"
-            , "parsing"
-            , "partial"
-            , "prelude"
-            , "psci-support"
-            , "quickcheck"
-            , "quickcheck-combinators"
-            , "safely"
-            , "spec"
-            , "strings"
-            , "these"
-            , "transformers"
-            , "typelevel"
-            , "tuples"
-            , "unicode"
-            , "unordered-collections"
-            , "unsafe-coerce"
-            ]
-        , repo = "https://github.com/juspay/medea-ps.git"
-        , version = "8b215851959aa8bbf33e6708df6bd683c89d1a5a"
-        }
-
-      , aeson =
+      { aeson =
         { dependencies =
           [ "aff"
           , "argonaut"
@@ -267,6 +205,66 @@ let additions =
           ]
         , repo = "https://github.com/hdgarrood/purescript-sequences"
         , version = "v3.0.2"
+        }
+      , properties =
+        { dependencies = [ "prelude", "console" ]
+        , repo = "https://github.com/Risto-Stevcev/purescript-properties.git"
+        , version = "v0.2.0"
+        }
+      , lattice =
+        { dependencies = [ "prelude", "console", "properties" ]
+        , repo = "https://github.com/Risto-Stevcev/purescript-lattice.git"
+        , version = "v0.3.0"
+        }
+      , mote =
+        { dependencies = [ "these", "transformers", "arrays" ]
+        , repo = "https://github.com/garyb/purescript-mote"
+        , version = "v1.1.0"
+        }
+      , medea =
+        { dependencies =
+          [ "aff"
+          , "argonaut"
+          , "arrays"
+          , "bifunctors"
+          , "control"
+          , "effect"
+          , "either"
+          , "enums"
+          , "exceptions"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "free"
+          , "integers"
+          , "lists"
+          , "maybe"
+          , "mote"
+          , "naturals"
+          , "newtype"
+          , "node-buffer"
+          , "node-fs-aff"
+          , "node-path"
+          , "nonempty"
+          , "ordered-collections"
+          , "parsing"
+          , "partial"
+          , "prelude"
+          , "psci-support"
+          , "quickcheck"
+          , "quickcheck-combinators"
+          , "safely"
+          , "spec"
+          , "strings"
+          , "these"
+          , "transformers"
+          , "typelevel"
+          , "tuples"
+          , "unicode"
+          , "unordered-collections"
+          , "unsafe-coerce"
+          ]
+        , repo = "https://github.com/juspay/medea-ps.git"
+        , version = "8b215851959aa8bbf33e6708df6bd683c89d1a5a"
         }
       , purescript-toppokki =
         { dependencies =

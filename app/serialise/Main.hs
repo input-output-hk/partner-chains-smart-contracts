@@ -7,53 +7,29 @@ import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
-import Data.Either (fromRight)
+import Data.Foldable (traverse_)
 import Ledger (Script, scriptHash)
-import TrustlessSidechain.OnChain.FUELMintingPolicy qualified
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified
-import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified
-import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified
+import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
 -- CTL uses the usual TextEnvelope format now.
 serialiseScript :: FilePath -> Script -> IO ()
 serialiseScript name script =
-  let out :: PlutusScript PlutusScriptV1
-      out = PlutusScriptSerialised . toShort . toStrict $ serialise script
+  let out = PlutusScriptSerialised @PlutusScriptV1 . toShort . toStrict $ serialise script
       file = "ctl-scaffold/Scripts/" <> name <> ".plutus"
-   in fromRight () <$> writeFileTextEnvelope file Nothing out
-
-serialiseFUELMintingPolicy :: IO ()
-serialiseFUELMintingPolicy = do
-  let name = "FUELMintingPolicy"
-      mp = TrustlessSidechain.OnChain.FUELMintingPolicy.serialisableMintingPolicy
-  putStrLn $ "serialising " <> name <> " hash =" <> show (scriptHash mp)
-  serialiseScript name mp
-
-serialiseCommitteCandidateValidator :: IO ()
-serialiseCommitteCandidateValidator = do
-  let name = "CommitteCandidateValidator"
-      mp = TrustlessSidechain.OnChain.UpdateCommitteeHash.serialisableCommitteHashPolicy
-  putStrLn $ "serialising " <> name <> " hash =" <> show (scriptHash mp)
-  serialiseScript name mp
-
-serialiseMPTRootTokenValidator :: IO ()
-serialiseMPTRootTokenValidator = do
-  let name = "MPTRootTokenValidator"
-      mp = TrustlessSidechain.OnChain.MPTRootTokenValidator.serialisableValidator
-  putStrLn $ "serialising " <> name <> " hash =" <> show (scriptHash mp)
-  serialiseScript name mp
-
-serialiseMPTRootTokenMintingPolicy :: IO ()
-serialiseMPTRootTokenMintingPolicy = do
-  let name = "MPTRootMintingPolicy"
-      mp = TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.serialisableMintingPolicy
-  putStrLn $ "serialising " <> name <> " hash =" <> show (scriptHash mp)
-  serialiseScript name mp
+   in do
+        putStrLn $ "serialising " <> name <> ",\thash = " <> show (scriptHash script)
+        writeFileTextEnvelope file Nothing out >>= either print pure
 
 main :: IO ()
-main = do
-  serialiseFUELMintingPolicy
-  serialiseCommitteCandidateValidator
-  serialiseMPTRootTokenValidator
-  serialiseMPTRootTokenMintingPolicy
+main =
+  traverse_
+    (uncurry serialiseScript)
+    [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
+    , ("CommitteCandidateValidator", UpdateCommitteeHash.serialisableCommitteHashPolicy)
+    , ("MPTRootTokenValidator", MPTRootTokenValidator.serialisableValidator)
+    , ("MPTRootMintingPolicy", MPTRootTokenMintingPolicy.serialisableMintingPolicy)
+    ]

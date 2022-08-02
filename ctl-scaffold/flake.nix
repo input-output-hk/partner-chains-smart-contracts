@@ -1,7 +1,7 @@
 {
   description = "ctl-scaffold";
   inputs = {
-    nixpkgs.follows  = "cardano-transaction-lib/nixpkgs";
+    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
     cardano-transaction-lib = {
@@ -11,22 +11,24 @@
       rev = "1aaa081fb0b7c669cdc3e1b285c613f78cd598a5";
     };
   };
-  outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs: let
-    defaultSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
-    perSystem = nixpkgs.lib.genAttrs defaultSystems;
-    nixpkgsFor = system: import nixpkgs {
-      inherit system;
-      overlays = [
-        cardano-transaction-lib.overlay
-        (_: _: {
-          ctl-server = cardano-transaction-lib.packages.${system}."ctl-server:exe:ctl-server";
-        })
-      ];
-    };
-    psProjectFor = system: let
-      projectName = "ctl-scaffold";
-      pkgs = nixpkgsFor system;
-      src = builtins.path {
+  outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:
+    let
+      defaultSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
+      perSystem = nixpkgs.lib.genAttrs defaultSystems;
+      nixpkgsFor = system: import nixpkgs {
+        inherit system;
+        overlays = [
+          cardano-transaction-lib.overlay
+          (_: _: {
+            ctl-server = cardano-transaction-lib.packages.${system}."ctl-server:exe:ctl-server";
+          })
+        ];
+      };
+      psProjectFor = system:
+        let
+          projectName = "ctl-scaffold";
+          pkgs = nixpkgsFor system;
+          src = builtins.path {
             path = self;
             name = "${projectName}-src";
             filter = path: ftype:
@@ -35,45 +37,49 @@
                 (baseNameOf path) [ "doc" ]
               );
           };
-      in pkgs.purescriptProject {
-        inherit pkgs src projectName;
-        packageJson = ./package.json;
-        packageLock = ./package-lock.json;
-        shell.packages = with pkgs; [
-          bashInteractive
-          fd
-          docker
-          # plutip
-          ctl-server
-          ogmios
-          ogmios-datum-cache
-          plutip-server
-          postgresql
-        ];
-      };
-    in {
-    packages = perSystem (system: {
-      default = self.packages.${system}.ctl-scaffold-bundle-web;
-      ctl-scaffold-bundle-web = (psProjectFor system).bundlePursProject {
-        sources = [ "src" ];
-        main = "Main";
-        entrypoint = "index.js"; # must be same as listed in webpack config
-        webpackConfig = "webpack.config.js";
-        bundledModuleName = "output.js";
-      };
-      ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
-    });
-    apps = perSystem (system: { ctl-scaffold-runtime = (nixpkgsFor system).launchCtlRuntime { }; });
-    devShell = perSystem (system: (psProjectFor system).devShell
-      );
-    checks = perSystem (system: let pkgs = nixpkgsFor system; in {
-      ctl-scaffold = (psProjectFor system).runPursTest {
-        sources = [ "src" "test" ];
-        testMain = "Test.Main";
+        in
+        pkgs.purescriptProject {
+          inherit pkgs src projectName;
+          packageJson = ./package.json;
+          packageLock = ./package-lock.json;
+          shell.packages = with pkgs; [
+            bashInteractive
+            fd
+            docker
+            # plutip
+            ctl-server
+            ogmios
+            ogmios-datum-cache
+            plutip-server
+            postgresql
+          ];
         };
-      formatting-check = pkgs.runCommand "formatting-check"
-        { nativeBuildInputs = [ pkgs.easy-ps.purs-tidy pkgs.fd ]; }
-        ''cd ${self} && purs-tidy check $(fd -epurs) && touch $out'';
-    });
-  };
+    in
+    {
+      packages = perSystem (system: {
+        default = self.packages.${system}.ctl-scaffold-bundle-web;
+        ctl-scaffold-bundle-web = (psProjectFor system).bundlePursProject {
+          sources = [ "src" ];
+          main = "Main";
+          entrypoint = "index.js"; # must be same as listed in webpack config
+          webpackConfig = "webpack.config.js";
+          bundledModuleName = "output.js";
+        };
+        ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
+      });
+      apps = perSystem (system: { ctl-scaffold-runtime = (nixpkgsFor system).launchCtlRuntime { }; });
+      devShell = perSystem (system: (psProjectFor system).devShell
+      );
+      checks = perSystem (system:
+        let pkgs = nixpkgsFor system; in
+        {
+          ctl-scaffold = (psProjectFor system).runPursTest {
+            sources = [ "src" "test" ];
+            testMain = "Test.Main";
+          };
+          formatting-check = pkgs.runCommand "formatting-check"
+            { nativeBuildInputs = [ pkgs.easy-ps.purs-tidy pkgs.fd ]; }
+            ''cd ${self} && purs-tidy check $(fd -epurs) && touch $out'';
+        });
+    };
 }
