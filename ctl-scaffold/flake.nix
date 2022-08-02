@@ -16,7 +16,12 @@
     perSystem = nixpkgs.lib.genAttrs defaultSystems;
     nixpkgsFor = system: import nixpkgs {
       inherit system;
-      overlays = [ cardano-transaction-lib.overlay ];
+      overlays = [
+        cardano-transaction-lib.overlay
+        (_: _: {
+          ctl-server = cardano-transaction-lib.packages.${system}."ctl-server:exe:ctl-server";
+        })
+      ];
     };
     psProjectFor = system: let
       projectName = "ctl-scaffold";
@@ -38,6 +43,12 @@
           bashInteractive
           fd
           docker
+          # plutip
+          ctl-server
+          ogmios
+          ogmios-datum-cache
+          plutip-server
+          postgresql
         ];
       };
     in {
