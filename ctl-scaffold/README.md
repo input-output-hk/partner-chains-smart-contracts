@@ -25,3 +25,5 @@ Upgrading ctl etc.. [read their docs](https://github.com/Plutonomicon/cardano-tr
 * All scripts must be explicitly passed to CTL. unlike plutus , off-on chain must share scripts in serialized format: easiest is using Contract.TextEnvelope.textEnvelope with the JS FFI
 
 * Applying arguments to parameterized scripts requires a weird hack wrapping Data arguments (unsafeFromBuiltinData)
+
+* Before testing remember to `nix run .#ctl-scaffold-runtime`
