@@ -2,22 +2,26 @@
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
 
-import Codec.Serialise (Serialise, serialise)
-import Data.ByteString.Base16.Lazy qualified as Base16
-import Data.ByteString.Lazy qualified as BS
-import Ledger (scriptHash)
+import Cardano.Api (PlutusScriptV1, writeFileTextEnvelope)
+import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
+import Codec.Serialise (serialise)
+import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Short (toShort)
+import Data.Either (fromRight)
+import Ledger (Script, scriptHash)
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified
 import Prelude
 
--- CTL uses raw serialised form of scripts as hex string; Base-16 encoded CBOR
-serialiseScript :: Serialise a => FilePath -> a -> IO ()
+-- CTL uses the usual TextEnvelope format now.
+serialiseScript :: FilePath -> Script -> IO ()
 serialiseScript name script =
-  let out = Base16.encode (serialise script)
+  let out :: PlutusScript PlutusScriptV1
+      out = PlutusScriptSerialised . toShort . toStrict $ serialise script
       file = "ctl-scaffold/Scripts/" <> name <> ".plutus"
-   in BS.writeFile file out
+   in fromRight () <$> writeFileTextEnvelope file Nothing out
 
 serialiseFUELMintingPolicy :: IO ()
 serialiseFUELMintingPolicy = do

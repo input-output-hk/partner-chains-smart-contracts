@@ -2,11 +2,10 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
 import Contract.Monad (launchAff_)
 import Contract.Test.Plutip (PlutipConfig, runPlutipContract)
 import Data.UInt (fromInt)
--- import Main (contract)
+import Main (contract)
 
 config ∷ PlutipConfig
 config =
@@ -41,6 +40,4 @@ config =
   }
 
 main ∷ Effect Unit
-main = launchAff_ $ runPlutipContract config unit \_ -> do
-  logInfo' "Hello World"
---   contract
+main = launchAff_ $ runPlutipContract config unit \_ -> contract

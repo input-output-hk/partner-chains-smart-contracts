@@ -130,6 +130,7 @@ executable trustless-sidechain-serialise
   build-depends:
     , base16-bytestring
     , bytestring
+    , cardano-api
     , plutus-ledger
     , serialise
     , trustless-sidechain
