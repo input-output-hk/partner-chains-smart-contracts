@@ -287,6 +287,7 @@ let additions =
           , "aeson-helpers"
           , "aff"
           , "aff-promise"
+          , "aff-retry"
           , "affjax"
           , "arraybuffer-types"
           , "arrays"
@@ -320,10 +321,12 @@ let additions =
           , "mote"
           , "newtype"
           , "node-buffer"
+          , "node-child-process"
           , "node-fs"
           , "node-fs-aff"
           , "node-path"
           , "node-process"
+          , "node-streams"
           , "nonempty"
           , "optparse"
           , "now"
@@ -332,6 +335,7 @@ let additions =
           , "orders"
           , "parallel"
           , "partial"
+          , "posix-types"
           , "prelude"
           , "profunctor"
           , "profunctor-lenses"
@@ -359,7 +363,7 @@ let additions =
           , "variant"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "27b38d402a9a9b2ef90129c195c9730c0091da35"
+        , version = "1aaa081fb0b7c669cdc3e1b285c613f78cd598a5"
         }
       }
 in upstream // additions

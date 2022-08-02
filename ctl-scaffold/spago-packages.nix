@@ -53,6 +53,18 @@ let
         installPhase = "ln -s $src $out";
       };
 
+    "aff-retry" = pkgs.stdenv.mkDerivation {
+        name = "aff-retry";
+        version = "v1.2.1";
+        src = pkgs.fetchgit {
+          url = "https://github.com/Unisay/purescript-aff-retry.git";
+          rev = "936fad803e3610f149df724ead288657a905cb84";
+          sha256 = "08651ly153ywzviab0ipd0zrhwdr8nz4xfym45dlpbgabgrh8pra";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
     "affjax" = pkgs.stdenv.mkDerivation {
         name = "affjax";
         version = "v12.0.0";
@@ -199,11 +211,11 @@ let
 
     "cardano-transaction-lib" = pkgs.stdenv.mkDerivation {
         name = "cardano-transaction-lib";
-        version = "27b38d402a9a9b2ef90129c195c9730c0091da35";
+        version = "1aaa081fb0b7c669cdc3e1b285c613f78cd598a5";
         src = pkgs.fetchgit {
           url = "https://github.com/Plutonomicon/cardano-transaction-lib.git";
-          rev = "27b38d402a9a9b2ef90129c195c9730c0091da35";
-          sha256 = "0k4myay896shxypfnns8k7k2kml9r1waxnssq3nfwjkqbgq5g2bk";
+          rev = "1aaa081fb0b7c669cdc3e1b285c613f78cd598a5";
+          sha256 = "0w2wg9anyx4s9bd2fgi34dwnx2v8lhcb6pjqmv1lxpkf30j0iwh6";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -581,6 +593,18 @@ let
         installPhase = "ln -s $src $out";
       };
 
+    "js-timers" = pkgs.stdenv.mkDerivation {
+        name = "js-timers";
+        version = "v5.0.1";
+        src = pkgs.fetchgit {
+          url = "https://github.com/purescript-contrib/purescript-js-timers.git";
+          rev = "86afef13f457b9506acdfe88559ee18f1cd2c2d8";
+          sha256 = "0008paz0qkz5n1pfrzagkkac6jny9z2rd1ij10ww2k1pkb9cy59z";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
     "js-uri" = pkgs.stdenv.mkDerivation {
         name = "js-uri";
         version = "v2.0.0";
@@ -768,6 +792,18 @@ let
           url = "https://github.com/purescript-node/purescript-node-buffer.git";
           rev = "0721f1e8d768df48ae429547c8c60b121ca120cb";
           sha256 = "14bf3llsa20ivkwp5hlyk8v8zfzpzhhsni9pd8rfqdyzp6zrdx3b";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
+    "node-child-process" = pkgs.stdenv.mkDerivation {
+        name = "node-child-process";
+        version = "v7.1.0";
+        src = pkgs.fetchgit {
+          url = "https://github.com/purescript-node/purescript-node-child-process.git";
+          rev = "5c4e560eceead04efc1d5a3ec1f6de91bb1d512e";
+          sha256 = "18va367xims00hmjwiasiifdfak3cbs0sp4sr52ihb20n19n6h5b";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";
@@ -1284,6 +1320,18 @@ let
           url = "https://github.com/purescript/purescript-tailrec.git";
           rev = "5fbf0ac05dc6ab1a228b2897630195eb7483b962";
           sha256 = "1jjl2q2hyhjcdxpamzr1cdlxhmq2bl170x5p3jajb9zgwkqx0x22";
+        };
+        phases = "installPhase";
+        installPhase = "ln -s $src $out";
+      };
+
+    "test-unit" = pkgs.stdenv.mkDerivation {
+        name = "test-unit";
+        version = "v16.0.0";
+        src = pkgs.fetchgit {
+          url = "https://github.com/bodil/purescript-test-unit.git";
+          rev = "56d06897b621df5d2f619433d19ababb5bb8ebd1";
+          sha256 = "0qz903phxkgrn7qdz1xi49bydkf5cbxssyb4xk029zi4lshb35mw";
         };
         phases = "installPhase";
         installPhase = "ln -s $src $out";

@@ -18,6 +18,9 @@ If you add a dependency to `package.json`, make sure to update the lockfile with
 After updating your `package-lock.json` with the previous `npm` invocation, remember to reload
 your nix shell.
 
+# Nix
+Upgrading ctl etc.. [read their docs](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/ctl-as-dependency.md#upgrading-ctl)
+
 # Notes
 * All scripts must be explicitly passed to CTL. unlike plutus , off-on chain must share scripts in serialized format: easiest is using Contract.TextEnvelope.textEnvelope with the JS FFI
 
