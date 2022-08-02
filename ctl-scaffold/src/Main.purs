@@ -10,7 +10,6 @@ import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
 import Contract.Value (scriptCurrencySymbol)
 
 foreign import fuelMintingPolicy ∷ String
-foreign import inBrowser ∷ Boolean
 
 asMintingPolicy ∷ ByteArray -> MintingPolicy
 asMintingPolicy = PlutusScript >>> MintingPolicy

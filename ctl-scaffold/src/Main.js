@@ -14,4 +14,3 @@ if (inBrowser) {
   );
 }
 exports.fuelMintingPolicy = script;
-exports.inBrowser = inBrowser;
