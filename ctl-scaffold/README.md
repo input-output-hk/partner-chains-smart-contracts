@@ -26,4 +26,3 @@ Upgrading ctl etc.. [read their docs](https://github.com/Plutonomicon/cardano-tr
 
 * Applying arguments to parameterized scripts requires a weird hack wrapping Data arguments (unsafeFromBuiltinData)
 
-* Before testing remember to `nix run .#ctl-scaffold-runtime`
