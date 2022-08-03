@@ -29,7 +29,7 @@ main =
   traverse_
     (uncurry serialiseScript)
     [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
-    , ("CommitteCandidateValidator", UpdateCommitteeHash.serialisableCommitteHashPolicy)
+    , ("UpdateCommitteeHash", UpdateCommitteeHash.serialisableCommitteHashPolicy)
     , ("MPTRootTokenValidator", MPTRootTokenValidator.serialisableValidator)
-    , ("MPTRootMintingPolicy", MPTRootTokenMintingPolicy.serialisableMintingPolicy)
+    , ("MPTRootTokenMintingPolicy", MPTRootTokenMintingPolicy.serialisableMintingPolicy)
     ]
