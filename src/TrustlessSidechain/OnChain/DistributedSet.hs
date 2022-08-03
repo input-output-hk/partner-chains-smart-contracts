@@ -224,6 +224,9 @@ PlutusTx.makeLift ''DsMint
     @nPrefix a ++ br ++ [d]@ can be a prefix of @str@ since we'd otherwise
     contradict the construction of @a@.
 
+    Also, uniqueness is immediate (since otherwise, the prefix wouldn't match
+    or we could go further down the tree).
+
  Claim 2.
    If a node @a@ is of the form @Tip suf = nEdge a@, then every string
    @str /= nPrefix a ++ suf@ with @nPrefix a `isPrefixOf` str@ is not in the
@@ -236,6 +239,22 @@ PlutusTx.makeLift ''DsMint
 
  Proof.
    Claim 2. and 3. are immediate.
+
+ Property 1.
+    An insertion will yield 2 or 3 new nodes.
+
+ Proof.
+    See 'insertNode' for the case analysis.
+
+ Property 2.
+    The height of the tree (length of the longest path from root to leaf) is at
+    most the length of the message digest.
+
+ Proof.
+    Immediate by construction.
+
+ Property 1. and Property 2. entail reasonably efficient onchain validation and
+ a way to efficiently query utxos offchain resp.
  -}
 
 {-
@@ -261,22 +280,49 @@ PlutusTx.makeLift ''DsMint
     bytes which coincidentally is exactly how large a 'TokenName' may be.
 
  Now, we need to be a bit careful about minting writing the validators /
- minting policies for this. In particular, the validator must
+ minting policies for this. We describe this (and the security!) in more detail
+ here.
 
-    * Verify that when we are trying to insert a new string, only the new nodes
-    which maintain the invariants of the data structure are created as new
-    UTxOs.
+ When we initialize the distributed set we must create minting policy which
+ (takes as a parameter an unspent transaction, say @inittxout@) that
 
-  Moreover, the minting policy must
+    * Mints exactly one token with 'TokenName' @""@ which is paid to some
+    script (N.B. at this moment, we can't verify that this token is paid to the
+    validator script for the distributed set because of a chicken / egg sorta
+    problem) that corresponds to 'rootNode' in the distributed set (we
+    initialize the set to be non empty with some aribtrary null bytes -- see
+    Note [Why Can we Assume the Distributed Set is NonEmpty?]); AND we consume
+    the @inittxout@ transaction.
 
-    * Verify that new 'TokenName's are generated exactly as required for the
-    validator and no other new 'TokenName's are generated.
+    * (this is used in the general case of inserting things in the distributed
+    set). Mints exactly 1 or 2 tokens (of a potentially arbitrary 'TokenName's)
+    if and only if (a) we are consuming exactly one transaction which already
+    has a 'CurrencySymbol' of this script; and (b) we spend these tokens to
+    distinct continuing outputs of the utxo we are spending.
 
- Also, one more side remark: you may notice that this implementation appears to
- not support "being empty" -- which indeed it doesn't. We remedy this situation
- by initializing the distributed set with some null bytes and using preimage
- resistance of the hash function, no one should be able to find a preimage of
- the null bytes.
+  At this point, other participants may use the above 'CurrencySymbol' with
+  'TokenName' @""@ to identify the 'rootNode' of the distributed set. If an
+  adversary did something evil and attempted to mint the token to a validator
+  which isn't the distributed set, other participants would notice pretty quick
+  that something is wrong (since our distributed set validators are
+  paramerterized with the 'CurrencySymbol') and hence wouldn't paid to the
+  distributed set's validator.
+
+  As for the validator, the validator needs to verify that: when given a
+  redeemer (of the string to insert), we create 2-3 new utxos of nodes which
+  correspond to the insertion. Note that the second case of the minting policy
+  is used to create these new nodes.
+-}
+
+{- Note [Why Can We Assume the Distributed Set is NonEmpty?]
+
+ You may notice that this implementation appears to not support "being empty"
+ -- which indeed this representation only allows the set to be nonempty.
+ This doesn't matter actually since we can initialize the set to start with any
+ arbitrary bytes already inserted (we arbitrarily choose some null bytes) and
+ since we are storing hashes, by preimage resistance, it will be difficult for
+ someone to find something in the domain that hashes to the same arbitrary
+ bytes we chose.
 -}
 
 {-
@@ -814,7 +860,7 @@ dsCurSymbol = Contexts.scriptCurrencySymbol . dsPolicy
     essentialyl "burn" other people's tokens forever (since they can never
     spend this transaction as it'll run over the budget).
 
-    But the Stick Breaking Set had good ideas nonetheless --  a great place to
+    But the Stick Breaking Set had good ideas nonetheless -- a great place to
     start :D.
 -}
 

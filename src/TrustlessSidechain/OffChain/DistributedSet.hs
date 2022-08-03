@@ -109,9 +109,7 @@ foldUtxoRefsWithCurrency f z pq astCls =
           Nothing -> return acc'
           Just pq' -> query pq' >>= go acc'
 
-{- | 'foldUtxoRefsWithCurrency' Folds through each 'UtxosResponse's of utxos
- given with the given 'AssetClass' and 'PageQuery'.
--}
+-- | 'utxosWithCurrency' queries all the utxos with a given 'AssetClass'
 utxosWithCurrency ::
   forall w s e.
   AsContractError e =>
@@ -193,7 +191,7 @@ findDsOutput ds tn =
               Nothing -> return inp
               Just inp' -> go inp'
 
--- | converts a 'Node' to the correpsonding 'DsDatum'
+-- | Converts a 'Node' to the correpsonding 'DsDatum'
 nodeToDatum :: Node -> DsDatum
 nodeToDatum node =
   DsDatum
@@ -250,8 +248,6 @@ dsInit dsp = do
           val = Value.assetClassValue ast 1
           ast = Value.assetClass sm tn
 
-          -- TODO: perhaps on chain code should verify this in the minting
-          -- policy as well.
           dat = nodeToDatum DistributedSet.rootNode
 
           -- lookups required to build the transaction

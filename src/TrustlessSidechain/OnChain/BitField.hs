@@ -20,8 +20,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import Prelude qualified
 
--- neededf for the ToJSON for 'BuiltinByteString' which I don't think we really need?
-
 {- | 'Byte' is an internal type alias to denote an element of a ByteString.
  Invariant: 'Byte' are values in [0, 2^8 - 1].
 -}
@@ -71,7 +69,7 @@ orByte = go 0 0
       | otherwise = acc
 
 {- | @'exps0To7' i@ is an internal function to which does computes @2^i@ for @0
- <= i < 8@ and throws an exception of @i@ falls outside the domain.
+ <= i < 8@.
 -}
 {-# INLINEABLE exps0To7 #-}
 exps0To7 :: Integer -> Integer
