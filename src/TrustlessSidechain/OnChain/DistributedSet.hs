@@ -16,8 +16,8 @@ import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint),
-  TxOut (txOutDatumHash, txOutValue),
+  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs),
+  TxOut (txOutAddress, txOutDatumHash, txOutValue),
   TxOutRef,
  )
 import Plutus.V1.Ledger.Scripts (
@@ -579,16 +579,8 @@ insertNode str node =
 mkInsertValidator :: Ds -> DsDatum -> DsRedeemer -> ScriptContext -> Bool
 mkInsertValidator ds _dat red ctx =
   traceIfFalse "error 'mkInsertValidator' invalid insertion" $
-    ( \nnodes ->
-        nnodes == contNodes
-          --  this checks that the outputs are really the nodes that they
-          --  should be.
-          && normalizeIb (fromListIb (nPrefix ownNode : map unTokenName mintedTns))
-            == fmap nPrefix contNodes
-            -- this verifies that we've only minted the new tokens that we
-            -- should have minted for the nodes.
-    )
-      $ normalizeIbNodes $
+    (== contNodes) $
+      normalizeIbNodes $
         insertNode nStr ownNode
   where
     -- Aliases:
@@ -597,9 +589,6 @@ mkInsertValidator ds _dat red ctx =
 
     curSymb :: CurrencySymbol -- This uniquely identifies this tree.
     curSymb = dsSymbol ds
-
-    mint :: Value
-    mint = txInfoMint info
 
     nStr :: BuiltinByteString
     nStr = dsStr red
@@ -634,9 +623,6 @@ mkInsertValidator ds _dat red ctx =
       Just inp -> getTxOutNodeInfo $ txInInfoResolved inp
       Nothing -> traceError "error 'mkInsertValidator': 'ownNode' doesn't exist"
 
-    mintedTns :: [TokenName]
-    mintedTns = getTns mint
-
     contNodes :: Ib Node
     contNodes =
       normalizeIbNodes $ fromListIb $ map getTxOutNodeInfo $ Contexts.getContinuingOutputs ctx
@@ -668,37 +654,36 @@ insertAddress = Scripts.validatorAddress . typedInsertValidator
 
 -- * Minting Policy for Initializing the Distributed Set
 
-{- | 'mkDsPolicy' needs to verify the following. Either:
-
-      (1) [Growing the Distributed Set] Checks that we are spending an
-      'AssetClass' with *this* 'CurrencySymbol', and mints exactly one
-      of whatever 'TokenName' it likes.
-
-      (2) [Initializing the Distributed Set] spends the 'TxOutRef' given in
-      the parameter.
-
-  Note that the validator script does the heavy lifting to ensure that these
-  tokens are minted and transferred in a controlled manner.
-
-  The "use-case"  of this script would be to:
-
-    (1) Mint an initial transaction, and pay to some validator script say
-    @script@
-
-    (2) Then, this minting policy will only succeed if there exists some
-    @script'@ which has this token AND (by defn. of consensus rules) that
-    @script'@ will succeed.
-
- Note that this minting policy does not guarantee that the @script'@ is the
- same validator as the original @script@! Hence, @script@ needs to be written
- carefully to ensure that this is the case for security.
-
- TODO: We need to verify that the intial datum is 'rootNode' for security reasons.
--}
+-- | 'mkDsPolicy' needs to verify the following.  See Note [Node Representation].
 mkDsPolicy :: DsMint -> () -> ScriptContext -> Bool
-mkDsPolicy gds _red ctx =
-  traceIfFalse "error 'mkDsPolicy' missing transaction inputs" checkInputs
-    && traceIfFalse "error 'mkDsPolicy' must mint exactly one TokenName" checkMintedAmount
+mkDsPolicy gds _red ctx = case inputs of
+  -- We only allow consuming a single token of this currency symbol (or the
+  -- initial transaction to consume).
+  [i]
+    -- This is the minting new tokens to grow the distributed set case.
+    | Left txout <- i
+      , [itn] <- getTns (txOutValue txout) ->
+      traceIfFalse "error 'mkDsPolicy' bad extend" $
+        let contTns =
+              normalizeIb $
+                fromListIb $
+                  mapMaybe (\o -> if txOutAddress txout == txOutAddress o then case getTns (txOutValue o) of [tn] -> Just tn; _ -> Nothing else Nothing) $
+                    txInfoOutputs info
+         in normalizeIb (fromListIb (itn : minted)) == contTns
+    -- This is the "initializing" the distributed set case.
+    | Right _ <- i -> traceIfFalse "error 'mkDsPolicy' bad initialization" $ case minted of
+      [mt] ->
+        -- Then, we find the output which contains this token and
+        -- verify that it has the datum for the right root of the
+        -- distributed set
+        case flip find (txInfoOutputs info) $ \o -> let tns = getTns (txOutValue o) in not (null tns) of
+          Just txout -> fromMaybe False $ do
+            dhash <- txOutDatumHash txout
+            dn <- fmap getDatum (Contexts.findDatum dhash info) >>= PlutusTx.fromBuiltinData
+            return $ rootNode == mkNode (unTokenName mt) dn
+          _ -> False
+      _ -> False
+  _ -> traceError "error 'mkDsPolicy' illegal transaction inputs"
   where
     -- Aliases
     info :: TxInfo
@@ -710,29 +695,38 @@ mkDsPolicy gds _red ctx =
     mint :: Value
     mint = txInfoMint info
 
-    -- Checks:
-    checkInputs :: Bool
-    checkInputs = flip any (txInfoInputs info) $ \i ->
-      -- p1 correponds to (1), and p2 corresponds to (2).
-      let p1, p2 :: Bool
-          p1 = case fmap AssocMap.toList $
-            AssocMap.lookup ownCurSymb $
-              getValue $
-                txOutValue $
-                  txInInfoResolved i of
-            Just ((_, amount) : _) -> amount == 1
-            _ -> False
-          p2 = txInInfoOutRef i == dsmTxOutRef gds
-       in if p2 then True else p1
+    minted :: [TokenName]
+    minted = getTns mint
 
-    checkMintedAmount :: Bool
-    checkMintedAmount = flip (maybe False) (fmap AssocMap.toList $ AssocMap.lookup ownCurSymb $ getValue mint) $ \mintedtns ->
-      let go :: [(TokenName, Integer)] -> Bool
-          go [] = True
-          go ((_mt, amount) : mts)
-            | amount == 1 = go mts
-            | otherwise = False
-       in go mintedtns
+    -- Helper functions
+    getTns :: Value -> [TokenName]
+    getTns v = case AssocMap.toList <$> AssocMap.lookup ownCurSymb (Value.getValue v) of
+      Just kvs | all ((== 1) . snd) kvs -> map fst kvs
+      _ -> []
+
+    -- these are the inputs which either
+    --
+    --      * Left: spend an output which contains a currency of this token (implemented as @p1@); or
+    --
+    --      * Right: spend the distinguished address in 'DsMint' (implemented as @p2@)
+    inputs :: [Either TxOut ()]
+    inputs = flip mapMaybe (txInfoInputs info) $ \i ->
+      -- p1 correponds to (1), and p2 corresponds to (2).
+      let p1, p2 :: Maybe (Either TxOut ())
+          p1 = case tns of
+            Just [(_tn, amount)] | amount == 1 -> Just $ Left txout
+            Just _ -> traceError "error 'mkDsPolicy' illegal spend"
+            _ -> Nothing
+          p2 =
+            if txInInfoOutRef i == dsmTxOutRef gds
+              then Just $ Right ()
+              else Nothing
+
+          txout = txInInfoResolved i
+          tns = fmap AssocMap.toList $ AssocMap.lookup ownCurSymb $ getValue $ txOutValue txout
+       in case p1 of
+            Just _ -> p1
+            Nothing -> p2
 
 -- | 'dsPolicy' is the minting policy
 dsPolicy :: DsMint -> MintingPolicy
