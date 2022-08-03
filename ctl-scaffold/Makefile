@@ -3,16 +3,20 @@ SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
 
 BROWSER_RUNTIME ?= 1
-ps-sources := $$(fd -epurs)
+
+ps-sources := $(shell fd -epurs)
+plutus-scripts := $(wildcard Scripts/*.plutus)
+
 ps-entrypoint := Main
 
-output.js: src/${ps-entrypoint}.purs
+
+output.js: src/Main.purs ${plutus-scripts}
 	spago bundle-module -m ${ps-entrypoint} --to output.js
 
-run-dev: output.js scriptsAreFresh
+run-dev: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack-dev-server --progress
 
-run-build: output.js scriptsAreFresh
+run-build: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
 
 check-format:
@@ -21,13 +25,9 @@ check-format:
 format:
 	@purs-tidy format-in-place ${ps-sources}
 
-# Check that the oldest script is newer than the newest haskell source file
-# Make isn't quite designed for that
+# Check that the script is newer than the haskell source file of the same name
 # This errors rather than depending on a haskell binary in ../
-scriptsAreFresh:
-	@HSDir=../src/TrustlessSidechain/OnChain/ && ScriptDir=Scripts/ \
-	&& NewestHSScript=$$HSDir$$(ls -t $$HSDir | head -1) \
-        && OldestPSScript=$$ScriptDir$$(ls -rt $$ScriptDir/ | head -1) \
-        && echo Checking that Scripts/ are fresh enough \
-	&& echo Newest hs file: $$NewestHSScript should be newer than oldest serialised script: $$OldestPSScript ! \
-	&& [ $$NewestHSScript -ot $$OldestPSScript ]
+Scripts/%.plutus: ../src/TrustlessSidechain/OnChain/%.hs
+	@echo Please update your plutus scripts by running 'cabal run trustless-sidechain-serialise'
+	@echo on the project root.
+	@exit 1
