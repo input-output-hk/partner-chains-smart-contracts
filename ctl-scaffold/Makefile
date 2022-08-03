@@ -31,6 +31,9 @@ format:
 
 # Check that the script is newer than the haskell source file of the same name
 # This errors rather than depending on a haskell binary in ../
+# Invariant: Plutus scripts must correspond in name to Haskell files.
+#            If this cannot be maintained, we can rely on other means to detect
+#            freshness (oldest script to newest haskell file).
 Scripts/%.plutus: ../src/TrustlessSidechain/OnChain/%.hs
 	@echo Please update your plutus scripts by running 'cabal run trustless-sidechain-serialise'
 	@echo on the project root.
