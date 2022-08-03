@@ -457,7 +457,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "Inserting a string in the distributed set (worst case 2)"
-        (initAda [12, 12])
+        (initAda [9, 9])
         ( do
             withContractAs 0 $ \_ -> do
               -- Initializing the distributed set
@@ -472,8 +472,8 @@ test =
                   dsm = DistributedSet.DsMint {DistributedSet.dsmTxOutRef = OffChainTypes.dspTxOutRef dsp}
 
               _ <- DistributedSet.dsInit dsp
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001"}
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001\000"}
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255\000"}
 
               _ <- DistributedSet.logDs ds
               return ()
