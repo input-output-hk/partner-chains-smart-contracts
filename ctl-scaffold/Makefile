@@ -8,16 +8,20 @@ ps-sources := $(shell fd -epurs)
 plutus-scripts := $(wildcard Scripts/*.plutus)
 
 ps-entrypoint := Main
+ps-test-entrypoint := Test.Main
 
 
 output.js: src/Main.purs ${plutus-scripts}
 	spago bundle-module -m ${ps-entrypoint} --to output.js
 
-run-dev: output.js
+dev: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack-dev-server --progress
 
-run-build: output.js
+build: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
+
+test: ${plutus-scripts}
+	@spago run -m ${ps-test-entrypoint}
 
 check-format:
 	@purs-tidy check ${ps-sources}

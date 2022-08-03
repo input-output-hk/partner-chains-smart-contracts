@@ -1,8 +1,8 @@
 # Build/test/run
 * `nix build` or `spago build`
-* `npm run test` or `npm run unit-test` or `npm run integration-test`
-* `make run-dev` will start webpack dev server at localhost:4008
-* `make run-build` will output webpack-bundled example module to dist
+* `make test` for tests
+* `make dev` will start webpack dev server at localhost:4008
+* `make build` will output webpack-bundled example module to dist
 * Note `BROWSER_RUNTIME` env variable should be set to 1 to build project properly for browser (for node environments leave unset or set 0)
 
 # Running ctl contracts (requires a nami wallet (or gero depending on ContractConfig) , which both require chromium-based browsers)
