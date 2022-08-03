@@ -711,7 +711,6 @@ mkDsPolicy gds _red ctx = case inputs of
     --      * Right: spend the distinguished address in 'DsMint' (implemented as @p2@)
     inputs :: [Either TxOut ()]
     inputs = flip mapMaybe (txInfoInputs info) $ \i ->
-      -- p1 correponds to (1), and p2 corresponds to (2).
       let p1, p2 :: Maybe (Either TxOut ())
           p1 = case tns of
             Just [(_tn, amount)] | amount == 1 -> Just $ Left txout
