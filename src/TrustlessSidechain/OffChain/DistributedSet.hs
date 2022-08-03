@@ -128,14 +128,14 @@ utxosWithCurrency = foldUtxoRefsWithCurrency go Map.empty
         -- that are already spent). This is weird.... very weird..
         \acc' ref ->
           Contract.utxoRefMembership ref >>= \p ->
-            Request.txOutFromRef ref >>= \case
-              Just o | isUtxo p -> return $ acc' `Prelude.mappend` Map.singleton ref o
-              _ -> return acc'
+            Request.txOutFromRef ref PlutusPrelude.<&> \case
+              Just o | isUtxo p -> Map.insert ref o acc'
+              _ -> acc'
 
 -- | 'logDs' logs the entire distributed set
 logDs :: AsContractError e => Ds -> Contract w s e ()
 logDs ds = do
-  Contract.logInfo @Text (Text.pack ("Logging the distributed set: " `Prelude.mappend` Prelude.show ds))
+  Contract.logInfo @Text (Text.pack ("Logging the distributed set: " Prelude.<> Prelude.show ds))
   Contract.utxosAt (DistributedSet.insertAddress ds) >>= \utxos ->
     Fold.forMOf_ Fold.folded utxos $ \utxo ->
       Contract.logInfo @Text $ Text.pack $ Prelude.show utxo
