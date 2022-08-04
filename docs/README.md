@@ -60,31 +60,32 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
-
-<!--
-
-```haskell
-data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot :: ByteString
-  , signature :: ByteString
+```
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , threshold :: Integer
+  , committeeSignatures :: [(PubKey, Maybe[BuiltinByteString])] -- Public keys of all committee members with their correspoing signatures
   }
 ```
--->
+
+Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
+
 
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , lastMerkleRoot :: ByteString
-  , signatures :: [ByteString] -- Current committee signatures
+  , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
   , beneficiary :: ByteString -- Sidechain address
-  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  , committeePubKeys :: [PubKey] -- Sorted public keys of all committee members
   }
 ```
 
 Minting policy verifies the following:
 
-- signature can be verified with the <!--ATMS verification key--> submitted public key hashes of committee members, and the concatenated and hashed value of these correspond to the one saved on-chain
+- signature can be verified with the <!--ATMS verification key--> submitted public keys of committee members, and the concatenated and hashed value of these keys correspond to the one saved on-chain
+- list of public keys does not contain duplicates
 - UTxO with the last Merkle root is referenced in the transaction
 
 Validator script verifies the following:
@@ -182,24 +183,15 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 **Endpoint params:**
 
-<!--
-```haskell
-data UpdateVKey = UpdateVKey
-  { newVKey :: ByteString,
-  , signature :: ByteString
-  }
-```
--->
-
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { committeePubKeysHash :: ByteString -- Hash of all public keys of the current committee members
+  { committeePubKeysHash :: ByteString -- Hash of all sorted public keys of the current committee members
   , lastMerkleRoot :: ByteString
   }
 ```
 
 ```
-committeePubKeysHash = blake2b(committeePubKey1 ++ committeePubKey2 ++ ... ++ committeePubKeyN)
+committeePubKeysHash = blake2b(sort(committeePubKey1 ++ committeePubKey2 ++ ... ++ committeePubKeyN))
 committeePubKeyN - 33 bytes compressed ecdsa public key of a committee member
 ```
 
