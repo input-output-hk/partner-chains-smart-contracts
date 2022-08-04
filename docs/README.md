@@ -173,6 +173,21 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
+**Endpoint params:**
+
+```
+data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { -- | The public keys of the new committee.
+    newCommitteePubKeys :: [PubKey]
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
+  , -- | The signature for the new committee hash.
+    committeeSignatures :: [(PubKey, Maybe[BuiltinByteString])]
+  }
+```
+
+Validator script verifies the following:
+
 - verifies that hash of committeePublicKeys matches the hash saved on chain
 - verifies that all the provided signatures are valid 
 - verifies that size(signatures) > 2/3 * size(committeePubKeys)
@@ -181,7 +196,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 - outputs a new UTxO with the updated <!--ATMS key--> committee hash containing the NFT to the same script address
 - reference to the last Merkle root is referenced in the transaction
 
-**Endpoint params:**
+**Datum:**
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
