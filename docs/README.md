@@ -65,7 +65,7 @@ data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
   , threshold :: Integer
-  , committeeSignatures :: [(PubKey, Maybe[BuiltinByteString])] -- Public keys of all committee members with their correspoing signatures
+  , committeeSignatures :: [(PubKey, Maybe BuiltinByteString)] -- Public keys of all committee members with their corresponding signatures
   }
 ```
 
@@ -182,7 +182,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- | The asset class of the NFT identifying this committee hash
     token :: !AssetClass
   , -- | The signature for the new committee hash.
-    committeeSignatures :: [(PubKey, Maybe[BuiltinByteString])]
+    committeeSignatures :: [(PubKey, Maybe BuiltinByteString)]
   }
 ```
 
