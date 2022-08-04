@@ -60,7 +60,7 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-```
+```haskell
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
@@ -175,7 +175,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 **Endpoint params:**
 
-```
+```haskell
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
