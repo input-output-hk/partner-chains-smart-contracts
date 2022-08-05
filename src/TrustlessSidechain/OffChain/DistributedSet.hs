@@ -44,9 +44,9 @@ import TrustlessSidechain.OffChain.Types (
   DsParams (dspStr, dspTxOutRef),
  )
 import TrustlessSidechain.OnChain.DistributedSet (
-  Ds (Ds, dsSymbol),
+  Ds (Ds, dsTxOutRef),
   DsDatum (DsDatum, dsEdge),
-  DsMint (DsMint, dsmTxOutRef),
+  DsMint (DsMint, dsmTxOutRef, dsmValidatorHash),
   Node (nEdge, nPrefix),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
@@ -141,6 +141,11 @@ logDs ds = do
       Contract.logInfo @Text $ Text.pack $ Prelude.show utxo
   Contract.logInfo @Text "Logging the distributed set END"
 
+-- | 'dsToDsMint' is a helper function to convert 'Ds' into 'DsMint'
+dsToDsMint :: Ds -> DsMint
+dsToDsMint ds =
+  DsMint {dsmTxOutRef = dsTxOutRef ds, dsmValidatorHash = DistributedSet.insertValidatorHash ds}
+
 {- | 'findDsOutput' finds the transaction which we must insert to
  (if it exists) for the distributed set.
 -}
@@ -156,7 +161,7 @@ findDsOutput ds tn =
     Just v -> fmap Just $ go v
   where
     queryUtxos :: TokenName -> Contract w s e (Map TxOutRef ChainIndexTxOut)
-    queryUtxos = utxosWithCurrency pq . Value.assetClass (dsSymbol ds)
+    queryUtxos = utxosWithCurrency pq . Value.assetClass (DistributedSet.dsCurSymbol $ dsToDsMint ds)
 
     queryTn :: TokenName -> Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
     queryTn inp = do
@@ -266,8 +271,6 @@ dsInit dsp = do
 
       PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
 
-      Contract.logInfo @Text "Initialized distributed set"
-
       return ast
   where
     -- Aliases:
@@ -275,10 +278,10 @@ dsInit dsp = do
     oref = dspTxOutRef dsp
 
     ds :: Ds
-    ds = Ds {dsSymbol = DistributedSet.dsCurSymbol dsm}
+    ds = Ds {dsTxOutRef = dspTxOutRef dsp}
 
     dsm :: DsMint
-    dsm = DsMint {dsmTxOutRef = dspTxOutRef dsp}
+    dsm = dsToDsMint ds
 
     mp :: MintingPolicy
     mp = DistributedSet.dsPolicy dsm
@@ -328,14 +331,15 @@ dsInsert dsp =
               ]
 
       ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups txConstraints
+
       PlutusPrelude.void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
   where
     -- Aliases:
     ds :: Ds
-    ds = Ds {dsSymbol = DistributedSet.dsCurSymbol dsm}
+    ds = Ds {dsTxOutRef = dspTxOutRef dsp}
 
     dsm :: DsMint
-    dsm = DsMint {dsmTxOutRef = dspTxOutRef dsp}
+    dsm = dsToDsMint ds
 
     mp :: MintingPolicy
     mp = DistributedSet.dsPolicy dsm

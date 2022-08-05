@@ -445,8 +445,8 @@ test =
                       , dspStr = ""
                       }
 
-                  ds = DistributedSet.Ds {DistributedSet.dsSymbol = DistributedSet.dsCurSymbol dsm}
-                  dsm = DistributedSet.DsMint {DistributedSet.dsmTxOutRef = OffChainTypes.dspTxOutRef dsp}
+                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
+              -- dsm = DistributedSet.dsToDsMint ds
 
               _ <- DistributedSet.dsInit dsp
               _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
@@ -468,8 +468,7 @@ test =
                       , dspStr = ""
                       }
 
-                  ds = DistributedSet.Ds {DistributedSet.dsSymbol = DistributedSet.dsCurSymbol dsm}
-                  dsm = DistributedSet.DsMint {DistributedSet.dsmTxOutRef = OffChainTypes.dspTxOutRef dsp}
+                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
 
               _ <- DistributedSet.dsInit dsp
               _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
@@ -479,4 +478,27 @@ test =
               return ()
         )
         [shouldSucceed]
+    , assertExecution
+        "Inserting a duplicated string in the distributed set"
+        (initAda [9, 9])
+        ( do
+            withContractAs 0 $ \_ -> do
+              -- Initializing the distributed set
+              oref <- DistributedSet.ownTxOutRef
+              let dsp =
+                    DsParams
+                      { dspTxOutRef = oref
+                      , dspStr = ""
+                      }
+
+                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
+
+              _ <- DistributedSet.dsInit dsp
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
+              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
+
+              _ <- DistributedSet.logDs ds
+              return ()
+        )
+        [shouldFail]
     ]

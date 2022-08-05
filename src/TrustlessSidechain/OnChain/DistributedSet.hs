@@ -13,6 +13,8 @@ import Ledger.Address (Address)
 import Ledger.Contexts qualified as Contexts
 import Ledger.Typed.Scripts (MintingPolicy, TypedValidator, Validator, ValidatorTypes)
 import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Ada qualified as Ada
+import Plutus.V1.Ledger.Address qualified as Address
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
@@ -22,6 +24,7 @@ import Plutus.V1.Ledger.Contexts (
  )
 import Plutus.V1.Ledger.Scripts (
   Datum (getDatum),
+  ValidatorHash,
  )
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (
@@ -53,14 +56,12 @@ hash = Builtins.blake2b_256
 -- * Data types
 
 {- | 'Ds' (abbr. Distributed Set) is the type which parameterizes the validator
- for the distributed set. It contains the 'CurrencySymbol' which is used to
- hold 'TokenName's that uniquely identify nodes (See Note [Data Structure
- Definition])
+ for the distributed set. (See Note [Data Structure Definition] and Note [Node Representation])
 -}
 newtype Ds = Ds
-  { -- | 'dsSymbol' is the 'CurrencySymbol' for the minting policy that
+  { -- | 'dsTxOutRef' is the 'CurrencySymbol' for the minting policy that
     -- creates tokens which identifies a node.
-    dsSymbol :: CurrencySymbol
+    dsTxOutRef :: TxOutRef
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
@@ -129,10 +130,30 @@ instance Functor Ib where
 {- | 'DsMint' is the parameter for the minting policy.
  See Note [Node Representation] for more details.
 -}
-newtype DsMint = DsMint
-  { dsmTxOutRef :: TxOutRef
+data DsMint = DsMint
+  { -- | 'dsmValidatorHash' is the validator hash that the minting policy
+    -- essentially "forwards" its checks to the validator.
+    --
+    --
+    -- TODO: as an optimization, we can take the 'Address' as a parameter
+    -- instead (since the offchain code will always immediately convert this
+    -- into an 'Address').
+    dsmValidatorHash :: ValidatorHash
+  , -- | 'dsmTxOutRef' to mint this "NFT-like" object initially.
+    dsmTxOutRef :: TxOutRef
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+{- | 'Action' is an internal data type used in the mitning policy to dictate
+ whether we are
+
+      * 'Init'ializing the tree.
+
+      * 'Graft'ing (inserting or growing) the tree.
+-}
+data Action
+  = Init
+  | Graft TokenName
 
 makeIsDataIndexed ''Ds [('Ds, 0)]
 deriveJSON defaultOptions ''Ds
@@ -153,6 +174,10 @@ deriveJSON defaultOptions ''Node
 makeIsDataIndexed ''DsMint [('DsMint, 0)]
 deriveJSON defaultOptions ''DsMint
 PlutusTx.makeLift ''DsMint
+
+makeIsDataIndexed ''Action [('Init, 0), ('Graft, 1)]
+deriveJSON defaultOptions ''Action
+PlutusTx.makeLift ''Action
 
 {-
  Note [Data Structure Definition]
@@ -267,7 +292,9 @@ PlutusTx.makeLift ''DsMint
 
     * @'nEdge' a@ in the datum.
 
- to represent the node @a@ on the block chain.
+ to represent the node @a@ on the block chain. Given a UTXO with the
+ aforementioned 'TokenName' and 'nEdge', we call the corresponding 'Node' the
+ /node representation of the UTXO/.
 
  We do this for a few reasons
 
@@ -283,35 +310,71 @@ PlutusTx.makeLift ''DsMint
  minting policies for this. We describe this (and the security!) in more detail
  here.
 
- When we initialize the distributed set we must create minting policy which
- (takes as a parameter an unspent transaction, say @inittxout@) that
+ We start with some arbitrary UTxO (as normally is the case when we want to
+ mint an NFT) say @oref@.
 
-    * Mints exactly one token with 'TokenName' @""@ which is paid to some
-    script (N.B. at this moment, we can't verify that this token is paid to the
-    validator script for the distributed set because of a chicken / egg sorta
-    problem) that corresponds to 'rootNode' in the distributed set (we
-    initialize the set to be non empty with some aribtrary null bytes -- see
-    Note [Why Can we Assume the Distributed Set is NonEmpty?]); AND we consume
-    the @inittxout@ transaction.
+ 'mkInsertValidator' is parameterized by @oref@ (actually, this is optional and
+ we don't need to do this)
 
-    * (this is used in the general case of inserting things in the distributed
-    set). Mints exactly 1 or 2 tokens (of a potentially arbitrary 'TokenName's)
-    if and only if (a) we are consuming exactly one transaction which already
-    has a 'CurrencySymbol' of this script; and (b) we spend these tokens to
-    distinct continuing outputs of the utxo we are spending.
+ 'mkDsPolicy' is parameterized by @oref@ and the validator hash of
+ 'mkInsertValidator', say @valHash@. We remark that these choices of
+ parameters resembles [1] and [2].
 
-  At this point, other participants may use the above 'CurrencySymbol' with
-  'TokenName' @""@ to identify the 'rootNode' of the distributed set. If an
-  adversary did something evil and attempted to mint the token to a validator
-  which isn't the distributed set, other participants would notice pretty quick
-  that something is wrong (since our distributed set validators are
-  paramerterized with the 'CurrencySymbol') and hence wouldn't paid to the
-  distributed set's validator.
+ We start with minting the 'CurrencySymbol' which will uniquely identify the
+ tree. 'mkDsPolicy' verifies either of the following
 
-  As for the validator, the validator needs to verify that: when given a
-  redeemer (of the string to insert), we create 2-3 new utxos of nodes which
-  correspond to the insertion. Note that the second case of the minting policy
-  is used to create these new nodes.
+    * (Initialization step) We spend @oref@ AND pay to the @valHash@ such that
+    the node representation of the datum in @valHash@ is 'rootNode' AND we've
+    only minted exactly one token AND the script output at @valHash@ only
+    contains this token (except for ada of course).
+
+    * (Inserting / grafting step) We spend an output with address of @valHash@
+    which contains a non-zero amount of this currency AND we mint 1 or 2 new
+    distinct tokens AND every token is also paid a script output at @valHash@
+    AND each script output has exactly one token of this currency (except for
+    ada of course).
+
+ Property 1.
+    All tokens in this minting policy are minted to some script output with
+    @valHash@ (see [2] for more discussion behind this idea).
+
+ Proof.
+    Follows by induction over the Initialization step and Insertion / grafting
+    step.
+
+ Now, we discuss the validator. It's a bit interesting how the validator
+ interacts in a "trustless" way. The validator must achieve the following
+
+    * Consume an input with exactly one single 'CurrencySymbol', say @tok@,
+    (not including ada), and construct the corresponding nodes for the
+    insertion with exactly one token.
+
+ Remark.
+    Note that the validator doesn't know if @tok@ comes from 'mkDsPolicy'.
+    There is no way for this on chain code to verify it, but any participating
+    party knows that we are only interested in 'mkInsertValidator's which have
+    the 'mkDsPolicy' 'CurrencySymbol'.
+
+ Defn.
+    The nodes in the distributed set are identified by @oref@, the
+    corresponding minting policy 'mkDsPolicy's 'CurrencySymbol', and the
+    validator 'mkInsertValidator'.
+
+ Claim.
+    The above identification uniquely identifies the nodes i.e., every node
+    with with the same 'nPrefix' is unique w.r.t to the above parameters.
+
+ Proof.
+    By induction on the sequence of steps. The base case ensures that we
+    uniquely create the root node. After, the combination of the minting policy
+    and the validator ensure that exactly the amount of needed tokens to insert
+    are generated and each new token is distinct.
+
+  References:
+
+    [1] https://github.com/Plutonomicon/plutonomicon/blob/main/assoc.md
+
+    [2] https://github.com/Plutonomicon/plutonomicon/blob/main/forwarding1.md
 -}
 
 {- Note [Why Can We Assume the Distributed Set is NonEmpty?]
@@ -378,6 +441,7 @@ snocByteString :: BuiltinByteString -> Integer -> BuiltinByteString
 snocByteString str b = appendByteString str (Builtins.consByteString b emptyByteString)
 
 -- | 'lcp' computes the longest common prefix of two strings.
+{-# INLINEABLE lcp #-}
 lcp :: BuiltinByteString -> BuiltinByteString -> BuiltinByteString
 lcp s t = takeByteString (go 0) s
   where
@@ -387,6 +451,11 @@ lcp s t = takeByteString (go 0) s
         if s `indexByteString` ix == t `indexByteString` ix
           then go (ix + 1)
           else ix
+
+-- | 'flattenNonAdaValue' flattens the 'Value' and removes all ada entries.
+{-# INLINEABLE flattenNonAdaValue #-}
+flattenNonAdaValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
+flattenNonAdaValue v = filter (\(c, t, _) -> not (c == Ada.adaSymbol && t == Ada.adaToken)) $ Value.flattenValue v
 
 -- * Helper functions related to 'Ib'
 
@@ -503,6 +572,9 @@ elemNode str node
 --
 --      - @elemNode str node@ must be False
 --
+--      - all strings stored in the distributed set must be the same fixed
+--      length (recall we are storing message digests so this is true!)
+--
 -- This is mostly just tedious case analysis.
 insertNode :: BuiltinByteString -> Node -> Ib Node
 insertNode str node =
@@ -577,7 +649,7 @@ insertNode str node =
 -}
 {-# INLINEABLE mkInsertValidator #-}
 mkInsertValidator :: Ds -> DsDatum -> DsRedeemer -> ScriptContext -> Bool
-mkInsertValidator ds _dat red ctx =
+mkInsertValidator _ds _dat red ctx =
   traceIfFalse "error 'mkInsertValidator' invalid insertion" $
     (== contNodes) $
       normalizeIbNodes $
@@ -587,29 +659,36 @@ mkInsertValidator ds _dat red ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
-    curSymb :: CurrencySymbol -- This uniquely identifies this tree.
-    curSymb = dsSymbol ds
-
     nStr :: BuiltinByteString
     nStr = dsStr red
 
-    -- Given a value, gets the 'TokenName's that correspond to the given
-    -- 'CurrencySymbol' from 'dsSymbol'
-    getTns :: Value -> [TokenName]
-    getTns v = case AssocMap.toList <$> AssocMap.lookup curSymb (Value.getValue v) of
-      Just kvs | all ((== 1) . snd) kvs -> map fst kvs
-      _ -> traceError "error 'mkInsertValidator': 'getTns' failed"
+    ownInput :: TxInInfo
+    ownInput = case Contexts.findOwnInput ctx of
+      Just i -> i
+      Nothing -> traceError "error 'mkInsertValidator': ownInput failed"
+
+    ownOutput :: TxOut
+    ownOutput = txInInfoResolved ownInput
+
+    ownCurSymb :: CurrencySymbol
+    ownCurSymb = case flattenNonAdaValue $ txOutValue ownOutput of
+      [(curSymb, _, amount)] | amount == 1 -> curSymb
+      _ -> traceError "error 'mkInsertValidator': spending bad node"
+
+    -- Given a value, gets the token name (of the "continuing" currency symbol)
+    getTn :: Value -> TokenName
+    getTn v = case flattenNonAdaValue v of
+      [(curSymb', tn, amount)] | ownCurSymb == curSymb' && amount == 1 -> tn
+      _ -> traceError "error 'mkInsertValidator': 'getTn' failed"
 
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.
     getTxOutNodeInfo :: TxOut -> Node
-    getTxOutNodeInfo txout =
+    getTxOutNodeInfo o =
       let err = "error 'mkInsertValidator': 'getTxOutNodeInfo' failed"
-          tn = case getTns (txOutValue txout) of
-            [tn'] -> tn'
-            _ -> traceError err
+          tn = getTn (txOutValue o)
 
-          dhash = case txOutDatumHash txout of
+          dhash = case txOutDatumHash o of
             Just dhash' -> dhash'
             Nothing -> traceError err
 
@@ -619,9 +698,7 @@ mkInsertValidator ds _dat red ctx =
        in mkNode (unTokenName tn) dn
 
     ownNode :: Node
-    ownNode = case Contexts.findOwnInput ctx of
-      Just inp -> getTxOutNodeInfo $ txInInfoResolved inp
-      Nothing -> traceError "error 'mkInsertValidator': 'ownNode' doesn't exist"
+    ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
 
     contNodes :: Ib Node
     contNodes =
@@ -648,6 +725,10 @@ typedInsertValidator ds =
 insertValidator :: Ds -> Validator
 insertValidator = Scripts.validatorScript . typedInsertValidator
 
+-- | The validator hash for the distributed set.
+insertValidatorHash :: Ds -> ValidatorHash
+insertValidatorHash = Scripts.validatorHash . typedInsertValidator
+
 -- | The address for the distributed set.
 insertAddress :: Ds -> Address
 insertAddress = Scripts.validatorAddress . typedInsertValidator
@@ -656,76 +737,82 @@ insertAddress = Scripts.validatorAddress . typedInsertValidator
 
 -- | 'mkDsPolicy' needs to verify the following.  See Note [Node Representation].
 mkDsPolicy :: DsMint -> () -> ScriptContext -> Bool
-mkDsPolicy gds _red ctx = case inputs of
-  -- We only allow consuming a single token of this currency symbol (or the
-  -- initial transaction to consume).
-  [i]
-    -- This is the minting new tokens to grow the distributed set case.
-    | Left txout <- i
-      , [itn] <- getTns (txOutValue txout) ->
-      traceIfFalse "error 'mkDsPolicy' bad extend" $
-        let contTns =
-              normalizeIb $
-                fromListIb $
-                  mapMaybe (\o -> if txOutAddress txout == txOutAddress o then case getTns (txOutValue o) of [tn] -> Just tn; _ -> Nothing else Nothing) $
-                    txInfoOutputs info
-         in normalizeIb (fromListIb (itn : minted)) == contTns
-    -- This is the "initializing" the distributed set case.
-    | Right _ <- i -> traceIfFalse "error 'mkDsPolicy' bad initialization" $ case minted of
-      [mt] ->
-        -- Then, we find the output which contains this token and
-        -- verify that it has the datum for the right root of the
-        -- distributed set
-        case flip find (txInfoOutputs info) $ \o -> let tns = getTns (txOutValue o) in not (null tns) of
-          Just txout -> fromMaybe False $ do
-            dhash <- txOutDatumHash txout
-            dn <- fmap getDatum (Contexts.findDatum dhash info) >>= PlutusTx.fromBuiltinData
-            return $ rootNode == mkNode (unTokenName mt) dn
-          _ -> False
-      _ -> False
-  _ -> traceError "error 'mkDsPolicy' illegal transaction inputs"
+mkDsPolicy dsm _red ctx = traceIfFalse "error 'mkDsPolicy': bad mint" $ case action of
+  [a]
+    | Graft ownTn <- a ->
+      -- This verifies that the the the current token of this currency (which
+      -- we are currently spending) and the tokens we are minting are all
+      -- paid to the script 'dsmValidatorHash'. We accomplish this in a bit
+      -- of an indirect way. Recall that we know that there is only one of
+      -- @ownTn@ and one of each @mintedTns@. So, if it is the case that
+      -- these tokens are equal to the tokens paid to the script
+      -- 'dsmValidatorHash', since we know there are no more tokens, this
+      -- implies that all tokens of this 'CurrencySymbol' are paid to to the
+      -- script 'dsmValidatorHash'.
+      ((==) `PlutusPrelude.on` normalizeIb . fromListIb) (ownTn : mintedTns) $
+        flip mapMaybe (txInfoOutputs info) $
+          \txout ->
+            PlutusPrelude.guard (txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm))
+              >> case flattenNonAdaValue $ txOutValue txout of
+                [(curSymb, tn, amount)] | curSymb == ownCurSymb && amount == 1 -> Just tn
+                _ -> Nothing
+    | Init <- a
+      , [mtn] <- mintedTns
+      , [o] <- flip mapMaybe (txInfoOutputs info) $ \txout ->
+          PlutusPrelude.guard (txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm))
+            >> case flattenNonAdaValue $ txOutValue txout of
+              -- If it's more clear, we are checking the following.
+              -- > [(curSymb, tn, 1)] | curSymb == ownCurSymb && tn == mtn ->
+              -- We already know that there can be at most one since
+              -- the we've only minted on token.
+              [(curSymb, _, _)] | curSymb == ownCurSymb -> return txout
+              _ -> Nothing
+      , -- The following gets the datum sitting at 'dsmValidatorHash'
+        Just dhash <- txOutDatumHash o
+      , Just bd <- Contexts.findDatum dhash info
+      , Just d <- (PlutusTx.fromBuiltinData $ getDatum bd :: Maybe DsDatum) ->
+      mkNode (unTokenName mtn) d == rootNode
+  _ -> False
   where
-    -- Aliases
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
     ownCurSymb :: CurrencySymbol
     ownCurSymb = Contexts.ownCurrencySymbol ctx
 
-    mint :: Value
-    mint = txInfoMint info
+    -- Determines the 'Action' of this transaction i.e., we are either
+    -- initalizing the tree, or grafting (inserting) something into the tree
+    action :: [Action]
+    action =
+      let go [] = []
+          go (t : ts)
+            | txout <- txInInfoResolved t
+              , txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm)
+              , -- If it's more clear, we're checking the following condition:
+                -- > , [(curSymb, tn, 1)] <- flattenNonAdaValue (txOutValue txout)
+                -- In our case, the @1@ is implicit since we always pay exactly
+                -- one token to any output (argue inductively).
+                [(curSymb, tn, _)] <- flattenNonAdaValue (txOutValue txout)
+              , ownCurSymb == curSymb =
+              Graft tn : go ts
+            -- Need to keep recursing to ensure that this transaction
+            -- is only spending one input
+            | txInInfoOutRef t == dsmTxOutRef dsm = [Init]
+            -- No point in recursing further, since we know that inputs
+            -- are a set (for which inputs are uniquely determined by
+            -- the 'TxOutRef')
+            | otherwise = go ts
+       in -- otherwise, we skip the element
+          go $ txInfoInputs info
 
-    minted :: [TokenName]
-    minted = getTns mint
-
-    -- Helper functions
-    getTns :: Value -> [TokenName]
-    getTns v = case AssocMap.toList <$> AssocMap.lookup ownCurSymb (Value.getValue v) of
-      Just kvs | all ((== 1) . snd) kvs -> map fst kvs
-      _ -> []
-
-    -- these are the inputs which either
-    --
-    --      * Left: spend an output which contains a currency of this token (implemented as @p1@); or
-    --
-    --      * Right: spend the distinguished address in 'DsMint' (implemented as @p2@)
-    inputs :: [Either TxOut ()]
-    inputs = flip mapMaybe (txInfoInputs info) $ \i ->
-      let p1, p2 :: Maybe (Either TxOut ())
-          p1 = case tns of
-            Just [(_tn, amount)] | amount == 1 -> Just $ Left txout
-            Just _ -> traceError "error 'mkDsPolicy' illegal spend"
-            _ -> Nothing
-          p2 =
-            if txInInfoOutRef i == dsmTxOutRef gds
-              then Just $ Right ()
-              else Nothing
-
-          txout = txInInfoResolved i
-          tns = fmap AssocMap.toList $ AssocMap.lookup ownCurSymb $ getValue $ txOutValue txout
-       in case p1 of
-            Just _ -> p1
-            Nothing -> p2
+    mintedTns :: [TokenName]
+    mintedTns =
+      case AssocMap.lookup ownCurSymb $ getValue $ txInfoMint info of
+        Just mp
+          | vs <- AssocMap.toList mp
+            , all ((== 1) . snd) vs ->
+            map fst vs
+        _ -> traceError "error 'mkDsPolicy': bad minted tokens"
 
 -- | 'dsPolicy' is the minting policy
 dsPolicy :: DsMint -> MintingPolicy
