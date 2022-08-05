@@ -69,7 +69,7 @@ orByte = go 0 0
       | otherwise = acc
 
 {- | @'exps0To7' i@ is an internal function to which does computes @2^i@ for @0
- <= i < 8@.
+ <= i < 7@.
 -}
 {-# INLINEABLE exps0To7 #-}
 exps0To7 :: Integer -> Integer
