@@ -9,8 +9,9 @@ plutus-scripts := $(wildcard Scripts/*.plutus)
 
 ps-entrypoint := Main
 ps-test-entrypoint := Test.Main
+SRC = ${ps-test-entrypoint} ${ps-entrypoint}
 
-
+${SRC}:
 output.js: src/Main.purs ${plutus-scripts}
 	spago bundle-module -m ${ps-entrypoint} --to output.js
 
@@ -20,7 +21,8 @@ dev: output.js
 build: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
 
-test: ${plutus-scripts}
+# Note. need a plutip-server running (won't put `plutip-server &` here because it tends to flood the terminal)
+test: ${plutus-scripts} ${SRC}
 	@spago run -m ${ps-test-entrypoint}
 
 check-format:
