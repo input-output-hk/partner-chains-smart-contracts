@@ -206,8 +206,9 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 ```
 
 ```
-committeePubKeysHash = blake2b(sort(committeePubKey1 ++ committeePubKey2 ++ ... ++ committeePubKeyN))
-committeePubKeyN - 33 bytes compressed ecdsa public key of a committee member
+committeePubKeys = sort([key1, key2, ..., keyN])
+committeePubKeysHash = blake2b(concat(committeePubKeys))
+keyN - 33 bytes compressed ecdsa public key of a committee member
 ```
 
 ![Public key update](pubkeyupdate.svg)
