@@ -71,6 +71,7 @@ data SaveRootParams = SaveRootParams
 
 Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
 
+**Redeemer:**
 
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
