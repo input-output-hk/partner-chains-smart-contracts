@@ -1,24 +1,29 @@
 /* global BROWSER_RUNTIME */
 
-var script;
 var inBrowser = typeof BROWSER_RUNTIME !== 'undefined' && BROWSER_RUNTIME;
 
 if (inBrowser) {
-  fuelMintingPolicy = require('Scripts/FUELMintingPolicy.plutus');
+  const fuelMintingPolicy          = require('Scripts/FUELMintingPolicy.plutus');
+  const CommitteCandidateValidator = require("../../Scripts/CommitteCandidateValidator.plutus");
+  const MPTRootMintingPolicy       = require("../../Scripts/MPTRootMintingPolicy.plutus");
+  const MPTRootTokenMintingPolicy  = require("../../Scripts/MPTRootTokenMintingPolicy.plutus");
+  const MPTRootTokenValidator      = require("../../Scripts/MPTRootTokenValidator.plutus");
+  const UpdateCommitteeHash        = require("../../Scripts/UpdateCommitteeHash.plutus");
+
 } else {
   const fs = require("fs");
   const path = require("path");
-  fuelMintingPolicy = fs.readFileSync(path.resolve(__dirname
+  var fuelMintingPolicy = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/FUELMintingPolicy.plutus"), "utf8");
-  CommitteCandidateValidator = fs.readFileSync(path.resolve(__dirname
+  var CommitteCandidateValidator = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/CommitteCandidateValidator.plutus") , "utf8");
-  MPTRootMintingPolicy = fs.readFileSync(path.resolve(__dirname
+  var MPTRootMintingPolicy = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/MPTRootMintingPolicy.plutus") , "utf8");
-  MPTRootTokenMintingPolicy = fs.readFileSync(path.resolve(__dirname
+  var MPTRootTokenMintingPolicy = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/MPTRootTokenMintingPolicy.plutus") , "utf8");
-  MPTRootTokenValidator = fs.readFileSync(path.resolve(__dirname
+  var MPTRootTokenValidator = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/MPTRootTokenValidator.plutus") , "utf8");
-  UpdateCommitteeHash = fs.readFileSync(path.resolve(__dirname
+  var UpdateCommitteeHash = fs.readFileSync(path.resolve(__dirname
     , "../../Scripts/UpdateCommitteeHash.plutus") , "utf8");
 }
 exports.fUELMintingPolicy          = fuelMintingPolicy         
