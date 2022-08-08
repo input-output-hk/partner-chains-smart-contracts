@@ -78,7 +78,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , lastMerkleRoot :: ByteString
   , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
   , beneficiary :: ByteString -- Sidechain address
-  , committeePubKeys :: [PubKey] -- Sorted public keys of all committee members
+  , committeePubKeys :: [PubKey] -- Lexicographically sorted public keys of all committee members
   }
 ```
 
@@ -200,7 +200,7 @@ Validator script verifies the following:
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { committeePubKeysHash :: ByteString -- Hash of all sorted public keys of the current committee members
+  { committeePubKeysHash :: ByteString -- Hash of all lexicographically sorted public keys of the current committee members
   , lastMerkleRoot :: ByteString
   }
 ```
