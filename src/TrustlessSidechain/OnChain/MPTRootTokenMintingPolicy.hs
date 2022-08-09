@@ -15,12 +15,12 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
-import TrustlessSidechain.OffChain.Types (SidechainParams)
+import TrustlessSidechain.OffChain.Types (PassiveBrdgSidechainParams)
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
+mkMintingPolicy :: PassiveBrdgSidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
 mkMintingPolicy
   _
   SignedMerkleRoot
@@ -46,7 +46,7 @@ mkMintingPolicy
       ownTokenName = Value.TokenName merkleRoot
 mkMintingPolicy _ _ _ = False
 
-mintingPolicy :: SidechainParams -> MintingPolicy
+mintingPolicy :: PassiveBrdgSidechainParams -> MintingPolicy
 mintingPolicy param =
   Ledger.mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)

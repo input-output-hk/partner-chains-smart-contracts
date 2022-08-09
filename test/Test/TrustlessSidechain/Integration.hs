@@ -26,10 +26,11 @@ import TrustlessSidechain.OffChain.Types (
   DeregisterParams (DeregisterParams),
   GenesisCommitteeHashParams (GenesisCommitteeHashParams),
   MintParams (MintParams),
+  PassiveBrdgSidechainParams (..),
   RegisterParams (RegisterParams),
-  SidechainParams (..),
   SidechainPubKey (SidechainPubKey),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
+  convertSCParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 
@@ -44,9 +45,9 @@ import Prelude
 
 import Test.Plutip.Internal.Types qualified as PlutipInternal
 
-sidechainParams :: SidechainParams
+sidechainParams :: PassiveBrdgSidechainParams
 sidechainParams =
-  SidechainParams
+  PassiveBrdgSidechainParams
     { chainId = 0
     , genesisHash = ""
     , genesisMint = Nothing
@@ -84,7 +85,7 @@ test =
                   let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
-                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
 
                       ecdsaMsg =
@@ -113,7 +114,7 @@ test =
                   let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
-                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
 
                       ecdsaMsg =
