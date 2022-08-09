@@ -79,7 +79,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , lastMerkleRoot :: ByteString
   , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
   , beneficiary :: ByteString -- Sidechain address
-  , committeePubKeys :: [PubKey] -- Lexicographically sorted public keys of all committee members
+  , committeePubKeys :: [SidechainPubKey] -- Lexicographically sorted public keys of all committee members
   }
 ```
 
@@ -96,20 +96,29 @@ Validator script verifies the following:
 ![MPTRootToken minting](MPTRoot.svg)
 
 The merkle tree has to be constructed in the exact same way as it is done by [following merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
+```haskell
+data MerkleTreeEntry = MerkleTreeEntry
+  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
+  , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
+  }
 ```
-index - 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-amount - 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-recipient- arbitrary length bytestring that represents decoded bech32 cardano address
-sidechainEpoch - sidechain epoch for which merkle tree was created
-
-index = value padded to 4 bytes
-amount = value padded to 32 bytes
-recipient = arbitrary length bytestring
-sidechainEpoch = value padded to 8 bytes
-value = index ++ amount ++ sidechainEpoch ++ recipient 
-entry = blake2b(value)
 ```
+entry = blake2b(cbor(MerkleTreeEntry))
+```
+Signatures for merkle tree should be constructed as follow:
 
+```haskell
+data MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { sidechainParams :: SidechainParams
+  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
+  , merkleRoot :: ByteString
+  }
+```
+```
+signature = ecdsa.sign(data: blake2b(cbor(MerkleRootInsertionMessage)), key: committeeMemberPrvKey)
+```
 #### 3.2. Individual claiming
 
 **Endpoint params for claiming:**
@@ -179,11 +188,11 @@ data BlockProducerRegistration = BlockProducerRegistration
 ```haskell
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | The public keys of the new committee.
-    newCommitteePubKeys :: [PubKey]
+    newCommitteePubKeys :: [SidechainPubKey]
   , -- | The asset class of the NFT identifying this committee hash
     token :: !AssetClass
   , -- | The signature for the new committee hash.
-    committeeSignatures :: [(PubKey, Maybe BuiltinByteString)]
+    committeeSignatures :: [(SidechainPubKey, Maybe BuiltinByteString)]
   }
 ```
 
@@ -219,19 +228,25 @@ keyN - 33 bytes compressed ecdsa public key of a committee member
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signatures :: [BuiltinByteString]
-  , newCommitteePubKeys :: [PubKey]
-  , committeePubKeys :: [PubKey]
+  , newCommitteePubKeys :: [SidechainPubKey]
+  , committeePubKeys :: [SidechainPubKey]
+  , sidechainEpoch :: Integer
   }
 ```
 
 Signatures are constructed as follow:
 ```
-newCommitteePubKeys - concatenated elements from a list where single element is newCommiteeMemberPubKey
-newCommiteeMemberPubKey - 33 bytes compressed ecdsa public key of the next committee member
-sidechainEpoch - sidechain epoch for which we obtain signature
-
-sidechainEpoch = value padded to 8 bytes
-signature = ecdsa.sign(data: blake2b(newCommitteePubKeys ++ sidechainEpoch), key: committeeMemberPrvKey)
+SidechainPubKey - 33 bytes compressed ecdsa public key
+```
+```haskell
+data UpdateCommitteeMessage = UpdateCommitteeMessage
+  { sidechainParams :: SidechainParams
+  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
+  , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
+  }
+```
+```
+signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committeeMemberPrvKey)
 ```
 
 ## Appendix
