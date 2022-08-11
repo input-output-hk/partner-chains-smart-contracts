@@ -60,31 +60,33 @@ data BurnParams = BurnParams
 
 **Endpoint params for merkle root insertion:**
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
-
-<!--
-
 ```haskell
-data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot :: ByteString
-  , signature :: ByteString
+data SaveRootParams = SaveRootParams
+  { sidechainParams :: SidechainParams
+  , merkleRoot :: BuiltinByteString
+  , threshold :: Integer
+  , committeeSignatures :: [(PubKey, Maybe BuiltinByteString)] -- Public keys of all committee members with their corresponding signatures
   }
 ```
--->
+
+Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
+
+**Redeemer:**
 
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , lastMerkleRoot :: ByteString
-  , signature :: ByteString
+  , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
   , beneficiary :: ByteString -- Sidechain address
-  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  , committeePubKeys :: [SidechainPubKey] -- Lexicographically sorted public keys of all committee members
   }
 ```
 
 Minting policy verifies the following:
 
-- signature can be verified with the <!--ATMS verification key--> submitted public key hashes of committee members, and the concatenated and hashed value of these correspond to the one saved on-chain
+- signature can be verified with the <!--ATMS verification key--> submitted public keys of committee members, and the concatenated and hashed value of these keys correspond to the one saved on-chain
+- list of public keys does not contain duplicates
 - UTxO with the last Merkle root is referenced in the transaction
 
 Validator script verifies the following:
@@ -93,6 +95,30 @@ Validator script verifies the following:
 
 ![MPTRootToken minting](MPTRoot.svg)
 
+The merkle tree has to be constructed in the exact same way as it is done by [following merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
+```haskell
+data MerkleTreeEntry = MerkleTreeEntry
+  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
+  , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
+  }
+```
+```
+entry = blake2b(cbor(MerkleTreeEntry))
+```
+Signatures for merkle tree should be constructed as follow:
+
+```haskell
+data MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { sidechainParams :: SidechainParams
+  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
+  , merkleRoot :: ByteString
+  }
+```
+```
+signature = ecdsa.sign(data: blake2b(cbor(MerkleRootInsertionMessage)), key: committeeMemberPrvKey)
+```
 #### 3.2. Individual claiming
 
 **Endpoint params for claiming:**
@@ -103,6 +129,8 @@ data MintParams = MintParams
   , recipient :: ByteString
   , merkleProof :: MerkleProof
   , chainId :: Integer
+  , index :: Integer
+  , sidechainEpoch :: Integer
   }
 ```
 
@@ -110,7 +138,7 @@ Minting policy verifies the following:
 
 - `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
 - chainId matches the minting policy chainId
-- recipient and amount matches the actual tx body contents
+- recipient, amount, index and sidechainEpoch combined with merkleProof match against merkleRootHash
 - the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set[^1] (the actual hash might be subject to change)
 - a new entry with the value of `blake2(tx.recipient, tx.amount, merkleRoot)` is created in the distributed set
 
@@ -155,30 +183,42 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 1. Bridge component triggers the Cardano transaction. This tx does the following:
 
-- verifies the signature on the new <!--ATMS key--> committee hash (must be signed by the old committee)
+**Endpoint params:**
+
+```haskell
+data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { -- | The public keys of the new committee.
+    newCommitteePubKeys :: [SidechainPubKey]
+  , -- | The asset class of the NFT identifying this committee hash
+    token :: !AssetClass
+  , -- | The signature for the new committee hash.
+    committeeSignatures :: [(SidechainPubKey, Maybe BuiltinByteString)]
+  }
+```
+
+Validator script verifies the following:
+
+- verifies that hash of committeePublicKeys matches the hash saved on chain
+- verifies that all the provided signatures are valid 
+- verifies that size(signatures) > 2/3 * size(committeePubKeys)
 - verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - outputs a new UTxO with the updated <!--ATMS key--> committee hash containing the NFT to the same script address
 - reference to the last Merkle root is referenced in the transaction
 
-**Endpoint params:**
-
-<!--
-```haskell
-data UpdateVKey = UpdateVKey
-  { newVKey :: ByteString,
-  , signature :: ByteString
-  }
-```
--->
+**Datum:**
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { newCommitteePubKeys :: [PubKey],
-  , signature :: ByteString
-  , committeePubKeys :: [PubKey] -- Public keys of the current committee members
+  { committeePubKeysHash :: ByteString -- Hash of all lexicographically sorted public keys of the current committee members
   , lastMerkleRoot :: ByteString
   }
+```
+
+```
+committeePubKeys = sort([key1, key2, ..., keyN])
+committeePubKeysHash = blake2b(concat(committeePubKeys))
+keyN - 33 bytes compressed ecdsa public key of a committee member
 ```
 
 ![Public key update](pubkeyupdate.svg)
@@ -187,10 +227,26 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
-  { signature :: BuiltinByteString
-  , committeePubKeys :: [PubKey]
-  , newCommitteeHash :: BuiltinByteString
+  { signatures :: [BuiltinByteString]
+  , newCommitteePubKeys :: [SidechainPubKey]
+  , committeePubKeys :: [SidechainPubKey]
+  , sidechainEpoch :: Integer
   }
+```
+
+Signatures are constructed as follow:
+```
+SidechainPubKey - 33 bytes compressed ecdsa public key
+```
+```haskell
+data UpdateCommitteeMessage = UpdateCommitteeMessage
+  { sidechainParams :: SidechainParams
+  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
+  , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
+  }
+```
+```
+signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committeeMemberPrvKey)
 ```
 
 ## Appendix
