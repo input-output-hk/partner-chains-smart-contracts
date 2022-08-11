@@ -48,14 +48,12 @@ FOURMOLU_EXTENSIONS := \
 
 # Add folder locations to the list to be reformatted.
 format:
-	@ echo "> Formatting all .hs files"
 	fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence \
-		$$(find src/ test/ app/ -iname "*.hs")
+		$(shell fd -ehs -elhs)
 
 format_check:
-	@ echo "> Checking format of all .hs files"
 	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence \
-		$$(find src/ test/ app/ -iname "*.hs")
+		$(shell fd -ehs -elhs)
 
 NIX_SOURCES := $(shell fd -enix)
 
@@ -74,4 +72,4 @@ cabalfmt_check: requires_nix_shell
 	cabal-fmt --check $(CABAL_SOURCES)
 
 lint: requires_nix_shell
-	hlint $$(find src/ test/ app/ -iname "*.hs")
+	hlint --no-summary $(shell fd -ehs -elhs)

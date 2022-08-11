@@ -73,8 +73,13 @@
                 project.hsPkgs.cardano-cli.components.exes.cardano-cli
                 project.hsPkgs.cardano-node.components.exes.cardano-node
               ];
-              tools.haskell-language-server = { };
               additional = ps: [ ps.plutip ];
+              shellHook = ''
+                [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
+                     git config core.hooksPath hooks
+                }
+              '';
+              tools.haskell-language-server = { };
             };
           };
         in

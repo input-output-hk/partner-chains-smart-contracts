@@ -24,19 +24,16 @@ mkMintingPolicy
   _
   SignedMerkleRoot
     { merkleRoot
-    , signature
+    , signatures
     , committeePubKeys
+    , threshold
     }
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
     verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1))
-      && any
-        ( \pubKey ->
-            verifySignature (getLedgerBytes $ Ledger.getPubKey pubKey) merkleRoot signature
-        )
-        committeePubKeys
+      && verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
     where
       verifyTokenAmount verify =
         case Value.flattenValue txInfoMint of
