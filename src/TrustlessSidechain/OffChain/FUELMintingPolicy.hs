@@ -6,8 +6,9 @@ import Control.Lens.Fold qualified as Fold
 import Control.Lens.Getter qualified as Getter
 import Control.Lens.Indexed qualified as Indexed
 import Control.Lens.Prism (_Just)
-import Control.Lens.Tuple (_1, _2, _3)
+import Control.Lens.Tuple (_1, _2)
 import Control.Monad (when)
+import Data.Map (Map)
 import Data.Text (Text)
 import Ledger (CardanoTx, Redeemer (Redeemer))
 import Ledger qualified
@@ -32,17 +33,18 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Class qualified as Class
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
-import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  BurnParams (BurnParams, amount, recipient, sidechainParams, sidechainSig),
+  BurnParams (BurnParams, amount, recipient, sidechainParams),
   MintParams (MintParams, amount, proof, recipient, sidechainParams),
   SidechainParams,
  )
+import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
+import Prelude qualified
 
 {- | 'findMPTRootToken' searches through the utxos to find all outputs that
  corresponds to @MPTRootTokenValidator.address (sc :: SidechainParams)@.
@@ -106,60 +108,38 @@ sideChainLeafTransactionHash txRecipient txAmount =
         `appendByteString` Class.stringToBuiltinByteString (PlutusCore.show txAmount)
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-burn BurnParams {amount, sidechainParams, recipient, sidechainSig} = do
-  let policy = FUELMintingPolicy.mintingPolicy sidechainParams
+burn BurnParams {amount, sidechainParams, recipient} = do
+  let fm =
+        FUELMint
+          { fmSidechainParams = sidechainParams
+          , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
+          }
+      policy = FUELMintingPolicy.mintingPolicy fm
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-      redeemer = Redeemer $ toBuiltinData (MainToSide recipient sidechainSig)
+      redeemer = Redeemer $ toBuiltinData (MainToSide recipient)
   when (amount > 0) $ Contract.throwError "Can't burn a positive amount"
   Contract.submitTxConstraintsWith @FUELRedeemer
     (Constraint.mintingPolicy policy)
     (Constraint.mustMintValueWithRedeemer redeemer value)
 
-{- | 'mint' is the endpoint for claiming transactions broadcasted to the main
- chain (the main chain is this chain)
+mintWithUtxo :: Maybe (Map Ledger.TxOutRef Ledger.ChainIndexTxOut) -> MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
+mintWithUtxo utxo MintParams {amount, sidechainParams, recipient, proof} = do
+  let fm =
+        FUELMint
+          { fmSidechainParams = sidechainParams
+          , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
+          }
+      policy = FUELMintingPolicy.mintingPolicy fm
+      value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
+      redeemer = Redeemer $ toBuiltinData $ SideToMain proof
+      lookups =
+        Constraint.mintingPolicy policy
+          Prelude.<> maybe Prelude.mempty Constraint.unspentOutputs utxo
+      tx =
+        Constraint.mustMintValueWithRedeemer redeemer value
+          <> Constraint.mustPayToPubKey recipient value
+  when (amount < 0) $ Contract.throwError "Can't mint a negative amount"
+  Contract.submitTxConstraintsWith @FUELRedeemer lookups tx
 
- The steps are as follows for constructing this transaction:
-
-      (1) Find all utxos with an MPTRootToken. Recall that the utxos with the
-      MPTRootToken have as token name the merkle root of unhandled
-      transactions collected by the side chain  -- see
-      'TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy' for this
-      endpoint
-
-      (2) Find the particular utxo with an MPTRootToken which has a Merkle
-      Root that corresponds to the proof that was given in the end point (and
-      failing otherwise). This is done with 'sideChainLeafTransactionHash' to
-      replicate how the side chain producers computed the leaf, and verifying
-      if the MerkleProof provided in the endpoint is the given Merkle Root.
-
-      (3) Build the transaction by:
-
-          - Providing a reference input to the transaction with the
-          MPTRootToken. TODO: we can't do this yet -- we need Plutus V2.
-
-          - Providing the transaction for the distributed set which provides
-          proof of non=membership. TODO:
-
-          - Obviously, we need to provide the minting policy as well.
--}
 mint :: MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-mint MintParams {amount, sidechainParams, recipient, proof} = do
-  -- (1)
-  mptRootTkns <- findMPTRootToken sidechainParams
-
-  -- (2)
-  let leaf = sideChainLeafTransactionHash recipient amount
-  case find (MT.memberMp leaf proof . Getter.view _3) mptRootTkns of
-    Nothing -> Contract.throwError "no MPTRootToken with Merkle root found"
-    Just (_oref, _o, _rh) -> do
-      -- (3)
-      -- This is still TODO
-      let policy = FUELMintingPolicy.mintingPolicy sidechainParams
-          value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-          redeemer = Redeemer $ toBuiltinData $ SideToMain proof
-      when (amount < 0) $ Contract.throwError "Can't mint a negative amount"
-      Contract.submitTxConstraintsWith @FUELRedeemer
-        (Constraint.mintingPolicy policy)
-        ( Constraint.mustMintValueWithRedeemer redeemer value
-            <> Constraint.mustPayToPubKey recipient value
-        )
+mint = mintWithUtxo Nothing

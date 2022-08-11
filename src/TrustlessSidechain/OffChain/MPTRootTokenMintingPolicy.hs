@@ -20,10 +20,10 @@ import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as Validator
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
 
 saveRoot :: SaveRootParams -> Contract () TrustlessSidechainSchema Text CardanoTx
-saveRoot SaveRootParams {sidechainParams, merkleRoot, signature, committeePubKeys} = do
+saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, committeePubKeys} = do
   let policy = MintingPolicy.mintingPolicy sidechainParams
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) (Value.TokenName merkleRoot) 1
-      redeemer = Redeemer $ toBuiltinData SignedMerkleRoot {merkleRoot, signature, committeePubKeys}
+      redeemer = Redeemer $ toBuiltinData SignedMerkleRoot {merkleRoot, signatures, threshold, committeePubKeys}
   Contract.submitTxConstraintsWith @SignedMerkleRoot
     (Constraint.mintingPolicy policy)
     ( Constraint.mustMintValueWithRedeemer redeemer value
