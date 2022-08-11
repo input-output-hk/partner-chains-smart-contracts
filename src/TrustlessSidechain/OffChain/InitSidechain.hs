@@ -29,7 +29,7 @@ import TrustlessSidechain.OnChain.UpdateCommitteeHash (
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
 
-{- | 'initSidechain' is creates the 'SidechainParams' of a new sidechain which
+{- | 'initSidechain' creates the 'SidechainParams' of a new sidechain which
  parameterize validators and minting policies in order to uniquely identify
  them. See the following notes for what 'initSidechain' must initialize.
 
