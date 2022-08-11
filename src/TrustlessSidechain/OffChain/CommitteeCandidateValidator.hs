@@ -11,7 +11,7 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef)
+import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut))
 import Ledger.Typed.Scripts (
   validatorAddress,
  )
@@ -30,14 +30,13 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as Commi
 import Prelude (Semigroup ((<>)))
 import Prelude qualified
 
-getInputUtxo :: Contract () TrustlessSidechainSchema Text TxOutRef
-getInputUtxo = do
-  ownPkh <- ownPaymentPubKeyHash
-  let ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
-  ownUtxos <- utxosAt ownAddr
-  case Map.toList ownUtxos of
-    (oref, _) : _ -> pure oref
-    _ -> throwError "No UTxO found at the address"
+--getInputUtxo :: Contract () TrustlessSidechainSchema Text TxOutRef
+--getInputUtxo = do
+--  ownPkh   <- ownPaymentPubKeyHash
+--  ownUtxos <- utxosAt ownAddr
+--  case Map.toList ownUtxos of
+--    (oref, _) : _ -> pure oref
+--    _ -> throwError "No UTxO found at the address"
 
 register :: RegisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, sidechainSig, inputUtxo} = do
@@ -46,7 +45,7 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, si
   ownUtxos <- utxosAt ownAddr
 
   let val = Ada.lovelaceValueOf 1
-      validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
+      validator = CommitteeCandidateValidator.committeeCandidateValidator sidechainParams
       lookups =
         Constraints.unspentOutputs ownUtxos
           <> Constraints.typedValidatorLookups validator
@@ -65,7 +64,7 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, si
 deregister :: DeregisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
-  let validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
+  let validator = CommitteeCandidateValidator.committeeCandidateValidator sidechainParams
       valAddr = validatorAddress validator
       ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
 
