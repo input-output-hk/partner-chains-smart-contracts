@@ -47,8 +47,9 @@ import System.Environment (getArgs)
 import System.Exit (die)
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint),
+  PassiveBrdgSidechainParams (PassiveBrdgSidechainParams, chainId, genesisHash, genesisMint),
   SidechainPubKey (SidechainPubKey),
+  convertSCParams,
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -87,7 +88,7 @@ main = do
   args <- either die pure . parseArgs =<< getArgs
 
   let scParams =
-        SidechainParams
+        PassiveBrdgSidechainParams
           { chainId = args.chainId
           , genesisHash = args.genesisHash
           , genesisMint = Just args.genesisTxIn
@@ -104,7 +105,7 @@ main = do
           }
       msg =
         BlockProducerRegistrationMsg
-          { bprmSidechainParams = scParams
+          { bprmSidechainParams = convertSCParams scParams
           , bprmSidechainPubKey = toSidechainPubKey args.sidechainPrivKey
           , bprmInputUtxo = args.registerTxIn
           }
@@ -130,7 +131,7 @@ main = do
 
   writeScripts scParams registrationData
 
-writeScripts :: SidechainParams -> BlockProducerRegistration -> IO ()
+writeScripts :: PassiveBrdgSidechainParams -> BlockProducerRegistration -> IO ()
 writeScripts scParams registrationData = do
   results <-
     sequence
