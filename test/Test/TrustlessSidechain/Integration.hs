@@ -17,16 +17,16 @@ import Test.Plutip.Internal.Types qualified as PlutipInternal
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
 import Test.Tasty (TestTree)
-import TrustlessSidechain.MerkleTree qualified as MT
+import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
   GenesisCommitteeHashParams (GenesisCommitteeHashParams),
-  MintParams (MintParams),
+  MintParams (MintParams, amount, proof, recipient),
   RegisterParams (RegisterParams),
-  SidechainParams (SidechainParams),
+  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
@@ -112,10 +112,10 @@ test =
             const $ do
               h <- ownPaymentPubKeyHash
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = h, proof = MT.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = h, proof = MerkleTree.emptyMp, sidechainParams}
                 >>= awaitTxConfirmed . getCardanoTxId
               FUELMintingPolicy.burn
-                BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
+                BurnParams {amount = -1, recipient = "", sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -127,7 +127,14 @@ test =
               utxo <- CommitteeCandidateValidator.getInputUtxo
               utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
               let scpOS = sidechainParams {genesisMint = Just utxo}
-              t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+              t <-
+                FUELMintingPolicy.mintWithUtxo (Just utxos) $
+                  MintParams
+                    { amount = 1
+                    , recipient = h
+                    , sidechainParams = scpOS
+                    , proof = MerkleTree.emptyMp
+                    }
               awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" scpOS
         )
@@ -142,9 +149,23 @@ test =
                 utxo <- CommitteeCandidateValidator.getInputUtxo
                 utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
                 let scpOS = sidechainParams {genesisMint = Just utxo}
-                t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
+                t <-
+                  FUELMintingPolicy.mintWithUtxo (Just utxos) $
+                    MintParams
+                      { amount = 1
+                      , recipient = h
+                      , sidechainParams = scpOS
+                      , proof = MerkleTree.emptyMp
+                      }
                 awaitTxConfirmed $ getCardanoTxId t
-                t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
+                t2 <-
+                  FUELMintingPolicy.mint $
+                    MintParams
+                      { amount = 1
+                      , recipient = h
+                      , sidechainParams = scpOS
+                      , proof = MerkleTree.emptyMp
+                      }
                 awaitTxConfirmed $ getCardanoTxId t2
         )
         [shouldFail]
@@ -155,7 +176,7 @@ test =
             const $ do
               h <- ownPaymentPubKeyHash
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = h, proof = MT.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = h, proof = MerkleTree.emptyMp, sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -165,11 +186,11 @@ test =
             void $
               withContract $ \[pkh1] -> do
                 FUELMintingPolicy.mint
-                  MintParams {amount = 1, recipient = pkh1, proof = MT.emptyMp, sidechainParams}
+                  MintParams {amount = 1, recipient = pkh1, proof = MerkleTree.emptyMp, sidechainParams}
             withContractAs 1 $
               const $
                 FUELMintingPolicy.burn
-                  BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
+                  BurnParams {amount = -1, recipient = "", sidechainParams}
         )
         [shouldSucceed]
     , assertExecution
@@ -178,10 +199,10 @@ test =
         ( withContract $ \[pkh1] ->
             do
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = pkh1, proof = MT.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = pkh1, proof = MerkleTree.emptyMp, sidechainParams}
                 >>= awaitTxConfirmed . getCardanoTxId
               FUELMintingPolicy.burn
-                BurnParams {amount = -1, recipient = "", sidechainSig = "", sidechainParams}
+                BurnParams {amount = -1, recipient = "", sidechainParams}
         )
         [shouldFail]
     , assertExecution
