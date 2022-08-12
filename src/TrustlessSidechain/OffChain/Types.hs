@@ -5,8 +5,7 @@ module TrustlessSidechain.OffChain.Types where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import GHC.Generics (Generic)
-import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
-import Ledger.Address (Address)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
 import Ledger.Orphans ()
 import Ledger.Tx (TxOutRef)
@@ -17,11 +16,31 @@ import Schema (
  )
 import Prelude qualified
 
+-- | Parameters to initialize a sidechain
+data InitSidechainParams = InitSidechainParams
+  { initChainId :: !BuiltinByteString
+  , initGenesisHash :: !BuiltinByteString
+  , -- | 'initUtxo ' is a 'TxOutRef' used for creating 'AssetClass's for the
+    -- internal function of the side chain (e.g. InitCommitteeHashMint TODO: hyperlink this documentation)
+    initUtxo :: !TxOutRef
+  , -- | 'initCommittee' is the initial committee of the sidechain
+    initCommittee :: [PubKey]
+  , initMint :: Maybe TxOutRef
+  }
+  deriving stock (Prelude.Show, Generic)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''InitSidechainParams)
+PlutusTx.makeLift ''InitSidechainParams
+
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
   { chainId :: !BuiltinByteString
   , genesisHash :: !BuiltinByteString
   , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
+  , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: !TxOutRef
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -89,10 +108,10 @@ $(deriveJSON defaultOptions ''MintParams)
  of these transactions either way.
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { -- | The public keys of the new committee.
+  { -- | See 'SidechainParams'.
+    sidechainParams :: !SidechainParams
+  , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
-  , -- | The asset class of the NFT identifying this committee hash
-    token :: !AssetClass
   , -- | The signature for the new committee hash.
     committeeSignatures :: [BuiltinByteString]
   , -- | Public keys of the current committee members.
@@ -102,24 +121,6 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
-
--- | Endpoint parameters for initializing the committee hash
-data GenesisCommitteeHashParams = GenesisCommitteeHashParams
-  { -- | Public keys of the initial committee members.
-    genesisCommitteePubKeys :: [PubKey]
-  , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
-    genesisAddress :: !Address
-  , -- | 'genesisToken' is the token name for the NFT
-    genesisToken :: !TokenName
-  }
-  deriving stock (Generic, Prelude.Show)
-
--- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
--- support having sum types which take an argument; so there is no
--- 'Schema.ToSchema' for 'Address'. Oops!
--- @deriving anyclass (ToSchema)@
-
-$(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams

@@ -21,12 +21,36 @@ All of these policies/validators are parameterised by the sidechain parameters, 
 data SidechainParams = SidechainParams
   { chainId :: BuiltinInteger
   , genesisHash :: BuiltinByteString
+  , genesisOutRef :: TxOutRef
+    -- ^ 'genesisOutRef' is an arbitrary 'TxOutRef' used to identify internal
+    -- 'AssetClass's (e.g. see [6.](#6.-update-committee-hash)) of the
+    -- sidechain
   }
 ```
 
 ### 1. Initialise contract
 
 For initialisation, we need to set the first <!-- ATMS verification key --> committee hash on chain using a NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated each when the committee changes, see [6.](#6.-update-committee-hash) for more details.
+
+**Workflow:**
+1. Call the initialize sidechain endpoint to generate the `SidechainParams` for a new
+   sidechain.
+2. Use the given sidechain parameters for the rest of the endpoints to work
+   with *this* particular sidechain.
+
+**Endpoint params:**
+
+```haskell
+data InitSidechainParams = InitSidechainParams
+  { initChainId :: BuiltinInteger
+  , initGenesisHash :: BuiltinByteString
+  , initUtxo :: TxOutRef
+    -- ^ 'initUtxo' is used for creating the committee NFT
+  , initCommittee :: [PubKey]
+    -- ^ 'initCommittee' is the initial committee of the sidechain
+  , initMint :: Maybe TxOutRef
+  }
+```
 
 ### 2. Transfer FUEL tokens from mainchain to sidechain
 
