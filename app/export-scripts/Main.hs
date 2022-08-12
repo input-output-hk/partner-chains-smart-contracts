@@ -47,7 +47,7 @@ import System.Environment (getArgs)
 import System.Exit (die)
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint),
+  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
   SidechainPubKey (SidechainPubKey),
  )
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
@@ -91,6 +91,7 @@ main = do
           { chainId = args.chainId
           , genesisHash = args.genesisHash
           , genesisMint = Just args.genesisTxIn
+          , genesisUtxo = args.genesisTxIn -- This is not needed for the Passive Bridge, so we're just using the same tx in
           }
 
       registrationData =
@@ -164,7 +165,7 @@ parseArgs =
       , rawRegisterTxIn
       ] ->
         Args
-          <$> mapLeft ("Unable to parse genesis input UTxO: " <>) (parseTxOutRef rawGenesisTxIn)
+          <$> mapLeft ("Unable to parse genesis mint input UTxO: " <>) (parseTxOutRef rawGenesisTxIn)
           <*> Right (read rawChainId)
           <*> parseGenesisHash rawGenesisHash
           <*> parsePkh rawOwnPkh
@@ -260,7 +261,7 @@ txOutRefParser = do
 
 -- Helpers
 
-writeData :: forall (a :: Type). ToData a => FilePath -> a -> IO ((Either (FileError ()) ()))
+writeData :: forall (a :: Type). ToData a => FilePath -> a -> IO (Either (FileError ()) ())
 writeData path =
   writeFileJSON path
     . scriptDataToJson ScriptDataJsonDetailedSchema
