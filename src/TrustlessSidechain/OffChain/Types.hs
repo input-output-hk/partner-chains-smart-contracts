@@ -68,15 +68,19 @@ data BurnParams = BurnParams
 $(deriveJSON defaultOptions ''BurnParams)
 
 data MintParams = MintParams
-  { -- | Minted amount in FUEL (Positive)
+  { -- | Minted amount in FUEL (this should be positive)
     amount :: Integer
   , -- | MainChain address
     recipient :: PaymentPubKeyHash
-  , -- | passed for parametrization
+  , -- | the merkle proof to prove to the mainchain that the given unhandled transaction from the sidechain actually happened on the sidechain
+    merkleProof :: MerkleProof
+  , --  | passed for parametrization.
+    -- TODO: in the spec, we don't do this -- we just pass the chainId. Not sure if this is what we want?
     sidechainParams :: SidechainParams
-  , -- | This is to prove to the main chain that the given unhandled
-    -- transaction from the sidechain has actually happened in the sidechain
-    proof :: MerkleProof
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'index' is here
+    index :: Integer
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
+    sidechainEpoch :: Integer
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)

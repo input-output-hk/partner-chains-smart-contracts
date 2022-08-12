@@ -24,7 +24,7 @@ import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
   GenesisCommitteeHashParams (GenesisCommitteeHashParams),
-  MintParams (MintParams, amount, proof, recipient),
+  MintParams (MintParams, amount, index, merkleProof, recipient, sidechainEpoch),
   RegisterParams (RegisterParams),
   SidechainParams (SidechainParams, chainId, genesisHash, genesisMint),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
@@ -112,7 +112,7 @@ test =
             const $ do
               h <- ownPaymentPubKeyHash
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = h, proof = MerkleTree.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = h, merkleProof = MerkleTree.emptyMp, sidechainParams, index = 0, sidechainEpoch = 0}
                 >>= awaitTxConfirmed . getCardanoTxId
               FUELMintingPolicy.burn
                 BurnParams {amount = -1, recipient = "", sidechainParams}
@@ -133,7 +133,9 @@ test =
                     { amount = 1
                     , recipient = h
                     , sidechainParams = scpOS
-                    , proof = MerkleTree.emptyMp
+                    , merkleProof = MerkleTree.emptyMp
+                    , index = 0
+                    , sidechainEpoch = 0
                     }
               awaitTxConfirmed $ getCardanoTxId t
               FUELMintingPolicy.burn $ BurnParams (-1) "" scpOS
@@ -155,7 +157,9 @@ test =
                       { amount = 1
                       , recipient = h
                       , sidechainParams = scpOS
-                      , proof = MerkleTree.emptyMp
+                      , merkleProof = MerkleTree.emptyMp
+                      , index = 0
+                      , sidechainEpoch = 0
                       }
                 awaitTxConfirmed $ getCardanoTxId t
                 t2 <-
@@ -164,7 +168,9 @@ test =
                       { amount = 1
                       , recipient = h
                       , sidechainParams = scpOS
-                      , proof = MerkleTree.emptyMp
+                      , merkleProof = MerkleTree.emptyMp
+                      , index = 0
+                      , sidechainEpoch = 0
                       }
                 awaitTxConfirmed $ getCardanoTxId t2
         )
@@ -176,7 +182,7 @@ test =
             const $ do
               h <- ownPaymentPubKeyHash
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = h, proof = MerkleTree.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = h, merkleProof = MerkleTree.emptyMp, sidechainParams, index = 0, sidechainEpoch = 0}
         )
         [shouldSucceed]
     , assertExecution
@@ -186,7 +192,7 @@ test =
             void $
               withContract $ \[pkh1] -> do
                 FUELMintingPolicy.mint
-                  MintParams {amount = 1, recipient = pkh1, proof = MerkleTree.emptyMp, sidechainParams}
+                  MintParams {amount = 1, recipient = pkh1, merkleProof = MerkleTree.emptyMp, sidechainParams, index = 0, sidechainEpoch = 0}
             withContractAs 1 $
               const $
                 FUELMintingPolicy.burn
@@ -199,7 +205,7 @@ test =
         ( withContract $ \[pkh1] ->
             do
               FUELMintingPolicy.mint
-                MintParams {amount = 1, recipient = pkh1, proof = MerkleTree.emptyMp, sidechainParams}
+                MintParams {amount = 1, recipient = pkh1, merkleProof = MerkleTree.emptyMp, sidechainParams, index = 0, sidechainEpoch = 0}
                 >>= awaitTxConfirmed . getCardanoTxId
               FUELMintingPolicy.burn
                 BurnParams {amount = -1, recipient = "", sidechainParams}

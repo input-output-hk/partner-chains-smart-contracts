@@ -13,7 +13,7 @@ import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInp
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Crypto (PubKeyHash (getPubKeyHash))
 import Plutus.V1.Ledger.Tx qualified as Tx
-import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (unTokenName), Value (getValue))
+import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (TokenName, unTokenName), Value (getValue))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
@@ -55,8 +55,9 @@ PlutusTx.makeLift ''FUELMint
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
 -}
+{-# INLINEABLE fuelTokenName #-}
 fuelTokenName :: TokenName
-fuelTokenName = "FUEL"
+fuelTokenName = TokenName "FUEL"
 
 {- | 'mkMintingPolicy' verifies the following
 
@@ -76,9 +77,6 @@ fuelTokenName = "FUEL"
 
   3. recipient and amount matches the actual tx body contents
 
-  TODO: I assume this is checked when verifying this is in the merkle root? See
-  @tx@ for some more details -- this needs to be fixed later.
-
   4. The recipient recieves the amount minted in one transaction output.
 
   TODO: this isn't in the spec, but the following note will make this clear why
@@ -97,10 +95,19 @@ mkMintingPolicy :: FUELMint -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy fm mode ctx = case mode of
   MainToSide _ ->
     traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
-  SideToMain mp ->
-    traceIfFalse "Can't mint a negative amount" (fuelAmount > 0)
-      && traceIfFalse "error 'mkMintingPolicy' merkle proof failed" (MerkleTree.memberMp tx mp merkleRoot)
-      && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
+  SideToMain index sidechainEpoch mp ->
+    let cborTx :: BuiltinByteString
+        cborTx =
+          MPTRootTokenMintingPolicy.serialiseMerkleTreeEntry
+            MerkleTreeEntry
+              { mteIndex = index
+              , mteAmount = fuelAmount
+              , mteRecipient = getPubKeyHash recipient
+              , mteSidechainEpoch = sidechainEpoch
+              }
+     in traceIfFalse "Can't mint a negative amount" (fuelAmount > 0)
+          && traceIfFalse "error 'mkMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborTx mp merkleRoot)
+          && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
   where
     -- Aliases:
     info = scriptContextTxInfo ctx
@@ -154,17 +161,6 @@ mkMintingPolicy fm mode ctx = case mode of
             | otherwise = go os
           go [] = traceError "error 'mkMintingPolicy' no recipient found"
        in go $ txInfoOutputs info
-
-    tx :: BuiltinByteString
-    tx =
-      MPTRootTokenMintingPolicy.encodeMerkleTreeEntry
-        -- TODO: fill this in with proper data later
-        MerkleTreeEntry
-          { mteIndex = 0
-          , mteAmount = fuelAmount
-          , mteRecipient = getPubKeyHash recipient
-          , mteSidechainEpoch = 0
-          }
 
     -- Checks:
     hasUTxO :: TxOutRef -> Bool

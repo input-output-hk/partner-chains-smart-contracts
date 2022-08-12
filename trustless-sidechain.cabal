@@ -92,6 +92,7 @@ library
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OffChain.UpdateCommitteeHash
+    TrustlessSidechain.OffChain.Utils
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
@@ -107,9 +108,11 @@ library
     , cardano-crypto
     , cardano-prelude
     , containers
+    , data-default
     , data-default-class
     , lens
     , playground-common
+    , plutus-chain-index-core
     , plutus-contract
     , plutus-core
     , plutus-ledger

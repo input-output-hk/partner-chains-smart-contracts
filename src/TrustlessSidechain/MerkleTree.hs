@@ -50,6 +50,7 @@ module TrustlessSidechain.MerkleTree (
   -- * Creating and querying Merkle proofs / the root hash
   lookupMp,
   memberMp,
+  rootMp,
   rootHash,
 
   -- * Internal
@@ -329,7 +330,13 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
 -}
 {-# INLINEABLE memberMp #-}
 memberMp :: BuiltinByteString -> MerkleProof -> RootHash -> Bool
-memberMp bt prf rth = rth == go (hashLeaf bt) (unMerkleProof prf)
+memberMp bt prf rth = rth == rootMp bt prf
+
+{- | @'rootMp' bt prf@ computes the root of a merkle tree with @bt@ as the
+ missing element, and @prf@ is the proof of @str@ being in the merkle tree.
+-}
+rootMp :: BuiltinByteString -> MerkleProof -> RootHash
+rootMp bt prf = go (hashLeaf bt) (unMerkleProof prf)
   where
     -- This just undoes the process given in 'lookupMp'.
     go :: RootHash -> [Up] -> RootHash

@@ -40,8 +40,24 @@ data MerkleTreeEntry = MerkleTreeEntry
 PlutusTx.makeLift ''MerkleTreeEntry
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
-encodeMerkleTreeEntry :: MerkleTreeEntry -> BuiltinByteString
-encodeMerkleTreeEntry _mte = emptyByteString
+{- | 'serialiseMerkleTreeEntry' serialises a 'MerkleTreeEntry' with cbor.
+
+ TODO: it doesn't encode the 'MerkleTreeEntry' to @cbor@. We would like to
+ use something like
+ [PlutusTx.serialiseData](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/Builtins.hs#L373)
+ but for some reason it doesn't exist in the package plutus-tx for the
+ version that we are using?
+
+ It appears that we are using
+ > plutus-tx                         >= 0.1.0 && < 0.2,
+ which doesn't have our desired function, but version 1.0.0.0 does have it.
+
+ While we wait, we /could/ actually reimplement such functionality onchain
+ (but it would be very slow and expensive probably). See package plutus-core
+ in module @PlutusCore.Data@
+-}
+serialiseMerkleTreeEntry :: MerkleTreeEntry -> BuiltinByteString
+serialiseMerkleTreeEntry = mteRecipient
 
 {- | 'mkMintingPolicy' verifies the following
 
