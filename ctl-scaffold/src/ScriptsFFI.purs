@@ -1,15 +1,13 @@
 module ScriptsFFI
   ( fUELMintingPolicy
-  , committeCandidateValidator
-  , mPTRootMintingPolicy
+  , committeeCandidateValidator
   , mPTRootTokenMintingPolicy
   , mPTRootTokenValidator
   , updateCommitteeHash
   ) where
 
 foreign import fUELMintingPolicy ∷ String
-foreign import committeCandidateValidator ∷ String
-foreign import mPTRootMintingPolicy ∷ String
+foreign import committeeCandidateValidator ∷ String
 foreign import mPTRootTokenMintingPolicy ∷ String
 foreign import mPTRootTokenValidator ∷ String
 foreign import updateCommitteeHash ∷ String
