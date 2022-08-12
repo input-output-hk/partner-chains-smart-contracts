@@ -178,7 +178,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
-        ((Bytes.getLedgerBytes PlutusTx.. Crypto.getPubKey) `PlutusTx.map` (committeePubKeys red))
+        (Bytes.getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
         1
         (newCommitteeHash red)
         (committeeSignatures red) -- TODO where are the other signatures?

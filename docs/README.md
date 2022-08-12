@@ -48,6 +48,7 @@ data InitSidechainParams = InitSidechainParams
     -- ^ 'initUtxo' is used for creating the committee NFT
   , initCommittee :: [PubKey]
     -- ^ 'initCommittee' is the initial committee of the sidechain
+  , initMint :: Maybe TxOutRef
   }
 ```
 

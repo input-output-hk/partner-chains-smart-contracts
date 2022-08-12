@@ -1,20 +1,35 @@
 #!/usr/bin/env bash
 set -e
 
+die() {
+	code=$?
+	echo $* >&2 && exit $code
+}
+
 # If there are whitespace errors, print the offending file names and fail.
 git diff-index --cached --check HEAD --
 
 # Catch formatting errors
-
 changed=$(git diff-index --cached --name-status HEAD -- | grep -v ^D | cut -f2)
+set +e
+	nix=$(grep '\.nix$' <<< $changed)
+	cabal=$(grep '\.cabal$' <<< $changed)
+	haskell=$(grep '\.l\?hs$' <<< $changed)
+set -e
 
-case $changed in *.hs*|*.lhs*)
-     make -s format_check
-     make -s lint
-esac
-case $changed in *.cabal*)
-     make -s cabalfmt_check
-esac
-case $changed in *.nix*)
-     make -s nixpkgsfmt_check
-esac
+! [ "$nix" ] || nixpkgs-fmt --check $nix
+! [ "$cabal" ] || cabal-fmt --check $cabal
+! [ "$haskell" ] || {
+	FOURMOLU_EXTENSIONS='
+		-o -XTypeApplications
+		-o -XTemplateHaskell
+		-o -XImportQualifiedPost
+		-o -XPatternSynonyms
+		-o -fplugin=RecordDotPreprocessor
+	'
+	fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell \
+		|| die "Please check formatting in $haskell"
+	hlint --no-summary $haskell
+}
+# `test && cmd` would fail the script if the test fails
+# `! test || cmd` would only fail if cmd fails
