@@ -53,6 +53,6 @@ runFuelMP fp sp = do
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
-  logInfo' ("Tx ID: " <> show txId)
+  logInfo' ("Submitted fuelMP Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "Tx submitted successfully!"
+  logInfo' "fuelMP Tx submitted successfully!"

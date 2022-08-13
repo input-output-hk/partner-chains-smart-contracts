@@ -12,5 +12,3 @@ derive instance Newtype SidechainParams _
 instance ToData SidechainParams where
   toData (SidechainParams { chainId , genesisHash , genesisMint })
     = Constr zero [ toData chainId , toData genesisHash , toData genesisMint ]
-
-

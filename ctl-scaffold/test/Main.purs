@@ -62,5 +62,4 @@ main = launchAff_ $ do
 
 --cfg ← defaultTestnetContractConfig
 --runContract_ cfg go
-
 --publishTestFeedback true
