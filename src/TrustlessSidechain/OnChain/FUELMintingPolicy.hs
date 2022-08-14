@@ -9,10 +9,9 @@ import Ledger (
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
-import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint, txInfoOutputs), TxOut (txOutValue), TxOutRef)
+import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue), TxOutRef)
 import Plutus.V1.Ledger.Contexts qualified as Contexts
-import Plutus.V1.Ledger.Crypto (PubKeyHash (getPubKeyHash))
-import Plutus.V1.Ledger.Tx qualified as Tx
+import Plutus.V1.Ledger.Crypto (PubKeyHash (PubKeyHash, getPubKeyHash))
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (TokenName, unTokenName), Value (getValue))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -24,9 +23,8 @@ import TrustlessSidechain.OffChain.Types (
     genesisMint
   ),
  )
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy (MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteIndex, mteRecipient, mteSidechainEpoch))
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
+import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteRecipient))
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See
  'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
@@ -77,36 +75,27 @@ fuelTokenName = TokenName "FUEL"
 
   3. recipient and amount matches the actual tx body contents
 
-  4. The recipient recieves the amount minted in one transaction output.
+  4. The recipient has signed the transaction
 
-  TODO: this isn't in the spec, but the following note will make this clear why
-  we should have this.
-
-  N.B. This guarantees that the recipient will receive the entire amount they
-  minted (i.e., transferred over from the main chain). Technically, this would
-  reject more transactions than necessary (e.g. someone could want to have this
-  pay half of their FUEL to one transaction and another the rest to another
-  transaction output), but then to support this we would have to verify
-  uniqueness of the recipient as well. Hence, we disallow such types of
-  transactions in general. [this is open for discussion!]
+  TODO: this isn't in the spec, but we have to do this to ensure that only the
+  recipient is the one who is controlling where the FUEL goes i.e., so an
+  adversary can't impersonate the recipient to steal their FUEL.
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: FUELMint -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy fm mode ctx = case mode of
   MainToSide _ ->
     traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
-  SideToMain index sidechainEpoch mp ->
-    let cborTx :: BuiltinByteString
-        cborTx =
-          MPTRootTokenMintingPolicy.serialiseMerkleTreeEntry
-            MerkleTreeEntry
-              { mteIndex = index
-              , mteAmount = fuelAmount
-              , mteRecipient = getPubKeyHash recipient
-              , mteSidechainEpoch = sidechainEpoch
-              }
+  SideToMain mte mp ->
+    let cborMte :: BuiltinByteString
+        cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
      in traceIfFalse "Can't mint a negative amount" (fuelAmount > 0)
-          && traceIfFalse "error 'mkMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborTx mp merkleRoot)
+          -- TODO: I don't think this positive check is in the spec and I don't think we need to
+          -- verify this on chain either? By checking if it is is in the merkle
+          -- tree (we may assume that the merkle root is computed in a trusted
+          -- way) we get this for free.
+          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
+          && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
   where
     -- Aliases:
@@ -122,7 +111,7 @@ mkMintingPolicy fm mode ctx = case mode of
         , [(tn, amount)] <- AssocMap.toList tns
         , tn == fuelTokenName =
         amount
-      | otherwise = traceError "error 'mkMintingPolicy' illegal FUEL minting"
+      | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
 
     merkleRoot :: RootHash
     merkleRoot =
@@ -143,24 +132,8 @@ mkMintingPolicy fm mode ctx = case mode of
             -- we can be certain there is only ONE distinct TokenName for
             -- each 'CurrencySymbol'
             | otherwise = go ts
-          go [] = traceError "error 'mkMintingPolicy' missing MPTRootToken"
+          go [] = traceError "error 'FUELMintingPolicy' missing MPTRootToken"
        in RootHash $ unTokenName $ go $ txInfoInputs info
-
-    recipient :: PubKeyHash
-    recipient =
-      let go :: [TxOut] -> PubKeyHash
-          go (o : os)
-            | Just r <- Tx.txOutPubKey o
-              , Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue o
-              , (_tn, amt) : _ <- AssocMap.toList tns
-              , -- If it's more clear, we can write the above line as
-                -- > [ (tn, amt) ] <- AssocMap.toList tns, tn == fuelTokenName
-                -- but the extra checks are implicit by construction.
-                amt == fuelAmount =
-              r
-            | otherwise = go os
-          go [] = traceError "error 'mkMintingPolicy' no recipient found"
-       in go $ txInfoOutputs info
 
     -- Checks:
     hasUTxO :: TxOutRef -> Bool

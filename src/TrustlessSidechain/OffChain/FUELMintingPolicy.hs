@@ -13,7 +13,6 @@ import Ledger (CardanoTx, Redeemer (Redeemer))
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints qualified as Constraint
-import Ledger.Crypto (PubKeyHash (getPubKeyHash))
 import Ledger.Tx (
   ChainIndexTxOut,
   TxOutRef,
@@ -25,6 +24,7 @@ import Plutus.ChainIndex (
  )
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
+import Plutus.V1.Ledger.Crypto (PubKeyHash (getPubKeyHash))
 import Plutus.V1.Ledger.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Value (TokenName (TokenName))
 import PlutusTx (ToData (toBuiltinData))
@@ -40,10 +40,13 @@ import TrustlessSidechain.OffChain.Types (
 import TrustlessSidechain.OffChain.Utils qualified as Utils
 import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy (MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteIndex, mteRecipient, mteSidechainEpoch))
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
+import TrustlessSidechain.OnChain.Types (
+  FUELRedeemer (MainToSide, SideToMain),
+  MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteIndex, mteRecipient, mteSidechainEpoch),
+ )
+
 import Prelude qualified
 
 {- | 'findMPTRootToken sc mp me' constructs the merkle root from the merkle
@@ -104,14 +107,14 @@ burn BurnParams {amount, sidechainParams, recipient} = do
 mintWithUtxo :: Maybe (Map Ledger.TxOutRef Ledger.ChainIndexTxOut) -> MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 mintWithUtxo utxo MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merkleProof} =
   let mte =
-        MPTRootTokenMintingPolicy.serialiseMerkleTreeEntry $
-          MerkleTreeEntry
-            { mteIndex = index
-            , mteAmount = amount
-            , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash recipient
-            , mteSidechainEpoch = sidechainEpoch
-            }
-      root = MerkleTree.rootMp mte merkleProof
+        MerkleTreeEntry
+          { mteIndex = index
+          , mteAmount = amount
+          , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash recipient
+          , mteSidechainEpoch = sidechainEpoch
+          }
+      cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
+      root = MerkleTree.rootMp cborMte merkleProof
    in findMPTRootToken sidechainParams root >>= \case
         [] -> Contract.throwError "error FUELMintingPolicy: no UTxO found"
         mptUtxo : _ -> do
@@ -122,7 +125,7 @@ mintWithUtxo utxo MintParams {amount, index, sidechainEpoch, sidechainParams, re
                   }
               policy = FUELMintingPolicy.mintingPolicy fm
               value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
-              redeemer = Redeemer $ toBuiltinData $ SideToMain index sidechainEpoch merkleProof
+              redeemer = Redeemer $ toBuiltinData $ SideToMain mte merkleProof
 
               -- TODO: the following line should be removed with reference inputs:
               mptRootTokenValidator = MPTRootTokenValidator.validator sidechainParams
@@ -135,13 +138,13 @@ mintWithUtxo utxo MintParams {amount, index, sidechainEpoch, sidechainParams, re
 
               lookups =
                 Constraint.mintingPolicy policy
-                  Prelude.<> Constraint.unspentOutputs (uncurry Map.singleton mptUtxo)
-                  Prelude.<> maybe Prelude.mempty Constraint.unspentOutputs utxo
+                  Prelude.<> Constraint.unspentOutputs (fromMaybe Prelude.mempty utxo Prelude.<> uncurry Map.singleton mptUtxo)
                   -- TODO: the following line should be removed with reference inputs:
                   Prelude.<> Constraint.otherScript mptRootTokenValidator
               tx =
                 Constraint.mustMintValueWithRedeemer redeemer value
                   Prelude.<> Constraint.mustPayToPubKey recipient value
+                  Prelude.<> Constraint.mustSpendScriptOutput (fst mptUtxo) Scripts.unitRedeemer
                   -- TODO: the following line should be removed with reference inputs:
                   Prelude.<> Constraint.mustPayToOtherScript (MPTRootTokenValidator.hash sidechainParams) Scripts.unitDatum mptRootTokenValue
 

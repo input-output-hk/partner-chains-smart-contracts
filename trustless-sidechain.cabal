@@ -169,6 +169,7 @@ test-suite trustless-sidechain-test
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , text
     , trustless-sidechain
 
   hs-source-dirs: test

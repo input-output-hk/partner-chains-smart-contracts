@@ -82,15 +82,14 @@ utxosWithCurrency ::
 utxosWithCurrency = foldUtxoRefsWithCurrency go Map.empty
   where
     go :: Map TxOutRef ChainIndexTxOut -> UtxosResponse -> Contract w s e (Map TxOutRef ChainIndexTxOut)
-    go acc utxoRsp =
-      flip (flip (Fold.foldlMOf Fold.folded) acc) (pageItems $ page utxoRsp) $
-        -- Why do we need to use 'Contract.utxoRefMembership ref' to
-        -- test if @ref@ is in the utxo set? Apparently (according to
-        -- Plutip in the tests) sometimes the 'utxoRefsWithCurrency'
-        -- doesn't actually return a utxo (i.e., it returns outputs
-        -- that are already spent). This is weird.... very weird..
-        \acc' ref ->
-          Contract.utxoRefMembership ref >>= \p ->
-            Request.txOutFromRef ref PlutusPrelude.<&> \case
-              Just o | isUtxo p -> Map.insert ref o acc'
-              _ -> acc'
+    go acc utxoRsp = (\k -> Fold.foldlMOf Fold.folded k acc (pageItems $ page utxoRsp)) $
+      -- Why do we need to use 'Contract.utxoRefMembership ref' to
+      -- test if @ref@ is in the utxo set? Apparently (according to
+      -- Plutip in the tests) sometimes the 'utxoRefsWithCurrency'
+      -- doesn't actually return a utxo (i.e., it returns outputs
+      -- that are already spent). This is weird.... very weird..
+      \acc' ref ->
+        Contract.utxoRefMembership ref >>= \p ->
+          Request.txOutFromRef ref PlutusPrelude.<&> \case
+            Just o | isUtxo p -> Map.insert ref o acc'
+            _ -> acc'

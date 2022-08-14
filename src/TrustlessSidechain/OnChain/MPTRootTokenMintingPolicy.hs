@@ -18,29 +18,10 @@ import Plutus.V1.Ledger.Value (CurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
+import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteRecipient), SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
 import TrustlessSidechain.OnChain.Utils qualified as Utils
 
-{- | 'MerkleTreeEntry' is the data which are the elements in the merkle tree
- for the MPTRootToken.
--}
-data MerkleTreeEntry = MerkleTreeEntry
-  { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-    mteIndex :: Integer
-  , -- | 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-    mteAmount :: Integer
-  , -- | arbitrary length bytestring that represents decoded bech32 cardano
-    -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
-    -- of bech32
-    mteRecipient :: BuiltinByteString
-  , -- | sidechain epoch for which merkle tree was created
-    mteSidechainEpoch :: Integer
-  }
-
-PlutusTx.makeLift ''MerkleTreeEntry
-PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
-
-{- | 'serialiseMerkleTreeEntry' serialises a 'MerkleTreeEntry' with cbor.
+{- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor.
 
  TODO: it doesn't encode the 'MerkleTreeEntry' to @cbor@. We would like to
  use something like
@@ -56,8 +37,8 @@ PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
  (but it would be very slow and expensive probably). See package plutus-core
  in module @PlutusCore.Data@
 -}
-serialiseMerkleTreeEntry :: MerkleTreeEntry -> BuiltinByteString
-serialiseMerkleTreeEntry = mteRecipient
+serialiseMte :: MerkleTreeEntry -> BuiltinByteString
+serialiseMte = mteRecipient
 
 {- | 'mkMintingPolicy' verifies the following
 
@@ -69,10 +50,15 @@ serialiseMerkleTreeEntry = mteRecipient
       committee members, AND the concatenated hashed value of these
       signatures correspond to the one saved on chain.
 
+      TODO: I don't think this does the latter of the conditions? i.e., it
+      appears it does NOT check the concatenated hashed valuee of the committee
+      submited correspond to the one saved on chain (recall the committee hash
+      is saved via 'TrustlessSidechain.OnChain.UpdateCommitteeHash')
+
       3. Exactly one token is minted
 
       TODO: the spec doesn't say this, but this is what the implementation
-      does.
+      does. Fairly certain this is what we want...
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> SignedMerkleRoot -> ScriptContext -> Bool
@@ -89,7 +75,9 @@ mkMintingPolicy
     , scriptContextTxInfo = TxInfo {txInfoMint}
     } =
     -- 2.
-    Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
+    traceIfFalse
+      "error 'MPTRootTokenMintingPolicy' verifyMultisig failed"
+      (Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures)
       && verifyTokenAmount (traceIfFalse "Amount must be 1" . (== 1)) -- 3.
     where
       verifyTokenAmount verify =
