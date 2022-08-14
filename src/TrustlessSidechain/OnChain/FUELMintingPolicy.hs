@@ -69,7 +69,7 @@ fuelTokenName = TokenName "FUEL"
   allow us to define it], the transaction should be constructed s.t. there is
   exactly only one input with an MPTRootToken.
 
-  2. chainId the minting policy id
+  2. chainId matches the minting policy id
 
   TODO: It doesn't do this yet? Honestly, I'm quite unsure what this means?
 
