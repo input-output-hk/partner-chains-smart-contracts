@@ -88,6 +88,7 @@ library
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
     TrustlessSidechain.OffChain.FUELMintingPolicy
+    TrustlessSidechain.OffChain.InitSidechain
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
@@ -106,7 +107,6 @@ library
     , bytestring                 ^>=0.10.12.0
     , cardano-api
     , cardano-crypto
-    , cardano-prelude
     , containers
     , data-default
     , data-default-class
@@ -118,7 +118,6 @@ library
     , plutus-ledger
     , plutus-ledger-api
     , plutus-ledger-constraints
-    , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
     , row-types
