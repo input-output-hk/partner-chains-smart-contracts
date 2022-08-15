@@ -24,7 +24,7 @@ import TrustlessSidechain.OffChain.Types (
   ),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteRecipient, mteAmount))
+import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See
  'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
