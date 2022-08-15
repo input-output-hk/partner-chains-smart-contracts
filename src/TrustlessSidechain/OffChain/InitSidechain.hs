@@ -7,9 +7,9 @@ import Ledger (Datum (Datum), TxOutRef, validatorHash)
 import Ledger.Address qualified as Address
 import Ledger.Constraints qualified as Constraints
 import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
-import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
 import PlutusTx qualified
 import PlutusTx.Prelude

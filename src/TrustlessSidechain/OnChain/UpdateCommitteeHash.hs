@@ -15,7 +15,7 @@ import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
-import Plutus.Script.Utils.V2.Scripts qualified as Scripts
+import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
@@ -185,12 +185,12 @@ updateCommitteeHashValidator updateCommitteeHash =
         `PlutusTx.applyCode` PlutusTx.liftCode updateCommitteeHash
     )
   where
-    untypedValidator = Scripts.mkUntypedValidator . mkUpdateCommitteeHashValidator
+    untypedValidator = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator
 
 -- | 'updateCommitteeHashAddress' is the address of the script
 {-# INLINEABLE updateCommitteeHashAddress #-}
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
-updateCommitteeHashAddress = Ledger.scriptHashAddress . Scripts.validatorHash . updateCommitteeHashValidator
+updateCommitteeHashAddress = Ledger.scriptHashAddress . ScriptUtils.validatorHash . updateCommitteeHashValidator
 
 -- * Initializing the committee hash
 
@@ -199,7 +199,7 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
     icTxOutRef :: TxOutRef
   }
-  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving newtype (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic, PlutusTx.UnsafeFromData)
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''InitCommitteeHashMint
@@ -245,7 +245,7 @@ mkCommitteeHashPolicy ichm _red ctx =
 committeeHashPolicy :: InitCommitteeHashMint -> MintingPolicy
 committeeHashPolicy gch =
   Ledger.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.mkUntypedMintingPolicy . mkCommitteeHashPolicy||])
+    $$(PlutusTx.compile [||ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy||])
       `PlutusTx.applyCode` PlutusTx.liftCode gch
 
 -- | 'committeeHashCurSymbol' is the currency symbol
@@ -259,3 +259,10 @@ committeeHashCurSymbol ichm = scriptCurrencySymbol $ committeeHashPolicy ichm
 {-# INLINEABLE committeeHashAssetClass #-}
 committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
 committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn
+
+-- CTL hack
+mkCommitteHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+
+serialisableCommitteHashPolicy :: Ledger.Script
+serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])

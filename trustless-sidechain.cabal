@@ -166,6 +166,19 @@ executable trustless-sidechain-export
 
   hs-source-dirs: app/export-scripts
 
+executable trustless-sidechain-serialise
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , plutus-ledger
+    , serialise
+    , trustless-sidechain
+
+  hs-source-dirs: app/serialise
+
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0

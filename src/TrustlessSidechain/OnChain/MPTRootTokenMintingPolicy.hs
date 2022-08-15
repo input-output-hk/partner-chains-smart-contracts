@@ -7,13 +7,14 @@ import Ledger qualified
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Scripts qualified as Script
+import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (getLedgerBytes)
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (..),
   ScriptPurpose (Minting),
   TxInfo (..),
  )
-import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (..))
@@ -52,3 +53,10 @@ mintingPolicy param =
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
     wrap = Script.mkUntypedMintingPolicy
+
+-- CTL hack
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
+
+serialisableMintingPolicy :: Ledger.Script
+serialisableMintingPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

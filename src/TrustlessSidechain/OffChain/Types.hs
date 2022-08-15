@@ -53,34 +53,34 @@ data InitSidechainParams = InitSidechainParams
 
 $(deriveJSON defaultOptions ''InitSidechainParams)
 PlutusTx.makeLift ''InitSidechainParams
+PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
   , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
-  , genesisHash :: !BuiltinByteString
+  , genesisHash :: BuiltinByteString
   , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: !TxOutRef
+    genesisUtxo :: TxOutRef
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
-
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: !SidechainParams
-  , spoPubKey :: !PubKey
-  , sidechainPubKey :: !SidechainPubKey
-  , spoSig :: !Signature
-  , sidechainSig :: !Signature
-  , inputUtxo :: !TxOutRef
+  { sidechainParams :: SidechainParams
+  , spoPubKey :: PubKey
+  , sidechainPubKey :: SidechainPubKey
+  , spoSig :: Signature
+  , sidechainSig :: Signature
+  , inputUtxo :: TxOutRef
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -89,8 +89,8 @@ $(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: !SidechainParams
-  , spoPubKey :: !PubKey
+  { sidechainParams :: SidechainParams
+  , spoPubKey :: PubKey
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -134,7 +134,7 @@ $(deriveJSON defaultOptions ''MintParams)
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | See 'SidechainParams'.
-    sidechainParams :: !SidechainParams
+    sidechainParams :: SidechainParams
   , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
   , -- | The signature for the new committee hash.

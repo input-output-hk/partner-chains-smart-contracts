@@ -5,7 +5,7 @@ module TrustlessSidechain.OnChain.MPTRootTokenValidator where
 import Ledger qualified
 import Plutus.Script.Utils.V2.Scripts qualified as Script
 import Plutus.V2.Ledger.Contexts (ScriptContext)
-import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
@@ -25,3 +25,10 @@ hash = Script.validatorHash . validator
 
 address :: SidechainParams -> Ledger.Address
 address = Ledger.scriptHashAddress . hash
+
+-- CTL hack
+mkValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorUntyped = Script.mkUntypedValidator . mkValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableValidator :: Ledger.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])

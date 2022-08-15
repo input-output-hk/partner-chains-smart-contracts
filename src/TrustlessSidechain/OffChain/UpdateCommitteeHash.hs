@@ -16,11 +16,11 @@ import Ledger.Tx (
   ciTxOutValue,
  )
 import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Logging qualified as Logging
-import Plutus.V1.Ledger.Api (Datum (getDatum))
-import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api (Datum (getDatum))
 import PlutusPrelude (void)
 import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
