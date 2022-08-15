@@ -24,7 +24,7 @@ import TrustlessSidechain.OffChain.Types (
   ),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteRecipient))
+import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteRecipient, mteAmount))
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See
  'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
@@ -73,7 +73,7 @@ fuelTokenName = TokenName "FUEL"
 
   TODO: It doesn't do this yet? Honestly, I'm quite unsure what this means?
 
-  3. recipient and amount matches the actual tx body contents
+  3. amount matches the actual tx body contents
 
   4. The recipient has signed the transaction
 
@@ -94,6 +94,7 @@ mkMintingPolicy fm mode ctx = case mode of
           -- verify this on chain either? By checking if it is is in the merkle
           -- tree (we may assume that the merkle root is computed in a trusted
           -- way) we get this for free.
+          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
