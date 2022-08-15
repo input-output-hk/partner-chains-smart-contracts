@@ -56,22 +56,31 @@ serialiseBprm (BlockProducerRegistrationMsg _ _ (TxOutRef (TxId txId) _)) =
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
-{-# INLINEABLE mkCommitteeCanditateValidator #-}
-mkCommitteeCanditateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
-mkCommitteeCanditateValidator _ datum _ ctx =
+{-# INLINEABLE mkCommitteeCandidateValidator #-}
+mkCommitteeCandidateValidator :: SidechainParams -> BlockProducerRegistration -> () -> Ledger.ScriptContext -> Bool
+mkCommitteeCandidateValidator _ datum _ ctx =
   traceIfFalse "Must be signed by the original submitter" isSigned
   where
     info = Ledger.scriptContextTxInfo ctx
     pkh = bprOwnPkh datum
     isSigned = Ledger.txSignedBy info pkh
 
-committeeCanditateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
-committeeCanditateValidator sidechainParams =
+committeeCandidateValidator :: SidechainParams -> TypedValidator CommitteeCandidateRegistry
+committeeCandidateValidator sidechainParams =
   Scripts.mkTypedValidator @CommitteeCandidateRegistry
-    ($$(PlutusTx.compile [||mkCommitteeCanditateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
+    ($$(PlutusTx.compile [||mkCommitteeCandidateValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams)
     $$(PlutusTx.compile [||wrap||])
   where
     wrap = Scripts.wrapValidator @BlockProducerRegistration @()
+
+-- ctl hack
+-- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
+{-# INLINEABLE committeeCandidateValidatorUntyped #-}
+committeeCandidateValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+committeeCandidateValidatorUntyped = Scripts.wrapValidator . mkCommitteeCandidateValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisablecommitteeCandidateValidator :: Ledger.Script
+serialisablecommitteeCandidateValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
 
 data CommitteeCandidateRegistry
 instance ValidatorTypes CommitteeCandidateRegistry where
@@ -79,7 +88,7 @@ instance ValidatorTypes CommitteeCandidateRegistry where
   type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
 
 script :: SidechainParams -> Ledger.Script
-script = Scripts.unValidatorScript . Scripts.validatorScript . committeeCanditateValidator
+script = Scripts.unValidatorScript . Scripts.validatorScript . committeeCandidateValidator
 
 scriptSBS :: SidechainParams -> SBS.ShortByteString
 scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams
