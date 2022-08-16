@@ -20,7 +20,7 @@ import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
-import ScriptsFFI (fUELMintingPolicy)
+import ScriptsFFI (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 
 data FUELRedeemer
@@ -36,7 +36,7 @@ instance ToData FUELRedeemer where
 fuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 fuelMintingPolicy sp = do
   fuelMPUnapplied ← (PlutusScript >>> MintingPolicy) <$> textEnvelopeBytes
-    fUELMintingPolicy
+    rawFUELMintingPolicy
     PlutusScriptV1
   liftedE (applyArgs fuelMPUnapplied [ toData sp ])
 
