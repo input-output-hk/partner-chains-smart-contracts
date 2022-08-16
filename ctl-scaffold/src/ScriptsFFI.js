@@ -2,7 +2,7 @@
 
 let inBrowser = typeof BROWSER_RUNTIME !== 'undefined' && BROWSER_RUNTIME;
 let fuelMintingPolicy;
-let CommitteCandidateValidator;
+let CommitteeCandidateValidator;
 let MPTRootMintingPolicy;
 let MPTRootTokenMintingPolicy;
 let MPTRootTokenValidator;
