@@ -1,6 +1,8 @@
 module Main (main) where
 
 import Test.Tasty
+
+import Test.TrustlessSidechain.DistributedSet as DistributedSet
 import Test.TrustlessSidechain.Integration as Integration
 import Test.TrustlessSidechain.MerkleTree as MerkleTree
 import Test.TrustlessSidechain.MultiSig as MultiSig
@@ -20,5 +22,6 @@ tests =
     "TrustlessSidechain"
     [ Integration.test
     , MerkleTree.test
+    , DistributedSet.test
     , MultiSig.test
     ]

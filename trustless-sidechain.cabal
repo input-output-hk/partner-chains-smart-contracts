@@ -87,6 +87,7 @@ library
   exposed-modules:
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
+    TrustlessSidechain.OffChain.DistributedSet
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.InitSidechain
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
@@ -94,7 +95,9 @@ library
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OffChain.Utils
+    TrustlessSidechain.OnChain.BitField
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
+    TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator
@@ -147,6 +150,7 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Test.TrustlessSidechain.DistributedSet
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig

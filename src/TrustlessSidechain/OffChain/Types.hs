@@ -139,3 +139,16 @@ data SaveRootParams = SaveRootParams
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
 $(deriveJSON defaultOptions ''SaveRootParams)
+
+-- | 'DsParams' are parameters for the distributed set.
+data DsParams = DsParams
+  { -- | The 'TxOutRef' which is used as the "genesis" transaction to create
+    -- the distributed set.
+    dspTxOutRef :: TxOutRef
+  , -- | The 'BuiltinByteString' to insert
+    dspStr :: BuiltinByteString
+  }
+  deriving stock (Generic, Prelude.Show)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''DsParams)
