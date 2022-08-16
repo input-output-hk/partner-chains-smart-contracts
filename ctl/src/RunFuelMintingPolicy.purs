@@ -1,41 +1,31 @@
 module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
 
+import Contract.Prelude
+
 import Contract.Address (PaymentPubKeyHash)
-import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
-  , liftContractAffM
   , liftContractM
   , liftedE
   , liftedM
+  , logInfo'
+  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prelude
-  ( class Generic
-  , Unit
-  , Void
-  , bind
-  , discard
-  , negate
-  , one
-  , show
-  , wrap
-  , zero
-  , (<$>)
-  , (<>)
-  , (=<<)
-  , (>>>)
-  )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(..), PlutusScript(..), applyArgs)
-import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
+import Contract.Scripts (MintingPolicy(..), applyArgs)
+import Contract.TextEnvelope
+  ( TextEnvelopeType(PlutusScriptV2)
+  , textEnvelopeBytes
+  )
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import ScriptsFFI (fUELMintingPolicy)
 import SidechainParams (SidechainParams)
+import Types.Scripts (plutusV2Script)
 
 data FUELRedeemer
   = MainToSide String String -- recipient sidechain (addr , signature)
@@ -49,9 +39,9 @@ instance ToData FUELRedeemer where
 -- Applies SidechainParams to the minting policy
 fuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 fuelMintingPolicy sp = do
-  fuelMPUnapplied ← (PlutusScript >>> MintingPolicy) <$> textEnvelopeBytes
+  fuelMPUnapplied ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
     fUELMintingPolicy
-    PlutusScriptV1
+    PlutusScriptV2
   liftedE (applyArgs fuelMPUnapplied [ toData sp ])
 
 data FuelParams
@@ -62,8 +52,10 @@ data FuelParams
 runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
 runFuelMP fp sp = do
   fuelMP ← fuelMintingPolicy sp
-  cs ← liftContractAffM "Cannot get currency symbol"
-    (Value.scriptCurrencySymbol fuelMP)
+
+  cs <- maybe (throwContractError "Cannot get currency symbol") pure $
+    Value.scriptCurrencySymbol
+      fuelMP
   logInfo' ("fuelMP curreny symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")

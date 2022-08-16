@@ -1,5 +1,7 @@
 module CommitteCandidateValidator where
 
+import Contract.Prelude
+
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
@@ -8,8 +10,7 @@ import Contract.Address
   , payPubKeyHashBaseAddress
   , validatorHashBaseAddress
   )
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractM, liftedE, liftedM, logInfo')
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -20,33 +21,6 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
-import Contract.Prelude
-  ( class Generic
-  , class Newtype
-  , Maybe(..)
-  , Unit
-  , Void
-  , bind
-  , discard
-  , flip
-  , liftAff
-  , mconcat
-  , pure
-  , show
-  , snd
-  , unwrap
-  , zero
-  , ($)
-  , (&&)
-  , (/\)
-  , (<$>)
-  , (<*>)
-  , (<<<)
-  , (<>)
-  , (=<<)
-  , (==)
-  , (>>>)
-  )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( PlutusScript(..)
@@ -54,12 +28,16 @@ import Contract.Scripts
   , applyArgs
   , validatorHash
   )
-import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
+import Contract.TextEnvelope
+  ( TextEnvelopeType(PlutusScriptV2)
+  , textEnvelopeBytes
+  )
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutput(TransactionOutput)
   , awaitTxConfirmed
   , balanceAndSignTx
+  , outputDatumDatum
   , submit
   )
 import Contract.TxConstraints as Constraints
@@ -74,6 +52,7 @@ import Data.Map as Map
 import Plutus.Types.Address (Address)
 import ScriptsFFI (committeeCandidateValidator)
 import SidechainParams (SidechainParams)
+import Types.Scripts (plutusV2Script)
 
 type Signature = String -- Ed25519Signature
 type AssetClass = Value.TokenName
@@ -94,9 +73,9 @@ newtype DeregisterParams = DeregisterParams
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
 getCommitteeCandidateValidator sp = do
-  ccvUnapplied ← (PlutusScript >>> Validator) <$> textEnvelopeBytes
+  ccvUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
     committeeCandidateValidator
-    PlutusScriptV1
+    PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
 
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
@@ -219,10 +198,8 @@ register
 
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr) -- TrustlessSidechainSchema Text CardanoTx
   validator ← getCommitteeCandidateValidator sidechainParams
-  valHash ← liftedM "couldn't get validator hash" $ liftAff
-    (validatorHash validator)
-
   let
+    valHash = validatorHash validator
     val = Value.lovelaceValueOf (BigInt.fromInt 1)
     datum = BlockProducerRegistration
       { bprSpoPubKey: spoPubKey
@@ -256,20 +233,17 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
     (payPubKeyHashBaseAddress netId ownPkh ownStake)
 
   validator ← getCommitteeCandidateValidator sidechainParams
-  valHash ← liftedM "couldn't get validator hash"
-    (liftAff (validatorHash validator))
+  let valHash = validatorHash validator
   valAddr ← liftContractM "marketPlaceListNft: get validator address"
     (validatorHashBaseAddress netId valHash)
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
   valUtxos ← unwrap <$> liftedM "cannot get val UTxOs" (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
 
-  datums ← getDatumsByHashes (mapMaybe (snd >>> unwrap >>> _.dataHash) valUtxos')
   ourDatums ← liftAff $ (flip parTraverse) valUtxos' $
     \(input /\ (TransactionOutput out)) → runMaybeT $ do
       BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
-        =<< (_ `Map.lookup` datums)
-        =<< out.dataHash
+        =<< outputDatumDatum out.datum
       guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
       pure input
 

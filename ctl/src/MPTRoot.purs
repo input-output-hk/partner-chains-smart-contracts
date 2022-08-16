@@ -4,7 +4,7 @@ import SidechainParams (SidechainParams)
 import ScriptsFFI (fUELMintingPolicy)
 import Data.BigInt as BigInt
 import Contract.Prelude (class Generic, Unit, Void, bind, discard, negate, one, show, wrap, zero, (<$>), (<>), (=<<), (>>>))
-import Contract.Log (logInfo')
+import Contract.Log (logInfo)
 import Contract.Monad (Contract, liftContractAffM, liftContractM, liftedE, liftedM)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.Scripts (MintingPolicy(..), PlutusScript(..), applyArgs)
@@ -42,7 +42,7 @@ instance ToData SaveRootParams where
 
 rootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 rootTokenMintingPolicy sp = do
-  mptRootMP ← (PlutusScript >>> MintingPolicy) <$> textEnvelopeBytes mPTRootMintingPolicy PlutusScriptV1
+  mptRootMP ← (PlutusScript >>> MintingPolicy) <$> textEnvelopeBytes mPTRootMintingPolicy PlutusScriptV2
   liftedE (applyArgs mptRootMP [ toData sp ])
 
 saveRoot ∷ SaveRootParams → Contract () ()
@@ -58,9 +58,9 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
   ubTx ← liftedE (Lookups.mkUnbalancedTx (Lookups.mintingPolicy rootTokenMP) constraints)
   bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
-  logInfo' ("Submitted saveRoot Tx: " <> show txId)
+  logInfo ("Submitted saveRoot Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "saveRoot Tx submitted successfully!"
+  logInfo "saveRoot Tx submitted successfully!"
 
 --saveRoot ∷ SaveRootParams → Contract () TrustlessSidechainSchema Text CardanoTx
 --saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, committeePubKeys} = do

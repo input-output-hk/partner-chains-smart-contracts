@@ -6,9 +6,9 @@
     flake-compat.flake = false;
     cardano-transaction-lib = {
       type = "github";
-      owner = "Plutonomicon";
+      owner = "gege251";
       repo = "cardano-transaction-lib";
-      rev = "1aaa081fb0b7c669cdc3e1b285c613f78cd598a5";
+      rev = "c061baf7f3152d3ec70152eac7703f4091973a32";
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:
@@ -49,8 +49,8 @@
             # plutip
             ctl-server
             ogmios
-            ogmios-datum-cache
-            plutip-server
+            # ogmios-datum-cache
+            # plutip-server
             postgresql
           ];
         };
