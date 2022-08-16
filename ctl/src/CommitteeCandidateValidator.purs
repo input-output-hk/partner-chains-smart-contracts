@@ -1,5 +1,7 @@
 module CommitteCandidateValidator where
 
+import Contract.Prelude
+
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
@@ -19,33 +21,6 @@ import Contract.PlutusData
   , getDatumsByHashes
   , toData
   , unitRedeemer
-  )
-import Contract.Prelude
-  ( class Generic
-  , class Newtype
-  , Maybe(..)
-  , Unit
-  , Void
-  , bind
-  , discard
-  , flip
-  , liftAff
-  , mconcat
-  , pure
-  , show
-  , snd
-  , unwrap
-  , zero
-  , ($)
-  , (&&)
-  , (/\)
-  , (<$>)
-  , (<*>)
-  , (<<<)
-  , (<>)
-  , (=<<)
-  , (==)
-  , (>>>)
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts

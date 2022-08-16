@@ -1,5 +1,7 @@
 module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
 
+import Contract.Prelude
+
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad
@@ -10,22 +12,6 @@ import Contract.Monad
   , liftedM
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prelude
-  ( class Generic
-  , Unit
-  , Void
-  , bind
-  , discard
-  , negate
-  , one
-  , show
-  , wrap
-  , zero
-  , (<$>)
-  , (<>)
-  , (=<<)
-  , (>>>)
-  )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), PlutusScript(..), applyArgs)
