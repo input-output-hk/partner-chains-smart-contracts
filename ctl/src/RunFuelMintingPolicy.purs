@@ -28,12 +28,12 @@ import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
 data FUELRedeemer
-  = MainToSide String String -- recipient sidechain (addr , signature)
+  = MainToSide String -- recipient sidechain (addr , signature)
   | SideToMain
 
 derive instance Generic FUELRedeemer _
 instance ToData FUELRedeemer where
-  toData (MainToSide s1 s2) = Constr zero [ toData s1, toData s2 ]
+  toData (MainToSide s1) = Constr zero [ toData s1 ]
   toData (SideToMain) = Constr one []
 
 -- Applies SidechainParams to the minting policy
@@ -46,7 +46,7 @@ fuelMintingPolicy sp = do
 
 data FuelParams
   = Mint { amount ∷ Int, recipient ∷ PaymentPubKeyHash }
-  | Burn { amount ∷ Int, recipient ∷ String, sidechainSig ∷ String }
+  | Burn { amount ∷ Int, recipient ∷ String }
 
 -- it's a limitation of plutus server that we cannot use stake addresses so ignore the custom warning
 runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
@@ -56,6 +56,7 @@ runFuelMP fp sp = do
   cs <- maybe (throwContractError "Cannot get currency symbol") pure $
     Value.scriptCurrencySymbol
       fuelMP
+  logInfo' (show (toData sp))
   logInfo' ("fuelMP curreny symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
@@ -66,7 +67,7 @@ runFuelMP fp sp = do
     constraints = case fp of
       Burn bp →
         let
-          redeemer = wrap (toData (MainToSide bp.recipient bp.sidechainSig))
+          redeemer = wrap (toData (MainToSide bp.recipient))
         in
           Constraints.mustMintValueWithRedeemer redeemer (mkValue (-bp.amount))
       Mint mp →
