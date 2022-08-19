@@ -5,8 +5,8 @@ import Contract.Prelude
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
+  , getWalletAddress
   , ownPaymentPubKeyHash
-  , ownStakePubKeyHash
   , payPubKeyHashBaseAddress
   , validatorHashBaseAddress
   )
@@ -58,9 +58,18 @@ import Types.Scripts (plutusV2Script)
 type Signature = String -- Ed25519Signature
 type AssetClass = Value.TokenName
 
+newtype SidechainPubKey = SidechainPubKey String
+
+derive instance Generic SidechainPubKey _
+derive instance Newtype SidechainPubKey _
+derive newtype instance Eq SidechainPubKey
+derive newtype instance FromData SidechainPubKey
+derive newtype instance Ord SidechainPubKey
+derive newtype instance ToData SidechainPubKey
+
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PaymentPubKeyHash
+  , spoPubKey ∷ SidechainPubKey
   , sidechainPubKey ∷ String
   , spoSig ∷ Signature
   , sidechainSig ∷ Signature
@@ -69,7 +78,7 @@ newtype RegisterParams = RegisterParams
 
 newtype DeregisterParams = DeregisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PaymentPubKeyHash
+  , spoPubKey ∷ SidechainPubKey
   }
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
@@ -127,7 +136,7 @@ newtype SaveRootParams = SaveRootParams
   }
 
 newtype BlockProducerRegistration = BlockProducerRegistration
-  { bprSpoPubKey ∷ PaymentPubKeyHash -- own cold verification key hash
+  { bprSpoPubKey ∷ SidechainPubKey -- own cold verification key hash
   , bprSidechainPubKey ∷ String -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
   , bprSidechainSignature ∷ Signature -- Signature of the SPO
@@ -190,12 +199,7 @@ register
       }
   ) = do
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownStake ← liftedM "Cannot get stakePubKeyHash" ownStakePubKeyHash
-  netId ← getNetworkId
-  ownAddr ← liftContractM "Cannot get user address" $ payPubKeyHashBaseAddress
-    netId
-    ownPkh
-    ownStake
+  ownAddr ← liftedM "Cannot get own address" getWalletAddress
 
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr) -- TrustlessSidechainSchema Text CardanoTx
   validator ← getCommitteeCandidateValidator sidechainParams
@@ -228,10 +232,8 @@ register
 deregister ∷ DeregisterParams → Contract () Unit
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownStake ← liftedM "Cannot get stakePubKeyHash" ownStakePubKeyHash
+  ownAddr ← liftedM "Cannot get own address" getWalletAddress
   netId ← getNetworkId
-  ownAddr ← liftContractM "Cannot get user address"
-    (payPubKeyHashBaseAddress netId ownPkh ownStake)
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator

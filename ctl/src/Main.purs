@@ -2,6 +2,7 @@ module Main (main) where
 
 import Contract.Prelude
 
+import CommitteCandidateValidator as CommitteCandidateValidator
 import Contract.Address (NetworkId(TestnetId), ownPaymentPubKeyHash)
 import Contract.Monad (ConfigParams, runContract)
 import Contract.Monad as Contract.Monad
@@ -50,13 +51,13 @@ main =
             Nothing -> liftEffect $ throwException (error "Couldn't find own PKH")
             Just pkh ->
               let
-                params = Mint { amount: 1, recipient: pkh }
                 scParams = SidechainParams
+
                   { chainId: BigInt.fromInt 123
                   , genesisHash: "112233"
                   , genesisMint: Just
                       ( toTxIn
-                          "2657d280a1f57b8b8995e3784c56e6087ea640ca2c2a3638c2af1c61ab515c46"
+                          "4ff9fb6788e9d643d7bb75e5b1003fd0e0d316ffed826a6a5a6f935b14f3126f"
                           0
                       )
                   , genesisUtxo:
@@ -64,8 +65,21 @@ main =
                         "aabbcc"
                         0
                   }
+
+                -- mintP = Mint { amount: 10, recipient: pkh }
+                -- burnP = Burn { amount: 1, recipient: "aabbcc" }
+                -- regP = CommitteCandidateValidator.RegisterParams
+                deregP = CommitteCandidateValidator.DeregisterParams
+                  { sidechainParams: scParams
+                  , spoPubKey: CommitteCandidateValidator.SidechainPubKey
+                      "aabbcc"
+                  }
               in
-                runFuelMP params scParams
+                do
+                  -- runFuelMP mintP scParams
+                  -- runFuelMP burnP scParams
+                  -- CommitteCandidateValidator.register regP
+                  CommitteCandidateValidator.deregister deregP
       )
 
 toTxIn :: String -> Int -> TransactionInput
