@@ -36,6 +36,7 @@ let additions =
           , "sequences"
           , "spec"
           , "strings"
+          , "stringutils"
           , "transformers"
           , "tuples"
           , "typelevel"
@@ -257,7 +258,7 @@ let additions =
           , "variant"
           ]
         , repo = "https://github.com/gege251/cardano-transaction-lib.git"
-        , version = "c061baf7f3152d3ec70152eac7703f4091973a32"
+        , version = "322abd6203ecb19dba186aee7a6bcd08e9512ab7"
         }
       }
 

@@ -3,12 +3,12 @@ module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
 import Contract.Prelude
 
 import Contract.Address (PaymentPubKeyHash)
+import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractM
   , liftedE
   , liftedM
-  , logInfo'
   , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)

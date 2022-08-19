@@ -8,7 +8,7 @@
       type = "github";
       owner = "gege251";
       repo = "cardano-transaction-lib";
-      rev = "c061baf7f3152d3ec70152eac7703f4091973a32";
+      rev = "322abd6203ecb19dba186aee7a6bcd08e9512ab7";
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:

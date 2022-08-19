@@ -10,7 +10,8 @@ import Contract.Address
   , payPubKeyHashBaseAddress
   , validatorHashBaseAddress
   )
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM, logInfo')
+import Contract.Log (logInfo')
+import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData
   ( class FromData
   , class ToData

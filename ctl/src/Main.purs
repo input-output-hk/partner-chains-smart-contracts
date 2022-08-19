@@ -2,22 +2,11 @@ module Main (main) where
 
 import Contract.Prelude
 
-import Cardano.TextEnvelope (TextEnvelopeType(..))
 import Contract.Address (NetworkId(TestnetId), ownPaymentPubKeyHash)
-import Contract.Monad
-  ( Aff
-  , ConfigParams(..)
-  , DefaultContractConfig
-  , Host
-  , mkContractConfig
-  , runContract
-  )
+import Contract.Monad (ConfigParams, runContract)
 import Contract.Monad as Contract.Monad
-import Contract.Wallet (Wallet, privateKeyFromBytes)
 import Data.Log.Level (LogLevel(Trace))
-import Data.UInt (fromInt)
 import Effect.Exception (error, throwException)
-import Node.Path (FilePath)
 import QueryM.ServerConfig
   ( defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
@@ -25,30 +14,32 @@ import QueryM.ServerConfig
   )
 import RunFuelMintingPolicy (FuelParams(Mint), runFuelMP)
 import SidechainParams (SidechainParams(SidechainParams))
-import Wallet (mkKeyWallet)
-import Wallet.Key (PrivatePaymentKey(..))
-import Wallet.KeyFile (keyFromFile)
+import Wallet.Spec (PrivatePaymentKeySource(..), WalletSpec(..))
 
 main :: Effect Unit
 main =
   Contract.Monad.launchAff_ do
-    pkey <- privatePaymentKeyFromFile
-      "/Users/gergo/Dev/cardano/testnets/addresses/server.skey"
 
     let
-      wallet = mkKeyWallet pkey Nothing
-      (config :: ConfigParams ()) = ConfigParams
+      (config :: ConfigParams ()) =
         { ogmiosConfig: defaultOgmiosWsConfig
         , datumCacheConfig: defaultDatumCacheWsConfig
         , ctlServerConfig: defaultServerConfig
         , networkId: TestnetId
         , logLevel: Trace
         , extraConfig: {}
-        , wallet: Just wallet
+        , walletSpec: Just
+            ( UseKeys
+                ( PrivatePaymentKeyFile
+                    "/Users/gergo/Dev/cardano/testnets/addresses/server.skey"
+
+                )
+                Nothing
+            )
+        , customLogger: Nothing
         }
 
-    cconf <- mkContractConfig config
-    runContract cconf
+    runContract config
       ( do
           maybePkh <- ownPaymentPubKeyHash
           case maybePkh of
@@ -64,10 +55,3 @@ main =
               in
                 runFuelMP params scParams
       )
-
-privatePaymentKeyFromFile :: FilePath -> Aff PrivatePaymentKey
-privatePaymentKeyFromFile filePath = do
-  bytes <- keyFromFile filePath PaymentSigningKeyShelleyed25519
-  liftM (error "Unable to decode private payment key")
-    $ PrivatePaymentKey
-    <$> privateKeyFromBytes (wrap bytes)
