@@ -69,6 +69,18 @@ main =
                 -- mintP = Mint { amount: 10, recipient: pkh }
                 -- burnP = Burn { amount: 1, recipient: "aabbcc" }
                 -- regP = CommitteCandidateValidator.RegisterParams
+                --   { sidechainParams: scParams
+                --   , spoPubKey: CommitteCandidateValidator.SidechainPubKey
+                --       "aabbcc"
+                --   , sidechainPubKey: "aabbcc"
+                --   , spoSig: "aabbcc"
+                --   , sidechainSig: "aabbcc"
+                --   , inputUtxo:
+                --       ( toTxIn
+                --           "4f7141da93cfa4af139a8d76e22e3a52ef25d9138b689a9b149370ce102ad7ea"
+                --           0
+                --       )
+                --   }
                 deregP = CommitteCandidateValidator.DeregisterParams
                   { sidechainParams: scParams
                   , spoPubKey: CommitteCandidateValidator.SidechainPubKey
