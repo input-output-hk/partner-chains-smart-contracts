@@ -6,9 +6,9 @@
     flake-compat.flake = false;
     cardano-transaction-lib = {
       type = "github";
-      owner = "gege251";
+      owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "322abd6203ecb19dba186aee7a6bcd08e9512ab7";
+      rev = "4f84fceddbe9e7aecf319e0ceed0e9313ca1813f";
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:

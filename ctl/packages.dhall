@@ -257,8 +257,8 @@ let additions =
           , "untagged-union"
           , "variant"
           ]
-        , repo = "https://github.com/gege251/cardano-transaction-lib.git"
-        , version = "322abd6203ecb19dba186aee7a6bcd08e9512ab7"
+        , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
+        , version = "4f84fceddbe9e7aecf319e0ceed0e9313ca1813f"
         }
       }
 
