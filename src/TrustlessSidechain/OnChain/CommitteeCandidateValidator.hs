@@ -50,8 +50,8 @@ committeeCanditateValidator sidechainParams =
 committeeCandidateValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 committeeCandidateValidatorUntyped = ScriptUtils.mkUntypedValidator . mkCommitteeCandidateValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisablecommitteeCandidateValidator :: Ledger.Script
-serialisablecommitteeCandidateValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
+serialisableValidator :: Ledger.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
 
 script :: SidechainParams -> Scripts.Script
 script = Scripts.unValidatorScript . committeeCanditateValidator

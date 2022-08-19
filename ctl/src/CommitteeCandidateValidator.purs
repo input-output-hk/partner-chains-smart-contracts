@@ -51,7 +51,7 @@ import Data.Array (catMaybes, mapMaybe)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Plutus.Types.Address (Address)
-import ScriptsFFI (committeeCandidateValidator)
+import ScriptsFFI (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
@@ -75,7 +75,7 @@ newtype DeregisterParams = DeregisterParams
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
 getCommitteeCandidateValidator sp = do
   ccvUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
-    committeeCandidateValidator
+    rawCommitteeCandidateValidator
     PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
 
