@@ -107,3 +107,10 @@ mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} 
   let msg = serialiseBprm $ BlockProducerRegistrationMsg sidechainParams sidechainPubKey inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
    in params {spoSig = sig}
+
+-- CTL hack
+mkValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorUntyped = Scripts.wrapValidator . mkCommitteeCanditateValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableValidator :: Scripts.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
