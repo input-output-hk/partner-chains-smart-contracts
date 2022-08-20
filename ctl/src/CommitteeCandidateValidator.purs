@@ -2,6 +2,7 @@ module CommitteCandidateValidator where
 
 import Contract.Prelude
 
+import BalanceTx.Extra (getOuts, reattachDatumsInline)
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
@@ -223,7 +224,8 @@ register
     constraints = Constraints.mustPayToScript valHash (Datum (toData datum)) val
       <> Constraints.mustSpendPubKeyOutput inputUtxo
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  bsTx ← liftedM "Failed to balance/sign tx"
+    (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
   logInfo' ("Submitted committeeCandidate register Tx: " <> show txId)
   awaitTxConfirmed txId

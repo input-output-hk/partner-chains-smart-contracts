@@ -9,6 +9,7 @@
   , "node-path"
   , "ordered-collections"
   , "parallel"
+  , "profunctor-lenses"
   , "transformers"
   , "uint"
   ]
