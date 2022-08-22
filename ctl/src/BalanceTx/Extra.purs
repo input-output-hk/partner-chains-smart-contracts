@@ -4,7 +4,7 @@ import Contract.Prelude
 
 import Cardano.Types.Transaction (TransactionOutput(..), _body, _outputs)
 import Contract.ScriptLookups (UnattachedUnbalancedTx(..))
-import Contract.Transaction (OutputDatum(..), UnbalancedTx(..))
+import Contract.Transaction (OutputDatum(..))
 import Data.Lens (lens')
 import Data.Lens.Getter ((^.))
 import Data.Lens.Setter ((%~), (.~))
@@ -38,9 +38,6 @@ reattachDatumsInline utx =
             (_datum %~ f)
         )
       # (_datums .~ [])
-
-getOuts :: UnattachedUnbalancedTx -> Array TransactionOutput
-getOuts utx = utx ^. _unbalancedTx <<< _transaction <<< _body <<< _outputs
 
 _unbalancedTx :: Lens' UnattachedUnbalancedTx UnbalancedTx
 _unbalancedTx = lens' \(UnattachedUnbalancedTx rec@{ unbalancedTx }) ->

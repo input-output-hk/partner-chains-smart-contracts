@@ -8,7 +8,7 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "4f84fceddbe9e7aecf319e0ceed0e9313ca1813f";
+      rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:

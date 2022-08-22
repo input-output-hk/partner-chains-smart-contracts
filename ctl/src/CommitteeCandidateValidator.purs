@@ -2,33 +2,36 @@ module CommitteCandidateValidator where
 
 import Contract.Prelude
 
-import BalanceTx.Extra (getOuts, reattachDatumsInline)
+import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
   , getWalletAddress
   , ownPaymentPubKeyHash
-  , payPubKeyHashBaseAddress
-  , validatorHashBaseAddress
   )
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.Monad
+  ( Contract
+  , liftContractM
+  , liftedE
+  , liftedM
+  , throwContractError
+  )
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , Datum(..)
   , PlutusData(Constr)
   , fromData
-  , getDatumsByHashes
   , toData
   , unitRedeemer
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( PlutusScript(..)
-  , Validator(..)
+  ( Validator(..)
   , applyArgs
   , validatorHash
+  , validatorHashEnterpriseAddress
   )
 import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
@@ -48,7 +51,7 @@ import Contract.Value as Value
 import Control.Alternative (guard)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Control.Parallel (parTraverse)
-import Data.Array (catMaybes, mapMaybe)
+import Data.Array (catMaybes, (:))
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Plutus.Types.Address (Address)
@@ -240,7 +243,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM "marketPlaceListNft: get validator address"
-    (validatorHashBaseAddress netId valHash)
+    (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
   valUtxos ← unwrap <$> liftedM "cannot get val UTxOs" (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
@@ -252,6 +255,9 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
       pure input
 
+  when (null (catMaybes ourDatums)) $ throwContractError
+    "Registration utxo cannot be found"
+
   let
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.validator validator
@@ -260,8 +266,10 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = mconcat
-      ( (\x → Constraints.mustSpendScriptOutput x unitRedeemer) <$> catMaybes
-          ourDatums
+      ( Constraints.mustBeSignedBy ownPkh :
+          ( (\x → Constraints.mustSpendScriptOutput x unitRedeemer) <$> catMaybes
+              ourDatums
+          )
       )
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
