@@ -16,7 +16,7 @@ import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   InitSidechainParams (initChainId, initCommittee, initGenesisHash, initMint, initUtxo),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
+  PassiveBrdgSidechainParams (PassiveBrdgSidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
  )
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (UpdateCommitteeHash, cToken),
@@ -47,7 +47,7 @@ import Prelude qualified
  Here, we create a transaction which executes both of these steps with a single
  transaction.
 -}
-initSidechain :: InitSidechainParams -> Contract () TrustlessSidechainSchema Text SidechainParams
+initSidechain :: InitSidechainParams -> Contract () TrustlessSidechainSchema Text PassiveBrdgSidechainParams
 initSidechain isp =
   let oref = initUtxo isp
    in Contract.txOutFromRef oref
@@ -93,7 +93,7 @@ initSidechain isp =
             Contract.logInfo $ "Minted " <> Prelude.show val <> " and paid to script validator"
 
             return
-              SidechainParams
+              PassiveBrdgSidechainParams
                 { chainId = initChainId isp
                 , genesisHash = initGenesisHash isp
                 , genesisUtxo = oref

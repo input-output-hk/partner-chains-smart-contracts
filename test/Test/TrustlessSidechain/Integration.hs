@@ -37,10 +37,11 @@ import TrustlessSidechain.OffChain.Types (
     initUtxo
   ),
   MintParams (MintParams),
+  PassiveBrdgSidechainParams (..),
   RegisterParams (RegisterParams),
-  SidechainParams (..),
   SidechainPubKey (SidechainPubKey),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
+  convertSCParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -59,7 +60,7 @@ initCmtPubKeys :: [PubKey]
 initCmtPubKeys = map Crypto.toPublicKey initCmtPrvKeys
 
 -- | 'getSidechainParams' is a helper function to create the 'SidechainParams'
-getSidechainParams :: Contract () TrustlessSidechainSchema Text SidechainParams
+getSidechainParams :: Contract () TrustlessSidechainSchema Text PassiveBrdgSidechainParams
 getSidechainParams =
   InitSidechain.ownTxOutRef >>= \oref ->
     InitSidechain.initSidechain $
@@ -110,7 +111,7 @@ test =
                   let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
-                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
 
                       ecdsaMsg =
@@ -140,7 +141,7 @@ test =
                   let msg =
                         Builtins.serialiseData $
                           toBuiltinData $
-                            BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
 
                       ecdsaMsg =

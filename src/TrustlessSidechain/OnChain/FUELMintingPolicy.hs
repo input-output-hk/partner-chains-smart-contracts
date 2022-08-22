@@ -21,13 +21,13 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Prelude
-import TrustlessSidechain.OffChain.Types (SidechainParams (..))
+import TrustlessSidechain.OffChain.Types (PassiveBrdgSidechainParams (..))
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> FUELRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: PassiveBrdgSidechainParams -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
-  SidechainParams {genesisMint}
+  PassiveBrdgSidechainParams {genesisMint}
   mode
   ScriptContext
     { scriptContextPurpose = Minting ownSymbol
@@ -50,20 +50,20 @@ mkMintingPolicy
               && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
 mkMintingPolicy _ _ _ = False
 
-mintingPolicy :: SidechainParams -> MintingPolicy
+mintingPolicy :: PassiveBrdgSidechainParams -> MintingPolicy
 mintingPolicy param =
   mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
     wrap = mkUntypedMintingPolicy
 
-script :: SidechainParams -> Scripts.Script
+script :: PassiveBrdgSidechainParams -> Scripts.Script
 script = Scripts.unMintingPolicyScript . mintingPolicy
 
-scriptSBS :: SidechainParams -> SBS.ShortByteString
+scriptSBS :: PassiveBrdgSidechainParams -> SBS.ShortByteString
 scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams
 
-policyScript :: SidechainParams -> PlutusScript PlutusScriptV2
+policyScript :: PassiveBrdgSidechainParams -> PlutusScript PlutusScriptV2
 policyScript = PlutusScriptSerialised . scriptSBS
 
 -- ctl hack
