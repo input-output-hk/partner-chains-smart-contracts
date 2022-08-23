@@ -18,8 +18,6 @@ main :: Effect Unit
 main = do
   opts <- getOptions
 
-  log $ show opts
-
   launchAff_ $ runContract (toConfig opts) do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     case opts.endpoint of
