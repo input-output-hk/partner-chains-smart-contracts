@@ -1,5 +1,5 @@
 {
-  description = "ctl-scaffold";
+  description = "ctl-test";
   inputs = {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     flake-compat.url = "github:edolstra/flake-compat";
@@ -28,7 +28,7 @@
           cardano-transaction-lib.overlays.purescript
         ];
       };
-      runtimeConfig = final: with final; {
+      runtimeConfig = final: {
         network = {
           name = "vasil-dev";
           magic = 9;
@@ -36,7 +36,7 @@
       };
       psProjectFor = system:
         let
-          projectName = "ctl-scaffold";
+          projectName = "ctl-test";
           pkgs = nixpkgsFor system;
           src = builtins.path {
             path = self;
@@ -56,6 +56,7 @@
             bashInteractive
             fd
             docker
+            dhall
             # plutip
             ctl-server
             ogmios
@@ -68,8 +69,8 @@
     in
     {
       packages = perSystem (system: {
-        default = self.packages.${system}.ctl-scaffold-bundle-web;
-        ctl-scaffold-bundle-web = (psProjectFor system).bundlePursProject {
+        default = self.packages.${system}.ctl-bundle-web;
+        ctl-bundle-web = (psProjectFor system).bundlePursProject {
           sources = [ "src" ];
           main = "Main";
           entrypoint = "index.js"; # must be same as listed in webpack config
@@ -84,7 +85,7 @@
       checks = perSystem (system:
         let pkgs = nixpkgsFor system; in
         {
-          ctl-scaffold = (psProjectFor system).runPursTest {
+          ctl-test = (psProjectFor system).runPursTest {
             sources = [ "src" "test" ];
             testMain = "Test.Main";
           };

@@ -1,5 +1,6 @@
 # Build/test/run
 * `nix build` or `spago build`
+* `spago run -b '<program name from spago.dhall> [args...]'` for running main
 * `make test` for tests
 * `make dev` will start webpack dev server at localhost:4008
 * `make build` will output webpack-bundled example module to dist

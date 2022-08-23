@@ -1,4 +1,4 @@
-{ name = "ctl-package-example"
+{ name = "ctl-test"
 , dependencies =
   [ "arrays"
   , "bigints"

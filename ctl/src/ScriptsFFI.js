@@ -8,7 +8,7 @@ let mptRootTokenValidator;
 let updateCommitteeHash;
 
 if (inBrowser) {
-  fuelMintingPolicy = require("Scripts/FUELMintingPolicy.plutus");
+  fuelMintingPolicy = require("../../Scripts/FUELMintingPolicy.plutus");
   committeeCandidateValidator = require("../../Scripts/CommitteeCandidateValidator.plutus");
   mptRootTokenMintingPolicy = require("../../Scripts/MPTRootTokenMintingPolicy.plutus");
   mptRootTokenValidator = require("../../Scripts/MPTRootTokenValidator.plutus");
