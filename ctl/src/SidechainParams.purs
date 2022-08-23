@@ -3,12 +3,13 @@ module SidechainParams where
 import Contract.Prelude
 
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
+import Contract.Prim.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Types.Transaction (TransactionInput)
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
-  , genesisHash ∷ String
+  , genesisHash ∷ ByteArray
   , genesisMint ∷ Maybe TransactionInput
   , genesisUtxo ∷ TransactionInput
   }
@@ -23,3 +24,6 @@ instance ToData SidechainParams where
       , toData genesisMint
       , toData genesisUtxo
       ]
+
+instance Show SidechainParams where
+  show = genericShow

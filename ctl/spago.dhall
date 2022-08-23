@@ -8,6 +8,7 @@
   , "ordered-collections"
   , "parallel"
   , "profunctor-lenses"
+  , "strings"
   , "transformers"
   , "uint"
   ]

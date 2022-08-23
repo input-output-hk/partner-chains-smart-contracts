@@ -26,6 +26,7 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
@@ -58,22 +59,14 @@ import ScriptsFFI (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
-type Signature = String -- Ed25519Signature
-type AssetClass = Value.TokenName
-
-newtype SidechainPubKey = SidechainPubKey String
-
-derive instance Generic SidechainPubKey _
-derive instance Newtype SidechainPubKey _
-derive newtype instance Eq SidechainPubKey
-derive newtype instance FromData SidechainPubKey
-derive newtype instance Ord SidechainPubKey
-derive newtype instance ToData SidechainPubKey
+type Signature = ByteArray -- Ed25519Signature
+type AssetClass = Value.CurrencySymbol
+type PubKey = ByteArray
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ SidechainPubKey
-  , sidechainPubKey ∷ String
+  , spoPubKey ∷ PubKey
+  , sidechainPubKey ∷ PubKey
   , spoSig ∷ Signature
   , sidechainSig ∷ Signature
   , inputUtxo ∷ TransactionInput
@@ -81,7 +74,7 @@ newtype RegisterParams = RegisterParams
 
 newtype DeregisterParams = DeregisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ SidechainPubKey
+  , spoPubKey ∷ PubKey
   }
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
@@ -131,8 +124,8 @@ newtype SaveRootParams = SaveRootParams
   }
 
 newtype BlockProducerRegistration = BlockProducerRegistration
-  { bprSpoPubKey ∷ SidechainPubKey -- own cold verification key hash
-  , bprSidechainPubKey ∷ String -- public key in the sidechain's desired format
+  { bprSpoPubKey ∷ PubKey -- own cold verification key hash
+  , bprSidechainPubKey ∷ PubKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
   , bprSidechainSignature ∷ Signature -- Signature of the SPO
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
