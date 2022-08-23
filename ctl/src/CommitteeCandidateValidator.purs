@@ -54,7 +54,6 @@ import Control.Parallel (parTraverse)
 import Data.Array (catMaybes, (:))
 import Data.BigInt as BigInt
 import Data.Map as Map
-import Plutus.Types.Address (Address)
 import ScriptsFFI (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
@@ -120,14 +119,6 @@ newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
       Array String -- The signature for the new committee hash.
   , committeePubKeys ∷
       Array PaymentPubKeyHash -- Public keys of the current committee members.
-  }
-
--- | Endpoint parameters for initializing the committee hash
-newtype GenesisCommitteeHashParams = GenesisCommitteeHashParams
-  { genesisCommitteePubKeys ∷
-      Array PaymentPubKeyHash -- Public keys of the initial committee members.
-  , genesisAddress ∷ Address -- 'genesisAddress' is the address to spend a utxo to create an NFT.
-  , genesisToken ∷ Value.TokenName -- 'genesisToken' is the token name for the NFT
   }
 
 newtype SaveRootParams = SaveRootParams
