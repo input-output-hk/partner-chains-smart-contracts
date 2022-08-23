@@ -18,11 +18,15 @@
       nixpkgsFor = system: import nixpkgs {
         inherit system;
         overlays = [
-          cardano-transaction-lib.overlay
-          (_: _: {
-            ctl-server = cardano-transaction-lib.packages.${system}."ctl-server:exe:ctl-server";
-          })
+          cardano-transaction-lib.overlays.runtime
+          cardano-transaction-lib.overlays.purescript
         ];
+      };
+      runtimeConfig = final: with final; {
+        network = {
+          name = "vasil-dev";
+          magic = 9;
+        };
       };
       psProjectFor = system:
         let
@@ -52,6 +56,7 @@
             # ogmios-datum-cache
             # plutip-server
             postgresql
+            nixpkgs-fmt
           ];
         };
     in
@@ -65,9 +70,9 @@
           webpackConfig = "webpack.config.js";
           bundledModuleName = "output.js";
         };
-        ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
+        ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
       });
-      apps = perSystem (system: { ctl-scaffold-runtime = (nixpkgsFor system).launchCtlRuntime { }; });
+      apps = perSystem (system: { ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig; });
       devShell = perSystem (system: (psProjectFor system).devShell
       );
       checks = perSystem (system:
