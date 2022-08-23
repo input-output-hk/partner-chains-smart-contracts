@@ -18,10 +18,8 @@
       nixpkgsFor = system: import nixpkgs {
         inherit system;
         overlays = [
-          cardano-transaction-lib.overlay
-          (_: _: {
-            ctl-server = cardano-transaction-lib.packages.${system}."ctl-server:exe:ctl-server";
-          })
+          cardano-transaction-lib.overlays.runtime
+          cardano-transaction-lib.overlays.purescript
         ];
       };
       psProjectFor = system:
