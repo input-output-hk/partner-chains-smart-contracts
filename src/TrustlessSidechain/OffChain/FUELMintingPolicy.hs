@@ -64,7 +64,12 @@ findMPTRootToken sc rh =
   where
     pq = PageQuery {pageQuerySize = Default.def, pageQueryLastItem = Nothing}
 
-    assetClass = Value.assetClass (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc) $ TokenName $ unRootHash rh
+    assetClass =
+      Value.assetClass
+        ( MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol $
+            MPTRootTokenMintingPolicy.signedMerkleRootMint sc
+        )
+        $ TokenName $ unRootHash rh
 
     -- TODO: as an optimization, I don't think testing if it is paid to the
     -- MPTRootTokenValidator is really necessary since the existence of the
@@ -78,7 +83,10 @@ burn BurnParams {amount, sidechainParams, recipient} = do
   let fm =
         FUELMint
           { fmSidechainParams = sidechainParams
-          , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
+          , fmMptRootTokenCurrencySymbol =
+              MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol $
+                MPTRootTokenMintingPolicy.signedMerkleRootMint
+                  sidechainParams
           }
       policy = FUELMintingPolicy.mintingPolicy fm
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
@@ -118,10 +126,11 @@ mintWithUtxo utxo MintParams {amount, index, sidechainEpoch, sidechainParams, re
    in findMPTRootToken sidechainParams root >>= \case
         [] -> Contract.throwError "error FUELMintingPolicy: no UTxO found"
         mptUtxo : _ -> do
-          let fm =
+          let smrmParams = MPTRootTokenMintingPolicy.signedMerkleRootMint sidechainParams
+              fm =
                 FUELMint
                   { fmSidechainParams = sidechainParams
-                  , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
+                  , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol smrmParams
                   }
               policy = FUELMintingPolicy.mintingPolicy fm
               value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
@@ -132,7 +141,7 @@ mintWithUtxo utxo MintParams {amount, index, sidechainEpoch, sidechainParams, re
               -- TODO: the following line should be removed with reference inputs:
               mptRootTokenValue =
                 Value.singleton
-                  (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams)
+                  (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol smrmParams)
                   (TokenName $ unRootHash root)
                   1
 

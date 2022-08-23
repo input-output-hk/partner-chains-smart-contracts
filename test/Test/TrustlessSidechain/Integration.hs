@@ -72,14 +72,20 @@ initCmtPubKeys = map Crypto.toPublicKey initCmtPrvKeys
 
 -- | 'getSidechainParams' is a helper function to create the 'SidechainParams'
 getSidechainParams :: Contract () TrustlessSidechainSchema Text SidechainParams
-getSidechainParams =
+getSidechainParams = getSidechainParamsWith initCmtPrvKeys
+
+{- | 'getSidechainParamsWith' is a helper function to create the
+ 'SidechainParams' which allows the specification of the initial committee
+-}
+getSidechainParamsWith :: [Wallet.XPrv] -> Contract () TrustlessSidechainSchema Text SidechainParams
+getSidechainParamsWith cmt =
   InitSidechain.ownTxOutRef >>= \oref ->
     InitSidechain.initSidechain $
       InitSidechainParams
         { initChainId = ""
         , initGenesisHash = ""
         , initUtxo = oref
-        , initCommittee = initCmtPubKeys
+        , initCommittee = map Crypto.toPublicKey cmt
         , initMint = Nothing
         }
 
@@ -206,11 +212,13 @@ test =
         (initAda [100, 100, 100, 100])
         ( withContract $
             const $ do
-              sidechainParams <- getSidechainParams
-              h <- ownPaymentPubKeyHash
               -- Create a committee:
               let cmt :: [(Wallet.XPrv, PubKey)]
                   cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+
+              h <- ownPaymentPubKeyHash
 
               -- Create the merkle tree / proof
               let mte0 =
@@ -244,9 +252,13 @@ test =
         -- distinguished utxo when saving the root parameters.
         (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
         ( do
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
             PlutipInternal.ExecutionResult (Right ((_utxo, utxos, scpOS), _)) _ _ <- withContractAs 0 $
               const $ do
-                sidechainParams <- getSidechainParams
+                sidechainParams <- getSidechainParamsWith $ map fst cmt
                 h <- ownPaymentPubKeyHash
 
                 utxo <- CommitteeCandidateValidator.getInputUtxo
@@ -257,10 +269,6 @@ test =
                 return (utxo, utxos, scpOS)
 
             PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContractAs 1 $ \[pkh0] -> do
-              -- Create a committee:
-              let cmt :: [(Wallet.XPrv, PubKey)]
-                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
-
               -- Create the merkle tree / proof
               let mte0 =
                     MerkleTreeEntry
@@ -282,9 +290,13 @@ test =
         "FUELMintingPolicy.burnOneshot double Mint"
         (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
         ( do
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
             PlutipInternal.ExecutionResult (Right ((_utxo, utxos, scpOS), _)) _ _ <- withContractAs 0 $
               const $ do
-                sidechainParams <- getSidechainParams
+                sidechainParams <- getSidechainParamsWith $ map fst cmt
                 h <- ownPaymentPubKeyHash
 
                 utxo <- CommitteeCandidateValidator.getInputUtxo
@@ -294,10 +306,6 @@ test =
                 return (utxo, utxos, scpOS)
 
             PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContractAs 1 $ \[pkh0] -> do
-              -- Create a committee:
-              let cmt :: [(Wallet.XPrv, PubKey)]
-                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
-
               -- Create the merkle tree / proof
               let mte0 =
                     MerkleTreeEntry
@@ -319,11 +327,12 @@ test =
         (initAda [10, 10, 10]) -- mint, fee
         ( withContract $
             const $ do
-              sidechainParams <- getSidechainParams
-              h <- ownPaymentPubKeyHash
               -- Create a committee:
               let cmt :: [(Wallet.XPrv, PubKey)]
                   cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+              h <- ownPaymentPubKeyHash
 
               -- Create the merkle tree / proof
               let mte0 =
@@ -347,17 +356,53 @@ test =
         )
         [shouldSucceed]
     , assertExecution
+        "FUELMintingPolicy.mint with wrong committee"
+        (initAda [10, 10, 10]) -- mint, fee
+        ( withContract $
+            const $ do
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) $ map (const 0) [1 :: Integer .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+              h <- ownPaymentPubKeyHash
+
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      }
+
+                  mte1 =
+                    MerkleTreeEntry
+                      { mteIndex = 1
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      }
+
+              let cmt' :: [(Wallet.XPrv, PubKey)]
+                  cmt' = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+              mintparams <- saveMerkleRootEntries sidechainParams cmt' [mte0, mte1]
+
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+        )
+        [shouldFail]
+    , assertExecution
         "FUELMintingPolicy.mint FUEL to other"
         (initAda [3, 3, 3] Prelude.<> initAda [2, 2, 2]) -- mint, fee, ??? <> collateral
         ( do
-            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ <- withContract $ const getSidechainParams
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ <- withContract $ const (getSidechainParamsWith $ map fst cmt)
             -- let the first wallet @[3,3,3]@ save the root entries, which mints
             -- to someone the second wallet @[2,2,2]@
             PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContract $ \[pkh1] -> do
-              -- Create a committee:
-              let cmt :: [(Wallet.XPrv, PubKey)]
-                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
-
               -- Create the merkle tree / proof
               let mte0 =
                     MerkleTreeEntry
@@ -384,10 +429,11 @@ test =
             -- let the first wallet @[3,3,3]@ save the root entries, which mints
             -- to someone the second wallet @[2,2,2]@
             PlutipInternal.ExecutionResult (Right ((sidechainParams, mintparams), _)) _ _ <- withContract $ \[pkh1] -> do
-              sidechainParams <- getSidechainParams
               -- Create a committee:
               let cmt :: [(Wallet.XPrv, PubKey)]
                   cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
 
               -- Create the merkle tree / proof
               let mte0 =
