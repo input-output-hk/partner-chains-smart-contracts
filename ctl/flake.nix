@@ -9,6 +9,12 @@
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
       rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
+      inputs.cardano-configurations = {
+        type = "github";
+        owner = "input-output-hk";
+        repo = "cardano-configurations";
+        flake = false;
+      };
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:
