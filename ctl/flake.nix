@@ -1,5 +1,5 @@
 {
-  description = "ctl-scaffold";
+  description = "ctl-test";
   inputs = {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     flake-compat.url = "github:edolstra/flake-compat";
@@ -9,6 +9,12 @@
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
       rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
+      inputs.cardano-configurations = {
+        type = "github";
+        owner = "input-output-hk";
+        repo = "cardano-configurations";
+        flake = false;
+      };
     };
   };
   outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:
@@ -22,9 +28,15 @@
           cardano-transaction-lib.overlays.purescript
         ];
       };
+      runtimeConfig = final: {
+        network = {
+          name = "vasil-dev";
+          magic = 9;
+        };
+      };
       psProjectFor = system:
         let
-          projectName = "ctl-scaffold";
+          projectName = "ctl-test";
           pkgs = nixpkgsFor system;
           src = builtins.path {
             path = self;
@@ -44,34 +56,36 @@
             bashInteractive
             fd
             docker
+            dhall
             # plutip
             ctl-server
             ogmios
             # ogmios-datum-cache
             # plutip-server
             postgresql
+            nixpkgs-fmt
           ];
         };
     in
     {
       packages = perSystem (system: {
-        default = self.packages.${system}.ctl-scaffold-bundle-web;
-        ctl-scaffold-bundle-web = (psProjectFor system).bundlePursProject {
+        default = self.packages.${system}.ctl-bundle-web;
+        ctl-bundle-web = (psProjectFor system).bundlePursProject {
           sources = [ "src" ];
           main = "Main";
           entrypoint = "index.js"; # must be same as listed in webpack config
           webpackConfig = "webpack.config.js";
           bundledModuleName = "output.js";
         };
-        ctl-scaffold-runtime = (nixpkgsFor system).buildCtlRuntime { };
+        ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
       });
-      apps = perSystem (system: { ctl-scaffold-runtime = (nixpkgsFor system).launchCtlRuntime { }; });
+      apps = perSystem (system: { ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig; });
       devShell = perSystem (system: (psProjectFor system).devShell
       );
       checks = perSystem (system:
         let pkgs = nixpkgsFor system; in
         {
-          ctl-scaffold = (psProjectFor system).runPursTest {
+          ctl-test = (psProjectFor system).runPursTest {
             sources = [ "src" "test" ];
             testMain = "Test.Main";
           };

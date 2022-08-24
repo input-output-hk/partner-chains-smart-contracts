@@ -1,15 +1,14 @@
-{ name = "ctl-package-example"
+{ name = "ctl-test"
 , dependencies =
   [ "arrays"
   , "bigints"
   , "cardano-transaction-lib"
   , "control"
-  , "exceptions"
-  , "monad-logger"
-  , "node-path"
+  , "optparse"
   , "ordered-collections"
   , "parallel"
   , "profunctor-lenses"
+  , "strings"
   , "transformers"
   , "uint"
   ]
