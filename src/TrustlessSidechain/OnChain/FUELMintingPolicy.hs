@@ -7,17 +7,19 @@ import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Ledger qualified
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts (MintingPolicy)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy)
+import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (mkMintingPolicyScript, txInInfoOutRef)
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
   ScriptPurpose (Minting),
   TxInfo (TxInfo, txInfoInputs, txInfoMint),
  )
-import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (PassiveBrdgSidechainParams (..))
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
@@ -63,3 +65,12 @@ scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams
 
 policyScript :: PassiveBrdgSidechainParams -> PlutusScript PlutusScriptV2
 policyScript = PlutusScriptSerialised . scriptSBS
+
+-- ctl hack
+-- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
+{-# INLINEABLE mkMintingPolicyUntyped #-}
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
+
+serialisableMintingPolicy :: Ledger.Script
+serialisableMintingPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

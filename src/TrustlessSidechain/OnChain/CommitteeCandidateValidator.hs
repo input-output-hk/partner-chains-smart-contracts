@@ -11,11 +11,12 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Ledger qualified
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts qualified as TypedScripts
-import Plutus.Script.Utils.V2.Scripts.Validators (mkUntypedValidator)
+import Plutus.Script.Utils.V2.Scripts.Validators qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (mkValidatorScript, toBuiltinData)
 import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedBy)
 import PlutusTx qualified
@@ -27,9 +28,9 @@ import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (..),
  )
 
-{-# INLINEABLE mkCommitteeCanditateValidator #-}
-mkCommitteeCanditateValidator :: PassiveBrdgSidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
-mkCommitteeCanditateValidator _ datum _ ctx =
+{-# INLINEABLE mkCommitteeCandidateValidator #-}
+mkCommitteeCandidateValidator :: PassiveBrdgSidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
+mkCommitteeCandidateValidator _ datum _ ctx =
   traceIfFalse "Must be signed by the original submitter" isSigned
   where
     info = scriptContextTxInfo ctx
@@ -43,7 +44,14 @@ committeeCanditateValidator sidechainParams =
         `PlutusTx.applyCode` PlutusTx.liftCode sidechainParams
     )
   where
-    toValidator = mkUntypedValidator . mkCommitteeCanditateValidator
+    toValidator = ScriptUtils.mkUntypedValidator . mkCommitteeCandidateValidator
+
+{-# INLINEABLE committeeCandidateValidatorUntyped #-}
+committeeCandidateValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+committeeCandidateValidatorUntyped = ScriptUtils.mkUntypedValidator . mkCommitteeCandidateValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableValidator :: Ledger.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
 
 script :: PassiveBrdgSidechainParams -> Scripts.Script
 script = Scripts.unValidatorScript . committeeCanditateValidator

@@ -65,8 +65,11 @@ main = do
   let pabConf =
         (def @PABConfig)
           { pcNetwork = Testnet (NetworkMagic 1097911063)
-          , pcProtocolParams = Just protocolParams
+          , pcProtocolParams = protocolParams
+          , pcTipPollingInterval = 10_000_000
+          , pcCollectStats = False
           , pcOwnPubKeyHash = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+          , pcOwnStakePubKeyHash = Nothing
           , pcScriptFileDir = "./data"
           , pcMetadataDir = "./metadata"
           , pcSigningKeyFileDir = "./signing-keys"

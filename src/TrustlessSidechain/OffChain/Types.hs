@@ -7,8 +7,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.String (IsString)
 import GHC.Generics (Generic)
-import Ledger (AssetClass, PaymentPubKeyHash, TokenName)
-import Ledger.Address (Address)
+import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import Plutus.V2.Ledger.Tx (TxOutRef)
@@ -38,13 +37,34 @@ makeLift ''SidechainPubKey
 
 $(deriveJSON defaultOptions ''SidechainPubKey)
 
+-- | Parameters to initialize a sidechain
+data InitSidechainParams = InitSidechainParams
+  { initChainId :: Integer
+  , initGenesisHash :: GenesisHash
+  , -- | 'initUtxo ' is a 'TxOutRef' used for creating 'AssetClass's for the
+    -- internal function of the side chain (e.g. InitCommitteeHashMint TODO: hyperlink this documentation)
+    initUtxo :: TxOutRef
+  , -- | 'initCommittee' is the initial committee of the sidechain
+    initCommittee :: [PubKey]
+  , initMint :: Maybe TxOutRef
+  }
+  deriving stock (Prelude.Show, Generic)
+  deriving anyclass (ToSchema)
+
+$(deriveJSON defaultOptions ''InitSidechainParams)
+PlutusTx.makeLift ''InitSidechainParams
+PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
+
 {- | Parameters uniquely identifying a sidechain
  This version of the sidechain parameters includes the genesis mint utxo, which is only used in the Passive Bridge phase.
 -}
 data PassiveBrdgSidechainParams = PassiveBrdgSidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
-  , genesisMint :: (Maybe TxOutRef) -- any random UTxO to prevent subsequent minting
+  , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
+  , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: TxOutRef
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -66,20 +86,19 @@ data SidechainParams = SidechainParams
 
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
-
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 convertSCParams :: PassiveBrdgSidechainParams -> SidechainParams
-convertSCParams (PassiveBrdgSidechainParams ci gh _) = SidechainParams ci gh
+convertSCParams (PassiveBrdgSidechainParams ci gh _ _) = SidechainParams ci gh
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: !PassiveBrdgSidechainParams
-  , spoPubKey :: !PubKey
-  , sidechainPubKey :: !SidechainPubKey
-  , spoSig :: !Signature
-  , sidechainSig :: !Signature
-  , inputUtxo :: !TxOutRef
+  { sidechainParams :: PassiveBrdgSidechainParams
+  , spoPubKey :: PubKey
+  , sidechainPubKey :: SidechainPubKey
+  , spoSig :: Signature
+  , sidechainSig :: Signature
+  , inputUtxo :: TxOutRef
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -88,8 +107,8 @@ $(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: !PassiveBrdgSidechainParams
-  , spoPubKey :: !PubKey
+  { sidechainParams :: PassiveBrdgSidechainParams
+  , spoPubKey :: PubKey
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -132,10 +151,10 @@ $(deriveJSON defaultOptions ''MintParams)
  of these transactions either way.
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { -- | The public keys of the new committee.
+  { -- | See 'SidechainParams'.
+    sidechainParams :: PassiveBrdgSidechainParams
+  , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
-  , -- | The asset class of the NFT identifying this committee hash
-    token :: !AssetClass
   , -- | The signature for the new committee hash.
     committeeSignatures :: [BuiltinByteString]
   , -- | Public keys of the current committee members.
@@ -145,24 +164,6 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
-
--- | Endpoint parameters for initializing the committee hash
-data GenesisCommitteeHashParams = GenesisCommitteeHashParams
-  { -- | Public keys of the initial committee members.
-    genesisCommitteePubKeys :: [PubKey]
-  , -- | 'genesisAddress' is the address to spend a utxo to create an NFT.
-    genesisAddress :: !Address
-  , -- | 'genesisToken' is the token name for the NFT
-    genesisToken :: !TokenName
-  }
-  deriving stock (Generic, Prelude.Show)
-
--- TODO: The reason why we can't do this is because 'Schema.ToSchema' doesn't
--- support having sum types which take an argument; so there is no
--- 'Schema.ToSchema' for 'Address'. Oops!
--- @deriving anyclass (ToSchema)@
-
-$(deriveJSON defaultOptions ''GenesisCommitteeHashParams)
 
 data SaveRootParams = SaveRootParams
   { sidechainParams :: PassiveBrdgSidechainParams

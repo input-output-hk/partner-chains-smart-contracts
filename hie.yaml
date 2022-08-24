@@ -9,5 +9,8 @@ cradle:
     - path: "./app/export-scripts"
       component: "exe:trustless-sidechain-export"
 
+    - path: "./app/serialise"
+      component: "exe:trustless-sidechain-serialise"
+
     - path: "./test"
       component: "test:trustless-sidechain-test"

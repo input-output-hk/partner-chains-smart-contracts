@@ -40,9 +40,8 @@ mintWithUtxo utxo MintParams {amount, sidechainParams, recipient} = do
         Constraint.mintingPolicy policy
           Prelude.<> maybe Prelude.mempty Constraint.unspentOutputs utxo
       tx =
-        ( Constraint.mustMintValueWithRedeemer redeemer value
-            <> Constraint.mustPayToPubKey recipient value
-        )
+        Constraint.mustMintValueWithRedeemer redeemer value
+          <> Constraint.mustPayToPubKey recipient value
   when (amount < 0) $ Contract.throwError "Can't mint a negative amount"
   Contract.submitTxConstraintsWith @FUELRedeemer lookups tx
 
