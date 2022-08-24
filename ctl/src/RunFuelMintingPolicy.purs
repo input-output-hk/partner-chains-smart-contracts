@@ -23,7 +23,7 @@ import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
-import ScriptsFFI (rawFUELMintingPolicy)
+import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 

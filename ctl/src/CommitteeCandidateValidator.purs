@@ -55,7 +55,7 @@ import Control.Parallel (parTraverse)
 import Data.Array (catMaybes, (:))
 import Data.BigInt as BigInt
 import Data.Map as Map
-import ScriptsFFI (rawCommitteeCandidateValidator)
+import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
