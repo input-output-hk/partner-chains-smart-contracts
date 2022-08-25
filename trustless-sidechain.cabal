@@ -126,23 +126,7 @@ library
 
   hs-source-dirs:  src
 
-executable trustless-sidechain-pab
-  import:         common-lang
-  main-is:        Main.hs
-  build-depends:
-    , aeson                 ^>=1.5.0.0
-    , bot-plutus-interface
-    , bytestring
-    , cardano-api
-    , data-default
-    , playground-common
-    , plutus-ledger
-    , servant-client-core
-    , trustless-sidechain
-
-  hs-source-dirs: app/bpi
-
-executable trustless-sidechain-export
+executable trustless-sidechain-gen-signatures
   import:         common-lang
   main-is:        Main.hs
   build-depends:
@@ -154,6 +138,7 @@ executable trustless-sidechain-export
     , cardano-crypto
     , cardano-crypto-class
     , either
+    , optparse-applicative
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
@@ -164,7 +149,7 @@ executable trustless-sidechain-export
     , text
     , trustless-sidechain
 
-  hs-source-dirs: app/export-scripts
+  hs-source-dirs: app/gen-signatures
 
 executable trustless-sidechain-serialise
   import:         common-lang
