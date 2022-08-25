@@ -2,21 +2,19 @@
 Please make sure you
 - don't have `node_modules` inside the ctl directory,
 - have `spago-packages.nix` inside the ctl directory,
+
 before running `nix develop`.
 
 The workflow in this module relies entirely on `nix` and `spago`. The only viable use for `npm` is
-when you want to update js dependencies or run npm scripts in your editor. The npm scripts
-simple call to `make`. The updating workflow is outlined below and in more detail in
-[the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/develop/doc).
+when you want to update js dependencies or run npm scripts in your editor. The npm scripts simply
+call to `make`. The workflow for updating/adding dependencies is outlined below and in more detail
+in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/develop/doc).
 
 # General Rules of Thumb
-To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime` first.
-
-<!-- TODO: shouldn't this be automatic? -->
-To test things with plutip, make sure an instance of `plutip-server` is running.
-
-The Makefile is the central source of truth for how to deal with the environment.
-As a rule of thumb, never invoke `npm install` without `--package-lock-only`.
+* To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime` first.
+* To test things with plutip, make sure an instance of `plutip-server` is running. <!-- TODO: shouldn't this be automatic? -->
+* The Makefile is the central source of truth for how to deal with the environment.
+* Never invoke `npm install` without `--package-lock-only`.
 
 # Build/Test/Run
 * `make format` for formatting
