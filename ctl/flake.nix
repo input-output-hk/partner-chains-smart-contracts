@@ -28,7 +28,7 @@
           cardano-transaction-lib.overlays.purescript
         ];
       };
-      runtimeConfig = final: {
+      runtimeConfig = {
         network = {
           name = "vasil-dev";
           magic = 9;
@@ -66,6 +66,8 @@
             nixpkgs-fmt
           ];
         };
+      spagopkgsFor = system:
+        import ./spago-packages.nix { pkgs = nixpkgsFor system; };
     in
     {
       packages = perSystem (system: {
@@ -78,10 +80,35 @@
           bundledModuleName = "output.js";
         };
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+        # https://github.com/justinwoo/spago2nix#workflow
+        ctl-main = (nixpkgsFor system).stdenv.mkDerivation {
+          name = "ctl-main";
+          src = ./.;
+          buildPhase = ''
+            install-spago-style
+            build-spago-style "./src/**/*.purs"
+            XDG_CACHE_HOME=$TMPDIR spago bundle-app --no-build --no-install -t main.js
+            sed -i '1i #!/usr/bin/env node' main.js
+            chmod +x main.js
+          '';
+          installPhase = ''
+            install -D main.js $out/bin/main.js
+          '';
+          buildInputs =
+            with nixpkgsFor system;
+            with spagopkgsFor system;
+            [ fd buildSpagoStyle installSpagoStyle ]
+            ++ (psProjectFor system).devShell.buildInputs;
+        };
       });
-      apps = perSystem (system: { ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig; });
-      devShell = perSystem (system: (psProjectFor system).devShell
-      );
+      apps = perSystem (system: {
+        ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
+        ctl-main = {
+          type = "app";
+          program = "${self.packages.${system}.ctl-main}/bin/main.js";
+        };
+      });
+      devShell = perSystem (system: (psProjectFor system).devShell);
       checks = perSystem (system:
         let pkgs = nixpkgsFor system; in
         {
