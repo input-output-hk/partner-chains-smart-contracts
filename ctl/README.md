@@ -46,17 +46,32 @@ Notes:
 
 #### Register committee candidate
 
+In order to generate the signatures, you can use the signature generator tool:
+
 ```
-nix run .#ctl-main -- register \
-  --signing-key-file /Users/gergo/Dev/cardano/testnets/addresses/server.skey \
+cabal run trustless-sidechain-gen-signatures -- \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --chain-id 1 \
   --genesis-hash 112233 \
-  --spo-public-key aabbcc \
-  --sidechain-public-key aabbcc \
-  --spo-signature aabbcc \
-  --sidechain-signature aabbcc \
+  --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
+```
+
+And use it's output for the registration:
+
+```
+nix run .#ctl-main -- register \
+  --signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --chain-id 1 \
+  --genesis-hash 112233 \
+  --spo-public-key f71ff66b6b8da0702444183b5ce5de09f6754457a6a71b3354b81ced8dcd7e30 \
+  --sidechain-public-key 03eef26d3cf978e0fc2d786c443b1284b27b265a7c82eeeec68c24cd3fd0bb6428 \
+  --spo-signature 980db1db31457189326e948c7f292b16278ab91bd45f5fd6ee9ad637bf993f26936c17ee126e510c52d0a3381b52acb36a2a89d4fe55a587cf3478678114dd0f \
+  --sidechain-signature bd00090a8a26b3aad534ae2e75ce4ab5b284ffad0751b793d447a3980f770f217929543c21bc7d2567c6ee0c23b983e3983f22d8eb41dfb901a6c31ae3d5b41d \
   --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
 ```
 
