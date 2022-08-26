@@ -52,6 +52,7 @@
           inherit pkgs src projectName;
           packageJson = ./package.json;
           packageLock = ./package-lock.json;
+          spagoPackages = ./spago-packages.nix;
           shell.packages = with pkgs; [
             bashInteractive
             fd
