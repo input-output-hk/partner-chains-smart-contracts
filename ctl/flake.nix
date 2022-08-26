@@ -74,33 +74,26 @@
           bundledModuleName = "output.js";
         };
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
-        # https://github.com/justinwoo/spago2nix#workflow
-        ctl-main = (nixpkgsFor system).stdenv.mkDerivation {
-          name = "ctl-main";
-          src = ./.;
-          buildPhase = ''
-            install-spago-style
-            build-spago-style "./src/**/*.purs"
-            XDG_CACHE_HOME=$TMPDIR spago bundle-app --no-build --no-install -t main.js
-            sed -i '1i #!/usr/bin/env node' main.js
-            chmod +x main.js
-          '';
-          installPhase = ''
-            install -D main.js $out/bin/main.js
-          '';
-          buildInputs =
-            with nixpkgsFor system;
-            with spagopkgsFor system;
-            [ fd buildSpagoStyle installSpagoStyle ]
-            ++ (psProjectFor system).devShell.buildInputs;
-        };
       });
       apps = perSystem (system: {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
-        ctl-main = {
-          type = "app";
-          program = "${self.packages.${system}.ctl-main}/bin/main.js";
-        };
+        ctl-main =
+          let
+            pkgs = nixpkgsFor system;
+            project = psProjectFor system;
+            script = pkgs.writeShellApplication {
+              name = "ctl-main";
+              runtimeInputs = [ pkgs.nodejs-14_x ];
+              text = ''
+                export NODE_PATH="${project.nodeModules}/lib/node_modules"
+                node -e 'require("${project.compiled}/output/Main").main()' "$@"
+              '';
+            };
+          in
+          {
+            type = "app";
+            program = "${script}/bin/ctl-main";
+          };
       });
       devShell = perSystem (system: (psProjectFor system).devShell);
       checks = perSystem (system:
