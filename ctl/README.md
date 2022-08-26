@@ -1,4 +1,9 @@
 # Trustless Sidechain CTL
+
+## Development
+
+If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
 ## Environment setup
 
 In order to run CTL you need to setup the runtime dependencies:
