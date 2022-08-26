@@ -53,22 +53,15 @@
           packageJson = ./package.json;
           packageLock = ./package-lock.json;
           spagoPackages = ./spago-packages.nix;
+          withRuntime = true;
           shell.packages = with pkgs; [
             bashInteractive
             fd
             docker
             dhall
-            # plutip
-            ctl-server
-            ogmios
-            # ogmios-datum-cache
-            # plutip-server
-            postgresql
             nixpkgs-fmt
           ];
         };
-      spagopkgsFor = system:
-        import ./spago-packages.nix { pkgs = nixpkgsFor system; };
     in
     {
       packages = perSystem (system: {
