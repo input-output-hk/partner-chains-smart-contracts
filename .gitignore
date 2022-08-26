@@ -58,3 +58,7 @@ cabal.project.local*
 
 # Test scripts
 /exports/
+*#
+*.~
+*~
+/.psc-ide-port

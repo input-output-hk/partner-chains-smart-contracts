@@ -1,8 +1,7 @@
-module Options (getOptions, Options(..), Endpoint(..)) where
+module Options (getOptions) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Data.BigInt as BigInt
@@ -28,31 +27,9 @@ import Options.Applicative
   , short
   , str
   )
+import Options.Types (Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
-
-type Options =
-  { scParams :: SidechainParams
-  , skey :: String
-  , endpoint :: Endpoint
-  }
-
-data Endpoint
-  = MintAct { amount :: Int }
-  | BurnAct { amount :: Int, recipient :: String }
-  | CommitteeCandidateReg
-      { spoPubKey :: PubKey
-      , sidechainPubKey :: PubKey
-      , spoSig :: Signature
-      , sidechainSig :: Signature
-      , inputUtxo :: TransactionInput
-      }
-  | CommitteeCandidateDereg { spoPubKey :: PubKey }
-
-derive instance Generic Endpoint _
-
-instance Show Endpoint where
-  show = genericShow
 
 options :: ParserInfo Options
 options = info (helper <*> optSpec) fullDesc
