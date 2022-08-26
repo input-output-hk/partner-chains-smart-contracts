@@ -119,3 +119,16 @@ nix run .#ctl-main -- burn \
   --amount 5 \
   --recipient aabbcc
 ```
+
+#### Get script addresses of a sidechain
+
+Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the scrpit addresses for a given sidechain, you can use the following command:
+
+```
+nix run .#ctl-main -- addresses \
+  --signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233
+```
