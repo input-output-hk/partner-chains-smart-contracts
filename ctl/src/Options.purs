@@ -138,14 +138,14 @@ options = info (helper <*> optSpec) fullDesc
   scParamsSpec = ado
     chainId <- option int $ fold
       [ short 'i'
-      , long "chain-id"
+      , long "sidechain-id"
       , metavar "1"
       , help "Sidechain ID"
       ]
 
     genesisHash <- option byteArray $ fold
       [ short 'h'
-      , long "genesis-hash"
+      , long "sidechain-genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
       ]

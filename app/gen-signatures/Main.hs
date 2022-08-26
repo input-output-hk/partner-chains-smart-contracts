@@ -126,8 +126,8 @@ main = do
             , ["--signing-key-file $SIGNING_KEY \\\n"]
             , ["--genesis-committee-hash-utxo", showTxOutRef args.genesisUtxo, "\\\n"]
             , maybe [] (\oref -> ["--genesis-mint-utxo", showTxOutRef oref, "\\\n"]) args.genesisMint
-            , ["--chain-id", show args.chainId, "\\\n"]
-            , ["--genesis-hash", show args.genesisHash, "\\\n"]
+            , ["--sidechain-id", show args.chainId, "\\\n"]
+            , ["--sidechain-genesis-hash", show args.genesisHash, "\\\n"]
             , ["--spo-public-key", showPubKey regData.spoPubKey, "\\\n"]
             , ["--sidechain-public-key", showScPubKey regData.sidechainPubKey, "\\\n"]
             , ["--spo-signature", showSig regData.spoSignature, "\\\n"]
@@ -149,7 +149,7 @@ argParser = do
     option auto $
       mconcat
         [ short 'i'
-        , long "chain-id"
+        , long "sidechain-id"
         , metavar "1"
         , help "Sidechain ID"
         ]
@@ -169,7 +169,7 @@ argParser = do
       parseGenesisHash
       $ mconcat
         [ short 'h'
-        , long "genesis-hash"
+        , long "sidechain-genesis-hash"
         , metavar "GENESIS_HASH"
         , help "Sidechain genesis hash"
         ]
