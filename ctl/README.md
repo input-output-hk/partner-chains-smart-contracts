@@ -42,7 +42,14 @@ Then, you can use it the following way (without the `--`):
 Below are some examples for running the Passive Bridge endpoints.
 Notes:
 - `genesis-committee-hash-utxo` is not used in the Passive Bridge, but it is pinned to the sidechain parameters, so we have to add an arbitrary utxo here. It can be the same as the mint utxo
+
 - `genesis-mint-utxo` is not a required argument. If omitted from the sidechain parameters, we can mint multiple times
+
+- prior to running the contracts - have available your signing key in the environment. Example:
+
+```bash
+export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
+```
 
 #### Register committee candidate
 
@@ -79,7 +86,7 @@ nix run .#ctl-main -- register \
 
 ```
 nix run .#ctl-main -- deregister \
-  --signing-key-file /Users/gergo/Dev/cardano/testnets/addresses/server.skey \
+  --signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --chain-id 1 \
@@ -91,7 +98,7 @@ nix run .#ctl-main -- deregister \
 
 ```
 nix run .#ctl-main -- mint \
-  --signing-key-file /Users/gergo/Dev/cardano/testnets/addresses/server.skey \
+  --signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --chain-id 1 \
@@ -104,7 +111,7 @@ nix run .#ctl-main -- mint \
 
 ```
 nix run .#ctl-main -- burn \
-  --signing-key-file /Users/gergo/Dev/cardano/testnets/addresses/server.skey \
+  --signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --chain-id 1 \

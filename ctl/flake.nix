@@ -8,7 +8,7 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
+      rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
       inputs.cardano-configurations = {
         url = "path:./cardano-configurations";
         flake = false;
@@ -37,35 +37,44 @@
           projectName = "trustless-sidechain-ctl";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = self;
+            path = ./.;
             name = "${projectName}-src";
-            filter = path: ftype:
-              !(pkgs.lib.hasSuffix ".md" path) # filter out certain files, e.g. markdown
-              && !(ftype == "directory" && builtins.elem # or entire directories
-                (baseNameOf path) [ "doc" ]
-              );
+            filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
           };
         in
         pkgs.purescriptProject {
           inherit pkgs src projectName;
           packageJson = ./package.json;
           packageLock = ./package-lock.json;
+          spagoPackages = ./spago-packages.nix;
+          withRuntime = true;
           shell.packages = with pkgs; [
             bashInteractive
             fd
             docker
             dhall
-            # plutip
-            ctl-server
-            ogmios
-            # ogmios-datum-cache
-            # plutip-server
-            postgresql
             nixpkgs-fmt
           ];
         };
-      spagopkgsFor = system:
-        import ./spago-packages.nix { pkgs = nixpkgsFor system; };
+      # CTL's `runPursTest` won't pass command-line arugments to the `node`
+      # invocation, so we can essentially recreate `runPursTest` here with and
+      # pass the arguments
+      ctlMainFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          project = psProjectFor system;
+        in
+        pkgs.writeShellApplication {
+          name = "ctl-main";
+          runtimeInputs = [ pkgs.nodejs-14_x ];
+          # Node's `process.argv` always contains the executable name as the
+          # first argument, hence passing `ctl-main "$@"` rather than just
+          # `"$@"`
+          text = ''
+            export NODE_PATH="${project.nodeModules}/lib/node_modules"
+            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
+          '';
+        };
     in
     {
       packages = perSystem (system: {
@@ -78,32 +87,13 @@
           bundledModuleName = "output.js";
         };
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
-        # https://github.com/justinwoo/spago2nix#workflow
-        ctl-main = (nixpkgsFor system).stdenv.mkDerivation {
-          name = "ctl-main";
-          src = ./.;
-          buildPhase = ''
-            install-spago-style
-            build-spago-style "./src/**/*.purs"
-            XDG_CACHE_HOME=$TMPDIR spago bundle-app --no-build --no-install -t main.js
-            sed -i '1i #!/usr/bin/env node' main.js
-            chmod +x main.js
-          '';
-          installPhase = ''
-            install -D main.js $out/bin/main.js
-          '';
-          buildInputs =
-            with nixpkgsFor system;
-            with spagopkgsFor system;
-            [ fd buildSpagoStyle installSpagoStyle ]
-            ++ (psProjectFor system).devShell.buildInputs;
-        };
+        ctl-main = ctlMainFor system;
       });
       apps = perSystem (system: {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
         ctl-main = {
           type = "app";
-          program = "${self.packages.${system}.ctl-main}/bin/main.js";
+          program = "${ctlMainFor system}/bin/ctl-main";
         };
       });
       devShell = perSystem (system: (psProjectFor system).devShell);
