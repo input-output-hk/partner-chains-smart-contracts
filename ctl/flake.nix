@@ -58,6 +58,9 @@
             nixpkgs-fmt
           ];
         };
+      # CTL's `runPursTest` won't pass command-line arugments to the `node`
+      # invocation, so we can essentially recreate `runPursTest` here with and
+      # pass the arguments
       ctlMainFor = system:
         let
           pkgs = nixpkgsFor system;
@@ -66,9 +69,12 @@
         pkgs.writeShellApplication {
           name = "ctl-main";
           runtimeInputs = [ pkgs.nodejs-14_x ];
+          # Node's `process.argv` always contains the executable name as the
+          # first argument, hence passing `ctl-main "$@"` rather than just
+          # `"$@"`
           text = ''
             export NODE_PATH="${project.nodeModules}/lib/node_modules"
-            node -e 'require("${project.compiled}/output/Main").main()' "$@"
+            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
           '';
         };
     in
