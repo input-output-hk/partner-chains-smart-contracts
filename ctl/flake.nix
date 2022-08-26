@@ -8,7 +8,7 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
+      rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
       inputs.cardano-configurations = {
         type = "github";
         owner = "input-output-hk";
@@ -28,7 +28,7 @@
           cardano-transaction-lib.overlays.purescript
         ];
       };
-      runtimeConfig = final: {
+      runtimeConfig = {
         network = {
           name = "vasil-dev";
           magic = 9;
@@ -39,32 +39,43 @@
           projectName = "ctl-test";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = self;
+            path = ./.;
             name = "${projectName}-src";
-            filter = path: ftype:
-              !(pkgs.lib.hasSuffix ".md" path) # filter out certain files, e.g. markdown
-              && !(ftype == "directory" && builtins.elem # or entire directories
-                (baseNameOf path) [ "doc" ]
-              );
+            filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
           };
         in
         pkgs.purescriptProject {
           inherit pkgs src projectName;
           packageJson = ./package.json;
           packageLock = ./package-lock.json;
+          spagoPackages = ./spago-packages.nix;
+          withRuntime = true;
           shell.packages = with pkgs; [
             bashInteractive
             fd
             docker
             dhall
-            # plutip
-            ctl-server
-            ogmios
-            # ogmios-datum-cache
-            # plutip-server
-            postgresql
             nixpkgs-fmt
           ];
+        };
+      # CTL's `runPursTest` won't pass command-line arugments to the `node`
+      # invocation, so we can essentially recreate `runPursTest` here with and
+      # pass the arguments
+      ctlMainFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          project = psProjectFor system;
+        in
+        pkgs.writeShellApplication {
+          name = "ctl-main";
+          runtimeInputs = [ pkgs.nodejs-14_x ];
+          # Node's `process.argv` always contains the executable name as the
+          # first argument, hence passing `ctl-main "$@"` rather than just
+          # `"$@"`
+          text = ''
+            export NODE_PATH="${project.nodeModules}/lib/node_modules"
+            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
+          '';
         };
     in
     {
@@ -78,10 +89,16 @@
           bundledModuleName = "output.js";
         };
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+        ctl-main = ctlMainFor system;
       });
-      apps = perSystem (system: { ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig; });
-      devShell = perSystem (system: (psProjectFor system).devShell
-      );
+      apps = perSystem (system: {
+        ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
+        ctl-main = {
+          type = "app";
+          program = "${ctlMainFor system}/bin/ctl-main";
+        };
+      });
+      devShell = perSystem (system: (psProjectFor system).devShell);
       checks = perSystem (system:
         let pkgs = nixpkgsFor system; in
         {

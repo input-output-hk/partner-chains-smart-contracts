@@ -50,6 +50,7 @@ src/RawScripts.purs: ${plutus-scripts}
 		sed -i "2i\  , raw$$name" $@
 	done
 	@sed -i '2s/,/(/' $@
+	@sed -i '$$d' $@
 
 # Check that the script is newer than the haskell source file of the same name
 # This errors rather than depending on a haskell binary in ../

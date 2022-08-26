@@ -18,5 +18,4 @@ result-*
 /dist/
 output.js
 main.js
-RawScripts.purs
 *.plutus
