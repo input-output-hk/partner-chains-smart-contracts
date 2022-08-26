@@ -32,29 +32,29 @@ import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
 type Options =
-  { scParams :: SidechainParams
-  , skey :: String
-  , endpoint :: Endpoint
+  { scParams ∷ SidechainParams
+  , skey ∷ String
+  , endpoint ∷ Endpoint
   }
 
 data Endpoint
-  = MintAct { amount :: Int }
-  | BurnAct { amount :: Int, recipient :: String }
+  = MintAct { amount ∷ Int }
+  | BurnAct { amount ∷ Int, recipient ∷ String }
   | CommitteeCandidateReg
-      { spoPubKey :: PubKey
-      , sidechainPubKey :: PubKey
-      , spoSig :: Signature
-      , sidechainSig :: Signature
-      , inputUtxo :: TransactionInput
+      { spoPubKey ∷ PubKey
+      , sidechainPubKey ∷ PubKey
+      , spoSig ∷ Signature
+      , sidechainSig ∷ Signature
+      , inputUtxo ∷ TransactionInput
       }
-  | CommitteeCandidateDereg { spoPubKey :: PubKey }
+  | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
 
 derive instance Generic Endpoint _
 
 instance Show Endpoint where
   show = genericShow
 
-options :: ParserInfo Options
+options ∷ ParserInfo Options
 options = info (helper <*> optSpec) fullDesc
   where
   optSpec =
@@ -78,7 +78,7 @@ options = info (helper <*> optSpec) fullDesc
       ]
 
   withCommonOpts endpointParser = ado
-    skey <- option str $ fold
+    skey ← option str $ fold
       [ short 'k'
       , long "signing-key-file"
       , metavar "/absolute/path/to/skey"
@@ -86,16 +86,16 @@ options = info (helper <*> optSpec) fullDesc
       , action "file"
       ]
 
-    scParams <- scParamsSpec
+    scParams ← scParamsSpec
 
-    endpoint <- endpointParser
+    endpoint ← endpointParser
     in { skey, scParams, endpoint }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
   burnSpec = ado
-    amount <- parseAmount
-    recipient <- option str $ fold
+    amount ← parseAmount
+    recipient ← option str $ fold
       [ long "recipient"
       , metavar "PUBLIC_KEY_HASH"
       , help "Public key hash of the sidechain recipient"
@@ -103,23 +103,23 @@ options = info (helper <*> optSpec) fullDesc
     in BurnAct { amount, recipient }
 
   regSpec = ado
-    spoPubKey <- parseSpoPubKey
-    sidechainPubKey <- option byteArray $ fold
+    spoPubKey ← parseSpoPubKey
+    sidechainPubKey ← option byteArray $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
       , help "Sidechain public key"
       ]
-    spoSig <- option byteArray $ fold
+    spoSig ← option byteArray $ fold
       [ long "spo-signature"
       , metavar "SIGNATURE"
       , help "SPO signature"
       ]
-    sidechainSig <- option byteArray $ fold
+    sidechainSig ← option byteArray $ fold
       [ long "sidechain-signature"
       , metavar "SIGNATURE"
       , help "Sidechain signature"
       ]
-    inputUtxo <- option transactionInput $ fold
+    inputUtxo ← option transactionInput $ fold
       [ long "registration-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the commitee candidate registration"
@@ -136,27 +136,27 @@ options = info (helper <*> optSpec) fullDesc
   deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
 
   scParamsSpec = ado
-    chainId <- option int $ fold
+    chainId ← option int $ fold
       [ short 'i'
       , long "chain-id"
       , metavar "1"
       , help "Sidechain ID"
       ]
 
-    genesisHash <- option byteArray $ fold
+    genesisHash ← option byteArray $ fold
       [ short 'h'
       , long "genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
       ]
 
-    genesisMint <- optional $ option transactionInput $ fold
+    genesisMint ← optional $ option transactionInput $ fold
       [ short 'm'
       , long "genesis-mint-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the genesis mint"
       ]
-    genesisUtxo <- option transactionInput $ fold
+    genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
       , metavar "TX_ID#TX_IDX"
@@ -187,17 +187,17 @@ getOptions ∷ Effect Options
 getOptions =
   execParser options
 
-transactionInput :: ReadM TransactionInput
-transactionInput = maybeReader $ \txIn ->
+transactionInput ∷ ReadM TransactionInput
+transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
-    [ txId, txIdx ] -> ado
-      index <- UInt.fromString txIdx
+    [ txId, txIdx ] → ado
+      index ← UInt.fromString txIdx
       in
         TransactionInput
           { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
           , index
           }
-    _ -> Nothing
+    _ → Nothing
 
-byteArray :: ReadM ByteArray
+byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray

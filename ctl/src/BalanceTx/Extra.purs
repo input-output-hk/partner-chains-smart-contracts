@@ -17,20 +17,20 @@ import Types.OutputDatum (OutputDatum)
 import Types.UnbalancedTransaction (UnbalancedTx, _transaction)
 
 --| Making all output datums inline
-reattachDatumsInline :: UnattachedUnbalancedTx -> UnattachedUnbalancedTx
+reattachDatumsInline ∷ UnattachedUnbalancedTx → UnattachedUnbalancedTx
 reattachDatumsInline utx =
   let
     datums = utx ^. _datums
     datumMap =
-      foldl (\dm d -> maybe dm (\dh -> Map.insert dh d dm) (Hashing.datumHash d))
+      foldl (\dm d → maybe dm (\dh → Map.insert dh d dm) (Hashing.datumHash d))
         Map.empty
         datums
 
     f NoOutputDatum = NoOutputDatum
     f (OutputDatum d) = OutputDatum d
     f (OutputDatumHash dh) = case Map.lookup dh datumMap of
-      Nothing -> OutputDatumHash dh -- This should never happen, so we don't handle it explicitly
-      Just d -> OutputDatum d
+      Nothing → OutputDatumHash dh -- This should never happen, so we don't handle it explicitly
+      Just d → OutputDatum d
   in
     utx
       #
@@ -39,16 +39,16 @@ reattachDatumsInline utx =
         )
       # (_datums .~ [])
 
-_unbalancedTx :: Lens' UnattachedUnbalancedTx UnbalancedTx
-_unbalancedTx = lens' \(UnattachedUnbalancedTx rec@{ unbalancedTx }) ->
-  Tuple unbalancedTx \utx -> UnattachedUnbalancedTx rec { unbalancedTx = utx }
+_unbalancedTx ∷ Lens' UnattachedUnbalancedTx UnbalancedTx
+_unbalancedTx = lens' \(UnattachedUnbalancedTx rec@{ unbalancedTx }) →
+  Tuple unbalancedTx \utx → UnattachedUnbalancedTx rec { unbalancedTx = utx }
 
-_datums ::
+_datums ∷
   Lens' UnattachedUnbalancedTx (Array Datum)
-_datums = lens' \(UnattachedUnbalancedTx rec@{ datums }) ->
-  Tuple datums \ds -> UnattachedUnbalancedTx rec { datums = ds }
+_datums = lens' \(UnattachedUnbalancedTx rec@{ datums }) →
+  Tuple datums \ds → UnattachedUnbalancedTx rec { datums = ds }
 
-_datum ::
+_datum ∷
   Lens' TransactionOutput OutputDatum
-_datum = lens' \(TransactionOutput rec@{ datum }) ->
-  Tuple datum \d -> TransactionOutput rec { datum = d }
+_datum = lens' \(TransactionOutput rec@{ datum }) →
+  Tuple datum \d → TransactionOutput rec { datum = d }
