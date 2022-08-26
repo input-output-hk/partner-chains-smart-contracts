@@ -62,6 +62,19 @@
             nixpkgs-fmt
           ];
         };
+      ctlMainFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          project = psProjectFor system;
+        in
+        pkgs.writeShellApplication {
+          name = "ctl-main";
+          runtimeInputs = [ pkgs.nodejs-14_x ];
+          text = ''
+            export NODE_PATH="${project.nodeModules}/lib/node_modules"
+            node -e 'require("${project.compiled}/output/Main").main()' "$@"
+          '';
+        };
     in
     {
       packages = perSystem (system: {
@@ -74,26 +87,14 @@
           bundledModuleName = "output.js";
         };
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+        ctl-main = ctlMainFor system;
       });
       apps = perSystem (system: {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
-        ctl-main =
-          let
-            pkgs = nixpkgsFor system;
-            project = psProjectFor system;
-            script = pkgs.writeShellApplication {
-              name = "ctl-main";
-              runtimeInputs = [ pkgs.nodejs-14_x ];
-              text = ''
-                export NODE_PATH="${project.nodeModules}/lib/node_modules"
-                node -e 'require("${project.compiled}/output/Main").main()' "$@"
-              '';
-            };
-          in
-          {
-            type = "app";
-            program = "${script}/bin/ctl-main";
-          };
+        ctl-main = {
+          type = "app";
+          program = "${ctlMainFor system}/bin/ctl-main";
+        };
       });
       devShell = perSystem (system: (psProjectFor system).devShell);
       checks = perSystem (system:
