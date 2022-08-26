@@ -48,6 +48,7 @@ data Endpoint
       , inputUtxo :: TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey :: PubKey }
+  | GetAddrs
 
 derive instance Generic Endpoint _
 
@@ -74,6 +75,10 @@ options = info (helper <*> optSpec) fullDesc
       , command "deregister"
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
+          )
+      , command "addresses"
+          ( info (withCommonOpts (pure GetAddrs))
+              (progDesc "Get the script addresses for a given sidechain")
           )
       ]
 

@@ -2,17 +2,35 @@ module Main (main) where
 
 import Contract.Prelude
 
+import CommitteCandidateValidator (getCommitteeCandidateValidator)
 import CommitteCandidateValidator as CommitteCandidateValidator
-import Contract.Address (ownPaymentPubKeyHash)
+import Contract.Address
+  ( addressToBech32
+  , getNetworkId
+  , ownPaymentPubKeyHash
+  , validatorHashEnterpriseAddress
+  )
 import Contract.Config (testnetConfig)
-import Contract.Monad (ConfigParams, launchAff_, liftedM, runContract)
+import Contract.Log (logInfo')
+import Contract.Monad
+  ( ConfigParams
+  , Contract
+  , launchAff_
+  , liftContractM
+  , liftedM
+  , runContract
+  )
+import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
 toConfig :: Options -> ConfigParams ()
 toConfig { skey } = testnetConfig
-  { walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing) }
+
+  { logLevel = Info
+  , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
+  }
 
 main :: Effect Unit
 main = do
@@ -47,3 +65,17 @@ main = do
             { sidechainParams: opts.scParams
             , spoPubKey
             }
+      GetAddrs -> do
+        printAddr "CommitteCandidateValidator"
+          (getCommitteeCandidateValidator opts.scParams)
+
+printAddr :: String -> Contract () Validator -> Contract () Unit
+printAddr name getValidator = do
+  netId ← getNetworkId
+  v <- getValidator
+  addr <- liftContractM ("Cannot get " <> name <> " address") $
+    validatorHashEnterpriseAddress
+      netId
+      (validatorHash v)
+  serialised <- addressToBech32 addr
+  logInfo' $ name <> " address: " <> serialised
