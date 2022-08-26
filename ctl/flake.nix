@@ -1,5 +1,5 @@
 {
-  description = "ctl-test";
+  description = "trustless-sidechain-ctl";
   inputs = {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     flake-compat.url = "github:edolstra/flake-compat";
@@ -10,9 +10,7 @@
       repo = "cardano-transaction-lib";
       rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
       inputs.cardano-configurations = {
-        type = "github";
-        owner = "input-output-hk";
-        repo = "cardano-configurations";
+        url = "path:./cardano-configurations";
         flake = false;
       };
     };
@@ -30,13 +28,13 @@
       };
       runtimeConfig = {
         network = {
-          name = "vasil-dev";
+          name = "takao";
           magic = 9;
         };
       };
       psProjectFor = system:
         let
-          projectName = "ctl-test";
+          projectName = "trustless-sidechain-ctl";
           pkgs = nixpkgsFor system;
           src = builtins.path {
             path = ./.;
@@ -102,7 +100,7 @@
       checks = perSystem (system:
         let pkgs = nixpkgsFor system; in
         {
-          ctl-test = (psProjectFor system).runPursTest {
+          trustless-sidechain-ctl = (psProjectFor system).runPursTest {
             sources = [ "src" "test" ];
             testMain = "Test.Main";
           };
