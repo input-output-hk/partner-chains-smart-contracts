@@ -39,13 +39,9 @@
           projectName = "ctl-test";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = self;
+            path = ./.;
             name = "${projectName}-src";
-            filter = path: ftype:
-              !(pkgs.lib.hasSuffix ".md" path) # filter out certain files, e.g. markdown
-              && !(ftype == "directory" && builtins.elem # or entire directories
-                (baseNameOf path) [ "doc" ]
-              );
+            filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
           };
         in
         pkgs.purescriptProject {
