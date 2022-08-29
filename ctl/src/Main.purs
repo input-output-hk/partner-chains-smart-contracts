@@ -10,21 +10,21 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
-toConfig :: Options -> ConfigParams ()
+toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
   { walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing) }
 
-main :: Effect Unit
+main ∷ Effect Unit
 main = do
-  opts <- getOptions
+  opts ← getOptions
 
   launchAff_ $ runContract (toConfig opts) do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     case opts.endpoint of
 
-      MintAct { amount } -> runFuelMP (Mint { amount, recipient: pkh })
+      MintAct { amount } → runFuelMP (Mint { amount, recipient: pkh })
         opts.scParams
-      BurnAct { amount, recipient } -> runFuelMP (Burn { amount, recipient })
+      BurnAct { amount, recipient } → runFuelMP (Burn { amount, recipient })
         opts.scParams
       CommitteeCandidateReg
         { spoPubKey
@@ -32,7 +32,7 @@ main = do
         , spoSig
         , sidechainSig
         , inputUtxo
-        } -> CommitteCandidateValidator.register $
+        } → CommitteCandidateValidator.register $
         CommitteCandidateValidator.RegisterParams
           { sidechainParams: opts.scParams
           , spoPubKey
@@ -41,7 +41,7 @@ main = do
           , sidechainSig
           , inputUtxo
           }
-      CommitteeCandidateDereg { spoPubKey } ->
+      CommitteeCandidateDereg { spoPubKey } →
         CommitteCandidateValidator.deregister $
           CommitteCandidateValidator.DeregisterParams
             { sidechainParams: opts.scParams
