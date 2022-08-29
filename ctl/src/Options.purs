@@ -192,9 +192,10 @@ transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
+      transactionId ← TransactionHash <$> hexToByteArray txId
       in
         TransactionInput
-          { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
+          { transactionId
           , index
           }
     _ → Nothing
