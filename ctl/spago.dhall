@@ -1,6 +1,8 @@
 { name = "ctl-test"
 , dependencies =
-  [ "argonaut-core"
+  [ "aeson"
+  , "aeson-helpers"
+  , "argonaut-core"
   , "arrays"
   , "bigints"
   , "cardano-transaction-lib"
@@ -16,7 +18,6 @@
   , "profunctor"
   , "profunctor-lenses"
   , "strings"
-  , "test-unit"
   , "transformers"
   , "uint"
   , "variant"

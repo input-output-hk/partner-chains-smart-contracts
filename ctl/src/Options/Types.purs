@@ -1,9 +1,15 @@
 module Options.Types (Options(..), Endpoint(..)) where
 
+import Aeson
+import Contract.Aeson
 import Contract.Prelude
 
+import Aeson.Decode as Decode
+import Aeson.Encode ((>$<))
+import Aeson.Encode as Encode
 import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Transaction (TransactionInput)
+import Control.Lazy (defer)
 import SidechainParams (SidechainParams)
 
 type Options =
