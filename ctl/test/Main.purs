@@ -2,6 +2,12 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
+import CommitteCandidateValidator
+  ( DeregisterParams(..)
+  , RegisterParams(..)
+  , deregister
+  , register
+  )
 import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
 import Contract.Monad (Contract, launchAff_, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
@@ -27,6 +33,7 @@ main = launchAff_ $ do
   runPlutipContract config distribute \(alice /\ _bob) → do
     withKeyWallet alice $ do
       mintAndBurnScenario
+      registerAndDeregisterScenario
 
 mintAndBurnScenario ∷ Contract () Unit
 mintAndBurnScenario = do
@@ -46,6 +53,37 @@ mintAndBurnScenario = do
   runFuelMP (Mint { amount: 5, recipient: pk }) scParams
   runFuelMP (Burn { amount: 2, recipient: "someaddress" }) scParams
   runFuelMP (Burn { amount: 3, recipient: "someaddress" }) scParams
+
+registerAndDeregisterScenario ∷ Contract () Unit
+registerAndDeregisterScenario = do
+  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  registrationUtxo ← liftContractM "No UTxOs found at key wallet"
+    $ Set.findMin
+    $ Map.keys ownUtxos
+  let
+    scParams = SidechainParams
+      { chainId: BigInt.fromInt 1
+      , genesisHash: hexToByteArrayUnsafe "aabbcc"
+      , genesisMint: Nothing
+      , genesisUtxo: toTxIn "aabbcc" 0
+      }
+    regParams =
+      RegisterParams
+        { sidechainParams: scParams
+        , spoPubKey: hexToByteArrayUnsafe "ababab"
+        , sidechainPubKey: hexToByteArrayUnsafe ""
+        , spoSig: hexToByteArrayUnsafe ""
+        , sidechainSig: hexToByteArrayUnsafe ""
+        , inputUtxo: registrationUtxo
+        }
+    deregParams =
+      DeregisterParams
+        { sidechainParams: scParams
+        , spoPubKey: hexToByteArrayUnsafe "ababab"
+        }
+  register regParams
+  deregister deregParams
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
