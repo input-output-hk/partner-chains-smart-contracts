@@ -9,7 +9,7 @@ import Ledger (
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
-import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue), TxOutRef)
+import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue))
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Crypto (PubKeyHash (PubKeyHash, getPubKeyHash))
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (TokenName, unTokenName), Value (getValue))
@@ -19,9 +19,7 @@ import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.Types (
-  SidechainParams (
-    genesisMint
-  ),
+  SidechainParams (),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
@@ -46,6 +44,8 @@ data FUELMint = FUELMint
     fmMptRootTokenCurrencySymbol :: CurrencySymbol
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams
+  , -- | 'fmSidechainParams' is the sidechain parameters
+    fmDsLeafCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeLift ''FUELMint
@@ -89,21 +89,16 @@ mkMintingPolicy fm mode ctx = case mode of
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
-     in traceIfFalse "Can't mint a negative amount" (fuelAmount > 0)
-          -- TODO: I don't think this positive check is in the spec and I don't think we need to
-          -- verify this on chain either? By checking if it is is in the merkle
-          -- tree (we may assume that the merkle root is computed in a trusted
-          -- way) we get this for free.
-          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+     in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
-          && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
+          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMte)
   where
     -- Aliases:
     info = scriptContextTxInfo ctx
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
     mptRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
-    sc = fmSidechainParams fm
+    dsLeafCurrencySymbol = fmDsLeafCurrencySymbol fm
     minted = txInfoMint info
 
     fuelAmount :: Integer
@@ -113,6 +108,13 @@ mkMintingPolicy fm mode ctx = case mode of
         , tn == fuelTokenName =
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
+
+    dsInserted :: BuiltinByteString
+    dsInserted
+      | Just tns <- AssocMap.lookup dsLeafCurrencySymbol $ getValue minted
+        , (tn, _amt) : _ <- AssocMap.toList tns =
+        unTokenName tn
+      | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
 
     merkleRoot :: RootHash
     merkleRoot =
@@ -133,17 +135,13 @@ mkMintingPolicy fm mode ctx = case mode of
             -- we can be certain there is only ONE distinct TokenName for
             -- each 'CurrencySymbol'
             | otherwise = go ts
-          go [] = traceError "error 'FUELMintingPolicy' missing MPTRootToken"
+          go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
        in RootHash $ unTokenName $ go $ txInfoInputs info
-
-    -- Checks:
-    hasUTxO :: TxOutRef -> Bool
-    hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
-
-    oneshotMintAndUTxOPresent :: Bool
-    oneshotMintAndUTxOPresent = maybe True hasUTxO $ genesisMint sc
 
 mintingPolicy :: FUELMint -> MintingPolicy
 mintingPolicy param =
   Ledger.mkMintingPolicyScript
     ($$(PlutusTx.compile [||Script.wrapMintingPolicy . mkMintingPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
+
+currencySymbol :: FUELMint -> CurrencySymbol
+currencySymbol = Ledger.scriptCurrencySymbol . mintingPolicy

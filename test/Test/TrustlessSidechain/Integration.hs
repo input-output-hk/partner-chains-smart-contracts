@@ -12,10 +12,9 @@ import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Ledger (getCardanoTxId)
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
-import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey, PubKeyHash (PubKeyHash, getPubKeyHash), Signature (getSignature))
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
+import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash)
 import PlutusTx.Prelude
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.Internal.Types qualified as PlutipInternal
@@ -25,7 +24,6 @@ import Test.Tasty (TestTree)
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.OffChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OffChain.InitSidechain qualified as InitSidechain
 import TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
@@ -33,7 +31,6 @@ import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
   DeregisterParams (DeregisterParams),
-  DsParams (DsParams, dspStr, dspTxOutRef),
   InitSidechainParams (
     InitSidechainParams,
     initChainId,
@@ -45,7 +42,7 @@ import TrustlessSidechain.OffChain.Types (
   MintParams (MintParams, amount, index, merkleProof, recipient, sidechainEpoch),
   RegisterParams (RegisterParams),
   SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, signatures, threshold),
-  SidechainParams (genesisMint),
+  SidechainParams,
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
@@ -54,10 +51,9 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   serialiseBprm,
  )
-import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (
-  MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteIndex, mteRecipient, mteSidechainEpoch),
+  MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteHash, mteIndex, mteRecipient, mteSidechainEpoch),
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
@@ -127,6 +123,7 @@ saveMerkleRootEntries sc cmt entries = do
                 , sidechainParams = sc
                 , index = mteIndex mte
                 , sidechainEpoch = mteSidechainEpoch mte
+                , entryHash = mteHash mte
                 }
           )
           entries
@@ -150,7 +147,7 @@ test =
     "Plutip integration test"
     [ assertExecution
         "InitSidechain.initSidechain"
-        (initAda [2, 2])
+        (initAda [6, 6])
         ( withContract $ const getSidechainParams
         )
         [shouldSucceed]
@@ -219,6 +216,7 @@ test =
                       , mteAmount = 2
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
                       , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
                       }
 
                   mte1 =
@@ -227,8 +225,18 @@ test =
                       , mteAmount = 2
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
                       , mteSidechainEpoch = 1
+                      , mteHash = "\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001"
                       }
-              mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1]
+
+                  mte2 =
+                    MerkleTreeEntry
+                      { mteIndex = 2
+                      , mteAmount = 2
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\006"
+                      }
+              mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1, mte2]
 
               traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
 
@@ -237,83 +245,6 @@ test =
                 >>= awaitTxConfirmed . getCardanoTxId
         )
         [shouldSucceed]
-    , assertExecution
-        "FUELMintingPolicy.burnOneshotMint"
-        -- making this test case work is a bit convuluated because sometimes
-        -- the constraint solver for building the transaction would spend the
-        -- distinguished utxo when saving the root parameters.
-        (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
-        ( do
-            PlutipInternal.ExecutionResult (Right ((_utxo, utxos, scpOS), _)) _ _ <- withContractAs 0 $
-              const $ do
-                sidechainParams <- getSidechainParams
-                h <- ownPaymentPubKeyHash
-
-                utxo <- CommitteeCandidateValidator.getInputUtxo
-                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
-
-                let scpOS = sidechainParams {genesisMint = Just utxo}
-
-                return (utxo, utxos, scpOS)
-
-            PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContractAs 1 $ \[pkh0] -> do
-              -- Create a committee:
-              let cmt :: [(Wallet.XPrv, PubKey)]
-                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
-
-              -- Create the merkle tree / proof
-              let mte0 =
-                    MerkleTreeEntry
-                      { mteIndex = 0
-                      , mteAmount = 2
-                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh0
-                      , mteSidechainEpoch = 1
-                      }
-              saveMerkleRootEntries scpOS cmt [mte0]
-
-            withContractAs 0 $
-              const $ do
-                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxo (Just utxos)) mintparams
-
-                FUELMintingPolicy.burn $ BurnParams (-2) "" scpOS
-        )
-        [shouldSucceed]
-    , assertExecution
-        "FUELMintingPolicy.burnOneshot double Mint"
-        (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
-        ( do
-            PlutipInternal.ExecutionResult (Right ((_utxo, utxos, scpOS), _)) _ _ <- withContractAs 0 $
-              const $ do
-                sidechainParams <- getSidechainParams
-                h <- ownPaymentPubKeyHash
-
-                utxo <- CommitteeCandidateValidator.getInputUtxo
-                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
-
-                let scpOS = sidechainParams {genesisMint = Just utxo}
-                return (utxo, utxos, scpOS)
-
-            PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContractAs 1 $ \[pkh0] -> do
-              -- Create a committee:
-              let cmt :: [(Wallet.XPrv, PubKey)]
-                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
-
-              -- Create the merkle tree / proof
-              let mte0 =
-                    MerkleTreeEntry
-                      { mteIndex = 0
-                      , mteAmount = 2
-                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh0
-                      , mteSidechainEpoch = 1
-                      }
-              saveMerkleRootEntries scpOS cmt [mte0]
-
-            withContractAs 0 $
-              const $ do
-                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxo (Just utxos)) mintparams
-                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxo (Just utxos)) mintparams
-        )
-        [shouldFail]
     , assertExecution
         "FUELMintingPolicy.mint"
         (initAda [10, 10, 10]) -- mint, fee
@@ -332,6 +263,7 @@ test =
                       , mteAmount = 1
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
                       , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
                       }
 
                   mte1 =
@@ -340,6 +272,7 @@ test =
                       , mteAmount = 1
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
                       , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001"
                       }
               mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1]
 
@@ -365,6 +298,7 @@ test =
                       , mteAmount = 1
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh1
                       , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
                       }
               saveMerkleRootEntries sidechainParams cmt [mte0]
 
@@ -396,6 +330,7 @@ test =
                       , mteAmount = 1
                       , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh1
                       , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
                       }
               fmap (sidechainParams,) $ saveMerkleRootEntries sidechainParams cmt [mte0]
 
@@ -415,7 +350,7 @@ test =
         [shouldFail]
     , assertExecution
         "UpdateCommitteeHash.updateCommitteeHash on same wallet"
-        (initAda [3, 2])
+        (initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -450,7 +385,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "UpdateCommitteeHash.updateCommitteeHash on different wallet"
-        (initAda [3, 2] Prelude.<> initAda [3, 2])
+        (initAda [5, 5] Prelude.<> initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -485,7 +420,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "UpdateCommitteeHash.updateCommitteeHash on same wallet with the wrong committee"
-        (initAda [3, 2])
+        (initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -519,7 +454,7 @@ test =
         [shouldFail]
     , assertExecution
         "UpdateCommitteeHash.updateCommitteeHash on different wallet with the wrong committee"
-        (initAda [3, 2] Prelude.<> initAda [3, 2])
+        (initAda [5, 5] Prelude.<> initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -549,77 +484,6 @@ test =
                       , committeeSignatures = [sig]
                       }
               UpdateCommitteeHash.updateCommitteeHash uchp
-        )
-        [shouldFail]
-    , -- N.B. these two test cases should be the worst case when inserting a
-      -- string in the distributed set.
-      assertExecution
-        "Inserting a string in the distributed set (worst case 1)"
-        (initAda [6, 6])
-        ( do
-            withContractAs 0 $ \_ -> do
-              -- Initializing the distributed set
-              oref <- DistributedSet.ownTxOutRef
-              let dsp =
-                    DsParams
-                      { dspTxOutRef = oref
-                      , dspStr = ""
-                      }
-
-                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
-              -- dsm = DistributedSet.dsToDsMint ds
-
-              _ <- DistributedSet.dsInit dsp
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
-
-              _ <- DistributedSet.logDs ds
-              return ()
-        )
-        [shouldSucceed]
-    , assertExecution
-        "Inserting a string in the distributed set (worst case 2)"
-        (initAda [9, 9])
-        ( do
-            withContractAs 0 $ \_ -> do
-              -- Initializing the distributed set
-              oref <- DistributedSet.ownTxOutRef
-              let dsp =
-                    DsParams
-                      { dspTxOutRef = oref
-                      , dspStr = ""
-                      }
-
-                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
-
-              _ <- DistributedSet.dsInit dsp
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255\000"}
-
-              _ <- DistributedSet.logDs ds
-              return ()
-        )
-        [shouldSucceed]
-    , assertExecution
-        "Inserting a duplicated string in the distributed set"
-        (initAda [9, 9])
-        ( do
-            withContractAs 0 $ \_ -> do
-              -- Initializing the distributed set
-              oref <- DistributedSet.ownTxOutRef
-              let dsp =
-                    DsParams
-                      { dspTxOutRef = oref
-                      , dspStr = ""
-                      }
-
-                  ds = DistributedSet.Ds {DistributedSet.dsTxOutRef = oref}
-
-              _ <- DistributedSet.dsInit dsp
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
-              _ <- DistributedSet.dsInsert dsp {dspStr = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\255"}
-
-              _ <- DistributedSet.logDs ds
-              return ()
         )
         [shouldFail]
     ]

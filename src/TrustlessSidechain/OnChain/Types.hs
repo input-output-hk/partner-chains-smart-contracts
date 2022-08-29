@@ -24,6 +24,9 @@ data MerkleTreeEntry = MerkleTreeEntry
     mteRecipient :: !BuiltinByteString
   , -- | sidechain epoch for which merkle tree was created
     mteSidechainEpoch :: !Integer
+  , -- | 'mteHash' will be removed later TODO! Currently, we have this here to
+    -- help test the system.
+    mteHash :: !BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
@@ -71,6 +74,8 @@ makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
 instance Script.ValidatorTypes SignedMerkleRoot
 
+{-
+
 {- | The Redeemer that is passed to the on-chain validator to insert the
  following suggested string (provided it does not exist)
 -}
@@ -79,3 +84,4 @@ newtype DsRedeemer = DsRedeemer
   }
 
 makeIsDataIndexed ''DsRedeemer [('DsRedeemer, 0)]
+-}

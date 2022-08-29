@@ -18,7 +18,7 @@ import Plutus.V1.Ledger.Value (CurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteRecipient), SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
+import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteHash), SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
 import TrustlessSidechain.OnChain.Utils qualified as Utils
 
 {- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor.
@@ -38,7 +38,7 @@ import TrustlessSidechain.OnChain.Utils qualified as Utils
  in module @PlutusCore.Data@
 -}
 serialiseMte :: MerkleTreeEntry -> BuiltinByteString
-serialiseMte = mteRecipient
+serialiseMte = mteHash
 
 {- | 'mkMintingPolicy' verifies the following
 

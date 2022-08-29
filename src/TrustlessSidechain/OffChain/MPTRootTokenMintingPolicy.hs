@@ -9,6 +9,7 @@ import Ledger.Constraints qualified as Constraint
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
+import Plutus.Contract.StateMachine (Void)
 import PlutusTx (ToData (toBuiltinData))
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
@@ -16,7 +17,6 @@ import TrustlessSidechain.OffChain.Types (
   SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, sidechainParams, signatures, threshold),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.MPTRootTokenValidator (MPT)
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
 import TrustlessSidechain.OnChain.Types (SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
 import Prelude qualified
@@ -35,4 +35,9 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
             Ledger.unitDatum
             value
 
-  Contract.submitTxConstraintsWith @MPT lookups tx
+  ledgerTx <- Contract.submitTxConstraintsWith @Void lookups tx
+
+  Contract.logInfo @Prelude.String $ "Saving root..."
+  Contract.logInfo $ Prelude.show ledgerTx
+
+  return ledgerTx

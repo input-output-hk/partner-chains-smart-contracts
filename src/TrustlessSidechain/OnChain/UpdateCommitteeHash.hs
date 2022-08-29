@@ -28,10 +28,11 @@ import Plutus.V1.Ledger.Value (
   AssetClass,
   CurrencySymbol,
   TokenName (TokenName),
-  Value,
+  Value (getValue),
  )
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
@@ -243,8 +244,8 @@ initCommitteeHashMintTn = TokenName Builtins.emptyByteString
 {-# INLINEABLE mkCommitteeHashPolicy #-}
 mkCommitteeHashPolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
 mkCommitteeHashPolicy ichm _red ctx =
-  traceIfFalse "UTxO not consumed" hasUtxo
-    && traceIfFalse "wrong amount minted" checkMintedAmount
+  traceIfFalse "error 'mkCommitteeHashPolicy' UTxO not consumed" hasUtxo
+    && traceIfFalse "error 'mkCommitteeHashPolicy' wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -256,8 +257,8 @@ mkCommitteeHashPolicy ichm _red ctx =
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
     checkMintedAmount :: Bool
-    checkMintedAmount = case Value.flattenValue (txInfoMint info) of
-      [(_cs, tn', amt)] -> tn' == initCommitteeHashMintTn && amt == 1
+    checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+      Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == 1
       -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
       -- since the ledger rules ensure that the minting policy will only
       -- be run if some of the asset is actually being minted: see

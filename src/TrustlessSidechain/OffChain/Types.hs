@@ -100,6 +100,10 @@ data MintParams = MintParams
     index :: Integer
   , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
     sidechainEpoch :: Integer
+  , -- | See
+    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for
+    -- why 'entryHash' is here. This is TODO and will be removed later
+    entryHash :: BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -147,6 +151,8 @@ data DsParams = DsParams
     dspTxOutRef :: TxOutRef
   , -- | The 'BuiltinByteString' to insert
     dspStr :: BuiltinByteString
+  , -- |
+    dspSidechainParams :: SidechainParams
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)

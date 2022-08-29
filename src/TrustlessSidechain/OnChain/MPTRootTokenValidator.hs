@@ -2,40 +2,38 @@
 
 module TrustlessSidechain.OnChain.MPTRootTokenValidator where
 
-import Ledger (
-  ScriptContext,
- )
 import Ledger qualified
-import Ledger.Typed.Scripts qualified as Script
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Scripts qualified as Scripts
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
-data MPT
-instance Script.ValidatorTypes MPT where
-  type RedeemerType MPT = ()
-  type DatumType MPT = ()
-
 {-# INLINEABLE mkValidator #-}
-mkValidator :: SidechainParams -> () -> () -> ScriptContext -> Bool
-mkValidator _ () () _ = True
+mkValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidator _ _ _ _ = ()
 
 -- When we have reference inputs, we should replace the above line with
--- > mkValidator _ () () _ = False
+-- > mkValidator _ _ _ _ = Builtins.error ()
 
-typedValidator :: SidechainParams -> Script.TypedValidator MPT
-typedValidator p =
-  Script.mkTypedValidator @MPT
-    ($$(PlutusTx.compile [||mkValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Script.wrapValidator @() @()
+-- If it's of any interest, the following was the old typed version...
+-- > typedValidator :: SidechainParams -> Script.TypedValidator MPT
+-- > typedValidator p =
+-- >   Script.mkTypedValidator @MPT
+-- >     ($$(PlutusTx.compile [||mkValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
+-- >     $$(PlutusTx.compile [||wrap||])
+-- >   where
+-- >     wrap = Script.wrapValidator @() @()
 
 validator :: SidechainParams -> Ledger.Validator
-validator = Script.validatorScript . typedValidator
+validator sc =
+  Scripts.mkValidatorScript
+    ( $$(PlutusTx.compile [||mkValidator||])
+        `PlutusTx.applyCode` PlutusTx.liftCode sc
+    )
 
 hash :: SidechainParams -> Ledger.ValidatorHash
-hash = Script.validatorHash . typedValidator
+hash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . validator
 
 address :: SidechainParams -> Ledger.Address
 address = Ledger.scriptHashAddress . hash
