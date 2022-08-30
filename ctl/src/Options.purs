@@ -208,9 +208,7 @@ transactionInput = maybeReader $ \txIn →
     _ → Nothing
 
 scParamsConfigFile ∷ ReadM (Either SidechainParams FilePath)
-scParamsConfigFile = do
-  s ← readerAsk
-  pure $ Right s
+scParamsConfigFile = Right <$> readerAsk
 
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray
