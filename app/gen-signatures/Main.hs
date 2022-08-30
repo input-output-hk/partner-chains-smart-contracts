@@ -23,6 +23,7 @@ import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
 import Data.Either.Combinators (mapLeft, maybeToRight)
+import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -68,6 +69,7 @@ import TrustlessSidechain.OnChain.Types (
  )
 import Prelude hiding (takeWhile)
 
+-- | Parsed arguments of the CLI
 data Args = Args
   { chainId :: Integer
   , genesisHash :: GenesisHash
@@ -78,6 +80,7 @@ data Args = Args
   , registrationUtxo :: TxOutRef
   }
 
+-- | Arguments to be passed to the CTL CLI
 data RegistrationArgs = RegistrationArgs
   { -- | SPO cold verification key hash
     spoPubKey :: PubKey -- own cold verification key hash
@@ -90,6 +93,7 @@ data RegistrationArgs = RegistrationArgs
   }
   deriving stock (Prelude.Show)
 
+-- | Main entrypoint for the registration signature generator tool
 main :: IO ()
 main = do
   args <- execParser opts
@@ -119,22 +123,28 @@ main = do
   putStrLn "Please call ctl-main with the following arguments:"
   putStrLn ""
 
-  putStrLn $
-    mconcat $
-      unwords
-        <$> [ ["nix run .#ctl-main -- register \\\n"]
-            , ["--signing-key-file $SIGNING_KEY \\\n"]
-            , ["--genesis-committee-hash-utxo", showTxOutRef args.genesisUtxo, "\\\n"]
-            , maybe [] (\oref -> ["--genesis-mint-utxo", showTxOutRef oref, "\\\n"]) args.genesisMint
-            , ["--sidechain-id", show args.chainId, "\\\n"]
-            , ["--sidechain-genesis-hash", show args.genesisHash, "\\\n"]
-            , ["--spo-public-key", showPubKey regData.spoPubKey, "\\\n"]
-            , ["--sidechain-public-key", showScPubKey regData.sidechainPubKey, "\\\n"]
-            , ["--spo-signature", showSig regData.spoSignature, "\\\n"]
-            , ["--sidechain-signature", showSig regData.sidechainSignature, "\\\n"]
-            , ["--registration-utxo", showTxOutRef args.registrationUtxo]
-            ]
+  putStrLn $ mkRegistrationCliSample args regData
 
+-- | Generate a sample
+mkRegistrationCliSample :: Args -> RegistrationArgs -> String
+mkRegistrationCliSample args regData =
+  intercalate " \\\n"
+    . filter (not . null)
+    . fmap unwords
+    $ [ ["nix run .#ctl-main -- register"]
+      , ["--signing-key-file $SIGNING_KEY"]
+      , ["--genesis-committee-hash-utxo", showTxOutRef args.genesisUtxo]
+      , maybe [] (\oref -> ["--genesis-mint-utxo", showTxOutRef oref]) args.genesisMint
+      , ["--sidechain-id", show args.chainId]
+      , ["--sidechain-genesis-hash", show args.genesisHash]
+      , ["--spo-public-key", showPubKey regData.spoPubKey]
+      , ["--sidechain-public-key", showScPubKey regData.sidechainPubKey]
+      , ["--spo-signature", showSig regData.spoSignature]
+      , ["--sidechain-signature", showSig regData.sidechainSignature]
+      , ["--registration-utxo", showTxOutRef args.registrationUtxo]
+      ]
+
+-- | Parser info for the CLI arguments
 opts :: OptParse.ParserInfo Args
 opts =
   info
@@ -143,6 +153,7 @@ opts =
         <> progDesc "Generate arguments for committee candidate registration"
     )
 
+-- | Parser for the CLI argumenst
 argParser :: OptParse.Parser Args
 argParser = do
   chainId <-
@@ -234,6 +245,7 @@ argParser = do
 
 -- Keys
 
+-- | Sign a message with an Ed25519DSIGN key
 signWithSPOKey ::
   SignKeyDSIGN Ed25519DSIGN ->
   BlockProducerRegistrationMsg ->
@@ -245,6 +257,7 @@ signWithSPOKey skey msg =
         . rawSerialiseSigDSIGN
         $ signDSIGN () serialised skey
 
+-- | Sign a message with a SECP256K1 key
 signWithSidechainKey ::
   SECP.SecKey ->
   BlockProducerRegistrationMsg ->
@@ -259,6 +272,7 @@ signWithSidechainKey skey msg =
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
 
+-- | Parse Ed25519DSIGN private key
 toSpoPrivKey :: String -> Either String (SignKeyDSIGN Ed25519DSIGN)
 toSpoPrivKey =
   fmap (genKeyDSIGN @Ed25519DSIGN . mkSeedFromBytes)
@@ -266,6 +280,7 @@ toSpoPrivKey =
     . Base16.decode
     . Char8.pack
 
+-- | Derive Ed25519DSIGN public key from the private key
 toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
 toSpoPubKey =
   Crypto.PubKey
@@ -274,6 +289,7 @@ toSpoPubKey =
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
     . deriveVerKeyDSIGN
 
+-- | Parse SECP256K1 private key
 toSidechainPrivKey :: String -> Either String SECP.SecKey
 toSidechainPrivKey raw = do
   decoded <-
@@ -283,6 +299,7 @@ toSidechainPrivKey raw = do
       $ raw
   maybeToRight "Unable to parse sidechain private key" $ SECP.secKey decoded
 
+-- | Derive SECP256K1 public key from the private key
 toSidechainPubKey :: SECP.SecKey -> SidechainPubKey
 toSidechainPubKey =
   SidechainPubKey
@@ -290,6 +307,7 @@ toSidechainPubKey =
     . SECP.exportPubKey True
     . SECP.derivePubKey
 
+-- | Transaction output reference parser
 txOutRefParser :: Parser TxOutRef
 txOutRefParser = do
   txId <- TxId <$> decodeHash (takeWhile (/= '#'))
@@ -298,28 +316,35 @@ txOutRefParser = do
   txIx <- decimal
   pure $ TxOutRef txId txIx
 
+-- | Serialise transaction output reference into CLI format (TX_ID#TX_IDX)
 showTxOutRef :: TxOutRef -> String
 showTxOutRef (TxOutRef (TxId txId) txIdx) =
   showBuiltinBS txId ++ "#" ++ show txIdx
 
+-- | Serialise a ByteString into hex string
 showBS :: ByteString -> String
 showBS =
   Char8.unpack . Base16.encode
 
+-- | Serialise a BuiltinByteString into hex string
 showBuiltinBS :: BuiltinByteString -> String
 showBuiltinBS = showBS . Builtins.fromBuiltin
 
+-- | Serialise public key
 showPubKey :: PubKey -> String
 showPubKey (PubKey (LedgerBytes pk)) = showBuiltinBS pk
 
+-- | Serialise sidechain public key
 showScPubKey :: SidechainPubKey -> String
 showScPubKey (SidechainPubKey pk) = showBuiltinBS pk
 
+-- | Serialise signature
 showSig :: Signature -> String
 showSig (Signature sig) = showBuiltinBS sig
 
 -- Helpers
 
+-- | Decode a hexadecimal string into a BuiltinByteString
 decodeHash :: Parser Text -> Parser Builtins.BuiltinByteString
 decodeHash rawParser =
   rawParser >>= \parsed -> either (const mzero) (pure . Builtins.toBuiltin) (tryDecode parsed)

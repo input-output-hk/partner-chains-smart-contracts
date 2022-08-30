@@ -25,6 +25,7 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
+-- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
 
@@ -32,6 +33,7 @@ toConfig { skey } = testnetConfig
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
   }
 
+-- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
   opts ← getOptions
@@ -72,6 +74,7 @@ main = do
         printAddr "CommitteCandidateValidator"
           (getCommitteeCandidateValidator opts.scParams)
 
+-- | Print the bech32 serialised address of a given validator
 printAddr ∷ String → Contract () Validator → Contract () Unit
 printAddr name getValidator = do
   netId ← getNetworkId
