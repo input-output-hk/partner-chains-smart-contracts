@@ -56,7 +56,7 @@ runFuelMP sp fp = do
     Value.scriptCurrencySymbol
       fuelMP
   logInfo' (show (toData sp))
-  logInfo' ("fuelMP curreny symbol: " <> show cs)
+  logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let
