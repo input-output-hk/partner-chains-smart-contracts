@@ -58,7 +58,11 @@ import Prelude qualified
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  The intialization step of the distributed set is done as follows.
 
-  (1) TODO: document this later
+  (1) Create an NFT and pay this to a script which holds 'DsConfDatum' which is
+  the minting policy of all the scripts.
+
+  (2) Mint node which corresponds to the root of the distributed set
+  'DistributedSet.rootNode'
 
  Here, we create a transaction which executes both of these steps with a single
  transaction.
