@@ -3,7 +3,7 @@ module Options (getOptions, Options(..), Endpoint(..)) where
 import Contract.Prelude
 
 import CommitteCandidateValidator (PubKey, Signature)
-import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
