@@ -37,119 +37,43 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import Prelude qualified
-
-{- | 'hash' is an internal function to store the hash of the to put in the set.
- This is just a thin wrapper around the 'Builtins.blake2b_256' hash function
-
- TODO: We need to actually hash things in the script still.
--}
-{-# INLINEABLE hash #-}
-hash :: BuiltinByteString -> BuiltinByteString
-hash = Builtins.blake2b_256
 
 -- * Data types
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
- for the distributed set. (See Note [Data Structure Definition] and Note [Node
- Representation])
+ for the distributed set. (See Note [How This All Works].
 -}
 newtype Ds = Ds
-  { -- | 'dsConfCurrencySymbol' is the 'CurrencySymbol' which identifies a utxo
+  { -- | 'dsConf' is the 'CurrencySymbol' which identifies the utxo
     -- with 'DsConfDatum'.
     dsConf :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
-{- | 'DSDatum' is the datum in the distributed set. See: Note [Data Structure
- - Definition] and Note [Node Representation].
--}
-data DsDatum = DsDatum
-  { dsBreak :: Integer
-  , dsZero :: Edge
-  , dsOne :: Edge
+-- | 'DSDatum' is the datum in the distributed set. See: Note [How This All Works]
+newtype DsDatum = DsDatum
+  { dsNext :: BuiltinByteString
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
 instance Eq DsDatum where
   {-# INLINEABLE (==) #-}
-  a == b =
-    dsBreak a == dsBreak b
-      && dsZero a == dsZero b
-      && dsOne a == dsOne b
-
-{- | Prefix break (abbr. 'PBr') is an internal type alias for integers which
- are a prefix break. See 'lcp' for more details.
- Internally this has the invariant that it's in the range @[0,7)@
--}
-type PBr = Integer
-
-type Byte = Integer
-
-{- | 'Edge' represents an edge in the graph. See: Note [Data Structure
- - Definition] and Note [Node Representation].
--}
-data Edge
-  = -- | @'Branch' bs pre@ is an edge @bs@ with @pr@ as the prefix length
-    Bin BuiltinByteString PBr
-  | -- | 'Tip' denotes a null edge
-    Tip
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
-instance Eq Edge where
-  Tip == Tip = True
-  Bin bs0 br0 == Bin bs1 br1 = bs0 == bs1 && br0 == br1
-  _ == _ = False
+  a == b = dsNext a == dsNext b
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
- See: Note [Data Structure Definition] and Note [Node Representation].
+ See: Note [How This All Works].
 -}
 data Node = Node
-  { nPrefix :: BuiltinByteString
-  , nBreak :: PBr
-  , nZero :: Edge
-  , nOne :: Edge
+  { nKey :: BuiltinByteString
+  , nNext :: BuiltinByteString
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
-  a == b =
-    nPrefix a == nPrefix b
-      && nBreak a == nBreak b
-      && nZero a == nZero b
-      && nOne a == nOne b
-
-{- | 'Ib' (abbr. "insert buffer") is the output of 'insertNode' which indicates
- the number of new nodes. In particular, 'insertNode' may either create 2 or
- 3 new nodes.
--}
-data Ib a
-  = One a
-  | Two a a
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic, Prelude.Foldable)
-
-data PSuf a
-  = LsbZero {pSuf :: a}
-  | LsbOne {pSuf :: a}
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
-instance Functor PSuf where
-  fmap f = \case
-    LsbZero a -> LsbZero (f a)
-    LsbOne a -> LsbOne (f a)
-
-instance Eq a => Eq (Ib a) where
-  One a == One a' = a == a'
-  Two a b == Two a' b' = a == a' && b == b'
-  _ == _ = False
-
-instance Functor Ib where
-  fmap f = \case
-    One a -> One (f a)
-    Two a b -> Two (f a) (f b)
+  a == b = nKey a == nKey b && nNext a == nNext b
 
 {- | 'DsConf' is used for the 'DatumType' and 'RedeemerType' for the utxo which
  holds the 'DsConfDatum'
@@ -160,10 +84,48 @@ data DsConf
  minting policies needed by the distributed set.
 -}
 data DsConfDatum = DsConfDatum
-  { dscPrefixPolicy :: CurrencySymbol
-  , dscLeafPolicy :: CurrencySymbol
+  { dscKeyPolicy :: CurrencySymbol
   , dscFUELPolicy :: CurrencySymbol
   }
+
+{- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
+ length "array" of how many new nodes (this is always 2, see 'lengthIb') are
+ generated after inserting a into a node.
+-}
+data Ib a = Ib a a
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+instance Eq a => Eq (Ib a) where
+  {-# INLINEABLE (==) #-}
+  Ib s t == Ib s' t' = s == s' && t == t'
+
+instance Prelude.Foldable Ib where
+  foldMap f (Ib a b) = f a Prelude.<> f b
+
+{- | 'DsConfMint' is the parameter for the NFT to initialize the distributed set.
+ Note that 'ConfPolicy' allows one to mint a family of distinct NFTs
+ from a single 'TxOutRef'.
+
+ See 'mkDsConfPolicy' for more details.
+-}
+newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
+
+{- | 'DsMint' is the parameter for the minting policy.
+ See Note [How This All Works] for more details.
+-}
+data DsMint = DsMint
+  { -- | 'dsmValidatorHash' is the validator hash that the minting policy
+    -- essentially "forwards" its checks to the validator.
+    --
+    --
+    -- TODO: as an optimization, we can take the 'Address' as a parameter
+    -- instead (since the offchain code will always immediately convert this
+    -- into an 'Address').
+    dsmValidatorHash :: ValidatorHash
+  , -- | 'dsmConf' is the currency symbol to identify a utxo with 'DsConfDatum'
+    dsmConf :: CurrencySymbol
+  }
+  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
@@ -191,46 +153,12 @@ getConf currencySymbol info = go $ txInfoInputs info
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
-{- | 'DsConfMint' is the parameter for the NFT to initialize the distributed set.
- Note that 'ConfPolicy' allows one to mint a family of distinct NFTs
- from a single 'TxOutRef'.
-
- See 'mkDsConfPolicy' for more details.
--}
-newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
-
-{- | 'DsMint' is the parameter for the minting policy.
- See Note [Node Representation] for more details.
--}
-data DsMint = DsMint
-  { -- | 'dsmValidatorHash' is the validator hash that the minting policy
-    -- essentially "forwards" its checks to the validator.
-    --
-    --
-    -- TODO: as an optimization, we can take the 'Address' as a parameter
-    -- instead (since the offchain code will always immediately convert this
-    -- into an 'Address').
-    dsmValidatorHash :: ValidatorHash
-  , -- | 'dsmConf' is the currency symbol to identify a utxo with 'DsConfDatum'
-    dsmConf :: CurrencySymbol
-  }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
 makeIsDataIndexed ''Ds [('Ds, 0)]
 deriveJSON defaultOptions ''Ds
 PlutusTx.makeLift ''Ds
 
 makeIsDataIndexed ''DsDatum [('DsDatum, 0)]
 deriveJSON defaultOptions ''DsDatum
-
-makeIsDataIndexed ''Edge [('Tip, 0), ('Bin, 1)]
-deriveJSON defaultOptions ''Edge
-
-makeIsDataIndexed ''Ib [('One, 0), ('Two, 1)]
-deriveJSON defaultOptions ''Ib
-
-makeIsDataIndexed ''PSuf [('LsbZero, 0), ('LsbOne, 1)]
-deriveJSON defaultOptions ''PSuf
 
 makeIsDataIndexed ''Node [('Node, 0)]
 deriveJSON defaultOptions ''Node
@@ -243,237 +171,149 @@ makeIsDataIndexed ''DsConfMint [('DsConfMint, 0)]
 deriveJSON defaultOptions ''DsConfMint
 PlutusTx.makeLift ''DsConfMint
 
+makeIsDataIndexed ''Ib [('Ib, 0)]
+deriveJSON defaultOptions ''Ib
+PlutusTx.makeLift ''Ib
+
 makeIsDataIndexed ''DsConfDatum [('DsConfDatum, 0)]
 deriveJSON defaultOptions ''DsConfDatum
 PlutusTx.makeLift ''DsConfDatum
 
--- * Standard helper functions
+{- Note [How This all Works]
 
-{- | @'exps0To7' i@ is an internal function to which does computes @2^i@ for @0
- <= i < 7@.
--}
-{-# INLINEABLE exps0To7 #-}
-exps0To7 :: Integer -> Integer
--- For some reason, string literals don't seem to compile with Plutus, so we
--- can't do a lookup table as the following implementation:
--- > exps0To7 i = i `Builtins.indexByteString` "\001\002\004\008\016\032\064\128"
---
--- For now, we do a binary search which implements the mapping
--- > exps0To7 i
--- >    | i == 0 = 1
--- >    | i == 1 = 2
--- >    | i == 2 = 4
--- >    | i == 3 = 8
--- >    | i == 4 = 16
--- >    | i == 5 = 32
--- >    | i == 6 = 64
--- >    | i == 7 = 128
--- >    | otherwise = traceError "error 'exps0To7' non-exhaustive."
-exps0To7 i
-  | i < 4 = if i < 2 then if i < 1 then 1 else 2 else if i < 3 then 4 else 8
-  | i < 6 = if i < 5 then 16 else 32
-  | i < 7 = 64
-  | otherwise = 128
+    We briefly describre how this all works. We want the following operation:
 
-{-# INLINEABLE testBit #-}
-testBit :: Byte -> Integer -> Bool
-testBit w ix = (w `Builtins.quotientInteger` exps0To7 ix) `Builtins.remainderInteger` 2 == 1
+        * A method to prove that a message digest (image of a hash function)
+        has never been put in this set before, and
 
-{-# INLINEABLE nullByteString #-}
-nullByteString :: BuiltinByteString -> Bool
-nullByteString bs = 0 == lengthOfByteString bs
+        * A method to insert such a message digest into the set.
 
-{-# INLINEABLE initByteString #-}
-initByteString :: BuiltinByteString -> BuiltinByteString
-initByteString bs =
-  (\len -> if len == 0 then traceError "error 'initByteString' empty" else sliceByteString 0 (len - 1) bs) $
-    lengthOfByteString bs
+     We realize this through an ordered linked list i.e., formally, given a set
+     of message digests; we have a directed graph with
 
-{-# INLINEABLE singletonBytestring #-}
-singletonBytestring :: Byte -> BuiltinByteString
-singletonBytestring b = consByteString b emptyByteString
+        * Nodes: message digests (we call these message digests a /key/)
 
-{-# INLINEABLE lastByteString #-}
-lastByteString :: BuiltinByteString -> Byte
-lastByteString bs =
-  (\len -> if len == 0 then traceError "error 'lastByteString' empty" else indexByteString bs (len - 1)) $
-    lengthOfByteString bs
+        * Edges: there is an edge between nodes @a@ and @b@ iff @a < b@ and
+        there does not exist a node @k@ such that @a < k@ and @k < b@.
 
-{-# INLINEABLE headByteString #-}
-headByteString :: BuiltinByteString -> Byte
-headByteString bs =
-  (\len -> if len == 0 then traceError "error 'headByteString' empty" else indexByteString bs 0) $
-    lengthOfByteString bs
+    In code, we represent this graph with the 'Node' type, where 'nKey'
+    identifies the node and the edge is represented with 'nEdge'.
 
-{-# INLINEABLE tailByteString #-}
-tailByteString :: BuiltinByteString -> BuiltinByteString
-tailByteString bs =
-  (\len -> if len == 0 then traceError "error 'initByteString' empty" else sliceByteString 1 len bs) $
-    lengthOfByteString bs
+    We say that a message digest @str@ is in the set, iff there exists a node
+    @str@.
 
--- | 'snocByteString' appends the character to the end of the string.
-{-# INLINEABLE snocByteString #-}
-snocByteString :: BuiltinByteString -> Integer -> BuiltinByteString
-snocByteString str b = appendByteString str (Builtins.consByteString b emptyByteString)
+    Claim.
+        Let @a@ and @b@ be nodes s.t. there exists an edge @a@ to @b@.
+        Then, for every message digest @str@ s.t. @a < str@ and @str < b@,
+        @str@ is not in the set.
 
--- * Helper functions specific to this module
+    Sketch. Follows from the definition of an edge.
 
--- | @'lcpAppend` p br s@
-{-# INLINEABLE lcpAppend #-}
-lcpAppend :: BuiltinByteString -> PBr -> BuiltinByteString -> BuiltinByteString
-lcpAppend p br s
-  | br == 0 = p `appendByteString` s
-  | otherwise = initByteString p `appendByteString` singletonBytestring (lastByteString p + headByteString s) `appendByteString` tailByteString s
+    Why do we care about this? This claim asserts that to show that @str@ is
+    not already in the set, it suffices to find a node @a@ with an edge to @b@
+    satisfying @a < str@ and @str < b@. Note that otherwise this is inconclusive.
 
--- | 'distinctLsb' returns true if the LSB of the arguments are distinct.
-{-# INLINEABLE distinctLsb #-}
-distinctLsb :: Byte -> Byte -> Bool
-distinctLsb l r = l `Builtins.remainderInteger` 2 + r `Builtins.remainderInteger` 2 == 1
+    Also, since we are storing message digests (which are a fixed size and
+    also finite in size), we know that there exists a lower and upper bound to
+    the message digests. In particular, we are interested in storing message
+    digests of blake2b_256 so
 
-{- | @'lcpByte' l r@ returns common prefix of @l@ and @r@, the length of the
- common prefix (which is the index of the start of the suffix), the
- respective suffixes in a tuple if @l@ and @r@ are distinct.
+        * @""@ the empty string is a lower bound
 
- If @l@ and @r@ are not distinct, the behavior is undefined.
--}
-{-# INLINEABLE lcpByte #-}
-lcpByte :: Byte -> Byte -> (Byte, Integer, Byte, Byte)
-lcpByte = go 0 0
-  where
-    go :: Byte -> Integer -> Byte -> Byte -> (Byte, Integer, Byte, Byte)
-    go !accW !ix !l !r
-      | not (distinctLsb l r) =
-        go (accW + exps0To7 ix * (l `Builtins.remainderInteger` 2)) (ix + 1) (l `Builtins.quotientInteger` 2) (r `Builtins.quotientInteger` 2)
-      | otherwise =
-        (accW, ix, l * exps0To7 ix, r * exps0To7 ix)
+        * @replicate 33 '\255'@ is an upper bound
 
--- @'lcp' s t@ returns the longest common prefix with the last byte having
--- everything outside the length (see next point) cleared, the length of the last byte
--- (between 0 and 7 inclusive) of the prefix (which is also the starting index
--- of the suffix), and the respective suffixes with the first byte having bits
--- [0, length of the last byte of the prefix) cleared.
---
--- Note that if the length of the last byte is 0, then the prefix and suffixes
--- have no bits cleared.
-{-# INLINEABLE lcp #-}
-lcp :: BuiltinByteString -> BuiltinByteString -> (BuiltinByteString, Integer, BuiltinByteString, BuiltinByteString)
-lcp s t = go 0
-  where
-    go :: Integer -> (BuiltinByteString, Integer, BuiltinByteString, BuiltinByteString)
-    go !ix
-      | ix >= lengthOfByteString s || ix >= lengthOfByteString t = aligned
-      | otherwise =
-        ( \si ti ->
-            if si == ti
-              then go (ix + 1)
-              else case lcpByte si ti of
-                (lp, lix, ssi, sti)
-                  | lix == 0 -> aligned
-                  | otherwise ->
-                    ( takeByteString ix s `snocByteString` lp
-                    , -- we take everything up to (but not including)
-                      -- the distinct byte, and snoc the masked
-                      -- distinct byte at the end
-                      lix
-                    , consByteString ssi $ dropByteString (ix + 1) s
-                    , consByteString sti $ dropByteString (ix + 1) t
-                    -- for the suffixes, we drop everything
-                    -- (including the distinct byte), then prepend
-                    -- the masked distinct byte to the front
-                    --
-                    -- note that the bits @[0, lix - 1] = [0, lix)@
-                    -- are cleared.
-                    )
-        )
-          (s `Builtins.indexByteString` ix)
-          (t `Builtins.indexByteString` ix)
-      where
-        aligned =
-          ( takeByteString ix s
-          , 0
-          , dropByteString ix s
-          , dropByteString ix t
-          )
+    This means that we can have a root node as given in 'rootNode'.
 
-{- | @'prefixOf' p br bs@
+    To insert a string @str@ (not already in the set) into the set, we need the
+    greatest lower bound of @str@ in the set (think infimum) so pictorially, we
+    have
+    >
+    >   str' ------> str''
+    >
+    where we necessarily have @str' < str < str''@ from our assumptions.
+    Note that the place we wish to insert is unique, so what follows will be a
+    well defined mapping.
 
- Preconditions:
+    Then, we transform this into
+    >
+    >   str' ---> str ---> str''
+    >
+    and it's easy to see that the invariants of the graph are still satisfied,
+    and by defn. @str@ is included in the set.
 
-  - @bs@ is non empty
+    Claim.
+        This mapping maintains the required invariants of the graph.
 
-  - @0 <= br < 8@
--}
-{-# INLINEABLE prefixOf #-}
-prefixOf :: BuiltinByteString -> PBr -> BuiltinByteString -> Maybe (PSuf BuiltinByteString)
-prefixOf p br bs
-  | nullByteString p = return aligned
-  | pLen <= bLen =
-    if br == 0
-      then
-        PlutusPrelude.guard (p == takeByteString (lengthOfByteString p) bs)
-          PlutusPrelude.$> aligned
-      else
-        ( \pebs l r ->
-            if initByteString p == pebs
-              then
-                let go !ix !pb !bb
-                      | ix < br =
-                        if distinctLsb pb bb
-                          then Nothing
-                          else go (ix + 1) (pb `Builtins.quotientInteger` 2) (bb `Builtins.quotientInteger` 2)
-                      | otherwise =
-                        return $
-                          if bb `Builtins.remainderInteger` 2 == 0
-                            then LsbZero (bb * exps0To7 ix)
-                            else LsbOne (bb * exps0To7 ix)
-                 in case go 0 l r of
-                      Just res ->
-                        let k nsb = consByteString nsb $ dropByteString pLen bs
-                         in case res of
-                              LsbZero a -> Just (LsbZero (k a))
-                              LsbOne a -> Just (LsbOne (k a))
-                      Nothing -> Nothing
-              else -- fmap (fmap (\nsb -> consByteString nsb $ dropByteString pLen bs )) $
-              -- Maybe functor, PSuf functor
-                Nothing
-        )
-          (takeByteString (pLen - 1) bs)
-          (lastByteString p)
-          (bs `indexByteString` (pLen - 1))
-  | otherwise = Nothing
-  where
-    bLen = lengthOfByteString bs
-    pLen = lengthOfByteString p
+    Claim.
+        There is a unique node for an insertion of a string not already in
+        the set.
 
-    aligned
-      | headByteString bs `Builtins.remainderInteger` 2 == 0 = LsbZero (dropByteString pLen bs)
-      | otherwise = LsbOne (dropByteString pLen bs)
+    And really, that's it.. this isn't a super complicated way to do this....
+    and probably this has made it overly complicated.
 
--- * Helper functions related to 'Ib'
+    Now, we discuss how we actually do this in the block chain.. lovely.. We
+    store the message digest which identifies the node in a token name of a
+    utxo, and we represent the edge (to another node) via storing the token
+    name which identifies the other node in the datum of the utxo. It's really
+    just that easy.
 
-{-# INLINEABLE lengthIb #-}
-lengthIb :: Ib a -> Integer
-lengthIb =
-  \case
-    One _ -> 1
-    Two _ _ -> 2
+    Also, I should mention that we have some complexities with the validator
+    succeeding iff the minting policy (which identifies the node -- see
+    'mkDsKeyPolicy'). To achieve this, we store (at another utxo) a
+    'DsConfDatum'  which stores the minting policy hash so that the validator
+    can validate iff and the minting policy succeeds; and the minting policy is
+    parameterized by the validator hash.
 
-{- | 'fromListIb' converts a list into an 'Ib'. N.B. this function is partial
- and throws an error in the case that the list does not have 1 or 2 elements.
--}
-{-# INLINEABLE fromListIb #-}
-fromListIb :: [a] -> Ib a
-fromListIb = \case
-  [a] -> One a
-  [a, b] -> Two a b
-  _ -> traceError "error 'fromListIb' invalid list"
+    There's a bit of an annoyance with "how do I initialize this thing," but
+    it's easily resolved by minting an initial NFT (which pays to a utxo with
+    'DsConfDatum'), which will identifies the 'DsConfDatum'. Then, this utxo
+    will be used as a reference input for the validator so the validator knows
+    the minting policy hash.
 
--- | 'toListIb'  converts an 'Ib' into a list (in order)
-{-# INLINEABLE toListIb #-}
-toListIb :: Ib a -> [a]
-toListIb = \case
-  Two a b -> [a, b]
-  One a -> [a]
+    So initially, given a utxo, we initialize the system as follows (left side
+    is transaction inputs, and rightside are the outputs).
+
+    >
+    > utxo ---------------> utxo with
+    >      ---------------> DsConfDatum
+    >      --------------->     hash of minting policy of keys
+    >      --------------->     [other hashes of minting policies can be included here as well]
+    >      ---------------> utxo which represents the node
+    >                           Node { nKey = "", nEdge = "\255...\255"}
+    where we recall that @""@ is the lower bound of message digests, and
+    @"\255...\255"@ is the upper bound of message digests
+
+    Some notation is needed here. When we say
+    > utxo which represents the node
+    >   Node { nKey = "", nEdge = "\255...\255"}
+    this means that there exists a utxo (sitting at the validator script
+    'mkInsertValidator') with
+
+        * Datum as @DsDatum {dsNext  = "\255...\255" }@  (i.e., the @nEdge@
+        field)
+
+        * A TokenName (with CurrencySymbol as 'mkDsKeyPolicy') @""@ (i.e., the
+        @nKey@ field)
+
+    It's clear how this defn. generalizes to other nodes.
+
+    Then, to insert a string @str@, we follow the procedure above and build
+    transactions that look like this
+
+    >
+    > utxo which represents:                                      utxo which represents
+    > Node                                                          Node
+    >   { nKey = str'                           ---consumed---->      { nKey = str'
+    >   , nEdge = str'' }                       --------------->      , nEdge = str }
+    >                                           --------------->
+    >                                           --------------->   utxo which represents
+    > utxo with [as a reference input]          --------------->    Node
+    >   DsConfDatum                                                   { nKey = str
+    >     hash of minting policy of keys                              , nEdge = str'' }
+    >     [...]
+
+    Wow! It's hopefully just that easy!
+ -}
 
 -- * Node related functions
 
@@ -482,94 +322,51 @@ toListIb = \case
 mkNode :: BuiltinByteString -> DsDatum -> Node
 mkNode str d =
   Node
-    { nPrefix = str
-    , nBreak = dsBreak d
-    , nZero = dsZero d
-    , nOne = dsOne d
+    { nKey = str
+    , nNext = dsNext d
     }
 
-{- | 'rootNode' is the root node of every distributed set. In particular, a
- distributed set must have @""@ as the prefix, and starts with a string of
- null bytes inserted already. See Note [Node Representation] and Note [Data
- Structure Definition] for more details.
--}
+-- | 'rootNode' is the root node of every distributed set.
 {-# INLINEABLE rootNode #-}
 rootNode :: Node
 rootNode =
   Node
-    { nPrefix = emptyByteString
-    , nBreak = 0
-    , nZero = Tip
-    , nOne = Tip
+    { nKey = emptyByteString
+    , -- this is the lower bound of all values in the set.
+
+      nNext =
+        let dbl str = str `appendByteString` str
+         in consByteString 255 (dbl (dbl (dbl (dbl (dbl (consByteString 255 emptyByteString))))))
+        -- We'd really want to write something like this:
+        -- > "\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255"
+        -- which is a 33 byte long string which is the max value.
+        -- In particular, this is the upper bound of all values produced by the
+        -- hash.
     }
 
-{- | @'nextNodePrefix' str node@ finds the prefix of the next node (provided it
- exists) of @str@ after following the edges of @node@.
-
- Preconditions (you must check these yourself)
-
-      - @prefix node `isPrefixOfByteString` str@
+{- | 'fromListIb lst' converts a list of length 2 into an 'Ib' and throws an
+ exception otherwise.
 -}
-nextNodePrefix :: BuiltinByteString -> Node -> Maybe (BuiltinByteString, PBr)
-nextNodePrefix str node
-  | nullByteString str = Nothing
-  | otherwise =
-    prefixOf (nPrefix node) (nBreak node) str >>= \case
-      LsbZero pStrSuf -> bin pStrSuf $ nZero node
-      LsbOne pStrSuf -> bin pStrSuf $ nOne node
-  where
-    bin :: BuiltinByteString -> Edge -> Maybe (BuiltinByteString, PBr)
-    bin strSuf = \case
-      Tip -> Nothing
-      Bin suf sbr ->
-        let nbs = lcpAppend (nPrefix node) (nBreak node) suf
-         in prefixOf suf sbr strSuf
-              >> PlutusPrelude.guard (not (nbs == str && sbr == 0))
-              PlutusPrelude.$> (nbs, sbr)
+{-# INLINEABLE fromListIb #-}
+fromListIb :: [a] -> Ib a
+fromListIb = \case
+  [a, b] -> Ib a b
+  _ -> traceError "error 'fromListIb' bad list"
 
--- @'insertNode' str node@ returns the nodes which should replace @node@ in
--- order to insert @str@ in the tree.
---
--- Preconditions:
---
---      - @'nextNodePrefix' str node@ must be 'Nothing'.
---
--- This is mostly just tedious case analysis.
-{-# INLINEABLE insertNode #-}
-insertNode :: BuiltinByteString -> Node -> Ib Node
-insertNode str node
-  | Just psuf <- prefixOf (nPrefix node) (nBreak node) str
-    , suf' <- pSuf psuf =
-    let bin :: BuiltinByteString -> PBr -> (Edge, Node)
-        bin suf sbr = case lcp suf suf' of
-          (nsuf, nbr, ssuf, ssuf') -> case if testBit (headByteString ssuf) nbr
-            then ((ssuf', 0), (ssuf, sbr))
-            else ((ssuf, sbr), (ssuf', 0)) of
-            (zb, ob) ->
-              ( Bin nsuf nbr
-              , Node
-                  { nPrefix = lcpAppend (nPrefix node) (nBreak node) nsuf
-                  , nBreak = nbr
-                  , nZero = uncurry Bin zb
-                  , nOne = uncurry Bin ob
-                  }
-              )
-     in case psuf of
-          LsbZero _
-            | Tip <- nZero node -> One node {nZero = Bin suf' 0}
-            | Bin suf sbr <- nZero node
-              , isNothing (prefixOf suf sbr suf') -> case bin suf sbr of
-              (ne, nnode) -> Two node {nZero = ne} nnode
-          LsbOne _
-            | Tip <- nOne node -> One node {nOne = Bin suf' 0}
-            | Bin suf sbr <- nOne node
-              , isNothing (prefixOf suf sbr suf') -> case bin suf sbr of
-              (ne, nnode) -> Two node {nOne = ne} nnode
-          _ -> traceError err
-  | otherwise = traceError err
-  where
-    err = "error 'insertNode' bad insertion"
+-- | 'lengthIb' always returns 2.
+{-# INLINEABLE lengthIb #-}
+lengthIb :: Ib a -> Integer
+lengthIb _ = 2
+
 -- * Validators for insertion in the distributed set
+
+{-# INLINEABLE insertNode #-}
+insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
+insertNode str node
+  | nKey node < str && str < nNext node =
+    Just $
+      Ib node {nNext = str} Node {nKey = str, nNext = nNext node}
+  | otherwise = Nothing
 
 {- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
  done in the 'insertNode' function.
@@ -578,43 +375,49 @@ insertNode str node
 mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
-      ( \(!nNodes) ->
-          -- the total number tokens which are prefixes is @1 + the number of
-          -- minted tokens@ since we know that there is only one input with this
-          -- token.
-          --
-          -- In erroneous cases, we return @-1@ which will always be @False@ in the
-          -- above predicate
-          let totalPrefixes :: Integer
-              totalPrefixes = case AssocMap.lookup prefixCurrencySymbol minted of
-                Nothing -> 1
-                Just mp
-                  | [(_, amt)] <- AssocMap.toList mp
-                    , amt == 1 ->
-                    2
-                _ -> -1
-           in traceIfFalse
-                "error 'mkInsertValidator' bad insertion"
-                ( contNodes == nNodes
-                    -- The following check:
-                    && totalPrefixes == lengthIb nNodes
-                    -- takes @11 075 011 - 5 886 715 = 5 188 296@ mem execution units
-                    -- (testing this with and without this one extra check) of the total
-                    -- 10 000 000 mem execution units.
-                    --
-                    -- I'm fairly certain this isn't getting compiled properly and
-                    -- it's recomputing @nNodes@ twice....
-                )
-                -- TODO: the following check should be moved to the leaf minting policy...
-                -- > && traceIfFalse "error 'mkInsertValidator' bad leaf policy" (AssocMap.member (dscFUELPolicy conf) minted)
-      )
-        (insertNode nStr ownNode)
+      -- the total number tokens which are prefixes is @1 + the number of
+      -- minted tokens@ since we know that there is only one input with this
+      -- token.
+      --
+      -- In erroneous cases, we return @-1@ which will always be @False@ in the
+      -- above predicate
+      let ownNode :: Node
+          ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
+
+          nNodes :: Ib Node
+          nNodes = case insertNode nStr ownNode of
+            Just x -> x
+            Nothing -> traceError "error 'mkInsertValidator' bad insertion"
+
+          contNodes :: Ib Node
+          contNodes =
+            let normalizeIbNodes (Ib a b)
+                  | nKey a < nKey b = Ib a b
+                  | otherwise = Ib b a
+             in normalizeIbNodes $
+                  fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
+                    ownAddr ->
+                      let go :: [TxOut] -> [Node]
+                          go (t : ts)
+                            | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
+                            | otherwise = go ts
+                          go [] = []
+                       in go (txInfoOutputs info)
+
+          totalKeys :: Integer
+          totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
+            Just mp
+              | [(_, amt)] <- AssocMap.toList mp
+                , amt == 1 ->
+                2
+            _ -> -1
+       in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
+            && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (dscFUELPolicy conf) minted)
   )
-    ( case AssocMap.lookup leafCurrencySymbol minted of
+    ( case AssocMap.lookup keyCurrencySymbol minted of
         Just mp
-          | [(leaf, _amt)] <- AssocMap.toList mp ->
-            -- TODO: the following check is completely optional actually..
-            -- > , _amt == 1
+          | [(leaf, amt)] <- AssocMap.toList mp
+            , amt == 1 ->
             unTokenName leaf
         _ -> traceError "error 'mkInsertValidator' missing unique string to insert"
     )
@@ -633,49 +436,22 @@ mkInsertValidator ds _dat _red ctx =
     conf :: DsConfDatum
     !conf = getConf (dsConf ds) info
 
-    prefixCurrencySymbol :: CurrencySymbol
-    prefixCurrencySymbol = dscPrefixPolicy conf
+    keyCurrencySymbol :: CurrencySymbol
+    keyCurrencySymbol = dscKeyPolicy conf
 
-    leafCurrencySymbol :: CurrencySymbol
-    leafCurrencySymbol = dscLeafPolicy conf
-
-    -- Given a value, gets the token name (of the "continuing" currency symbol)
-    getPrefixTn :: Value -> TokenName
-    getPrefixTn v
-      | Just tns <- AssocMap.lookup prefixCurrencySymbol $ getValue v
+    -- Given a value, gets the token name (of the "continuing" token name)
+    getKeyTn :: Value -> BuiltinByteString
+    getKeyTn v
+      | Just tns <- AssocMap.lookup keyCurrencySymbol $ getValue v
         , [(tn, amt)] <- AssocMap.toList tns
         , amt == 1 =
-        tn
-    getPrefixTn _ = traceError "error 'mkInsertValidator': 'getPrefixTn' failed"
+        unTokenName tn
+    getKeyTn _ = traceError "error 'mkInsertValidator': 'getKeyTn' failed"
 
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.
     getTxOutNodeInfo :: TxOut -> Node
-    getTxOutNodeInfo o = mkNode (unTokenName $ getPrefixTn $ txOutValue o) $ unsafeGetDatum info o
-
-    ownNode :: Node
-    ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
-
-    normalizeIbNodes :: Ib Node -> Ib Node
-    normalizeIbNodes = \case
-      One a -> One a
-      Two a b
-        | nPrefix a < nPrefix b -> Two a b
-        | otherwise -> Two b a
-
-    contNodes :: Ib Node
-    contNodes =
-      normalizeIbNodes $
-        fromListIb $
-          ( \ownAddr ->
-              let go :: [TxOut] -> [Node]
-                  go [] = []
-                  go (t : ts)
-                    | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
-                    | otherwise = go ts
-               in go (txInfoOutputs info)
-          )
-            $ txOutAddress (txInInfoResolved ownInput)
+    getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum info o
 
 instance ValidatorTypes Ds where
   type DatumType Ds = DsDatum
@@ -705,8 +481,7 @@ insertAddress :: Ds -> Address
 insertAddress = Scripts.validatorAddress . typedInsertValidator
 
 {- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
- at.
- mkDsConfValidator :: Ds -> DsConfDatum -> () -> ScriptContext -> Bool
+ at. This will always return 'False'.
 -}
 mkDsConfValidator :: Ds -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfValidator _ds _dat _red _ctx = ()
@@ -782,41 +557,31 @@ dsConfPolicy dscm =
 dsConfCurSymbol :: DsConfMint -> CurrencySymbol
 dsConfCurSymbol = Contexts.scriptCurrencySymbol . dsConfPolicy
 
-{- | 'mkDsLeafPolicy' provides evidence for the leaf that was just added. Note
- this simply forwards all checks to the validator.
--}
-mkDsLeafPolicy :: DsMint -> () -> ScriptContext -> Bool
-mkDsLeafPolicy dsm _red ctx =
-  traceIfFalse "error 'mkDsPrefixPolicy' no validator found" $
-    any go $ txInfoInputs $ scriptContextTxInfo ctx
-  where
-    go :: TxInInfo -> Bool
-    go txin = txOutAddress (txInInfoResolved txin) == Address.scriptHashAddress (dsmValidatorHash dsm)
-
--- | 'mkDsPrefixPolicy' needs to verify the following.  See Note [Node Representation].
-mkDsPrefixPolicy :: DsMint -> () -> ScriptContext -> Bool
-mkDsPrefixPolicy _ _ _ = True
-
-{-
-mkDsPrefixPolicy dsm _red ctx = case ins of
-    [_ownTn] -> True
-    []
-        |  -- If we are minting the NFT which configures everything, then we
-           -- should mint only the empty prefix
-         Just _ <- AssocMap.lookup (dsmConf dsm) $ getValue $ txInfoMint info
-         -> case mintedTns of
-            [tn] | unTokenName tn == nPrefix rootNode ->
-                traceIfFalse "error 'mkDsPrefixPolicy' illegal outputs" $
-                    case find (\txout -> txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm)) $ txInfoOutputs info of
-                        Just txout -> isJust $ AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
-                        Nothing -> False
-                -- TODO: check in the script output with the output that this
-                -- ownCurrencySymbol is actually where it should be.. Actually,
-                -- there's no need to do this -- we can verify this offchain
-                -- since we may assume that all participants know the protocol
-                -- ahead of time and may independently verify.
-            _ ->  traceError "error 'mkDsPrefixPolicy' bad initial mint"
-    _ -> traceError "error 'mkDsPrefixPolicy' bad inputs in transaction"
+-- | 'mkDsKeyPolicy'.  See Note [How This All Works].
+mkDsKeyPolicy :: DsMint -> () -> ScriptContext -> Bool
+mkDsKeyPolicy dsm _red ctx = case ins of
+  [_ownTn] -> True
+  -- This is enough to imply that the validator succeeded. Since we know
+  -- that all these tokens are paid to the original validator hash, if an
+  -- input has this token, that means the validator has successffully
+  -- validated. Woohoo!
+  []
+    | -- If we are minting the NFT which configures everything, then we
+      -- should mint only the empty prefix
+      Just _ <- AssocMap.lookup (dsmConf dsm) $ getValue $ txInfoMint info ->
+      case mintedTns of
+        [tn] | unTokenName tn == nKey rootNode ->
+          traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
+            case find (\txout -> txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm)) $ txInfoOutputs info of
+              Just txout -> isJust $ AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
+              Nothing -> False
+        -- TODO: check in the script output with the output that this
+        -- ownCurrencySymbol is actually where it should be.. Actually,
+        -- there's no need to do this -- we can verify this offchain
+        -- since we may assume that all participants know the protocol
+        -- ahead of time and may independently verify.
+        _ -> traceError "error 'mkDsKeyPolicy' bad initial mint"
+  _ -> traceError "error 'mkDsKeyPolicy' bad inputs in transaction"
   where
     -- Aliases
     info :: TxInfo
@@ -837,8 +602,8 @@ mkDsPrefixPolicy dsm _red ctx = case ins of
                 -- > [(tn,1)] <- AssocMap.toList tns
                 -- In our case, it is implicit that there is exactly one
                 -- TokenName and that there will be only one distinct TokenName.
-               (tn,_amt) : _ <- AssocMap.toList tns
-                = tn : go ts
+                (tn, _amt) : _ <- AssocMap.toList tns =
+              tn : go ts
             -- Need to keep recursing to ensure that this transaction
             -- is only spending one input
             | otherwise = go ts -- otherwise, we skip the element
@@ -851,320 +616,32 @@ mkDsPrefixPolicy dsm _red ctx = case ins of
           | vs <- AssocMap.toList mp
             , all ((== 1) . snd) vs ->
             map fst vs
-        _ -> traceError "error 'mkDsPrefixPolicy': bad minted tokens"
-    -}
+        _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
 
--- | 'dsPrefixPolicy' is the minting policy for the prefixes of nodes
-dsPrefixPolicy :: DsMint -> MintingPolicy
-dsPrefixPolicy dsm =
+-- | 'dsKeyPolicy' is the minting policy for the prefixes of nodes
+dsKeyPolicy :: DsMint -> MintingPolicy
+dsKeyPolicy dsm =
   Scripts.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsPrefixPolicy||])
+    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsKeyPolicy||])
       `PlutusTx.applyCode` PlutusTx.liftCode dsm
 
-{- | 'dsPrefixCurSymbol' is the currency symbol for prefixes of nodes in the
+{- | 'dsKeyCurSymbol' is the currency symbol for prefixes of nodes in the
  distributed set
 -}
-dsPrefixCurSymbol :: DsMint -> CurrencySymbol
-dsPrefixCurSymbol = Contexts.scriptCurrencySymbol . dsPrefixPolicy
+dsKeyCurSymbol :: DsMint -> CurrencySymbol
+dsKeyCurSymbol = Contexts.scriptCurrencySymbol . dsKeyPolicy
 
--- | 'dsLeafPolicy' is the minting policy for the leaves just minted
-dsLeafPolicy :: DsMint -> MintingPolicy
-dsLeafPolicy dsm =
-  Scripts.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsLeafPolicy||])
-      `PlutusTx.applyCode` PlutusTx.liftCode dsm
+{- Note [Alternative Ways of Doing This]
 
-{- | 'dsLeafCurSymbol' is the currency symbol for prefixes of nodes in the
- distributed set
--}
-dsLeafCurSymbol :: DsMint -> CurrencySymbol
-dsLeafCurSymbol = Contexts.scriptCurrencySymbol . dsLeafPolicy
+ We actually did try some other ways of doing it, but none of them worked.  For
+ reference, here's what we tried:
 
-{- Note [Comparison to Stick Breaking Set]
-    This was based off of the [Stick Breaking
+    * The [Stick Breaking
     Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
-    with some modifications of course. We'll first recall the data type for the nodes of
-    the Stick Breaking Set and note some comparisions:
+    which had some obvious issues with datum sizes being too large which could
+    be remedied by working at the bit level of having a binary tree with
+    branches of 0 and 1.
+    This had budget issues.
 
-    Recall that the nodes in the Stick Breaking Set are defined as follows.
-
-    > data Node = Node
-    > { prefix :: BuiltinByteString
-    > , leaves :: [BuiltinByteString], branches :: [BuiltinByteString]
-    > }
-
-    A set of 'Node's forms with a distinguished 'Node' called the /root/ is a /Stick Breaking Set/.
-
-    The intuitive idea behind this is that:
-
-        - 'prefix' (like in the implementation here) denotes the characters
-        we've scanned so far to reach this node i.e., it provides a proof of
-        what we've already seen to reach the current node.
-
-        - 'leaves': given an BuiltinByteString @str@ in 'leaves', we say that
-        @prefix ++ str@ is in the Stick Breaking Set.
-
-        - 'branches': given an BuiltinByteString @str@ in 'branches', we say
-        that there exists another node, say @node'@, such that @node'@ has the
-        'prefix' field set to @prefix ++ str@ i.e., @str@ can be thought of as
-        an edge to @node'@ from this current node.
-
-    Example. Given a set of 'Node's as follows:
-    >   root = Node { prefix = "a", leaves = [], branches = ["a","b","cc"]}
-    >   node1 = Node { prefix = "aa", leaves = [""], branches = []}
-    >   node2 = Node { prefix = "ab", leaves = [""], branches = []}
-    >   node3 = Node { prefix = "acc", leaves = [""], branches = []}
-    We may picture this as the graph for which the edges between nodes are
-    strings as follows:
-    >                              root
-    >                         { prefix = "a" }
-    >            "a"         /       |         \
-    >          /-------------        | "b"      -----------\
-    >         /                      |                      \ "cc"
-    >       node1                  node2                   node3
-    > { prefix = "aa"         { prefix = "aa"         { prefix = "cc"
-    > , leaves = [""] }       , leaves = [""] }       , leaves = [""] }
-    where "aa", "ab", "acc" are /in/ the set since @node1@ tells us @"aa" <> ""
-    == "aa"@ and similiar reasoning for @node2@, and @node3@.
-
-    Pros:
-        (1) The overall space taken up by every node should be smaller than or
-        equal to the implementation here since it the 'branches' may be
-        arbitrary strings which can "factor out" common portions of strings
-        inserted to be stored in the branch.
-
-        (2) Usual advantages of trie data structures: Worst case lookup (for
-        offchain code) is in big Oh of the length of the longest string.
-
-    Cons:
-        (1) Individual transactions can get too large for our purposes. In the
-        trustless-sidechain, we are storing hashes of strings which has a size
-        of 32 bytes (blake2 has a message digest of 256 bits), so in the worst
-        case, we can have a 'Node' like with @prefix = ""@, @2^8@ (recall @2^8@
-        is the size of the alphabet) leaves with a distinct first character,
-        and no branches -- meaning this Node will take up
-
-        >    2^8 leaves      32 bytes
-        >   ------------ * -----------  =  8192 bytes
-        >    1 Node          1 leaf
-
-        so if a transaction insert another element at this Node, they must spend this Node
-        and also produce another 'Node' with at least the same amount of data as this 'Node'.
-        This means that the plutus transaction must take at least
-
-        >    2 *  8192 bytes =  16384 bytes
-
-        which according to
-        [here](https://testnets.cardano.org/en/testnets/cardano/tools/plutus-fee-estimator/)
-        the datum is included in the size of the transaction but transactions
-        can be at most 16384 bytes i.e., this will exceed the maximum
-        transaction size (note that this estimate doesn't even include extra
-        costs from constructors and other required things from Plutus).
-
-        Why is this bad? Well, this means that an adversary can be malicious
-        and make transaction impossible to mint. This is more of a problem when
-        the side-chain initially starts (since as the chain goes on, the leaves
-        will be broken up and hence individual nodes will get smaller); BUT it
-        is perfectly feasible for adversaries to do a small proof of work (See
-        Note [Adversary Proof of Work Attack of Stick Breaking Set]) to insert things in the set with
-        common prefixes that differ all differ in a bit of the same index.
-
-        (2) Insertion code is a bit complex and requires scanning through all
-        the leaves and branches calculating the longest common prefix. While
-        this is upper bounded by by the size of the alphabet (recall this is
-        @2^8@), [other data
-        structures](https://github.com/Plutonomicon/plutonomicon/blob/main/assoc.md)
-        boast an honest to goodness constant time insertion (provided you know
-        where to insert it). This actualy isn't that bad though.
-
-        (3) the optimization of having branches that are strings is mainly
-        helpful when strings of long common prefixes are inserted. I don't
-        think this case will be particularly common because: the strings are of
-        a fixed rather small size 32 in the trustless-sidechain; and we may
-        regard the strings as random inputs since they are hashes so the
-        probability of strings sharing long common prefixes becomes
-        exponentially small. I don't have a formal analysis, and I think the
-        average case analysis of this is honestly quite
-        tricky...
-
-    So, I think the Cons (1) is enough of a reason to not use exactly the Stick
-    Breaking Set's implementation. While this is very unlikely with honest
-    participants and this becomes impossible as the set grows (since it will
-    break up the node), an adversary in the beginning (see Note [Adversary
-    Proof of Work Attack of Stick Breaking Set]) can actually exploit this and
-    essentialyl "burn" other people's tokens forever (since they can never
-    spend this transaction as it'll run over the budget).
-
-    But the Stick Breaking Set had good ideas nonetheless -- a great place to
-    start :D.
+    * Variations of a Patricia Tree. This also had budget issues.
 -}
-
-{- Note [Adversary Proof of Work Attack of Stick Breaking Set]
-
-    This is an attack on the Stick Breaking Set (see Note [Comparison to Stick
-    Breaking Set]) where one can make a Node that is too large for anyone to
-    spend. Note that this scenario occurs exactly when one inserts strings
-    which all share a common prefix and all differ at the next character i.e.,
-    when given strings like
-
-    > str1 = a11 a12...a1k....
-    > str2 = a21 a22...a2k....
-    > str3 = a31 a32...a3k....
-    > ...
-
-    (note on notation: @a21@ denotes @str2@'s @1@st character)
-
-    such that
-
-        - @si@ for @s = 1,..@ and @i=1,..,k-1@ are all the same; and
-
-        - @sk@ for @s = 1,..@ are all distinct. Note that by definition
-        @k@ is the first index for which all these strings differ.
-
-        - and the remaining characters may be arbitrary
-
-    If we were just given this set, and inserting arbitrary strings, it would
-    be very easy to exploit this attack. Thankfully in the trustless-sidechain,
-    we are actually inserting blake2 hashes of some message into the set so it
-    isn't that "easy" to just find a collection of strings like this since we
-    assume that hash functions are preimage resistant. Hence, execute this
-    attack the adversary would need to do some sort of "Proof of Work" brute
-    force search to find such strings. We do an expected value analysis for
-    finding a set of @2^8@ strings which satisfy the above requirements to
-    execute this attack where we assume that each character has an equal
-    probability to be hashed to and are independent (i.e., avalanche effect of
-    hash functions).
-
-    Let @X@ denote the random variable which denotes the number of guesses an
-    adversary would have to put in the hash function in order to satisfied the
-    above requirements.
-
-    Consider some point in time when the @k@th character of @str1@ to
-    @str(i-1)@ all differ, and each of those strings all share the same common
-    prefix. Let @Xi@ be the random variable that denotes the number of guesses
-    to make until the @k@th character from @stri@ differs from the previous
-    strings (@str1@ to @str(i-1)@) AND @stri@ shares the same common prefix of
-    the strings @str1@ to @str(i-1)@.
-    This event occurs with probability (probability of the prefix being the
-    same as the previous strings, and probability of choosing a different
-    character from the previous strings)
-
-    > (1 / (2^8)^(k-1)) * ( 1 - ( (i - 1) / 2^8 ) ) = ( 2^8 - i + 1 ) / 2^(8 k)
-
-    which is a Geometrically Distributed Random variable so the expected value is
-
-    > E[Xi] = 2^(8 k)  / ( 2^8 - i + 1 )                    [*]
-
-    Clearly,
-
-    > X = X1 + X2  + ... + X(2^8)
-
-    so by Linearity of Expectation, it follows that
-
-    > E[X] = E[X1 + X2  + ... + X(2^8)]
-    >      = E[X1] + [X2]  + ... + E[X(2^8)]                  [linearity of expectation]
-    >      = sum i=1 to 2^8 of E[Xi]
-    >      = sum i=1 to 2^8 of 2^(8 k)  / ( 2^8 - i + 1 )     [by [*]]
-
-    which as Haskell code is:
-
-    > f k = sum $ map (\i -> 2^(8 * k) `div` ( 2^8 - i + 1)) $ [1..2^8]
-
-    Let's recall what the function @f@ applied to @k@ says: given a prefix of
-    size @0 <= k <= 32@, @f k@ computes the expected number of guesses an
-    adversary would have to make to find @2^8@ strings that share a common
-    prefix up to the @k-1@th character and are all distinct on the @k@th
-    character.
-
-    Now, when we have a prefix of size @k@ for a node, in the worst case when
-    the 'leaves' field is filled with strings as long as possible which is @32
-    - k@ (recall that in the trustless-sidechain, we are storing hashes that
-    are 32 bytes long), since there the alphabet contains @2^8@ distinct
-    characters, we get the worst case space requirements for a node is when the
-    'leaves' field has @2^8@ strings of size @32 - k@ i.e., the worst case
-    space of a node is given by
-
-    > k + 2^8 * (32 - k)  bytes
-
-    and so a transaction spending this node, would take at least 2x this, a
-    spending transaction would take at least
-
-    > 2 * (k + 2^8 * (32 - k))  bytes           [**]
-
-    Recall from
-    [here](https://testnets.cardano.org/en/testnets/cardano/tools/plutus-fee-estimator/)
-    that this datum size [**] becomes problematic when it becomes larger than
-    16384 bytes.
-    Note that [**] is clearly decreasing (just take the derivative), and we may
-    note that the size of the transaction in the worst case is only problematic
-    for perhaps the first few values of @k@ -- see the below table:
-
-        k | size of transaction in the worst case
-       ------------------------------------------
-        0 |                 16384
-        1 |                 15873
-        2 |                 15362
-        3 |                 14851
-        4 |                 14340
-        5 |                 13829
-        6 |                 13318
-        7 |                 12807
-        8 |                 12296
-
-        (remaining values ommitted since they clearly fit within the
-        transaction size limit)
-    where we see that assuming a [typical script
-    size](https://testnets.cardano.org/en/testnets/cardano/tools/plutus-fee-estimator/)
-    of 4000-8000 bytes, we may go over the maximum transaction size limit for
-    @k=0,1,2@ and it would be reasonable to include extra values of @k@ since
-    we're not completely counting all things that contribute space.
-
-    And from our result of the function @f@, we may associate how many guesses and adversary would have to make
-    in order to build a Node with such space requirements as follows.
-         Prefix of size k | Expected number of guesses the adversary must make
-         ---------------------------------------------------------------------
-         0                | 1466
-         1                | 401255
-         2                | 102749359
-         3                | 26303861211
-         4                | 6733788499037
-         5                | 1723849855776909
-         6                | 441305563078916342
-    where if we assume 10^8 computations guesses per second (standard
-    competitive programming rule of thumb), it is reasonable for an adversary
-    to give strings that invoke the worst case Node size for prefixes of size
-    @k=0,..,4@.
-
-    Unfortunately for us, this isn't good -- it demonstrates that an adversary
-    can actually invoke a worst case Node size and hence make it impossible for
-    honest people to mint their tokens from the side chain if they
-    unfortunately share the same prefix of the adversary.
-
-    So what does this suggest? This isn't the right way to go. Indeed, this is
-    the motivating reason for why we didn't go with this representation... with
-    the representation here, the probability of breaking the leafs is
-    exponentially small (as strings get larger).
-
- -}
-
-{- Note [Comparison to a Linked List]
- An alternative would be to implement the distributed set would be to implement
- an ordered linked list on chain. As a sketch, you'd have something
- > ... ---> "aaa" ----> "caa" ---> ...
- and to insert a string like "baa", you'd consume the UTxOs with datum "aaa" and "caa" to produce
- > ... ---> "aaa" ----> "baa" ----> "caa" ---> ...
-
- Why did we not want to go this route? Well it actually seems pretty good --
- the only short coming is that the offchain code has no way of figuring out
- where to look when trying to find which UTXO can prove that an element is not
- in the set. So as this system runs on for a couple of decades, offchain would
- have to do a linear search of every single UTXO making this crippling slow as
- the years pass. To remedy this, one would have to implement an extra service
- to maintain an efficient query to the UTXOs onchain.
-
- So if someone wanted to participate in the trustless-sidechain, they would
- have to scan through the entire blockchain to build an trustless-sidechain
- UTXO set which would maintain the efficient query to these linked list nodes.
-
- Honestly, this idea isn't that bad in my opinion :)
- -}

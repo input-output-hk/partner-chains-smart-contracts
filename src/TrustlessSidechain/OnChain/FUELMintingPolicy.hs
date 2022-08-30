@@ -45,7 +45,7 @@ data FUELMint = FUELMint
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams
   , -- | 'fmSidechainParams' is the sidechain parameters
-    fmDsLeafCurrencySymbol :: CurrencySymbol
+    fmDsKeyCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeLift ''FUELMint
@@ -89,16 +89,43 @@ mkMintingPolicy fm mode ctx = case mode of
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
+
+        cborMteHashed = cborMte --  TODO: actually hash this later.
+        dsInserted :: BuiltinByteString
+        dsInserted
+          | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
+            , (tn, _amt) : _ <- AssocMap.toList tns =
+            unTokenName tn
+          | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
+
+        merkleRoot :: RootHash
+        merkleRoot =
+          let go :: [TxInInfo] -> TokenName
+              go (t : ts)
+                | o <- txInInfoResolved t
+                  , Just tns <- AssocMap.lookup mptRootTnCurrencySymbol $ getValue $ txOutValue o
+                  , [(tn, _amt)] <- AssocMap.toList tns =
+                  tn
+                -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
+                -- can be rewritten as
+                -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
+                -- where from
+                -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
+                -- we can be certain there is only ONE distinct TokenName for
+                -- each 'CurrencySymbol'
+                | otherwise = go ts
+              go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
+           in RootHash $ unTokenName $ go $ txInfoInputs info
      in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
+          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
-          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMte)
+          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
   where
     -- Aliases:
     info = scriptContextTxInfo ctx
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
     mptRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
-    dsLeafCurrencySymbol = fmDsLeafCurrencySymbol fm
+    dsKeyCurrencySymbol = fmDsKeyCurrencySymbol fm
     minted = txInfoMint info
 
     fuelAmount :: Integer
@@ -108,35 +135,6 @@ mkMintingPolicy fm mode ctx = case mode of
         , tn == fuelTokenName =
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
-
-    dsInserted :: BuiltinByteString
-    dsInserted
-      | Just tns <- AssocMap.lookup dsLeafCurrencySymbol $ getValue minted
-        , (tn, _amt) : _ <- AssocMap.toList tns =
-        unTokenName tn
-      | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
-
-    merkleRoot :: RootHash
-    merkleRoot =
-      -- N.B. we could use 'PlutusTx.Foldable.asum' but I'm fairly certain
-      -- the strictness of Plutus won't be what we want i.e., it would always
-      -- do a linear scan EVEN if it could terminate early.
-      let go :: [TxInInfo] -> TokenName
-          go (t : ts)
-            | o <- txInInfoResolved t
-              , Just tns <- AssocMap.lookup mptRootTnCurrencySymbol $ getValue $ txOutValue o
-              , [(tn, _amt)] <- AssocMap.toList tns =
-              tn
-            -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
-            -- can be rewritten as
-            -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
-            -- where from
-            -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
-            -- we can be certain there is only ONE distinct TokenName for
-            -- each 'CurrencySymbol'
-            | otherwise = go ts
-          go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
-       in RootHash $ unTokenName $ go $ txInfoInputs info
 
 mintingPolicy :: FUELMint -> MintingPolicy
 mintingPolicy param =

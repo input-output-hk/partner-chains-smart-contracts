@@ -23,9 +23,9 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsConf),
-  DsConfDatum (DsConfDatum, dscLeafPolicy, dscPrefixPolicy),
+  DsConfDatum (DsConfDatum, dscKeyPolicy),
   DsConfMint (DsConfMint, dscmTxOutRef),
-  Node (nPrefix),
+  Node (nKey),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
@@ -97,29 +97,28 @@ initSidechain isp =
                 dsconf = DistributedSet.dsConfCurSymbol $ DsConfMint {dscmTxOutRef = oref}
                 dsm = DistributedSet.dsToDsMint ds
 
-                pmp = DistributedSet.dsPrefixPolicy dsm
+                pmp = DistributedSet.dsKeyPolicy dsm
 
                 -- the prefix policy of the distributed set
-                smDsPrefix = DistributedSet.dsPrefixCurSymbol dsm
-                tnDsPrefix = TokenName $ nPrefix DistributedSet.rootNode
-                astDsPrefix = Value.assetClass smDsPrefix tnDsPrefix
-                valDsPrefix = Value.assetClassValue astDsPrefix 1
-                datDsPrefix = DistributedSet.nodeToDatum DistributedSet.rootNode
+                smDsKey = DistributedSet.dsKeyCurSymbol dsm
+                tnDsKey = TokenName $ nKey DistributedSet.rootNode
+                astDsKey = Value.assetClass smDsKey tnDsKey
+                valDsKey = Value.assetClassValue astDsKey 1
+                datDsKey = DistributedSet.nodeToDatum DistributedSet.rootNode
 
                 -- the config policy of the distributed set
                 cast = Value.assetClass dsconf DistributedSet.dsConfTokenName
                 valConfDs = Value.assetClassValue cast 1
                 datConfDs =
                   DsConfDatum
-                    { dscPrefixPolicy = DistributedSet.dsPrefixCurSymbol dsm
-                    , dscLeafPolicy = DistributedSet.dsLeafCurSymbol dsm
+                    { dscKeyPolicy = DistributedSet.dsKeyCurSymbol dsm
                     , dscFUELPolicy =
                         FUELMintingPolicy.currencySymbol
                           FUELMint
                             { fmMptRootTokenCurrencySymbol =
                                 MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc
                             , fmSidechainParams = sc
-                            , fmDsLeafCurrencySymbol = DistributedSet.dsLeafCurSymbol dsm
+                            , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
                             }
                     }
                 cmp = DistributedSet.dsConfPolicy DsConfMint {dscmTxOutRef = oref}
@@ -143,11 +142,11 @@ initSidechain isp =
                     Prelude.<> Constraints.mustMintValue valCommittee
                     Prelude.<> Constraints.mustPayToTheScript datCommitee valCommittee
                     -- minting the distributed set
-                    Prelude.<> Constraints.mustMintValue valDsPrefix
+                    Prelude.<> Constraints.mustMintValue valDsKey
                     Prelude.<> Constraints.mustPayToOtherScript
                       (DistributedSet.insertValidatorHash ds)
-                      (Datum {getDatum = Class.toBuiltinData datDsPrefix})
-                      valDsPrefix
+                      (Datum {getDatum = Class.toBuiltinData datDsKey})
+                      valDsKey
                     Prelude.<> Constraints.mustMintValue valConfDs
                     Prelude.<> Constraints.mustPayToOtherScript
                       (DistributedSet.dsConfValidatorHash ds)
@@ -157,8 +156,6 @@ initSidechain isp =
             ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
 
             void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-
-            Contract.logInfo $ "Minted " <> Prelude.show valCommittee <> " and paid to script validator"
 
             return sc
 

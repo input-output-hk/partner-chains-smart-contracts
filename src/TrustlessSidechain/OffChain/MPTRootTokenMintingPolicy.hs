@@ -35,9 +35,4 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
             Ledger.unitDatum
             value
 
-  ledgerTx <- Contract.submitTxConstraintsWith @Void lookups tx
-
-  Contract.logInfo @Prelude.String $ "Saving root..."
-  Contract.logInfo $ Prelude.show ledgerTx
-
-  return ledgerTx
+  Contract.submitTxConstraintsWith @Void lookups tx

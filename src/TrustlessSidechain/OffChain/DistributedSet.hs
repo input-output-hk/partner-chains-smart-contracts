@@ -1,14 +1,10 @@
 module TrustlessSidechain.OffChain.DistributedSet where
 
 import Control.Lens.Fold qualified as Fold
-import Control.Lens.Getter qualified as Getter
 import Control.Lens.Indexed qualified as Indexed
 import Control.Lens.Prism (_Right)
 import Control.Lens.Review qualified as Review
-import Control.Lens.Setter qualified as Setter
-import Control.Lens.Tuple qualified as Tuple
 import Data.Default qualified as Default
-import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -25,19 +21,19 @@ import Plutus.ChainIndex (
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Error qualified as Error
-import Plutus.V1.Ledger.Value (TokenName (TokenName, unTokenName))
+import Plutus.V1.Ledger.Value (TokenName (unTokenName), Value (getValue))
 import Plutus.V1.Ledger.Value qualified as Value
-import PlutusPrelude qualified
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Utils qualified as Utils
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (dsConf),
   DsConfDatum,
-  DsDatum (DsDatum, dsBreak, dsOne, dsZero),
+  DsDatum (DsDatum, dsNext),
   DsMint (DsMint, dsmConf, dsmValidatorHash),
-  Node (nBreak, nOne, nPrefix, nZero),
-  PBr,
+  Ib,
+  Node (nNext),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 
@@ -58,52 +54,40 @@ dsToDsMint ds =
   DsMint {dsmConf = dsConf ds, dsmValidatorHash = DistributedSet.insertValidatorHash ds}
 
 {- | 'findDsOutput' finds the transaction which we must insert to
- (if it exists) for the distributed set.
+ (if it exists) for the distributed set. It returns
+ the 'TxOutRef' of the output to spend, the chain index information, the datum
+ at that utxo to spend, and the 'TokenName' of the key of the utxo we want to
+ spend; and finally the new nodes to insert (after replacing the given node)
+
+ N.B. this is linear in the size of the distributed set... one should maintain
+ an efficient offchain index of the utxos, and set up the appropriate actions
+ when the list gets updated by someone else.
 -}
 findDsOutput ::
   forall w s e.
   AsContractError e =>
   Ds ->
   TokenName ->
-  Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
+  Contract w s e (Maybe ((TxOutRef, ChainIndexTxOut, DsDatum, TokenName), Ib Node))
 findDsOutput ds tn =
-  queryTn (TokenName $ nPrefix DistributedSet.rootNode, nBreak DistributedSet.rootNode) >>= \case
-    Nothing -> return Nothing
-    Just v -> fmap Just $ go v
-  where
-    queryUtxos :: TokenName -> Contract w s e (Map TxOutRef ChainIndexTxOut)
-    queryUtxos = Utils.utxosWithCurrency pq . Value.assetClass (DistributedSet.dsPrefixCurSymbol $ dsToDsMint ds)
-
-    queryTn :: (TokenName, PBr) -> Contract w s e (Maybe (TxOutRef, ChainIndexTxOut, DsDatum, TokenName))
-    queryTn (inp, br) =
-      fmap Indexed.itoList (queryUtxos inp) >>= \utxos ->
-        let loop [] = return Nothing
-            loop ((ref, o) : ts)
-              | Just (dat :: DsDatum) <- Class.fromBuiltinData . getDatum =<< Fold.preview (Tx.ciTxOutDatum . _Right) o
-                , dsBreak dat == br
-                , Getter.view Tx.ciTxOutAddress o == DistributedSet.insertAddress ds =
-                return $ Just (ref, o, dat, inp)
-              | otherwise = loop ts
-         in loop utxos
-
-    pq :: PageQuery TxOutRef
-    pq = PageQuery {pageQuerySize = Default.def, pageQueryLastItem = Nothing}
-
-    str :: BuiltinByteString
-    str = unTokenName tn
-
-    go ::
-      (TxOutRef, ChainIndexTxOut, DsDatum, TokenName) ->
-      Contract w s e (TxOutRef, ChainIndexTxOut, DsDatum, TokenName)
-    go inp@(_ref, _o, dat, t) =
-      let n = DistributedSet.mkNode (unTokenName t) dat
-       in PlutusPrelude.join
-            <$> traverse
-              (queryTn . Setter.over Tuple._1 TokenName)
-              (DistributedSet.nextNodePrefix str n)
-            >>= \case
-              Nothing -> return inp
-              Just inp' -> go inp'
+  let go [] = Nothing
+      go ((ref, o) : ts)
+        | Just (dat :: DsDatum) <- Class.fromBuiltinData . getDatum =<< Fold.preview (Tx.ciTxOutDatum . _Right) o
+          , Just vs <- Fold.preview Tx.ciTxOutValue o
+          , -- If it's more clear, the following check can be written as follows
+            -- > , Just [(tn, 1)] <- AssocMap.lookup (DistributedSet.dsKeyCurSymbol $ dsToDsMint ds) $ getValue vs
+            -- by the onchain code.
+            Just ((tn', _) : _) <-
+              fmap AssocMap.toList $
+                AssocMap.lookup
+                  ( DistributedSet.dsKeyCurSymbol $
+                      dsToDsMint ds
+                  )
+                  $ getValue vs
+          , Just nnodes <- DistributedSet.insertNode (unTokenName tn) $ DistributedSet.mkNode (unTokenName tn') dat =
+          Just ((ref, o, dat, tn'), nnodes)
+        | otherwise = go ts
+   in go . Indexed.itoList <$> Contract.utxosAt (DistributedSet.insertAddress ds)
 
 {- | 'findDsConfOutput' finds the utxo which holds the configuration of the
  distributed set.
@@ -130,9 +114,7 @@ findDsConfOutput ds =
 nodeToDatum :: Node -> DsDatum
 nodeToDatum node =
   DsDatum
-    { dsBreak = nBreak node
-    , dsZero = nZero node
-    , dsOne = nOne node
+    { dsNext = nNext node
     }
 
 {- | 'ownTxOutRef' finds a 'TxOutRef' corresponding to 'ownPaymentPubKeyHash'

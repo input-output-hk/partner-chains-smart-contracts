@@ -42,9 +42,10 @@ import TrustlessSidechain.OffChain.Types (
 import TrustlessSidechain.OffChain.Utils qualified as Utils
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsConf),
+  DsConfDatum (dscFUELPolicy, dscKeyPolicy),
   DsConfMint (DsConfMint, dscmTxOutRef),
   DsMint,
-  Node (nPrefix),
+  Node (nKey),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
@@ -104,7 +105,7 @@ burn BurnParams {amount, sidechainParams, recipient} = do
         FUELMint
           { fmSidechainParams = sidechainParams
           , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
-          , fmDsLeafCurrencySymbol = DistributedSet.dsLeafCurSymbol dsm
+          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
           }
       policy = FUELMintingPolicy.mintingPolicy fm
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
@@ -160,33 +161,21 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
         dsm :: DsMint
         dsm = DistributedSet.dsToDsMint ds
 
-        pmp :: MintingPolicy
-        pmp = DistributedSet.dsPrefixPolicy dsm
-
-        lmp :: MintingPolicy
-        lmp = DistributedSet.dsLeafPolicy dsm
+        kmp :: MintingPolicy
+        kmp = DistributedSet.dsKeyPolicy dsm
 
         -- > cborMteHashed = Builtins.blake2b_256 cborMte
         -- > cborMteHashedTn = TokenName cborMteHashed
         cborMteHashed = cborMte
         cborMteHashedTn = TokenName cborMteHashed
-
-        -- this is the string we are actually checking if it is in the
-        -- distributed set.
-        str = cborMte
      in findMPTRootToken sidechainParams root >>= \case
           [] -> Contract.throwError "error FUELMintingPolicy: no MPT root token UTxO found"
           mptUtxo : _ ->
             DistributedSet.findDsConfOutput ds >>= \(confRef, confO, confDat) ->
               DistributedSet.findDsOutput ds cborMteHashedTn >>= \case
                 Nothing -> Contract.throwError "error FUELMintingPolicy: no distributed set output found"
-                Just (nodeRef, oNode, datNode, tnNode) -> do
-                  Contract.logInfo @Prelude.String $ "mpt"
-                  Contract.logInfo @Prelude.String $ Prelude.show mptUtxo
-                  Contract.logInfo @Prelude.String $ "conf ds output"
-                  Contract.logInfo @Prelude.String $ Prelude.show confRef
-                  Contract.logInfo @Prelude.String $ "ds output"
-                  Contract.logInfo @Prelude.String $ Prelude.show nodeRef
+                Just ((nodeRef, oNode, datNode, tnNode), nodes) -> do
+                  -- These lines are useful for debugging..
 
                   let -- Variables for the FUEL minting policy
                       -----------------------------------
@@ -194,7 +183,7 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                         FUELMint
                           { fmSidechainParams = sidechainParams
                           , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
-                          , fmDsLeafCurrencySymbol = DistributedSet.dsLeafCurSymbol dsm
+                          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
                           }
                       fuelPolicy = FUELMintingPolicy.mintingPolicy fm
                       value = Value.singleton (Ledger.scriptCurrencySymbol fuelPolicy) "FUEL" amount
@@ -212,7 +201,6 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                       -- Variables for the distributed set
                       -----------------------------------
                       node = DistributedSet.mkNode (unTokenName tnNode) datNode
-                      nodes = DistributedSet.insertNode cborMteHashed node
                       nodeRedeemer = Redeemer $ Class.toBuiltinData ()
 
                       -- Building the transaction...
@@ -224,8 +212,7 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                           -----------------------------------
                           Prelude.<> Constraints.unspentOutputs (Map.singleton nodeRef oNode)
                           Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
-                          Prelude.<> Constraints.mintingPolicy pmp
-                          Prelude.<> Constraints.mintingPolicy lmp
+                          Prelude.<> Constraints.mintingPolicy kmp
                           Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
                           -- TODO: the following line should be removed with reference inputs:
                           Prelude.<> Constraints.otherScript mptRootTokenValidator
@@ -241,17 +228,11 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                           , Constraints.mustBeSignedBy ownPkhHash
                           , -- Constraints for the distributed set
                             Constraints.mustSpendScriptOutput nodeRef nodeRedeemer
-                          , Constraints.mustMintValue
-                              ( Value.singleton
-                                  (DistributedSet.dsLeafCurSymbol dsm)
-                                  (TokenName {unTokenName = str})
-                                  1
-                              )
                           , flip (Fold.foldMapOf Fold.folded) nodes $
                               \n ->
-                                let nTn = TokenName $ nPrefix n
-                                    val = Value.singleton (DistributedSet.dsPrefixCurSymbol dsm) nTn 1
-                                 in if unTokenName nTn == nPrefix node
+                                let nTn = TokenName $ nKey n
+                                    val = Value.singleton (DistributedSet.dsKeyCurSymbol dsm) nTn 1
+                                 in if unTokenName nTn == nKey node
                                       then
                                         Constraints.mustPayToTheScript
                                           (DistributedSet.nodeToDatum n)
@@ -273,14 +254,13 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                               -- TODO: end of lines that should be removed with reference inputs
                           ]
 
-                  Contract.logInfo @Prelude.String $ "Original node"
-                  Contract.logInfo $ Prelude.show node
-                  Contract.logInfo @Prelude.String $ "New nodes:"
-                  Contract.logInfo $ Prelude.show nodes
+                  -- This check is important so all participants can
+                  -- independently verify that the system has been set up
+                  -- correctly.
+                  unless
+                    ( dscKeyPolicy confDat == DistributedSet.dsKeyCurSymbol dsm
+                        && dscFUELPolicy confDat == FUELMintingPolicy.currencySymbol fm
+                    )
+                    $ Contract.throwError "error FUELMintingPolicy: misconfigured distributed set"
 
-                  ledgerTx <- Contract.submitTxConstraintsWith @Ds lookups tx
-
-                  Contract.logInfo @Prelude.String $ "Transaction: "
-                  Contract.logInfo $ Prelude.show ledgerTx
-
-                  return ledgerTx
+                  Contract.submitTxConstraintsWith @Ds lookups tx
