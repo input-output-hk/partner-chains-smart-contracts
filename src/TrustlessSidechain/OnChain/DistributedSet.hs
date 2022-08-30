@@ -52,15 +52,12 @@ newtype Ds = Ds
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
--- | 'DSDatum' is the datum in the distributed set. See: Note [How This All Works]
+-- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
-instance Eq DsDatum where
-  {-# INLINEABLE (==) #-}
-  a == b = dsNext a == dsNext b
+  deriving newtype (Eq)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
@@ -102,11 +99,8 @@ instance Eq a => Eq (Ib a) where
 instance Prelude.Foldable Ib where
   foldMap f (Ib a b) = f a Prelude.<> f b
 
-{- | 'DsConfMint' is the parameter for the NFT to initialize the distributed set.
- Note that 'ConfPolicy' allows one to mint a family of distinct NFTs
- from a single 'TxOutRef'.
-
- See 'mkDsConfPolicy' for more details.
+{- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
+ set. See 'mkDsConfPolicy' for more details.
 -}
 newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
 
@@ -131,6 +125,7 @@ data DsMint = DsMint
  otherwise.
  TODO: Using inline datum is probably a good idea for this.
 -}
+{-# INLINEABLE unsafeGetDatum #-}
 unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxInfo -> TxOut -> a
 unsafeGetDatum info o
   | Just dhash <- txOutDatumHash o
@@ -141,6 +136,7 @@ unsafeGetDatum info o
 {- | 'getConf' gets the config associated with a distributed set and throws an
  error if it does not exist.
 -}
+{-# INLINEABLE getConf #-}
 getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
 getConf currencySymbol info = go $ txInfoInputs info
   where
@@ -181,7 +177,7 @@ PlutusTx.makeLift ''DsConfDatum
 
 {- Note [How This all Works]
 
-    We briefly describre how this all works. We want the following operation:
+    We briefly describe how this all works. We want the following operations:
 
         * A method to prove that a message digest (image of a hash function)
         has never been put in this set before, and
@@ -375,17 +371,11 @@ insertNode str node
 mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
-      -- the total number tokens which are prefixes is @1 + the number of
-      -- minted tokens@ since we know that there is only one input with this
-      -- token.
-      --
-      -- In erroneous cases, we return @-1@ which will always be @False@ in the
-      -- above predicate
       let ownNode :: Node
           ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
 
           nNodes :: Ib Node
-          nNodes = case insertNode nStr ownNode of
+          !nNodes = case insertNode nStr ownNode of
             Just x -> x
             Nothing -> traceError "error 'mkInsertValidator' bad insertion"
 
@@ -404,6 +394,12 @@ mkInsertValidator ds _dat _red ctx =
                           go [] = []
                        in go (txInfoOutputs info)
 
+          -- the total number tokens which are prefixes is @1 + the number of
+          -- minted tokens@ since we know that there is only one input with this
+          -- token.
+          --
+          -- In erroneous cases, we return @-1@ which will always be @False@ in the
+          -- above predicate
           totalKeys :: Integer
           totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
             Just mp
