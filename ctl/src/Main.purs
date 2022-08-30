@@ -2,18 +2,38 @@ module Main (main) where
 
 import Contract.Prelude
 
+import CommitteCandidateValidator (getCommitteeCandidateValidator)
 import CommitteCandidateValidator as CommitteCandidateValidator
-import Contract.Address (ownPaymentPubKeyHash)
+import Contract.Address
+  ( addressToBech32
+  , getNetworkId
+  , ownPaymentPubKeyHash
+  , validatorHashEnterpriseAddress
+  )
 import Contract.Config (testnetConfig)
-import Contract.Monad (ConfigParams, launchAff_, liftedM, runContract)
+import Contract.Log (logInfo')
+import Contract.Monad
+  ( ConfigParams
+  , Contract
+  , launchAff_
+  , liftContractM
+  , liftedM
+  , runContract
+  )
+import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
+-- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
-  { walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing) }
 
+  { logLevel = Info
+  , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
+  }
+
+-- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
   opts ← getOptions
@@ -50,3 +70,18 @@ main = do
             { sidechainParams: opts.scParams
             , spoPubKey
             }
+      GetAddrs → do
+        printAddr "CommitteCandidateValidator"
+          (getCommitteeCandidateValidator opts.scParams)
+
+-- | Print the bech32 serialised address of a given validator
+printAddr ∷ String → Contract () Validator → Contract () Unit
+printAddr name getValidator = do
+  netId ← getNetworkId
+  v ← getValidator
+  addr ← liftContractM ("Cannot get " <> name <> " address") $
+    validatorHashEnterpriseAddress
+      netId
+      (validatorHash v)
+  serialised ← addressToBech32 addr
+  logInfo' $ name <> " address: " <> serialised
