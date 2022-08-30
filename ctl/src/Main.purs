@@ -10,8 +10,9 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (getOptions)
 import Options.Types (Endpoint(..), Options)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
+import SidechainParams (SidechainParams)
 
-toConfig ∷ Options → ConfigParams ()
+toConfig ∷ Options SidechainParams → ConfigParams ()
 toConfig { skey } = testnetConfig
   { walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing) }
 

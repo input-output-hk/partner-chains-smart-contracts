@@ -1,4 +1,4 @@
-module Options.Types (Options(..), Endpoint(..), Options'(..)) where
+module Options.Types (Options(..), Endpoint(..), ScParams(..)) where
 
 import Contract.Prelude
 
@@ -7,17 +7,17 @@ import Contract.Transaction (TransactionInput)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 
-type Options =
-  { scParams ∷ SidechainParams
+type Options a =
+  { scParams ∷ a
   , skey ∷ String
   , endpoint ∷ Endpoint
   }
 
-type Options' =
-  { scParamsFile ∷ FilePath
-  , skey ∷ String
-  , endpoint ∷ Endpoint
-  }
+data ScParams = Value SidechainParams | ConfigFile FilePath
+
+derive instance Generic ScParams _
+instance Show ScParams where
+  show = genericShow
 
 data Endpoint
   = MintAct { amount ∷ Int }

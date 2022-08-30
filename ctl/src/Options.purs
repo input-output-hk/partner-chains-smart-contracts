@@ -10,7 +10,6 @@ import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Effect.Exception (error, throwException)
-import Node.Path (FilePath)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -32,11 +31,11 @@ import Options.Applicative
   , str
   )
 import Options.Applicative.Types (readerAsk)
-import Options.Types (Endpoint(..), Options, Options')
+import Options.Types (Endpoint(..), Options, ScParams(..))
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-options ∷ ParserInfo (Either Options Options')
+options ∷ ParserInfo (Options ScParams)
 options = info (helper <*> optSpec) fullDesc
   where
   optSpec =
@@ -68,14 +67,11 @@ options = info (helper <*> optSpec) fullDesc
       , action "file"
       ]
 
-    scParams' ← scParamsSpec
+    scParams ← scParamsSpec
 
     endpoint ← endpointParser
 
-    in
-      case scParams' of
-        Left scParams → Left { skey, scParams, endpoint }
-        Right scParamsFile → Right { skey, scParamsFile, endpoint }
+    in { skey, scParams, endpoint }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
@@ -158,7 +154,7 @@ options = info (helper <*> optSpec) fullDesc
       , help "Input UTxO to be spent with the first committee hash setup"
       ]
     in
-      Left $ SidechainParams
+      Value $ SidechainParams
         { chainId: BigInt.fromInt chainId
         , genesisHash
         , genesisMint
@@ -178,22 +174,23 @@ options = info (helper <*> optSpec) fullDesc
     , help "Amount of FUEL token to be burnt/minted"
     ]
 
-getOptions ∷ Effect Options
+getOptions ∷ Effect (Options SidechainParams)
 getOptions = do
-  opt' ← execParser options
-  case opt' of
-    Left opt → pure opt
-    Right opt → do
-      json' ← readJson opt.scParamsFile
-      case json' of
-        Left e → throwException $ error e
-        Right json → case decodeSidechainParams json of
-          Left e → throwException $ error $ show e
-          Right scParams → pure
-            { scParams: scParams
-            , skey: opt.skey
-            , endpoint: opt.endpoint
-            }
+  opt ← execParser options
+  case opt.scParams of
+    Value params → unwrap opt params
+    ConfigFile loc → readAndParseJsonFrom opt loc
+
+  where
+  unwrap opt params = pure $ opt { scParams = params }
+
+  readAndParseJsonFrom opt loc = do
+    json' ← readJson loc
+    case json' of
+      Left e → throwException $ error e
+      Right json → case decodeSidechainParams json of
+        Left e → throwException $ error $ show e
+        Right scParams → pure $ opt { scParams = scParams }
 
 transactionInput ∷ ReadM TransactionInput
 transactionInput = maybeReader $ \txIn →
@@ -207,8 +204,8 @@ transactionInput = maybeReader $ \txIn →
           }
     _ → Nothing
 
-scParamsConfigFile ∷ ReadM (Either SidechainParams FilePath)
-scParamsConfigFile = Right <$> readerAsk
+scParamsConfigFile ∷ ReadM ScParams
+scParamsConfigFile = ConfigFile <$> readerAsk
 
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray

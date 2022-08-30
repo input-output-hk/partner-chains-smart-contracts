@@ -44,14 +44,14 @@ scParamsExample =
         }
     }
 
-optExample ∷ Options
+optExample ∷ Options SidechainParams
 optExample =
   { scParams: scParamsExample
   , skey: "skey"
   , endpoint: MintAct { amount: 2 }
   }
 
-decodeOptions ∷ J.Json → Either CA.JsonDecodeError Options
+decodeOptions ∷ J.Json → Either CA.JsonDecodeError (Options SidechainParams)
 decodeOptions = CA.decode optionsCodec
 
 decodeSidechainParams ∷ J.Json → Either CA.JsonDecodeError SidechainParams

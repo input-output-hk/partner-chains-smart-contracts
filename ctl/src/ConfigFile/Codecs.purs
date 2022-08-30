@@ -28,7 +28,7 @@ import SidechainParams (SidechainParams(..))
 import Type.Proxy (Proxy(..))
 import Types.Transaction (TransactionInput(TransactionInput))
 
-optionsCodec ∷ CA.JsonCodec Options
+optionsCodec ∷ CA.JsonCodec (Options SidechainParams)
 optionsCodec =
   CA.object "Options"
     ( CAR.record
