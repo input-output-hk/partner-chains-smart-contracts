@@ -375,7 +375,7 @@ mkInsertValidator ds _dat _red ctx =
           ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
 
           nNodes :: Ib Node
-          !nNodes = case insertNode nStr ownNode of
+          nNodes = case insertNode nStr ownNode of
             Just x -> x
             Nothing -> traceError "error 'mkInsertValidator' bad insertion"
 
