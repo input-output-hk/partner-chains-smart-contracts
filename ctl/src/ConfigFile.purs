@@ -25,14 +25,14 @@ import Options.Types (Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.Transaction (TransactionInput(TransactionInput))
 
-test :: Effect String
+test ∷ Effect String
 test = do
-  json'' <- readJson "./sc-params.json"
+  json'' ← readJson "./sc-params.json"
   case json'' of
-    Left e -> pure $ e
-    Right json -> pure $ show $ decodeSidechainParams json
+    Left e → pure $ e
+    Right json → pure $ show $ decodeSidechainParams json
 
-scParamsExample :: SidechainParams
+scParamsExample ∷ SidechainParams
 scParamsExample =
   SidechainParams
     { chainId: BInt.fromInt 1
@@ -44,18 +44,18 @@ scParamsExample =
         }
     }
 
-optExample :: Options
+optExample ∷ Options
 optExample =
   { scParams: scParamsExample
   , skey: "skey"
   , endpoint: MintAct { amount: 2 }
   }
 
-decodeOptions :: J.Json -> Either CA.JsonDecodeError Options
+decodeOptions ∷ J.Json → Either CA.JsonDecodeError Options
 decodeOptions = CA.decode optionsCodec
 
-decodeSidechainParams :: J.Json -> Either CA.JsonDecodeError SidechainParams
+decodeSidechainParams ∷ J.Json → Either CA.JsonDecodeError SidechainParams
 decodeSidechainParams = CA.decode scParamsCodec
 
-readJson :: FilePath -> Effect (Either String J.Json)
+readJson ∷ FilePath → Effect (Either String J.Json)
 readJson path = jsonParser <$> (Buff.toString ASCII =<< readFile path)

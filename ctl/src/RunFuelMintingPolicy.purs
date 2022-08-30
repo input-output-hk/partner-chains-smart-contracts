@@ -53,7 +53,7 @@ runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
 runFuelMP fp sp = do
   fuelMP ← fuelMintingPolicy sp
 
-  cs <- maybe (throwContractError "Cannot get currency symbol") pure $
+  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
     Value.scriptCurrencySymbol
       fuelMP
   logInfo' (show (toData sp))

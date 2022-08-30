@@ -36,7 +36,7 @@ import Options.Types (Endpoint(..), Options, Options')
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-options :: ParserInfo (Either Options Options')
+options ∷ ParserInfo (Either Options Options')
 options = info (helper <*> optSpec) fullDesc
   where
   optSpec =
@@ -60,7 +60,7 @@ options = info (helper <*> optSpec) fullDesc
       ]
 
   withCommonOpts endpointParser = ado
-    skey <- option str $ fold
+    skey ← option str $ fold
       [ short 'k'
       , long "signing-key-file"
       , metavar "/absolute/path/to/skey"
@@ -68,20 +68,20 @@ options = info (helper <*> optSpec) fullDesc
       , action "file"
       ]
 
-    scParams' <- scParamsSpec
+    scParams' ← scParamsSpec
 
-    endpoint <- endpointParser
+    endpoint ← endpointParser
 
     in
       case scParams' of
-        Left scParams -> Left { skey, scParams, endpoint }
-        Right scParamsFile -> Right { skey, scParamsFile, endpoint }
+        Left scParams → Left { skey, scParams, endpoint }
+        Right scParamsFile → Right { skey, scParamsFile, endpoint }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
   burnSpec = ado
-    amount <- parseAmount
-    recipient <- option str $ fold
+    amount ← parseAmount
+    recipient ← option str $ fold
       [ long "recipient"
       , metavar "PUBLIC_KEY_HASH"
       , help "Public key hash of the sidechain recipient"
@@ -89,23 +89,23 @@ options = info (helper <*> optSpec) fullDesc
     in BurnAct { amount, recipient }
 
   regSpec = ado
-    spoPubKey <- parseSpoPubKey
-    sidechainPubKey <- option byteArray $ fold
+    spoPubKey ← parseSpoPubKey
+    sidechainPubKey ← option byteArray $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
       , help "Sidechain public key"
       ]
-    spoSig <- option byteArray $ fold
+    spoSig ← option byteArray $ fold
       [ long "spo-signature"
       , metavar "SIGNATURE"
       , help "SPO signature"
       ]
-    sidechainSig <- option byteArray $ fold
+    sidechainSig ← option byteArray $ fold
       [ long "sidechain-signature"
       , metavar "SIGNATURE"
       , help "Sidechain signature"
       ]
-    inputUtxo <- option transactionInput $ fold
+    inputUtxo ← option transactionInput $ fold
       [ long "registration-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the commitee candidate registration"
@@ -131,27 +131,27 @@ options = info (helper <*> optSpec) fullDesc
     ]
 
   scParamsSpecCLI = ado
-    chainId <- option int $ fold
+    chainId ← option int $ fold
       [ short 'i'
       , long "chain-id"
       , metavar "1"
       , help "Sidechain ID"
       ]
 
-    genesisHash <- option byteArray $ fold
+    genesisHash ← option byteArray $ fold
       [ short 'h'
       , long "genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
       ]
 
-    genesisMint <- optional $ option transactionInput $ fold
+    genesisMint ← optional $ option transactionInput $ fold
       [ short 'm'
       , long "genesis-mint-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the genesis mint"
       ]
-    genesisUtxo <- option transactionInput $ fold
+    genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
       , metavar "TX_ID#TX_IDX"
@@ -180,37 +180,37 @@ options = info (helper <*> optSpec) fullDesc
 
 getOptions ∷ Effect Options
 getOptions = do
-  opt' <- execParser options
+  opt' ← execParser options
   case opt' of
-    Left opt -> pure opt
-    Right opt -> do
-      json' <- readJson opt.scParamsFile
+    Left opt → pure opt
+    Right opt → do
+      json' ← readJson opt.scParamsFile
       case json' of
-        Left e -> throwException $ error e
-        Right json -> case decodeSidechainParams json of
-          Left e -> throwException $ error $ show e
-          Right scParams -> pure
+        Left e → throwException $ error e
+        Right json → case decodeSidechainParams json of
+          Left e → throwException $ error $ show e
+          Right scParams → pure
             { scParams: scParams
             , skey: opt.skey
             , endpoint: opt.endpoint
             }
 
-transactionInput :: ReadM TransactionInput
-transactionInput = maybeReader $ \txIn ->
+transactionInput ∷ ReadM TransactionInput
+transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
-    [ txId, txIdx ] -> ado
-      index <- UInt.fromString txIdx
+    [ txId, txIdx ] → ado
+      index ← UInt.fromString txIdx
       in
         TransactionInput
           { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
           , index
           }
-    _ -> Nothing
+    _ → Nothing
 
-scParamsConfigFile :: ReadM (Either SidechainParams FilePath)
+scParamsConfigFile ∷ ReadM (Either SidechainParams FilePath)
 scParamsConfigFile = do
-  s <- readerAsk
+  s ← readerAsk
   pure $ Right s
 
-byteArray :: ReadM ByteArray
+byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray

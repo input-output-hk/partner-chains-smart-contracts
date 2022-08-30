@@ -28,7 +28,7 @@ import SidechainParams (SidechainParams(..))
 import Type.Proxy (Proxy(..))
 import Types.Transaction (TransactionInput(TransactionInput))
 
-optionsCodec :: CA.JsonCodec Options
+optionsCodec ∷ CA.JsonCodec Options
 optionsCodec =
   CA.object "Options"
     ( CAR.record
@@ -38,7 +38,7 @@ optionsCodec =
         }
     )
 
-scParamsCodec :: CA.JsonCodec SidechainParams
+scParamsCodec ∷ CA.JsonCodec SidechainParams
 scParamsCodec = wrapIso SidechainParams
   ( CAR.object "SidechainParams"
       { chainId: bigIntCodec
@@ -48,7 +48,7 @@ scParamsCodec = wrapIso SidechainParams
       }
   )
 
-endpointCodec :: CA.JsonCodec Endpoint
+endpointCodec ∷ CA.JsonCodec Endpoint
 endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
   { mintAct: Right mintCodec
   , burnAct: Right burnCodec
@@ -71,19 +71,19 @@ endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
     , committeeCandidateDereg: CommitteeCandidateDereg
     }
 
-  mintCodec :: CA.JsonCodec { amount :: Int }
+  mintCodec ∷ CA.JsonCodec { amount ∷ Int }
   mintCodec = CAR.object "mint" { amount: CA.int }
 
-  burnCodec :: CA.JsonCodec { amount :: Int, recipient :: String }
+  burnCodec ∷ CA.JsonCodec { amount ∷ Int, recipient ∷ String }
   burnCodec = CAR.object "burn" { amount: CA.int, recipient: CA.string }
 
-  committeeCandidateRegCodec ::
+  committeeCandidateRegCodec ∷
     CA.JsonCodec
-      { spoPubKey :: PubKey
-      , sidechainPubKey :: PubKey
-      , spoSig :: Signature
-      , sidechainSig :: Signature
-      , inputUtxo :: TransactionInput
+      { spoPubKey ∷ PubKey
+      , sidechainPubKey ∷ PubKey
+      , spoSig ∷ Signature
+      , sidechainSig ∷ Signature
+      , inputUtxo ∷ TransactionInput
       }
   committeeCandidateRegCodec = CAR.object "committeeCandidateReg"
     { spoPubKey: pubKeyCodec
@@ -93,40 +93,40 @@ endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
     , inputUtxo: transactionInputCodec
     }
 
-  committeeCandidateDeregCodec :: CA.JsonCodec { spoPubKey :: PubKey }
+  committeeCandidateDeregCodec ∷ CA.JsonCodec { spoPubKey ∷ PubKey }
   committeeCandidateDeregCodec = CAR.object "committeeCandidateDereg"
     { spoPubKey: pubKeyCodec }
 
-pubKeyCodec :: CA.JsonCodec PubKey
+pubKeyCodec ∷ CA.JsonCodec PubKey
 pubKeyCodec = byteArrayCodec
 
-signatureCodec :: CA.JsonCodec Signature
+signatureCodec ∷ CA.JsonCodec Signature
 signatureCodec = byteArrayCodec
 
-byteArrayCodec :: CA.JsonCodec ByteArray
+byteArrayCodec ∷ CA.JsonCodec ByteArray
 byteArrayCodec = CA.prismaticCodec "ByteArray" hexToByteArray byteArrayToHex
   CA.string
 
-bigIntCodec :: CA.JsonCodec BigInt
+bigIntCodec ∷ CA.JsonCodec BigInt
 bigIntCodec = CA.prismaticCodec "BigInt" BInt.fromString BInt.toString CA.string
 
-transactionInputCodec :: CA.JsonCodec TransactionInput
+transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string
   where
   toF txIn =
     case split (Pattern "#") txIn of
-      [ txId, txIdx ] -> ado
-        index <- UInt.fromString txIdx
+      [ txId, txIdx ] → ado
+        index ← UInt.fromString txIdx
         in
           TransactionInput
             { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
             , index
             }
-      _ -> Nothing
+      _ → Nothing
 
-  fromF :: TransactionInput -> String
+  fromF ∷ TransactionInput → String
   fromF (TransactionInput txIn) = indexStr <> "#" <> txHashStr
     where
     indexStr = show txIn.index
     txHashStr = case txIn.transactionId of
-      TransactionHash x -> byteArrayToHex x
+      TransactionHash x → byteArrayToHex x

@@ -8,28 +8,28 @@ import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 
 type Options =
-  { scParams :: SidechainParams
-  , skey :: String
-  , endpoint :: Endpoint
+  { scParams ∷ SidechainParams
+  , skey ∷ String
+  , endpoint ∷ Endpoint
   }
 
 type Options' =
-  { scParamsFile :: FilePath
-  , skey :: String
-  , endpoint :: Endpoint
+  { scParamsFile ∷ FilePath
+  , skey ∷ String
+  , endpoint ∷ Endpoint
   }
 
 data Endpoint
-  = MintAct { amount :: Int }
-  | BurnAct { amount :: Int, recipient :: String }
+  = MintAct { amount ∷ Int }
+  | BurnAct { amount ∷ Int, recipient ∷ String }
   | CommitteeCandidateReg
-      { spoPubKey :: PubKey
-      , sidechainPubKey :: PubKey
-      , spoSig :: Signature
-      , sidechainSig :: Signature
-      , inputUtxo :: TransactionInput
+      { spoPubKey ∷ PubKey
+      , sidechainPubKey ∷ PubKey
+      , spoSig ∷ Signature
+      , sidechainSig ∷ Signature
+      , inputUtxo ∷ TransactionInput
       }
-  | CommitteeCandidateDereg { spoPubKey :: PubKey }
+  | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
 
 derive instance Generic Endpoint _
 
