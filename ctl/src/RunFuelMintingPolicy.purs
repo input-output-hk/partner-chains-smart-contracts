@@ -48,7 +48,6 @@ data FuelParams
   = Mint { amount ∷ Int, recipient ∷ PaymentPubKeyHash }
   | Burn { amount ∷ Int, recipient ∷ String }
 
--- it's a limitation of plutus server that we cannot use stake addresses so ignore the custom warning
 runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
 runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
