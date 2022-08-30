@@ -1,4 +1,4 @@
-module Config.Codecs
+module ConfigFile.Codecs
   ( optionsCodec
   , scParamsCodec
   ) where

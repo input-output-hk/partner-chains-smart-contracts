@@ -1,4 +1,4 @@
-module Config
+module ConfigFile
   ( readJson
   , optExample
   , scParamsExample
@@ -9,13 +9,12 @@ module Config
 
 import Contract.Prelude
 
-import Config.Codecs (optionsCodec, scParamsCodec)
+import ConfigFile.Codecs (optionsCodec, scParamsCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash(..))
 import Data.Argonaut.Core as J
 import Data.Argonaut.Parser (jsonParser)
 import Data.BigInt as BInt
-import Data.Codec.Argonaut (decode)
 import Data.Codec.Argonaut as CA
 import Data.UInt as UInt
 import Node.Buffer.Class as Buff
@@ -26,12 +25,12 @@ import Options.Types (Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.Transaction (TransactionInput(TransactionInput))
 
-test :: Effect String --(Either CA.JsonDecodeError String)
+test :: Effect String
 test = do
-  json' <- readJson "config.json"
-  case json' of
-    Left str -> pure $ str
-    Right json -> pure $ show $ decode optionsCodec json
+  json'' <- readJson "./sc-params.json"
+  case json'' of
+    Left e -> pure $ e
+    Right json -> pure $ show $ decodeSidechainParams json
 
 scParamsExample :: SidechainParams
 scParamsExample =
@@ -59,5 +58,4 @@ decodeSidechainParams :: J.Json -> Either CA.JsonDecodeError SidechainParams
 decodeSidechainParams = CA.decode scParamsCodec
 
 readJson :: FilePath -> Effect (Either String J.Json)
-readJson path =
-  readFile path >>= Buff.toString ASCII >>= (\x -> pure $ jsonParser x)
+readJson path = jsonParser <$> (Buff.toString ASCII =<< readFile path)

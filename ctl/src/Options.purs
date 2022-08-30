@@ -2,11 +2,15 @@ module Options (getOptions) where
 
 import Contract.Prelude
 
+import ConfigFile (decodeSidechainParams, readJson)
 import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Control.Alt ((<|>))
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
+import Effect.Exception (error, throwException)
+import Node.Path (FilePath)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -27,11 +31,12 @@ import Options.Applicative
   , short
   , str
   )
-import Options.Types (Endpoint(..), Options)
+import Options.Applicative.Types (readerAsk)
+import Options.Types (Endpoint(..), Options, Options')
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-options :: ParserInfo Options
+options :: ParserInfo (Either Options Options')
 options = info (helper <*> optSpec) fullDesc
   where
   optSpec =
@@ -63,10 +68,14 @@ options = info (helper <*> optSpec) fullDesc
       , action "file"
       ]
 
-    scParams <- scParamsSpec
+    scParams' <- scParamsSpec
 
     endpoint <- endpointParser
-    in { skey, scParams, endpoint }
+
+    in
+      case scParams' of
+        Left scParams -> Left { skey, scParams, endpoint }
+        Right scParamsFile -> Right { skey, scParamsFile, endpoint }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
@@ -112,7 +121,16 @@ options = info (helper <*> optSpec) fullDesc
 
   deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
 
-  scParamsSpec = ado
+  scParamsSpec = scParamsSpecCLI <|> scParamsSpecConfigFile
+
+  scParamsSpecConfigFile = option scParamsConfigFile $ fold
+    [ short 'f'
+    , long "sc-config-file"
+    , metavar "./FILEPATH"
+    , help "Sidechain Spec. Config File."
+    ]
+
+  scParamsSpecCLI = ado
     chainId <- option int $ fold
       [ short 'i'
       , long "chain-id"
@@ -140,7 +158,7 @@ options = info (helper <*> optSpec) fullDesc
       , help "Input UTxO to be spent with the first committee hash setup"
       ]
     in
-      SidechainParams
+      Left $ SidechainParams
         { chainId: BigInt.fromInt chainId
         , genesisHash
         , genesisMint
@@ -161,8 +179,21 @@ options = info (helper <*> optSpec) fullDesc
     ]
 
 getOptions ∷ Effect Options
-getOptions =
-  execParser options
+getOptions = do
+  opt' <- execParser options
+  case opt' of
+    Left opt -> pure opt
+    Right opt -> do
+      json' <- readJson opt.scParamsFile
+      case json' of
+        Left e -> throwException $ error e
+        Right json -> case decodeSidechainParams json of
+          Left e -> throwException $ error $ show e
+          Right scParams -> pure
+            { scParams: scParams
+            , skey: opt.skey
+            , endpoint: opt.endpoint
+            }
 
 transactionInput :: ReadM TransactionInput
 transactionInput = maybeReader $ \txIn ->
@@ -175,6 +206,11 @@ transactionInput = maybeReader $ \txIn ->
           , index
           }
     _ -> Nothing
+
+scParamsConfigFile :: ReadM (Either SidechainParams FilePath)
+scParamsConfigFile = do
+  s <- readerAsk
+  pure $ Right s
 
 byteArray :: ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray

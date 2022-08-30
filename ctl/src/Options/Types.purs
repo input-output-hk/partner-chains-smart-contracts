@@ -1,19 +1,20 @@
-module Options.Types (Options(..), Endpoint(..)) where
+module Options.Types (Options(..), Endpoint(..), Options'(..)) where
 
-import Aeson
-import Contract.Aeson
 import Contract.Prelude
 
-import Aeson.Decode as Decode
-import Aeson.Encode ((>$<))
-import Aeson.Encode as Encode
 import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Transaction (TransactionInput)
-import Control.Lazy (defer)
+import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 
 type Options =
   { scParams :: SidechainParams
+  , skey :: String
+  , endpoint :: Endpoint
+  }
+
+type Options' =
+  { scParamsFile :: FilePath
   , skey :: String
   , endpoint :: Endpoint
   }
