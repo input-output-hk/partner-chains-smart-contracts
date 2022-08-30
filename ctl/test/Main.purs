@@ -50,9 +50,11 @@ mintAndBurnScenario = do
       , genesisMint: Just genesisMint
       , genesisUtxo: toTxIn "aabbcc" 0
       }
-  runFuelMP (Mint { amount: 5, recipient: pk }) scParams
-  runFuelMP (Burn { amount: 2, recipient: "someaddress" }) scParams
-  runFuelMP (Burn { amount: 3, recipient: "someaddress" }) scParams
+  runFuelMP scParams (Mint { amount: 5, recipient: pk })
+  runFuelMP scParams
+    (Burn { amount: 2, recipient: hexToByteArrayUnsafe "aabbcc" })
+  runFuelMP scParams
+    (Burn { amount: 3, recipient: hexToByteArrayUnsafe "aabbcc" })
 
 registerAndDeregisterScenario ∷ Contract () Unit
 registerAndDeregisterScenario = do

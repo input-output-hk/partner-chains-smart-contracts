@@ -1,25 +1,11 @@
 module MPTRoot where
 
+import Contract.Prelude
+
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData, unitDatum)
-import Contract.Prelude
-  ( class Generic
-  , Unit
-  , Void
-  , bind
-  , discard
-  , negate
-  , one
-  , show
-  , wrap
-  , zero
-  , (<$>)
-  , (<>)
-  , (=<<)
-  , (>>>)
-  )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
@@ -29,6 +15,10 @@ import Contract.Scripts
   , validatorHash
   )
 import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
+import Contract.TextEnvelope
+  ( TextEnvelopeType(PlutusScriptV2)
+  , textEnvelopeBytes
+  )
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
@@ -79,15 +69,15 @@ instance ToData SaveRootParams where
     , toData committeePubKeys
     ]
 
-rootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
-rootTokenMintingPolicy sp = do
+getRootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getRootTokenMintingPolicy sp = do
   mptRootMP ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
     rawMPTRootTokenMintingPolicy
     PlutusScriptV2
   liftedE (applyArgs mptRootMP [ toData sp ])
 
-rootTokenValidator ∷ SidechainParams → Contract () Validator
-rootTokenValidator sp = do
+getRootTokenValidator ∷ SidechainParams → Contract () Validator
+getRootTokenValidator sp = do
   mptRootVal ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
     rawMPTRootTokenValidator
     PlutusScriptV2
@@ -98,10 +88,10 @@ saveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, threshold, signatures, committeePubKeys }
   ) = do
-  rootTokenMP ← rootTokenMintingPolicy sidechainParams
+  rootTokenMP ← getRootTokenMintingPolicy sidechainParams
   rootTokenCS ← liftContractM "Cannot get currency symbol"
     (Value.scriptCurrencySymbol rootTokenMP)
-  rootTokenVal ← rootTokenValidator sidechainParams
+  rootTokenVal ← getRootTokenValidator sidechainParams
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii merkleRoot)
   let
@@ -118,8 +108,7 @@ saveRoot
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  --bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
-  bsTx ← balanceAndSignTx ubTx
+  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
   logInfo' ("Submitted saveRoot Tx: " <> show txId)
   awaitTxConfirmed txId
