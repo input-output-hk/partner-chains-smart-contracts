@@ -54,6 +54,7 @@
             docker
             dhall
             nixpkgs-fmt
+            jq
           ];
         };
       # CTL's `runPursTest` won't pass command-line arugments to the `node`

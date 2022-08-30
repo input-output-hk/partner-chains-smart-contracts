@@ -25,32 +25,34 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
-toConfig :: Options -> ConfigParams ()
+toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
 
   { logLevel = Info
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
   }
 
-main :: Effect Unit
+main ∷ Effect Unit
 main = do
-  opts <- getOptions
+  opts ← getOptions
 
   launchAff_ $ runContract (toConfig opts) do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     case opts.endpoint of
 
-      MintAct { amount } -> runFuelMP (Mint { amount, recipient: pkh })
-        opts.scParams
-      BurnAct { amount, recipient } -> runFuelMP (Burn { amount, recipient })
-        opts.scParams
+      MintAct { amount } → runFuelMP opts.scParams
+        (Mint { amount, recipient: pkh })
+
+      BurnAct { amount, recipient } → runFuelMP opts.scParams
+        (Burn { amount, recipient })
+
       CommitteeCandidateReg
         { spoPubKey
         , sidechainPubKey
         , spoSig
         , sidechainSig
         , inputUtxo
-        } -> CommitteCandidateValidator.register $
+        } → CommitteCandidateValidator.register $
         CommitteCandidateValidator.RegisterParams
           { sidechainParams: opts.scParams
           , spoPubKey
@@ -59,23 +61,24 @@ main = do
           , sidechainSig
           , inputUtxo
           }
-      CommitteeCandidateDereg { spoPubKey } ->
+
+      CommitteeCandidateDereg { spoPubKey } →
         CommitteCandidateValidator.deregister $
           CommitteCandidateValidator.DeregisterParams
             { sidechainParams: opts.scParams
             , spoPubKey
             }
-      GetAddrs -> do
+      GetAddrs → do
         printAddr "CommitteCandidateValidator"
           (getCommitteeCandidateValidator opts.scParams)
 
-printAddr :: String -> Contract () Validator -> Contract () Unit
+printAddr ∷ String → Contract () Validator → Contract () Unit
 printAddr name getValidator = do
   netId ← getNetworkId
-  v <- getValidator
-  addr <- liftContractM ("Cannot get " <> name <> " address") $
+  v ← getValidator
+  addr ← liftContractM ("Cannot get " <> name <> " address") $
     validatorHashEnterpriseAddress
       netId
       (validatorHash v)
-  serialised <- addressToBech32 addr
+  serialised ← addressToBech32 addr
   logInfo' $ name <> " address: " <> serialised

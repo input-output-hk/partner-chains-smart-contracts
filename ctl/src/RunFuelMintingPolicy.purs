@@ -12,7 +12,7 @@ import Contract.Monad
   , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -28,7 +28,7 @@ import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
 data FUELRedeemer
-  = MainToSide String -- recipient sidechain (addr , signature)
+  = MainToSide ByteArray -- recipient sidechain (addr , signature)
   | SideToMain
 
 derive instance Generic FUELRedeemer _
@@ -46,18 +46,17 @@ fuelMintingPolicy sp = do
 
 data FuelParams
   = Mint { amount ∷ Int, recipient ∷ PaymentPubKeyHash }
-  | Burn { amount ∷ Int, recipient ∷ String }
+  | Burn { amount ∷ Int, recipient ∷ ByteArray }
 
--- it's a limitation of plutus server that we cannot use stake addresses so ignore the custom warning
-runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
-runFuelMP fp sp = do
+runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
+runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
 
-  cs <- maybe (throwContractError "Cannot get currency symbol") pure $
+  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
     Value.scriptCurrencySymbol
       fuelMP
   logInfo' (show (toData sp))
-  logInfo' ("fuelMP curreny symbol: " <> show cs)
+  logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let

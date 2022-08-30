@@ -17,7 +17,7 @@ build: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
 
 # Note. need a plutip-server running (won't put `plutip-server &` here because it tends to flood the terminal)
-test: test/Main.purs src/RawScripts.purs
+test: src/RawScripts.purs
 	@spago test -m ${ps-test-entrypoint}
 
 check-format:
@@ -46,7 +46,7 @@ src/RawScripts.purs: ${plutus-scripts}
 		jq -c . $$script \
 		| sed 's/.*/  """&"""\n/' \
 		| sed "1i raw$$name =" \
-		| sed "1i raw$$name :: String" >> $@
+		| sed "1i raw$$name ∷ String" >> $@
 		sed -i "2i\  , raw$$name" $@
 	done
 	@sed -i '2s/,/(/' $@
