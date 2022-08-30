@@ -278,7 +278,7 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.mint"
-        (initAda [10, 10, 10, 100]) -- mint, fee
+        (initAda [10, 10, 10, 100, 100]) -- mint, fee
         ( withContract $
             const $ do
               sidechainParams <- getSidechainParams
