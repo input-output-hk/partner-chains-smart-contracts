@@ -4,6 +4,7 @@
   , "bigints"
   , "cardano-transaction-lib"
   , "control"
+  , "node-path"
   , "optparse"
   , "ordered-collections"
   , "parallel"

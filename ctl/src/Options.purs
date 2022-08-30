@@ -3,11 +3,12 @@ module Options (getOptions, Options(..), Endpoint(..)) where
 import Contract.Prelude
 
 import CommitteCandidateValidator (PubKey, Signature)
-import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
+import Node.Path (FilePath)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -33,13 +34,13 @@ import Types.ByteArray (ByteArray)
 
 type Options =
   { scParams ∷ SidechainParams
-  , skey ∷ String
+  , skey ∷ FilePath
   , endpoint ∷ Endpoint
   }
 
 data Endpoint
   = MintAct { amount ∷ Int }
-  | BurnAct { amount ∷ Int, recipient ∷ String }
+  | BurnAct { amount ∷ Int, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ PubKey
@@ -95,7 +96,7 @@ options = info (helper <*> optSpec) fullDesc
 
   burnSpec = ado
     amount ← parseAmount
-    recipient ← option str $ fold
+    recipient ← option byteArray $ fold
       [ long "recipient"
       , metavar "PUBLIC_KEY_HASH"
       , help "Public key hash of the sidechain recipient"
@@ -192,9 +193,10 @@ transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
+      transactionId ← TransactionHash <$> hexToByteArray txId
       in
         TransactionInput
-          { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
+          { transactionId
           , index
           }
     _ → Nothing

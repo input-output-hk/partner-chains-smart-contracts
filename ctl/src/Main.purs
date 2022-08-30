@@ -22,10 +22,12 @@ main = do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     case opts.endpoint of
 
-      MintAct { amount } → runFuelMP (Mint { amount, recipient: pkh })
-        opts.scParams
-      BurnAct { amount, recipient } → runFuelMP (Burn { amount, recipient })
-        opts.scParams
+      MintAct { amount } → runFuelMP opts.scParams
+        (Mint { amount, recipient: pkh })
+
+      BurnAct { amount, recipient } → runFuelMP opts.scParams
+        (Burn { amount, recipient })
+
       CommitteeCandidateReg
         { spoPubKey
         , sidechainPubKey
@@ -41,6 +43,7 @@ main = do
           , sidechainSig
           , inputUtxo
           }
+
       CommitteeCandidateDereg { spoPubKey } →
         CommitteCandidateValidator.deregister $
           CommitteCandidateValidator.DeregisterParams
