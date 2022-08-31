@@ -3,7 +3,7 @@ module Options (getOptions) where
 import Contract.Prelude
 
 import ConfigFile (decodeSidechainParams, readJson)
-import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Control.Alt ((<|>))
 import Data.BigInt as BigInt
@@ -56,6 +56,10 @@ options = info (helper <*> optSpec) fullDesc
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
           )
+      , command "addresses"
+          ( info (withCommonOpts (pure GetAddrs))
+              (progDesc "Get the script addresses for a given sidechain")
+          )
       ]
 
   withCommonOpts endpointParser = ado
@@ -77,7 +81,7 @@ options = info (helper <*> optSpec) fullDesc
 
   burnSpec = ado
     amount ← parseAmount
-    recipient ← option str $ fold
+    recipient ← option byteArray $ fold
       [ long "recipient"
       , metavar "PUBLIC_KEY_HASH"
       , help "Public key hash of the sidechain recipient"
@@ -129,14 +133,14 @@ options = info (helper <*> optSpec) fullDesc
   scParamsSpecCLI = ado
     chainId ← option int $ fold
       [ short 'i'
-      , long "chain-id"
+      , long "sidechain-id"
       , metavar "1"
       , help "Sidechain ID"
       ]
 
     genesisHash ← option byteArray $ fold
       [ short 'h'
-      , long "genesis-hash"
+      , long "sidechain-genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
       ]
@@ -197,9 +201,10 @@ transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
+      transactionId ← TransactionHash <$> hexToByteArray txId
       in
         TransactionInput
-          { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
+          { transactionId
           , index
           }
     _ → Nothing

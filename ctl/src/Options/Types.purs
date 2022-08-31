@@ -6,10 +6,11 @@ import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Transaction (TransactionInput)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
+import Types.ByteArray (ByteArray)
 
 type Options a =
   { scParams ∷ a
-  , skey ∷ String
+  , skey ∷ FilePath
   , endpoint ∷ Endpoint
   }
 
@@ -21,7 +22,7 @@ instance Show ScParams where
 
 data Endpoint
   = MintAct { amount ∷ Int }
-  | BurnAct { amount ∷ Int, recipient ∷ String }
+  | BurnAct { amount ∷ Int, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ PubKey
@@ -30,6 +31,7 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | GetAddrs
 
 derive instance Generic Endpoint _
 

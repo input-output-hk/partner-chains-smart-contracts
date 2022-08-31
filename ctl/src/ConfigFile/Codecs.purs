@@ -26,6 +26,7 @@ import Data.Variant as V
 import Options.Types (Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Type.Proxy (Proxy(..))
+import Types.ByteArray (ByteArray)
 import Types.Transaction (TransactionInput(TransactionInput))
 
 optionsCodec ∷ CA.JsonCodec (Options SidechainParams)
@@ -54,6 +55,7 @@ endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
   , burnAct: Right burnCodec
   , committeeCandidateReg: Right committeeCandidateRegCodec
   , committeeCandidateDereg: Right committeeCandidateDeregCodec
+  , getAddrs: Left unit
   }
   where
   -- necessary boilerplate
@@ -62,6 +64,7 @@ endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
     BurnAct x → V.inj (Proxy ∷ _ "burnAct") x
     CommitteeCandidateReg x → V.inj (Proxy ∷ _ "committeeCandidateReg") x
     CommitteeCandidateDereg x → V.inj (Proxy ∷ _ "committeeCandidateDereg") x
+    GetAddrs → V.inj (Proxy ∷ _ "getAddrs") unit
 
   -- necessary boilerplate
   fromVariant = V.match
@@ -69,13 +72,14 @@ endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
     , burnAct: BurnAct
     , committeeCandidateReg: CommitteeCandidateReg
     , committeeCandidateDereg: CommitteeCandidateDereg
+    , getAddrs: \_ → GetAddrs
     }
 
   mintCodec ∷ CA.JsonCodec { amount ∷ Int }
   mintCodec = CAR.object "mint" { amount: CA.int }
 
-  burnCodec ∷ CA.JsonCodec { amount ∷ Int, recipient ∷ String }
-  burnCodec = CAR.object "burn" { amount: CA.int, recipient: CA.string }
+  burnCodec ∷ CA.JsonCodec { amount ∷ Int, recipient ∷ ByteArray }
+  burnCodec = CAR.object "burn" { amount: CA.int, recipient: byteArrayCodec }
 
   committeeCandidateRegCodec ∷
     CA.JsonCodec
