@@ -14,7 +14,6 @@ import Contract.Scripts
   , applyArgs
   , validatorHash
   )
-import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
 import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
   , textEnvelopeBytes
