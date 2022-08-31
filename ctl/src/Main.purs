@@ -10,7 +10,7 @@ import Contract.Address
   , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
-import Contract.Config (testnetConfig)
+import Contract.Config (Message, testnetConfig)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( ConfigParams
@@ -22,16 +22,26 @@ import Contract.Monad
   )
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
+import Data.Log.Formatter.JSON (jsonFormatter)
+import Helpers (logWithLevel)
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff (appendTextFile)
 import Options (Endpoint(..), Options, getOptions)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
 -- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
-
   { logLevel = Info
+  , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
   }
+
+-- | Store all log levels in a file
+fileLogger ∷ Message → Aff Unit
+fileLogger m = do
+  let filename = "./contractlog.json"
+  appendTextFile UTF8 filename (jsonFormatter m <> "\n")
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
