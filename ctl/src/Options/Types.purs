@@ -14,7 +14,7 @@ type Options a =
   , endpoint ∷ Endpoint
   }
 
-data ScParams = Value SidechainParams | ConfigFile FilePath
+data ScParams = Config SidechainParams | ConfigFilePath FilePath
 
 derive instance Generic ScParams _
 instance Show ScParams where

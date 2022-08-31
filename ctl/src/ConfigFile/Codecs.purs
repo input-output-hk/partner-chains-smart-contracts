@@ -7,8 +7,7 @@ import Contract.Prelude
 
 import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayToHex
+  ( byteArrayToHex
   , hexToByteArray
   , hexToByteArrayUnsafe
   )

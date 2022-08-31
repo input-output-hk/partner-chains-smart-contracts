@@ -158,7 +158,7 @@ options = info (helper <*> optSpec) fullDesc
       , help "Input UTxO to be spent with the first committee hash setup"
       ]
     in
-      Value $ SidechainParams
+      Config $ SidechainParams
         { chainId: BigInt.fromInt chainId
         , genesisHash
         , genesisMint
@@ -182,8 +182,8 @@ getOptions ∷ Effect (Options SidechainParams)
 getOptions = do
   opt ← execParser options
   case opt.scParams of
-    Value params → unwrap opt params
-    ConfigFile loc → readAndParseJsonFrom opt loc
+    Config params → unwrap opt params
+    ConfigFilePath loc → readAndParseJsonFrom opt loc
 
   where
   unwrap opt params = pure $ opt { scParams = params }
@@ -210,7 +210,7 @@ transactionInput = maybeReader $ \txIn →
     _ → Nothing
 
 scParamsConfigFile ∷ ReadM ScParams
-scParamsConfigFile = ConfigFile <$> readerAsk
+scParamsConfigFile = ConfigFilePath <$> readerAsk
 
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray
