@@ -2,10 +2,18 @@
   description = "trustless-sidechain";
 
   inputs = {
+    # FIXME: https://github.com/NixOS/nix/issues/6986
+    bot-plutus-interface.url = "github:mlabs-haskell/bot-plutus-interface?rev=1f18513d9a6326bf70a5cd68e74a40b5aa104861";
+    bot-plutus-interface.inputs.haskell-nix.follows = "haskell-nix";
+    bot-plutus-interface.inputs.nixpkgs.follows = "haskell-nix/nixpkgs";
     plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
+    plutip.inputs.bot-plutus-interface.follows = "bot-plutus-interface";
+    plutip.inputs.haskell-nix.follows = "bot-plutus-interface/haskell-nix";
+    plutip.inputs.iohk-nix.follows = "bot-plutus-interface/iohk-nix";
+    plutip.inputs.nixpkgs.follows = "bot-plutus-interface/nixpkgs";
 
-    nixpkgs.follows = "plutip/nixpkgs";
-    haskell-nix.follows = "plutip/haskell-nix";
+    nixpkgs.follows = "bot-plutus-interface/nixpkgs";
+    haskell-nix.url = "github:input-output-hk/haskell.nix?ref=extra-sources";
     iohk-nix.follows = "plutip/haskell-nix";
     flake-compat = {
       url = "github:edolstra/flake-compat";
