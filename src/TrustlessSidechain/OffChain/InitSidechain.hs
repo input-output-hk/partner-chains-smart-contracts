@@ -98,13 +98,13 @@ initSidechain isp =
                 -- Variables for initializing the distributed set
                 -------------------------------------------------
                 ds = Ds {dsConf = dsconf}
-                dsconf = DistributedSet.dsConfCurSymbol $ DsConfMint {dscmTxOutRef = oref}
-                dsm = DistributedSet.dsToDsMint ds
+                dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
+                dskm = DistributedSet.dsToDsKeyMint ds
 
-                pmp = DistributedSet.dsKeyPolicy dsm
+                pmp = DistributedSet.dsKeyPolicy dskm
 
                 -- the prefix policy of the distributed set
-                smDsKey = DistributedSet.dsKeyCurSymbol dsm
+                smDsKey = DistributedSet.dsKeyCurrencySymbol dskm
                 tnDsKey = TokenName $ nKey DistributedSet.rootNode
                 astDsKey = Value.assetClass smDsKey tnDsKey
                 valDsKey = Value.assetClassValue astDsKey 1
@@ -115,14 +115,14 @@ initSidechain isp =
                 valConfDs = Value.assetClassValue cast 1
                 datConfDs =
                   DsConfDatum
-                    { dscKeyPolicy = DistributedSet.dsKeyCurSymbol dsm
+                    { dscKeyPolicy = DistributedSet.dsKeyCurrencySymbol dskm
                     , dscFUELPolicy =
                         FUELMintingPolicy.currencySymbol
                           FUELMint
                             { fmMptRootTokenCurrencySymbol =
                                 MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc
                             , fmSidechainParams = sc
-                            , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
+                            , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
                             }
                     }
                 cmp = DistributedSet.dsConfPolicy DsConfMint {dscmTxOutRef = oref}

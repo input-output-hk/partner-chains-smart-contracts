@@ -31,7 +31,7 @@ import TrustlessSidechain.OnChain.DistributedSet (
   Ds (dsConf),
   DsConfDatum,
   DsDatum (DsDatum, dsNext),
-  DsMint (DsMint, dsmConf, dsmValidatorHash),
+  DsKeyMint (DsKeyMint, dskmConfCurrencySymbol, dskmValidatorHash),
   Ib,
   Node (nNext),
  )
@@ -48,10 +48,10 @@ logDs ds = do
       Contract.logInfo @Text $ Text.pack $ Prelude.show utxo
   Contract.logInfo @Text "Logging the distributed set END"
 
--- | 'dsToDsMint' is a helper function to convert 'Ds' into 'DsMint'
-dsToDsMint :: Ds -> DsMint
-dsToDsMint ds =
-  DsMint {dsmConf = dsConf ds, dsmValidatorHash = DistributedSet.insertValidatorHash ds}
+-- | 'dsToDsKeyMint' is a helper function to convert 'Ds' into 'DsKeyMint'
+dsToDsKeyMint :: Ds -> DsKeyMint
+dsToDsKeyMint ds =
+  DsKeyMint {dskmConfCurrencySymbol = dsConf ds, dskmValidatorHash = DistributedSet.insertValidatorHash ds}
 
 {- | 'findDsOutput' finds the transaction which we must insert to
  (if it exists) for the distributed set. It returns
@@ -75,13 +75,13 @@ findDsOutput ds tn =
         | Just (dat :: DsDatum) <- Class.fromBuiltinData . getDatum =<< Fold.preview (Tx.ciTxOutDatum . _Right) o
           , Just vs <- Fold.preview Tx.ciTxOutValue o
           , -- If it's more clear, the following check can be written as follows
-            -- > , Just [(tn, 1)] <- AssocMap.lookup (DistributedSet.dsKeyCurSymbol $ dsToDsMint ds) $ getValue vs
+            -- > , Just [(tn, 1)] <- AssocMap.lookup (DistributedSet.dsKeyCurrencySymbol $ dsToDsKeyMint ds) $ getValue vs
             -- by the onchain code.
             Just ((tn', _) : _) <-
               fmap AssocMap.toList $
                 AssocMap.lookup
-                  ( DistributedSet.dsKeyCurSymbol $
-                      dsToDsMint ds
+                  ( DistributedSet.dsKeyCurrencySymbol $
+                      dsToDsKeyMint ds
                   )
                   $ getValue vs
           , Just nnodes <- DistributedSet.insertNode (unTokenName tn) $ DistributedSet.mkNode (unTokenName tn') dat =

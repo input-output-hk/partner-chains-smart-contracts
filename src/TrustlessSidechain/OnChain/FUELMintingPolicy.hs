@@ -44,7 +44,10 @@ data FUELMint = FUELMint
     fmMptRootTokenCurrencySymbol :: CurrencySymbol
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams
-  , -- | 'fmSidechainParams' is the sidechain parameters
+  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
+    -- hold the key for the distributed set. In particular, this allows the
+    -- FUEL minting policy to verify if a string has /just been inserted/ into
+    -- the distributed set.
     fmDsKeyCurrencySymbol :: CurrencySymbol
   }
 

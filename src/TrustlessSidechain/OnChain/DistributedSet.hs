@@ -7,7 +7,48 @@
 {- | Implementation of a distributed set an on-chain distributed set to admit
  proof not in a set membership
 -}
-module TrustlessSidechain.OnChain.DistributedSet where
+module TrustlessSidechain.OnChain.DistributedSet (
+  -- * Data types
+  Ds (Ds, dsConf),
+  DsDatum (DsDatum, dsNext),
+  Node (Node, nKey, nNext),
+  DsConf,
+  DsConfDatum (DsConfDatum, dscKeyPolicy, dscFUELPolicy),
+  DsConfMint (
+    DsConfMint,
+    dscmTxOutRef
+  ),
+  DsKeyMint (
+    DsKeyMint,
+    dskmValidatorHash,
+    dskmConfCurrencySymbol
+  ),
+  Ib (Ib, unIb),
+
+  -- * Helper functions for the data types
+  mkNode,
+  rootNode,
+  fromListIb,
+  lengthIb,
+  insertNode,
+
+  -- * Validators / minting policies
+  typedInsertValidator,
+  insertValidator,
+  insertValidatorHash,
+  insertAddress,
+  mkDsConfValidator,
+  dsConfValidator,
+  dsConfAddress,
+  mkDsConfPolicy,
+  dsConfTokenName,
+  dsConfPolicy,
+  dsConfCurrencySymbol,
+  mkDsKeyPolicy,
+  dsKeyPolicy,
+  dsKeyCurrencySymbol,
+  dsConfValidatorHash,
+) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Ledger.Address (Address)
@@ -40,10 +81,10 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
 import Prelude qualified
 
--- * Data types
-
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
- for the distributed set. (See Note [How This All Works].
+ for the distributed set. (See Note [How This All Works]. Moreover, this
+ parameterizes the 'mkInsertValidator' and is used as the type which identifies
+ the appropriate datum and redeemer type
 -}
 newtype Ds = Ds
   { -- | 'dsConf' is the 'CurrencySymbol' which identifies the utxo
@@ -51,6 +92,10 @@ newtype Ds = Ds
     dsConf :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+
+instance ValidatorTypes Ds where
+  type DatumType Ds = DsDatum
+  type RedeemerType Ds = ()
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
@@ -77,6 +122,10 @@ instance Eq Node where
 -}
 data DsConf
 
+instance ValidatorTypes DsConf where
+  type DatumType DsConf = DsConfDatum
+  type RedeemerType DsConf = ()
+
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
 -}
@@ -85,39 +134,40 @@ data DsConfDatum = DsConfDatum
   , dscFUELPolicy :: CurrencySymbol
   }
 
+instance Eq DsConfDatum where
+  a == b = dscKeyPolicy a == dscKeyPolicy b && dscFUELPolicy a == dscFUELPolicy b
+
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
  length "array" of how many new nodes (this is always 2, see 'lengthIb') are
- generated after inserting a into a node.
+ generated after inserting into a node.
 -}
-data Ib a = Ib a a
+newtype Ib a = Ib {unIb :: (a, a)}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
-instance Eq a => Eq (Ib a) where
-  {-# INLINEABLE (==) #-}
-  Ib s t == Ib s' t' = s == s' && t == t'
+  deriving newtype (Eq)
 
 instance Prelude.Foldable Ib where
-  foldMap f (Ib a b) = f a Prelude.<> f b
+  foldMap f (Ib (a, b)) = f a Prelude.<> f b
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
 -}
 newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
 
-{- | 'DsMint' is the parameter for the minting policy.
- See Note [How This All Works] for more details.
+{- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
+ 'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
+ the token. See Note [How This All Works] for more details.
 -}
-data DsMint = DsMint
-  { -- | 'dsmValidatorHash' is the validator hash that the minting policy
+data DsKeyMint = DsKeyMint
+  { -- | 'dskmValidatorHash' is the validator hash that the minting policy
     -- essentially "forwards" its checks to the validator.
     --
     --
     -- TODO: as an optimization, we can take the 'Address' as a parameter
     -- instead (since the offchain code will always immediately convert this
     -- into an 'Address').
-    dsmValidatorHash :: ValidatorHash
-  , -- | 'dsmConf' is the currency symbol to identify a utxo with 'DsConfDatum'
-    dsmConf :: CurrencySymbol
+    dskmValidatorHash :: ValidatorHash
+  , -- | 'dskmConfCurrencySymbol' is the currency symbol to identify a utxo with 'DsConfDatum'
+    dskmConfCurrencySymbol :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
@@ -159,9 +209,9 @@ deriveJSON defaultOptions ''DsDatum
 makeIsDataIndexed ''Node [('Node, 0)]
 deriveJSON defaultOptions ''Node
 
-makeIsDataIndexed ''DsMint [('DsMint, 0)]
-deriveJSON defaultOptions ''DsMint
-PlutusTx.makeLift ''DsMint
+makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
+deriveJSON defaultOptions ''DsKeyMint
+PlutusTx.makeLift ''DsKeyMint
 
 makeIsDataIndexed ''DsConfMint [('DsConfMint, 0)]
 deriveJSON defaultOptions ''DsConfMint
@@ -311,8 +361,6 @@ PlutusTx.makeLift ''DsConfDatum
     Wow! It's hopefully just that easy!
  -}
 
--- * Node related functions
-
 -- | 'mkNode' is a wrapper to create a Node from a prefix and the datum.
 {-# INLINEABLE mkNode #-}
 mkNode :: BuiltinByteString -> DsDatum -> Node
@@ -346,7 +394,7 @@ rootNode =
 {-# INLINEABLE fromListIb #-}
 fromListIb :: [a] -> Ib a
 fromListIb = \case
-  [a, b] -> Ib a b
+  [a, b] -> Ib {unIb = (a, b)}
   _ -> traceError "error 'fromListIb' bad list"
 
 -- | 'lengthIb' always returns 2.
@@ -354,14 +402,21 @@ fromListIb = \case
 lengthIb :: Ib a -> Integer
 lengthIb _ = 2
 
--- * Validators for insertion in the distributed set
+{- | @'insertNode' str node@ inserts returns the new nodes which should be
+ created (in place of the old @node@) provided that @str@ can actually be
+ inserted here. See Note [How This All Works].
 
+ Note that the first projection of 'Ib' will always be the node which should
+ replace @node@, which also should be the node which is strictly less than
+ @str@. This property is helpful in 'mkInsertValidator' when verifying that the
+ nodes generated are as they should be.
+-}
 {-# INLINEABLE insertNode #-}
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
 insertNode str node
   | nKey node < str && str < nNext node =
     Just $
-      Ib node {nNext = str} Node {nKey = str, nNext = nNext node}
+      Ib {unIb = (node {nNext = str}, Node {nKey = str, nNext = nNext node})}
   | otherwise = Nothing
 
 {- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
@@ -371,44 +426,43 @@ insertNode str node
 mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
-      let ownNode :: Node
-          ownNode = getTxOutNodeInfo $ txInInfoResolved ownInput
+      ( \nNodes ->
+          let -- the "continuing" nodes...
+              contNodes :: Ib Node
+              contNodes =
+                let normalizeIbNodes Ib {unIb = (a, b)}
+                      | nKey a < nKey b = Ib {unIb = (a, b)}
+                      | otherwise = Ib {unIb = (b, a)}
+                 in normalizeIbNodes $
+                      fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
+                        ownAddr ->
+                          let go :: [TxOut] -> [Node]
+                              go (t : ts)
+                                | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
+                                | otherwise = go ts
+                              go [] = []
+                           in go (txInfoOutputs info)
 
-          nNodes :: Ib Node
-          nNodes = case insertNode nStr ownNode of
+              -- the total number tokens which are prefixes is @1 + the number of
+              -- minted tokens@ since we know that there is only one input with this
+              -- token.
+              --
+              -- In erroneous cases, we return @-1@ which will always be @False@ in the
+              -- above predicate
+              totalKeys :: Integer
+              totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
+                Just mp
+                  | [(_, amt)] <- AssocMap.toList mp
+                    , amt == 1 ->
+                    2
+                _ -> -1
+           in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
+                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (dscFUELPolicy conf) minted)
+      )
+        ( case insertNode nStr $ getTxOutNodeInfo $ txInInfoResolved ownInput of
             Just x -> x
             Nothing -> traceError "error 'mkInsertValidator' bad insertion"
-
-          contNodes :: Ib Node
-          contNodes =
-            let normalizeIbNodes (Ib a b)
-                  | nKey a < nKey b = Ib a b
-                  | otherwise = Ib b a
-             in normalizeIbNodes $
-                  fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
-                    ownAddr ->
-                      let go :: [TxOut] -> [Node]
-                          go (t : ts)
-                            | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
-                            | otherwise = go ts
-                          go [] = []
-                       in go (txInfoOutputs info)
-
-          -- the total number tokens which are prefixes is @1 + the number of
-          -- minted tokens@ since we know that there is only one input with this
-          -- token.
-          --
-          -- In erroneous cases, we return @-1@ which will always be @False@ in the
-          -- above predicate
-          totalKeys :: Integer
-          totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
-            Just mp
-              | [(_, amt)] <- AssocMap.toList mp
-                , amt == 1 ->
-                2
-            _ -> -1
-       in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
-            && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (dscFUELPolicy conf) minted)
+        )
   )
     ( case AssocMap.lookup keyCurrencySymbol minted of
         Just mp
@@ -418,6 +472,12 @@ mkInsertValidator ds _dat _red ctx =
         _ -> traceError "error 'mkInsertValidator' missing unique string to insert"
     )
   where
+    -- if you're wondering why this is written in such an unreadable way, it's
+    -- because (as I read it) plutus is by value language, and to ensure that
+    -- things aren't recomputed, you can wrap things up with a lambda...
+    --
+    -- otherwise, we run into budgeting issues...
+
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
@@ -449,10 +509,6 @@ mkInsertValidator ds _dat _red ctx =
     getTxOutNodeInfo :: TxOut -> Node
     getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum info o
 
-instance ValidatorTypes Ds where
-  type DatumType Ds = DsDatum
-  type RedeemerType Ds = ()
-
 -- | The typed validator script for the distributed set.
 typedInsertValidator :: Ds -> TypedValidator Ds
 typedInsertValidator ds =
@@ -477,14 +533,14 @@ insertAddress :: Ds -> Address
 insertAddress = Scripts.validatorAddress . typedInsertValidator
 
 {- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
- at. This will always return 'False'.
+ at. This will always error.
 -}
 mkDsConfValidator :: Ds -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfValidator _ds _dat _red _ctx = ()
 
--- TODO: when we get reference inputs, we need to change this to the above line
+-- TODO: when we get reference inputs, we need to change the above line
 -- of code to the following line of code
--- > mkDsConfValidator _ds dat _red _ctx = Builtins.error ()
+-- > mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 
 -- | The regular validator script for the conf. of the distributed set.
 dsConfValidator :: Ds -> Validator
@@ -507,8 +563,6 @@ dsConfValidatorHash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . d
 -}
 dsConfAddress :: Ds -> Address
 dsConfAddress = Scripts.validatorAddress . Scripts.unsafeMkTypedValidator . dsConfValidator
-
--- * Minting Policy for Initializing the Distributed Set
 
 {- | 'mkDsConfPolicy' mints the nft which identifies the validator that stores
  the various minting policies that the distributed set depends on
@@ -538,7 +592,10 @@ mkDsConfPolicy dsc _red ctx =
         True
       | otherwise = False
 
--- | 'dsConfTokenName' is the token name of the
+{- | 'dsConfTokenName' is the token name of the NFT which identifies the utxo
+ holding 'DsConfDatum'. We just leave this as the empty string since it
+ doesn't matter
+-}
 dsConfTokenName :: TokenName
 dsConfTokenName = TokenName emptyByteString
 
@@ -549,13 +606,13 @@ dsConfPolicy dscm =
     $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsConfPolicy||])
       `PlutusTx.applyCode` PlutusTx.liftCode dscm
 
--- | 'dsConfCurSymbol' is the currency symbol for the distributed set
-dsConfCurSymbol :: DsConfMint -> CurrencySymbol
-dsConfCurSymbol = Contexts.scriptCurrencySymbol . dsConfPolicy
+-- | 'dsConfCurrencySymbol' is the currency symbol for the distributed set
+dsConfCurrencySymbol :: DsConfMint -> CurrencySymbol
+dsConfCurrencySymbol = Contexts.scriptCurrencySymbol . dsConfPolicy
 
 -- | 'mkDsKeyPolicy'.  See Note [How This All Works].
-mkDsKeyPolicy :: DsMint -> () -> ScriptContext -> Bool
-mkDsKeyPolicy dsm _red ctx = case ins of
+mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool
+mkDsKeyPolicy dskm _red ctx = case ins of
   [_ownTn] -> True
   -- This is enough to imply that the validator succeeded. Since we know
   -- that all these tokens are paid to the original validator hash, if an
@@ -564,11 +621,11 @@ mkDsKeyPolicy dsm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      Just _ <- AssocMap.lookup (dsmConf dsm) $ getValue $ txInfoMint info ->
+      Just _ <- AssocMap.lookup (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
       case mintedTns of
         [tn] | unTokenName tn == nKey rootNode ->
           traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
-            case find (\txout -> txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm)) $ txInfoOutputs info of
+            case find (\txout -> txOutAddress txout == Address.scriptHashAddress (dskmValidatorHash dskm)) $ txInfoOutputs info of
               Just txout -> isJust $ AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
               Nothing -> False
         -- TODO: check in the script output with the output that this
@@ -592,12 +649,12 @@ mkDsKeyPolicy dsm _red ctx = case ins of
       let go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
-              , txOutAddress txout == Address.scriptHashAddress (dsmValidatorHash dsm)
+              , txOutAddress txout == Address.scriptHashAddress (dskmValidatorHash dskm)
               , Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
               , -- If it's more clear, we're checking the following condition:
                 -- > [(tn,1)] <- AssocMap.toList tns
                 -- In our case, it is implicit that there is exactly one
-                -- TokenName and that there will be only one distinct TokenName.
+                -- 'TokenName' and that there will be only one distinct 'TokenName'.
                 (tn, _amt) : _ <- AssocMap.toList tns =
               tn : go ts
             -- Need to keep recursing to ensure that this transaction
@@ -615,17 +672,17 @@ mkDsKeyPolicy dsm _red ctx = case ins of
         _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
 
 -- | 'dsKeyPolicy' is the minting policy for the prefixes of nodes
-dsKeyPolicy :: DsMint -> MintingPolicy
-dsKeyPolicy dsm =
+dsKeyPolicy :: DsKeyMint -> MintingPolicy
+dsKeyPolicy dskm =
   Scripts.mkMintingPolicyScript $
     $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsKeyPolicy||])
-      `PlutusTx.applyCode` PlutusTx.liftCode dsm
+      `PlutusTx.applyCode` PlutusTx.liftCode dskm
 
-{- | 'dsKeyCurSymbol' is the currency symbol for prefixes of nodes in the
+{- | 'dsKeyCurrencySymbol' is the currency symbol for prefixes of nodes in the
  distributed set
 -}
-dsKeyCurSymbol :: DsMint -> CurrencySymbol
-dsKeyCurSymbol = Contexts.scriptCurrencySymbol . dsKeyPolicy
+dsKeyCurrencySymbol :: DsKeyMint -> CurrencySymbol
+dsKeyCurrencySymbol = Contexts.scriptCurrencySymbol . dsKeyPolicy
 
 {- Note [Alternative Ways of Doing This]
 

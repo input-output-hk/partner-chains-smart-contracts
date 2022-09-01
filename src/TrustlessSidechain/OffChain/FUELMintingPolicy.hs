@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module TrustlessSidechain.OffChain.FUELMintingPolicy where
+module TrustlessSidechain.OffChain.FUELMintingPolicy (burn, mint) where
 
 import Control.Lens.Fold qualified as Fold
 import Control.Lens.Indexed qualified as Indexed
@@ -8,6 +8,7 @@ import Control.Monad (when)
 import Data.Default qualified as Default
 import Data.Map qualified as Map
 import Data.Text (Text)
+import Data.Void (Void)
 import Ledger (CardanoTx, Redeemer (Redeemer))
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
@@ -44,13 +45,14 @@ import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsConf),
   DsConfDatum (dscFUELPolicy, dscKeyPolicy),
   DsConfMint (DsConfMint, dscmTxOutRef),
-  DsMint,
+  DsKeyMint,
   Node (nKey),
  )
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.OnChain.MPTRootTokenValidator (Mpt (Mpt, mptCurrencySymbol, mptSidechainParams))
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
 import TrustlessSidechain.OnChain.Types (
   FUELRedeemer (MainToSide, SideToMain),
@@ -81,8 +83,23 @@ findMPTRootToken sc rh =
     -- token is enough to imply that the sidechain has initiated this
     -- transaction.
     go :: (TxOutRef, ChainIndexTxOut) -> Bool
-    go (_oref, o) = maybe False (== MPTRootTokenValidator.address sc) $ o Fold.^? ciTxOutAddress
+    go (_oref, o) =
+      maybe
+        False
+        ( ==
+            MPTRootTokenValidator.address
+              Mpt
+                { mptSidechainParams = sc
+                , mptCurrencySymbol =
+                    MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc
+                }
+        )
+        $ o Fold.^? ciTxOutAddress
 
+{- | 'burn' will burn the given amount of FUEL in 'BurnParams'. Note that this
+ expects the 'amount' in 'BurnParams' to be negative -- see 'BurnParams' for
+ more details.
+-}
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 burn BurnParams {amount, sidechainParams, recipient} = do
   let -- Variables for the distributed set
@@ -94,10 +111,10 @@ burn BurnParams {amount, sidechainParams, recipient} = do
       ds = Ds {dsConf = dsconf}
 
       dsconf :: CurrencySymbol
-      dsconf = DistributedSet.dsConfCurSymbol $ DsConfMint {dscmTxOutRef = oref}
+      dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
 
-      dsm :: DsMint
-      dsm = DistributedSet.dsToDsMint ds
+      dskm :: DsKeyMint
+      dskm = DistributedSet.dsToDsKeyMint ds
 
       -- Variables for the FUEL minting (burning) policy
       --------------------------------------------------
@@ -105,7 +122,7 @@ burn BurnParams {amount, sidechainParams, recipient} = do
         FUELMint
           { fmSidechainParams = sidechainParams
           , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
-          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
+          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
           }
       policy = FUELMintingPolicy.mintingPolicy fm
       value = Value.singleton (Ledger.scriptCurrencySymbol policy) "FUEL" amount
@@ -117,7 +134,7 @@ burn BurnParams {amount, sidechainParams, recipient} = do
 
 {- | 'mint' does the following
 
-      1. Locates the utxo with the MPTRootToken, which proves that the
+      1. Locates a utxo with the MPTRootToken, which proves that the
       transaction happened on the sidechain.
 
       2. Build the transaction by
@@ -130,6 +147,9 @@ burn BurnParams {amount, sidechainParams, recipient} = do
           checked on chain since we will remove this feature later)
 
           * Calling the FUELMintingPolicy as usual.
+
+          * Verifying that the hash of the 'MerkleTreeEntry' was just inserted
+          in the distributed set.
 -}
 mint :: MintParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merkleProof, entryHash} =
@@ -156,13 +176,13 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
         ds = Ds {dsConf = dsconf}
 
         dsconf :: CurrencySymbol
-        dsconf = DistributedSet.dsConfCurSymbol $ DsConfMint {dscmTxOutRef = oref}
+        dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
 
-        dsm :: DsMint
-        dsm = DistributedSet.dsToDsMint ds
+        dskm :: DsKeyMint
+        dskm = DistributedSet.dsToDsKeyMint ds
 
         kmp :: MintingPolicy
-        kmp = DistributedSet.dsKeyPolicy dsm
+        kmp = DistributedSet.dsKeyPolicy dskm
 
         -- > cborMteHashed = Builtins.blake2b_256 cborMte
         -- > cborMteHashedTn = TokenName cborMteHashed
@@ -183,14 +203,21 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                         FUELMint
                           { fmSidechainParams = sidechainParams
                           , fmMptRootTokenCurrencySymbol = MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
-                          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurSymbol dsm
+                          , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
                           }
                       fuelPolicy = FUELMintingPolicy.mintingPolicy fm
                       value = Value.singleton (Ledger.scriptCurrencySymbol fuelPolicy) "FUEL" amount
                       fuelRedeemer = Redeemer $ toBuiltinData $ SideToMain mte merkleProof
 
+                      mptParam =
+                        Mpt
+                          { mptSidechainParams = sidechainParams
+                          , mptCurrencySymbol =
+                              MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams
+                          }
                       -- TODO: the following line should be removed with reference inputs:
-                      mptRootTokenValidator = MPTRootTokenValidator.validator sidechainParams
+                      mptRootTokenValidator =
+                        MPTRootTokenValidator.validator mptParam
                       mptRootTokenValue =
                         Value.singleton
                           (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sidechainParams)
@@ -211,7 +238,7 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                           --  lookups for the distributed set
                           -----------------------------------
                           Prelude.<> Constraints.unspentOutputs (Map.singleton nodeRef oNode)
-                          Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
+                          -- Prelude.<> Constraints.typedValidatorLookups (DistributedSet.typedInsertValidator ds)
                           Prelude.<> Constraints.mintingPolicy kmp
                           Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
                           -- TODO: the following line should be removed with reference inputs:
@@ -231,11 +258,12 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                           , flip (Fold.foldMapOf Fold.folded) nodes $
                               \n ->
                                 let nTn = TokenName $ nKey n
-                                    val = Value.singleton (DistributedSet.dsKeyCurSymbol dsm) nTn 1
+                                    val = Value.singleton (DistributedSet.dsKeyCurrencySymbol dskm) nTn 1
                                  in if unTokenName nTn == nKey node
                                       then
-                                        Constraints.mustPayToTheScript
-                                          (DistributedSet.nodeToDatum n)
+                                        Constraints.mustPayToOtherScript
+                                          (Scripts.validatorHash (DistributedSet.insertValidator ds))
+                                          (Datum (Class.toBuiltinData (DistributedSet.nodeToDatum n)))
                                           val
                                       else
                                         Constraints.mustPayToOtherScript
@@ -245,7 +273,10 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                                           Prelude.<> Constraints.mustMintValue val
                           , -- TODO: the following line should be removed with reference inputs:
                             Constraints.mustSpendScriptOutput (fst mptUtxo) Scripts.unitRedeemer
-                          , Constraints.mustPayToOtherScript (MPTRootTokenValidator.hash sidechainParams) Scripts.unitDatum mptRootTokenValue
+                          , Constraints.mustPayToOtherScript
+                              (MPTRootTokenValidator.hash mptParam)
+                              Scripts.unitDatum
+                              mptRootTokenValue
                           , Constraints.mustSpendScriptOutput confRef Scripts.unitRedeemer
                           , Constraints.mustPayToOtherScript
                               (DistributedSet.dsConfValidatorHash ds)
@@ -258,9 +289,9 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
                   -- independently verify that the system has been set up
                   -- correctly.
                   unless
-                    ( dscKeyPolicy confDat == DistributedSet.dsKeyCurSymbol dsm
+                    ( dscKeyPolicy confDat == DistributedSet.dsKeyCurrencySymbol dskm
                         && dscFUELPolicy confDat == FUELMintingPolicy.currencySymbol fm
                     )
                     $ Contract.throwError "error FUELMintingPolicy: misconfigured distributed set"
 
-                  Contract.submitTxConstraintsWith @Ds lookups tx
+                  Contract.submitTxConstraintsWith @Void lookups tx

@@ -1,5 +1,5 @@
 -- | A collection of some utility functions for the offchain code.
-module TrustlessSidechain.OffChain.Utils where
+module TrustlessSidechain.OffChain.Utils (foldUtxoRefsWithCurrency, utxosWithCurrency) where
 
 import Control.Lens.Fold qualified as Fold
 import Control.Lens.Review qualified as Review
