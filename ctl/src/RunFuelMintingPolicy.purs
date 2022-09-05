@@ -2,7 +2,7 @@ module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash)
+import Contract.Address (PaymentPubKeyHash, getWalletAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
@@ -21,6 +21,7 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
+import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import RawScripts (rawFUELMintingPolicy)
@@ -52,6 +53,9 @@ runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
 runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
 
+  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr) -- TrustlessSidechainSchema Text CardanoTx
+
   cs ← maybe (throwContractError "Cannot get currency symbol") pure $
     Value.scriptCurrencySymbol
       fuelMP
@@ -61,6 +65,7 @@ runFuelMP sp fp = do
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let
     mkValue i = Value.singleton cs tn (BigInt.fromInt i)
+    inputUtxo = (unwrap sp).genesisMint
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = case fp of
@@ -75,9 +80,12 @@ runFuelMP sp fp = do
         in
           Constraints.mustMintValueWithRedeemer (wrap (toData SideToMain)) value
             <> Constraints.mustPayToPubKey mp.recipient value
+            <> (maybe mempty Constraints.mustSpendPubKeyOutput inputUtxo)
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.mintingPolicy fuelMP
+    lookups = Lookups.unspentOutputs ownUtxos <>
+      Lookups.mintingPolicy fuelMP
+
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
