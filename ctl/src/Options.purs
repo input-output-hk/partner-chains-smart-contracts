@@ -16,6 +16,7 @@ import Options.Applicative
   , command
   , execParser
   , fullDesc
+  , header
   , help
   , helper
   , hsubparser
@@ -28,17 +29,25 @@ import Options.Applicative
   , progDesc
   , short
   , str
+  , value
   )
 import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
 options ∷ Maybe Config → ParserInfo Options
-options maybeConfig = info (helper <*> optSpec) fullDesc
+options maybeConfig = info (helper <*> optSpec)
+  ( fullDesc <> header
+      "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
+  )
   where
   optSpec =
     hsubparser $ mconcat
-      [ command "mint"
+      [ command "addresses"
+          ( info (withCommonOpts (pure GetAddrs))
+              (progDesc "Get the script addresses for a given sidechain")
+          )
+      , command "mint"
           ( info (withCommonOpts mintSpec)
               (progDesc "Mint a certain amount of FUEL tokens")
           )
@@ -54,15 +63,11 @@ options maybeConfig = info (helper <*> optSpec) fullDesc
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
           )
-      , command "addresses"
-          ( info (withCommonOpts (pure GetAddrs))
-              (progDesc "Get the script addresses for a given sidechain")
-          )
       ]
 
   withCommonOpts endpointParser = ado
-    skey ← maybe skeySpec pure (maybeConfig >>= _.signingKeyFile)
-    scParams ← maybe scParamsSpec pure (maybeConfig >>= _.sidechainParameters)
+    skey ← skeySpec
+    scParams ← scParamsSpec
     endpoint ← endpointParser
 
     in { skey, scParams, endpoint }
@@ -73,6 +78,7 @@ options maybeConfig = info (helper <*> optSpec) fullDesc
       , metavar "/absolute/path/to/skey"
       , help "Own signing key file"
       , action "file"
+      , maybe mempty value (maybeConfig >>= _.signingKeyFile)
       ]
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
@@ -125,6 +131,10 @@ options maybeConfig = info (helper <*> optSpec) fullDesc
       , long "sidechain-id"
       , metavar "1"
       , help "Sidechain ID"
+      , maybe mempty value
+          ( maybeConfig >>= _.sidechainParameters >>= unwrap >>> _.chainId >>>
+              BigInt.toInt
+          )
       ]
 
     genesisHash ← option byteArray $ fold
@@ -132,6 +142,8 @@ options maybeConfig = info (helper <*> optSpec) fullDesc
       , long "sidechain-genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters <#> unwrap >>> _.genesisHash)
       ]
 
     genesisMint ← optional $ option transactionInput $ fold
@@ -139,12 +151,16 @@ options maybeConfig = info (helper <*> optSpec) fullDesc
       , long "genesis-mint-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the genesis mint"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= unwrap >>> _.genesisMint)
       ]
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spent with the first committee hash setup"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters <#> unwrap >>> _.genesisUtxo)
       ]
     in
       SidechainParams
