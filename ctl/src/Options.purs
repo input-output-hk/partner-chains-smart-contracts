@@ -132,9 +132,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "1"
       , help "Sidechain ID"
       , maybe mempty value
-          ( maybeConfig >>= _.sidechainParameters >>= unwrap >>> _.chainId >>>
-              BigInt.toInt
-          )
+          (maybeConfig >>= _.sidechainParameters >>= _.chainId)
       ]
 
     genesisHash ← option byteArray $ fold
@@ -143,7 +141,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
       , maybe mempty value
-          (maybeConfig >>= _.sidechainParameters <#> unwrap >>> _.genesisHash)
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
       ]
 
     genesisMint ← optional $ option transactionInput $ fold
@@ -152,7 +150,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the genesis mint"
       , maybe mempty value
-          (maybeConfig >>= _.sidechainParameters >>= unwrap >>> _.genesisMint)
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
       ]
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
@@ -160,7 +158,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spent with the first committee hash setup"
       , maybe mempty value
-          (maybeConfig >>= _.sidechainParameters <#> unwrap >>> _.genesisUtxo)
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
     in
       SidechainParams

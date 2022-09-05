@@ -1,7 +1,4 @@
-module ConfigFile.Codecs
-  ( configCodec
-  , scParamsCodec
-  ) where
+module ConfigFile.Codecs (configCodec) where
 
 import Contract.Prelude
 
@@ -11,16 +8,12 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Contract.Transaction (TransactionHash(..))
-import Data.BigInt (BigInt)
-import Data.BigInt as BInt
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
-import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Options.Types (Config)
-import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 import Types.Transaction (TransactionInput(TransactionInput))
 
@@ -32,23 +25,19 @@ configCodec =
         , signingKeyFile: CAC.maybe CA.string
         }
     )
-
-scParamsCodec ∷ CA.JsonCodec SidechainParams
-scParamsCodec = wrapIso SidechainParams
-  ( CAR.object "sidechainParameters"
-      { chainId: bigIntCodec
-      , genesisHash: byteArrayCodec
-      , genesisMint: CAC.maybe transactionInputCodec
-      , genesisUtxo: transactionInputCodec
-      }
-  )
+  where
+  scParamsCodec =
+    ( CAR.object "sidechainParameters"
+        { chainId: CAC.maybe CA.int
+        , genesisHash: CAC.maybe byteArrayCodec
+        , genesisMint: CAC.maybe transactionInputCodec
+        , genesisUtxo: CAC.maybe transactionInputCodec
+        }
+    )
 
 byteArrayCodec ∷ CA.JsonCodec ByteArray
 byteArrayCodec = CA.prismaticCodec "ByteArray" hexToByteArray byteArrayToHex
   CA.string
-
-bigIntCodec ∷ CA.JsonCodec BigInt
-bigIntCodec = CA.prismaticCodec "BigInt" BInt.fromNumber BInt.toNumber CA.number
 
 transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string

@@ -15,7 +15,13 @@ type Options =
   }
 
 type Config =
-  { sidechainParameters ∷ Maybe SidechainParams
+  { sidechainParameters ∷
+      Maybe
+        { chainId ∷ Maybe Int
+        , genesisHash ∷ Maybe ByteArray
+        , genesisMint ∷ Maybe TransactionInput
+        , genesisUtxo ∷ Maybe TransactionInput
+        }
   , signingKeyFile ∷ Maybe FilePath
   }
 
