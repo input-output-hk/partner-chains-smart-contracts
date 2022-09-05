@@ -1,4 +1,4 @@
-module TrustlessSidechain.OffChain.DistributedSet where
+module TrustlessSidechain.OffChain.DistributedSet (logDs, dsToDsKeyMint, findDsOutput, findDsConfOutput, nodeToDatum) where
 
 import Control.Lens.Fold qualified as Fold
 import Control.Lens.Indexed qualified as Indexed
@@ -9,7 +9,6 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (TxOutRef)
-import Ledger.Address qualified as Address
 import Ledger.Scripts (Datum (getDatum))
 import Ledger.Tx (
   ChainIndexTxOut,
@@ -116,16 +115,3 @@ nodeToDatum node =
   DsDatum
     { dsNext = nNext node
     }
-
-{- | 'ownTxOutRef' finds a 'TxOutRef' corresponding to 'ownPaymentPubKeyHash'
-
- This is used in the test suite to make testing easier.
--}
-ownTxOutRef :: Contract w s Text TxOutRef
-ownTxOutRef = do
-  h <- Contract.ownPaymentPubKeyHash
-  let addr = Address.pubKeyHashAddress h Nothing
-  fmap Indexed.itoList (Contract.utxosAt addr)
-    >>= \case
-      [] -> Contract.throwError "no UTxO found"
-      utxo : _ -> return $ fst utxo
