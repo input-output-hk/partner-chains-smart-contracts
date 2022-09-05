@@ -1,5 +1,0 @@
-{ "chainId":"1",
-  "genesisHash":"000000000a00",
-  "genesisMint": { "tag": "Nothing"},
-  "genesisUtxo": "2u#000000"
-}

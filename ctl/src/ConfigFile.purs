@@ -4,12 +4,12 @@ module ConfigFile
   , scParamsExample
   , test
   , decodeSidechainParams
-  , decodeOptions
+  , decodeConfig
   ) where
 
 import Contract.Prelude
 
-import ConfigFile.Codecs (optionsCodec, scParamsCodec)
+import ConfigFile.Codecs (configCodec, scParamsCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash(..))
 import Data.Argonaut.Core as J
@@ -19,9 +19,9 @@ import Data.Codec.Argonaut as CA
 import Data.UInt as UInt
 import Node.Buffer.Class as Buff
 import Node.Encoding (Encoding(ASCII))
-import Node.FS.Sync (readFile)
+import Node.FS.Sync (exists, readFile)
 import Node.Path (FilePath)
-import Options.Types (Endpoint(..), Options)
+import Options.Types (Config)
 import SidechainParams (SidechainParams(..))
 import Types.Transaction (TransactionInput(TransactionInput))
 
@@ -44,18 +44,23 @@ scParamsExample =
         }
     }
 
-optExample ∷ Options SidechainParams
+optExample ∷ Config
 optExample =
-  { scParams: scParamsExample
-  , skey: "skey"
-  , endpoint: MintAct { amount: 2 }
+  { sidechainParameters: Just scParamsExample
+  , signingKeyFile: Just "signing-key-file"
   }
 
-decodeOptions ∷ J.Json → Either CA.JsonDecodeError (Options SidechainParams)
-decodeOptions = CA.decode optionsCodec
+decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config
+decodeConfig = CA.decode configCodec
 
 decodeSidechainParams ∷ J.Json → Either CA.JsonDecodeError SidechainParams
 decodeSidechainParams = CA.decode scParamsCodec
 
 readJson ∷ FilePath → Effect (Either String J.Json)
-readJson path = jsonParser <$> (Buff.toString ASCII =<< readFile path)
+readJson path = do
+  hasConfig ← exists path
+  if hasConfig then do
+    file ← Buff.toString ASCII =<< readFile path
+    pure $ jsonParser file
+  else
+    pure $ Left "No configuration file found."

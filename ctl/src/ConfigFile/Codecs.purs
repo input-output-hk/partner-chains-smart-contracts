@@ -1,11 +1,10 @@
 module ConfigFile.Codecs
-  ( optionsCodec
+  ( configCodec
   , scParamsCodec
   ) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Prim.ByteArray
   ( byteArrayToHex
   , hexToByteArray
@@ -15,32 +14,28 @@ import Contract.Transaction (TransactionHash(..))
 import Data.BigInt (BigInt)
 import Data.BigInt as BInt
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Common as CAC
+import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
-import Data.Codec.Argonaut.Variant as CAV
-import Data.Profunctor (dimap, wrapIso)
+import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import Data.Variant as V
-import Options.Types (Endpoint(..), Options)
+import Options.Types (Config)
 import SidechainParams (SidechainParams(..))
-import Type.Proxy (Proxy(..))
 import Types.ByteArray (ByteArray)
 import Types.Transaction (TransactionInput(TransactionInput))
 
-optionsCodec ∷ CA.JsonCodec (Options SidechainParams)
-optionsCodec =
-  CA.object "Options"
+configCodec ∷ CA.JsonCodec Config
+configCodec =
+  CA.object "Config file"
     ( CAR.record
-        { scParams: scParamsCodec
-        , skey: CA.string
-        , endpoint: endpointCodec
+        { sidechainParameters: CAC.maybe scParamsCodec
+        , signingKeyFile: CAC.maybe CA.string
         }
     )
 
 scParamsCodec ∷ CA.JsonCodec SidechainParams
 scParamsCodec = wrapIso SidechainParams
-  ( CAR.object "SidechainParams"
+  ( CAR.object "sidechainParameters"
       { chainId: bigIntCodec
       , genesisHash: byteArrayCodec
       , genesisMint: CAC.maybe transactionInputCodec
@@ -48,70 +43,12 @@ scParamsCodec = wrapIso SidechainParams
       }
   )
 
-endpointCodec ∷ CA.JsonCodec Endpoint
-endpointCodec = dimap toVariant fromVariant $ CAV.variantMatch
-  { mintAct: Right mintCodec
-  , burnAct: Right burnCodec
-  , committeeCandidateReg: Right committeeCandidateRegCodec
-  , committeeCandidateDereg: Right committeeCandidateDeregCodec
-  , getAddrs: Left unit
-  }
-  where
-  -- necessary boilerplate
-  toVariant = case _ of
-    MintAct x → V.inj (Proxy ∷ _ "mintAct") x
-    BurnAct x → V.inj (Proxy ∷ _ "burnAct") x
-    CommitteeCandidateReg x → V.inj (Proxy ∷ _ "committeeCandidateReg") x
-    CommitteeCandidateDereg x → V.inj (Proxy ∷ _ "committeeCandidateDereg") x
-    GetAddrs → V.inj (Proxy ∷ _ "getAddrs") unit
-
-  -- necessary boilerplate
-  fromVariant = V.match
-    { mintAct: MintAct
-    , burnAct: BurnAct
-    , committeeCandidateReg: CommitteeCandidateReg
-    , committeeCandidateDereg: CommitteeCandidateDereg
-    , getAddrs: \_ → GetAddrs
-    }
-
-  mintCodec ∷ CA.JsonCodec { amount ∷ Int }
-  mintCodec = CAR.object "mint" { amount: CA.int }
-
-  burnCodec ∷ CA.JsonCodec { amount ∷ Int, recipient ∷ ByteArray }
-  burnCodec = CAR.object "burn" { amount: CA.int, recipient: byteArrayCodec }
-
-  committeeCandidateRegCodec ∷
-    CA.JsonCodec
-      { spoPubKey ∷ PubKey
-      , sidechainPubKey ∷ PubKey
-      , spoSig ∷ Signature
-      , sidechainSig ∷ Signature
-      , inputUtxo ∷ TransactionInput
-      }
-  committeeCandidateRegCodec = CAR.object "committeeCandidateReg"
-    { spoPubKey: pubKeyCodec
-    , sidechainPubKey: pubKeyCodec
-    , spoSig: signatureCodec
-    , sidechainSig: signatureCodec
-    , inputUtxo: transactionInputCodec
-    }
-
-  committeeCandidateDeregCodec ∷ CA.JsonCodec { spoPubKey ∷ PubKey }
-  committeeCandidateDeregCodec = CAR.object "committeeCandidateDereg"
-    { spoPubKey: pubKeyCodec }
-
-pubKeyCodec ∷ CA.JsonCodec PubKey
-pubKeyCodec = byteArrayCodec
-
-signatureCodec ∷ CA.JsonCodec Signature
-signatureCodec = byteArrayCodec
-
 byteArrayCodec ∷ CA.JsonCodec ByteArray
 byteArrayCodec = CA.prismaticCodec "ByteArray" hexToByteArray byteArrayToHex
   CA.string
 
 bigIntCodec ∷ CA.JsonCodec BigInt
-bigIntCodec = CA.prismaticCodec "BigInt" BInt.fromString BInt.toString CA.string
+bigIntCodec = CA.prismaticCodec "BigInt" BInt.fromNumber BInt.toNumber CA.number
 
 transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string
@@ -128,8 +65,8 @@ transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string
       _ → Nothing
 
   fromF ∷ TransactionInput → String
-  fromF (TransactionInput txIn) = indexStr <> "#" <> txHashStr
+  fromF (TransactionInput txIn) = txHashStr <> "#" <> indexStr
     where
-    indexStr = show txIn.index
+    indexStr = UInt.toString txIn.index
     txHashStr = case txIn.transactionId of
       TransactionHash x → byteArrayToHex x

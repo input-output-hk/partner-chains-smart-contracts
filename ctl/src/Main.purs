@@ -25,12 +25,10 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Options (getOptions)
 import Options.Types (Endpoint(..), Options)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
-import SidechainParams (SidechainParams)
 
 -- | Get the CTL configuration parameters based on CLI arguments
-toConfig ∷ Options SidechainParams → ConfigParams ()
+toConfig ∷ Options → ConfigParams ()
 toConfig { skey } = testnetConfig
-
   { logLevel = Info
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
   }

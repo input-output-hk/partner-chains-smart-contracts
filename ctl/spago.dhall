@@ -13,13 +13,11 @@
   , "optparse"
   , "ordered-collections"
   , "parallel"
-  , "prelude"
   , "profunctor"
   , "profunctor-lenses"
   , "strings"
   , "transformers"
   , "uint"
-  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
