@@ -4,6 +4,7 @@ import Test.Tasty
 import Test.TrustlessSidechain.Integration as Integration
 import Test.TrustlessSidechain.MerkleTree as MerkleTree
 import Test.TrustlessSidechain.MultiSig as MultiSig
+import Test.TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude (IO)
 
 -- | @since 0.1
@@ -21,4 +22,5 @@ tests =
     [ Integration.test
     , MerkleTree.test
     , MultiSig.test
+    , UpdateCommitteeHash.test
     ]

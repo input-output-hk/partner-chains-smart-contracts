@@ -106,6 +106,7 @@ library
     , bytestring                 ^>=0.10.12.0
     , cardano-api
     , cardano-crypto
+    , cardano-crypto-class
     , cardano-prelude
     , containers
     , data-default-class
@@ -123,6 +124,7 @@ library
     , plutus-tx-plugin
     , prettyprinter
     , row-types
+    , secp256k1-haskell
     , serialise
     , text                       ^>=1.2.4.0
 
@@ -176,9 +178,11 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
+    Test.TrustlessSidechain.UpdateCommitteeHash
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
+    , base16-bytestring
     , bytestring
     , cardano-api
     , cardano-crypto

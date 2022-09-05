@@ -31,8 +31,14 @@ import Plutus.V2.Ledger.Contexts (
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import Plutus.V2.Ledger.Tx (OutputDatum (..))
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
+import TrustlessSidechain.OffChain.Types (
+  SidechainParams,
+  SidechainPubKey,
+ )
 import TrustlessSidechain.OnChain.Types (
   GenesisMintCommitteeHash,
   UpdateCommitteeHash,
@@ -43,6 +49,31 @@ import TrustlessSidechain.OnChain.Types (
   gcTxOutRef,
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
+
+-- * Supporting data for what is stored onchain
+
+data UpdateCommitteeMessage = UpdateCommitteeMessage
+  { -- | The sidechain parameters
+    sidechainParams :: SidechainParams
+  , -- The sidechain epoch for which we obtain the signature
+    sidechainEpoch :: Integer
+  , -- The public keys of the new committee. Invariant: the keys are sorted lexicographically
+    newCommitteePubKeys :: [SidechainPubKey]
+  }
+
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeMessage [('UpdateCommitteeMessage, 0)]
+
+{- | 'serialiseUpdateCommitteeMessage' serialises an 'UpdateCommitteeMessage'
+ into @cbor@
+-}
+serialiseUpdateCommitteeMessage :: UpdateCommitteeMessage -> BuiltinByteString
+serialiseUpdateCommitteeMessage = Builtins.serialiseData . Class.toBuiltinData
+
+{- | 'updateCommitteeMessageDigest' serialises an 'UpdateCommitteeMessage' (via
+ 'serialiseUpdateCommitteeMessage'), then hashes the output with 'Builtins.blake2b_256'
+-}
+updateCommitteeMessageDigest :: UpdateCommitteeMessage -> BuiltinByteString
+updateCommitteeMessageDigest = Builtins.blake2b_256 . serialiseUpdateCommitteeMessage
 
 -- * Updating the committee hash
 
