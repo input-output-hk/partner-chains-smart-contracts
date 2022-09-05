@@ -5,6 +5,8 @@ SHELL := bash
 BROWSER_RUNTIME ?= 1
 
 ps-sources := $(shell fd -epurs)
+js-sources := $(shell fd -ejs)
+dhall-sources := $(shell fd -edhall)
 plutus-scripts := $(wildcard Scripts/*.plutus)
 
 ps-entrypoint := Main
@@ -22,9 +24,13 @@ test: src/RawScripts.purs
 
 check-format:
 	@purs-tidy check ${ps-sources}
+	@eslint ${js-sources}
 
 format:
 	@purs-tidy format-in-place ${ps-sources}
+	@eslint --fix ${js-sources}
+	@dhall format ${dhall-sources}
+	@dhall lint ${dhall-sources}
 
 output.js: src/Main.purs src/RawScripts.purs
 	@spago bundle-module -m ${ps-entrypoint} -t $@
