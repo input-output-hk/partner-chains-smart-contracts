@@ -21,3 +21,4 @@ main.js
 *.plutus
 
 /config.json
+/contractlog.json
