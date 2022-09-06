@@ -2,6 +2,7 @@
 , dependencies =
   [ "argonaut-core"
   , "arrays"
+  , "bifunctors"
   , "bigints"
   , "cardano-transaction-lib"
   , "codec-argonaut"
@@ -15,7 +16,6 @@
   , "optparse"
   , "ordered-collections"
   , "parallel"
-  , "profunctor"
   , "profunctor-lenses"
   , "strings"
   , "transformers"

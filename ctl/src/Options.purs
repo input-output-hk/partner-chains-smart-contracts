@@ -5,10 +5,11 @@ import Contract.Prelude
 import ConfigFile (decodeConfig, readJson)
 import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import Effect.Exception (error, throwException)
+import Effect.Exception (error)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -188,12 +189,11 @@ getOptions = do
 
   where
   readAndParseJsonFrom loc = do
-    json' ← readJson loc
-    case json' of
-      Left _ → pure Nothing
-      Right json → case decodeConfig json of
-        Left e → throwException $ error $ show e
-        Right conf → pure $ Just conf
+    json' ← hush <$> readJson loc
+    traverse decodeConfigUnsafe json'
+
+  decodeConfigUnsafe json =
+    liftEither $ lmap (error <<< show) $ decodeConfig json
 
 transactionInput ∷ ReadM TransactionInput
 transactionInput = maybeReader $ \txIn →
