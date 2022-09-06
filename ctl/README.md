@@ -27,7 +27,7 @@ To change the testnet you're using, you have to change the network name in the `
       };
 ```
 
-You can also run these components indidually, more about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
+You can also run these components directly without using Docker, more about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
 
 ## Running the CLI
 
@@ -42,7 +42,7 @@ Then, you can use it the following way (without the `--`):
 ./main.js --help
 ```
 
-### Examples
+### Using the CLI commands
 
 Below are some examples for running the Passive Bridge endpoints.
 Notes:
@@ -54,6 +54,53 @@ Notes:
 
 ```bash
 export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
+```
+
+Available commands:
+```
+  addresses                Get the script addresses for a given sidechain
+  mint                     Mint a certain amount of FUEL tokens
+  burn                     Burn a certain amount of FUEL tokens
+  register                 Register a committee candidate
+  deregister               Deregister a committee member
+```
+
+#### Get script addresses of a sidechain
+
+Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
+
+```
+nix run .#ctl-main -- addresses \
+  --signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233
+```
+
+#### Mint FUEL tokens
+
+```
+nix run .#ctl-main -- mint \
+  --signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --amount 5
+```
+
+#### Burn user owned FUEL tokens
+
+```
+nix run .#ctl-main -- burn \
+  --signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --amount 5 \
+  --recipient aabbcc
 ```
 
 #### Register committee candidate
@@ -99,41 +146,20 @@ nix run .#ctl-main -- deregister \
   --spo-public-key aabbcc
 ```
 
-#### Mint FUEL tokens
+### Using a configuration file
+
+You can also provide a configuration file named `config.json` in the following format instead of repeating them in all commands.
 
 ```
-nix run .#ctl-main -- mint \
-  --signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
-  --amount 5
+{
+  "sidechainParameters": {
+    "chainId": 123,
+    "genesisHash": "11223344aabbcc",
+    "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
+    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
+  },
+  "signingKeyFile": "/absolute/path/to/signing-key.skey"
+}
 ```
 
-
-#### Burn user owned FUEL tokens
-
-```
-nix run .#ctl-main -- burn \
-  --signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
-  --amount 5 \
-  --recipient aabbcc
-```
-
-#### Get script addresses of a sidechain
-
-Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the scrpit addresses for a given sidechain, you can use the following command:
-
-```
-nix run .#ctl-main -- addresses \
-  --signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --sidechain-genesis-hash 112233
-```
+When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null, if you don't want to set a default value for that property.

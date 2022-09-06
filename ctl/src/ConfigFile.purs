@@ -1,61 +1,47 @@
 module ConfigFile
   ( readJson
   , optExample
-  , scParamsExample
-  , test
-  , decodeSidechainParams
-  , decodeOptions
+  , decodeConfig
   ) where
 
 import Contract.Prelude
 
-import ConfigFile.Codecs (optionsCodec, scParamsCodec)
+import ConfigFile.Codecs (configCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash(..))
 import Data.Argonaut.Core as J
 import Data.Argonaut.Parser (jsonParser)
-import Data.BigInt as BInt
 import Data.Codec.Argonaut as CA
 import Data.UInt as UInt
 import Node.Buffer.Class as Buff
 import Node.Encoding (Encoding(ASCII))
-import Node.FS.Sync (readFile)
+import Node.FS.Sync (exists, readFile)
 import Node.Path (FilePath)
-import Options.Types (Endpoint(..), Options)
-import SidechainParams (SidechainParams(..))
+import Options.Types (Config)
 import Types.Transaction (TransactionInput(TransactionInput))
 
-test ∷ Effect String
-test = do
-  json'' ← readJson "./sc-params.json"
-  case json'' of
-    Left e → pure $ e
-    Right json → pure $ show $ decodeSidechainParams json
-
-scParamsExample ∷ SidechainParams
-scParamsExample =
-  SidechainParams
-    { chainId: BInt.fromInt 1
-    , genesisHash: hexToByteArrayUnsafe "genesisHash"
-    , genesisMint: Nothing
-    , genesisUtxo: TransactionInput
-        { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
-        , index: UInt.fromInt 2
-        }
-    }
-
-optExample ∷ Options SidechainParams
+optExample ∷ Config
 optExample =
-  { scParams: scParamsExample
-  , skey: "skey"
-  , endpoint: MintAct { amount: 2 }
+  { sidechainParameters: Just
+      { chainId: Just 1
+      , genesisHash: Just $ hexToByteArrayUnsafe "genesisHash"
+      , genesisMint: Nothing
+      , genesisUtxo: Just $ TransactionInput
+          { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
+          , index: UInt.fromInt 2
+          }
+      }
+  , signingKeyFile: Just "signing-key-file"
   }
 
-decodeOptions ∷ J.Json → Either CA.JsonDecodeError (Options SidechainParams)
-decodeOptions = CA.decode optionsCodec
-
-decodeSidechainParams ∷ J.Json → Either CA.JsonDecodeError SidechainParams
-decodeSidechainParams = CA.decode scParamsCodec
+decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config
+decodeConfig = CA.decode configCodec
 
 readJson ∷ FilePath → Effect (Either String J.Json)
-readJson path = jsonParser <$> (Buff.toString ASCII =<< readFile path)
+readJson path = do
+  hasConfig ← exists path
+  if hasConfig then do
+    file ← Buff.toString ASCII =<< readFile path
+    pure $ jsonParser file
+  else
+    pure $ Left "No configuration file found."

@@ -19,3 +19,5 @@ result-*
 output.js
 main.js
 *.plutus
+
+/config.json
