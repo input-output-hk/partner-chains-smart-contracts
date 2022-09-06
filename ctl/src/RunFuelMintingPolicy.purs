@@ -21,8 +21,10 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
+import Contract.Utxos (getUtxo)
 import Contract.Value as Value
 import Data.BigInt as BigInt
+import Data.Map as Map
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
@@ -52,6 +54,16 @@ runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
 runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
 
+  let
+    inputTxIn = (unwrap sp).genesisMint
+
+  inputUtxo ← traverse
+    ( \txIn → do
+        txOut ← liftedM "Cannot find genesis mint UTxO" $ getUtxo txIn
+        pure $ Map.singleton txIn txOut
+    )
+    inputTxIn
+
   cs ← maybe (throwContractError "Cannot get currency symbol") pure $
     Value.scriptCurrencySymbol
       fuelMP
@@ -75,9 +87,12 @@ runFuelMP sp fp = do
         in
           Constraints.mustMintValueWithRedeemer (wrap (toData SideToMain)) value
             <> Constraints.mustPayToPubKey mp.recipient value
+            <> (maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn)
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.mintingPolicy fuelMP
+    lookups = (maybe mempty Lookups.unspentOutputs inputUtxo) <>
+      Lookups.mintingPolicy fuelMP
+
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
