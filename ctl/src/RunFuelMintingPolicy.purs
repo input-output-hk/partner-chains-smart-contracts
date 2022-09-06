@@ -55,7 +55,9 @@ runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
 
   let
-    inputTxIn = (unwrap sp).genesisMint
+    inputTxIn = case fp of
+      Mint _ → (unwrap sp).genesisMint
+      Burn _ → Nothing
 
   inputUtxo ← traverse
     ( \txIn → do
