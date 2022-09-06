@@ -19,3 +19,4 @@ result-*
 output.js
 main.js
 *.plutus
+contractlog.json
