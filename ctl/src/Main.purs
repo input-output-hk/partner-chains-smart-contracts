@@ -26,7 +26,8 @@ import Data.Log.Formatter.JSON (jsonFormatter)
 import Helpers (logWithLevel)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (appendTextFile)
-import Options (Endpoint(..), Options, getOptions)
+import Options (getOptions)
+import Options.Types (Endpoint(..), Options)
 import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
 -- | Get the CTL configuration parameters based on CLI arguments

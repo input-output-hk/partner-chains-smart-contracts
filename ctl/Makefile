@@ -32,6 +32,10 @@ format:
 	@dhall format ${dhall-sources}
 	@dhall lint ${dhall-sources}
 
+spago2nix:
+	@spago2nix generate
+	@nixpkgs-fmt spago-packages.nix
+
 output.js: src/Main.purs src/RawScripts.purs
 	@spago bundle-module -m ${ps-entrypoint} -t $@
 
