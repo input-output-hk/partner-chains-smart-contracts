@@ -162,4 +162,10 @@ You can also provide a configuration file named `config.json` in the following f
 }
 ```
 
+and now you can call the CLI without these values:
+
+```
+nix run .#ctl-main -- mint --amount 5
+```
+
 When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null, if you don't want to set a default value for that property.
