@@ -17,12 +17,8 @@ import Ledger.Scripts qualified as Scripts
 import Ledger.Tx (
   ChainIndexTxOut,
   TxOutRef,
-  ciTxOutAddress,
  )
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex (
-  PageQuery (PageQuery, pageQueryLastItem, pageQuerySize),
- )
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Api (Datum (Datum, getDatum), MintingPolicy)
@@ -71,30 +67,9 @@ findMPTRootToken ::
   SidechainParams ->
   RootHash ->
   Contract w s e [(TxOutRef, ChainIndexTxOut)]
-findMPTRootToken sc rh =
-  filter go . Indexed.itoList <$> Utils.utxosWithCurrency pq assetClass
+findMPTRootToken sc rh = Indexed.itoList <$> Utils.utxosWithCurrency Default.def assetClass
   where
-    pq = PageQuery {pageQuerySize = Default.def, pageQueryLastItem = Nothing}
-
     assetClass = Value.assetClass (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc) $ TokenName $ unRootHash rh
-
-    -- TODO: as an optimization, I don't think testing if it is paid to the
-    -- MPTRootTokenValidator is really necessary since the existence of the
-    -- token is enough to imply that the sidechain has initiated this
-    -- transaction.
-    go :: (TxOutRef, ChainIndexTxOut) -> Bool
-    go (_oref, o) =
-      maybe
-        False
-        ( ==
-            MPTRootTokenValidator.address
-              Mpt
-                { mptSidechainParams = sc
-                , mptCurrencySymbol =
-                    MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc
-                }
-        )
-        $ o Fold.^? ciTxOutAddress
 
 {- | 'burn' will burn the given amount of FUEL in 'BurnParams'. Note that this
  expects the 'amount' in 'BurnParams' to be negative -- see 'BurnParams' for
@@ -287,7 +262,9 @@ mint MintParams {amount, index, sidechainEpoch, sidechainParams, recipient, merk
 
                   -- This check is important so all participants can
                   -- independently verify that the system has been set up
-                  -- correctly.
+                  -- correctly.... This follows from the fact that the utxo
+                  -- with the config is unspendable, and we assume that all
+                  -- participants know the protocol.
                   unless
                     ( dscKeyPolicy confDat == DistributedSet.dsKeyCurrencySymbol dskm
                         && dscFUELPolicy confDat == FUELMintingPolicy.currencySymbol fm

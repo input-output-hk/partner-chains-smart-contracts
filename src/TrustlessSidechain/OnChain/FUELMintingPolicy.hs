@@ -9,7 +9,7 @@ import Ledger (
  )
 import Ledger qualified
 import Ledger.Typed.Scripts qualified as Script
-import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue))
+import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue), TxOutRef)
 import Plutus.V1.Ledger.Contexts qualified as Contexts
 import Plutus.V1.Ledger.Crypto (PubKeyHash (PubKeyHash, getPubKeyHash))
 import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (TokenName, unTokenName), Value (getValue))
@@ -19,7 +19,7 @@ import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.Types (
-  SidechainParams (),
+  SidechainParams (genesisMint),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
@@ -116,13 +116,23 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
                 -- we can be certain there is only ONE distinct TokenName for
                 -- each 'CurrencySymbol'
+                --
+                -- Actually, I suppose someone could mint multiple of the
+                -- token, then collect them all in a single transaction..
+                -- Either way, it doens't matter -- the existence of the token
+                -- is enough to conclude that the current committee has signed
+                -- it.
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
            in RootHash $ unTokenName $ go $ txInfoInputs info
      in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
-          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+          &&
+          --
+          ( traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+              || traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
+          )
   where
     -- Aliases:
     info = scriptContextTxInfo ctx
@@ -138,6 +148,13 @@ mkMintingPolicy fm mode ctx = case mode of
         , tn == fuelTokenName =
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
+
+    -- One shot minting policy checks.
+    hasUTxO :: TxOutRef -> Bool
+    hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
+
+    oneshotMintAndUTxOPresent :: Bool
+    oneshotMintAndUTxOPresent = maybe True hasUTxO $ genesisMint $ fmSidechainParams fm
 
 mintingPolicy :: FUELMint -> MintingPolicy
 mintingPolicy param =

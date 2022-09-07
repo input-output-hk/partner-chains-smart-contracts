@@ -306,6 +306,8 @@ test =
                       , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001"
                       }
               mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1]
+              -- Note that redeeming the @mte1@ is actually the worst case
+              -- for the distributed set since that will have the most data.
 
               traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
         )
@@ -399,7 +401,9 @@ test =
                   traverse (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
 
             -- Then, let the first wallet try to burn the second wallet's FUEL
-            withContractAs 0 $
+            withContract $
+              -- N.B., if it's more clear, this is the same as:
+              -- > withContractAs 0 $
               const $ do
                 FUELMintingPolicy.burn
                   BurnParams {amount = -1, recipient = "", sidechainParams}
