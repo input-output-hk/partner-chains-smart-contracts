@@ -23,7 +23,7 @@ import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value as Value
-import Data.BigInt as BigInt
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
@@ -47,8 +47,8 @@ fuelMintingPolicy sp = do
   liftedE (applyArgs fuelMPUnapplied [ toData sp ])
 
 data FuelParams
-  = Mint { amount ∷ Int, recipient ∷ PaymentPubKeyHash }
-  | Burn { amount ∷ Int, recipient ∷ ByteArray }
+  = Mint { amount ∷ BigInt, recipient ∷ PaymentPubKeyHash }
+  | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
 runFuelMP sp fp = do
@@ -74,7 +74,7 @@ runFuelMP sp fp = do
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let
-    mkValue i = Value.singleton cs tn (BigInt.fromInt i)
+    mkValue i = Value.singleton cs tn i
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = case fp of

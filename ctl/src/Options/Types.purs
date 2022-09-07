@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Transaction (TransactionInput)
+import Data.BigInt (BigInt)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types.ByteArray (ByteArray)
@@ -26,8 +27,8 @@ type Config =
   }
 
 data Endpoint
-  = MintAct { amount ∷ Int }
-  | BurnAct { amount ∷ Int, recipient ∷ ByteArray }
+  = MintAct { amount ∷ BigInt }
+  | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ PubKey

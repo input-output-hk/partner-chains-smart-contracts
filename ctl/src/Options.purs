@@ -6,6 +6,7 @@ import ConfigFile (decodeConfig, readJson)
 import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Data.Bifunctor (lmap)
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
@@ -175,7 +176,7 @@ options maybeConfig = info (helper <*> optSpec)
     , help "SPO cold verification key"
     ]
 
-  parseAmount = option int $ fold
+  parseAmount = option bigInt $ fold
     [ short 'a'
     , long "amount"
     , metavar "1"
@@ -210,3 +211,6 @@ transactionInput = maybeReader $ \txIn →
 
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray
+
+bigInt ∷ ReadM BigInt
+bigInt = maybeReader $ BigInt.fromString
