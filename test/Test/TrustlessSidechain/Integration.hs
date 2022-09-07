@@ -406,7 +406,9 @@ test =
                   traverse (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
 
             -- Then, let the first wallet try to burn the second wallet's FUEL
-            withContractAs 0 $
+            withContract $
+              -- N.B., if it's more clear, this is the same as:
+              -- > withContractAs 0 $
               const $ do
                 FUELMintingPolicy.burn
                   BurnParams {amount = -1, recipient = "", sidechainParams}

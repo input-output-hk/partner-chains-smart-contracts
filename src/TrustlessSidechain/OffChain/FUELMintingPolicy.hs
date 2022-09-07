@@ -2,7 +2,6 @@
 
 module TrustlessSidechain.OffChain.FUELMintingPolicy where
 
-import Control.Lens.Fold qualified as Fold
 import Control.Lens.Indexed qualified as Indexed
 import Control.Monad (when)
 import Data.Default qualified as Default
@@ -16,12 +15,8 @@ import Ledger.Constraints qualified as Constraint
 import Ledger.Tx (
   ChainIndexTxOut,
   TxOutRef,
-  ciTxOutAddress,
  )
 import Ledger.Value qualified as Value
-import Plutus.ChainIndex (
-  PageQuery (PageQuery, pageQueryLastItem, pageQuerySize),
- )
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Crypto (PubKeyHash (getPubKeyHash))
@@ -59,19 +54,9 @@ findMPTRootToken ::
   SidechainParams ->
   RootHash ->
   Contract w s e [(TxOutRef, ChainIndexTxOut)]
-findMPTRootToken sc rh =
-  filter go . Indexed.itoList <$> Utils.utxosWithCurrency pq assetClass
+findMPTRootToken sc rh = Indexed.itoList <$> Utils.utxosWithCurrency Default.def assetClass
   where
-    pq = PageQuery {pageQuerySize = Default.def, pageQueryLastItem = Nothing}
-
     assetClass = Value.assetClass (MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc) $ TokenName $ unRootHash rh
-
-    -- TODO: as an optimization, I don't think testing if it is paid to the
-    -- MPTRootTokenValidator is really necessary since the existence of the
-    -- token is enough to imply that the sidechain has initiated this
-    -- transaction.
-    go :: (TxOutRef, ChainIndexTxOut) -> Bool
-    go (_oref, o) = maybe False (== MPTRootTokenValidator.address sc) $ o Fold.^? ciTxOutAddress
 
 burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 burn BurnParams {amount, sidechainParams, recipient} = do
