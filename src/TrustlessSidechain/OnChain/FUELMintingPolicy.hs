@@ -89,12 +89,7 @@ mkMintingPolicy fm mode ctx = case mode of
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
-     in traceIfFalse "Can't mint a negative amount" (fuelAmount > 0)
-          -- TODO: I don't think this positive check is in the spec and I don't think we need to
-          -- verify this on chain either? By checking if it is is in the merkle
-          -- tree (we may assume that the merkle root is computed in a trusted
-          -- way) we get this for free.
-          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+     in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
