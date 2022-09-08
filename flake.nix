@@ -23,8 +23,7 @@
 
   outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:
     let
-      supportedSystems = with nixpkgs.lib.systems.supported;
-        tier1 ++ tier2 ++ tier3;
+      supportedSystems = nixpkgs.lib.systems.flakeExposed;
 
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
