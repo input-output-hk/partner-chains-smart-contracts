@@ -1,6 +1,16 @@
 {
   description = "trustless-sidechain";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.iog.io"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    ];
+    allow-import-from-derivation = "true";
+  };
+  
   inputs = {
     # FIXME: https://github.com/NixOS/nix/issues/6986
     bot-plutus-interface.url = "github:mlabs-haskell/bot-plutus-interface?rev=1f18513d9a6326bf70a5cd68e74a40b5aa104861";
