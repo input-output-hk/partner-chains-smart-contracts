@@ -226,7 +226,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM "marketPlaceListNft: get validator address"
+  valAddr ← liftContractM "committeeCandidateValidator: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
   valUtxos ← unwrap <$> liftedM "cannot get val UTxOs" (utxosAt valAddr)

@@ -9,7 +9,6 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
-  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
@@ -53,9 +52,7 @@ runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
 runFuelMP fp sp = do
   fuelMP ← fuelMintingPolicy sp
 
-  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
-    Value.scriptCurrencySymbol
-      fuelMP
+  cs ← liftContractM "Cannot get currency symbol" (Value.scriptCurrencySymbol fuelMP)
   logInfo' (show (toData sp))
   logInfo' ("fuelMP curreny symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"

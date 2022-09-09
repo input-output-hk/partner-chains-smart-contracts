@@ -2,7 +2,7 @@ module MPTRoot where
 import SidechainParams (SidechainParams)
 import RawScripts (rawMPTRootTokenValidator , rawMPTRootTokenMintingPolicy)
 import Data.BigInt (BigInt , fromInt)
-import Contract.Prelude (class Generic, Unit, Void, bind, discard, negate, one, show, wrap, zero, (<$>), (<>), (=<<), (>>>))
+import Contract.Prelude -- (class Generic, Unit, Void, bind, discard, negate, one, show, wrap, zero, (<$>), (<>), (=<<), (>>>))
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
@@ -64,8 +64,7 @@ saveRoot (SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, co
       lookups ∷ Lookups.ScriptLookups Void
       lookups = Lookups.mintingPolicy rootTokenMP
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
---bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
-  bsTx ← balanceAndSignTx ubTx
+  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
   logInfo' ("Submitted saveRoot Tx: " <> show txId)
   awaitTxConfirmed txId

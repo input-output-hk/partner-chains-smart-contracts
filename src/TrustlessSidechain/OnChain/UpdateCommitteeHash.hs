@@ -266,3 +266,9 @@ mkCommitteHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHa
 
 serialisableCommitteHashPolicy :: Ledger.Script
 serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])
+
+mkCommitteHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableCommitteHashValidator :: Ledger.Script
+serialisableCommitteHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashValidatorUntyped||])
