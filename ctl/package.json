@@ -29,6 +29,7 @@
     "xhr2": "0.2.1"
   },
   "devDependencies": {
+    "eslint": "^8.22.0",
     "buffer": "6.0.3",
     "webpack": "5.67.0",
     "webpack-cli": "4.10",

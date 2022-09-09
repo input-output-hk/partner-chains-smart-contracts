@@ -1,13 +1,16 @@
-module Options (getOptions, Options(..), Endpoint(..)) where
+module Options (getOptions) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator (PubKey, Signature)
-import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
+import ConfigFile (decodeConfig, readJson)
+import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Data.Bifunctor (lmap)
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
+import Effect.Exception (error)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -15,6 +18,7 @@ import Options.Applicative
   , command
   , execParser
   , fullDesc
+  , header
   , help
   , helper
   , hsubparser
@@ -27,39 +31,25 @@ import Options.Applicative
   , progDesc
   , short
   , str
+  , value
   )
+import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-type Options =
-  { scParams ∷ SidechainParams
-  , skey ∷ String
-  , endpoint ∷ Endpoint
-  }
-
-data Endpoint
-  = MintAct { amount ∷ Int }
-  | BurnAct { amount ∷ Int, recipient ∷ String }
-  | CommitteeCandidateReg
-      { spoPubKey ∷ PubKey
-      , sidechainPubKey ∷ PubKey
-      , spoSig ∷ Signature
-      , sidechainSig ∷ Signature
-      , inputUtxo ∷ TransactionInput
-      }
-  | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
-
-derive instance Generic Endpoint _
-
-instance Show Endpoint where
-  show = genericShow
-
-options ∷ ParserInfo Options
-options = info (helper <*> optSpec) fullDesc
+options ∷ Maybe Config → ParserInfo Options
+options maybeConfig = info (helper <*> optSpec)
+  ( fullDesc <> header
+      "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
+  )
   where
   optSpec =
     hsubparser $ mconcat
-      [ command "mint"
+      [ command "addresses"
+          ( info (withCommonOpts (pure GetAddrs))
+              (progDesc "Get the script addresses for a given sidechain")
+          )
+      , command "mint"
           ( info (withCommonOpts mintSpec)
               (progDesc "Mint a certain amount of FUEL tokens")
           )
@@ -78,24 +68,26 @@ options = info (helper <*> optSpec) fullDesc
       ]
 
   withCommonOpts endpointParser = ado
-    skey ← option str $ fold
+    skey ← skeySpec
+    scParams ← scParamsSpec
+    endpoint ← endpointParser
+
+    in { skey, scParams, endpoint }
+  skeySpec =
+    option str $ fold
       [ short 'k'
       , long "signing-key-file"
       , metavar "/absolute/path/to/skey"
       , help "Own signing key file"
       , action "file"
+      , maybe mempty value (maybeConfig >>= _.signingKeyFile)
       ]
-
-    scParams ← scParamsSpec
-
-    endpoint ← endpointParser
-    in { skey, scParams, endpoint }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
   burnSpec = ado
     amount ← parseAmount
-    recipient ← option str $ fold
+    recipient ← option byteArray $ fold
       [ long "recipient"
       , metavar "PUBLIC_KEY_HASH"
       , help "Public key hash of the sidechain recipient"
@@ -138,16 +130,20 @@ options = info (helper <*> optSpec) fullDesc
   scParamsSpec = ado
     chainId ← option int $ fold
       [ short 'i'
-      , long "chain-id"
+      , long "sidechain-id"
       , metavar "1"
       , help "Sidechain ID"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= _.chainId)
       ]
 
     genesisHash ← option byteArray $ fold
       [ short 'h'
-      , long "genesis-hash"
+      , long "sidechain-genesis-hash"
       , metavar "GENESIS_HASH"
       , help "Sidechain genesis hash"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
       ]
 
     genesisMint ← optional $ option transactionInput $ fold
@@ -155,12 +151,16 @@ options = info (helper <*> optSpec) fullDesc
       , long "genesis-mint-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spend with the genesis mint"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
       ]
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
       , metavar "TX_ID#TX_IDX"
       , help "Input UTxO to be spent with the first committee hash setup"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
     in
       SidechainParams
@@ -176,7 +176,7 @@ options = info (helper <*> optSpec) fullDesc
     , help "SPO cold verification key"
     ]
 
-  parseAmount = option int $ fold
+  parseAmount = option bigInt $ fold
     [ short 'a'
     , long "amount"
     , metavar "1"
@@ -184,20 +184,33 @@ options = info (helper <*> optSpec) fullDesc
     ]
 
 getOptions ∷ Effect Options
-getOptions =
-  execParser options
+getOptions = do
+  config ← readAndParseJsonFrom "./config.json"
+  execParser (options config)
+
+  where
+  readAndParseJsonFrom loc = do
+    json' ← hush <$> readJson loc
+    traverse decodeConfigUnsafe json'
+
+  decodeConfigUnsafe json =
+    liftEither $ lmap (error <<< show) $ decodeConfig json
 
 transactionInput ∷ ReadM TransactionInput
 transactionInput = maybeReader $ \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
+      transactionId ← TransactionHash <$> hexToByteArray txId
       in
         TransactionInput
-          { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
+          { transactionId
           , index
           }
     _ → Nothing
 
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader $ hexToByteArray
+
+bigInt ∷ ReadM BigInt
+bigInt = maybeReader $ BigInt.fromString

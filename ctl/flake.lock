@@ -300,8 +300,9 @@
         "type": "path"
       },
       "original": {
-        "path": "./cardano-configurations",
-        "type": "path"
+        "owner": "input-output-hk",
+        "repo": "cardano-configurations",
+        "type": "github"
       }
     },
     "cardano-crypto": {

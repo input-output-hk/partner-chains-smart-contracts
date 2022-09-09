@@ -9,9 +9,10 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
+  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -20,14 +21,16 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
+import Contract.Utxos (getUtxo)
 import Contract.Value as Value
-import Data.BigInt as BigInt
+import Data.BigInt (BigInt)
+import Data.Map as Map
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
 data FUELRedeemer
-  = MainToSide String -- recipient sidechain (addr , signature)
+  = MainToSide ByteArray -- recipient sidechain (addr , signature)
   | SideToMain
 
 derive instance Generic FUELRedeemer _
@@ -44,21 +47,34 @@ fuelMintingPolicy sp = do
   liftedE (applyArgs fuelMPUnapplied [ toData sp ])
 
 data FuelParams
-  = Mint { amount ∷ Int, recipient ∷ PaymentPubKeyHash }
-  | Burn { amount ∷ Int, recipient ∷ String }
+  = Mint { amount ∷ BigInt, recipient ∷ PaymentPubKeyHash }
+  | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
--- it's a limitation of plutus server that we cannot use stake addresses so ignore the custom warning
-runFuelMP ∷ FuelParams → SidechainParams → Contract () Unit
-runFuelMP fp sp = do
+runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
+runFuelMP sp fp = do
   fuelMP ← fuelMintingPolicy sp
 
-  cs ← liftContractM "Cannot get currency symbol" (Value.scriptCurrencySymbol fuelMP)
+  let
+    inputTxIn = case fp of
+      Mint _ → (unwrap sp).genesisMint
+      Burn _ → Nothing
+
+  inputUtxo ← traverse
+    ( \txIn → do
+        txOut ← liftedM "Cannot find genesis mint UTxO" $ getUtxo txIn
+        pure $ Map.singleton txIn txOut
+    )
+    inputTxIn
+
+  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
+    Value.scriptCurrencySymbol
+      fuelMP
   logInfo' (show (toData sp))
-  logInfo' ("fuelMP curreny symbol: " <> show cs)
+  logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let
-    mkValue i = Value.singleton cs tn (BigInt.fromInt i)
+    mkValue i = Value.singleton cs tn i
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = case fp of
@@ -73,9 +89,12 @@ runFuelMP fp sp = do
         in
           Constraints.mustMintValueWithRedeemer (wrap (toData SideToMain)) value
             <> Constraints.mustPayToPubKey mp.recipient value
+            <> (maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn)
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.mintingPolicy fuelMP
+    lookups = (maybe mempty Lookups.unspentOutputs inputUtxo) <>
+      Lookups.mintingPolicy fuelMP
+
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
   txId ← submit bsTx
