@@ -46,6 +46,7 @@ module TrustlessSidechain.MerkleTree (
   -- * Building the Merkle Tree
   fromList,
   fromNonEmpty,
+  rootHashFromList,
 
   -- * Creating and querying Merkle proofs / the root hash
   lookupMp,
@@ -198,7 +199,16 @@ rootHash = \case
   Bin h _ _ -> h
   Tip h -> h
 
-{- | /O(n log n)/. Throws an error when the list is empty, but otherwise executes
+{- | @'rootHashFromList' = 'rootHash' . 'fromList'@ i.e., 'rootHashFromList'
+ computes the merkle tree and returns the root. As in 'fromList', this throws
+ an exception in the case the input list is empty.
+-}
+{-# INLINEABLE rootHashFromList #-}
+rootHashFromList :: [BuiltinByteString] -> RootHash
+rootHashFromList = rootHash . fromList
+
+{- | /O(n log n)/.
+ Throws an error when the list is empty, but otherwise executes
  'fromNonEmpty'.
 
  > 'fromList' [] == error

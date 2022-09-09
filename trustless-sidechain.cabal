@@ -164,6 +164,19 @@ executable trustless-sidechain-serialise
 
   hs-source-dirs: app/serialise
 
+executable trustless-sidechain-merkle-tree
+  import:         common-lang
+  main-is:        Main.hs
+  build-depends:
+    , bytestring
+    , optparse-applicative
+    , plutus-ledger
+    , plutus-tx
+    , serialise
+    , trustless-sidechain
+
+  hs-source-dirs: app/merkle-tree
+
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
