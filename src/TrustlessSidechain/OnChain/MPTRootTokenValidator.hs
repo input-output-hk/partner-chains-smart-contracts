@@ -18,7 +18,10 @@ instance Script.ValidatorTypes MPT where
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: SidechainParams -> () -> () -> ScriptContext -> Bool
-mkValidator _ () () _ = False
+mkValidator _ () () _ = True
+
+-- When we have reference inputs, we should replace the above line with
+-- > mkValidator _ () () _ = False
 
 typedValidator :: SidechainParams -> Script.TypedValidator MPT
 typedValidator p =

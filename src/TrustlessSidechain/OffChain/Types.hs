@@ -14,6 +14,7 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import Schema (
   ToSchema,
  )
+import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
 -- | Parameters to initialize a sidechain
@@ -86,13 +87,19 @@ data BurnParams = BurnParams
 $(deriveJSON defaultOptions ''BurnParams)
 
 data MintParams = MintParams
-  { -- | Minted amount in FUEL (Positive)
+  { -- | Minted amount in FUEL (this should be positive)
     amount :: Integer
   , -- | MainChain address
     recipient :: PaymentPubKeyHash
-  , -- | passed for parametrization
+  , -- | the merkle proof to prove to the mainchain that the given unhandled transaction from the sidechain actually happened on the sidechain
+    merkleProof :: MerkleProof
+  , --  | passed for parametrization.
+    -- TODO: in the spec, we don't do this -- we just pass the chainId. Not sure if this is what we want?
     sidechainParams :: SidechainParams
-    -- , proof :: MerkleProof
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'index' is here
+    index :: Integer
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
+    sidechainEpoch :: Integer
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -104,7 +111,7 @@ $(deriveJSON defaultOptions ''MintParams)
  TODO: it might not be a bad idea to factor out the 'signature' and
  'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
  'SaveRootParams' in a different data type. I'd imagine there will be lots of
- duplciated code when it comes to verifying that the committee has approved
+ duplicated code when it comes to verifying that the committee has approved
  of these transactions either way.
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams

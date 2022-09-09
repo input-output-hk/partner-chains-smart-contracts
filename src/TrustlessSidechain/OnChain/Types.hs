@@ -6,12 +6,37 @@ module TrustlessSidechain.OnChain.Types where
 import Ledger.Crypto (PubKey)
 import Ledger.Typed.Scripts qualified as Script
 import PlutusTx (makeIsDataIndexed)
+
 import PlutusTx.Prelude (BuiltinByteString, Integer)
+import TrustlessSidechain.MerkleTree (MerkleProof)
+
+{- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
+ for the MPTRootToken.
+-}
+data MerkleTreeEntry = MerkleTreeEntry
+  { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+    mteIndex :: !Integer
+  , -- | 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+    mteAmount :: !Integer
+  , -- | arbitrary length bytestring that represents decoded bech32 cardano
+    -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
+    -- of bech32
+    mteRecipient :: !BuiltinByteString
+  , -- | sidechain epoch for which merkle tree was created
+    mteSidechainEpoch :: !Integer
+  }
+
+makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
   = MainToSide !BuiltinByteString -- Recipient's sidechain address
-  | SideToMain -- !MerkleProof
+  | -- | 'SideToMain' indicates that we wish to mint FUEL on the mainchain.
+    -- So, this includes which transaction in the sidechain we are
+    -- transferring over to the main chain (hence the 'MerkleTreeEntry'), and
+    -- the proof tha this actually happened on the sidechain (hence the
+    -- 'MerkleProof')
+    SideToMain !MerkleTreeEntry !MerkleProof
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
 -- it's actually useful (and verified) on the sidechain, so it needs to be
