@@ -129,9 +129,19 @@ mkMintingPolicy fm mode ctx = case mode of
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           &&
+          -- TODO: remove the oneshot minting policy later... yeah..
           --
-          ( traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
-              || traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
+          -- Why do we even have it? Well because the IOG people like using it
+          -- to test for now, even though it's not what we will use later and
+          -- the distributed set replaces it.
+          ( case genesisMint $ fmSidechainParams fm of
+              Nothing -> traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+              Just gutxo ->
+                traceIfFalse "Oneshot Mintingpolicy utxo not present" $
+                  let -- One shot minting policy checks.
+                      hasUTxO :: TxOutRef -> Bool
+                      hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
+                   in hasUTxO gutxo
           )
   where
     -- Aliases:
@@ -148,13 +158,6 @@ mkMintingPolicy fm mode ctx = case mode of
         , tn == fuelTokenName =
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
-
-    -- One shot minting policy checks.
-    hasUTxO :: TxOutRef -> Bool
-    hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
-
-    oneshotMintAndUTxOPresent :: Bool
-    oneshotMintAndUTxOPresent = maybe True hasUTxO $ genesisMint $ fmSidechainParams fm
 
 mintingPolicy :: FUELMint -> MintingPolicy
 mintingPolicy param =

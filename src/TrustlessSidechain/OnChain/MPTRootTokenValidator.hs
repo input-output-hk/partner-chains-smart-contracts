@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.OnChain.MPTRootTokenValidator (
-  Mpt (Mpt, mptCurrencySymbol, mptSidechainParams),
   validator,
   hash,
   address,
@@ -10,53 +9,37 @@ module TrustlessSidechain.OnChain.MPTRootTokenValidator (
 import Ledger qualified
 import Ledger.Typed.Scripts (Validator)
 import Ledger.Typed.Scripts qualified as Scripts
-import Ledger.Typed.Scripts.Validators (DatumType, RedeemerType, ValidatorTypes)
 import Plutus.V1.Ledger.Address (Address)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Value (CurrencySymbol)
-import PlutusPrelude qualified
 import PlutusTx (applyCode, compile, liftCode)
-import PlutusTx qualified
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-import Prelude qualified
 
-{- | Merkle proof token (abbr. 'Mpt') is the parameter for the
- 'mkMptRootTokenValidator'. We're going to get rid of this when we get
- reference inputs but for now it contains the 'CurrencySymbol' of the actual
- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy'.
+{- | 'mkMptRootTokenValidator' always fails.
+
+ TODO: There's a security issue here -- someone could steal the token so no
+ one else has access to it (and the honest individual would have to inspect
+ the blockchain, and mint such token themselves). There was an attempt at one
+ point to make this "forward" the token
 -}
-data Mpt = Mpt
-  { mptCurrencySymbol :: CurrencySymbol
-  , mptSidechainParams :: SidechainParams
-  }
-  deriving stock (Prelude.Show, PlutusPrelude.Generic)
-
-PlutusTx.makeLift ''Mpt
-
-instance ValidatorTypes Mpt where
-  type RedeemerType Mpt = ()
-  type DatumType Mpt = ()
-
--- | 'mkMptRootTokenValidator' always fails.
 {-# INLINEABLE mkMptRootTokenValidator #-}
-mkMptRootTokenValidator :: Mpt -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMptRootTokenValidator _mpt _dat _red _ctx = ()
+mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMptRootTokenValidator _sc _dat _red _ctx = ()
 
 -- This should be the following when we get reference inputs
--- > mkMptRootTokenValidator :: Mpt -> BuiltinData -> BuiltinData -> BuiltinData -> ()
--- > mkMptRootTokenValidator mpt _dat _red _ctx = Builtins.error ()
+-- > mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+-- > mkMptRootTokenValidator _sc _dat _red _ctx = Builtins.error ()
 
-validator :: Mpt -> Validator
-validator mpt =
+validator :: SidechainParams -> Validator
+validator sc =
   Scripts.mkValidatorScript
     ( $$(PlutusTx.compile [||mkMptRootTokenValidator||])
-        `PlutusTx.applyCode` PlutusTx.liftCode mpt
+        `PlutusTx.applyCode` PlutusTx.liftCode sc
     )
 
-hash :: Mpt -> ValidatorHash
+hash :: SidechainParams -> ValidatorHash
 hash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . validator
 
-address :: Mpt -> Address
+address :: SidechainParams -> Address
 address = Ledger.scriptHashAddress . hash

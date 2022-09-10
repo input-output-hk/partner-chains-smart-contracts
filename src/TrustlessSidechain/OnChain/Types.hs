@@ -65,7 +65,8 @@ makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 
 
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
-  , signatures :: [BuiltinByteString]
+  , -- , lastMerkleRoot :: BuiltinByteString
+    signatures :: [BuiltinByteString]
   , threshold :: !Integer -- Natural: the number of committee pubkeys needed to sign off
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }

@@ -10,10 +10,10 @@ import Ledger.Scripts (Datum (Datum, getDatum))
 import Ledger.Tx qualified as Tx
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
-import Plutus.V1.Ledger.Value (TokenName (TokenName))
+import Plutus.V1.Ledger.Value (AssetClass (unAssetClass), TokenName (TokenName))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
-import PlutusTx.IsData.Class qualified as Class
+import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
@@ -30,6 +30,13 @@ import TrustlessSidechain.OnChain.DistributedSet (
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy (FUELMint (FUELMint, fmMptRootTokenCurrencySymbol, fmSidechainParams))
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy (
+  SignedMerkleRootMint (
+    SignedMerkleRootMint,
+    smrmSidechainParams,
+    smrmUpdateCommitteeHashCurrencySymbol
+  ),
+ )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
   InitCommitteeHashMint (
@@ -120,7 +127,12 @@ initSidechain isp =
                         FUELMintingPolicy.currencySymbol
                           FUELMint
                             { fmMptRootTokenCurrencySymbol =
-                                MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol sc
+                                MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol
+                                  SignedMerkleRootMint
+                                    { smrmSidechainParams = sc
+                                    , smrmUpdateCommitteeHashCurrencySymbol =
+                                        fst $ unAssetClass nftCommittee
+                                    }
                             , fmSidechainParams = sc
                             , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
                             }
@@ -149,12 +161,12 @@ initSidechain isp =
                     Prelude.<> Constraints.mustMintValue valDsKey
                     Prelude.<> Constraints.mustPayToOtherScript
                       (DistributedSet.insertValidatorHash ds)
-                      (Datum {getDatum = Class.toBuiltinData datDsKey})
+                      (Datum {getDatum = IsData.toBuiltinData datDsKey})
                       valDsKey
                     Prelude.<> Constraints.mustMintValue valConfDs
                     Prelude.<> Constraints.mustPayToOtherScript
                       (DistributedSet.dsConfValidatorHash ds)
-                      (Datum {getDatum = Class.toBuiltinData datConfDs})
+                      (Datum {getDatum = IsData.toBuiltinData datConfDs})
                       valConfDs
 
             ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx

@@ -4,8 +4,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | Implementation of a distributed set an on-chain distributed set to admit
- proof not in a set membership
+{- | Implementation of a set for on-chain proof of not in a set membership.
+ We call this a *distributed set* since the set structure is distributed over
+ many utxos in the block chain.
 -}
 module TrustlessSidechain.OnChain.DistributedSet (
   -- * Data types
@@ -381,6 +382,7 @@ rootNode =
       nNext =
         let dbl str = str `appendByteString` str
          in consByteString 255 (dbl (dbl (dbl (dbl (dbl (consByteString 255 emptyByteString))))))
+        -- TODO:
         -- We'd really want to write something like this:
         -- > "\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255\255"
         -- which is a 33 byte long string which is the max value.
