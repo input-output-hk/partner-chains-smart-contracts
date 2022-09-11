@@ -53,7 +53,7 @@ instance ToData InitCommitteeHashMint where
 
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
  { committeeSignatures ∷ Array String -- String
- , committeePubKeys    ∷ Array PubKeyHash -- TODO Check
+ , committeePubKeys    ∷ Array PubKeyHash -- TODO Check if haskell [] is Array
  , newCommitteeHash    ∷ String
  }
 derive instance Generic UpdateCommitteeHashRedeemer _
@@ -83,6 +83,9 @@ updateCommitteeHashValidator sp = do
   validatorUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes rawUpdateCommitteeHash PlutusScriptV2
   liftedE (applyArgs validatorUnapplied [ toData sp ])
 
+initCommitteeHashTokenName ∷ String
+initCommitteeHashTokenName = ""
+
 -- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
@@ -90,7 +93,7 @@ updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   pol ← committeeHashPolicy (InitCommitteeHashMint {icTxOutRef: (\(SidechainParams x) -> x.genesisUtxo) uchp.sidechainParams})
   cs  ← liftContractM "Cannot get currency symbol" (Value.scriptCurrencySymbol pol)
-  tn  ← liftContractM "Cannot get token name" (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
+  tn  ← liftContractM "Cannot get token name" (Value.mkTokenName =<< byteArrayFromAscii initCommitteeHashTokenName)
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
   let aggregateKeys ∷ Array String → String -- pubkeyhash or String ?
       aggregateKeys ls = MT.unRootHash $ MT.rootHash (MT.fromList (toUnfoldable ls))
@@ -111,16 +114,13 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   (oref /\ (TransactionOutput tOut)) ← liftContractM "updateCommittee hash output not found" found
   rawDatum ← liftContractM "no datum" (outputDatumDatum tOut.datum)
   UpdateCommitteeHashDatum datum  ← liftContractM "cannot get datum" (fromData $ unwrap rawDatum)
---dat    ← liftContractM "no datahash" (tOut.dataHash)
---datums ← getDatumsByHashes (mapMaybe (snd >>> unwrap >>> _.dataHash) scriptUtxos)
---datum  ← liftContractM "no datum" =<< liftContractM "no datum"  ((fromData <<< unwrap) <$> (dat `Map.lookup` datums))
   when (datum.committeeHash /= curCommitteeHash) (throwContractError "incorrect committee provided")
   let newDatum = Datum $ toData (UpdateCommitteeHashDatum { committeeHash : newCommitteeHash })
       value    = Value.singleton cs uchTN (fromInt 1)
       redeemer = Redeemer $ toData (
         UpdateCommitteeHashRedeemer
           { committeeSignatures : uchp.newCommitteeSignatures
-          , committeePubKeys    : [] -- cmtPubKeys TODO
+          , committeePubKeys    : uchp.committeePubKeys
           , newCommitteeHash    : newCommitteeHash
           })
       lookups     ∷ Lookups.ScriptLookups Void
