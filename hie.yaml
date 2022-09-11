@@ -3,11 +3,8 @@ cradle:
     - path: "./src"
       component: "lib:trustless-sidechain"
 
-    - path: "./app/bpi"
-      component: "exe:trustless-sidechain-pab"
-
-    - path: "./app/export-scripts"
-      component: "exe:trustless-sidechain-export"
+    - path: "./app/gen-signatures"
+      component: "exe:trustless-sidechain-gen-signatures"
 
     - path: "./app/serialise"
       component: "exe:trustless-sidechain-serialise"

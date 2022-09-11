@@ -245,6 +245,30 @@ let
       installPhase = "ln -s $src $out";
     };
 
+    "codec" = pkgs.stdenv.mkDerivation {
+      name = "codec";
+      version = "v4.0.1";
+      src = pkgs.fetchgit {
+        url = "https://github.com/garyb/purescript-codec.git";
+        rev = "178d0e73c0a3ac972f9364eb43d1d001bd779cac";
+        sha256 = "1z1wimbpf832467rgc45jiiym7nrh4wxzx4p2ibxsgmcvqy6j0rx";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
+    "codec-argonaut" = pkgs.stdenv.mkDerivation {
+      name = "codec-argonaut";
+      version = "v8.0.0";
+      src = pkgs.fetchgit {
+        url = "https://github.com/garyb/purescript-codec-argonaut.git";
+        rev = "f84e6737baf895a658e5bb34b5e0e6144d5d62d0";
+        sha256 = "0jld7x4fd2yq6sa147y7qz27d7kg4r6lwijwcz7l7q2npjjw20c6";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
     "console" = pkgs.stdenv.mkDerivation {
       name = "console";
       version = "v5.0.0";
