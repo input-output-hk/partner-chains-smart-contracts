@@ -22,7 +22,11 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Contract.Prim.ByteArray
+  ( ByteArray
+  , byteArrayFromAscii
+  , hexToByteArrayUnsafe
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy(..)
@@ -48,14 +52,16 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MerkleTree as MT
 import RawScripts (rawUpdateCommitteeHash)
+import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams(..))
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
+import Types.RawBytes (rawBytesToByteArray)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
 
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash ∷ String }
+  { committeeHash ∷ ByteArray }
 
 derive instance Generic UpdateCommitteeHashDatum _
 derive instance Newtype UpdateCommitteeHashDatum _
@@ -92,7 +98,7 @@ instance ToData InitCommitteeHashMint where
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array String -- String
   , committeePubKeys ∷ Array PubKeyHash -- TODO Check
-  , newCommitteeHash ∷ String
+  , newCommitteeHash ∷ ByteArray
   }
 
 derive instance Generic UpdateCommitteeHashRedeemer _
@@ -159,13 +165,11 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
   let
-    aggregateKeys ∷ Array String → String -- pubkeyhash or String ?
-    aggregateKeys ls = MT.unRootHash $ MT.rootHash
-      (MT.fromList (toUnfoldable ls))
     uch = { uchAssetClass: cs /\ tn }
     -- show is our version of (getLedgerBytes . getPubKey)
-    newCommitteeHash = aggregateKeys (show <$> uchp.newCommitteePubKeys) ∷ String -- aggregateKeys (newCommitteePubKeys uchp)
-    curCommitteeHash = aggregateKeys (show <$> uchp.committeePubKeys)
+    newCommitteeHash = aggregateKeys
+      (pkhToByteArray <$> uchp.newCommitteePubKeys)
+    curCommitteeHash = aggregateKeys (pkhToByteArray <$> uchp.committeePubKeys)
   updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
   let valHash = validatorHash updateValidator
   netId ← getNetworkId
@@ -214,3 +218,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   logInfo' "Submitted updateCommitteeHash transaction!"
   awaitTxConfirmed txId
   logInfo' "updateCommitteeHash transaction submitted successfully!"
+
+aggregateKeys ∷ Array ByteArray → ByteArray
+aggregateKeys ls = MT.unRootHash $ MT.rootHash
+  (MT.fromList (toUnfoldable ls))
+
+pkhToByteArray ∷ PubKeyHash → ByteArray
+pkhToByteArray = unwrap >>> ed25519KeyHashToBytes >>> rawBytesToByteArray

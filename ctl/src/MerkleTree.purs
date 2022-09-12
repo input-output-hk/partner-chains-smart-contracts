@@ -1,16 +1,17 @@
 module MerkleTree where
 
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Data.Function (on)
 import Data.List (List(..), (:))
 import Prelude (map, (<<<), (<>))
 
 -- ! Wrapper around internal hashing function
-hash ∷ String → RootHash
+hash ∷ ByteArray → RootHash
 hash = RootHash -- <<< blake2b_256 TODO find appropriate purescript hashing function
 
-newtype RootHash = RootHash String
+newtype RootHash = RootHash ByteArray
 
-unRootHash ∷ RootHash → String
+unRootHash ∷ RootHash → ByteArray
 unRootHash (RootHash s) = s
 
 data MerkleTree
@@ -21,7 +22,7 @@ rootHash ∷ MerkleTree → RootHash
 rootHash (Bin h _ _) = h
 rootHash (Tip h) = h
 
-fromList ∷ List String → MerkleTree
+fromList ∷ List ByteArray → MerkleTree
 --fromList [] = error "MerkleTree.fromList: empty list"
 fromList ls =
   let
@@ -39,8 +40,8 @@ fromList ls =
 mergeRootHashes ∷ RootHash → RootHash → RootHash
 mergeRootHashes l r = hashInternalNode (((<>) `on` unRootHash) l r)
 
-hashInternalNode ∷ String → RootHash
-hashInternalNode = hash <<< (_ <> "1")
+hashInternalNode ∷ ByteArray → RootHash
+hashInternalNode = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 1 ])
 
-hashLeaf ∷ String → RootHash
-hashLeaf = hash <<< (_ <> "0")
+hashLeaf ∷ ByteArray → RootHash
+hashLeaf = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 0 ])
