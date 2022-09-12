@@ -87,6 +87,7 @@ library
   exposed-modules:
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.CommitteeCandidateValidator
+    TrustlessSidechain.OffChain.DistributedSet
     TrustlessSidechain.OffChain.FUELMintingPolicy
     TrustlessSidechain.OffChain.InitSidechain
     TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
@@ -95,6 +96,7 @@ library
     TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OffChain.Utils
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
+    TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator

@@ -1,41 +1,45 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.MPTRootTokenValidator where
+module TrustlessSidechain.OnChain.MPTRootTokenValidator (
+  validator,
+  hash,
+  address,
+) where
 
-import Ledger (
-  ScriptContext,
- )
 import Ledger qualified
-import Ledger.Typed.Scripts qualified as Script
+import Ledger.Typed.Scripts (Validator)
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.V1.Ledger.Address (Address)
+import Plutus.V1.Ledger.Scripts (ValidatorHash)
+import Plutus.V1.Ledger.Scripts qualified as Scripts
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
-data MPT
-instance Script.ValidatorTypes MPT where
-  type RedeemerType MPT = ()
-  type DatumType MPT = ()
+{- | 'mkMptRootTokenValidator' always fails.
 
-{-# INLINEABLE mkValidator #-}
-mkValidator :: SidechainParams -> () -> () -> ScriptContext -> Bool
-mkValidator _ () () _ = True
+ TODO: There's a security issue here -- someone could steal the token so no
+ one else has access to it (and the honest individual would have to inspect
+ the blockchain, and mint such token themselves). There was an attempt at one
+ point to make this "forward" the token
+-}
+{-# INLINEABLE mkMptRootTokenValidator #-}
+mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMptRootTokenValidator _sc _dat _red _ctx = ()
 
--- When we have reference inputs, we should replace the above line with
--- > mkValidator _ () () _ = False
+-- This should be the following when we get reference inputs
+-- > mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+-- > mkMptRootTokenValidator _sc _dat _red _ctx = Builtins.error ()
 
-typedValidator :: SidechainParams -> Script.TypedValidator MPT
-typedValidator p =
-  Script.mkTypedValidator @MPT
-    ($$(PlutusTx.compile [||mkValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Script.wrapValidator @() @()
+validator :: SidechainParams -> Validator
+validator sc =
+  Scripts.mkValidatorScript
+    ( $$(PlutusTx.compile [||mkMptRootTokenValidator||])
+        `PlutusTx.applyCode` PlutusTx.liftCode sc
+    )
 
-validator :: SidechainParams -> Ledger.Validator
-validator = Script.validatorScript . typedValidator
+hash :: SidechainParams -> ValidatorHash
+hash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . validator
 
-hash :: SidechainParams -> Ledger.ValidatorHash
-hash = Script.validatorHash . typedValidator
-
-address :: SidechainParams -> Ledger.Address
+address :: SidechainParams -> Address
 address = Ledger.scriptHashAddress . hash

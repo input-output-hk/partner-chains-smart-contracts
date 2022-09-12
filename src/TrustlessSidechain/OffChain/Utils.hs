@@ -1,11 +1,14 @@
 -- | A collection of some utility functions for the offchain code.
-module TrustlessSidechain.OffChain.Utils where
+module TrustlessSidechain.OffChain.Utils (foldUtxoRefsWithCurrency, utxosWithCurrency, ownTxOutRef) where
 
 import Control.Lens.Fold qualified as Fold
+import Control.Lens.Indexed qualified as Indexed
 import Control.Lens.Review qualified as Review
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Text (Text)
 import Ledger (TxOutRef)
+import Ledger.Address qualified as Address
 import Ledger.Tx (
   ChainIndexTxOut,
  )
@@ -93,3 +96,18 @@ utxosWithCurrency = foldUtxoRefsWithCurrency go Map.empty
           Request.txOutFromRef ref PlutusPrelude.<&> \case
             Just o | isUtxo p -> Map.insert ref o acc'
             _ -> acc'
+
+{- | 'ownTxOutRef' finds a 'TxOutRef' corresponding to 'ownPaymentPubKeyHash'
+
+ This is used in the test suite to make testing easier.
+-}
+ownTxOutRef :: Contract w s Text TxOutRef
+ownTxOutRef =
+  Contract.ownPaymentPubKeyHash >>= \h ->
+    let addr = Address.pubKeyHashAddress h Nothing
+     in Contract.utxosAt addr
+          >>= ( \case
+                  [] -> Contract.throwError "no UTxO found"
+                  utxo : _ -> return $ fst utxo
+              )
+            . Indexed.itoList

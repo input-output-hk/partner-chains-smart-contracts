@@ -38,7 +38,10 @@ PlutusTx.makeLift ''InitSidechainParams
 data SidechainParams = SidechainParams
   { chainId :: !BuiltinByteString
   , genesisHash :: !BuiltinByteString
-  , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
+  , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
+    -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
+    -- will use the distributed set implementation.
+    genesisMint :: Maybe TxOutRef
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: !TxOutRef
@@ -100,6 +103,10 @@ data MintParams = MintParams
     index :: Integer
   , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
     sidechainEpoch :: Integer
+  , -- | See
+    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for
+    -- why 'entryHash' is here. This is TODO and will be removed later
+    entryHash :: BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)

@@ -28,10 +28,11 @@ import Plutus.V1.Ledger.Value (
   AssetClass,
   CurrencySymbol,
   TokenName (TokenName),
-  Value,
+  Value (getValue),
  )
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
@@ -149,10 +150,18 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "Token missing from output" outputHasToken
-    && traceIfFalse "Committee signature missing" signedByCurrentCommittee
-    && traceIfFalse "Wrong committee" isCurrentCommittee
-    && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+  -- TODO: remove the if statement here and just have the else clause. We do
+  -- this for now because this is needed in the signed merkle root to emulate
+  -- reference inputs... so we allow people to spend this output just to read
+  -- the data here essentially
+  -- BUT THIS SHOULD BE REMOVED WHEN WE HAVE REFERENCE INPUTS IN PLUTUSV2!
+  if newCommitteeHash red == committeeHash dat
+    then True
+    else
+      traceIfFalse "Token missing from output" outputHasToken
+        && traceIfFalse "Committee signature missing" signedByCurrentCommittee
+        && traceIfFalse "Wrong committee" isCurrentCommittee
+        && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -179,9 +188,9 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     signedByCurrentCommittee =
       verifyMultisig
         (Bytes.getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        1
+        1 -- TODO: this should be the threshold?
         (newCommitteeHash red)
-        (committeeSignatures red) -- TODO where are the other signatures?
+        (committeeSignatures red)
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
@@ -237,14 +246,21 @@ PlutusTx.makeLift ''InitCommitteeHashMint
 initCommitteeHashMintTn :: TokenName
 initCommitteeHashMintTn = TokenName Builtins.emptyByteString
 
+{- | 'initCommitteeHashMintAmount' is the amount of the currency to mint which
+ is 1.
+-}
+{-# INLINEABLE initCommitteeHashMintAmount #-}
+initCommitteeHashMintAmount :: Integer
+initCommitteeHashMintAmount = 1
+
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
 {-# INLINEABLE mkCommitteeHashPolicy #-}
 mkCommitteeHashPolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
 mkCommitteeHashPolicy ichm _red ctx =
-  traceIfFalse "UTxO not consumed" hasUtxo
-    && traceIfFalse "wrong amount minted" checkMintedAmount
+  traceIfFalse "error 'mkCommitteeHashPolicy' UTxO not consumed" hasUtxo
+    && traceIfFalse "error 'mkCommitteeHashPolicy' wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -255,13 +271,10 @@ mkCommitteeHashPolicy ichm _red ctx =
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
+    -- assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
-    checkMintedAmount = case Value.flattenValue (txInfoMint info) of
-      [(_cs, tn', amt)] -> tn' == initCommitteeHashMintTn && amt == 1
-      -- Note: we don't need to check that @cs == Contexts.ownCurrencySymbol ctx@
-      -- since the ledger rules ensure that the minting policy will only
-      -- be run if some of the asset is actually being minted: see
-      -- https://playground.plutus.iohkdev.io/doc/plutus/tutorials/basic-minting-policies.html.
+    checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+      Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
       _ -> False
 
 -- | 'committeeHashPolicy' is the minting policy
@@ -277,7 +290,7 @@ committeeHashPolicy gch =
 committeeHashCurSymbol :: InitCommitteeHashMint -> CurrencySymbol
 committeeHashCurSymbol ichm = Contexts.scriptCurrencySymbol $ committeeHashPolicy ichm
 
-{- | 'committeeHashCurSymbol' is the asset class. See 'initCommitteeHashMintTn'
+{- | 'committeeHashAssetClass' is the asset class. See 'initCommitteeHashMintTn'
  for details on the token name
 -}
 {-# INLINEABLE committeeHashAssetClass #-}

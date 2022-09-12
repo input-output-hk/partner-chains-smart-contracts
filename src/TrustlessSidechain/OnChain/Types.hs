@@ -24,6 +24,9 @@ data MerkleTreeEntry = MerkleTreeEntry
     mteRecipient :: !BuiltinByteString
   , -- | sidechain epoch for which merkle tree was created
     mteSidechainEpoch :: !Integer
+  , -- | 'mteHash' will be removed later TODO! Currently, we have this here to
+    -- help test the system.
+    mteHash :: !BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
@@ -62,7 +65,8 @@ makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 
 
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: BuiltinByteString
-  , signatures :: [BuiltinByteString]
+  , -- , lastMerkleRoot :: BuiltinByteString
+    signatures :: [BuiltinByteString]
   , threshold :: !Integer -- Natural: the number of committee pubkeys needed to sign off
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }

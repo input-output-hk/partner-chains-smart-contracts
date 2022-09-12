@@ -19,9 +19,7 @@ import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.Types (
-  SidechainParams (
-    genesisMint
-  ),
+  SidechainParams (genesisMint),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
@@ -46,6 +44,11 @@ data FUELMint = FUELMint
     fmMptRootTokenCurrencySymbol :: CurrencySymbol
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams
+  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
+    -- hold the key for the distributed set. In particular, this allows the
+    -- FUEL minting policy to verify if a string has /just been inserted/ into
+    -- the distributed set.
+    fmDsKeyCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeLift ''FUELMint
@@ -89,16 +92,63 @@ mkMintingPolicy fm mode ctx = case mode of
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
+
+        cborMteHashed = cborMte --  TODO: actually hash this later.
+        dsInserted :: BuiltinByteString
+        dsInserted
+          | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
+            , (tn, _amt) : _ <- AssocMap.toList tns =
+            unTokenName tn
+          | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
+
+        merkleRoot :: RootHash
+        merkleRoot =
+          let go :: [TxInInfo] -> TokenName
+              go (t : ts)
+                | o <- txInInfoResolved t
+                  , Just tns <- AssocMap.lookup mptRootTnCurrencySymbol $ getValue $ txOutValue o
+                  , [(tn, _amt)] <- AssocMap.toList tns =
+                  tn
+                -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
+                -- can be rewritten as
+                -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
+                -- where from
+                -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
+                -- we can be certain there is only ONE distinct TokenName for
+                -- each 'CurrencySymbol'
+                --
+                -- Actually, I suppose someone could mint multiple of the
+                -- token, then collect them all in a single transaction..
+                -- Either way, it doens't matter -- the existence of the token
+                -- is enough to conclude that the current committee has signed
+                -- it.
+                | otherwise = go ts
+              go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
+           in RootHash $ unTokenName $ go $ txInfoInputs info
      in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
+          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
-          && traceIfFalse "Oneshot Mintingpolicy utxo not present" oneshotMintAndUTxOPresent
+          &&
+          -- TODO: remove the oneshot minting policy later... yeah..
+          --
+          -- Why do we even have it? Well because the IOG people like using it
+          -- to test for now, even though it's not what we will use later and
+          -- the distributed set replaces it.
+          ( case genesisMint $ fmSidechainParams fm of
+              Nothing -> traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+              Just gutxo ->
+                traceIfFalse "Oneshot Mintingpolicy utxo not present" $
+                  let -- One shot minting policy checks.
+                      hasUTxO :: TxOutRef -> Bool
+                      hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
+                   in hasUTxO gutxo
+          )
   where
     -- Aliases:
     info = scriptContextTxInfo ctx
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
     mptRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
-    sc = fmSidechainParams fm
+    dsKeyCurrencySymbol = fmDsKeyCurrencySymbol fm
     minted = txInfoMint info
 
     fuelAmount :: Integer
@@ -109,36 +159,10 @@ mkMintingPolicy fm mode ctx = case mode of
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
 
-    merkleRoot :: RootHash
-    merkleRoot =
-      -- N.B. we could use 'PlutusTx.Foldable.asum' but I'm fairly certain
-      -- the strictness of Plutus won't be what we want i.e., it would always
-      -- do a linear scan EVEN if it could terminate early.
-      let go :: [TxInInfo] -> TokenName
-          go (t : ts)
-            | o <- txInInfoResolved t
-              , Just tns <- AssocMap.lookup mptRootTnCurrencySymbol $ getValue $ txOutValue o
-              , [(tn, _amt)] <- AssocMap.toList tns =
-              tn
-            -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
-            -- can be rewritten as
-            -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
-            -- where from
-            -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
-            -- we can be certain there is only ONE distinct TokenName for
-            -- each 'CurrencySymbol'
-            | otherwise = go ts
-          go [] = traceError "error 'FUELMintingPolicy' missing MPTRootToken"
-       in RootHash $ unTokenName $ go $ txInfoInputs info
-
-    -- Checks:
-    hasUTxO :: TxOutRef -> Bool
-    hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
-
-    oneshotMintAndUTxOPresent :: Bool
-    oneshotMintAndUTxOPresent = maybe True hasUTxO $ genesisMint sc
-
 mintingPolicy :: FUELMint -> MintingPolicy
 mintingPolicy param =
   Ledger.mkMintingPolicyScript
     ($$(PlutusTx.compile [||Script.wrapMintingPolicy . mkMintingPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
+
+currencySymbol :: FUELMint -> CurrencySymbol
+currencySymbol = Ledger.scriptCurrencySymbol . mintingPolicy
