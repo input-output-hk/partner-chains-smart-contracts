@@ -2,11 +2,7 @@ module UpdateCommitteeHash where
 
 import Contract.Prelude
 
-import Contract.Address
-  ( PubKeyHash
-  , getNetworkId
-  , validatorHashEnterpriseAddress
-  )
+import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
@@ -46,17 +42,17 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.Array (toUnfoldable)
-import Data.BigInt (fromInt)
+import Data.BigInt as BigInt
 import Data.Foldable (find)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MerkleTree as MT
+import Partial.Unsafe (unsafePartial)
 import RawScripts (rawUpdateCommitteeHash)
-import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams(..))
+import Types (AssetClass, PubKey, Signature)
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
-import Types.RawBytes (rawBytesToByteArray)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
 
@@ -78,7 +74,7 @@ instance FromData UpdateCommitteeHashDatum where
 -- plutus script is parameterised on AssetClass, which CTL doesn't have
 -- the toData instance uses the underlying tuple so we do the same
 newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { uchAssetClass ∷ Value.CurrencySymbol /\ Value.TokenName }
+  { uchAssetClass ∷ AssetClass }
 
 derive instance Generic UpdateCommitteeHash _
 derive instance Newtype UpdateCommitteeHash _
@@ -96,8 +92,8 @@ instance ToData InitCommitteeHashMint where
     [ toData icTxOutRef ]
 
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array String -- String
-  , committeePubKeys ∷ Array PubKeyHash -- TODO Check
+  { committeeSignatures ∷ Array Signature
+  , committeePubKeys ∷ Array PubKey
   , newCommitteeHash ∷ ByteArray
   }
 
@@ -114,9 +110,9 @@ instance ToData UpdateCommitteeHashRedeemer where
 
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array PubKeyHash
-  , newCommitteeSignatures ∷ Array String
-  , committeePubKeys ∷ Array PubKeyHash
+  , newCommitteePubKeys ∷ Array PubKey
+  , newCommitteeSignatures ∷ Array Signature
+  , committeePubKeys ∷ Array PubKey
   }
 
 derive instance Generic UpdateCommitteeHashParams _
@@ -149,6 +145,27 @@ updateCommitteeHashValidator sp = do
     PlutusScriptV2
   liftedE (applyArgs validatorUnapplied [ toData sp ])
 
+{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
+ the utxo which contains the committee hash. We use an empty bytestring for
+ this because the name really doesn't matter, so we mighaswell save a few
+ bytes by giving it the empty name.
+-}
+initCommitteeHashMintTn ∷ Value.TokenName
+initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
+  hexToByteArrayUnsafe ""
+
+{- | 'committeeHashCurSymbol' is the asset class. See 'initCommitteeHashMintTn'
+ for details on the token name
+-}
+{-# INLINEABLE committeeHashAssetClass #-}
+committeeHashAssetClass ∷ InitCommitteeHashMint → Contract () AssetClass
+committeeHashAssetClass ichm = do
+  cp ← committeeHashPolicy ichm
+  curSym ← liftContractM "Couldn't get committeeHash currency symbol"
+    (Value.scriptCurrencySymbol cp)
+
+  pure $ curSym /\ initCommitteeHashMintTn
+
 -- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
@@ -167,9 +184,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     uch = { uchAssetClass: cs /\ tn }
     -- show is our version of (getLedgerBytes . getPubKey)
-    newCommitteeHash = aggregateKeys
-      (pkhToByteArray <$> uchp.newCommitteePubKeys)
-    curCommitteeHash = aggregateKeys (pkhToByteArray <$> uchp.committeePubKeys)
+    newCommitteeHash = aggregateKeys uchp.newCommitteePubKeys
+    curCommitteeHash = aggregateKeys uchp.committeePubKeys
   updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
   let valHash = validatorHash updateValidator
   netId ← getNetworkId
@@ -182,7 +198,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     uchCS /\ uchTN = uch.uchAssetClass
     findOwnValue (_tIN /\ tOUT) =
-      Value.valueOf ((unwrap tOUT).amount) uchCS uchTN == fromInt 1
+      Value.valueOf ((unwrap tOUT).amount) uchCS uchTN == BigInt.fromInt 1
     found = find findOwnValue scriptUtxos
   (oref /\ (TransactionOutput tOut)) ← liftContractM
     "updateCommittee hash output not found"
@@ -198,7 +214,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     newDatum = Datum $ toData
       (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
-    value = Value.singleton cs uchTN (fromInt 1)
+    value = Value.singleton cs uchTN (BigInt.fromInt 1)
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures: uchp.newCommitteeSignatures
@@ -222,6 +238,3 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 aggregateKeys ∷ Array ByteArray → ByteArray
 aggregateKeys ls = MT.unRootHash $ MT.rootHash
   (MT.fromList (toUnfoldable ls))
-
-pkhToByteArray ∷ PubKeyHash → ByteArray
-pkhToByteArray = unwrap >>> ed25519KeyHashToBytes >>> rawBytesToByteArray

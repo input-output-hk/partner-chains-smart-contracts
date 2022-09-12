@@ -57,11 +57,8 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
+import Types (AssetClass, PubKey, Signature)
 import Types.Scripts (plutusV2Script)
-
-type Signature = ByteArray -- Ed25519Signature
-type AssetClass = Value.CurrencySymbol
-type PubKey = ByteArray
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
