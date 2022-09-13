@@ -10,13 +10,13 @@ import Contract.Scripts (validatorHash)
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
 import SidechainParams
   ( InitSidechainParams(InitSidechainParams)
   , SidechainParams(SidechainParams)
   )
+import Types (assetClassValue)
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
   , UpdateCommitteeHash(..)
@@ -42,9 +42,7 @@ import UpdateCommitteeHash
  Here, we create a transaction which executes both of these steps with a single
  transaction.
 -}
-initSidechain ∷
-  InitSidechainParams →
-  Contract () SidechainParams
+initSidechain ∷ InitSidechainParams → Contract () SidechainParams
 initSidechain (InitSidechainParams isp) = do
   let txIn = isp.initUtxo
   txOut ← liftedM "Cannot find genesis UTxO" $ getUtxo txIn
@@ -54,8 +52,7 @@ initSidechain (InitSidechainParams isp) = do
   nftPolicy ← committeeHashPolicy ichm
 
   let
-    uchCS /\ uchTN = nft
-    val = Value.singleton uchCS uchTN (BigInt.fromInt 1)
+    val = assetClassValue nft (BigInt.fromInt 1)
     uch = UpdateCommitteeHash { uchAssetClass: nft }
 
     ndat = Datum

@@ -28,7 +28,7 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
+  TxInfo (txInfoInputs, txInfoMint),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -229,7 +229,7 @@ mkCommitteeHashPolicy ichm _red ctx =
     oref = icTxOutRef ichm
 
     hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoReferenceInputs info
+    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
     checkMintedAmount :: Bool
     checkMintedAmount = case Value.flattenValue (txInfoMint info) of
@@ -261,14 +261,14 @@ committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
 committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn
 
 -- CTL hack
-mkCommitteHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteHashPolicy :: Ledger.Script
-serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])
+serialisableCommitteeHashPolicy :: Ledger.Script
+serialisableCommitteeHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])
 
-mkCommitteHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteHashValidator :: Ledger.Script
-serialisableCommitteHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashValidatorUntyped||])
+serialisableCommitteeHashValidator :: Ledger.Script
+serialisableCommitteeHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

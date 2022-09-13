@@ -48,9 +48,16 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MerkleTree as MT
 import Partial.Unsafe (unsafePartial)
-import RawScripts (rawUpdateCommitteeHash)
+import RawScripts (rawCommitteeHashPolicy, rawCommitteeHashValidator)
 import SidechainParams (SidechainParams(..))
-import Types (AssetClass, PubKey, Signature)
+import Types
+  ( AssetClass
+  , PubKey
+  , Signature
+  , assetClass
+  , assetClassValue
+  , assetClassValueOf
+  )
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
@@ -88,8 +95,8 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
 derive instance Generic InitCommitteeHashMint _
 derive instance Newtype InitCommitteeHashMint _
 instance ToData InitCommitteeHashMint where
-  toData (InitCommitteeHashMint { icTxOutRef }) = Constr zero
-    [ toData icTxOutRef ]
+  toData (InitCommitteeHashMint { icTxOutRef }) =
+    toData icTxOutRef
 
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array Signature
@@ -134,14 +141,14 @@ instance ToData UpdateCommitteeHashParams where
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do
   policyUnapplied ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
-    rawUpdateCommitteeHash
+    rawCommitteeHashPolicy
     PlutusScriptV2
   liftedE (applyArgs policyUnapplied [ toData sp ])
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
 updateCommitteeHashValidator sp = do
   validatorUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
-    rawUpdateCommitteeHash
+    rawCommitteeHashValidator
     PlutusScriptV2
   liftedE (applyArgs validatorUnapplied [ toData sp ])
 
@@ -164,7 +171,7 @@ committeeHashAssetClass ichm = do
   curSym ← liftContractM "Couldn't get committeeHash currency symbol"
     (Value.scriptCurrencySymbol cp)
 
-  pure $ curSym /\ initCommitteeHashMintTn
+  pure $ assetClass curSym initCommitteeHashMintTn
 
 -- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
@@ -182,7 +189,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
   let
-    uch = { uchAssetClass: cs /\ tn }
+    uch = { uchAssetClass: assetClass cs tn }
     -- show is our version of (getLedgerBytes . getPubKey)
     newCommitteeHash = aggregateKeys uchp.newCommitteePubKeys
     curCommitteeHash = aggregateKeys uchp.committeePubKeys
@@ -196,9 +203,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       (utxosAt valAddr) ∷
       Contract () (Array (TransactionInput /\ TransactionOutput))
   let
-    uchCS /\ uchTN = uch.uchAssetClass
     findOwnValue (_tIN /\ tOUT) =
-      Value.valueOf ((unwrap tOUT).amount) uchCS uchTN == BigInt.fromInt 1
+      assetClassValueOf ((unwrap tOUT).amount) uch.uchAssetClass ==
+        BigInt.fromInt 1
     found = find findOwnValue scriptUtxos
   (oref /\ (TransactionOutput tOut)) ← liftContractM
     "updateCommittee hash output not found"
@@ -214,7 +221,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     newDatum = Datum $ toData
       (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
-    value = Value.singleton cs uchTN (BigInt.fromInt 1)
+    value = assetClassValue uch.uchAssetClass (BigInt.fromInt 1)
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures: uchp.newCommitteeSignatures

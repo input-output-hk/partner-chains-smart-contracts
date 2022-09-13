@@ -19,8 +19,9 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Data.UInt as UInt
+import InitSidechain (initSidechain)
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
-import SidechainParams (SidechainParams(..))
+import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.Config (config)
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
@@ -34,6 +35,7 @@ main = launchAff_ $ do
     withKeyWallet alice $ do
       mintAndBurnScenario
       registerAndDeregisterScenario
+      initAndUpdateCommitteeHashScenario
 
 mintAndBurnScenario ∷ Contract () Unit
 mintAndBurnScenario = do
@@ -93,3 +95,21 @@ toTxIn txId txIdx =
     { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
     , index: UInt.fromInt txIdx
     }
+
+initAndUpdateCommitteeHashScenario ∷ Contract () Unit
+initAndUpdateCommitteeHashScenario = do
+  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  genesisUtxo ← liftContractM "No UTxOs found at key wallet"
+    $ Set.findMin
+    $ Map.keys ownUtxos
+  let
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 1
+      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+      , initMint: Nothing
+      , initUtxo: genesisUtxo
+      , initCommittee: hexToByteArrayUnsafe <$> [ "aa", "bb", "cc" ]
+      }
+
+  void $ initSidechain initScParams

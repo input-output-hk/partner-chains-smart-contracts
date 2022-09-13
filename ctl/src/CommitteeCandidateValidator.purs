@@ -26,7 +26,6 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
@@ -169,7 +168,7 @@ instance FromData BlockProducerRegistration where
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
   , bprmSidechainPubKey ∷ String
-  , bprmInputUtxo ∷ TransactionOutput -- A UTxO that must be spent by the transaction
+  , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
 register ∷ RegisterParams → Contract () Unit

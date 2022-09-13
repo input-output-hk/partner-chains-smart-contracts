@@ -33,6 +33,6 @@ main =
     , ("MPTRootTokenValidator", MPTRootTokenValidator.serialisableValidator)
     , ("MPTRootTokenMintingPolicy", MPTRootTokenMintingPolicy.serialisableMintingPolicy)
     , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
-    , ("UpdateCommitteePolicy", UpdateCommitteeHash.serialisableCommitteHashPolicy)
-    , ("UpdateCommitteeHash", UpdateCommitteeHash.serialisableCommitteHashValidator)
+    , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
+    , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
     ]
