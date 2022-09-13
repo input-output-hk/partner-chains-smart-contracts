@@ -26,6 +26,7 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
@@ -56,7 +57,7 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
-import Types (AssetClass, PubKey, Signature)
+import Types (PubKey, Signature)
 import Types.Scripts (plutusV2Script)
 
 newtype RegisterParams = RegisterParams
@@ -80,43 +81,13 @@ getCommitteeCandidateValidator sp = do
     PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
 
-newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷
-      Array String -- | The current committee's signatures for the 'newCommitteeHash'
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- | 'committeePubKeys' is the current committee public keys
-  , newCommitteeHash ∷ String -- | 'newCommitteeHash' is the hash of the new committee
-  }
-
-derive instance Generic UpdateCommitteeHashRedeemer _
-derive instance Newtype UpdateCommitteeHashRedeemer _
-instance ToData UpdateCommitteeHashRedeemer where
-  toData
-    ( UpdateCommitteeHashRedeemer
-        { committeeSignatures, committeePubKeys, newCommitteeHash }
-    ) = Constr zero
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteeHash
-    ]
-
-newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { newCommitteePubKeys ∷
-      Array PaymentPubKeyHash -- The public keys of the new committee.
-  , token ∷ AssetClass -- The asset class of the NFT for this committee hash
-  , committeeSignatures ∷
-      Array String -- The signature for the new committee hash.
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- Public keys of the current committee members.
-  }
-
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ String
-  , signatures ∷ Array String
+  , merkleRoot ∷ ByteArray
+  , signatures ∷ Array Signature
   , threshold ∷ BigInt.BigInt
   , committeePubKeys ∷
-      Array PaymentPubKeyHash -- Public keys of all committee members
+      Array PubKey -- Public keys of all committee members
   }
 
 newtype BlockProducerRegistration = BlockProducerRegistration

@@ -23,6 +23,11 @@ import InitSidechain (initSidechain)
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.Config (config)
+import UpdateCommitteeHash
+  ( UpdateCommitteeHashParams(..)
+  , aggregateKeys
+  , updateCommitteeHash
+  )
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -33,8 +38,8 @@ main = launchAff_ $ do
 
   runPlutipContract config distribute \(alice /\ _bob) → do
     withKeyWallet alice $ do
-      mintAndBurnScenario
-      registerAndDeregisterScenario
+      -- mintAndBurnScenario
+      -- registerAndDeregisterScenario
       initAndUpdateCommitteeHashScenario
 
 mintAndBurnScenario ∷ Contract () Unit
@@ -104,12 +109,28 @@ initAndUpdateCommitteeHashScenario = do
     $ Set.findMin
     $ Map.keys ownUtxos
   let
+    initCommittee = hexToByteArrayUnsafe <$> [ "aa", "bb", "cc" ]
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
       , initMint: Nothing
       , initUtxo: genesisUtxo
-      , initCommittee: hexToByteArrayUnsafe <$> [ "aa", "bb", "cc" ]
+      , initCommittee
       }
 
-  void $ initSidechain initScParams
+  scParams ← initSidechain initScParams
+
+  let
+    nextCommittee = hexToByteArrayUnsafe <$> [ "dd", "ee", "ff" ]
+    -- nextCommitteeHash = aggregateKeys nextCommittee
+    -- sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+
+    uchp =
+      UpdateCommitteeHashParams
+        { sidechainParams: scParams
+        , newCommitteePubKeys: nextCommittee
+        , committeePubKeys: initCommittee
+        , committeeSignatures: hexToByteArrayUnsafe <$> [ "aabb" ]
+        }
+
+  updateCommitteeHash uchp

@@ -2,6 +2,7 @@ module UpdateCommitteeHash where
 
 import Contract.Prelude
 
+import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
@@ -118,7 +119,7 @@ instance ToData UpdateCommitteeHashRedeemer where
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
-  , newCommitteeSignatures ∷ Array Signature
+  , committeeSignatures ∷ Array Signature
   , committeePubKeys ∷ Array PubKey
   }
 
@@ -128,13 +129,13 @@ instance ToData UpdateCommitteeHashParams where
     ( UpdateCommitteeHashParams
         { sidechainParams
         , newCommitteePubKeys
-        , newCommitteeSignatures
+        , committeeSignatures
         , committeePubKeys
         }
     ) = Constr zero
     [ toData sidechainParams
     , toData newCommitteePubKeys
-    , toData newCommitteeSignatures
+    , toData committeeSignatures
     , toData committeePubKeys
     ]
 
@@ -198,24 +199,21 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   netId ← getNetworkId
   valAddr ← liftContractM "updateCommitteeHash: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
-  scriptUtxos ←
-    Map.toUnfoldable <<< unwrap <$> liftedM "Cannot get script utxos"
-      (utxosAt valAddr) ∷
-      Contract () (Array (TransactionInput /\ TransactionOutput))
+  scriptUtxos ← unwrap <$> liftedM "Cannot get script utxos" (utxosAt valAddr)
   let
     findOwnValue (_tIN /\ tOUT) =
       assetClassValueOf ((unwrap tOUT).amount) uch.uchAssetClass ==
         BigInt.fromInt 1
-    found = find findOwnValue scriptUtxos
+    found = find findOwnValue
+      ( Map.toUnfoldable scriptUtxos ∷
+          (Array (TransactionInput /\ TransactionOutput))
+      )
   (oref /\ (TransactionOutput tOut)) ← liftContractM
     "updateCommittee hash output not found"
     found
-  rawDatum ← liftContractM "no datum" (outputDatumDatum tOut.datum)
+  rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
   UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
     (fromData $ unwrap rawDatum)
-  --dat    ← liftContractM "no datahash" (tOut.dataHash)
-  --datums ← getDatumsByHashes (mapMaybe (snd >>> unwrap >>> _.dataHash) scriptUtxos)
-  --datum  ← liftContractM "no datum" =<< liftContractM "no datum"  ((fromData <<< unwrap) <$> (dat `Map.lookup` datums))
   when (datum.committeeHash /= curCommitteeHash)
     (throwContractError "incorrect committee provided")
   let
@@ -224,19 +222,25 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     value = assetClassValue uch.uchAssetClass (BigInt.fromInt 1)
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
-          { committeeSignatures: uchp.newCommitteeSignatures
-          , committeePubKeys: [] -- cmtPubKeys TODO
+          { committeeSignatures: uchp.committeeSignatures
+          , committeePubKeys: uchp.committeePubKeys
           , newCommitteeHash: newCommitteeHash
           }
       )
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.unspentOutputs
-      (Map.singleton oref (TransactionOutput tOut))
+    lookups =
+      Lookups.unspentOutputs
+        (Map.singleton oref (TransactionOutput tOut))
+        <> Lookups.validator updateValidator
     constraints = Constraints.mustSpendScriptOutput oref redeemer
       <> Constraints.mustPayToScript valHash newDatum value
+
+  logInfo' (show tOut)
+  logInfo' (show value)
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  bsTx ← liftedM "Failed to balance/sign tx"
+    (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
   logInfo' "Submitted updateCommitteeHash transaction!"
   awaitTxConfirmed txId

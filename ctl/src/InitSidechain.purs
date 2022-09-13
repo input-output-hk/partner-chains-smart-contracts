@@ -2,6 +2,7 @@ module InitSidechain where
 
 import Contract.Prelude
 
+import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.PlutusData (Datum(..), toData)
@@ -70,13 +71,14 @@ initSidechain (InitSidechainParams isp) = do
         <> Lookups.unspentOutputs (Map.singleton txIn txOut)
         <> Lookups.validator updateValidator
 
-    tx =
+    constraints =
       Constraints.mustSpendPubKeyOutput txIn
         <> Constraints.mustMintValue val
         <> Constraints.mustPayToScript valHash ndat val
 
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups tx)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedM "Failed to balance/sign tx"
+    (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
   logInfo' "Submitted initial updateCommitteeHash transaction."
   awaitTxConfirmed txId
