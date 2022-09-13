@@ -5,11 +5,10 @@
  This is is a CLI for 'TrustlessSidechain.MerkleTree' supporting input via cbor
  encoded BuiltinData.
 -}
-module Main (main) where
+module Main (main, serialiseBuiltinData) where
 
 import Codec.Serialise qualified as Serialise
 import Control.Exception qualified as Exception
-import Control.Monad qualified as Monad
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as Lazy
@@ -22,6 +21,7 @@ import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude qualified as PlutusTx
 import System.IO (Handle, IOMode (ReadMode, WriteMode))
 import System.IO qualified as IO
+import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 
 -- N.B. technically, the @STANDARDS.md@ says something like we shouldn't
@@ -37,10 +37,13 @@ import Prelude
  to cbor i.e.,
  > 'serialiseBuiltinData' = 'Builtins.serialiseData' . 'Class.toBuiltinData'
 
+ Why is this here? Well, it was a helpful wrapper used in GHCi when developing
+ this.
+
  Some notes on [cbor](https://www.rfc-editor.org/rfc/rfc8949.html) (although
  for a detailed treatment, just see the RFC). It appears that Plutus encodes
  lists as indefinite length lists i.e., lists will be prefixed by @0x9f...@
- and terminated with @0xff@
+ and terminated with @0xff@.
 -}
 serialiseBuiltinData :: ToData a => a -> BuiltinByteString
 serialiseBuiltinData = Builtins.serialiseData . Class.toBuiltinData
@@ -58,12 +61,14 @@ unBuiltinByteString (BuiltinByteString bs) = bs
  and we are hence interested in reading input from stdin.
 -}
 newtype Input = Input {unInput :: Maybe FilePath}
+  deriving newtype (Show, Eq)
 
 {- | 'Output' is a newtype wrapper for @Maybe FilePath@ and is identical to
  'Input' except 'Nothing' denotes no input was provided and we are hence
  interested in writing output to stdout.
 -}
 newtype Output = Output {unOutput :: Maybe FilePath}
+  deriving newtype (Show, Eq)
 
 {- | 'pFileInput' parses an input file and returns 'Nothing' as the default.
  The 'Nothing' is used to represent stdin.
@@ -100,18 +105,42 @@ pFileOutput =
  *Readers* are methods used to read data from input
 -}
 
-{- | 'readerBuiltinDataCbor' reads a cbor encoded 'BuiltinData' representation
- of the given arguments e.g. if the argument is @["pomeranian", "maltese"]@,
- then this will read @cbor(toBuiltinData(["pomeranian", "maltese"]))@
+{- | 'MerkleTreeAction' is a (hopefully) convenient intermediate type which
+ represents the merkle tree function we wish to execute and its associated
+ arguments.
 -}
-readerBuiltinDataCbor :: FromData a => Handle -> IO a
-readerBuiltinDataCbor input =
-  Lazy.hGetContents input
-    >>= PlutusTx.maybe
-      (Exception.throwIO $ userError "BuiltinData deserialization failed")
-      return
-      . Class.fromBuiltinData
-      . Serialise.deserialise
+data MerkleTreeAction
+  = -- | Correponds to @\bs -> 'MerkleTree.fromList' bs@
+    FromList [BuiltinByteString]
+  | -- | Correponds to @\bs -> 'MerkleTree.rootHashFromList' bs@
+    RootHashFromList [BuiltinByteString]
+  | -- | Correponds to @\(bs, mt) -> 'MerkleTree.lookupMp' bs mt@
+    LookupMp (BuiltinByteString, MerkleTree)
+  | -- | Correponds to @\(bs, mp, rh) -> 'MerkleTree.memberMp' bs mp rh@
+    MemberMp (BuiltinByteString, MerkleProof, RootHash)
+
+{- | 'readBuiltinDataCbor' reads a cbor encoded 'BuiltinData' representation
+ of the given arguments e.g. if the argument is @["pomeranian", "maltese"]@
+ (say, correponding to 'FromList' in 'MerkleTreeAction'), then this will
+ attempt to read @cbor(toBuiltinData(["pomeranian", "maltese"]))@
+-}
+readBuiltinDataCbor :: MerkleTreeOption -> Handle -> IO MerkleTreeAction
+readBuiltinDataCbor opt handle = case opt of
+  EncodeFromList -> FromList <$> arg
+  EncodeRootHashFromList -> RootHashFromList <$> arg
+  EncodeLookupMp -> LookupMp <$> arg
+  EncodeMemberMp -> MemberMp <$> arg
+  where
+    -- Generic function which reads from input and deserializes to BuiltinData,
+    -- and transforms that to the corresponding Haskell data type
+    arg :: FromData a => IO a
+    arg =
+      Lazy.hGetContents handle
+        >>= PlutusTx.maybe
+          (Exception.throwIO $ userError "BuiltinData deserialization failed")
+          return
+          . Class.fromBuiltinData
+          . Serialise.deserialise
 
 -- * Writers
 
@@ -119,24 +148,28 @@ readerBuiltinDataCbor input =
  *Writers* are methods used to write the data to the given handle.
 -}
 
-{- | @'writerCborBuiltinData' handle a@ will write @cbor(toBuiltinData(a))@ to
- @handle@.
+{- | @'writeCborBuiltinData' mta handle@ will execute the associated merkle
+ tree command given by the 'MerkleTreeAction' @mta@, and write the result on
+ the given handle encoded as @cbor(toBuiltinData(result))@.
 -}
-writerCborBuiltinData :: ToData a => Handle -> a -> IO ()
-writerCborBuiltinData output =
-  ByteString.hPutStr output
-    . unBuiltinByteString
-    . Builtins.serialiseData
-    . Class.toBuiltinData
+writeCborBuiltinData :: MerkleTreeAction -> Handle -> IO ()
+writeCborBuiltinData mta handle = case mta of
+  FromList arg -> writer $ MerkleTree.fromList arg
+  RootHashFromList arg -> writer $ MerkleTree.rootHashFromList arg
+  LookupMp arg -> writer $ uncurry MerkleTree.lookupMp arg
+  MemberMp arg -> writer $ (\(bs, mp, rh) -> MerkleTree.memberMp bs mp rh) arg
+  where
+    writer :: ToData a => a -> IO ()
+    writer =
+      ByteString.hPutStr handle
+        . unBuiltinByteString
+        . Builtins.serialiseData
+        . Class.toBuiltinData
 
--- * Exposed Functionality
+-- * Input / Output
 
-{- $exposedFunctionality
- This section includes functions which expose functionality of the
- 'TrustlessSidechain.MerkleTree'
-
- In the future, we can provide various commands for various input and output
- formats.
+{- $inputoutput
+ This section includes functions help work with the 'Input' and 'Output' types.
 -}
 
 {- | @'withInputOutput' input output go@ opens up two 'Handle's from @input@
@@ -156,67 +189,68 @@ withInputOutput (Input input) (Output output) go = case input of
     Just outFp -> IO.withFile outFp WriteMode $ go IO.stdin
     Nothing -> go IO.stdin IO.stdout
 
--- | 'fromList' is a wrapper for 'MerkleTree.fromList'.
-fromList :: Input -> Output -> IO ()
-fromList input output = withInputOutput input output $ \inHandle outHandle ->
-  readerBuiltinDataCbor inHandle >>= writerCborBuiltinData outHandle . MerkleTree.fromList
-
--- | 'rootHashFromList' is a wrapper for 'MerkleTree.rootHashFromList'.
-rootHashFromList :: Input -> Output -> IO ()
-rootHashFromList input output = withInputOutput input output $ \inHandle outHandle ->
-  readerBuiltinDataCbor inHandle >>= writerCborBuiltinData outHandle . MerkleTree.rootHashFromList
-
-{- | 'lookupMp' is a wrapper for @uncurry . MerkleTree.lookupMp@. Note that
- this expects the arguments as a cbor encoded tuple.
--}
-lookupMp :: Input -> Output -> IO ()
-lookupMp input output = withInputOutput input output $ \inHandle outHandle ->
-  readerBuiltinDataCbor inHandle
-    >>= writerCborBuiltinData outHandle . uncurry MerkleTree.lookupMp
-
-{- | 'memberMp' is a wrapper for @\(bs, merkleProof, rootHash) ->
- MerkleTree.memberMp bs merkleProof rootHash@.
- Note that the arguments are expected to be a cbor encoded triplet.
--}
-memberMp :: Input -> Output -> IO ()
-memberMp input output = withInputOutput input output $ \inHandle outHandle ->
-  readerBuiltinDataCbor inHandle
-    >>= writerCborBuiltinData outHandle
-      . (\(bs, merkleProof, rootHash) -> MerkleTree.memberMp bs merkleProof rootHash)
-
 -- * Main
 
-{- | 'options' is the main runner of the application. It returns the IO actions
- which correspond to the exposed functionality of the merkle tree.
+-- | 'MerkleTreeCliOptions' is a pure representation of parsed cli input.
+data MerkleTreeCliOptions = MerkleTreeCliOptions
+  { -- | 'mtoAction' indicates which merkle tree action we are interested
+    -- in performing -- see 'MerkleTreeOption'
+    mtoAction :: MerkleTreeOption
+  , -- | 'mtoInput' is the 'Input' handle to get the arguments for the
+    -- given 'mtoAction'.
+    mtoInput :: Input
+  , -- | 'mtoOutput' is the 'Output' handle to put the result of the given
+    -- 'mtoAction'.
+    mtoOutput :: Output
+  }
+  deriving stock (Show, Eq)
+
+{- | 'MerkleTreeOption' is a sum type representing the action to execute for
+ the merkle tree.
 -}
-options :: Parser (IO ())
+data MerkleTreeOption
+  = -- | Correponds to 'MerkleTree.fromList'
+    EncodeFromList
+  | -- | Correponds to 'MerkleTree.rootHashFromList'
+    EncodeRootHashFromList
+  | -- | Correponds to @\(bs, mt) -> 'MerkleTree.lookupMp' bs mt@
+    EncodeLookupMp
+  | -- | Correponds to @\(bs, mp, mt) -> 'MerkleTree.memberMp' bs mp mt@
+    EncodeMemberMp
+  deriving stock (Show, Eq)
+
+{- | 'options' is the main runner of the application. It returns
+ 'MerkleTreeCliOptions' which is a pure representation of what the rest of the
+ application should do.
+-}
+options :: Parser MerkleTreeCliOptions
 options =
   Applicative.subparser $
     Prelude.mconcat
       [ Applicative.command "fromList" $
           Applicative.info
-            (fromList <$> pFileInput <*> pFileOutput)
+            (MerkleTreeCliOptions EncodeFromList <$> pFileInput <*> pFileOutput)
             ( Applicative.header "fromList"
                 <> Applicative.progDesc
                   "Given a list of `BuiltinByteString`s `bs` encoded as `cbor(toBuiltinData(bs))`, returns the cbor encoding of the `BuiltinData` of the corresponding merkle tree."
             )
       , Applicative.command "rootHashFromList" $
           Applicative.info
-            (rootHashFromList <$> pFileInput <*> pFileOutput)
+            (MerkleTreeCliOptions EncodeRootHashFromList <$> pFileInput <*> pFileOutput)
             ( Applicative.header "rootHashFromList"
                 <> Applicative.progDesc
                   "Given a list of `BuiltinByteString`s `bs` encoded as `cbor(toBuiltinData(bs))`, returns the cbor encoding of the `BuiltinData` of the root hash of the corresponding merkle tree."
             )
       , Applicative.command "lookupMp" $
           Applicative.info
-            (rootHashFromList <$> pFileInput <*> pFileOutput)
+            (MerkleTreeCliOptions EncodeLookupMp <$> pFileInput <*> pFileOutput)
             ( Applicative.header "lookupMp"
                 <> Applicative.progDesc
                   "Given `cbor( toBuiltinData (bs,merkleTree) )`, this returns `cbor(toBuiltinData(lookupMp bs merkleTree))`"
             )
       , Applicative.command "memberMp" $
           Applicative.info
-            (rootHashFromList <$> pFileInput <*> pFileOutput)
+            (MerkleTreeCliOptions EncodeMemberMp <$> pFileInput <*> pFileOutput)
             ( Applicative.header "memberMp"
                 <> Applicative.progDesc
                   "Given `cbor(toBuiltinData (bs,merkleProof,rootHash) )`, this returns `cbor(toBuiltinData(memberMp bs merkleProof rootHash))`"
@@ -248,9 +282,10 @@ options =
 -}
 main :: IO ()
 main =
-  let opts :: ParserInfo (IO ())
-      opts =
-        Applicative.info
-          (Applicative.helper <*> options)
-          Applicative.idm
-   in Monad.join $ Applicative.execParser opts
+  let opts :: ParserInfo MerkleTreeCliOptions
+      opts = Applicative.info (Applicative.helper <*> options) Applicative.idm
+   in Applicative.execParser opts >>= \cliOpts ->
+        withInputOutput (mtoInput cliOpts) (mtoOutput cliOpts) $
+          \inputHandle outputHandle ->
+            readBuiltinDataCbor (mtoAction cliOpts) inputHandle
+              >>= \action -> writeCborBuiltinData action outputHandle
