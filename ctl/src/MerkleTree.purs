@@ -6,6 +6,10 @@ import Contract.Hashing (blake2b256Hash)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Data.Function (on)
 import Data.List (List(..), (:))
+import Data.List as List
+import Data.String (joinWith)
+import Effect.Aff as Aff
+import Effect.Exception (error)
 import Prelude (map, (<<<), (<>))
 
 -- ! Wrapper around internal hashing function
@@ -14,6 +18,12 @@ hash = map RootHash <<< blake2b256Hash
 
 newtype RootHash = RootHash ByteArray
 
+derive instance Generic RootHash _
+derive instance Newtype RootHash _
+
+instance Show RootHash where
+  show = genericShow
+
 unRootHash ∷ RootHash → ByteArray
 unRootHash (RootHash s) = s
 
@@ -21,12 +31,17 @@ data MerkleTree
   = Bin RootHash MerkleTree MerkleTree
   | Tip RootHash
 
+instance Show MerkleTree where
+  show (Bin h l r) = joinWith " " [ "Bin", show h, show l, show r ]
+  show (Tip h) = joinWith " " [ "Tip", show h ]
+
 rootHash ∷ MerkleTree → RootHash
 rootHash (Bin h _ _) = h
 rootHash (Tip h) = h
 
 fromList ∷ List ByteArray → Aff MerkleTree
---fromList [] = error "MerkleTree.fromList: empty list"
+fromList List.Nil =
+  Aff.throwError $ error "MerkleTree.fromList: empty list"
 fromList ls =
   let
     mergeAll ∷ List MerkleTree → Aff MerkleTree
@@ -49,7 +64,7 @@ mergeRootHashes ∷ RootHash → RootHash → Aff RootHash
 mergeRootHashes l r = hashInternalNode (((<>) `on` unRootHash) l r)
 
 hashInternalNode ∷ ByteArray → Aff RootHash
-hashInternalNode = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 1 ])
+hashInternalNode = hash <<< (byteArrayFromIntArrayUnsafe [ 1 ] <> _)
 
 hashLeaf ∷ ByteArray → Aff RootHash
-hashLeaf = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 0 ])
+hashLeaf = hash <<< (byteArrayFromIntArrayUnsafe [ 0 ] <> _)
