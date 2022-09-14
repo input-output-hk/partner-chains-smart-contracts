@@ -1,13 +1,16 @@
 module MerkleTree where
 
+import Contract.Prelude
+
+import Contract.Hashing (blake2b256Hash)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Data.Function (on)
 import Data.List (List(..), (:))
 import Prelude (map, (<<<), (<>))
 
 -- ! Wrapper around internal hashing function
-hash ∷ ByteArray → RootHash
-hash = RootHash -- <<< blake2b_256 TODO find appropriate purescript hashing function
+hash ∷ ByteArray → Aff RootHash
+hash = map RootHash <<< blake2b256Hash
 
 newtype RootHash = RootHash ByteArray
 
@@ -22,26 +25,31 @@ rootHash ∷ MerkleTree → RootHash
 rootHash (Bin h _ _) = h
 rootHash (Tip h) = h
 
-fromList ∷ List ByteArray → MerkleTree
+fromList ∷ List ByteArray → Aff MerkleTree
 --fromList [] = error "MerkleTree.fromList: empty list"
 fromList ls =
   let
-    mergeAll ∷ List MerkleTree → MerkleTree
-    mergeAll (r : Nil) = r
-    mergeAll rs = mergeAll (mergePairs rs)
+    mergeAll ∷ List MerkleTree → Aff MerkleTree
+    mergeAll (r : Nil) = pure r
+    mergeAll rs = mergePairs rs >>= mergeAll
 
-    mergePairs ∷ List MerkleTree → List MerkleTree
-    mergePairs (a : b : cs) = Bin (mergeRootHashes (rootHash a) (rootHash b)) a b
-      : mergePairs cs
-    mergePairs cs = cs
+    mergePairs ∷ List MerkleTree → Aff (List MerkleTree)
+    mergePairs (a : b : cs) = do
+      merged ← mergeRootHashes (rootHash a) (rootHash b)
+      tail ← mergePairs cs
+      pure $ Bin merged a b : tail
+    mergePairs cs = pure cs
+
+    leaves ∷ Aff (List MerkleTree)
+    leaves = traverse (map Tip <$> hashLeaf) ls
   in
-    mergeAll (map (Tip <<< hashLeaf) ls)
+    mergeAll =<< leaves
 
-mergeRootHashes ∷ RootHash → RootHash → RootHash
+mergeRootHashes ∷ RootHash → RootHash → Aff RootHash
 mergeRootHashes l r = hashInternalNode (((<>) `on` unRootHash) l r)
 
-hashInternalNode ∷ ByteArray → RootHash
+hashInternalNode ∷ ByteArray → Aff RootHash
 hashInternalNode = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 1 ])
 
-hashLeaf ∷ ByteArray → RootHash
+hashLeaf ∷ ByteArray → Aff RootHash
 hashLeaf = hash <<< (_ <> byteArrayFromIntArrayUnsafe [ 0 ])

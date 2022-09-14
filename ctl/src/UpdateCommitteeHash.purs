@@ -189,11 +189,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
-  let
-    uch = { uchAssetClass: assetClass cs tn }
-    -- show is our version of (getLedgerBytes . getPubKey)
-    newCommitteeHash = aggregateKeys uchp.newCommitteePubKeys
-    curCommitteeHash = aggregateKeys uchp.committeePubKeys
+  let uch = { uchAssetClass: assetClass cs tn }
+  newCommitteeHash ← aggregateKeys uchp.newCommitteePubKeys
+  curCommitteeHash ← aggregateKeys uchp.committeePubKeys
   updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
   let valHash = validatorHash updateValidator
   netId ← getNetworkId
@@ -246,6 +244,6 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   awaitTxConfirmed txId
   logInfo' "updateCommitteeHash transaction submitted successfully!"
 
-aggregateKeys ∷ Array ByteArray → ByteArray
-aggregateKeys ls = MT.unRootHash $ MT.rootHash
-  (MT.fromList (toUnfoldable ls))
+aggregateKeys ∷ Array ByteArray → Contract () ByteArray
+aggregateKeys ls = liftAff
+  (MT.fromList (toUnfoldable ls) <#> MT.rootHash >>> MT.unRootHash)

@@ -51,6 +51,7 @@ initSidechain (InitSidechainParams isp) = do
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   nft ← committeeHashAssetClass ichm
   nftPolicy ← committeeHashPolicy ichm
+  committeeHash ← aggregateKeys isp.initCommittee
 
   let
     val = assetClassValue nft (BigInt.fromInt 1)
@@ -59,7 +60,7 @@ initSidechain (InitSidechainParams isp) = do
     ndat = Datum
       $ toData
       $ UpdateCommitteeHashDatum
-          { committeeHash: aggregateKeys $ isp.initCommittee }
+          { committeeHash }
 
   updateValidator ← updateCommitteeHashValidator uch
   let

@@ -44,8 +44,8 @@ main = launchAff_ $ do
 
   runPlutipContract config distribute \(alice /\ _bob) → do
     withKeyWallet alice $ do
-      -- mintAndBurnScenario
-      -- registerAndDeregisterScenario
+      mintAndBurnScenario
+      registerAndDeregisterScenario
       initAndUpdateCommitteeHashScenario
 
 mintAndBurnScenario ∷ Contract () Unit
@@ -127,9 +127,9 @@ initAndUpdateCommitteeHashScenario = do
 
   scParams ← initSidechain initScParams
 
+  let nextCommittee = hexToByteArrayUnsafe <$> [ "dd", "ee", "ff" ]
+  nextCommitteeHash ← aggregateKeys nextCommittee
   let
-    nextCommittee = hexToByteArrayUnsafe <$> [ "dd", "ee", "ff" ]
-    nextCommitteeHash = aggregateKeys nextCommittee
     sigs = multiSign committeePrvKeys nextCommitteeHash
 
     uchp =
