@@ -9,6 +9,7 @@ import CommitteCandidateValidator
   , register
   )
 import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Log (logInfo')
 import Contract.Monad (Contract, launchAff_, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Test.Plutip (runPlutipContract)
@@ -17,6 +18,7 @@ import Contract.Utxos (utxosAt)
 import Contract.Wallet (withKeyWallet)
 import Data.Array as Array
 import Data.BigInt as BigInt
+import Data.Int as Int
 import Data.Map as Map
 import Data.Set as Set
 import Data.UInt as UInt
@@ -24,11 +26,7 @@ import InitSidechain (initSidechain)
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.Config (config)
-import Test.Utils
-  ( generatePrivKey
-  , multiSign
-  , toPubKeyUnsafe
-  )
+import Test.Utils (generatePrivKey, multiSign, toPubKeyUnsafe)
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(..)
   , aggregateKeys
@@ -111,10 +109,14 @@ initAndUpdateCommitteeHashScenario ∷ Contract () Unit
 initAndUpdateCommitteeHashScenario = do
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
   ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  let
+    keyCount = 101
+    threshold = 2.0 / 3.0
+    reqSigns = Int.ceil $ Int.toNumber keyCount / threshold
   genesisUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
-  committeePrvKeys ← Array.singleton <$> generatePrivKey
+  committeePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let
     initCommittee = map toPubKeyUnsafe committeePrvKeys
     initScParams = InitSidechainParams
@@ -127,7 +129,9 @@ initAndUpdateCommitteeHashScenario = do
 
   scParams ← initSidechain initScParams
 
-  let nextCommittee = hexToByteArrayUnsafe <$> [ "dd", "ee", "ff" ]
+  logInfo' (show reqSigns)
+  nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let nextCommittee = map toPubKeyUnsafe nextCommitteePrvKeys
   nextCommitteeHash ← aggregateKeys nextCommittee
   let
     sigs = multiSign committeePrvKeys nextCommitteeHash
@@ -137,7 +141,7 @@ initAndUpdateCommitteeHashScenario = do
         { sidechainParams: scParams
         , newCommitteePubKeys: nextCommittee
         , committeePubKeys: initCommittee
-        , committeeSignatures: sigs
+        , committeeSignatures: Array.take reqSigns sigs
         }
 
   updateCommitteeHash uchp

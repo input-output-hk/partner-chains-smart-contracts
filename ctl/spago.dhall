@@ -10,6 +10,7 @@
   , "control"
   , "exceptions"
   , "foldable-traversable"
+  , "integers"
   , "lists"
   , "maybe"
   , "monad-logger"

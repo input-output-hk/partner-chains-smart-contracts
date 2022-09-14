@@ -167,11 +167,15 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     hasNft :: Value -> Bool
     hasNft val = Value.assetClassValueOf val (cToken uch) == 1
 
+    threshold :: Integer
+    threshold =
+      length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
         (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        1
+        threshold
         (newCommitteeHash red)
         (committeeSignatures red) -- TODO where are the other signatures?
     isCurrentCommittee :: Bool
