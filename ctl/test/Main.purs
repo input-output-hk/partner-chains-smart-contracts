@@ -15,6 +15,7 @@ import Contract.Test.Plutip (runPlutipContract)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Utxos (utxosAt)
 import Contract.Wallet (withKeyWallet)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
@@ -23,6 +24,11 @@ import InitSidechain (initSidechain)
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.Config (config)
+import Test.Utils
+  ( generatePrivKey
+  , multiSign
+  , toPubKeyUnsafe
+  )
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(..)
   , aggregateKeys
@@ -108,8 +114,9 @@ initAndUpdateCommitteeHashScenario = do
   genesisUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
+  committeePrvKeys ← Array.singleton <$> generatePrivKey
   let
-    initCommittee = hexToByteArrayUnsafe <$> [ "aa", "bb", "cc" ]
+    initCommittee = map toPubKeyUnsafe committeePrvKeys
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
@@ -122,15 +129,15 @@ initAndUpdateCommitteeHashScenario = do
 
   let
     nextCommittee = hexToByteArrayUnsafe <$> [ "dd", "ee", "ff" ]
-    -- nextCommitteeHash = aggregateKeys nextCommittee
-    -- sig = UpdateCommitteeHash.multiSign nCommitteeHash cmtPrvKeys
+    nextCommitteeHash = aggregateKeys nextCommittee
+    sigs = multiSign committeePrvKeys nextCommitteeHash
 
     uchp =
       UpdateCommitteeHashParams
         { sidechainParams: scParams
         , newCommitteePubKeys: nextCommittee
         , committeePubKeys: initCommittee
-        , committeeSignatures: hexToByteArrayUnsafe <$> [ "aabb" ]
+        , committeeSignatures: sigs
         }
 
   updateCommitteeHash uchp
