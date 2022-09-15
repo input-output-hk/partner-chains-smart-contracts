@@ -63,15 +63,7 @@
               src = plutip;
               subdirs = [ "." ];
             }];
-            modules = plutip.haskellModules ++ [{
-              packages = {
-                trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
-                  [
-                    project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                    project.hsPkgs.cardano-node.components.exes.cardano-node
-                  ];
-              };
-            }];
+            modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
               exactDeps = true;
@@ -88,10 +80,6 @@
                 haskellPackages.cabal-fmt
                 haskellPackages.fourmolu
                 nixpkgs-fmt
-
-                # Cardano Runtime
-                project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                project.hsPkgs.cardano-node.components.exes.cardano-node
               ];
               additional = ps: [ ps.plutip ];
               shellHook = ''
