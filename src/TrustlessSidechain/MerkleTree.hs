@@ -211,14 +211,15 @@ fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
   where
     mergeAll :: [MerkleTree] -> MerkleTree
     mergeAll [r] = r
-    mergeAll rs = mergeAll $ mergePairs rs
+    mergeAll rs = mergeAll $ mergePairs [] rs
 
-    mergePairs :: [MerkleTree] -> [MerkleTree]
-    mergePairs (a : b : cs) =
+    mergePairs :: [MerkleTree] -> [MerkleTree] -> [MerkleTree]
+    mergePairs acc (a : b : cs) =
       let a' = rootHash a
           b' = rootHash b
-       in Bin (mergeRootHashes a' b') a b : mergePairs cs
-    mergePairs cs = cs
+       in mergePairs (Bin (mergeRootHashes a' b') a b : acc) cs
+    mergePairs acc [a] = a : acc
+    mergePairs acc [] = acc
 
 {- | /O(n log n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
  'BuiltinByteString'.
