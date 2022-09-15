@@ -8,6 +8,12 @@ exports.sign = (bip32private_key) => (data) => {
   return bip32private_key.to_raw_key().sign(data).to_bytes();
 };
 
+exports.verifyEd25519Signature = (ed25519pub_key) => (data) => (ed25519sig) => {
+  const pub_key = lib.PublicKey.from_bytes(ed25519pub_key);
+  const sig = lib.Ed25519Signature.from_bytes(ed25519sig);
+  return pub_key.verify(data, sig);
+};
+
 exports.publicKeyToBytesUnsafe = (public_key) => {
   return public_key.as_bytes();
 };

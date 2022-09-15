@@ -11,6 +11,7 @@ import Contract.Scripts (validatorHash)
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import SidechainParams
@@ -51,7 +52,7 @@ initSidechain (InitSidechainParams isp) = do
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   nft ← committeeHashAssetClass ichm
   nftPolicy ← committeeHashPolicy ichm
-  committeeHash ← aggregateKeys isp.initCommittee
+  committeeHash ← aggregateKeys $ Array.sort isp.initCommittee
 
   let
     val = assetClassValue nft (BigInt.fromInt 1)

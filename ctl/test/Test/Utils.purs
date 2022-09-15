@@ -1,6 +1,7 @@
 module Test.Utils
   ( toPubKeyUnsafe
   , sign
+  , verifyEd25519Signature
   , generatePrivKey
   , multiSign
   , hexToPrivKeyUnsafe
@@ -19,6 +20,8 @@ foreign import publicKeyToBytesUnsafe ∷ PublicKey → ByteArray
 foreign import generateRandomBIP32PrivateKeyArrayInt8 ∷ Effect (Array Int)
 foreign import generateBIP32PrivateKeyFromArray ∷ Array Int → PrivateKey
 foreign import sign ∷ PrivateKey → ByteArray → Signature
+foreign import verifyEd25519Signature ∷
+  PubKey → ByteArray → Signature → Boolean
 
 multiSign ∷ Array PrivateKey → ByteArray → Array Signature
 multiSign xkeys msg = map (flip sign msg) xkeys

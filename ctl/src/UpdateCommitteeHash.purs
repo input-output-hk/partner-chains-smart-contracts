@@ -43,14 +43,19 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.Array (toUnfoldable)
+import Data.Array as Array
+import Data.Bifunctor (rmap)
 import Data.BigInt as BigInt
 import Data.Foldable (find)
+import Data.List (List, (:))
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MerkleTree as MT
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawCommitteeHashPolicy, rawCommitteeHashValidator)
 import SidechainParams (SidechainParams(..))
+import Test.Utils (verifyEd25519Signature)
 import Types
   ( AssetClass
   , PubKey
@@ -184,16 +189,32 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         { icTxOutRef: (\(SidechainParams x) → x.genesisUtxo) uchp.sidechainParams
         }
     )
+
   cs ← liftContractM "Cannot get currency symbol"
     (Value.scriptCurrencySymbol pol)
+
   tn ← liftContractM "Cannot get token name"
     (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
+
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
   let uch = { uchAssetClass: assetClass cs tn }
-  newCommitteeHash ← aggregateKeys uchp.newCommitteePubKeys
-  curCommitteeHash ← aggregateKeys uchp.committeePubKeys
+
+  let newCommitteePubKeys = uchp.newCommitteePubKeys
+  unless (isSorted newCommitteePubKeys) $ throwContractError
+    "New committee member public keys must be sorted"
+
+  newCommitteeHash ← aggregateKeys newCommitteePubKeys
+
+  let
+    curCommitteePubKeys /\ committeeSignatures = sortPubKeysAndSigs
+      newCommitteeHash
+      uchp.committeePubKeys
+      uchp.committeeSignatures
+  curCommitteeHash ← aggregateKeys curCommitteePubKeys
+
   updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
   let valHash = validatorHash updateValidator
+
   netId ← getNetworkId
   valAddr ← liftContractM "updateCommitteeHash: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
@@ -209,6 +230,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   (oref /\ (TransactionOutput tOut)) ← liftContractM
     "updateCommittee hash output not found"
     found
+
   rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
   UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
     (fromData $ unwrap rawDatum)
@@ -220,8 +242,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     value = assetClassValue uch.uchAssetClass (BigInt.fromInt 1)
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
-          { committeeSignatures: uchp.committeeSignatures
-          , committeePubKeys: uchp.committeePubKeys
+          { committeeSignatures
+          , committeePubKeys: curCommitteePubKeys
           , newCommitteeHash: newCommitteeHash
           }
       )
@@ -234,8 +256,6 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     constraints = Constraints.mustSpendScriptOutput oref redeemer
       <> Constraints.mustPayToScript valHash newDatum value
 
-  logInfo' (show tOut)
-  logInfo' (show value)
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
     (balanceAndSignTx (reattachDatumsInline ubTx))
@@ -247,3 +267,31 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 aggregateKeys ∷ Array ByteArray → Contract () ByteArray
 aggregateKeys ls = liftAff
   (MT.fromList (toUnfoldable ls) <#> MT.rootHash >>> MT.unRootHash)
+
+{-| Sorting public key and signatures pairs by public keys to be able to efficiently nub them on-chain -}
+sortPubKeysAndSigs ∷
+  ByteArray →
+  Array PubKey →
+  Array Signature →
+  Tuple (Array PubKey) (Array Signature)
+sortPubKeysAndSigs msg pks sigs =
+  pairSigs (Array.toUnfoldable pks) (Array.toUnfoldable sigs)
+    # List.sortBy (\x y → fst x `compare` fst y)
+    # Array.fromFoldable
+    # Array.unzip
+    # rmap Array.catMaybes
+  where
+  pairSigs ∷ List PubKey → List Signature → List (Tuple PubKey (Maybe Signature))
+  pairSigs List.Nil _ = List.Nil
+  pairSigs pks' List.Nil = map (_ /\ Nothing) pks'
+  pairSigs (pk : pks') (sig : sigs')
+    | verifyEd25519Signature pk msg sig =
+        (pk /\ Just sig) : pairSigs pks' sigs'
+    | otherwise =
+        (pk /\ Nothing) : pairSigs pks' (sig : sigs')
+
+{- | Verifies that the non empty array is sorted -}
+isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
+isSorted xss = case Array.tail xss of
+  Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
+  Nothing → false

@@ -128,7 +128,7 @@ initAndUpdateCommitteeHashScenario = do
 
   scParams ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-  let nextCommittee = map toPubKeyUnsafe nextCommitteePrvKeys
+  let nextCommittee = Array.sort $ map toPubKeyUnsafe nextCommitteePrvKeys
   nextCommitteeHash ← aggregateKeys nextCommittee
   let
     sigs = multiSign committeePrvKeys nextCommitteeHash
