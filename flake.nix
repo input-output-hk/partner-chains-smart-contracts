@@ -34,9 +34,6 @@
 
       supportedSystems = with nixpkgs.lib.systems.supported;
         tier1 ++ tier2 ++ tier3;
-      # TODO: Do we really claim to support all of them?
-      # Including for example MIPS and PPC?
-      # Also lib.systems.supported is deprecated (and removed in 22.05)
 
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
