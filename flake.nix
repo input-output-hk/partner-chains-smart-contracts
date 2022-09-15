@@ -52,17 +52,10 @@
           inherit (haskell-nix) config;
         };
 
-      # TODO: Do we actually need this?? Can't we just use the overlayed pkgs?
-      nixpkgsFor' = system:
-        import nixpkgs {
-          inherit system;
-          inherit (haskell-nix) config;
-        };
-
       hsProjectFor = system:
         let
-          pkgs' = nixpkgsFor' system;
-          project = (nixpkgsFor system).haskell-nix.cabalProject {
+          pkgs = nixpkgsFor system;
+          project = pkgs.haskell-nix.cabalProject {
             src = ./.;
             compiler-nix-name = "ghc8107";
             inherit (plutip) cabalProjectLocal;
@@ -82,7 +75,7 @@
             shell = {
               withHoogle = true;
               exactDeps = true;
-              nativeBuildInputs = with pkgs'; [
+              nativeBuildInputs = with pkgs; [
                 # Shell utils
                 bashInteractive
                 git
