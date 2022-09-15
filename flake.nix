@@ -4,9 +4,9 @@
   inputs = {
     plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
 
-    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";         # < TODO: verify this is what we want to follow
+    nixpkgs.follows = "cardano-transaction-lib/nixpkgs"; # < TODO: verify this is what we want to follow
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix"; # <
-    iohk-nix.follows = "cardano-transaction-lib/haskell-nix";    # <
+    iohk-nix.follows = "cardano-transaction-lib/haskell-nix"; # <
     cardano-transaction-lib = {
       type = "github";
       owner = "Plutonomicon";
