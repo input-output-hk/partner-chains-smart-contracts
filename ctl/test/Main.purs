@@ -9,7 +9,6 @@ import CommitteCandidateValidator
   , register
   )
 import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
-import Contract.Log (logInfo')
 import Contract.Monad (Contract, launchAff_, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Test.Plutip (runPlutipContract)
@@ -128,8 +127,6 @@ initAndUpdateCommitteeHashScenario = do
       }
 
   scParams ← initSidechain initScParams
-
-  logInfo' (show reqSigns)
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let nextCommittee = map toPubKeyUnsafe nextCommitteePrvKeys
   nextCommitteeHash ← aggregateKeys nextCommittee
