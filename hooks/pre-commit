@@ -15,9 +15,15 @@ set +e
 	nix=$(grep '\.nix$' <<< $changed)
 	cabal=$(grep '\.cabal$' <<< $changed)
 	haskell=$(grep '\.l\?hs$' <<< $changed)
+	purescript=$(grep '\.purs$' <<< $changed)
+	javascript=$(grep '\.js$' <<< $changed)
+	dhall=$(grep '\.dhall$' <<< $changed)
+	flake=$(grep '^flake\.nix$' <<< $changed)
 set -e
 
 ! [ "$nix" ] || nixpkgs-fmt --check $nix
+! [ "$flake" ] || nix flake lock --no-update-lock-file
+
 ! [ "$cabal" ] || cabal-fmt --check $cabal
 ! [ "$haskell" ] || {
 	FOURMOLU_EXTENSIONS='
@@ -31,5 +37,10 @@ set -e
 		|| die "Please check formatting in $haskell"
 	hlint --no-summary $haskell
 }
+
+! [ "$purescript" ] || purs-tidy check $purescript
+! [ "$javascript" ] || eslint $javascript
+! [ "$dhall" ] || dhall lint --check $dhall
+
 # `test && cmd` would fail the script if the test fails
 # `! test || cmd` would only fail if cmd fails
