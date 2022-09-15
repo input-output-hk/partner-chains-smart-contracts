@@ -27,11 +27,11 @@ import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootToke
 import TrustlessSidechain.OnChain.Types (
   SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold),
   UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer, committeePubKeys, committeeSignatures, newCommitteeHash),
+  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
+  UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
   InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef),
-  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
-  UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
@@ -56,8 +56,7 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
         UpdateCommitteeHash
           { cToken = UpdateCommitteeHash.committeeHashAssetClass ichm
           }
-   in UpdateCommitteeHash.findCommitteeHashOutput uch
-        >>= \case
+   in UpdateCommitteeHash.findCommitteeHashOutput uch >>= \case
           Nothing -> Contract.throwError "error 'saveRoot' no committee hash found."
           Just (choref, cho, chd) ->
             let param = MPTRootTokenMintingPolicy.signedMerkleRootMint sidechainParams
@@ -97,7 +96,8 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
                     -- TODO: the following line should be removed with reference
                     -- inputs
                     Prelude.<> Constraint.mustPayToOtherScript
-                      (Scripts.validatorHash (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch))
+--                    (Scripts.validatorHash (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch))
+                      (Ledger.validatorHash (UpdateCommitteeHash.updateCommitteeHashValidator uch))
                       (Datum {getDatum = Class.toBuiltinData chd})
                       ( Value.singleton
                           (UpdateCommitteeHash.committeeHashCurSymbol ichm)

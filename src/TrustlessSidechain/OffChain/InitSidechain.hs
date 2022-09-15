@@ -3,23 +3,32 @@ module TrustlessSidechain.OffChain.InitSidechain where
 import Control.Lens.Indexed qualified as Indexed
 import Data.Map qualified as Map
 import Data.Text (Text)
-import Ledger (TxOutRef)
+import Data.Functor ((<&>))
+import Ledger (Datum (Datum), TxOutRef, validatorHash)
 import Ledger.Address qualified as Address
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (Datum (Datum, getDatum))
 import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Value (AssetClass (unAssetClass), TokenName (TokenName))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
 import PlutusTx.IsData.Class qualified as IsData
+import PlutusTx qualified (toBuiltinData)
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   InitSidechainParams (initChainId, initCommittee, initGenesisHash, initMint, initUtxo),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
+  SidechainParams(..),
+  GenesisHash(..)
+ )
+import TrustlessSidechain.OnChain.Types (
+  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
+  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
+  UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsConf),
@@ -43,9 +52,6 @@ import TrustlessSidechain.OnChain.UpdateCommitteeHash (
     InitCommitteeHashMint,
     icTxOutRef
   ),
-  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
@@ -77,33 +83,28 @@ import Prelude qualified
 initSidechain :: InitSidechainParams -> Contract () TrustlessSidechainSchema Text SidechainParams
 initSidechain isp =
   let oref = initUtxo isp
-   in Contract.txOutFromRef oref
-        >>= \case
-          Nothing -> Contract.throwError "bad 'initUtxo'"
-          Just o -> do
-            let sc =
-                  SidechainParams
-                    { chainId = initChainId isp
-                    , genesisHash = initGenesisHash isp
-                    , genesisUtxo = oref
-                    , genesisMint = initMint isp
-                    }
+      sc = SidechainParams
+        { chainId = initChainId isp
+        , genesisHash = getGenesisHash (initGenesisHash isp)
+        , genesisUtxo = oref
+        , genesisMint = initMint isp
+        }
+   in do
+            o <- Contract.txOutFromRef oref >>= \case
+              Nothing -> Contract.throwError "bad 'initUtxo'"
+              Just x  -> pure x
 
                 -- Variables for initializing the committee hash
-                -------------------------------------------------
-                ichm = InitCommitteeHashMint {icTxOutRef = oref}
+            let ichm = InitCommitteeHashMint {icTxOutRef = oref}
                 nftCommittee = UpdateCommitteeHash.committeeHashAssetClass ichm
                 valCommittee = Value.assetClassValue nftCommittee 1
                 uchCommittee = UpdateCommitteeHash {cToken = nftCommittee}
-                datCommitee =
-                  UpdateCommitteeHashDatum
-                    { committeeHash =
-                        UpdateCommitteeHash.aggregateKeys $
-                          initCommittee isp
-                    }
+                datCommitee = UpdateCommitteeHashDatum
+                  { committeeHash = UpdateCommitteeHash.aggregateKeys (initCommittee isp) }
+
+--              validator = UpdateCommitteeHash.updateCommitteeHashValidator uch
 
                 -- Variables for initializing the distributed set
-                -------------------------------------------------
                 ds = Ds {dsConf = dsconf}
                 dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
                 dskm = DistributedSet.dsToDsKeyMint ds
@@ -112,7 +113,7 @@ initSidechain isp =
 
                 -- the prefix policy of the distributed set
                 smDsKey = DistributedSet.dsKeyCurrencySymbol dskm
-                tnDsKey = TokenName $ nKey DistributedSet.rootNode
+                tnDsKey = TokenName (nKey DistributedSet.rootNode)
                 astDsKey = Value.assetClass smDsKey tnDsKey
                 valDsKey = Value.assetClassValue astDsKey 1
                 datDsKey = DistributedSet.nodeToDatum DistributedSet.rootNode
@@ -145,8 +146,10 @@ initSidechain isp =
                   Constraints.unspentOutputs (Map.singleton oref o)
                     -- lookups for the update committee hash...
                     Prelude.<> Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
-                    Prelude.<> Constraints.typedValidatorLookups
-                      (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uchCommittee)
+--                  Prelude.<> Constraints.typedValidatorLookups
+--                    (UpdateCommitteeHash.updateCommitteeHashValidator uchCommittee)
+                    Prelude.<> Constraints.otherScript
+                      (UpdateCommitteeHash.updateCommitteeHashValidator uchCommittee)
                     -- lookups for the distributed set...
                     Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
                     Prelude.<> Constraints.mintingPolicy pmp
@@ -168,12 +171,19 @@ initSidechain isp =
                       (DistributedSet.dsConfValidatorHash ds)
                       (Datum {getDatum = IsData.toBuiltinData datConfDs})
                       valConfDs
+--passive-bridge-v1
+--                Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
+--                  Prelude.<> Constraints.unspentOutputs (Map.singleton oref o)
+--                  Prelude.<> Constraints.otherScript validator
+
+--              tx = Constraints.mustSpendPubKeyOutput oref
+--                  Prelude.<> Constraints.mustMintValue val
+--                  Prelude.<> Constraints.mustPayToOtherScript (validatorHash validator) ndat val
 
             ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
-
-            void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
-
-            return sc
+            void $ Contract.awaitTxConfirmed (Tx.getCardanoTxId ledgerTx)
+--          Contract.logInfo $ "Minted " <> Prelude.show val <> " and paid to validator"
+            pure sc
 
 {- | 'ownTxOutRef' gets a 'TxOutRef' from 'Contract.ownPaymentPubKeyHash'. This
  is used in the test suite for convience to make intializing the sidechain a

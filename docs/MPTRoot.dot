@@ -21,8 +21,8 @@ strict digraph {
 
   mptRootAddr [label = "MPT root script address"]
 
-  atmsVKey -> mintToken [style = dashed, label = "references"] 
-  lastMPTRoot -> mintToken [style = dashed, label = "references"] 
+  atmsVKey -> mintToken [style = dashed, label = "references"]
+  lastMPTRoot -> mintToken [style = dashed, label = "references"]
   mintToken -> mptRootAddr
 
 }

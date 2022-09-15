@@ -11,6 +11,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Void (Void)
 import Ledger (CardanoTx, Redeemer (Redeemer))
+import Ledger (CardanoTx, ChainIndexTxOut, Redeemer (Redeemer), TxOutRef, scriptCurrencySymbol)
 import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints qualified as Constraints
@@ -84,17 +85,12 @@ burn :: BurnParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 burn BurnParams {amount, sidechainParams, recipient} = do
   let -- Variables for the distributed set
       --------------------------------------------------
-      oref :: TxOutRef
-      oref = genesisUtxo sidechainParams
-
-      ds :: Ds
-      ds = Ds {dsConf = dsconf}
-
       dsconf :: CurrencySymbol
-      dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
+      dsconf = DistributedSet.dsConfCurrencySymbol
+        $ DsConfMint {dscmTxOutRef = genesisUtxo sidechainParams}
 
       dskm :: DsKeyMint
-      dskm = DistributedSet.dsToDsKeyMint ds
+      dskm = DistributedSet.dsToDsKeyMint (Ds {dsConf = dsconf})
 
       -- Variables for the FUEL minting (burning) policy
       --------------------------------------------------
@@ -114,10 +110,7 @@ burn BurnParams {amount, sidechainParams, recipient} = do
   Contract.submitTxConstraintsWith @FUELRedeemer
     (Constraints.mintingPolicy policy)
     (Constraints.mustMintValueWithRedeemer redeemer value)
-
-{- | 'mintWithUtxos' does the following (provided that we are using the
- distributed set)
-
+{-
       1. Locates a utxo with the MPTRootToken, which proves that the
       transaction happened on the sidechain.
 
@@ -166,17 +159,15 @@ mintWithUtxos utxos MintParams {amount, index, sidechainEpoch, sidechainParams, 
 
         -- Variables for the  distributed set..
         -----------------------------------
-        oref :: TxOutRef
-        oref = genesisUtxo sidechainParams
+        dsconf :: CurrencySymbol
+        dsconf = DistributedSet.dsConfCurrencySymbol
+          $ DsConfMint {dscmTxOutRef = genesisUtxo sidechainParams}
 
         ds :: Ds
         ds = Ds {dsConf = dsconf}
 
-        dsconf :: CurrencySymbol
-        dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
-
         dskm :: DsKeyMint
-        dskm = DistributedSet.dsToDsKeyMint ds
+        dskm = DistributedSet.dsToDsKeyMint (Ds {dsConf = dsconf})
 
         kmp :: MintingPolicy
         kmp = DistributedSet.dsKeyPolicy dskm

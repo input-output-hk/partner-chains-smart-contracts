@@ -32,7 +32,7 @@ strict digraph {
 //      "]
 //
 
-  merkleRoot -> tx [style = dashed, label = "references"] 
+  merkleRoot -> tx [style = dashed, label = "references"]
   pubKey -> tx [label = "consumes"]
   tx -> newPubKey
 }
