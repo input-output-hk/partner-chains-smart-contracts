@@ -66,9 +66,8 @@ runFuelMP sp fp = do
     )
     inputTxIn
 
-  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
-    Value.scriptCurrencySymbol
-      fuelMP
+  cs ← liftContractM "Cannot get currency symbol" $
+    Value.scriptCurrencySymbol fuelMP
   logInfo' (show (toData sp))
   logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
