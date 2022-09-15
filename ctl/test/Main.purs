@@ -25,12 +25,12 @@ import InitSidechain (initSidechain)
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.Config (config)
-import Test.Utils (generatePrivKey, multiSign, toPubKeyUnsafe)
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(..)
   , aggregateKeys
   , updateCommitteeHash
   )
+import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit

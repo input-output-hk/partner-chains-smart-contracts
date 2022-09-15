@@ -1,4 +1,4 @@
-module Test.Utils
+module Utils.Crypto
   ( toPubKeyUnsafe
   , sign
   , verifyEd25519Signature

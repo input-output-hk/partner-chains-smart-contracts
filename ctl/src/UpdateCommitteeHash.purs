@@ -55,7 +55,6 @@ import MerkleTree as MT
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawCommitteeHashPolicy, rawCommitteeHashValidator)
 import SidechainParams (SidechainParams(..))
-import Test.Utils (verifyEd25519Signature)
 import Types
   ( AssetClass
   , PubKey
@@ -68,6 +67,7 @@ import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
+import Utils.Crypto (verifyEd25519Signature)
 
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash ∷ ByteArray }
