@@ -131,7 +131,7 @@ initAndUpdateCommitteeHashScenario = do
   let nextCommittee = Array.sort $ map toPubKeyUnsafe nextCommitteePrvKeys
   nextCommitteeHash ← aggregateKeys nextCommittee
   let
-    sigs = Array.take reqSigns $ multiSign committeePrvKeys nextCommitteeHash
+    sigs = multiSign (Array.take reqSigns committeePrvKeys) nextCommitteeHash
 
     uchp =
       UpdateCommitteeHashParams
