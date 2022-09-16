@@ -4,20 +4,17 @@
 
 module TrustlessSidechain.OnChain.Types where
 
-import Ledger.Crypto (PubKey)
-import Ledger.Typed.Scripts qualified as Script
-import PlutusTx (makeIsDataIndexed)
-
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Typed.Scripts (ValidatorTypes (..))
 import Ledger.Value (AssetClass, TokenName)
 import Plutus.V2.Ledger.Contexts (TxOutRef)
+import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Prelude (BuiltinByteString, Eq ((==)), Integer)
 import TrustlessSidechain.MerkleTree (MerkleProof)
-import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainPubKey)
+import TrustlessSidechain.OffChain.Types (SidechainParams', SidechainPubKey)
 import Prelude qualified
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
@@ -70,7 +67,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams
+  { bprmSidechainParams :: SidechainParams'
   , bprmSidechainPubKey :: SidechainPubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef

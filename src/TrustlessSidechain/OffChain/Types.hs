@@ -60,8 +60,8 @@ PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: !Integer
-  , genesisHash :: !BuiltinByteString
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
   , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
     -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
     -- will use the distributed set implementation.
@@ -77,9 +77,30 @@ $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
+{- | Parameters uniquely identifying a sidechain, used only in the block producer registration
+ TODO: This type has to be removed, when we deprecate Passive Bridge functionality
+-}
+data SidechainParams' = SidechainParams'
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
+  , -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
+    -- will use the distributed set implementation.
+
+    -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show, Generic)
+
+PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
+
+-- | Convert SidechainParams to the Active Bridge version
+convertSCParams :: SidechainParams -> SidechainParams'
+convertSCParams (SidechainParams i g _ u) = SidechainParams' i g u
+
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: SidechainParams -- PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
   , sidechainPubKey :: SidechainPubKey
   , spoSig :: Signature
@@ -93,7 +114,7 @@ $(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: SidechainParams -- PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
   }
   deriving stock (Generic, Prelude.Show)
@@ -107,7 +128,7 @@ data BurnParams = BurnParams
   , -- | SideChain address
     recipient :: BuiltinByteString
   , -- | passed for parametrization
-    sidechainParams :: SidechainParams -- PassiveBrdgSidechainParams
+    sidechainParams :: SidechainParams
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -148,7 +169,7 @@ $(deriveJSON defaultOptions ''MintParams)
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | See 'SidechainParams'.
-    sidechainParams :: SidechainParams -- PassiveBrdgSidechainParams
+    sidechainParams :: SidechainParams
   , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
   , -- | The signature for the new committee hash.
@@ -162,7 +183,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
 
 data SaveRootParams = SaveRootParams
-  { sidechainParams :: SidechainParams --PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
   , signatures :: [BuiltinByteString]
   , threshold :: Integer

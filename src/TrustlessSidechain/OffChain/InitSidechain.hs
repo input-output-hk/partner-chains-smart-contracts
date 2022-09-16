@@ -86,7 +86,7 @@ initSidechain isp =
       sc =
         SidechainParams
           { chainId = initChainId isp
-          , genesisHash = getGenesisHash (initGenesisHash isp)
+          , genesisHash = initGenesisHash isp
           , genesisUtxo = oref
           , genesisMint = initMint isp
           }

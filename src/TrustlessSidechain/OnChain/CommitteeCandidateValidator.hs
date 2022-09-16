@@ -22,7 +22,11 @@ import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedB
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OffChain.Types (RegisterParams (..), SidechainParams (..))
+import TrustlessSidechain.OffChain.Types (
+  RegisterParams (..),
+  SidechainParams (..),
+  convertSCParams,
+ )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (..),
   BlockProducerRegistrationMsg (..),
@@ -74,7 +78,7 @@ mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} 
         Builtins.serialiseData $
           toBuiltinData $
             BlockProducerRegistrationMsg
-              sidechainParams -- (convertSCParams sidechainParams)
+              (convertSCParams sidechainParams)
               sidechainPubKey
               inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey
