@@ -32,7 +32,10 @@
         };
       };
 
-      perSystem = with nixpkgs.lib; genAttrs systems.flakeExposed;
+      supportedSystems = with nixpkgs.lib.systems.supported;
+        tier1 ++ tier2 ++ tier3;
+
+      perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
       nixpkgsFor = system:
         import nixpkgs {
