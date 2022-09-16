@@ -2,11 +2,6 @@
   description = "trustless-sidechain";
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
-
-    nixpkgs.follows = "cardano-transaction-lib/nixpkgs"; # < TODO: verify this is what we want to follow
-    haskell-nix.follows = "cardano-transaction-lib/haskell-nix"; # <
-    iohk-nix.follows = "cardano-transaction-lib/haskell-nix"; # <
     cardano-transaction-lib = {
       type = "github";
       owner = "Plutonomicon";
@@ -17,13 +12,18 @@
         flake = false;
       };
     };
+
+    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
+    haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
+    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
+
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, plutip, cardano-transaction-lib, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, ... }@inputs:
     let
       runtimeConfig = {
         network = {
@@ -42,7 +42,7 @@
           inherit system;
           overlays = [
             haskell-nix.overlay
-            (import "${plutip.inputs.iohk-nix}/overlays/crypto")
+            (import "${inputs.iohk-nix}/overlays/crypto")
             cardano-transaction-lib.overlays.runtime
             cardano-transaction-lib.overlays.purescript
           ];
@@ -52,14 +52,11 @@
       hsProjectFor = system:
         let
           pkgs = nixpkgsFor system;
+          plutip = cardano-transaction-lib.inputs.plutip;
           project = pkgs.haskell-nix.cabalProject {
             src = ./.;
             compiler-nix-name = "ghc8107";
-            inherit (plutip) cabalProjectLocal;
-            extraSources = plutip.extraSources ++ [{
-              src = plutip;
-              subdirs = [ "." ];
-            }];
+            inherit (plutip) cabalProjectLocal extraSources;
             modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
@@ -78,7 +75,13 @@
                 haskellPackages.fourmolu
                 nixpkgs-fmt
               ];
-              additional = ps: [ ps.plutip ];
+              additional = ps: [
+                ps.cardano-crypto-class
+                ps.plutus-tx-plugin
+                ps.plutus-script-utils
+                ps.plutus-ledger
+                ps.playground-common
+              ];
               shellHook = ''
                 [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
                      git config core.hooksPath hooks
