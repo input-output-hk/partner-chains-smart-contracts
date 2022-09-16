@@ -11,22 +11,23 @@ import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (CardanoTx, ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut), TxOutRef)
-import Ledger.Typed.Scripts (
-  validatorAddress,
+import Ledger.Tx (
+  CardanoTx,
+  ChainIndexTxOut (PublicKeyChainIndexTxOut, ScriptChainIndexTxOut),
+  TxOutRef,
  )
-import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Contract (Contract, ownPaymentPubKeyHash, submitTxConstraintsWith, throwError, utxosAt)
-import Plutus.V1.Ledger.Scripts (Datum (Datum))
+import Plutus.Script.Utils.V2.Address qualified as UtilsAddress
+import Plutus.V2.Ledger.Api (Datum (Datum), toBuiltinData)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (DeregisterParams (..), RegisterParams (..))
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
+import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (BlockProducerRegistration, bprOwnPkh, bprSpoPubKey),
   CommitteeCandidateRegistry,
  )
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import Prelude (Semigroup ((<>)))
 import Prelude qualified
 
@@ -47,26 +48,29 @@ register RegisterParams {sidechainParams, spoPubKey, sidechainPubKey, spoSig, si
 
   let val = Ada.lovelaceValueOf 1
       validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
+      valHash = Scripts.validatorHash validator
       lookups =
         Constraints.unspentOutputs ownUtxos
-          <> Constraints.typedValidatorLookups validator
+          <> Constraints.otherScript validator
       datum =
-        BlockProducerRegistration
-          spoPubKey
-          sidechainPubKey
-          spoSig
-          sidechainSig
-          inputUtxo
-          (unPaymentPubKeyHash ownPkh)
-      tx = Constraints.mustPayToTheScript datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
+        Datum $
+          toBuiltinData $
+            BlockProducerRegistration
+              spoPubKey
+              sidechainPubKey
+              spoSig
+              sidechainSig
+              inputUtxo
+              (unPaymentPubKeyHash ownPkh)
+      tx = Constraints.mustPayToOtherScript valHash datum val <> Constraints.mustSpendPubKeyOutput inputUtxo
 
-  submitTxConstraintsWith lookups tx
+  submitTxConstraintsWith @CommitteeCandidateRegistry lookups tx
 
 deregister :: DeregisterParams -> Contract () TrustlessSidechainSchema Text CardanoTx
 deregister DeregisterParams {sidechainParams, spoPubKey} = do
   ownPkh <- ownPaymentPubKeyHash
   let validator = CommitteeCandidateValidator.committeeCanditateValidator sidechainParams
-      valAddr = validatorAddress validator
+      valAddr = UtilsAddress.mkValidatorAddress validator
       ownAddr = Ledger.pubKeyHashAddress ownPkh Nothing
 
   ownUtxos <- utxosAt ownAddr
@@ -75,7 +79,7 @@ deregister DeregisterParams {sidechainParams, spoPubKey} = do
   let ownEntries = Map.filter (isOwnEntry ownPkh) valUtxos
 
       lookups =
-        Constraints.otherScript (Scripts.validatorScript validator)
+        Constraints.otherScript validator
           <> Constraints.unspentOutputs ownUtxos
           <> Constraints.unspentOutputs valUtxos
       tx =

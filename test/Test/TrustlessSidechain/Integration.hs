@@ -6,9 +6,12 @@ module Test.TrustlessSidechain.Integration (test) where
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Arrow qualified as Arrow
 import Control.Monad qualified as Monad
+import Crypto.Secp256k1 qualified as SECP
 import Data.ByteString qualified as ByteString
+import Data.ByteString.Hash (blake2b_256)
 import Data.Functor (void)
 import Data.List qualified as List
+import Data.Maybe (fromMaybe)
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Ledger (getCardanoTxId)
@@ -16,8 +19,9 @@ import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey, PubKeyHash (PubKeyHash, getPubKeyHash), Signature (getSignature))
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash)
+import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
 import Plutus.Contract qualified as Contract
+import PlutusTx (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
@@ -44,19 +48,19 @@ import TrustlessSidechain.OffChain.Types (
     initUtxo
   ),
   MintParams (MintParams, amount, index, merkleProof, recipient, sidechainEpoch),
+  PassiveBrdgSidechainParams (..),
   RegisterParams (RegisterParams),
   SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, signatures, threshold),
   SidechainParams,
+  SidechainPubKey (SidechainPubKey),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
+  convertSCParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
-  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
-  serialiseBprm,
- )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (
+  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteHash, mteIndex, mteRecipient, mteSidechainEpoch),
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -82,7 +86,7 @@ getSidechainParamsWith cmt =
   InitSidechain.ownTxOutRef >>= \oref ->
     InitSidechain.initSidechain $
       InitSidechainParams
-        { initChainId = ""
+        { initChainId = 0
         , initGenesisHash = ""
         , initUtxo = oref
         , initCommittee = map Crypto.toPublicKey cmt
@@ -91,9 +95,6 @@ getSidechainParamsWith cmt =
 
 spoPrivKey :: Wallet.XPrv
 spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
-
-sidechainPrivKey :: Wallet.XPrv
-sidechainPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 111
 
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
@@ -150,6 +151,17 @@ saveMerkleRootEntries sc cmt entries = do
 
   return mintparams
 
+--sidechainPrivKey :: SECP.SecKey
+--sidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
+--
+--sidechainPubKey :: SidechainPubKey
+--sidechainPubKey =
+--  SidechainPubKey
+--    . Builtins.toBuiltin
+--    . SECP.exportPubKey False
+--    . SECP.derivePubKey
+--    $ sidechainPrivKey
+
 -- | 'test' is the suite of tests.
 test :: TestTree
 test =
@@ -169,12 +181,23 @@ test =
               ( do
                   sidechainParams <- getSidechainParams
                   oref <- CommitteeCandidateValidator.getInputUtxo
-                  let sidechainPubKey = ""
-                      msg =
-                        serialiseBprm $
-                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                  let msg =
+                        Builtins.serialiseData $
+                          toBuiltinData $
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
-                      sidechainSig = Crypto.sign' msg sidechainPrivKey
+
+                      ecdsaMsg =
+                        fromMaybe undefined
+                          . SECP.msg
+                          . blake2b_256
+                          $ Builtins.fromBuiltin msg
+
+                      sidechainSig =
+                        Crypto.Signature
+                          . Builtins.toBuiltin
+                          . SECP.exportSig
+                          $ SECP.signMsg sidechainPrivKey ecdsaMsg
                   CommitteeCandidateValidator.register
                     (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
               )
@@ -188,12 +211,23 @@ test =
               ( do
                   sidechainParams <- getSidechainParams
                   oref <- CommitteeCandidateValidator.getInputUtxo
-                  let sidechainPubKey = ""
-                      msg =
-                        serialiseBprm $
-                          BlockProducerRegistrationMsg sidechainParams sidechainPubKey oref
+                  let msg =
+                        Builtins.serialiseData $
+                          toBuiltinData $
+                            BlockProducerRegistrationMsg (convertSCParams sidechainParams) sidechainPubKey oref
                       spoSig = Crypto.sign' msg spoPrivKey
-                      sidechainSig = Crypto.sign' msg sidechainPrivKey
+
+                      ecdsaMsg =
+                        fromMaybe undefined
+                          . SECP.msg
+                          . blake2b_256
+                          $ Builtins.fromBuiltin msg
+
+                      sidechainSig =
+                        Crypto.Signature
+                          . Builtins.toBuiltin
+                          . SECP.exportSig
+                          $ SECP.signMsg sidechainPrivKey ecdsaMsg
                   regTx <-
                     CommitteeCandidateValidator.register
                       (RegisterParams sidechainParams spoPubKey sidechainPubKey spoSig sidechainSig oref)
@@ -633,7 +667,7 @@ test =
                 nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
                 nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
 
-            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ <- withContract $ const getSidechainParams
+            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ _ <- withContract $ const getSidechainParams
 
             withContractAs 1 $ \_ -> do
               -- updating the committee hash
@@ -702,7 +736,7 @@ test =
                 nCmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [101 .. 200]
                 nCmtPubKeys = map Crypto.toPublicKey nCmtPrvKeys
 
-            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ <- withContract $ const getSidechainParams
+            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ _ <- withContract $ const getSidechainParams
 
             -- Let another wallet update the committee hash.
             withContractAs 1 $ \_ -> do

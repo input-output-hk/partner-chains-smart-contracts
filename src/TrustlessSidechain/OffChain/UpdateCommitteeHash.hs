@@ -8,7 +8,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Ledger (Redeemer (Redeemer), TxOutRef)
-import Ledger.Constraints as Constraints
+import Ledger.Constraints qualified as Constraints
 import Ledger.Crypto (PubKey)
 import Ledger.Tx (
   ChainIndexTxOut,
@@ -16,11 +16,11 @@ import Ledger.Tx (
   ciTxOutValue,
  )
 import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.Logging qualified as Logging
-import Plutus.V1.Ledger.Api (Datum (getDatum))
-import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api (Datum (getDatum))
 import PlutusPrelude (void)
 import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
@@ -30,16 +30,14 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHashRedeemer (
-    UpdateCommitteeHashRedeemer
-  ),
+  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
+  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
+  UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
+  UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.Types qualified as OnChainTypes
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
   InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef),
-  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
@@ -83,7 +81,7 @@ updateCommitteeHash uchp =
       | committeeHash dat == cCommitteeHash -> do
         let ndat =
               UpdateCommitteeHashDatum
-                { UpdateCommitteeHash.committeeHash = nCommitteeHash
+                { committeeHash = nCommitteeHash
                 }
             val = Value.assetClassValue (cToken uch) 1
             redeemer =
@@ -98,9 +96,6 @@ updateCommitteeHash uchp =
               Constraints.unspentOutputs (Map.singleton oref o)
                 Prelude.<> Constraints.otherScript
                   (UpdateCommitteeHash.updateCommitteeHashValidator uch)
-                Prelude.<> Constraints.typedValidatorLookups
-                  (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch)
-
             tx =
               Constraints.mustSpendScriptOutput oref redeemer
                 Prelude.<> Constraints.mustPayToTheScript ndat val

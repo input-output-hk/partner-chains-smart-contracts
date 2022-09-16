@@ -19,7 +19,7 @@ All of these policies/validators are parameterised by the sidechain parameters, 
 
 ```haskell
 data SidechainParams = SidechainParams
-  { chainId :: BuiltinInteger
+  { chainId :: Integer
   , genesisHash :: BuiltinByteString
   , genesisOutRef :: TxOutRef
     -- ^ 'genesisOutRef' is an arbitrary 'TxOutRef' used to identify internal
@@ -33,10 +33,11 @@ data SidechainParams = SidechainParams
 For initialisation, we need to set the first <!-- ATMS verification key --> committee hash on chain using a NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated each when the committee changes, see [6.](#6.-update-committee-hash) for more details.
 
 **Workflow:**
+
 1. Call the initialize sidechain endpoint to generate the `SidechainParams` for a new
    sidechain.
 2. Use the given sidechain parameters for the rest of the endpoints to work
-   with *this* particular sidechain.
+   with _this_ particular sidechain.
 
 **Endpoint params:**
 
@@ -120,6 +121,7 @@ Validator script verifies the following:
 ![MPTRootToken minting](MPTRoot.svg)
 
 The merkle tree has to be constructed in the exact same way as it is done by [following merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
+
 ```haskell
 data MerkleTreeEntry = MerkleTreeEntry
   { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
@@ -128,9 +130,11 @@ data MerkleTreeEntry = MerkleTreeEntry
   , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
   }
 ```
+
 ```
 entry = blake2b(cbor(MerkleTreeEntry))
 ```
+
 Signatures for merkle tree should be constructed as follow:
 
 ```haskell
@@ -140,9 +144,11 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , merkleRoot :: ByteString
   }
 ```
+
 ```
 signature = ecdsa.sign(data: blake2b(cbor(MerkleRootInsertionMessage)), key: committeeMemberPrvKey)
 ```
+
 #### 3.2. Individual claiming
 
 **Endpoint params for claiming:**
@@ -226,7 +232,7 @@ Validator script verifies the following:
 
 - verifies that hash of committeePublicKeys matches the hash saved on chain
 - verifies that all the provided signatures are valid
-- verifies that size(signatures) > 2/3 * size(committeePubKeys)
+- verifies that size(signatures) > 2/3 \* size(committeePubKeys)
 - verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - outputs a new UTxO with the updated <!--ATMS key--> committee hash containing the NFT to the same script address
@@ -261,9 +267,11 @@ data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
 ```
 
 Signatures are constructed as follow:
+
 ```
 SidechainPubKey - 33 bytes compressed ecdsa public key
 ```
+
 ```haskell
 data UpdateCommitteeMessage = UpdateCommitteeMessage
   { sidechainParams :: SidechainParams
@@ -271,6 +279,7 @@ data UpdateCommitteeMessage = UpdateCommitteeMessage
   , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
   }
 ```
+
 ```
 signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committeeMemberPrvKey)
 ```

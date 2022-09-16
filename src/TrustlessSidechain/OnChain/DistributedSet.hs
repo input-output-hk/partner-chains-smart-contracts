@@ -34,13 +34,14 @@ module TrustlessSidechain.OnChain.DistributedSet (
   insertNode,
 
   -- * Validators / minting policies
-  typedInsertValidator,
+
+  --typedInsertValidator,
   insertValidator,
   insertValidatorHash,
   insertAddress,
   mkDsConfValidator,
   dsConfValidator,
-  dsConfAddress,
+  --dsConfAddress,
   mkDsConfPolicy,
   dsConfTokenName,
   dsConfPolicy,
@@ -52,35 +53,29 @@ module TrustlessSidechain.OnChain.DistributedSet (
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Ledger.Address (Address)
-import Ledger.Contexts qualified as Contexts
-import Ledger.Typed.Scripts (MintingPolicy, TypedValidator, Validator, ValidatorTypes)
-import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Address qualified as Address
-import Plutus.V1.Ledger.Contexts (
-  ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs),
-  TxOut (txOutAddress, txOutDatumHash, txOutValue),
-  TxOutRef,
- )
-import Plutus.V1.Ledger.Scripts (
-  Datum (getDatum),
-  ValidatorHash,
- )
-import Plutus.V1.Ledger.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Value (
-  CurrencySymbol,
-  TokenName (TokenName, unTokenName),
-  Value (getValue),
- )
+import Ledger.Address (scriptHashAddress)
+
+--import Ledger.Scripts qualified as Scripts --(MintingPolicy, TypedValidator, Validator, ValidatorTypes)
+
+-- (CurrencySymbol , OutputDatum(..) , ValidatorHash , Address , Validator , MintingPolicy , TokenName , Value , Map , mkMintingPolicyScript , getValue)
+import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy, mkUntypedValidator, scriptCurrencySymbol, validatorHash)
+import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Contexts ()
+import Plutus.V2.Ledger.Contexts as Contexts
+
+--import Plutus.Script.Utils.V2.Scripts.Validators
+--import Plutus.Script.Utils.V2.Scripts.MonetaryPolicies
+
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
 import Prelude qualified
+
+-- copied directly from Ledger.Address, which for some reason no longer exports it
+scriptAddress :: Validator -> Address
+scriptAddress validator = Address (ScriptCredential (validatorHash validator)) Nothing
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
  for the distributed set. (See Note [How This All Works]. Moreover, this
@@ -94,9 +89,9 @@ newtype Ds = Ds
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
 
-instance ValidatorTypes Ds where
-  type DatumType Ds = DsDatum
-  type RedeemerType Ds = ()
+--instance ValidatorTypes Ds where
+--  type DatumType Ds = DsDatum
+--  type RedeemerType Ds = ()
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
@@ -123,9 +118,9 @@ instance Eq Node where
 -}
 data DsConf
 
-instance ValidatorTypes DsConf where
-  type DatumType DsConf = DsConfDatum
-  type RedeemerType DsConf = ()
+--instance ValidatorTypes DsConf where
+--  type DatumType DsConf = DsConfDatum
+--  type RedeemerType DsConf = ()
 
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
@@ -178,11 +173,17 @@ data DsKeyMint = DsKeyMint
 -}
 {-# INLINEABLE unsafeGetDatum #-}
 unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxInfo -> TxOut -> a
-unsafeGetDatum info o
-  | Just dhash <- txOutDatumHash o
-    , Just bn <- Contexts.findDatum dhash info =
-    PlutusTx.unsafeFromBuiltinData (getDatum bn)
-  | otherwise = traceError "error 'unsafeGetDatum' failed"
+unsafeGetDatum info o = case txOutDatum o of
+  OutputDatumHash dhash
+    | Just bn <- Contexts.findDatum dhash info ->
+      PlutusTx.unsafeFromBuiltinData (getDatum bn)
+  --OutputDatum d   -> PlutusTx.unsafeFromBuiltinData d TODO
+  NoOutputDatum -> traceError "error 'unsafeGetDatum' failed"
+  _ -> traceError "error 'unsafeGetDatum' failed"
+
+--  | Just bn <- txOutDatum o , Just bn <- Contexts.findDatum dhash info =
+--    = PlutusTx.unsafeFromBuiltinData (getDatum bn)
+--  | otherwise = traceError "error 'unsafeGetDatum' failed"
 
 {- | 'getConf' gets the config associated with a distributed set and throws an
  error if it does not exist.
@@ -461,9 +462,9 @@ mkInsertValidator ds _dat _red ctx =
            in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
                 && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (dscFUELPolicy conf) minted)
       )
-        ( case insertNode nStr $ getTxOutNodeInfo $ txInInfoResolved ownInput of
-            Just x -> x
-            Nothing -> traceError "error 'mkInsertValidator' bad insertion"
+        ( fromMaybe
+            (traceError "error 'mkInsertValidator' bad insertion")
+            (insertNode nStr $ getTxOutNodeInfo (txInInfoResolved ownInput))
         )
   )
     ( case AssocMap.lookup keyCurrencySymbol minted of
@@ -477,7 +478,6 @@ mkInsertValidator ds _dat _red ctx =
     -- if you're wondering why this is written in such an unreadable way, it's
     -- because (as I read it) plutus is by value language, and to ensure that
     -- things aren't recomputed, you can wrap things up with a lambda...
-    --
     -- otherwise, we run into budgeting issues...
 
     info :: TxInfo
@@ -511,28 +511,24 @@ mkInsertValidator ds _dat _red ctx =
     getTxOutNodeInfo :: TxOut -> Node
     getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum info o
 
--- | The typed validator script for the distributed set.
+{- | The typed validator script for the distributed set.
 typedInsertValidator :: Ds -> TypedValidator Ds
-typedInsertValidator ds =
-  Scripts.mkTypedValidator @Ds
-    ( $$(PlutusTx.compile [||mkInsertValidator||])
-        `PlutusTx.applyCode` PlutusTx.liftCode ds
-    )
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Scripts.wrapValidator @DsDatum @()
-
--- | The regular validator script for the distributed set.
+-}
 insertValidator :: Ds -> Validator
-insertValidator = Scripts.validatorScript . typedInsertValidator
+insertValidator ds =
+  let wrap = \d -> mkUntypedValidator (mkInsertValidator d)
+   in mkValidatorScript
+        ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
+
+--($$(PlutusTx.compile [||\d -> mkUntypedValidator (mkInsertValidator d)||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
 
 -- | The validator hash for the distributed set.
 insertValidatorHash :: Ds -> ValidatorHash
-insertValidatorHash = Scripts.validatorHash . typedInsertValidator
+insertValidatorHash = validatorHash . insertValidator
 
 -- | The address for the distributed set.
 insertAddress :: Ds -> Address
-insertAddress = Scripts.validatorAddress . typedInsertValidator
+insertAddress = scriptAddress . insertValidator
 
 {- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
  at. This will always error.
@@ -547,24 +543,22 @@ mkDsConfValidator _ds _dat _red _ctx = ()
 -- | The regular validator script for the conf. of the distributed set.
 dsConfValidator :: Ds -> Validator
 dsConfValidator ds =
-  Scripts.mkValidatorScript
-    ( $$(PlutusTx.compile [||mkDsConfValidator||])
-        `PlutusTx.applyCode` PlutusTx.liftCode ds
-    )
+  mkValidatorScript ($$(PlutusTx.compile [||mkDsConfValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
 
 {- | The validator hash for the conf. of the distributed set.
 
  TODO: do this properly by fetching the right package...
 -}
 dsConfValidatorHash :: Ds -> ValidatorHash
-dsConfValidatorHash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . dsConfValidator
+dsConfValidatorHash = validatorHash . dsConfValidator
 
 {- | The address for the conf. of the distributed set.
 
  TODO: do this properly by fetching the right package...
 -}
-dsConfAddress :: Ds -> Address
-dsConfAddress = Scripts.validatorAddress . Scripts.unsafeMkTypedValidator . dsConfValidator
+
+--dsConfAddress :: Ds -> Address
+--dsConfAddress = Scripts.validatorAddress . Scripts.unsafeMkTypedValidator . dsConfValidator
 
 {- | 'mkDsConfPolicy' mints the nft which identifies the validator that stores
  the various minting policies that the distributed set depends on
@@ -601,16 +595,15 @@ mkDsConfPolicy dsc _red ctx =
 dsConfTokenName :: TokenName
 dsConfTokenName = TokenName emptyByteString
 
--- | 'dsConfPolicy' is the minting policy
+-- | 'dsConfPolicy' is the minting policy for distributed set
 dsConfPolicy :: DsConfMint -> MintingPolicy
 dsConfPolicy dscm =
-  Scripts.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsConfPolicy||])
-      `PlutusTx.applyCode` PlutusTx.liftCode dscm
+  mkMintingPolicyScript
+    ($$(PlutusTx.compile [||\d -> mkUntypedMintingPolicy (mkDsConfPolicy d)||]) `PlutusTx.applyCode` PlutusTx.liftCode dscm)
 
 -- | 'dsConfCurrencySymbol' is the currency symbol for the distributed set
 dsConfCurrencySymbol :: DsConfMint -> CurrencySymbol
-dsConfCurrencySymbol = Contexts.scriptCurrencySymbol . dsConfPolicy
+dsConfCurrencySymbol = scriptCurrencySymbol . dsConfPolicy
 
 -- | 'mkDsKeyPolicy'.  See Note [How This All Works].
 mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool
@@ -627,11 +620,11 @@ mkDsKeyPolicy dskm _red ctx = case ins of
       case mintedTns of
         [tn] | unTokenName tn == nKey rootNode ->
           traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
-            case find (\txout -> txOutAddress txout == Address.scriptHashAddress (dskmValidatorHash dskm)) $ txInfoOutputs info of
-              Just txout -> isJust $ AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
+            case find (\txout -> txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)) (txInfoOutputs info) of
+              Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
               Nothing -> False
         -- TODO: check in the script output with the output that this
-        -- ownCurrencySymbol is actually where it should be.. Actually,
+        -- ownCS is actually where it should be.. Actually,
         -- there's no need to do this -- we can verify this offchain
         -- since we may assume that all participants know the protocol
         -- ahead of time and may independently verify.
@@ -642,8 +635,8 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
-    ownCurrencySymbol :: CurrencySymbol
-    ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+    ownCS :: CurrencySymbol
+    ownCS = Contexts.ownCurrencySymbol ctx
 
     -- determines the branches that we are consuming
     ins :: [TokenName]
@@ -651,8 +644,8 @@ mkDsKeyPolicy dskm _red ctx = case ins of
       let go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
-              , txOutAddress txout == Address.scriptHashAddress (dskmValidatorHash dskm)
-              , Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue $ txOutValue txout
+              , txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)
+              , Just tns <- AssocMap.lookup ownCS $ getValue (txOutValue txout)
               , -- If it's more clear, we're checking the following condition:
                 -- > [(tn,1)] <- AssocMap.toList tns
                 -- In our case, it is implicit that there is exactly one
@@ -662,37 +655,30 @@ mkDsKeyPolicy dskm _red ctx = case ins of
             -- Need to keep recursing to ensure that this transaction
             -- is only spending one input
             | otherwise = go ts -- otherwise, we skip the element
-       in go $ txInfoInputs info
+       in go (txInfoInputs info)
 
     mintedTns :: [TokenName]
-    mintedTns =
-      case AssocMap.lookup ownCurrencySymbol $ getValue $ txInfoMint info of
-        Just mp
-          | vs <- AssocMap.toList mp
-            , all ((== 1) . snd) vs ->
-            map fst vs
-        _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
+    mintedTns = case AssocMap.lookup ownCS $ getValue (txInfoMint info) of
+      Just mp | vs <- AssocMap.toList mp, all ((== 1) . snd) vs -> map fst vs
+      _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
 
 -- | 'dsKeyPolicy' is the minting policy for the prefixes of nodes
 dsKeyPolicy :: DsKeyMint -> MintingPolicy
 dsKeyPolicy dskm =
-  Scripts.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . mkDsKeyPolicy||])
-      `PlutusTx.applyCode` PlutusTx.liftCode dskm
+  let wrap d = mkUntypedMintingPolicy (mkDsKeyPolicy d)
+   in mkMintingPolicyScript ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode dskm)
 
 {- | 'dsKeyCurrencySymbol' is the currency symbol for prefixes of nodes in the
  distributed set
 -}
 dsKeyCurrencySymbol :: DsKeyMint -> CurrencySymbol
-dsKeyCurrencySymbol = Contexts.scriptCurrencySymbol . dsKeyPolicy
+dsKeyCurrencySymbol = scriptCurrencySymbol . dsKeyPolicy
 
 {- Note [Alternative Ways of Doing This]
-
  We actually did try some other ways of doing it, but none of them worked.  For
  reference, here's what we tried:
 
-    * The [Stick Breaking
-    Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
+    * The [Stick Breaking Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
     which had some obvious issues with datum sizes being too large which could
     be remedied by working at the bit level of having a binary tree with
     branches of 0 and 1.

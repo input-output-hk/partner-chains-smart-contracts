@@ -1,25 +1,29 @@
 module TrustlessSidechain.OffChain.InitSidechain where
 
 import Control.Lens.Indexed qualified as Indexed
+import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Text (Text)
-import Ledger (TxOutRef)
+import Ledger (Datum (Datum), TxOutRef, validatorHash)
 import Ledger.Address qualified as Address
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts (Datum (Datum, getDatum))
 import Ledger.Tx qualified as Tx
+import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Value (AssetClass (unAssetClass), TokenName (TokenName))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
+import PlutusTx qualified (toBuiltinData)
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
+  GenesisHash (..),
   InitSidechainParams (initChainId, initCommittee, initGenesisHash, initMint, initUtxo),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
+  SidechainParams (..),
  )
 import TrustlessSidechain.OnChain.DistributedSet (
   Ds (Ds, dsConf),
@@ -38,14 +42,16 @@ import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy (
   ),
  )
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.OnChain.Types (
+  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
+  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
+  UpdatingCommitteeHash,
+ )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (
   InitCommitteeHashMint (
     InitCommitteeHashMint,
     icTxOutRef
   ),
-  UpdateCommitteeHash (UpdateCommitteeHash, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdatingCommitteeHash,
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude qualified
@@ -77,103 +83,111 @@ import Prelude qualified
 initSidechain :: InitSidechainParams -> Contract () TrustlessSidechainSchema Text SidechainParams
 initSidechain isp =
   let oref = initUtxo isp
-   in Contract.txOutFromRef oref
-        >>= \case
-          Nothing -> Contract.throwError "bad 'initUtxo'"
-          Just o -> do
-            let sc =
-                  SidechainParams
-                    { chainId = initChainId isp
-                    , genesisHash = initGenesisHash isp
-                    , genesisUtxo = oref
-                    , genesisMint = initMint isp
-                    }
+      sc =
+        SidechainParams
+          { chainId = initChainId isp
+          , genesisHash = getGenesisHash (initGenesisHash isp)
+          , genesisUtxo = oref
+          , genesisMint = initMint isp
+          }
+   in do
+        o <-
+          Contract.txOutFromRef oref >>= \case
+            Nothing -> Contract.throwError "bad 'initUtxo'"
+            Just x -> pure x
 
-                -- Variables for initializing the committee hash
-                -------------------------------------------------
-                ichm = InitCommitteeHashMint {icTxOutRef = oref}
-                nftCommittee = UpdateCommitteeHash.committeeHashAssetClass ichm
-                valCommittee = Value.assetClassValue nftCommittee 1
-                uchCommittee = UpdateCommitteeHash {cToken = nftCommittee}
-                datCommitee =
-                  UpdateCommitteeHashDatum
-                    { committeeHash =
-                        UpdateCommitteeHash.aggregateKeys $
-                          initCommittee isp
-                    }
+        -- Variables for initializing the committee hash
+        let ichm = InitCommitteeHashMint {icTxOutRef = oref}
+            nftCommittee = UpdateCommitteeHash.committeeHashAssetClass ichm
+            valCommittee = Value.assetClassValue nftCommittee 1
+            uchCommittee = UpdateCommitteeHash {cToken = nftCommittee}
+            datCommitee =
+              UpdateCommitteeHashDatum
+                { committeeHash = UpdateCommitteeHash.aggregateKeys (initCommittee isp)
+                }
 
-                -- Variables for initializing the distributed set
-                -------------------------------------------------
-                ds = Ds {dsConf = dsconf}
-                dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
-                dskm = DistributedSet.dsToDsKeyMint ds
+            --              validator = UpdateCommitteeHash.updateCommitteeHashValidator uch
 
-                pmp = DistributedSet.dsKeyPolicy dskm
+            -- Variables for initializing the distributed set
+            ds = Ds {dsConf = dsconf}
+            dsconf = DistributedSet.dsConfCurrencySymbol $ DsConfMint {dscmTxOutRef = oref}
+            dskm = DistributedSet.dsToDsKeyMint ds
 
-                -- the prefix policy of the distributed set
-                smDsKey = DistributedSet.dsKeyCurrencySymbol dskm
-                tnDsKey = TokenName $ nKey DistributedSet.rootNode
-                astDsKey = Value.assetClass smDsKey tnDsKey
-                valDsKey = Value.assetClassValue astDsKey 1
-                datDsKey = DistributedSet.nodeToDatum DistributedSet.rootNode
+            pmp = DistributedSet.dsKeyPolicy dskm
 
-                -- the config policy of the distributed set
-                cast = Value.assetClass dsconf DistributedSet.dsConfTokenName
-                valConfDs = Value.assetClassValue cast 1
-                datConfDs =
-                  DsConfDatum
-                    { dscKeyPolicy = DistributedSet.dsKeyCurrencySymbol dskm
-                    , dscFUELPolicy =
-                        FUELMintingPolicy.currencySymbol
-                          FUELMint
-                            { fmMptRootTokenCurrencySymbol =
-                                MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol
-                                  SignedMerkleRootMint
-                                    { smrmSidechainParams = sc
-                                    , smrmUpdateCommitteeHashCurrencySymbol =
-                                        fst $ unAssetClass nftCommittee
-                                    }
-                            , fmSidechainParams = sc
-                            , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
-                            }
-                    }
-                cmp = DistributedSet.dsConfPolicy DsConfMint {dscmTxOutRef = oref}
+            -- the prefix policy of the distributed set
+            smDsKey = DistributedSet.dsKeyCurrencySymbol dskm
+            tnDsKey = TokenName (nKey DistributedSet.rootNode)
+            astDsKey = Value.assetClass smDsKey tnDsKey
+            valDsKey = Value.assetClassValue astDsKey 1
+            datDsKey = DistributedSet.nodeToDatum DistributedSet.rootNode
 
-                -- Building the transaction
-                -------------------------------------------------
-                lookups =
-                  Constraints.unspentOutputs (Map.singleton oref o)
-                    -- lookups for the update committee hash...
-                    Prelude.<> Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
-                    Prelude.<> Constraints.typedValidatorLookups
-                      (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uchCommittee)
-                    -- lookups for the distributed set...
-                    Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
-                    Prelude.<> Constraints.mintingPolicy pmp
-                    Prelude.<> Constraints.mintingPolicy cmp
+            -- the config policy of the distributed set
+            cast = Value.assetClass dsconf DistributedSet.dsConfTokenName
+            valConfDs = Value.assetClassValue cast 1
+            datConfDs =
+              DsConfDatum
+                { dscKeyPolicy = DistributedSet.dsKeyCurrencySymbol dskm
+                , dscFUELPolicy =
+                    FUELMintingPolicy.currencySymbol
+                      FUELMint
+                        { fmMptRootTokenCurrencySymbol =
+                            MPTRootTokenMintingPolicy.mintingPolicyCurrencySymbol
+                              SignedMerkleRootMint
+                                { smrmSidechainParams = sc
+                                , smrmUpdateCommitteeHashCurrencySymbol =
+                                    fst $ unAssetClass nftCommittee
+                                }
+                        , fmSidechainParams = sc
+                        , fmDsKeyCurrencySymbol = DistributedSet.dsKeyCurrencySymbol dskm
+                        }
+                }
+            cmp = DistributedSet.dsConfPolicy DsConfMint {dscmTxOutRef = oref}
 
-                tx =
-                  Constraints.mustSpendPubKeyOutput oref
-                    -- minting the committee hash
-                    Prelude.<> Constraints.mustMintValue valCommittee
-                    Prelude.<> Constraints.mustPayToTheScript datCommitee valCommittee
-                    -- minting the distributed set
-                    Prelude.<> Constraints.mustMintValue valDsKey
-                    Prelude.<> Constraints.mustPayToOtherScript
-                      (DistributedSet.insertValidatorHash ds)
-                      (Datum {getDatum = IsData.toBuiltinData datDsKey})
-                      valDsKey
-                    Prelude.<> Constraints.mustMintValue valConfDs
-                    Prelude.<> Constraints.mustPayToOtherScript
-                      (DistributedSet.dsConfValidatorHash ds)
-                      (Datum {getDatum = IsData.toBuiltinData datConfDs})
-                      valConfDs
+            -- Building the transaction
+            -------------------------------------------------
+            lookups =
+              Constraints.unspentOutputs (Map.singleton oref o)
+                -- lookups for the update committee hash...
+                Prelude.<> Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
+                --                  Prelude.<> Constraints.typedValidatorLookups
+                --                    (UpdateCommitteeHash.updateCommitteeHashValidator uchCommittee)
+                Prelude.<> Constraints.otherScript
+                  (UpdateCommitteeHash.updateCommitteeHashValidator uchCommittee)
+                -- lookups for the distributed set...
+                Prelude.<> Constraints.otherScript (DistributedSet.insertValidator ds)
+                Prelude.<> Constraints.mintingPolicy pmp
+                Prelude.<> Constraints.mintingPolicy cmp
 
-            ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
+            tx =
+              Constraints.mustSpendPubKeyOutput oref
+                -- minting the committee hash
+                Prelude.<> Constraints.mustMintValue valCommittee
+                Prelude.<> Constraints.mustPayToTheScript datCommitee valCommittee
+                -- minting the distributed set
+                Prelude.<> Constraints.mustMintValue valDsKey
+                Prelude.<> Constraints.mustPayToOtherScript
+                  (DistributedSet.insertValidatorHash ds)
+                  (Datum {getDatum = IsData.toBuiltinData datDsKey})
+                  valDsKey
+                Prelude.<> Constraints.mustMintValue valConfDs
+                Prelude.<> Constraints.mustPayToOtherScript
+                  (DistributedSet.dsConfValidatorHash ds)
+                  (Datum {getDatum = IsData.toBuiltinData datConfDs})
+                  valConfDs
+        --passive-bridge-v1
+        --                Constraints.mintingPolicy (UpdateCommitteeHash.committeeHashPolicy ichm)
+        --                  Prelude.<> Constraints.unspentOutputs (Map.singleton oref o)
+        --                  Prelude.<> Constraints.otherScript validator
 
-            void $ Contract.awaitTxConfirmed $ Tx.getCardanoTxId ledgerTx
+        --              tx = Constraints.mustSpendPubKeyOutput oref
+        --                  Prelude.<> Constraints.mustMintValue val
+        --                  Prelude.<> Constraints.mustPayToOtherScript (validatorHash validator) ndat val
 
-            return sc
+        ledgerTx <- Contract.submitTxConstraintsWith @UpdatingCommitteeHash lookups tx
+        void $ Contract.awaitTxConfirmed (Tx.getCardanoTxId ledgerTx)
+        --          Contract.logInfo $ "Minted " <> Prelude.show val <> " and paid to validator"
+        pure sc
 
 {- | 'ownTxOutRef' gets a 'TxOutRef' from 'Contract.ownPaymentPubKeyHash'. This
  is used in the test suite for convience to make intializing the sidechain a
