@@ -1,4 +1,4 @@
-module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
+module FUELMintingPolicy (runFuelMP, FuelParams(..)) where
 
 import Contract.Prelude
 
