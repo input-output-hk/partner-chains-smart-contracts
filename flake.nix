@@ -213,12 +213,10 @@
 
       # TODO: make this a combined shell.
       #       using // makes the rhs devShell override the lhs one.
-      devShells = perSystem (system: {
+      devShells = perSystem (system: rec {
         ps = (psProjectFor system).devShell;
         hs = self.flake.${system}.devShell;
+        default = ps;
       });
-
-      devShell = perSystem (system: self.devShells.${system}.hs);
-      # END TODO
     };
 }
