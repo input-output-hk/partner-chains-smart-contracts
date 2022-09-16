@@ -22,18 +22,18 @@ import Prelude qualified
 -}
 data MerkleTreeEntry = MerkleTreeEntry
   { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-    mteIndex :: !Integer
+    mteIndex :: Integer
   , -- | 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-    mteAmount :: !Integer
+    mteAmount :: Integer
   , -- | arbitrary length bytestring that represents decoded bech32 cardano
     -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- of bech32
-    mteRecipient :: !BuiltinByteString
+    mteRecipient :: BuiltinByteString
   , -- | sidechain epoch for which merkle tree was created
-    mteSidechainEpoch :: !Integer
+    mteSidechainEpoch :: Integer
   , -- | 'mteHash' will be removed later TODO! Currently, we have this here to
     -- help test the system.
-    mteHash :: !BuiltinByteString
+    mteHash :: BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
