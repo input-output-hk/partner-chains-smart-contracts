@@ -220,7 +220,5 @@
 
       devShell = perSystem (system: self.devShells.${system}.hs);
       # END TODO
-
-      herculesCI.ciSystems = [ "x86_64-linux" ];
     };
 }
