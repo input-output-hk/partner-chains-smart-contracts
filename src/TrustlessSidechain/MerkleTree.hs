@@ -209,16 +209,27 @@ fromList :: [BuiltinByteString] -> MerkleTree
 fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
 fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
   where
+    -- Note [Tail Recursive mergePairs]
+    -- Previously, the recursive step of @mergePairs :: [MerkleTree] ->
+    -- [MerkleTree]@ was written as
+    -- > mergePairs (a : b : cs) =
+    -- >   let a' = rootHash a
+    -- >       b' = rootHash b
+    -- >    in Bin (mergeRootHashes a' b') a b : mergePairs cs
+    -- but this causes problems in non-lazy functional languages since
+    -- mergePairs does not occur in the tail position, and hence this
+    -- accumulates stack space.
     mergeAll :: [MerkleTree] -> MerkleTree
     mergeAll [r] = r
-    mergeAll rs = mergeAll $ mergePairs rs
+    mergeAll rs = mergeAll $ mergePairs [] rs
 
-    mergePairs :: [MerkleTree] -> [MerkleTree]
-    mergePairs (a : b : cs) =
+    mergePairs :: [MerkleTree] -> [MerkleTree] -> [MerkleTree]
+    mergePairs acc (a : b : cs) =
       let a' = rootHash a
           b' = rootHash b
-       in Bin (mergeRootHashes a' b') a b : mergePairs cs
-    mergePairs cs = cs
+       in mergePairs (Bin (mergeRootHashes a' b') a b : acc) cs
+    mergePairs acc [a] = a : acc
+    mergePairs acc [] = acc
 
 {- | /O(n log n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
  'BuiltinByteString'.
@@ -242,6 +253,9 @@ fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
 
  N.B. it doesn't exactly do this anymore since this permits second preimage
  attacks: see Note [2nd Preimage Attack on The Merkle Tree].
+
+ N.B. as it builds the tree up, each layer is reversed to make constructing the
+ tree tail recursive. See Note [Tail Recursive mergePairs]
 -}
 {-# INLINEABLE fromNonEmpty #-}
 fromNonEmpty :: NonEmpty BuiltinByteString -> MerkleTree
@@ -480,43 +494,4 @@ and observing that the recurrence T is obviously increasing, we get that
          = log_2 2^k + 2
          <= floor(log_2 n) + 2          [Apply (*)]
 as required.
-
-Practically, here are some benchmarks from the hydra-poc. The hydra-poc people
-have benchmarks like:
-
-| Size | % member max mem | % member max cpu | % builder max mem | % builder max cpu |
-| :--- | ---------------: | ---------------: | ----------------: | ----------------: |
-| 1    | 2.44             | 1.55             | 2.66              | 1.64              |
-| 2    | 2.58             | 1.66             | 3.31              | 2.09              |
-| 5    | 2.77             | 1.82             | 8.22              | 5.53              |
-| 10   | 2.91             | 1.93             | 25.49             | 17.62             |
-| 20   | 3.04             | 2.04             | 94.54             | 65.96             |
-| 50   | 3.22             | 2.19             | 0.00              | 0.00              |
-| 100  | 3.36             | 2.30             | 0.00              | 0.00              |
-| 500  | 3.66             | 2.56             | 0.00              | 0.00              |
-Benchmark on-chain-cost: FINISH
-
-And our method has running time like:
-| Size | % member max mem | % member max cpu | % builder max mem | % builder max cpu |
-| :--- | ---------------: | ---------------: | ----------------: | ----------------: |
-| 1    | 2.44             | 1.55             | 2.57              | 1.60              |
-| 2    | 2.58             | 1.66             | 2.76              | 1.74              |
-| 5    | 2.79             | 1.84             | 3.31              | 2.16              |
-| 10   | 2.93             | 1.95             | 4.08              | 2.80              |
-| 20   | 3.06             | 2.06             | 5.58              | 4.06              |
-| 50   | 3.24             | 2.20             | 9.98              | 7.81              |
-| 100  | 3.37             | 2.32             | 17.25             | 14.04             |
-| 500  | 3.66             | 2.55             | 75.18             | 63.70             |
-Benchmark on-chain-cost: FINISH
-
-where 'member' is 'memberMp' here and 'builder' is 'fromList'.
-
-We see that the bottom up implementation of 'fromList' is almost 10x more
-efficient on some cases, and I'm fairly certain the last 3 cases of the
-hydra-poc guys are botched and didn't actually run whereas our implementation
-actually did run.
-
-I'll note that the hydra-poc people have a slightly more efficient 'memberMp'
-I suspect this is just "lucky" with the test cases because in some cases our
-member function is faster as well. This follows from [Merkle Tree Height Bound].
 -}
