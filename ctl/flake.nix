@@ -14,8 +14,11 @@
         flake = false;
       };
     };
+    trustless-sidechain = {
+      url = "path:../";
+    };
   };
-  outputs = { self, nixpkgs, cardano-transaction-lib, ... }@inputs:
+  outputs = { self, nixpkgs, cardano-transaction-lib, trustless-sidechain, ... }@inputs:
     let
       defaultSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
       perSystem = nixpkgs.lib.genAttrs defaultSystems;
@@ -55,6 +58,10 @@
             dhall
             nixpkgs-fmt
             jq
+
+            # Note: to update the trustless-sidechain, see `nix flake lock --help`;
+            # in particular, see `--update-input`.
+            trustless-sidechain.outputs.project.${system}.trustless-sidechain.components.exes.trustless-sidechain-merkle-tree
           ];
         };
       # CTL's `runPursTest` won't pass command-line arugments to the `node`

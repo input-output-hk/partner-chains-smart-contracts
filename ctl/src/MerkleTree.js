@@ -1,5 +1,6 @@
 const { spawnSync } = require("node:child_process");
-const { Buffer } = require("node:Buffer");
+const { Buffer } = require("node:buffer");
+
 
 // TODO: perhaps we can do an async version that doesn't block the event loop
 // later...
@@ -17,6 +18,10 @@ exports.toBufferImpl = function (uint8array) {
 
 exports.fromBufferImpl = function (buf) {
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.length/ Uint8Array.BYTES_PER_ELEMENT);
+};
+
+exports.bufferToStringImpl = function (buf) {
+  return buf.toString("utf8");
 };
 
 exports.isNullImpl = function(val) {

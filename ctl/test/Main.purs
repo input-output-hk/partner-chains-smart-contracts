@@ -22,18 +22,24 @@ import Data.UInt as UInt
 import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
 import SidechainParams (SidechainParams(..))
 import Test.Config (config)
+import Test.MerkleTree as MerkleTree
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
-main = launchAff_ $ do
-  let
-    distribute = [ BigInt.fromInt 1_000_000_000, BigInt.fromInt 2_000_000_000 ]
-      /\ [ BigInt.fromInt 2_000_000_000 ]
+main = do
+  -- Run the integration tests of the merkle tree.
+  MerkleTree.test
 
-  runPlutipContract config distribute \(alice /\ _bob) → do
-    withKeyWallet alice $ do
-      mintAndBurnScenario
-      registerAndDeregisterScenario
+  -- Run the plutip tests
+  launchAff_ $ do
+    let
+      distribute = [ BigInt.fromInt 1_000_000_000, BigInt.fromInt 2_000_000_000 ]
+        /\ [ BigInt.fromInt 2_000_000_000 ]
+
+    runPlutipContract config distribute \(alice /\ _bob) → do
+      withKeyWallet alice $ do
+        mintAndBurnScenario
+        registerAndDeregisterScenario
 
 mintAndBurnScenario ∷ Contract () Unit
 mintAndBurnScenario = do

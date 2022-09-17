@@ -62,6 +62,11 @@ module TrustlessSidechain.MerkleTree (
   Side (L, R),
   Up (Up, siblingSide, sibling),
 
+  -- * Internal alternative pretty printers
+  pureScriptShowRootHash,
+  pureScriptShowUp,
+  pureScriptShowMerkleProof,
+  pureScriptShowMerkleTree,
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -73,6 +78,10 @@ import PlutusTx.Prelude
 import Schema qualified
 import Prelude qualified
 
+import Data.ByteString.Base16 qualified as Base16
+import Data.List qualified as List
+import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
+
 {- | 'RootHash' is the hash that is the root of a 'MerkleTree'.
 
  Internally, this is just a newtype wrapper around 'BuiltinByteString' for
@@ -82,6 +91,18 @@ import Prelude qualified
 newtype RootHash = RootHash {unRootHash :: BuiltinByteString}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
+-- | 'pureScriptShowRootHash' shows the RootHash in a purescript friendly way.
+pureScriptShowRootHash :: RootHash -> Prelude.String
+pureScriptShowRootHash RootHash {unRootHash = rh} =
+  List.unwords
+    [ "RootHash"
+    , "("
+    , "hexToByteArrayUnsafe"
+    , Prelude.show $ case rh of
+        BuiltinByteString bs -> Base16.encode bs
+    , ")"
+    ]
 
 makeIsDataIndexed ''RootHash [('RootHash, 0)]
 deriveJSON defaultOptions ''RootHash
@@ -131,6 +152,26 @@ data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
 
+-- | 'pureScriptShowUp' shows Up in a purescript friendly way.
+pureScriptShowUp :: Up -> Prelude.String
+pureScriptShowUp (Up ss s) =
+  List.unwords
+    [ "("
+    , "Up"
+    , "{"
+    , "siblingSide"
+    , ":"
+    , Prelude.show ss
+    , ","
+    , "sibling"
+    , ":"
+    , "("
+    , pureScriptShowRootHash s
+    , ")"
+    , "}"
+    , ")"
+    ]
+
 makeIsDataIndexed ''Up [('Up, 0)]
 deriveJSON defaultOptions ''Up
 
@@ -142,6 +183,18 @@ deriveJSON defaultOptions ''Up
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
+-- | 'pureScriptShowMerkleProof' shows the MerkleProof in a purescript friendly way.
+pureScriptShowMerkleProof :: MerkleProof -> Prelude.String
+pureScriptShowMerkleProof (MerkleProof proof) =
+  List.unwords
+    [ "("
+    , "MerkleProof"
+    , "["
+    , List.intercalate "," (map pureScriptShowUp proof)
+    , "]"
+    , ")"
+    ]
 
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
@@ -184,6 +237,30 @@ data MerkleTree
   deriving (Prelude.Show, Prelude.Eq)
 
 makeIsDataIndexed ''MerkleTree [('Bin, 0), ('Tip, 1)]
+
+-- | 'pureScriptShowMerkleTree' shows the MerkleTree in a purescript friendly way.
+pureScriptShowMerkleTree :: MerkleTree -> Prelude.String
+pureScriptShowMerkleTree = \case
+  Bin rh l r ->
+    List.unwords
+      [ "Bin"
+      , "("
+      , pureScriptShowRootHash rh
+      , ")"
+      , "("
+      , pureScriptShowMerkleTree l
+      , ")"
+      , "("
+      , pureScriptShowMerkleTree r
+      , ")"
+      ]
+  Tip rh ->
+    List.unwords
+      [ "Tip"
+      , "("
+      , pureScriptShowRootHash rh
+      , ")"
+      ]
 
 -- Note [Merkle Tree Invariants]:
 --      1. @Bin h l r@ satisfies @h = rootHash l `mergeRootHashes` rootHash r@

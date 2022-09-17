@@ -1,14 +1,18 @@
 { name = "ctl-test"
 , dependencies =
   [ "argonaut-core"
+  , "arraybuffer-types"
   , "arrays"
   , "bifunctors"
   , "bigints"
   , "cardano-transaction-lib"
   , "codec-argonaut"
+  , "console"
   , "control"
   , "exceptions"
+  , "maybe"
   , "monad-logger"
+  , "newtype"
   , "node-buffer"
   , "node-fs"
   , "node-fs-aff"
@@ -16,10 +20,12 @@
   , "optparse"
   , "ordered-collections"
   , "parallel"
+  , "partial"
   , "profunctor-lenses"
   , "strings"
   , "transformers"
   , "uint"
+  , "untagged-union"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
