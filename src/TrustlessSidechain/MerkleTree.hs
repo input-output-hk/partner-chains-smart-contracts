@@ -59,6 +59,9 @@ module TrustlessSidechain.MerkleTree (
   hash,
   hashLeaf,
   hashInternalNode,
+  Side (L, R),
+  Up (Up, siblingSide, sibling),
+
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
@@ -244,14 +247,15 @@ fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
  > merkleTree = MT.fromNonEmpty $ PlutusPrelude.fromList [ pubkey1, pubkey2 ]
 
  Pictorially, given @["p1", "p2", "p3"]@, this creates a tree like
- >              hash (hash (hash "p1" ++ hash "p2") ++ hash "p3")
+ >    hash (1 : hash (1 : hash (0:"p1") ++ hash (0:"p2")) ++ hash (0:"p3"))
  >              /                               |
- >    hash (hash "p1" ++ hash "p2")             |
+ >    hash (1 : hash (0:"p1") ++ hash (0:"p2")) |
  >      /                    \                  |
- > hash "p1"                hash "p2"       hash "p3"
+ > hash (0:"p1")          hash (0:"p2")       hash (0:"p3")
 
- N.B. it doesn't exactly do this anymore since this permits second preimage
- attacks: see Note [2nd Preimage Attack on The Merkle Tree].
+ Note how all the leaves are prepended with @0@ before being hashed, and all
+ the internal nodes are prepended by @1@ before being hashed. For more details,
+ see Note [2nd Preimage Attack on The Merkle Tree].
 -}
 {-# INLINEABLE fromNonEmpty #-}
 fromNonEmpty :: NonEmpty BuiltinByteString -> MerkleTree
@@ -456,7 +460,7 @@ Observation 1.
 
     since this counts the number of times the mergePairs function gets called
     in 'fromList' where we may observe that the height of the tree increases by
-    iff mergePairs gets called.
+    one iff mergePairs gets called.
 
 Thus, it suffices to show
 
