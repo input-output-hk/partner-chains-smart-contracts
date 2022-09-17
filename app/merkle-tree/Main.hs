@@ -18,7 +18,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.IsData.Class (FromData, ToData)
 import PlutusTx.IsData.Class qualified as Class
-import PlutusTx.Prelude qualified as PlutusTx
 import System.IO (Handle, IOMode (ReadMode, WriteMode))
 import System.IO qualified as IO
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
@@ -134,13 +133,15 @@ readBuiltinDataCbor opt handle = case opt of
     -- Generic function which reads from input and deserializes to BuiltinData,
     -- and transforms that to the corresponding Haskell data type
     arg :: FromData a => IO a
-    arg =
+    arg = do
       Lazy.hGetContents handle
-        >>= PlutusTx.maybe
-          (Exception.throwIO $ userError "BuiltinData deserialization failed")
-          return
-          . Class.fromBuiltinData
-          . Serialise.deserialise
+        >>= \builtinData ->
+          case Class.fromBuiltinData builtinData of
+            Just deserializedArg -> return deserializedArg
+            Nothing ->
+              Exception.throwIO $
+                userError ("BuiltinData deserialization failed: " ++ show builtinData)
+            . Serialise.deserialise
 
 -- * Writers
 
