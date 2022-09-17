@@ -17,7 +17,7 @@ import Options.Applicative qualified as Applicative
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.IsData.Class (FromData, ToData)
-import PlutusTx.IsData.Class qualified as Class
+import PlutusTx.IsData.Class qualified as IsData
 import System.IO (Handle, IOMode (ReadMode, WriteMode))
 import System.IO qualified as IO
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
@@ -34,7 +34,7 @@ import Prelude
 {- | 'serialiseBuiltinData'
  converts the given data to its 'BuiltinData' instance, and serializes that
  to cbor i.e.,
- > 'serialiseBuiltinData' = 'Builtins.serialiseData' . 'Class.toBuiltinData'
+ > 'serialiseBuiltinData' = 'Builtins.serialiseData' . 'PlutusTx.IsData.Class.toBuiltinData'
 
  Why is this here? Well, it was a helpful wrapper used in GHCi when developing
  this.
@@ -45,7 +45,7 @@ import Prelude
  and terminated with @0xff@.
 -}
 serialiseBuiltinData :: ToData a => a -> BuiltinByteString
-serialiseBuiltinData = Builtins.serialiseData . Class.toBuiltinData
+serialiseBuiltinData = Builtins.serialiseData . IsData.toBuiltinData
 
 {- | @'unBuiltinByteString' bs@ unwraps the 'BuiltinByteString' type to give
  the underlying (strict) 'ByteString'.
@@ -136,7 +136,7 @@ readBuiltinDataCbor opt handle = case opt of
     arg = do
       Lazy.hGetContents handle
         >>= \builtinData ->
-          case Class.fromBuiltinData builtinData of
+          case IsData.fromBuiltinData builtinData of
             Just deserializedArg -> return deserializedArg
             Nothing ->
               Exception.throwIO $
@@ -165,7 +165,7 @@ writeCborBuiltinData mta handle = case mta of
       ByteString.hPutStr handle
         . unBuiltinByteString
         . Builtins.serialiseData
-        . Class.toBuiltinData
+        . IsData.toBuiltinData
 
 -- * Input / Output
 
