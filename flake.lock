@@ -294,14 +294,17 @@
     "cardano-configurations": {
       "flake": false,
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-VTtp2vcs6hH3PGTQLm2xslsEAwow1TU6O0jtF7LYi9U=",
-        "path": "./cardano-configurations",
-        "type": "path"
+        "lastModified": 1662514199,
+        "narHash": "sha256-Z71TP5nHA9ch4DRwftz8my5RwYOjH/xA/WlcJqUTtYY=",
+        "owner": "input-output-hk",
+        "repo": "cardano-configurations",
+        "rev": "182b16cb743867b0b24b7af92efbf427b2b09b52",
+        "type": "github"
       },
       "original": {
-        "path": "./cardano-configurations",
-        "type": "path"
+        "owner": "input-output-hk",
+        "repo": "cardano-configurations",
+        "type": "github"
       }
     },
     "cardano-crypto": {

@@ -8,7 +8,7 @@
       repo = "cardano-transaction-lib";
       rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
       inputs.cardano-configurations = {
-        url = "path:./cardano-configurations";
+        url = "github:input-output-hk/cardano-configurations";
         flake = false;
       };
     };
@@ -27,7 +27,7 @@
     let
       runtimeConfig = {
         network = {
-          name = "takao";
+          name = "vasil-dev";
           magic = 9;
         };
       };
