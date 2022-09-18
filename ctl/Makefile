@@ -1,6 +1,7 @@
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
+.PHONY: dev build test check-format format spago2nix
 
 BROWSER_RUNTIME ?= 1
 

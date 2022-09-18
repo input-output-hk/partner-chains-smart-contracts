@@ -202,7 +202,7 @@
 
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
-        trustless-sidechain-ctl = (psProjectFor system).runPursTest {
+        trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
           sources = [ "src" "test" ];
           testMain = "Test.Main";
         };
