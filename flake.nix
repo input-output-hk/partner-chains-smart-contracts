@@ -8,7 +8,7 @@
       repo = "cardano-transaction-lib";
       rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
       inputs.cardano-configurations = {
-        url = "github:input-output-hk/cardano-configurations";
+        url = "github:input-output-hk/cardano-configurations?rev=182b16cb743867b0b24b7af92efbf427b2b09b52";
         flake = false;
       };
     };
