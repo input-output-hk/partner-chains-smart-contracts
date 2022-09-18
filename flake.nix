@@ -131,10 +131,9 @@
         in
         pkgs.runCommand "format-check"
           {
-            nativeBuildInputs = [
-              self.devShells.${system}.hs.nativeBuildInputs
-              self.devShells.${system}.ps.buildInputs
-            ];
+            nativeBuildInputs = self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
           } ''
           cd ${self}
           export LC_CTYPE=C.UTF-8
@@ -200,10 +199,9 @@
           {
             nativeBuildInputs = builtins.attrValues self.checks.${system}
               ++ builtins.attrValues self.flake.${system}.packages
-              ++ [
-              self.devShells.${system}.hs.nativeBuildInputs
-              self.devShells.${system}.ps.buildInputs
-            ];
+              ++ self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
           } "touch $out");
 
       checks = perSystem (system: self.flake.${system}.checks // {
