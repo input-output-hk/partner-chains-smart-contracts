@@ -145,8 +145,6 @@
           make check-format
           mkdir $out
         '';
-      # TODO: ^ thouch or mkdir -p are less error-prone.
-      #       currently this fails because $out/bin/format-check doesn't exist.
 
       # CTL's `runPursTest` won't pass command-line arugments to the `node`
       # invocation, so we can essentially recreate `runPursTest` here with and
@@ -192,7 +190,8 @@
         };
       });
 
-      # TODO: What's this used for?
+      # This is used for nix build .#check.<system> because nix flake check
+      # does not work with haskell.nix import-from-derivtion.
       check = perSystem (system:
         (nixpkgsFor system).runCommand "combined-check"
           {
@@ -210,8 +209,6 @@
         };
       });
 
-      # TODO: make this a combined shell.
-      #       using // makes the rhs devShell override the lhs one.
       devShells = perSystem (system: rec {
         ps = (psProjectFor system).devShell;
         hs = self.flake.${system}.devShell;
