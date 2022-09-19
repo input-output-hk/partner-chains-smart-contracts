@@ -10,7 +10,7 @@ import MerkleTree
   ( MerkleProof(MerkleProof)
   , MerkleTree(Bin, Tip)
   , RootHash(RootHash)
-  , Side(R)
+  , Side(L, R)
   , Up(Up)
   )
 import MerkleTree as MerkleTree
@@ -51,7 +51,6 @@ eqUpToLeft _ _ = false
 -- on the purescript side.
 test ∷ Effect Unit
 test = do
-
   -- Testing if
   -- > fromList ["maltese", "yorkie", "pomeranian"]
   -- produces the same tree.
@@ -61,7 +60,14 @@ test = do
         Bin
           ( RootHash
               ( hexToByteArrayUnsafe
-                  "b92047d71aee73816d12ddafdb51f251a90d67a18d54a88eef921f8a3b261a1c"
+                  "f5259910f2ce05d66ec99cd1ff8a0ef983fb8a6123cf118e18f21e346d141cc7"
+              )
+          )
+          ( Tip
+              ( RootHash
+                  ( hexToByteArrayUnsafe
+                      "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
+                  )
               )
           )
           ( Bin
@@ -82,13 +88,6 @@ test = do
                       ( hexToByteArrayUnsafe
                           "f10e71fd4b801fe5989221bc5698ea2848bcdd9b271d3c37490109783a14c052"
                       )
-                  )
-              )
-          )
-          ( Tip
-              ( RootHash
-                  ( hexToByteArrayUnsafe
-                      "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
                   )
               )
           )
@@ -115,7 +114,7 @@ test = do
     let
       expected = RootHash
         ( hexToByteArrayUnsafe
-            "b92047d71aee73816d12ddafdb51f251a90d67a18d54a88eef921f8a3b261a1c"
+            "f5259910f2ce05d66ec99cd1ff8a0ef983fb8a6123cf118e18f21e346d141cc7"
         )
       actual = MerkleTree.rootHashFromList
         [ unsafeByteArrayFromAscii "maltese"
@@ -131,31 +130,31 @@ test = do
   -- produce the same @'Maybe' 'MerkleProof'@.
   void do
     let
-      expected = Just
-        ( MerkleProof
-            [ ( Up
-                  { siblingSide: R
-                  , sibling:
-                      ( RootHash
-                          ( hexToByteArrayUnsafe
-                              "f10e71fd4b801fe5989221bc5698ea2848bcdd9b271d3c37490109783a14c052"
-                          )
-                      )
-                  }
-              )
-            , ( Up
-                  { siblingSide: R
-                  , sibling:
-                      ( RootHash
-                          ( hexToByteArrayUnsafe
-                              "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
-                          )
-                      )
-                  }
-              )
-            ]
-        )
-
+      expected =
+        Just
+          ( MerkleProof
+              [ ( Up
+                    { siblingSide: R
+                    , sibling:
+                        ( RootHash
+                            ( hexToByteArrayUnsafe
+                                "f10e71fd4b801fe5989221bc5698ea2848bcdd9b271d3c37490109783a14c052"
+                            )
+                        )
+                    }
+                )
+              , ( Up
+                    { siblingSide: L
+                    , sibling:
+                        ( RootHash
+                            ( hexToByteArrayUnsafe
+                                "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
+                            )
+                        )
+                    }
+                )
+              ]
+          )
       actual = do
         merkleTree ← MerkleTree.fromList
           [ unsafeByteArrayFromAscii "maltese"
@@ -189,7 +188,6 @@ test = do
   void do
     let
       expected = true
-
       actual = do
         merkleTree ← MerkleTree.fromList
           [ unsafeByteArrayFromAscii "maltese"
@@ -212,7 +210,6 @@ test = do
   void do
     let
       expected = false
-
       actual = do
         merkleTree ← MerkleTree.fromList
           [ unsafeByteArrayFromAscii "maltese"
