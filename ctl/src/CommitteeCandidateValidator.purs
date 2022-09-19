@@ -41,6 +41,7 @@ import Contract.TextEnvelope
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceAndSignTx
   , outputDatumDatum
@@ -189,7 +190,7 @@ register
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
 
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr) -- TrustlessSidechainSchema Text CardanoTx
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   validator ← getCommitteeCandidateValidator sidechainParams
   let
     valHash = validatorHash validator
@@ -208,8 +209,11 @@ register
       <> Lookups.validator validator
 
     constraints ∷ Constraints.TxConstraints Void Void
-    constraints = Constraints.mustPayToScript valHash (Datum (toData datum)) val
-      <> Constraints.mustSpendPubKeyOutput inputUtxo
+    constraints =
+      Constraints.mustSpendPubKeyOutput inputUtxo
+        <> Constraints.mustPayToScript valHash (Datum (toData datum))
+          Constraints.DatumWitness
+          val
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
     (balanceAndSignTx (reattachDatumsInline ubTx))
@@ -228,16 +232,17 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let valHash = validatorHash validator
   valAddr ← liftContractM "marketPlaceListNft: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  valUtxos ← unwrap <$> liftedM "cannot get val UTxOs" (utxosAt valAddr)
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  valUtxos ← liftedM "cannot get val UTxOs" (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
 
   ourDatums ← liftAff $ (flip parTraverse) valUtxos' $
-    \(input /\ (TransactionOutput out)) → runMaybeT $ do
-      BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
-        =<< outputDatumDatum out.datum
-      guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
-      pure input
+    \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
+      runMaybeT $ do
+        BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
+          =<< outputDatumDatum out.datum
+        guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
+        pure input
 
   when (null (catMaybes ourDatums)) $ throwContractError
     "Registration utxo cannot be found"

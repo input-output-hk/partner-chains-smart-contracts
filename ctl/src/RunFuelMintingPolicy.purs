@@ -19,7 +19,12 @@ import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
   , textEnvelopeBytes
   )
-import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
+import Contract.Transaction
+  ( TransactionOutputWithRefScript(..)
+  , awaitTxConfirmed
+  , balanceAndSignTx
+  , submit
+  )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value as Value
@@ -62,7 +67,8 @@ runFuelMP sp fp = do
   inputUtxo ← traverse
     ( \txIn → do
         txOut ← liftedM "Cannot find genesis mint UTxO" $ getUtxo txIn
-        pure $ Map.singleton txIn txOut
+        pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+          { output: txOut, scriptRef: Nothing }
     )
     inputTxIn
 
