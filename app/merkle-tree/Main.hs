@@ -133,15 +133,16 @@ readBuiltinDataCbor opt handle = case opt of
     -- Generic function which reads from input and deserializes to BuiltinData,
     -- and transforms that to the corresponding Haskell data type
     arg :: FromData a => IO a
-    arg = do
+    arg =
       Lazy.hGetContents handle
-        >>= \builtinData ->
-          case IsData.fromBuiltinData builtinData of
-            Just deserializedArg -> return deserializedArg
-            Nothing ->
-              Exception.throwIO $
-                userError ("BuiltinData deserialization failed: " ++ show builtinData)
-            . Serialise.deserialise
+        >>= ( \builtinData ->
+                case IsData.fromBuiltinData builtinData of
+                  Just deserializedArg -> return deserializedArg
+                  Nothing ->
+                    Exception.throwIO $
+                      userError ("BuiltinData deserialization failed: " ++ show builtinData)
+            )
+          . Serialise.deserialise
 
 -- * Writers
 
