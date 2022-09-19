@@ -177,7 +177,6 @@
         ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
         ctl-main = ctlMainFor system;
         ctl-bundle-web = (psProjectFor system).bundlePursProject {
-          sources = [ "src" ];
           main = "Main";
           entrypoint = "index.js"; # must be same as listed in webpack config
           webpackConfig = "webpack.config.js";
@@ -207,7 +206,6 @@
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
         trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
-          sources = [ "src" "test" ];
           testMain = "Test.Main";
         };
       });
