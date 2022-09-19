@@ -6,7 +6,7 @@
       type = "github";
       owner = "Plutonomicon";
       repo = "cardano-transaction-lib";
-      rev = "acb68d4a238bfd56e1c4c2c0a1cfda42887817ea";
+      rev = "1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
       inputs.cardano-configurations = {
         url = "github:input-output-hk/cardano-configurations?rev=182b16cb743867b0b24b7af92efbf427b2b09b52";
         flake = false;
