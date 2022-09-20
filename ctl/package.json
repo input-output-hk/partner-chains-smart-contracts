@@ -7,9 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "spago run --main Test.Main",
-    "dev": "make run-dev",
-    "build": "make run-build"
+    "test": "make test",
+    "dev": "make dev",
+    "build": "make build"
   },
   "author": "",
   "license": "MIT",
