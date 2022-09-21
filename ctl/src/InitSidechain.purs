@@ -4,11 +4,17 @@ import Contract.Prelude
 
 import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractE, liftedE, liftedM)
 import Contract.PlutusData (Datum(..), toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
-import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
+import Contract.Transaction
+  ( TransactionOutputWithRefScript(..)
+  , awaitTxConfirmed
+  , balanceAndSignTx
+  , submit
+  )
+import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Data.Array as Array
@@ -52,7 +58,7 @@ initSidechain (InitSidechainParams isp) = do
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   nft ← committeeHashAssetClass ichm
   nftPolicy ← committeeHashPolicy ichm
-  committeeHash ← aggregateKeys $ Array.sort isp.initCommittee
+  committeeHash ← liftContractE $ aggregateKeys $ Array.sort isp.initCommittee
 
   let
     val = assetClassValue nft (BigInt.fromInt 1)
@@ -70,13 +76,18 @@ initSidechain (InitSidechainParams isp) = do
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.mintingPolicy nftPolicy
-        <> Lookups.unspentOutputs (Map.singleton txIn txOut)
+        <> Lookups.unspentOutputs
+          ( Map.singleton txIn
+              ( TransactionOutputWithRefScript
+                  { output: txOut, scriptRef: Nothing }
+              )
+          )
         <> Lookups.validator updateValidator
 
     constraints =
       Constraints.mustSpendPubKeyOutput txIn
         <> Constraints.mustMintValue val
-        <> Constraints.mustPayToScript valHash ndat val
+        <> Constraints.mustPayToScript valHash ndat DatumWitness val
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"

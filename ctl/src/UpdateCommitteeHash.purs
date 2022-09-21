@@ -7,6 +7,7 @@ import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
+  , liftContractE
   , liftContractM
   , liftedE
   , liftedM
@@ -35,10 +36,12 @@ import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutput(..)
+  , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTx
   , submit
   )
+import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
@@ -203,14 +206,14 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   unless (isSorted newCommitteePubKeys) $ throwContractError
     "New committee member public keys must be sorted"
 
-  newCommitteeHash ← aggregateKeys newCommitteePubKeys
+  newCommitteeHash ← liftContractE $ aggregateKeys newCommitteePubKeys
 
   let
     curCommitteePubKeys /\ committeeSignatures = sortPubKeysAndSigs
       newCommitteeHash
       uchp.committeePubKeys
       uchp.committeeSignatures
-  curCommitteeHash ← aggregateKeys curCommitteePubKeys
+  curCommitteeHash ← liftContractE $ aggregateKeys curCommitteePubKeys
 
   updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
   let valHash = validatorHash updateValidator
@@ -218,18 +221,23 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   netId ← getNetworkId
   valAddr ← liftContractM "updateCommitteeHash: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
-  scriptUtxos ← unwrap <$> liftedM "Cannot get script utxos" (utxosAt valAddr)
+  scriptUtxos ← liftedM "Cannot get script utxos" (utxosAt valAddr)
   let
-    findOwnValue (_tIN /\ tOUT) =
-      assetClassValueOf ((unwrap tOUT).amount) uch.uchAssetClass ==
-        BigInt.fromInt 1
+    findOwnValue
+      ( _tIN /\
+          ( TransactionOutputWithRefScript
+              { output: TransactionOutput { amount } }
+          )
+      ) =
+      assetClassValueOf amount uch.uchAssetClass == BigInt.fromInt 1
     found = find findOwnValue
       ( Map.toUnfoldable scriptUtxos ∷
-          (Array (TransactionInput /\ TransactionOutput))
+          (Array (TransactionInput /\ TransactionOutputWithRefScript))
       )
-  (oref /\ (TransactionOutput tOut)) ← liftContractM
-    "updateCommittee hash output not found"
-    found
+  (oref /\ (TransactionOutputWithRefScript { output: TransactionOutput tOut })) ←
+    liftContractM
+      "updateCommittee hash output not found"
+      found
 
   rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
   UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
@@ -251,10 +259,14 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs
-        (Map.singleton oref (TransactionOutput tOut))
+        ( Map.singleton oref
+            ( TransactionOutputWithRefScript
+                { output: TransactionOutput tOut, scriptRef: Nothing }
+            )
+        )
         <> Lookups.validator updateValidator
     constraints = Constraints.mustSpendScriptOutput oref redeemer
-      <> Constraints.mustPayToScript valHash newDatum value
+      <> Constraints.mustPayToScript valHash newDatum DatumWitness value
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
@@ -264,8 +276,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   awaitTxConfirmed txId
   logInfo' "updateCommitteeHash transaction submitted successfully!"
 
-aggregateKeys ∷ Array ByteArray → Contract () ByteArray
-aggregateKeys ls = liftAff
+aggregateKeys ∷ Array ByteArray → Either String ByteArray
+aggregateKeys ls =
   (MT.fromList (toUnfoldable ls) <#> MT.rootHash >>> MT.unRootHash)
 
 {-| Sorting public key and signatures pairs by public keys to be able to efficiently nub them on-chain -}

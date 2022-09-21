@@ -8,13 +8,11 @@ import Data.Function (on)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.String (joinWith)
-import Effect.Aff as Aff
-import Effect.Exception (error)
 import Prelude (map, (<<<), (<>))
 
 -- ! Wrapper around internal hashing function
-hash ∷ ByteArray → Aff RootHash
-hash = map RootHash <<< blake2b256Hash
+hash ∷ ByteArray → RootHash
+hash = RootHash <<< blake2b256Hash
 
 newtype RootHash = RootHash ByteArray
 
@@ -39,32 +37,33 @@ rootHash ∷ MerkleTree → RootHash
 rootHash (Bin h _ _) = h
 rootHash (Tip h) = h
 
-fromList ∷ List ByteArray → Aff MerkleTree
-fromList List.Nil =
-  Aff.throwError $ error "MerkleTree.fromList: empty list"
+fromList ∷ List ByteArray → Either String MerkleTree
+fromList List.Nil = Left "MerkleTree.fromList: empty list"
 fromList ls =
   let
-    mergeAll ∷ List MerkleTree → Aff MerkleTree
-    mergeAll (r : Nil) = pure r
-    mergeAll rs = mergePairs rs >>= mergeAll
+    mergeAll ∷ List MerkleTree → MerkleTree
+    mergeAll (r : Nil) = r
+    mergeAll rs = mergeAll $ mergePairs rs
 
-    mergePairs ∷ List MerkleTree → Aff (List MerkleTree)
-    mergePairs (a : b : cs) = do
-      merged ← mergeRootHashes (rootHash a) (rootHash b)
-      tail ← mergePairs cs
-      pure $ Bin merged a b : tail
-    mergePairs cs = pure cs
+    mergePairs ∷ List MerkleTree → List MerkleTree
+    mergePairs (a : b : cs) =
+      let
+        merged = mergeRootHashes (rootHash a) (rootHash b)
+        tail = mergePairs cs
+      in
+        Bin merged a b : tail
+    mergePairs cs = cs
 
-    leaves ∷ Aff (List MerkleTree)
-    leaves = traverse (map Tip <$> hashLeaf) ls
+    leaves ∷ List MerkleTree
+    leaves = map (Tip <<< hashLeaf) ls
   in
-    mergeAll =<< leaves
+    Right $ mergeAll leaves
 
-mergeRootHashes ∷ RootHash → RootHash → Aff RootHash
+mergeRootHashes ∷ RootHash → RootHash → RootHash
 mergeRootHashes l r = hashInternalNode (((<>) `on` unRootHash) l r)
 
-hashInternalNode ∷ ByteArray → Aff RootHash
+hashInternalNode ∷ ByteArray → RootHash
 hashInternalNode = hash <<< (byteArrayFromIntArrayUnsafe [ 1 ] <> _)
 
-hashLeaf ∷ ByteArray → Aff RootHash
+hashLeaf ∷ ByteArray → RootHash
 hashLeaf = hash <<< (byteArrayFromIntArrayUnsafe [ 0 ] <> _)
