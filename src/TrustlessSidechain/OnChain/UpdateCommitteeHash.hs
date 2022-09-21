@@ -14,8 +14,8 @@ import Ledger.Address (Address)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
@@ -194,7 +194,7 @@ updateCommitteeHashValidator updateCommitteeHash =
 -- | 'updateCommitteeHashAddress' is the address of the script
 {-# INLINEABLE updateCommitteeHashAddress #-}
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
-updateCommitteeHashAddress = Ledger.scriptHashAddress . ScriptUtils.validatorHash . updateCommitteeHashValidator
+updateCommitteeHashAddress = Ledger.scriptHashAddress . validatorHash . updateCommitteeHashValidator
 
 -- * Initializing the committee hash
 
