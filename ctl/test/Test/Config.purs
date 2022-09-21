@@ -23,11 +23,12 @@ config =
       , path: Nothing
       }
   , ctlServerConfig:
-      { port: UInt.fromInt 8081
-      , host: "127.0.0.1"
-      , secure: false
-      , path: Nothing
-      }
+      Just
+        { port: UInt.fromInt 8081
+        , host: "127.0.0.1"
+        , secure: false
+        , path: Nothing
+        }
   , postgresConfig:
       { host: "127.0.0.1"
       , port: UInt.fromInt 5432
@@ -35,4 +36,6 @@ config =
       , password: "password"
       , dbname: "ctl"
       }
+  , customLogger: Nothing
+  , suppressLogs: false
   }
