@@ -54,12 +54,14 @@ newtype DsKeyMint = DsKeyMint
   }
 
 -- * Validator / minting policies
+
+-- | 'insertValidator' gets the validator
 insertValidator ∷ Ds → Contract () Validator
 insertValidator _ds = do
-  -- TODO: apply this to the validator..
   validatorBytes ← TextEnvelope.textEnvelopeBytes RawScripts.rawInsertValidator
     PlutusScriptV2
   let validatorUnapplied = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
+  -- TODO: apply 'validatorUnapplied' to the validator..
   pure validatorUnapplied
 
 -- * ToData / FromData instances.
