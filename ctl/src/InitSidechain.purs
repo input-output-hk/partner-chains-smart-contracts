@@ -1,18 +1,16 @@
--- | 'InitSidechain' implements the endpoint for intializing the sidechain.
-module InitSidechain (initSidechain) where
+module InitSidechain where
 
 import Contract.Prelude
 
 import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
-import Contract.PlutusData (Datum(..))
-import Contract.PlutusData as PlutusData
+import Contract.PlutusData (Datum(..), toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
 import Contract.TxConstraints as Constraints
-import Contract.Utxos as Utxos
+import Contract.Utxos (getUtxo)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -37,20 +35,11 @@ import UpdateCommitteeHash
 
  Note [Initializing the Committee Hash]
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- The intialization step of the committee hash is done as follows.
+ The intialization step of the committee hash is done in two steps.
 
-  (1) Create an NFT which identifies the committee hash / spend the NFT to the
-  script output which contains the committee hsah
+  (1) Create an NFT which identifies the committee hash
 
- Note [Initializing the Distributed Set]
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- The intialization step of the distributed set is done as follows.
-
-  (1) Create an NFT and pay this to a script which holds 'DsConfDatum' which
-  holds the minting policy of the scripts related to the distributed set.
-
-  (2) Mint node which corresponds to the root of the distributed set
-  i.e., 'DistributedSet.rootNode'
+  (2) Spend that NFT to a script output which contains the committee hash
 
  Here, we create a transaction which executes both of these steps with a single
  transaction.
@@ -58,55 +47,36 @@ import UpdateCommitteeHash
 initSidechain ∷ InitSidechainParams → Contract () SidechainParams
 initSidechain (InitSidechainParams isp) = do
   let txIn = isp.initUtxo
-  txOut ← liftedM "initSidechain: cannot find genesis UTxO" $ Utxos.getUtxo txIn
+  txOut ← liftedM "Cannot find genesis UTxO" $ getUtxo txIn
 
-  -- Sidechain parameters
-  -----------------------------------
-  let
-    sc = SidechainParams
-      { chainId: isp.initChainId
-      , genesisHash: isp.initGenesisHash
-      , genesisUtxo: txIn
-      , genesisMint: isp.initMint
-      }
-
-  -- Initializing the committee hash
-  -----------------------------------
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
-  assetClassCommitteeHash ← committeeHashAssetClass ichm
-  nftCommitteeHashPolicy ← committeeHashPolicy ichm
-  aggregatedKeys ← aggregateKeys $ Array.sort isp.initCommittee
-  let
-    committeeHashParam = UpdateCommitteeHash
-      { uchAssetClass: assetClassCommitteeHash }
-    committeeHashDatum = Datum
-      $ PlutusData.toData
-      $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
-    valCommitteeHash = assetClassValue assetClassCommitteeHash (BigInt.fromInt 1)
-  committeeHashValidator ← updateCommitteeHashValidator committeeHashParam
-  let
-    committeeHashValidatorHash = validatorHash committeeHashValidator
+  nft ← committeeHashAssetClass ichm
+  nftPolicy ← committeeHashPolicy ichm
+  committeeHash ← aggregateKeys $ Array.sort isp.initCommittee
 
-  -- Initializing the distributed set
-  -----------------------------------
-  -- TODO: add distributed set stuff here...
-
-
-  -- Building the transaction
-  -----------------------------------
   let
+    val = assetClassValue nft (BigInt.fromInt 1)
+    uch = UpdateCommitteeHash { uchAssetClass: nft }
+
+    ndat = Datum
+      $ toData
+      $ UpdateCommitteeHashDatum
+          { committeeHash }
+
+  updateValidator ← updateCommitteeHashValidator uch
+  let
+    valHash = validatorHash updateValidator
+
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
-      Lookups.mintingPolicy nftCommitteeHashPolicy
+      Lookups.mintingPolicy nftPolicy
         <> Lookups.unspentOutputs (Map.singleton txIn txOut)
-        <> Lookups.validator committeeHashValidator
+        <> Lookups.validator updateValidator
 
     constraints =
       Constraints.mustSpendPubKeyOutput txIn
-        <> Constraints.mustMintValue valCommitteeHash
-        <> Constraints.mustPayToScript committeeHashValidatorHash
-          committeeHashDatum
-          valCommitteeHash
+        <> Constraints.mustMintValue val
+        <> Constraints.mustPayToScript valHash ndat val
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
@@ -116,4 +86,9 @@ initSidechain (InitSidechainParams isp) = do
   awaitTxConfirmed txId
   logInfo' "Inital updateCommitteeHash transaction submitted successfully."
 
-  pure sc
+  pure $ SidechainParams
+    { chainId: isp.initChainId
+    , genesisHash: isp.initGenesisHash
+    , genesisUtxo: txIn
+    , genesisMint: isp.initMint
+    }
