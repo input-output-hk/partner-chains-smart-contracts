@@ -23,7 +23,7 @@ import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
 testScenario ∷ Contract () Unit
 testScenario = do
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   let
     keyCount = 101
     threshold = 2.0 / 3.0

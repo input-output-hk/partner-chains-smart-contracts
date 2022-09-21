@@ -17,7 +17,7 @@ testScenario ∷ Contract () Unit
 testScenario = do
   pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   genesisMint ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
