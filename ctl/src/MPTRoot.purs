@@ -102,6 +102,7 @@ saveRoot
     constraints =
       Constraints.mustMintValueWithRedeemer (wrap (toData redeemer)) value
         <> Constraints.mustPayToScript (validatorHash rootTokenVal) unitDatum
+          Constraints.DatumWitness
           value
 
     lookups ∷ Lookups.ScriptLookups Void
