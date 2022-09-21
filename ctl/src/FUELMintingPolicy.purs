@@ -9,7 +9,6 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
-  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
