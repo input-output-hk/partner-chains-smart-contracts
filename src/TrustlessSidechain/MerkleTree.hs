@@ -360,7 +360,7 @@ Properties [Merkle Tree Height Bound]
 See: Note [Hydra-Poc People Merkle Tree Comparisons]
 -}
 
-{- | /O(log n)/. Lookup the the corresponding merkle proof of the
+{- | /O(n)/. Lookup the the corresponding merkle proof of the
  'BuiltinByteString' in the 'MerkleTree' i.e., this builds the merkle proof
  for the given 'BuiltinByteString' corresponding to this 'MerkleTree' if such
  a merkle proof exists.
