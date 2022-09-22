@@ -19,7 +19,6 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
 import Contract.Value as Value
 import Data.Array as Array
-import Data.BigInt as BigInt
 import Data.Map as Map
 import DistributedSet
   ( Ds(Ds)
@@ -96,8 +95,7 @@ initSidechain (InitSidechainParams isp) = do
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
-    committeeHashValue = assetClassValue assetClassCommitteeHash
-      (BigInt.fromInt 1)
+    committeeHashValue = assetClassValue assetClassCommitteeHash one
   committeeHashValidator ← updateCommitteeHashValidator committeeHashParam
   let
     committeeHashValidatorHash = validatorHash committeeHashValidator
@@ -206,8 +204,8 @@ initSidechain (InitSidechainParams isp) = do
   bsTx ← liftedM "Failed to balance/sign tx"
     (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
-  logInfo' "Submitted initial updateCommitteeHash transaction."
+  logInfo' "Submitted initial 'initSidechain' transaction."
   awaitTxConfirmed txId
-  logInfo' "Inital updateCommitteeHash transaction submitted successfully."
+  logInfo' "Initial 'initSidechain' transaction submitted successfully."
 
   pure sc
