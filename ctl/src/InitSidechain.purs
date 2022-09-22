@@ -6,16 +6,30 @@ import Contract.Prelude
 import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
+import Contract.Monad as Monad
 import Contract.PlutusData (Datum(..))
 import Contract.PlutusData as PlutusData
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
+import Contract.Scripts as Scripts
 import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
-import Contract.TxConstraints as Constraints
+import Contract.TxConstraints (TxConstraints)
+import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
+import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
+import DistributedSet
+  ( Ds(Ds)
+  , DsConfDatum(DsConfDatum)
+  , DsConfMint(DsConfMint)
+  , DsDatum(DsDatum)
+  , DsKeyMint(DsKeyMint)
+  )
+import DistributedSet as DistributedSet
+import FUELMintingPolicy as FUELMintingPolicy
 import SidechainParams
   ( InitSidechainParams(InitSidechainParams)
   , SidechainParams(SidechainParams)
@@ -82,31 +96,111 @@ initSidechain (InitSidechainParams isp) = do
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
-    valCommitteeHash = assetClassValue assetClassCommitteeHash (BigInt.fromInt 1)
+    committeeHashValue = assetClassValue assetClassCommitteeHash
+      (BigInt.fromInt 1)
   committeeHashValidator ← updateCommitteeHashValidator committeeHashParam
   let
     committeeHashValidatorHash = validatorHash committeeHashValidator
 
   -- Initializing the distributed set
   -----------------------------------
-  -- TODO: add distributed set stuff here...
 
+  -- Configuration policy of the distributed set
+  dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint { dscmTxOutRef: txIn }
+  dsConfPolicyCurrencySymbol ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to get 'dsConfPolicy' CurrencySymbol."
+      $ Value.scriptCurrencySymbol dsConfPolicy
+
+  -- Validator for insertion of the distributed set / the associated datum and
+  -- tokens that should be paid to this validator.
+  let ds = Ds { dsConf: dsConfPolicyCurrencySymbol }
+  insertValidator ← DistributedSet.insertValidator ds
+  let
+    insertValidatorHash = Scripts.validatorHash insertValidator
+    dskm = DsKeyMint
+      { dskmValidatorHash: insertValidatorHash
+      , dskmConfCurrencySymbol: dsConfPolicyCurrencySymbol
+      }
+
+  dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
+  dsKeyPolicyCurrencySymbol ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
+      $ Value.scriptCurrencySymbol dsKeyPolicy
+  dsKeyPolicyTokenName ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
+      $ Value.mkTokenName
+      $ (unwrap DistributedSet.rootNode).nKey
+
+  let
+    insertValidatorValue = Value.singleton dsKeyPolicyCurrencySymbol
+      dsKeyPolicyTokenName
+      one
+    insertValidatorDatum = Datum
+      $ PlutusData.toData
+      $ DsDatum
+          { dsNext: (unwrap DistributedSet.rootNode).nNext
+          }
+
+  -- FUEL minting policy
+  -- TODO: we need to update the fuel minting policy to actually integrate the
+  -- distributed set in.
+  fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy sc
+  fuelMintingPolicyCurrencySymbol ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to get 'fuelMintingPolicy' CurrencySymbol."
+      $ Value.scriptCurrencySymbol fuelMintingPolicy
+
+  -- Validator for the configuration of the distributed set / the associated
+  -- datum and tokens that should be paid to this validator.
+  dsConfValidator ← DistributedSet.dsConfValidator ds
+  let
+    dsConfValidatorHash = Scripts.validatorHash dsConfValidator
+    dsConfValue = Value.singleton dsConfPolicyCurrencySymbol
+      DistributedSet.dsConfTokenName
+      one
+    dsConfValidatorDatum = Datum
+      $ PlutusData.toData
+      $ DsConfDatum
+          { dscKeyPolicy: dsKeyPolicyCurrencySymbol
+          , dscFUELPolicy: fuelMintingPolicyCurrencySymbol
+          }
 
   -- Building the transaction
   -----------------------------------
   let
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ ScriptLookups Void
     lookups =
-      Lookups.mintingPolicy nftCommitteeHashPolicy
-        <> Lookups.unspentOutputs (Map.singleton txIn txOut)
+      -- The distinguished transaction input to spend
+      Lookups.unspentOutputs (Map.singleton txIn txOut)
+        -- Lookups for update committee hash
+        <> Lookups.mintingPolicy nftCommitteeHashPolicy
         <> Lookups.validator committeeHashValidator
+        -- Lookups for the distributed set
+        <> Lookups.validator insertValidator
+        <> Lookups.mintingPolicy dsConfPolicy
+        <> Lookups.mintingPolicy dsKeyPolicy
 
+    constraints ∷ TxConstraints Void Void
     constraints =
-      Constraints.mustSpendPubKeyOutput txIn
-        <> Constraints.mustMintValue valCommitteeHash
-        <> Constraints.mustPayToScript committeeHashValidatorHash
+      -- Spend the distinguished transaction input to spend
+      TxConstraints.mustSpendPubKeyOutput txIn
+        -- Constraints for updating the committee hash
+        <> TxConstraints.mustMintValue committeeHashValue
+        <> TxConstraints.mustPayToScript committeeHashValidatorHash
           committeeHashDatum
-          valCommitteeHash
+          committeeHashValue
+        -- Constraints for initializing the distributed set
+        <> TxConstraints.mustMintValue insertValidatorValue
+        <> TxConstraints.mustPayToScript insertValidatorHash
+          insertValidatorDatum
+          insertValidatorValue
+        <> TxConstraints.mustMintValue dsConfValue
+        <> TxConstraints.mustPayToScript dsConfValidatorHash
+          dsConfValidatorDatum
+          dsConfValue
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
