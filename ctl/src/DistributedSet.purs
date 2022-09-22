@@ -171,7 +171,7 @@ dsConfPolicy dsm = mkMintingPolicyParams RawScripts.rawDsConfPolicy $ map toData
 -- | 'dsKeyPolicy' gets corresponding 'dsKeyPolicy' from the serialized
 -- on chain code.
 dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
-dsKeyPolicy dskm = mkMintingPolicyParams RawScripts.rawDsConfPolicy $ map toData
+dsKeyPolicy dskm = mkMintingPolicyParams RawScripts.rawDsKeyPolicy $ map toData
   [ dskm ]
 
 -- * ToData / FromData instances.
