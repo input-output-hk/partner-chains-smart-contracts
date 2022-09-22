@@ -3,7 +3,7 @@ module Test.UpdateCommitteeHash where
 import Contract.Prelude
 
 import Contract.Address (getWalletAddress)
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (utxosAt)
 import Data.Array as Array
@@ -23,7 +23,7 @@ import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
 testScenario ∷ Contract () Unit
 testScenario = do
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   let
     keyCount = 101
     threshold = 2.0 / 3.0
@@ -45,7 +45,7 @@ testScenario = do
   scParams ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let nextCommittee = Array.sort $ map toPubKeyUnsafe nextCommitteePrvKeys
-  nextCommitteeHash ← aggregateKeys nextCommittee
+  nextCommitteeHash ← liftContractE $ aggregateKeys nextCommittee
   let
     sigs = multiSign (Array.take reqSigns committeePrvKeys) nextCommitteeHash
 

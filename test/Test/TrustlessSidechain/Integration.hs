@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Test.TrustlessSidechain.Integration (test) where
+module Test.TrustlessSidechain.Integration () where
+
+-- TODO: This file remains here as a reminder, that we have to migrate these tests to CTL
+-- https://github.com/mlabs-haskell/trustless-sidechain/issues/171
 
 import Cardano.Crypto.Wallet qualified as Wallet
 import Control.Monad (void)

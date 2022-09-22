@@ -1,6 +1,7 @@
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
+.PHONY: dev build test check-format format spago2nix
 
 BROWSER_RUNTIME ?= 1
 
@@ -25,11 +26,11 @@ test: src/RawScripts.purs
 check-format:
 	@purs-tidy check ${ps-sources}
 	@eslint ${js-sources}
+	@dhall lint --check ${dhall-sources}
 
 format:
 	@purs-tidy format-in-place ${ps-sources}
 	@eslint --fix ${js-sources}
-	@dhall format ${dhall-sources}
 	@dhall lint ${dhall-sources}
 
 spago2nix:

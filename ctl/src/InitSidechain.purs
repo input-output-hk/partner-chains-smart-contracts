@@ -5,7 +5,7 @@ import Contract.Prelude
 
 import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractE, liftedE, liftedM)
 import Contract.Monad as Monad
 import Contract.PlutusData (Datum(..))
 import Contract.PlutusData as PlutusData
@@ -13,10 +13,15 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
 import Contract.Scripts as Scripts
-import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
-import Contract.TxConstraints (TxConstraints)
-import Contract.TxConstraints as TxConstraints
-import Contract.Utxos as Utxos
+import Contract.Transaction
+  ( TransactionOutputWithRefScript(..)
+  , awaitTxConfirmed
+  , balanceAndSignTx
+  , submit
+  )
+import Contract.TxConstraints (DatumPresence(..), TxConstraints)
+import Contract.TxConstraints as Constraints
+import Contract.Utxos (getUtxo)
 import Contract.Value as Value
 import Data.Array as Array
 import Data.Map as Map
@@ -67,11 +72,14 @@ import UpdateCommitteeHash
 
  Here, we create a transaction which executes both of these steps with a single
  transaction.
+
 -}
 initSidechain ∷ InitSidechainParams → Contract () SidechainParams
 initSidechain (InitSidechainParams isp) = do
   let txIn = isp.initUtxo
-  txOut ← liftedM "error 'initSidechain': cannot find genesis UTxO" $ Utxos.getUtxo txIn
+
+  txOut ← liftedM "error 'initSidechain': cannot find genesis UTxO" $ getUtxo
+    txIn
 
   -- Sidechain parameters
   -----------------------------------
@@ -90,7 +98,7 @@ initSidechain (InitSidechainParams isp) = do
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   assetClassCommitteeHash ← committeeHashAssetClass ichm
   nftCommitteeHashPolicy ← committeeHashPolicy ichm
-  aggregatedKeys ← aggregateKeys $ Array.sort isp.initCommittee
+  aggregatedKeys ← liftContractE $ aggregateKeys $ Array.sort isp.initCommittee
   let
     committeeHashParam = UpdateCommitteeHash
       { uchAssetClass: assetClassCommitteeHash }
@@ -174,7 +182,12 @@ initSidechain (InitSidechainParams isp) = do
     lookups ∷ ScriptLookups Void
     lookups =
       -- The distinguished transaction input to spend
-      Lookups.unspentOutputs (Map.singleton txIn txOut)
+      Lookups.unspentOutputs
+        ( Map.singleton txIn
+            ( TransactionOutputWithRefScript
+                { output: txOut, scriptRef: Nothing }
+            )
+        )
         -- Lookups for update committee hash
         <> Lookups.mintingPolicy nftCommitteeHashPolicy
         <> Lookups.validator committeeHashValidator
@@ -186,20 +199,23 @@ initSidechain (InitSidechainParams isp) = do
     constraints ∷ TxConstraints Void Void
     constraints =
       -- Spend the distinguished transaction input to spend
-      TxConstraints.mustSpendPubKeyOutput txIn
+      Constraints.mustSpendPubKeyOutput txIn
         -- Constraints for updating the committee hash
-        <> TxConstraints.mustMintValue committeeHashValue
-        <> TxConstraints.mustPayToScript committeeHashValidatorHash
+        <> Constraints.mustMintValue committeeHashValue
+        <> Constraints.mustPayToScript committeeHashValidatorHash
           committeeHashDatum
+          DatumWitness
           committeeHashValue
         -- Constraints for initializing the distributed set
-        <> TxConstraints.mustMintValue insertValidatorValue
-        <> TxConstraints.mustPayToScript insertValidatorHash
+        <> Constraints.mustMintValue insertValidatorValue
+        <> Constraints.mustPayToScript insertValidatorHash
           insertValidatorDatum
+          DatumWitness
           insertValidatorValue
-        <> TxConstraints.mustMintValue dsConfValue
-        <> TxConstraints.mustPayToScript dsConfValidatorHash
+        <> Constraints.mustMintValue dsConfValue
+        <> Constraints.mustPayToScript dsConfValidatorHash
           dsConfValidatorDatum
+          DatumWitness
           dsConfValue
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)

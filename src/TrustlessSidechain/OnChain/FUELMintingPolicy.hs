@@ -11,8 +11,7 @@ import Ledger qualified
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts (MintingPolicy)
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy)
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (mkMintingPolicyScript, txInInfoOutRef)
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
@@ -55,7 +54,7 @@ mintingPolicy param =
   mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = mkUntypedMintingPolicy
+    wrap = ScriptUtils.mkUntypedMintingPolicy
 
 script :: PassiveBrdgSidechainParams -> Scripts.Script
 script = Scripts.unMintingPolicyScript . mintingPolicy
