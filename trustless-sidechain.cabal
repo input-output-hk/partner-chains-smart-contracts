@@ -34,9 +34,7 @@ common common-lang
     -Wincomplete-uni-patterns -Wredundant-constraints -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fplugin=RecordDotPreprocessor -fplugin-opt
-    PlutusTx.Plugin:defer-errors
-
-  -- -Werror
+    PlutusTx.Plugin:defer-errors -Werror
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
