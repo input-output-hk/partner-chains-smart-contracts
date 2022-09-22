@@ -8,7 +8,8 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 
 type PubKey = ByteArray
-type Signature = ByteArray -- Ed25519Signature
+type Signature = Ed25519Signature
+type Ed25519Signature = ByteArray
 
 type AssetClass = CurrencySymbol /\ TokenName
 
