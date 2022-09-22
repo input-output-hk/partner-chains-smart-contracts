@@ -11,15 +11,15 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Hash (blake2b_256)
 import Data.Functor (void)
 import Data.List qualified as List
-import Data.Maybe (fromMaybe)
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
+import GHC.Base (undefined)
 import Ledger (getCardanoTxId)
 import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Address qualified as Address
 import Ledger.Crypto (PubKey, PubKeyHash (PubKeyHash, getPubKeyHash), Signature (getSignature))
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
+import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash)
 import Plutus.Contract qualified as Contract
 import PlutusTx (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
@@ -48,7 +48,6 @@ import TrustlessSidechain.OffChain.Types (
     initUtxo
   ),
   MintParams (MintParams, amount, index, merkleProof, recipient, sidechainEpoch),
-  PassiveBrdgSidechainParams (..),
   RegisterParams (RegisterParams),
   SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, signatures, threshold),
   SidechainParams,
@@ -151,16 +150,16 @@ saveMerkleRootEntries sc cmt entries = do
 
   return mintparams
 
---sidechainPrivKey :: SECP.SecKey
---sidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
---
---sidechainPubKey :: SidechainPubKey
---sidechainPubKey =
---  SidechainPubKey
---    . Builtins.toBuiltin
---    . SECP.exportPubKey False
---    . SECP.derivePubKey
---    $ sidechainPrivKey
+sidechainPrivKey :: SECP.SecKey
+sidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
+
+sidechainPubKey :: SidechainPubKey
+sidechainPubKey =
+  SidechainPubKey
+    . Builtins.toBuiltin
+    . SECP.exportPubKey False
+    . SECP.derivePubKey
+    $ sidechainPrivKey
 
 -- | 'test' is the suite of tests.
 test :: TestTree
@@ -338,17 +337,17 @@ test =
             -- To make the one shot minting policy work properly, we first make
             -- the 0th wallet give us a distinguished utxo (so we can be sure that this won't
             -- be spent later)
-            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
+            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
 
             -- Then, we let the second wallet initialize the sidechain... and
             -- do the merkle root signing..
-            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ <- withContractAs 1 $
+            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ _ <- withContractAs 1 $
               \[pkh0] ->
                 InitSidechain.ownTxOutRef >>= \oref -> do
                   sidechainParams <-
                     InitSidechain.initSidechain $
                       InitSidechainParams
-                        { initChainId = ""
+                        { initChainId = 1
                         , initGenesisHash = ""
                         , initUtxo = oref
                         , initCommittee = map snd cmt
@@ -396,17 +395,17 @@ test =
             -- To make the one shot minting policy work properly, we first make
             -- the 0th wallet give us a distinguished utxo (so we can be sure that this won't
             -- be spent later)
-            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
+            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
 
             -- Then, we let the second wallet initialize the sidechain... and
             -- do the merkle root signing..
-            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ <- withContractAs 1 $
+            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ _ <- withContractAs 1 $
               \[pkh0] ->
                 InitSidechain.ownTxOutRef >>= \oref -> do
                   sidechainParams <-
                     InitSidechain.initSidechain $
                       InitSidechainParams
-                        { initChainId = ""
+                        { initChainId = 1
                         , initGenesisHash = ""
                         , initUtxo = oref
                         , initCommittee = map snd cmt
@@ -550,11 +549,11 @@ test =
             let cmt :: [(Wallet.XPrv, PubKey)]
                 cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
 
-            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ <- withContract $ const $ getSidechainParamsWith $ map fst cmt
+            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ _ <- withContract $ const $ getSidechainParamsWith $ map fst cmt
 
             -- let the first wallet @[100,100,101]@ save the root entries, which mints
             -- to someone the second wallet @[100,100,102]@
-            PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ <- withContract $ \[pkh1] -> do
+            PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ _ <- withContract $ \[pkh1] -> do
               -- Create the merkle tree / proof
               let mte0 =
                     MerkleTreeEntry
@@ -581,7 +580,7 @@ test =
         ( do
             -- let the first wallet @[100,100,101]@ save the root entries, which mints
             -- to someone the second wallet @[100,100,102]@
-            PlutipInternal.ExecutionResult (Right ((sidechainParams, mintparams), _)) _ _ <- withContract $ \[pkh1] -> do
+            PlutipInternal.ExecutionResult (Right ((sidechainParams, mintparams), _)) _ _ _ <- withContract $ \[pkh1] -> do
               -- Create a committee:
               let cmt :: [(Wallet.XPrv, PubKey)]
                   cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]

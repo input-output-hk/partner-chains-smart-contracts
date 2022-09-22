@@ -2,20 +2,20 @@
 
 module TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy where
 
+import PlutusTx.Prelude
+
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Void (Void)
 import Ledger (CardanoTx)
 import Ledger qualified
 import Ledger.Constraints qualified as Constraint
-import Ledger.Typed.Scripts qualified as Scripts
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Scripts (Datum (Datum, getDatum), Redeemer (Redeemer, getRedeemer))
 import PlutusTx (ToData (toBuiltinData))
-import PlutusTx.IsData.Class qualified as Class
-import PlutusTx.Prelude
+import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, sidechainParams, signatures, threshold),
@@ -85,7 +85,7 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
                     choref
                     ( Redeemer
                         { getRedeemer =
-                            Class.toBuiltinData
+                            IsData.toBuiltinData
                               UpdateCommitteeHashRedeemer
                                 { committeeSignatures = []
                                 , committeePubKeys = committeePubKeys
@@ -96,9 +96,8 @@ saveRoot SaveRootParams {sidechainParams, merkleRoot, threshold, signatures, com
                   -- TODO: the following line should be removed with reference
                   -- inputs
                   Prelude.<> Constraint.mustPayToOtherScript
-                    --                    (Scripts.validatorHash (UpdateCommitteeHash.typedUpdateCommitteeHashValidator uch))
                     (Ledger.validatorHash (UpdateCommitteeHash.updateCommitteeHashValidator uch))
-                    (Datum {getDatum = Class.toBuiltinData chd})
+                    (Datum {getDatum = IsData.toBuiltinData chd})
                     ( Value.singleton
                         (UpdateCommitteeHash.committeeHashCurSymbol ichm)
                         UpdateCommitteeHash.initCommitteeHashMintTn

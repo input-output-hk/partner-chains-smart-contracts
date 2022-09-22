@@ -1,27 +1,23 @@
 module TrustlessSidechain.OffChain.InitSidechain where
 
 import Control.Lens.Indexed qualified as Indexed
-import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Text (Text)
-import Ledger (Datum (Datum), TxOutRef, validatorHash)
+import Ledger (Datum (Datum), TxOutRef)
 import Ledger.Address qualified as Address
 import Ledger.Constraints qualified as Constraints
-import Ledger.Scripts (Datum (Datum, getDatum))
+import Ledger.Scripts (Datum (getDatum))
 import Ledger.Tx qualified as Tx
 import Ledger.Value qualified as Value
 import Plutus.Contract (Contract)
 import Plutus.Contract qualified as Contract
 import Plutus.V1.Ledger.Value (AssetClass (unAssetClass), TokenName (TokenName))
-import Plutus.V1.Ledger.Value qualified as Value
 import PlutusPrelude (void)
-import PlutusTx qualified (toBuiltinData)
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  GenesisHash (..),
   InitSidechainParams (initChainId, initCommittee, initGenesisHash, initMint, initUtxo),
   SidechainParams (..),
  )

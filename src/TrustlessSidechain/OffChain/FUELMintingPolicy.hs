@@ -11,14 +11,9 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Void (Void)
 import Ledger (CardanoTx, ChainIndexTxOut, Redeemer (Redeemer), TxOutRef, scriptCurrencySymbol)
-import Ledger qualified
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Constraints qualified as Constraints
 import Ledger.Scripts qualified as Scripts
-import Ledger.Tx (
-  ChainIndexTxOut,
-  TxOutRef,
- )
 import Ledger.Value qualified as Value
 import Plutus.Contract (AsContractError, Contract)
 import Plutus.Contract qualified as Contract

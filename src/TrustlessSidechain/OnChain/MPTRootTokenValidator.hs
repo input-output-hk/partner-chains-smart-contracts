@@ -7,19 +7,18 @@ module TrustlessSidechain.OnChain.MPTRootTokenValidator (
   serialisableValidator,
 ) where
 
+import PlutusTx.Prelude
+
 import Ledger qualified -- dangerously contains lots of v1 stuff
 import Ledger.Address
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V2.Ledger.Api -- (CurrencySymbol , OutputDatum(..) , ValidatorHash)
-import PlutusTx.Prelude
+import Plutus.V2.Ledger.Api (
+  Validator,
+  ValidatorHash,
+  mkValidatorScript,
+ )
+import PlutusTx qualified
 import TrustlessSidechain.OffChain.Types (SidechainParams)
-
---passive-v1
-
-import Plutus.Script.Utils.V2.Scripts
-import Plutus.Script.Utils.V2.Scripts qualified as Script
-import Plutus.V2.Ledger.Contexts (ScriptContext)
-import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 
 {- | 'mkMptRootTokenValidator' always fails.
 
