@@ -1,4 +1,4 @@
-module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
+module FUELMintingPolicy (runFuelMP, FuelParams(..)) where
 
 import Contract.Prelude
 
@@ -9,7 +9,6 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
-  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
@@ -72,9 +71,8 @@ runFuelMP sp fp = do
     )
     inputTxIn
 
-  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
-    Value.scriptCurrencySymbol
-      fuelMP
+  cs ← liftContractM "Cannot get currency symbol" $
+    Value.scriptCurrencySymbol fuelMP
   logInfo' (show (toData sp))
   logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"

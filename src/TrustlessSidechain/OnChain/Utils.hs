@@ -5,7 +5,7 @@
 
 module TrustlessSidechain.OnChain.Utils (verifyMulti, verifyMultisig) where
 
-import PlutusTx.Prelude (Bool (..), BuiltinByteString, Eq, Integer, Maybe (..), and, tail, verifyEd25519Signature, zipWith, (&&), (-), (<), (<$>), (<=), (||))
+import PlutusTx.Prelude
 
 -- ? can we require a single list [(Pubkey , Signature)] to validate
 
@@ -28,8 +28,8 @@ verifyMulti isOK threshold pubKeys signatures =
 {-# INLINEABLE verifyMultisig #-}
 verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
 -- note. we need to test nub of either signatures or pubkeys
---   | O(n^2) nub the signatures
---   | O(n)   require signatures to be sorted then test each elem greater than last O(n)
+--   | O(n^2) nub the public keys
+--   | O(n)   require public keys to be sorted then test each elem greater than last O(n)
 verifyMultisig pubKeys threshold message signatures =
-  let sigsSorted = and (zipWith (<) signatures (tail signatures)) -- insert (<) between all elements
-   in sigsSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifyEd25519Signature` message) threshold pubKeys signatures
+  let pubKeysSorted = and (zipWith (<) pubKeys (tail pubKeys)) -- insert (<) between all elements
+   in pubKeysSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifyEd25519Signature` message) threshold pubKeys signatures

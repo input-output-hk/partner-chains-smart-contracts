@@ -9,7 +9,7 @@ config ∷ PlutipConfig
 config =
   { host: "127.0.0.1"
   , port: UInt.fromInt 8082
-  , logLevel: Trace
+  , logLevel: Info
   , ogmiosConfig:
       { port: UInt.fromInt 1337
       , host: "127.0.0.1"
