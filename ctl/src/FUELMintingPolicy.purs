@@ -1,4 +1,4 @@
-module FUELMintingPolicy (runFuelMP, FuelParams(..)) where
+module FUELMintingPolicy (runFuelMP, FuelParams(..), fuelMintingPolicy) where
 
 import Contract.Prelude
 
@@ -9,7 +9,6 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
-  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
