@@ -71,7 +71,7 @@ import UpdateCommitteeHash
 initSidechain ∷ InitSidechainParams → Contract () SidechainParams
 initSidechain (InitSidechainParams isp) = do
   let txIn = isp.initUtxo
-  txOut ← liftedM "initSidechain: cannot find genesis UTxO" $ Utxos.getUtxo txIn
+  txOut ← liftedM "error 'initSidechain': cannot find genesis UTxO" $ Utxos.getUtxo txIn
 
   -- Sidechain parameters
   -----------------------------------
@@ -85,6 +85,8 @@ initSidechain (InitSidechainParams isp) = do
 
   -- Initializing the committee hash
   -----------------------------------
+  -- TODO: this needs to be synchronized with the spec still.. There's some
+  -- problems with this...
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   assetClassCommitteeHash ← committeeHashAssetClass ichm
   nftCommitteeHashPolicy ← committeeHashPolicy ichm
@@ -144,7 +146,7 @@ initSidechain (InitSidechainParams isp) = do
 
   -- FUEL minting policy
   -- TODO: we need to update the fuel minting policy to actually integrate the
-  -- distributed set in.
+  -- distributed set in. This isn't quite right for now!
   fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy sc
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
