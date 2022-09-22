@@ -1,7 +1,6 @@
 { name = "ctl-test"
 , dependencies =
   [ "argonaut-core"
-  , "arraybuffer-types"
   , "arrays"
   , "bifunctors"
   , "bigints"
@@ -10,9 +9,11 @@
   , "console"
   , "control"
   , "exceptions"
+  , "foldable-traversable"
+  , "integers"
+  , "lists"
   , "maybe"
   , "monad-logger"
-  , "newtype"
   , "node-buffer"
   , "node-fs"
   , "node-fs-aff"
@@ -21,11 +22,12 @@
   , "ordered-collections"
   , "parallel"
   , "partial"
+  , "prelude"
   , "profunctor-lenses"
   , "strings"
   , "transformers"
   , "uint"
-  , "untagged-union"
+  , "unfoldable"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

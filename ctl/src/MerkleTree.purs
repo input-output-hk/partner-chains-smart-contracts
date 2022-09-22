@@ -1,7 +1,23 @@
-module MerkleTree where
+-- | Implements merkle tree functionality
+module MerkleTree
+  ( Side(L, R)
+  , MerkleTree(Bin, Tip)
+  , Up(Up)
+  , MerkleProof(MerkleProof)
+  , RootHash(RootHash)
+
+  , fromList
+  , lookupMp
+  , fromArray
+  , memberMp
+  , rootMp
+  , rootHash
+  , unRootHash
+  ) where
 
 import Contract.Prelude
 
+import Contract.Hashing as Hashing
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -9,71 +25,16 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Data.ArrayBuffer.Types (Uint8Array)
-import Data.Maybe as Maybe
-import Data.Newtype as Newtype
+import Contract.Prim.ByteArray (ByteArray)
+import Contract.Prim.ByteArray as ByteArray
+import Data.Function as Function
+import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
-import Deserialization.FromBytes as Deserialization.FromBytes
-import Deserialization.PlutusData as Deserialization.PlutusData
-import Effect.Exception (Error)
-import Effect.Exception as Exception
-import Partial.Unsafe as Unsafe
-import Serialization as Serialization
-import Serialization.PlutusData as Serialization.PlutusData
-import Serialization.Types as Serialization.Types
-import Types.ByteArray (ByteArray)
-import Types.ByteArray as ByteArray
-import Types.PlutusData (PlutusData)
-import Untagged.Union as Union
+import Data.Unfoldable as Unfoldable
 
--- * Serialisation / deserialisation functions for 'PlutusData'
-
--- | 'serialisePlutusData' uses 'Serialization.PlutusData.convertPlutusData' internally to convert
--- the given plutus data into the internal cbor'd serialized version of the
--- data.
---
--- Note that we use the UK English spelling instead of the normal English spelling
--- because this corresponds to the spelling given in plutus-apps :^).
-serialisePlutusData ∷ PlutusData → Maybe ByteArray
-serialisePlutusData plutusData = Serialization.toBytes <<< Union.asOneOf <$>
-  Serialization.PlutusData.convertPlutusData plutusData
-
--- | 'unsafeSerialiseData' is 'serialisePlutusData' but throws an error in the case
--- of 'Nothing' via 'Maybe.fromJust'.
--- This is useful to play around with in PSCI.
-unsafeSerialiseData ∷ PlutusData → ByteArray
-unsafeSerialiseData plutusData = Unsafe.unsafePartial
-  ((Maybe.fromJust <<< serialisePlutusData) plutusData)
-
--- | 'deserialisePlutusData' deserializes cbor encoded PlutusData.
-deserialisePlutusData ∷ ByteArray → Maybe PlutusData
-deserialisePlutusData cbor =
-  ( Deserialization.FromBytes.fromBytes cbor ∷
-      Maybe (Serialization.Types.PlutusData)
-  )
-    >>= Deserialization.PlutusData.convertPlutusData
-
--- TODO: in the feature, apparently
--- `Deserialization.FromBytes.fromBytes :: Serialization.Types.PlutusData -> Maybe Serialization.Types.PlutusData`
--- will be removed, and this should be updated accordingly...
-
--- | 'unsafeDeserialiseData' is 'deserialisePlutusData' but throws an error in the case
--- of 'Nothing'
--- This is useful to play around with in PSCI
-unsafeDeserialiseData ∷ ByteArray → PlutusData
-unsafeDeserialiseData cbor =
-  (Unsafe.unsafePartial (Maybe.fromJust <<< deserialisePlutusData)) cbor
-
--- | 'unsafeByteArrayFromAscii' is a partial function which wraps 'Types.ByteArray.byteArrayFromAscii'
-unsafeByteArrayFromAscii ∷ String → ByteArray
-unsafeByteArrayFromAscii = Unsafe.unsafePartial
-  (Maybe.fromJust <<< ByteArray.byteArrayFromAscii)
-
--- * Merkle tree data types / helper functions
-
--- | 'Triple' is used as the argument to the exposed merkle tree functionality
--- that takes three arguments.
-data Triple a b c = Triple a b c
+-- * Merkle tree data types
+-- $types
+-- Each of these types should correspond the the on chain types.
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
 newtype RootHash = RootHash ByteArray
@@ -89,18 +50,10 @@ data MerkleTree
   | Tip RootHash
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
-rootHash ∷ MerkleTree → RootHash
-rootHash (Bin roothash _ _) = roothash
-rootHash (Tip roothash) = roothash
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
 newtype Up = Up { siblingSide ∷ Side, sibling ∷ RootHash }
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
 newtype MerkleProof = MerkleProof (Array Up)
-
-unRootHash ∷ RootHash → ByteArray
-unRootHash (RootHash ba) = ba
 
 instance Show MerkleTree where
   show (Bin h l r) = String.joinWith " " [ "Bin", show h, show l, show r ]
@@ -137,10 +90,10 @@ instance Eq MerkleTree where
   eq (Tip rh0) (Tip rh1) = rh0 == rh1
   eq _ _ = false
 
-instance Show RootHash where
+instance Show MerkleProof where
   show = genericShow
 
-instance Show MerkleProof where
+instance Show RootHash where
   show = genericShow
 
 -- Note ['ToData' / 'FromData' Instances of the Merkle Tree]
@@ -204,173 +157,111 @@ instance FromData MerkleTree where
           _ → Nothing
     _ → Nothing
 
-instance (ToData a, ToData b, ToData c) ⇒ ToData (Triple a b c) where
-  toData (Triple a b c) = Constr zero [ toData a, toData b, toData c ]
+-- * Internal helper functions
 
-instance (FromData a, FromData b, FromData c) ⇒ FromData (Triple a b c) where
-  fromData plutusData = case plutusData of
-    Constr n [ a, b, c ] | n == zero → Triple <$> fromData a <*> fromData b <*>
-      fromData c
-    _ → Nothing
+-- | @'mergeRootHashes' l r@ computes @'hash' (1 : l ++ r)@
+mergeRootHashes ∷ RootHash → RootHash → RootHash
+mergeRootHashes l r = hashInternalNode (((<>) `Function.on` unRootHash) l r)
+
+-- | @'hashInternalNode' b@ computes @'hash' (1 : b)@
+hashInternalNode ∷ ByteArray → RootHash
+hashInternalNode = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 1 ] <> _)
+
+-- | @'hashLeaf' b@ computes @'hash' (0 : b)@
+hashLeaf ∷ ByteArray → RootHash
+hashLeaf = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 0 ] <> _)
+
+--  | Wrapper around the internal hashing function (this uses blake2b256Hash)
+hash ∷ ByteArray → RootHash
+hash = RootHash <<< Hashing.blake2b256Hash
+
+-- | 'listToArray' converts a 'List' to an 'Array'
+listToArray ∷ ∀ a. List a → Array a
+listToArray =
+  let
+    go Nil = Nothing
+    go (Cons a as) = Just (a /\ as)
+  in
+    Unfoldable.unfoldr go
 
 -- * Merkle tree functionality
--- | 'merkleTreeExecutable' is the name of the executable to run.
+
+-- | 'rootHash' gets the root hash of the given merkle tree.
+rootHash ∷ MerkleTree → RootHash
+rootHash (Bin roothash _ _) = roothash
+rootHash (Tip roothash) = roothash
+
+-- | 'unRootHash' is an alias for 'unwrap' i.e., it coerces the newtype wrapper
+-- 'RootHash'
+unRootHash ∷ RootHash → ByteArray
+unRootHash = unwrap
+
+-- | 'fromList' computes a merkle tree from the given list, and errors in the
+-- case when the given list is empty.
 --
--- Currently, it goes back into the previous projects flake, and `nix run`s it.
--- N.B. to run the executable without having it already present in the path
--- (helpful for debugging sometimes), type
--- > nix run ..#trustless-sidechain:exe:trustless-sidechain-merkle-tree
-merkleTreeExecutable ∷ String
-merkleTreeExecutable =
-  "trustless-sidechain-merkle-tree"
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-fromList ∷ Array ByteArray → Either Error MerkleTree
-fromList inputArray = do
-  plutusData ←
-    Maybe.maybe
-      (Left (Exception.error "MerkleTree.fromList serialisation failure"))
-      pure
-      $ serialisePlutusData (toData inputArray)
-
-  outputByteArray ← spawnSyncMerkleTree [ "fromList" ] plutusData
-
-  -- the impossible case here *should* never happen as the CLI interface
-  -- should only dump out valid data
-  merkleTree ←
-    Maybe.maybe
-      (Left (Exception.error "MerkleTree.fromList deserialisation failure"))
-      pure
-      $ deserialisePlutusData outputByteArray
-      >>= fromData
-  pure merkleTree
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-rootHashFromList ∷ Array ByteArray → Either Error RootHash
-rootHashFromList inputArray = do
-  plutusData ←
-    Maybe.maybe
-      (Left (Exception.error "MerkleTree.rootHashFromList serialisation failure"))
-      pure
-      $ serialisePlutusData (toData inputArray)
-
-  outputByteArray ← spawnSyncMerkleTree [ "rootHashFromList" ] plutusData
-
-  -- the impossible case here *should* never happen as the CLI interface
-  -- should only dump out valid data
-  roothash ←
-    Maybe.maybe
-      ( Left
-          (Exception.error "MerkleTree.rootHashFromList deserialisation failure")
-      )
-      pure
-      $ deserialisePlutusData outputByteArray
-      >>= fromData
-  pure roothash
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-lookupMp ∷ ByteArray → MerkleTree → Either Error (Maybe MerkleProof)
-lookupMp leaf merkleTree = do
-  plutusData ←
-    Maybe.maybe
-      (Left (Exception.error "MerkleTree.rootHashFromList serialisation failure"))
-      pure
-      $ serialisePlutusData (toData (leaf /\ merkleTree))
-
-  outputByteArray ← spawnSyncMerkleTree [ "lookupMp" ] plutusData
-
-  -- the impossible case here *should* never happen as the CLI interface
-  -- should only dump out valid data
-  merkleProof ←
-    Maybe.maybe
-      ( Left
-          (Exception.error "MerkleTree.rootHashFromList deserialisation failure")
-      )
-      pure
-      $ deserialisePlutusData outputByteArray
-      >>= fromData
-  pure merkleProof
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-memberMp ∷ ByteArray → MerkleProof → RootHash → Either Error Boolean
-memberMp leaf proof roothash = do
-  plutusData ←
-    Maybe.maybe
-      (Left (Exception.error "MerkleTree.rootHashFromList serialisation failure"))
-      pure
-      $ serialisePlutusData (toData (Triple leaf proof roothash))
-
-  outputByteArray ← spawnSyncMerkleTree [ "memberMp" ] plutusData
-
-  -- the impossible case here *should* never happen as the CLI interface
-  -- should only dump out valid data
-  isInRootHash ←
-    Maybe.maybe
-      ( Left
-          (Exception.error "MerkleTree.rootHashFromList deserialisation failure")
-      )
-      pure
-      $ deserialisePlutusData outputByteArray
-      >>= fromData
-  pure isInRootHash
-
--- * Internal functions for calling the CLI
-
--- | @'spawnSyncMerkleTree' merkleCmds stdin@ is an internal function which
--- executes the CLI interface with @merkleCmds@ as argument, and piping @stdin@
--- in.
-spawnSyncMerkleTree ∷ Array String → ByteArray → Either Error ByteArray
-spawnSyncMerkleTree merkleCmds stdin =
+-- See the @src/TrustlessSidechain/MerkleTree.hs@ for more details.
+fromList ∷ List ByteArray → Either String MerkleTree
+fromList Nil = Left "MerkleTree.fromList: empty list"
+fromList ls =
   let
-    result = spawnSyncImpl merkleTreeExecutable merkleCmds
-      { input: (toBufferImpl (Newtype.unwrap stdin ∷ Uint8Array))
-      , encoding: "buffer"
-      }
+    mergeAll ∷ List MerkleTree → MerkleTree
+    mergeAll (r : Nil) = r
+    mergeAll rs = mergeAll $ mergePairs Nil rs
+
+    mergePairs ∷ List MerkleTree → List MerkleTree → List MerkleTree
+    mergePairs acc (a : b : cs) =
+      let
+        merged = mergeRootHashes (rootHash a) (rootHash b)
+      in
+        mergePairs (Bin merged a b : acc) cs
+    mergePairs acc (a : Nil) = a : acc
+    mergePairs acc Nil = acc
   in
-    if isNullImpl result.status then -- recall the documentation says that it is `null` in the case that the subprocess terminated due to a signal
+    Right $ mergeAll $ (Tip <<< hashLeaf) <$> ls
 
-      Left (Exception.error result.signal)
-    else if result.status == 0 -- if the process doesn't fail..
-    then Right (Newtype.wrap (fromBufferImpl result.stdout) ∷ ByteArray)
-    else Left (Exception.error (bufferToStringImpl result.stderr))
+-- | 'fromArray' is 'fromList' except it accepts an 'Array' instead of a 'List'
+fromArray ∷ Array ByteArray → Either String MerkleTree
+fromArray = fromList <<< foldr (:) Nil
 
--- else Left (Exception.error (fromBufferImpl result.stderr))
+-- | @'memberMp' bt mp rh@ computes @'rootMp' bt mp == rh@ i.e., verifies that
+-- the corresponding root of @bt@ and @mp@ is the given root hash.
+memberMp ∷ ByteArray → MerkleProof → RootHash → Boolean
+memberMp bt mp rh = rootMp bt mp == rh
 
--- | 'spawnSyncImpl' corresponds exactly to
--- [spawnSync](https://nodejs.org/api/child_process.html#child_processspawnsynccommand-args-options).
+-- | @'lookupMp' bt mt@ computes the merkle proof for @bt@ assuming that @bt@
+-- is a leaf for the merkle tree @mt@.
+lookupMp ∷ ByteArray → MerkleTree → Maybe MerkleProof
+lookupMp bt =
+  let
+    go prf mt = case mt of
+      Tip h
+        | h == hsh → Just prf
+        | otherwise → Nothing
+      Bin _h l r →
+        let
+          l' = rootHash l
+          r' = rootHash r
+        in
+          case go (Up { siblingSide: L, sibling: l' } : prf) r of
+            Just res → Just res
+            Nothing → go (Up { siblingSide: R, sibling: r' } : prf) l
+    hsh = hashLeaf bt
+  in
+    ((MerkleProof <<< listToArray) <$> _) <<< go Nil
+
+-- | @'rootMp' bt mp@ computes the root hash of @bt@ assuming that @mp@ is
+-- its corresponding merkle proof.
 --
--- N.B. HUGE WARNING: there is no type safety with this... refer to the `node.js`
--- documentation for what this expects.
-foreign import spawnSyncImpl ∷ ∀ a. a
-
--- | 'Buffer' corresponds to Node's [Buffer](https://nodejs.org/api/buffer.html) type.
-foreign import data Buffer ∷ Type
-
--- | 'toBufferImpl' converts a 'Uint8Array' into 'Buffer'. N.B. internally, this
--- will share the same allocated memory as 'Uint8Array'. See
--- [here](https://nodejs.org/api/buffer.html#buffers-and-typedarrays)
-foreign import toBufferImpl ∷ Uint8Array → Buffer
-
--- | 'fromBufferImpl' converts a 'Buffer' into 'Uint8Array'. N.B. internally, this
--- will share the same allocated memory as 'Buffer'. See
--- [here](https://nodejs.org/api/buffer.html#buffers-and-typedarrays)
-foreign import fromBufferImpl ∷ Buffer → Uint8Array
-
--- | 'bufferToStringImpl' corresponds to [here](https://nodejs.org/api/buffer.html#buftostringencoding-start-end).
--- We include some sane defaults such as: decoding to utf8 (see documentation for caveats if it isn't valid utf8).
-foreign import bufferToStringImpl ∷ Buffer → String
-
--- | 'isNullImpl' returns true iff the argument is @_ === null@ i.e., JavaScript's @null@.
--- This is useful for 'spawnSyncImpl' where various arguments may be
--- javascript's @null@ to indicate the presence of an error.
-foreign import isNullImpl ∷ ∀ a. a → Boolean
-
--- internal function used to help debug things..
-foreign import id ∷ ∀ a. a → a
-
--- Notes.
--- Why we didn't use the prepackaged function `Node.ChildProcess.execSync` for
--- 'spawnSyncMerkleTree'?
--- That version of the function only accepts `String`s for `stdin` (i.e., should
--- be valid UTF8), and we will be dumping binary output to it. a bit of a library
--- oversight perhaps....
+-- See the @src/TrustlessSidechain/MerkleTree.hs@ for more details.
+--
+-- TODO: this function isn't in this branch actually, so remember to test this
+-- later..
+rootMp ∷ ByteArray → MerkleProof → RootHash
+rootMp bt mp =
+  let
+    go acc (Up { siblingSide, sibling }) =
+      case siblingSide of
+        L → mergeRootHashes sibling acc
+        R → mergeRootHashes acc sibling
+  in
+    foldl go (hashLeaf bt) $ unwrap mp

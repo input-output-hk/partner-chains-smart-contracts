@@ -1,4 +1,5 @@
--- | Provides some integration tests with the CLI interface of the merkle tree.
+-- | Provides some integration unit tests with the on chain implementation of
+-- the merkle tree.
 module Test.MerkleTree (test) where
 
 import Contract.Prelude
@@ -91,7 +92,7 @@ test = do
                   )
               )
           )
-      actual = MerkleTree.fromList
+      actual = MerkleTree.fromArray
         [ unsafeByteArrayFromAscii "maltese"
         , unsafeByteArrayFromAscii "yorkie"
         , unsafeByteArrayFromAscii "pomeranian"
@@ -103,26 +104,9 @@ test = do
   -- both return error
   void do
     let
-      expected = Left (Exception.error "bad")
-      actual = MerkleTree.fromList []
+      expected = Left "bad"
+      actual = MerkleTree.fromArray []
     assertBy eqUpToLeft expected actual
-
-  -- Testing if
-  -- > rootHashFromList ["maltese", "yorkie", "pomeranian"]
-  -- produce the same root hash
-  void do
-    let
-      expected = RootHash
-        ( hexToByteArrayUnsafe
-            "f5259910f2ce05d66ec99cd1ff8a0ef983fb8a6123cf118e18f21e346d141cc7"
-        )
-      actual = MerkleTree.rootHashFromList
-        [ unsafeByteArrayFromAscii "maltese"
-        , unsafeByteArrayFromAscii "yorkie"
-        , unsafeByteArrayFromAscii "pomeranian"
-        ]
-
-    assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
   -- > let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
@@ -156,12 +140,12 @@ test = do
               ]
           )
       actual = do
-        merkleTree ← MerkleTree.fromList
+        merkleTree ← MerkleTree.fromArray
           [ unsafeByteArrayFromAscii "maltese"
           , unsafeByteArrayFromAscii "yorkie"
           , unsafeByteArrayFromAscii "pomeranian"
           ]
-        MerkleTree.lookupMp (unsafeByteArrayFromAscii "maltese") merkleTree
+        pure $ MerkleTree.lookupMp (unsafeByteArrayFromAscii "maltese") merkleTree
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
@@ -172,12 +156,12 @@ test = do
     let
       expected = Nothing
       actual = do
-        merkleTree ← MerkleTree.fromList
+        merkleTree ← MerkleTree.fromArray
           [ unsafeByteArrayFromAscii "maltese"
           , unsafeByteArrayFromAscii "yorkie"
           , unsafeByteArrayFromAscii "pomeranian"
           ]
-        MerkleTree.lookupMp (unsafeByteArrayFromAscii "pug") merkleTree
+        pure $ MerkleTree.lookupMp (unsafeByteArrayFromAscii "pug") merkleTree
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
@@ -189,16 +173,18 @@ test = do
     let
       expected = true
       actual = do
-        merkleTree ← MerkleTree.fromList
+        merkleTree ← MerkleTree.fromArray
           [ unsafeByteArrayFromAscii "maltese"
           , unsafeByteArrayFromAscii "yorkie"
           , unsafeByteArrayFromAscii "pomeranian"
           ]
-        maybeMerkleProof ← MerkleTree.lookupMp
-          (unsafeByteArrayFromAscii "maltese")
-          merkleTree
-        let merkleProof = Unsafe.unsafePartial Maybe.fromJust maybeMerkleProof
-        MerkleTree.memberMp (unsafeByteArrayFromAscii "maltese") merkleProof
+        let
+          maybeMerkleProof = MerkleTree.lookupMp
+            (unsafeByteArrayFromAscii "maltese")
+            merkleTree
+          merkleProof = Unsafe.unsafePartial Maybe.fromJust maybeMerkleProof
+        pure $ MerkleTree.memberMp (unsafeByteArrayFromAscii "maltese")
+          merkleProof
           (MerkleTree.rootHash merkleTree)
     assertBy eqUpToLeft (Right expected) actual
 
@@ -211,16 +197,17 @@ test = do
     let
       expected = false
       actual = do
-        merkleTree ← MerkleTree.fromList
+        merkleTree ← MerkleTree.fromArray
           [ unsafeByteArrayFromAscii "maltese"
           , unsafeByteArrayFromAscii "yorkie"
           , unsafeByteArrayFromAscii "pomeranian"
           ]
-        maybeMerkleProof ← MerkleTree.lookupMp
-          (unsafeByteArrayFromAscii "maltese")
-          merkleTree
-        let merkleProof = Unsafe.unsafePartial Maybe.fromJust maybeMerkleProof
-        MerkleTree.memberMp (unsafeByteArrayFromAscii "pug") merkleProof
+        let
+          maybeMerkleProof = MerkleTree.lookupMp
+            (unsafeByteArrayFromAscii "maltese")
+            merkleTree
+          merkleProof = Unsafe.unsafePartial Maybe.fromJust maybeMerkleProof
+        pure $ MerkleTree.memberMp (unsafeByteArrayFromAscii "pug") merkleProof
           (MerkleTree.rootHash merkleTree)
     assertBy eqUpToLeft (Right expected) actual
 

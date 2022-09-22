@@ -86,13 +86,7 @@ library
   import:          common-lang
   exposed-modules:
     TrustlessSidechain.MerkleTree
-    TrustlessSidechain.OffChain.CommitteeCandidateValidator
-    TrustlessSidechain.OffChain.FUELMintingPolicy
-    TrustlessSidechain.OffChain.InitSidechain
-    TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy
-    TrustlessSidechain.OffChain.Schema
     TrustlessSidechain.OffChain.Types
-    TrustlessSidechain.OffChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
@@ -102,27 +96,20 @@ library
     TrustlessSidechain.OnChain.Utils
 
   build-depends:
-    , aeson                      ^>=1.5.0.0
+    , aeson                ^>=1.5.0.0
     , base16-bytestring
-    , bytestring                 ^>=0.10.12.0
+    , bytestring           ^>=0.10.12.0
     , cardano-api
     , cardano-crypto
-    , containers
     , deepseq
-    , lens
     , playground-common
-    , plutus-contract
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-tx
     , plutus-tx-plugin
-    , prettyprinter
-    , row-types
     , serialise
-    , text                       ^>=1.2.4.0
 
   hs-source-dirs:  src
 
@@ -133,19 +120,14 @@ executable trustless-sidechain-gen-signatures
     , attoparsec
     , base16-bytestring
     , bytestring
-    , cardano-api
-    , cardano-binary
-    , cardano-crypto
     , cardano-crypto-class
     , either
     , optparse-applicative
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-script-utils
     , plutus-tx
     , secp256k1-haskell
-    , servant-client-core
     , text
     , trustless-sidechain
 
@@ -155,7 +137,6 @@ executable trustless-sidechain-serialise
   import:         common-lang
   main-is:        Main.hs
   build-depends:
-    , base16-bytestring
     , bytestring
     , cardano-api
     , plutus-ledger
@@ -182,31 +163,17 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
-    , bytestring
-    , cardano-api
-    , cardano-crypto
-    , cardano-crypto-class
-    , containers
-    , data-default
-    , plutip
-    , plutus-contract
     , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
     , plutus-tx
     , QuickCheck
-    , quickcheck-instances
-    , secp256k1-haskell
     , tasty
     , tasty-hunit
     , tasty-quickcheck
-    , text
     , trustless-sidechain
 
   hs-source-dirs: test

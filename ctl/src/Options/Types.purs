@@ -2,11 +2,11 @@ module Options.Types (Options(..), Config(..), Endpoint(..)) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator (PubKey, Signature)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
+import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
 
 type Options =

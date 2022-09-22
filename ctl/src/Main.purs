@@ -23,12 +23,12 @@ import Contract.Monad
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Log.Formatter.JSON (jsonFormatter)
+import FUELMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 import Helpers (logWithLevel)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (appendTextFile)
 import Options (getOptions)
 import Options.Types (Endpoint(..), Options)
-import RunFuelMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 
 -- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()

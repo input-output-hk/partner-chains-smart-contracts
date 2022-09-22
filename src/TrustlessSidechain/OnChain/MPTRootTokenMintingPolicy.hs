@@ -6,8 +6,7 @@ module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 import Ledger qualified
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
-import Plutus.Script.Utils.V2.Scripts qualified as Script
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (getLedgerBytes)
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (..),
@@ -52,7 +51,7 @@ mintingPolicy param =
   Ledger.mkMintingPolicyScript
     ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = Script.mkUntypedMintingPolicy
+    wrap = ScriptUtils.mkUntypedMintingPolicy
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

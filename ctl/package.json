@@ -7,17 +7,17 @@
     "test": "test"
   },
   "scripts": {
-    "test": "spago run --main Test.Main",
-    "dev": "make run-dev",
-    "build": "make run-build"
+    "test": "make test",
+    "dev": "make dev",
+    "build": "make build"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@emurgo/cardano-serialization-lib-browser": "11.0.0",
-    "@emurgo/cardano-serialization-lib-nodejs": "11.0.0",
+    "@emurgo/cardano-serialization-lib-browser": "11.0.5",
+    "@emurgo/cardano-serialization-lib-nodejs": "11.0.5",
     "big-integer": "1.6.51",
-    "blake2b-wasm": "2.4.0",
+    "blakejs": "1.2.1",
     "bufferutil": "4.0.5",
     "jssha": "3.2.0",
     "node-polyfill-webpack-plugin": "1.1.4",

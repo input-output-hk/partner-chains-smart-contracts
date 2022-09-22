@@ -231,8 +231,8 @@ mergeRootHashes l r = hashInternalNode $ (Builtins.appendByteString `PlutusPrelu
  verifying 'MerkleProof'.
 -}
 data MerkleTree
-  = Bin !RootHash MerkleTree MerkleTree
-  | Tip !RootHash
+  = Bin RootHash MerkleTree MerkleTree
+  | Tip RootHash
   deriving (Prelude.Show, Prelude.Eq)
 
 makeIsDataIndexed ''MerkleTree [('Bin, 0), ('Tip, 1)]

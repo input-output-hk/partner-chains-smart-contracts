@@ -14,8 +14,8 @@ import Ledger.Address (Address)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
@@ -28,7 +28,7 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
+  TxInfo (txInfoInputs, txInfoMint),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -167,11 +167,15 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     hasNft :: Value -> Bool
     hasNft val = Value.assetClassValueOf val (cToken uch) == 1
 
+    threshold :: Integer
+    threshold =
+      length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
         (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        1
+        threshold
         (newCommitteeHash red)
         (committeeSignatures red) -- TODO where are the other signatures?
     isCurrentCommittee :: Bool
@@ -190,7 +194,7 @@ updateCommitteeHashValidator updateCommitteeHash =
 -- | 'updateCommitteeHashAddress' is the address of the script
 {-# INLINEABLE updateCommitteeHashAddress #-}
 updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
-updateCommitteeHashAddress = Ledger.scriptHashAddress . ScriptUtils.validatorHash . updateCommitteeHashValidator
+updateCommitteeHashAddress = Ledger.scriptHashAddress . validatorHash . updateCommitteeHashValidator
 
 -- * Initializing the committee hash
 
@@ -229,7 +233,7 @@ mkCommitteeHashPolicy ichm _red ctx =
     oref = icTxOutRef ichm
 
     hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoReferenceInputs info
+    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
     checkMintedAmount :: Bool
     checkMintedAmount = case Value.flattenValue (txInfoMint info) of
@@ -261,8 +265,14 @@ committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
 committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn
 
 -- CTL hack
-mkCommitteHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteHashPolicy :: Ledger.Script
-serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])
+serialisableCommitteeHashPolicy :: Ledger.Script
+serialisableCommitteeHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])
+
+mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableCommitteeHashValidator :: Ledger.Script
+serialisableCommitteeHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

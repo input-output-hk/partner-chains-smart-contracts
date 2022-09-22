@@ -1,4 +1,4 @@
-module RunFuelMintingPolicy (runFuelMP, FuelParams(..)) where
+module FUELMintingPolicy (runFuelMP, FuelParams(..)) where
 
 import Contract.Prelude
 
@@ -9,7 +9,6 @@ import Contract.Monad
   , liftContractM
   , liftedE
   , liftedM
-  , throwContractError
   )
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
@@ -19,7 +18,12 @@ import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
   , textEnvelopeBytes
   )
-import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
+import Contract.Transaction
+  ( TransactionOutputWithRefScript(..)
+  , awaitTxConfirmed
+  , balanceAndSignTx
+  , submit
+  )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value as Value
@@ -62,13 +66,13 @@ runFuelMP sp fp = do
   inputUtxo ← traverse
     ( \txIn → do
         txOut ← liftedM "Cannot find genesis mint UTxO" $ getUtxo txIn
-        pure $ Map.singleton txIn txOut
+        pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+          { output: txOut, scriptRef: Nothing }
     )
     inputTxIn
 
-  cs ← maybe (throwContractError "Cannot get currency symbol") pure $
-    Value.scriptCurrencySymbol
-      fuelMP
+  cs ← liftContractM "Cannot get currency symbol" $
+    Value.scriptCurrencySymbol fuelMP
   logInfo' (show (toData sp))
   logInfo' ("fuelMP currency symbol: " <> show cs)
   tn ← liftContractM "Cannot get token name"
