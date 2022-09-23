@@ -305,7 +305,7 @@ fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
     -- of nodes created via the recurrence
     -- > T(n) = T(n/2) + n
     -- and a straightforward application of case 3 of the master theorem gives
-    -- us that this is /O(n)/ as we it's easy to choose /\epsilon > 0/ s.t.
+    -- us that this is /O(n)/ as it's easy to choose /\epsilon > 0/ s.t.
     -- /n \in \Omega(n^(\log_2 1 + \epsilon)) = \Omega(n^(\epsilon))/.
     -- The run time is analyzed similarly.
     --
@@ -443,12 +443,12 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
 {- | @/O(n)/@ where /n/ is the size of the list used to make the merkle
  tree.
 
- 'lookupsMp' mt@ returns all leafs associated with its 'MerkleProof' in a
- list (the order of the list output is unspecified and may be a bit
- surprising due to Note [Tail Recursive mergePairs]). This is useful for
- making an efficient mapping of the elements in the merkle tree, to its
- corresponding merkle proof since alternatively one would have to do repeated
- calls to 'lookupMp' being /O(n^2)/.
+ 'lookupsMp' mt@ returns all leafs associated with its 'MerkleProof' in a list
+ (the order of the list output is unspecified and may be a bit surprising due
+ to Note [Tail Recursive mergePairs]). This is useful for making an efficient
+ mapping of the elements in the merkle tree to its corresponding merkle proof
+ since alternatively one would have to do repeated /n/ calls to 'lookupMp'
+ (which is O(/n/) being /O(n^2)/ altogether.
 
  Example.
  Given
