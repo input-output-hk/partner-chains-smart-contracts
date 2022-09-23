@@ -448,7 +448,7 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
  surprising due to Note [Tail Recursive mergePairs]). This is useful for
  making an efficient mapping of the elements in the merkle tree, to its
  corresponding merkle proof since alternatively one would have to do repeated
- calls to 'lookupMp' being /O(n^2 log n)/.
+ calls to 'lookupMp' being /O(n^2)/.
 
  Example.
  Given
@@ -493,7 +493,8 @@ lookupsMpFromList :: [BuiltinByteString] -> [(RootHash, MerkleProof)]
 lookupsMpFromList = lookupsMp . fromList
 
 {- | /O(n)/ in the length of the 'MerkleProof' (which is /O(log n)/ of
- the size of the original 'MerkleTree' of the given 'RootHash').
+ the size of the original list to create the 'MerkleTree' of the given
+ 'RootHash').
 
  An example of using 'memberMp':
 
