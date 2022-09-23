@@ -6,6 +6,7 @@
   , "bigints"
   , "cardano-transaction-lib"
   , "codec-argonaut"
+  , "console"
   , "control"
   , "exceptions"
   , "foldable-traversable"
@@ -26,6 +27,7 @@
   , "strings"
   , "transformers"
   , "uint"
+  , "unfoldable"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
