@@ -10,25 +10,23 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (PubKey)
 import Ledger qualified
-import Ledger.Address (Address)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (getLedgerBytes),
   MintingPolicy,
   TokenName (TokenName),
-  Validator,
   Value (getValue),
  )
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
+  TxInfo (txInfoInputs, txInfoMint),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -74,28 +72,11 @@ aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBy
 aggregateCheck :: [PubKey] -> BuiltinByteString -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
 
-{- | 'verifyMultiSignature' is a wrapper for how we verify multi signatures.
-
- TODO: For now, to simplify things we just test if any of the committee has
- signed the message, and we should do a proper multisign later.
--}
-{-# INLINEABLE verifyMultiSignature #-}
-verifyMultiSignature ::
-  [PubKey] -> BuiltinByteString -> BuiltinByteString -> Bool
-verifyMultiSignature pubKeys msg sig = any go pubKeys
-  where
-    go pubKey =
-      let pubKey' = getLedgerBytes (Crypto.getPubKey pubKey)
-       in PlutusTx.verifyEd25519Signature pubKey' msg sig
-
 {- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
 Warning: there should be a non-empty number of private keys.
-
 We put this function here (even though it isn't used in the on chain code)
 because it corresponds to the 'verifyMultiSignature'
-
 TODO: For now, to simplify things we just make the first person sign the message.
-
 TODO: do a proper multisign later.
 -}
 multiSign :: BuiltinByteString -> [XPrv] -> BuiltinByteString
@@ -103,29 +84,20 @@ multiSign msg (prvKey : _) = Crypto.getSignature (Crypto.sign' msg prvKey)
 multiSign _ _ = traceError "Empty multisign"
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
-
   1. The native token is in both the input and output.
-
   2. The new committee hash is signed by the current committee
-
   3. The committee provided really is the current committee
-
   4. The new output transaction contains the new committee hash
-
 TODO an optimization. Instead of putting the new committee hash in the
 redeemer, we could just:
-
     1. check if the committee hash is included in the datum (we already do
     this)
-
     2. check if what is in the datum is signed by the current committee
-
 Note [Committee hash in output datum]:
 Normally, the producer of a utxo is only required to include the datum hash,
 and not the datum itself (but can optionally do so). In this case, we rely on
 the fact that the producer actually does include the datum; and enforce this
 with 'outputDatum'.
-
 Note [Input has Token and Output has Token]:
 In an older iteration, we used to check if the tx's input has the token, but
 this is implicitly covered when checking if the output spends the token. Hence,
@@ -186,21 +158,6 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
--- | 'updateCommitteeHashValidator' is the validator of the script
-updateCommitteeHashValidator :: UpdateCommitteeHash -> Validator
-updateCommitteeHashValidator updateCommitteeHash =
-  Ledger.mkValidatorScript
-    ( $$(PlutusTx.compile [||untypedValidator||])
-        `PlutusTx.applyCode` PlutusTx.liftCode updateCommitteeHash
-    )
-  where
-    untypedValidator = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator
-
--- | 'updateCommitteeHashAddress' is the address of the script
-{-# INLINEABLE updateCommitteeHashAddress #-}
-updateCommitteeHashAddress :: UpdateCommitteeHash -> Address
-updateCommitteeHashAddress = Ledger.scriptHashAddress . ScriptUtils.validatorHash . updateCommitteeHashValidator
-
 -- * Initializing the committee hash
 
 -- | 'InitCommitteeHashMint' is used as the parameter for the minting policy
@@ -241,8 +198,11 @@ mkCommitteeHashPolicy ichm _red ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
+    oref :: TxOutRef
+    oref = icTxOutRef ichm
+
     hasUtxo :: Bool
-    hasUtxo = any ((icTxOutRef ichm ==) . txInInfoOutRef) $ txInfoReferenceInputs info
+    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
     -- assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
@@ -271,8 +231,14 @@ committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
 committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn
 
 -- CTL hack
-mkCommitteHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteHashPolicy :: Ledger.Script
-serialisableCommitteHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteHashPolicyUntyped||])
+serialisableCommitteeHashPolicy :: Ledger.Script
+serialisableCommitteeHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])
+
+mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableCommitteeHashValidator :: Ledger.Script
+serialisableCommitteeHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

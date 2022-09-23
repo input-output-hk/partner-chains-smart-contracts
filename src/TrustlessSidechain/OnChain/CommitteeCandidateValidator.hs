@@ -16,7 +16,7 @@ import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
 import Ledger.Scripts qualified as Scripts
 import Ledger.Typed.Scripts qualified as TypedScripts
-import Plutus.Script.Utils.V2.Scripts.Validators qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (mkValidatorScript, toBuiltinData)
 import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedBy)
 import PlutusTx qualified

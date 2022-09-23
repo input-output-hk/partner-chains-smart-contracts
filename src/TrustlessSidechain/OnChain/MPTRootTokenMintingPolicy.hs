@@ -7,23 +7,18 @@ import PlutusTx.Prelude
 
 import Ledger qualified
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (
-  mkUntypedMintingPolicy,
-  scriptCurrencySymbol,
- )
-import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
+import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (getLedgerBytes),
-  MintingPolicy,
   OutputDatum (OutputDatum),
   Script,
-  ScriptContext (scriptContextTxInfo),
+  ScriptContext (..),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint),
+  TxInfo (..),
   TxOut (txOutDatum, txOutValue),
-  mkMintingPolicyScript,
  )
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
@@ -163,14 +158,10 @@ mkMintingPolicy
 -- | 'mintingPolicy' is the minting policy for the signed merkle root tokens
 mintingPolicy :: SignedMerkleRootMint -> MintingPolicy
 mintingPolicy param =
-  mkMintingPolicyScript
-    ($$(PlutusTx.compile [||mkUntypedMintingPolicy . mkMintingPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
-
---{- | 'mintingPolicyCurrencySymbol' is the currency symbol of the minting policy
--- for the signed merkle root tokens
----}
-mintingPolicyCurrencySymbol :: SignedMerkleRootMint -> CurrencySymbol
-mintingPolicyCurrencySymbol = scriptCurrencySymbol . mintingPolicy
+  Ledger.mkMintingPolicyScript
+    ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
+  where
+    wrap = ScriptUtils.mkUntypedMintingPolicy
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

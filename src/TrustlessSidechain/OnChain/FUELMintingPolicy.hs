@@ -3,16 +3,9 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
---import Ledger ( MintingPolicy, ScriptContext (scriptContextTxInfo),)
---import Ledger qualified
---import Ledger.Typed.Scripts qualified as Script
---import Plutus.V2.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue), TxOutRef)
-
-import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy, scriptCurrencySymbol)
+import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
 import Plutus.V2.Ledger.Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-
---import Plutus.V2.Ledger.Crypto (PubKeyHash (PubKeyHash, getPubKeyHash))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
@@ -21,27 +14,6 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.Types (SidechainParams (genesisMint))
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
-
--- import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
--- import Codec.Serialise (serialise)
--- import Data.ByteString.Lazy qualified as LBS
--- import Data.ByteString.Short qualified as SBS
--- import Ledger qualified
--- import Ledger.Scripts qualified as Scripts
--- import Ledger.Typed.Scripts (MintingPolicy)
--- import Ledger.Value qualified as Value
--- import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy)
--- import Plutus.Script.Utils.V2.Scripts qualified as ScriptUtils
--- import Plutus.V2.Ledger.Api (mkMintingPolicyScript, txInInfoOutRef)
--- import Plutus.V2.Ledger.Contexts (
---   ScriptContext (ScriptContext, scriptContextPurpose, scriptContextTxInfo),
---   ScriptPurpose (Minting),
---   TxInfo (TxInfo, txInfoInputs, txInfoMint),
---  )
--- import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
--- import PlutusTx.Prelude
--- import TrustlessSidechain.OffChain.Types (PassiveBrdgSidechainParams (..))
--- import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain))
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See
  'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
@@ -178,14 +150,6 @@ mkMintingPolicy fm mode ctx = case mode of
         , tn == fuelTokenName =
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
-
-mintingPolicy :: FUELMint -> MintingPolicy
-mintingPolicy param =
-  mkMintingPolicyScript
-    ($$(PlutusTx.compile [||\d -> mkUntypedMintingPolicy (mkMintingPolicy d)||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
-
-currencySymbol :: FUELMint -> CurrencySymbol
-currencySymbol = scriptCurrencySymbol . mintingPolicy
 
 -- ctl hack
 -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts

@@ -34,14 +34,11 @@ module TrustlessSidechain.OnChain.DistributedSet (
   insertNode,
 
   -- * Validators / minting policies
-
-  --typedInsertValidator,
   insertValidator,
   insertValidatorHash,
   insertAddress,
   mkDsConfValidator,
   dsConfValidator,
-  --dsConfAddress,
   mkDsConfPolicy,
   dsConfTokenName,
   dsConfPolicy,
@@ -52,25 +49,37 @@ module TrustlessSidechain.OnChain.DistributedSet (
   dsConfValidatorHash,
 ) where
 
+import PlutusTx.Prelude
+
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Ledger.Address (scriptHashAddress)
-
---import Ledger.Scripts qualified as Scripts --(MintingPolicy, TypedValidator, Validator, ValidatorTypes)
-
--- (CurrencySymbol , OutputDatum(..) , ValidatorHash , Address , Validator , MintingPolicy , TokenName , Value , Map , mkMintingPolicyScript , getValue)
-import Plutus.Script.Utils.V2.Scripts (mkUntypedMintingPolicy, mkUntypedValidator, scriptCurrencySymbol, validatorHash)
-import Plutus.V2.Ledger.Api
-import Plutus.V2.Ledger.Contexts ()
-import Plutus.V2.Ledger.Contexts as Contexts
-
---import Plutus.Script.Utils.V2.Scripts.Validators
---import Plutus.Script.Utils.V2.Scripts.MonetaryPolicies
-
+import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
+import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy, mkUntypedValidator)
+import Plutus.V2.Ledger.Api (
+  Address (Address),
+  Credential (ScriptCredential),
+  CurrencySymbol,
+  Datum (getDatum),
+  Map,
+  MintingPolicy,
+  OutputDatum (NoOutputDatum, OutputDatumHash),
+  ScriptContext (scriptContextTxInfo),
+  TokenName (TokenName, unTokenName),
+  TxInInfo (txInInfoResolved),
+  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs),
+  TxOut (txOutAddress, txOutDatum, txOutValue),
+  TxOutRef,
+  Validator,
+  ValidatorHash,
+  Value (getValue),
+  mkMintingPolicyScript,
+  mkValidatorScript,
+ )
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude
 import Prelude qualified
 
 -- copied directly from Ledger.Address, which for some reason no longer exports it
@@ -516,7 +525,7 @@ typedInsertValidator :: Ds -> TypedValidator Ds
 -}
 insertValidator :: Ds -> Validator
 insertValidator ds =
-  let wrap = \d -> mkUntypedValidator (mkInsertValidator d)
+  let wrap = mkUntypedValidator . mkInsertValidator
    in mkValidatorScript
         ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
 
@@ -599,7 +608,7 @@ dsConfTokenName = TokenName emptyByteString
 dsConfPolicy :: DsConfMint -> MintingPolicy
 dsConfPolicy dscm =
   mkMintingPolicyScript
-    ($$(PlutusTx.compile [||\d -> mkUntypedMintingPolicy (mkDsConfPolicy d)||]) `PlutusTx.applyCode` PlutusTx.liftCode dscm)
+    ($$(PlutusTx.compile [||mkUntypedMintingPolicy . mkDsConfPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode dscm)
 
 -- | 'dsConfCurrencySymbol' is the currency symbol for the distributed set
 dsConfCurrencySymbol :: DsConfMint -> CurrencySymbol
@@ -665,7 +674,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
 -- | 'dsKeyPolicy' is the minting policy for the prefixes of nodes
 dsKeyPolicy :: DsKeyMint -> MintingPolicy
 dsKeyPolicy dskm =
-  let wrap d = mkUntypedMintingPolicy (mkDsKeyPolicy d)
+  let wrap = mkUntypedMintingPolicy . mkDsKeyPolicy
    in mkMintingPolicyScript ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode dskm)
 
 {- | 'dsKeyCurrencySymbol' is the currency symbol for prefixes of nodes in the

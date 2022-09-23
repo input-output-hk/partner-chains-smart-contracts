@@ -141,6 +141,7 @@ newtype UpdateCommitteeHash = UpdateCommitteeHash
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''UpdateCommitteeHash
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 -- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
 data GenesisMintCommitteeHash = GenesisMintCommitteeHash
