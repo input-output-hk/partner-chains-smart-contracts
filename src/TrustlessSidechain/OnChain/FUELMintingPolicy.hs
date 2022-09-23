@@ -117,9 +117,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
            in RootHash $ unTokenName $ go $ txInfoInputs info
-     in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
-          && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
+     in traceIfFalse "error 'FUELMintingPolicy' tx not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           &&
           -- TODO: remove the oneshot minting policy later... yeah..
           --
@@ -127,7 +125,14 @@ mkMintingPolicy fm mode ctx = case mode of
           -- to test for now, even though it's not what we will use later and
           -- the distributed set replaces it.
           ( case genesisMint $ fmSidechainParams fm of
-              Nothing -> traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+              Nothing ->
+                traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+                  && traceIfFalse
+                    "error 'FUELMintingPolicy' merkle proof failed"
+                    (MerkleTree.memberMp cborMteHashed mp merkleRoot)
+                  && traceIfFalse
+                    "error 'FUELMintingPolicy' not inserting into distributed set"
+                    (dsInserted == cborMteHashed)
               Just gutxo ->
                 traceIfFalse "Oneshot Mintingpolicy utxo not present" $
                   let -- One shot minting policy checks.

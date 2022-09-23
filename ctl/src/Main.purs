@@ -23,7 +23,11 @@ import Contract.Monad
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Log.Formatter.JSON (jsonFormatter)
-import FUELMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
+import FUELMintingPolicy
+  ( FuelParams(Burn)
+  , passiveBridgeMintParams
+  , runFuelMP
+  )
 import Helpers (logWithLevel)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (appendTextFile)
@@ -54,7 +58,7 @@ main = do
     case opts.endpoint of
 
       MintAct { amount } → runFuelMP opts.scParams
-        (Mint { amount, recipient: pkh })
+        (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
 
       BurnAct { amount, recipient } → runFuelMP opts.scParams
         (Burn { amount, recipient })
