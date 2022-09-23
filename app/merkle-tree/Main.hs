@@ -117,6 +117,8 @@ data MerkleTreeAction
     LookupMp (BuiltinByteString, MerkleTree)
   | -- | Correponds to @\(bs, mp, rh) -> 'MerkleTree.memberMp' bs mp rh@
     MemberMp (BuiltinByteString, MerkleProof, RootHash)
+  | -- | Correponds to @\bs -> 'MerkleTree.lookupsMpFromList' bs@
+    LookupsMpFromList [BuiltinByteString]
 
 {- | 'readBuiltinDataCbor' reads a cbor encoded 'BuiltinData' representation
  of the given arguments e.g. if the argument is @["pomeranian", "maltese"]@
@@ -129,6 +131,7 @@ readBuiltinDataCbor opt handle = case opt of
   EncodeRootHashFromList -> RootHashFromList <$> arg
   EncodeLookupMp -> LookupMp <$> arg
   EncodeMemberMp -> MemberMp <$> arg
+  EncodeLookupsMpFromList -> LookupsMpFromList <$> arg
   where
     -- Generic function which reads from input and deserializes to BuiltinData,
     -- and transforms that to the corresponding Haskell data type
@@ -160,6 +163,7 @@ writeCborBuiltinData mta handle = case mta of
   RootHashFromList arg -> writer $ MerkleTree.rootHashFromList arg
   LookupMp arg -> writer $ uncurry MerkleTree.lookupMp arg
   MemberMp arg -> writer $ (\(bs, mp, rh) -> MerkleTree.memberMp bs mp rh) arg
+  LookupsMpFromList arg -> writer $ MerkleTree.lookupsMpFromList arg
   where
     writer :: ToData a => a -> IO ()
     writer =
@@ -219,6 +223,8 @@ data MerkleTreeOption
     EncodeLookupMp
   | -- | Correponds to @\(bs, mp, mt) -> 'MerkleTree.memberMp' bs mp mt@
     EncodeMemberMp
+  | -- | Correponds to @\bs -> 'MerkleTree.lookupsMpFromList' bs@
+    EncodeLookupsMpFromList
   deriving stock (Show, Eq)
 
 {- | 'options' is the main runner of the application. It returns
@@ -256,6 +262,13 @@ options =
             ( Applicative.header "memberMp"
                 <> Applicative.progDesc
                   "Given `cbor(toBuiltinData (bs,merkleProof,rootHash) )`, this returns `cbor(toBuiltinData(memberMp bs merkleProof rootHash))`"
+            )
+      , Applicative.command "lookupsMpFromList" $
+          Applicative.info
+            (MerkleTreeCliOptions EncodeMemberMp <$> pFileInput <*> pFileOutput)
+            ( Applicative.header "lookupsMpFromList"
+                <> Applicative.progDesc
+                  "Given `cbor(toBuiltinData(bs))`, this returns `cbor(toBuiltinData(lookupsMpFromList bs))`"
             )
       ]
 
