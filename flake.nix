@@ -2,7 +2,8 @@
   description = "trustless-sidechain";
 
   inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+    cardano-transaction-lib.url =
+      "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
