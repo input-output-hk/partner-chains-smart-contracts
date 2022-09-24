@@ -13,6 +13,7 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as Commi
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
@@ -35,4 +36,5 @@ main =
     , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
     , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
     , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
+    , ("PoCInlineDatum", PoCInlineDatum.serialisablePoCInlineDatumValidator)
     ]
