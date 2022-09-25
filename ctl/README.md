@@ -33,7 +33,7 @@ You can also run these components directly without using Docker, more about thes
 
 You can call the contract endpoints with the following CLI command (you need to add `--` before the arguments):
 ```
-nix run .#ctl-main -- -help
+nix run .#ctl-main -- --help
 ```
 
 Alternatively, you can run `make main.js` inside a `nix develop` shell to bundle CTL into an executable javascript file.
@@ -158,7 +158,8 @@ You can also provide a configuration file named `config.json` in the following f
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
   },
-  "signingKeyFile": "/absolute/path/to/signing-key.skey"
+  "signingKeyFile": "/absolute/path/to/signing-key.skey",
+  "stakeKeyFile": null
 }
 ```
 
