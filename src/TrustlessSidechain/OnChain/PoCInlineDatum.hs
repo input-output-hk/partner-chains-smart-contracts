@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script
- demonstrating the use of inline datum.
+ demonstrating the use of inline datum. In particular, we provide a script
+ succeeds iff its inline datum is its redeemer.
 
  This is used on the ctl side as a minimal example / test of using inline
  datums.
@@ -15,10 +16,16 @@ module TrustlessSidechain.OnChain.PoCInlineDatum (
   serialisablePoCInlineDatumValidator,
 ) where
 
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators as Validators
+import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
+import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
 import Plutus.V2.Ledger.Api (Datum (getDatum), Script)
 import Plutus.V2.Ledger.Api qualified as Api
-import Plutus.V2.Ledger.Contexts as Contexts
+import Plutus.V2.Ledger.Contexts (
+  ScriptContext,
+  TxInInfo (txInInfoResolved),
+  TxOut (txOutDatum),
+ )
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import Plutus.V2.Ledger.Tx (
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
  )
