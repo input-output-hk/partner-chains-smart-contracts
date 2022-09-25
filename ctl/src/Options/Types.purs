@@ -12,6 +12,7 @@ import Types.ByteArray (ByteArray)
 type Options =
   { scParams ∷ SidechainParams
   , skey ∷ FilePath
+  , stkey ∷ Maybe FilePath
   , endpoint ∷ Endpoint
   }
 
@@ -24,6 +25,7 @@ type Config =
         , genesisUtxo ∷ Maybe TransactionInput
         }
   , signingKeyFile ∷ Maybe FilePath
+  , stakeKeyFile ∷ Maybe FilePath
   }
 
 data Endpoint

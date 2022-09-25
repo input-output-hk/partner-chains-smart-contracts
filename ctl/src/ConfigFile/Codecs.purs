@@ -23,6 +23,7 @@ configCodec =
     ( CAR.record
         { sidechainParameters: CAC.maybe scParamsCodec
         , signingKeyFile: CAC.maybe CA.string
+        , stakeKeyFile: CAC.maybe CA.string
         }
     )
   where

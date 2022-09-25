@@ -10,7 +10,7 @@ import Contract.Address
   , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
-import Contract.Config (Message, testnetConfig)
+import Contract.Config (Message, PrivateStakeKeySource(..), testnetConfig)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( ConfigParams
@@ -36,10 +36,11 @@ import Options.Types (Endpoint(..), Options)
 
 -- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()
-toConfig { skey } = testnetConfig
+toConfig { skey, stkey } = testnetConfig
   { logLevel = Info
   , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
-  , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
+  , walletSpec = Just
+      (UseKeys (PrivatePaymentKeyFile skey) (PrivateStakeKeyFile <$> stkey))
   }
 
 -- | Store all log levels in a file

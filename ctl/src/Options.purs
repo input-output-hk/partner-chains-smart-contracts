@@ -69,10 +69,12 @@ options maybeConfig = info (helper <*> optSpec)
 
   withCommonOpts endpointParser = ado
     skey ← skeySpec
+    stkey ← stKeySpec
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
-    in { skey, scParams, endpoint }
+    in { skey, stkey, scParams, endpoint }
+
   skeySpec =
     option str $ fold
       [ short 'k'
@@ -81,6 +83,16 @@ options maybeConfig = info (helper <*> optSpec)
       , help "Own signing key file"
       , action "file"
       , maybe mempty value (maybeConfig >>= _.signingKeyFile)
+      ]
+
+  stKeySpec =
+    optional $ option str $ fold
+      [ short 'K'
+      , long "stake-key-file"
+      , metavar "/absolute/path/to/stake-key"
+      , help "Own stake key file"
+      , action "file"
+      , maybe mempty value (maybeConfig >>= _.stakeKeyFile)
       ]
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
