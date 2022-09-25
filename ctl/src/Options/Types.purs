@@ -10,10 +10,10 @@ import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
 
 type Options =
-  { scParams ∷ SidechainParams
+  { endpoint ∷ Endpoint
+  , scParams ∷ SidechainParams
   , skey ∷ FilePath
   , stkey ∷ Maybe FilePath
-  , endpoint ∷ Endpoint
   }
 
 type Config =

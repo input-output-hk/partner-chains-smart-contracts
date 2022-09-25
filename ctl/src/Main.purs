@@ -38,7 +38,7 @@ import Options.Types (Endpoint(..), Options)
 toConfig ∷ Options → ConfigParams ()
 toConfig { skey, stkey } = testnetConfig
   { logLevel = Info
-  , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
+  , customLogger = Just \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just
       (UseKeys (PrivatePaymentKeyFile skey) (PrivateStakeKeyFile <$> stkey))
   }

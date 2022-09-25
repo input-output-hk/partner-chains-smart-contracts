@@ -44,7 +44,7 @@ options maybeConfig = info (helper <*> optSpec)
   )
   where
   optSpec =
-    hsubparser $ mconcat
+    hsubparser $ fold
       [ command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
@@ -95,50 +95,6 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value (maybeConfig >>= _.stakeKeyFile)
       ]
 
-  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
-
-  burnSpec = ado
-    amount ← parseAmount
-    recipient ← option byteArray $ fold
-      [ long "recipient"
-      , metavar "PUBLIC_KEY_HASH"
-      , help "Public key hash of the sidechain recipient"
-      ]
-    in BurnAct { amount, recipient }
-
-  regSpec = ado
-    spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
-      [ long "sidechain-public-key"
-      , metavar "PUBLIC_KEY"
-      , help "Sidechain public key"
-      ]
-    spoSig ← option byteArray $ fold
-      [ long "spo-signature"
-      , metavar "SIGNATURE"
-      , help "SPO signature"
-      ]
-    sidechainSig ← option byteArray $ fold
-      [ long "sidechain-signature"
-      , metavar "SIGNATURE"
-      , help "Sidechain signature"
-      ]
-    inputUtxo ← option transactionInput $ fold
-      [ long "registration-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO to be spend with the commitee candidate registration"
-      ]
-    in
-      CommitteeCandidateReg
-        { spoPubKey
-        , sidechainPubKey
-        , spoSig
-        , sidechainSig
-        , inputUtxo
-        }
-
-  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
-
   scParamsSpec = ado
     chainId ← option int $ fold
       [ short 'i'
@@ -182,17 +138,61 @@ options maybeConfig = info (helper <*> optSpec)
         , genesisUtxo
         }
 
-  parseSpoPubKey = option byteArray $ fold
-    [ long "spo-public-key"
-    , metavar "PUBLIC_KEY"
-    , help "SPO cold verification key"
-    ]
+  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+
+  burnSpec = ado
+    amount ← parseAmount
+    recipient ← option byteArray $ fold
+      [ long "recipient"
+      , metavar "PUBLIC_KEY_HASH"
+      , help "Public key hash of the sidechain recipient"
+      ]
+    in BurnAct { amount, recipient }
 
   parseAmount = option bigInt $ fold
     [ short 'a'
     , long "amount"
     , metavar "1"
     , help "Amount of FUEL token to be burnt/minted"
+    ]
+
+  regSpec = ado
+    spoPubKey ← parseSpoPubKey
+    sidechainPubKey ← option byteArray $ fold
+      [ long "sidechain-public-key"
+      , metavar "PUBLIC_KEY"
+      , help "Sidechain public key"
+      ]
+    spoSig ← option byteArray $ fold
+      [ long "spo-signature"
+      , metavar "SIGNATURE"
+      , help "SPO signature"
+      ]
+    sidechainSig ← option byteArray $ fold
+      [ long "sidechain-signature"
+      , metavar "SIGNATURE"
+      , help "Sidechain signature"
+      ]
+    inputUtxo ← option transactionInput $ fold
+      [ long "registration-utxo"
+      , metavar "TX_ID#TX_IDX"
+      , help "Input UTxO to be spend with the commitee candidate registration"
+      ]
+    in
+      CommitteeCandidateReg
+        { spoPubKey
+        , sidechainPubKey
+        , spoSig
+        , sidechainSig
+        , inputUtxo
+        }
+
+  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
+
+  parseSpoPubKey = option byteArray $ fold
+    [ long "spo-public-key"
+    , metavar "PUBLIC_KEY"
+    , help "SPO cold verification key"
     ]
 
 getOptions ∷ Effect Options
@@ -209,7 +209,7 @@ getOptions = do
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
 transactionInput ∷ ReadM TransactionInput
-transactionInput = maybeReader $ \txIn →
+transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
@@ -222,7 +222,7 @@ transactionInput = maybeReader $ \txIn →
     _ → Nothing
 
 byteArray ∷ ReadM ByteArray
-byteArray = maybeReader $ hexToByteArray
+byteArray = maybeReader hexToByteArray
 
 bigInt ∷ ReadM BigInt
-bigInt = maybeReader $ BigInt.fromString
+bigInt = maybeReader BigInt.fromString
