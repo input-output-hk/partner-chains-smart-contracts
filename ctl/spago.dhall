@@ -10,6 +10,7 @@
   , "control"
   , "exceptions"
   , "foldable-traversable"
+  , "foreign-object"
   , "integers"
   , "lists"
   , "maybe"
