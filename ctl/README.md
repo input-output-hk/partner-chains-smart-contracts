@@ -50,7 +50,7 @@ Notes:
 
 - `genesis-mint-utxo` is not a required argument. If omitted from the sidechain parameters, we can mint multiple times
 
-- prior to running the contracts - have available your signing key in the environment. Example:
+- prior to running the contracts - it may be desirable to have available your signing key in the environment. Example:
 
 ```bash
 export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
@@ -159,7 +159,7 @@ You can also provide a configuration file named `config.json` in the following f
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
   },
   "signingKeyFile": "/absolute/path/to/signing-key.skey",
-  "stakeKeyFile": null
+  "stakeSigningKeyFile": null
 }
 ```
 

@@ -32,7 +32,7 @@ optExample =
           }
       }
   , signingKeyFile: Just "signing-key-file"
-  , stakeKeyFile: Nothing
+  , stakeSigningKeyFile: Nothing
   }
 
 decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config

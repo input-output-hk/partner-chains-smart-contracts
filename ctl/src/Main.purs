@@ -36,11 +36,11 @@ import Options.Types (Endpoint(..), Options)
 
 -- | Get the CTL configuration parameters based on CLI arguments
 toConfig ∷ Options → ConfigParams ()
-toConfig { skey, stkey } = testnetConfig
+toConfig { pSkey, stSkey } = testnetConfig
   { logLevel = Info
   , customLogger = Just \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just
-      (UseKeys (PrivatePaymentKeyFile skey) (PrivateStakeKeyFile <$> stkey))
+      (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
   }
 
 -- | Store all log levels in a file

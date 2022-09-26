@@ -68,31 +68,31 @@ options maybeConfig = info (helper <*> optSpec)
       ]
 
   withCommonOpts endpointParser = ado
-    skey ← skeySpec
-    stkey ← stKeySpec
+    pSkey ← pSkeySpec
+    stSkey ← stSKeySpec
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
-    in { skey, stkey, scParams, endpoint }
+    in { pSkey, stSkey, scParams, endpoint }
 
-  skeySpec =
+  pSkeySpec =
     option str $ fold
       [ short 'k'
       , long "signing-key-file"
-      , metavar "/absolute/path/to/skey"
-      , help "Own signing key file"
+      , metavar "/absolute/path/to/payment.skey"
+      , help "Own payment signing key file path"
       , action "file"
       , maybe mempty value (maybeConfig >>= _.signingKeyFile)
       ]
 
-  stKeySpec =
+  stSKeySpec =
     optional $ option str $ fold
       [ short 'K'
-      , long "stake-key-file"
-      , metavar "/absolute/path/to/stake-key"
-      , help "Own stake key file"
+      , long "stake-signing-key-file"
+      , metavar "/absolute/path/to/stake.skey"
+      , help "Own stake signing key file path"
       , action "file"
-      , maybe mempty value (maybeConfig >>= _.stakeKeyFile)
+      , maybe mempty value (maybeConfig >>= _.stakeSigningKeyFile)
       ]
 
   scParamsSpec = ado
@@ -161,7 +161,7 @@ options maybeConfig = info (helper <*> optSpec)
     sidechainPubKey ← option byteArray $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
-      , help "Sidechain public key"
+      , help "Sidechain public key value"
       ]
     spoSig ← option byteArray $ fold
       [ long "spo-signature"
@@ -192,7 +192,7 @@ options maybeConfig = info (helper <*> optSpec)
   parseSpoPubKey = option byteArray $ fold
     [ long "spo-public-key"
     , metavar "PUBLIC_KEY"
-    , help "SPO cold verification key"
+    , help "SPO cold verification key value"
     ]
 
 getOptions ∷ Effect Options
