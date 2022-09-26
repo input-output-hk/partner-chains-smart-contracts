@@ -71,7 +71,7 @@ Script addresses depend on the sidechain parameters, so we get different address
 
 ```
 nix run .#ctl-main -- addresses \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -82,7 +82,7 @@ nix run .#ctl-main -- addresses \
 
 ```
 nix run .#ctl-main -- mint \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -94,7 +94,7 @@ nix run .#ctl-main -- mint \
 
 ```
 nix run .#ctl-main -- burn \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -122,7 +122,7 @@ And use it's output for the registration:
 
 ```
 nix run .#ctl-main -- register \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -138,7 +138,7 @@ nix run .#ctl-main -- register \
 
 ```
 nix run .#ctl-main -- deregister \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -158,7 +158,7 @@ You can also provide a configuration file named `config.json` in the following f
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
   },
-  "signingKeyFile": "/absolute/path/to/signing-key.skey",
+  "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
   "stakeSigningKeyFile": null
 }
 ```

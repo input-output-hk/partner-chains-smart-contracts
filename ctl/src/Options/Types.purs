@@ -24,7 +24,7 @@ type Config =
         , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
         }
-  , signingKeyFile ∷ Maybe FilePath
+  , paymentSigningKeyFile ∷ Maybe FilePath
   , stakeSigningKeyFile ∷ Maybe FilePath
   }
 

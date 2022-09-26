@@ -22,7 +22,7 @@ configCodec =
   CA.object "Config file"
     ( CAR.record
         { sidechainParameters: CAC.maybe scParamsCodec
-        , signingKeyFile: CAC.maybe CA.string
+        , paymentSigningKeyFile: CAC.maybe CA.string
         , stakeSigningKeyFile: CAC.maybe CA.string
         }
     )

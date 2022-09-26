@@ -31,7 +31,7 @@ optExample =
           , index: UInt.fromInt 2
           }
       }
-  , signingKeyFile: Just "signing-key-file"
+  , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing
   }
 

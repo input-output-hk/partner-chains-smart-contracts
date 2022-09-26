@@ -78,11 +78,11 @@ options maybeConfig = info (helper <*> optSpec)
   pSkeySpec =
     option str $ fold
       [ short 'k'
-      , long "signing-key-file"
+      , long "payment-signing-key-file"
       , metavar "/absolute/path/to/payment.skey"
       , help "Own payment signing key file path"
       , action "file"
-      , maybe mempty value (maybeConfig >>= _.signingKeyFile)
+      , maybe mempty value (maybeConfig >>= _.paymentSigningKeyFile)
       ]
 
   stSKeySpec =
