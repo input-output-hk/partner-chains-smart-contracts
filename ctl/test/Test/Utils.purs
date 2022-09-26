@@ -6,9 +6,9 @@ import Contract.Address (Address)
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Transaction
-  ( TransactionInput
+  ( TransactionHash(..)
+  , TransactionInput(..)
   , TransactionOutputWithRefScript
   )
 import Contract.Utxos as Utxos

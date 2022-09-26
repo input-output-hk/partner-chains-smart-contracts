@@ -3,7 +3,6 @@ module Test.PoCReferenceInput (testScenario1, testScenario2) where
 
 import Contract.Prelude
 
-import Contract.Address (Address)
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract)
@@ -18,8 +17,6 @@ import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
   ( Language(PlutusV2)
-  , TransactionInput
-  , TransactionOutputWithRefScript
   )
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
