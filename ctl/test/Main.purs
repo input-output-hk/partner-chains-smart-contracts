@@ -9,32 +9,47 @@ import Data.BigInt as BigInt
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
+import Test.MerkleTree as MerkleTree
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
-
--- import Test.UpdateCommitteeHash as UpdateCommitteeHash
+import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
-main = launchAff_ $ do
-  let
-    distribute = [ BigInt.fromInt 1_000_000_000, BigInt.fromInt 2_000_000_000 ]
-      /\ [ BigInt.fromInt 2_000_000_000 ]
+main = do
+  -- Run the merkle tree integration tests
+  MerkleTree.test
 
-  runPlutipContract config distribute \(alice /\ _bob) → do
-    withKeyWallet alice $ do
-      CommitteeCandidateValidator.testScenario
-      FUELMintingPolicy.testScenario
+  -- Run the plutip tests
+  launchAff_ do
+    -- Default ada distribution
+    let
+      distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
+        /\ [ BigInt.fromInt 2_000_000_000 ]
 
-      -- TODO: Fix this.. the CLI merkle tree interface branch fixes this.
-      -- UpdateCommitteeHash.testScenario
+    -- Run the plutip tests
+    runPlutipContract config distribute \(alice /\ _bob) → do
+      withKeyWallet alice $ do
+        CommitteeCandidateValidator.testScenario
+        FUELMintingPolicy.testScenario
 
-      PoCInlineDatum.testScenario1
-      PoCInlineDatum.testScenario2
+        UpdateCommitteeHash.testScenario
 
-      PoCReferenceInput.testScenario1
-      PoCReferenceInput.testScenario2
+    -- Run the proof of concept tests (note that we run each test separately from
+    -- the other tests
+    let
+      pocTestScenarios =
+        [ PoCInlineDatum.testScenario1
+        , PoCInlineDatum.testScenario2
 
-      PoCReferenceScript.testScenario1
-      PoCReferenceScript.testScenario2
+        , PoCReferenceInput.testScenario1
+        , PoCReferenceInput.testScenario2
+
+        , PoCReferenceScript.testScenario1
+        , PoCReferenceScript.testScenario2
+        ]
+
+    for pocTestScenarios
+      \scenario → runPlutipContract config distribute
+        \(alice /\ _bob) → withKeyWallet alice scenario
