@@ -90,7 +90,7 @@ options maybeConfig = info (helper <*> optSpec)
     recipient ← option sidechainAddress $ fold
       [ long "recipient"
       , metavar "ADDRESS"
-      , help "Address of the sidechain recipient (without the 0x prefix)"
+      , help "Address of the sidechain recipient"
       ]
     in BurnAct { amount, recipient }
 
