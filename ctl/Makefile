@@ -40,7 +40,7 @@ spago2nix:
 update-scripts: touch-scripts src/RawScripts.purs
 touch-scripts:
 	@[ "${plutus-scripts}" ] || {
-		echo 'Please first run `cabal trustless-sidechain-serialise`'
+		echo 'Please first run `cabal run trustless-sidechain-serialise`'
 		exit 1
 	}
 	touch ${plutus-scripts}
