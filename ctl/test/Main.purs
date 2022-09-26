@@ -11,6 +11,7 @@ import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
+import Test.PoCReferenceScript as PoCReferenceScript
 
 -- import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
@@ -34,3 +35,6 @@ main = launchAff_ $ do
 
       PoCReferenceInput.testScenario1
       PoCReferenceInput.testScenario2
+
+      PoCReferenceScript.testScenario1
+      PoCReferenceScript.testScenario2

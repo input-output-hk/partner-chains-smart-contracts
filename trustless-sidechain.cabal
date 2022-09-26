@@ -93,6 +93,7 @@ library
     TrustlessSidechain.OnChain.MPTRootTokenValidator
     TrustlessSidechain.OnChain.PoCInlineDatum
     TrustlessSidechain.OnChain.PoCReferenceInput
+    TrustlessSidechain.OnChain.PoCReferenceScript
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.Utils

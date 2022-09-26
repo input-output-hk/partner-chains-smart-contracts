@@ -46,7 +46,9 @@ import PlutusTx.Prelude
 -- * To Reference
 
 {- | 'mkPoCToReferenceInputValidator'
- A script which verifies that its inline datum is the redeemer.
+ A script which always errors, so this script cannot be spent. One potential
+ use of this is for other scripts to read the datum of this script, when this
+ script is given as a reference input.
 -}
 mkPoCToReferenceInputValidator :: Integer -> () -> ScriptContext -> Bool
 mkPoCToReferenceInputValidator _dat _red _ctx = traceError "error 'mkPoCToReferenceInputValidator' attempt to spend"

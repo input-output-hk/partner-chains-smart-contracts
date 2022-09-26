@@ -36,13 +36,13 @@ import RawScripts as RawScripts
 
 -- | 'testScenario1' goes as follows:
 --  1.
---      Grabs the validator
+--      - Grabs the validator for 'RawScripts.rawPoCInlineDatum'
 --  2.
---      Build / submit the transaction to pay some ada to the
+--      - Build / submit the transaction to pay some ada to the
 --      'RawScripts.rawPoCInlineDatum' validator which holds the integer 69 as an
 --      inline datum
 --  3.
---      Build / submit another transaction to consume the previous utxo and verify that
+--      - Build / submit another transaction to consume the previous utxo and verify that
 --      the inline datum really was 69
 testScenario1 ∷ Contract () Unit
 testScenario1 = do

@@ -15,6 +15,7 @@ import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRoot
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
 import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.OnChain.PoCReferenceInput qualified as PoCReferenceInput
+import TrustlessSidechain.OnChain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
@@ -39,6 +40,8 @@ main =
     , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
     , -- Validators for proof of concept tests.
       ("PoCInlineDatum", PoCInlineDatum.serialisablePoCInlineDatumValidator)
-    , ("PoCToReferenceInput", PoCReferenceInput.serialisablePoCToReferenceValidator)
-    , ("PoCReferenceInput", PoCReferenceInput.serialisablePoCReferenceValidator)
+    , ("PoCToReferenceInput", PoCReferenceInput.serialisablePoCToReferenceInputValidator)
+    , ("PoCReferenceInput", PoCReferenceInput.serialisablePoCReferenceInputValidator)
+    , ("PoCToReferenceScript", PoCReferenceScript.serialisablePoCToReferenceScriptValidator)
+    , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
     ]
