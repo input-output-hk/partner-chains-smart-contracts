@@ -21,7 +21,7 @@ import Contract.Monad
 import Contract.Scripts (Validator, validatorHash)
 import FUELMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 import Options (getOptions)
-import Options.Types (Endpoint(..), Options)
+import Options.Types (Endpoint(..))
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
