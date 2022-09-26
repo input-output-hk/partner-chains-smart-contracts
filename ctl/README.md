@@ -152,7 +152,7 @@ nix run .#ctl-main -- deregister \
 
 ### 3.2. Using a configuration file
 
-You can also provide a configuration file named `config.json` in the following format instead of repeating them in all commands.
+You can also provide a configuration in `PROJECT_ROOT/ctl/config.json` in the following format instead of repeating them in all commands.
 
 ```json
 {
@@ -179,7 +179,7 @@ When using the CLI argument and the configuration file together, the **CLI argum
 
 In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and ctlServer) on a hosted environment, you have to set these in the configuration file using the following format:
 
-*config.json*
+*PROJECT_ROOT/ctl/config.json*
 ```json
 {
   "sidechainParameters": null,
