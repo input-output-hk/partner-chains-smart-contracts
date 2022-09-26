@@ -22,7 +22,6 @@ import Contract.Monad
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Log.Formatter.JSON (jsonFormatter)
-import Effect.Class (class MonadEffect)
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy (FuelParams(Mint, Burn), runFuelMP)
 import Helpers (logWithLevel)
@@ -112,7 +111,7 @@ main = do
 -- | Print the bech32 serialised address of a given validator
 getAddrs ∷
   Array (Tuple String (Contract () Validator)) →
-  Contract () (Array (String /\ String))
+  Contract () (Array (Tuple String String))
 getAddrs xs = do
   netId ← getNetworkId
   traverse (getAddr netId) xs
@@ -127,6 +126,6 @@ getAddrs xs = do
     serialised ← addressToBech32 addr
     pure $ name /\ serialised
 
-printEndpointResp ∷ ∀ m. MonadEffect m ⇒ EndpointResp → m Unit
+printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =
   log <<< stringifyEndpointResp
