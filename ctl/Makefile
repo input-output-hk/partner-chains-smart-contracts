@@ -19,7 +19,6 @@ dev: output.js
 build: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack --mode=production
 
-# Note. need a plutip-server running (won't put `plutip-server &` here because it tends to flood the terminal)
 test: src/RawScripts.purs
 	@spago test -m ${ps-test-entrypoint}
 
