@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.TrustlessSidechain.Integration () where
@@ -6,27 +7,37 @@ module Test.TrustlessSidechain.Integration () where
 -- https://github.com/mlabs-haskell/trustless-sidechain/issues/171
 
 import Cardano.Crypto.Wallet qualified as Wallet
-import Control.Monad (void)
+import Control.Arrow qualified as Arrow
+import Control.Monad qualified as Monad
 import Crypto.Secp256k1 qualified as SECP
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Hash (blake2b_256)
-import Data.Maybe (fromMaybe)
+import Data.Functor (void)
+import Data.List qualified as List
+import Data.Maybe qualified as Maybe
 import Data.Text (Text)
+import GHC.Base (undefined)
 import Ledger (getCardanoTxId)
+import Ledger.Address (PaymentPubKeyHash (PaymentPubKeyHash, unPaymentPubKeyHash))
 import Ledger.Address qualified as Address
-import Ledger.Crypto (PubKey)
+import Ledger.Crypto (PubKey, PubKeyHash (PubKeyHash, getPubKeyHash), Signature (getSignature))
 import Ledger.Crypto qualified as Crypto
-import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash, utxosAt)
+import Plutus.Contract (Contract, awaitTxConfirmed, ownPaymentPubKeyHash)
+import Plutus.Contract qualified as Contract
 import PlutusTx (toBuiltinData)
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Prelude
 import Test.Plutip.Contract (assertExecution, initAda, withContract, withContractAs)
 import Test.Plutip.Internal.Types qualified as PlutipInternal
 import Test.Plutip.LocalCluster (withCluster)
 import Test.Plutip.Predicate (shouldFail, shouldSucceed)
 import Test.Tasty (TestTree)
+import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
+import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OffChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OffChain.InitSidechain qualified as InitSidechain
+import TrustlessSidechain.OffChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
   BurnParams (BurnParams),
@@ -39,20 +50,23 @@ import TrustlessSidechain.OffChain.Types (
     initMint,
     initUtxo
   ),
-  MintParams (MintParams),
-  PassiveBrdgSidechainParams (..),
+  MintParams (MintParams, amount, index, merkleProof, recipient, sidechainEpoch),
   RegisterParams (RegisterParams),
+  SaveRootParams (SaveRootParams, committeePubKeys, merkleRoot, signatures, threshold),
+  SidechainParams,
   SidechainPubKey (SidechainPubKey),
   UpdateCommitteeHashParams (UpdateCommitteeHashParams),
   convertSCParams,
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
+  MerkleTreeEntry (MerkleTreeEntry, mteAmount, mteHash, mteIndex, mteRecipient, mteSidechainEpoch),
  )
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import Prelude
+import Prelude qualified
 
 -- | The initial committee for intializing the side chain
 initCmtPrvKeys :: [Wallet.XPrv]
@@ -63,15 +77,21 @@ initCmtPubKeys :: [PubKey]
 initCmtPubKeys = map Crypto.toPublicKey initCmtPrvKeys
 
 -- | 'getSidechainParams' is a helper function to create the 'SidechainParams'
-getSidechainParams :: Contract () TrustlessSidechainSchema Text PassiveBrdgSidechainParams
-getSidechainParams =
+getSidechainParams :: Contract () TrustlessSidechainSchema Text SidechainParams
+getSidechainParams = getSidechainParamsWith initCmtPrvKeys
+
+{- | 'getSidechainParamsWith' is a helper function to create the
+ 'SidechainParams' which allows the specification of the initial committee
+-}
+getSidechainParamsWith :: [Wallet.XPrv] -> Contract () TrustlessSidechainSchema Text SidechainParams
+getSidechainParamsWith cmt =
   InitSidechain.ownTxOutRef >>= \oref ->
     InitSidechain.initSidechain $
       InitSidechainParams
         { initChainId = 0
         , initGenesisHash = ""
         , initUtxo = oref
-        , initCommittee = initCmtPubKeys
+        , initCommittee = map Crypto.toPublicKey cmt
         , initMint = Nothing
         }
 
@@ -80,6 +100,58 @@ spoPrivKey = Crypto.generateFromSeed' $ ByteString.replicate 32 123
 
 spoPubKey :: PubKey
 spoPubKey = Crypto.toPublicKey spoPrivKey
+
+{- | 'saveMerkleRootEntries' is a thin wrapper around
+ 'MPTRootTokenMintingPolicy.saveRoot' to reduce boilerplate when making tests
+ regarding the FUELMintingPolicy.
+
+ To use this, you need to apply the generate the committee first. The
+ committee can be generated by the following code:
+ > cmtPrvKeys = map (Crypto.generateFromSeed' . ByteString.replicate 32) [1 .. cmtLen]
+ > cmtPubKeys = map Crypto.toPublicKey cmtPrvKeys
+ > cmt = zip cmtPrvKeys cmtPubKeys
+ or as a one liner
+ > cmt =  map (id Prelude.&&& Crypto.toPublicKey Prelude.<<< Crypto.generateFromSeed' Prelude.<<< ByteString.replicate 32) [1 .. cmtLen]
+-}
+saveMerkleRootEntries :: SidechainParams -> [(Wallet.XPrv, PubKey)] -> [MerkleTreeEntry] -> Contract () TrustlessSidechainSchema Text [MintParams]
+saveMerkleRootEntries sc cmt entries = do
+  -- Create a committee:
+  let cmtPrvKeys :: [Wallet.XPrv]
+      cmtPubKeys :: [PubKey]
+
+      (cmtPrvKeys, cmtPubKeys) = Prelude.unzip cmt
+
+      cmtLen = Prelude.length cmt
+
+      mt = MerkleTree.fromList $ map MPTRootTokenMintingPolicy.serialiseMte entries
+      rh = unRootHash $ MerkleTree.rootHash mt
+
+      mintparams =
+        map
+          ( \mte ->
+              MintParams
+                { amount = mteAmount mte
+                , recipient = PaymentPubKeyHash $ PubKeyHash $ mteRecipient mte
+                , merkleProof = Maybe.fromJust $ MerkleTree.lookupMp (MPTRootTokenMintingPolicy.serialiseMte mte) mt
+                , sidechainParams = sc
+                , index = mteIndex mte
+                , sidechainEpoch = mteSidechainEpoch mte
+                , entryHash = mteHash mte
+                }
+          )
+          entries
+
+  MPTRootTokenMintingPolicy.saveRoot
+    SaveRootParams
+      { sidechainParams = sc
+      , merkleRoot = rh
+      , signatures = sort $ map (getSignature . Crypto.sign' rh) cmtPrvKeys
+      , threshold = (2 * Prelude.fromIntegral cmtLen - 1) `Prelude.div` 3 + 1
+      , committeePubKeys = cmtPubKeys
+      }
+    >>= awaitTxConfirmed . getCardanoTxId
+
+  return mintparams
 
 sidechainPrivKey :: SECP.SecKey
 sidechainPrivKey = fromMaybe (error undefined) $ SECP.secKey $ ByteString.replicate 32 123
@@ -99,13 +171,13 @@ test =
     "Plutip integration test"
     [ assertExecution
         "InitSidechain.initSidechain"
-        (initAda [2, 2])
+        (initAda [6, 6])
         ( withContract $ const getSidechainParams
         )
         [shouldSucceed]
     , assertExecution
         "CommitteeCandidateValidator.register"
-        (initAda [100] <> initAda [1])
+        (initAda [100] Prelude.<> initAda [1])
         ( withContract $
             const
               ( do
@@ -174,85 +246,380 @@ test =
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.burn"
-        (initAda [2, 2, 2]) -- mint, fee, collateral
+        (initAda [100, 100, 100, 100])
         ( withContract $
             const $ do
-              sidechainParams <- getSidechainParams
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+
               h <- ownPaymentPubKeyHash
-              t <- FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
-              awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 2
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+                  mte1 =
+                    MerkleTreeEntry
+                      { mteIndex = 1
+                      , mteAmount = 2
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001"
+                      }
+
+                  mte2 =
+                    MerkleTreeEntry
+                      { mteIndex = 2
+                      , mteAmount = 2
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\001\006"
+                      }
+              mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1, mte2]
+
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+
+              FUELMintingPolicy.burn
+                BurnParams {amount = -4, recipient = "", sidechainParams}
+                >>= awaitTxConfirmed . getCardanoTxId
         )
         [shouldSucceed]
     , assertExecution
-        "FUELMintingPolicy.burnOneshotMint"
-        (initAda [100, 100, 100]) -- mint, fee, collateral
+        -- we test if we can mint a large amount of transactions on the side chain.
+        "FUELMintingPolicy.mint large amounts of tokens"
+        (initAda [100, 100, 100])
         ( withContract $
             const $ do
-              sidechainParams <- getSidechainParams
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+
               h <- ownPaymentPubKeyHash
-              utxo <- CommitteeCandidateValidator.getInputUtxo
-              utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
-              let scpOS = sidechainParams {genesisMint = Just utxo}
-              t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
-              awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" scpOS
+              -- Create the merkle tree / proof
+              let mtes = List.take (2 Prelude.^ (16 :: Prelude.Int) :: Prelude.Int) $ List.iterate (\mte -> mte {mteIndex = mteIndex mte + 1, mteHash = Builtins.blake2b_256 (mteHash mte)}) mte0
+                  -- 2^16 = 65536
+                  mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 2
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+              mintparams <- saveMerkleRootEntries sidechainParams cmt mtes
+
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) [List.head mintparams]
         )
         [shouldSucceed]
     , assertExecution
-        "FUELMintingPolicy.burnOneshot double Mint"
-        (initAda [100, 100, 100]) -- mint, fee, collateral
+        "FUELMintingPolicy oneshot minting policy"
+        -- making this test case work is a bit convuluated because sometimes
+        -- the constraint solver for building the transaction would spend the
+        -- distinguished utxo when saving the root parameters.
+        --
+        -- Here, we just test if we can mint stuff with the one shot minting
+        -- policy
+        (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
         ( do
-            withContract $
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+            -- To make the one shot minting policy work properly, we first make
+            -- the 0th wallet give us a distinguished utxo (so we can be sure that this won't
+            -- be spent later)
+            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
+
+            -- Then, we let the second wallet initialize the sidechain... and
+            -- do the merkle root signing..
+            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ _ <- withContractAs 1 $
+              \[pkh0] ->
+                InitSidechain.ownTxOutRef >>= \oref -> do
+                  sidechainParams <-
+                    InitSidechain.initSidechain $
+                      InitSidechainParams
+                        { initChainId = 1
+                        , initGenesisHash = ""
+                        , initUtxo = oref
+                        , initCommittee = map snd cmt
+                        , initMint = Just utxo
+                        }
+
+                  -- Create the merkle tree / proof
+                  let mte0 =
+                        MerkleTreeEntry
+                          { mteIndex = 0
+                          , mteAmount = 2
+                          , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh0
+                          , mteSidechainEpoch = 1
+                          , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                          }
+
+                  mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0]
+
+                  return (sidechainParams, mintparams)
+
+            -- Then we let the first wallet (which has the distinguished
+            -- genesisMint utxo) claim the tokens.
+            withContractAs 0 $
               const $ do
-                sidechainParams <- getSidechainParams
                 h <- ownPaymentPubKeyHash
-                utxo <- CommitteeCandidateValidator.getInputUtxo
-                utxos <- utxosAt (Address.pubKeyHashAddress h Nothing)
-                let scpOS = sidechainParams {genesisMint = Just utxo}
-                t <- FUELMintingPolicy.mintWithUtxo (Just utxos) $ MintParams 1 h scpOS
-                awaitTxConfirmed $ getCardanoTxId t
-                t2 <- FUELMintingPolicy.mint $ MintParams 1 h scpOS
-                awaitTxConfirmed $ getCardanoTxId t2
+
+                utxos <- Contract.utxosAt (Address.pubKeyHashAddress h Nothing)
+                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxos utxos) mintparams
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy oneshot double Mint"
+        -- Here, we test the one shot minting policy if it should fail when we
+        -- attempt to double mint
+        --
+        -- Again, there's the same awkwardness in the previous test case for
+        -- working with the one shot minting policy...
+        (initAda [100, 100, 100] Prelude.<> initAda [200, 200, 200]) -- mint, fee, collateral
+        ( do
+            -- [beginning of duplciated code from the previous case]
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+            -- To make the one shot minting policy work properly, we first make
+            -- the 0th wallet give us a distinguished utxo (so we can be sure that this won't
+            -- be spent later)
+            PlutipInternal.ExecutionResult (Right (utxo, _)) _ _ _ <- withContractAs 0 $ const $ do CommitteeCandidateValidator.getInputUtxo
+
+            -- Then, we let the second wallet initialize the sidechain... and
+            -- do the merkle root signing..
+            PlutipInternal.ExecutionResult (Right ((_sidechainParams, mintparams), _)) _ _ _ <- withContractAs 1 $
+              \[pkh0] ->
+                InitSidechain.ownTxOutRef >>= \oref -> do
+                  sidechainParams <-
+                    InitSidechain.initSidechain $
+                      InitSidechainParams
+                        { initChainId = 1
+                        , initGenesisHash = ""
+                        , initUtxo = oref
+                        , initCommittee = map snd cmt
+                        , initMint = Just utxo
+                        }
+
+                  -- Create the merkle tree / proof
+                  let mte0 =
+                        MerkleTreeEntry
+                          { mteIndex = 0
+                          , mteAmount = 2
+                          , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh0
+                          , mteSidechainEpoch = 1
+                          , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                          }
+
+                  mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0]
+
+                  return (sidechainParams, mintparams)
+
+            -- Then we let the first wallet (which has the distinguished
+            -- genesisMint utxo) claim the tokens.
+            withContractAs 0 $
+              const $ do
+                h <- ownPaymentPubKeyHash
+
+                utxos <- Contract.utxosAt (Address.pubKeyHashAddress h Nothing)
+                -- [end of duplciated code from the previous case]
+                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxos utxos) mintparams
+                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mintWithUtxos utxos) mintparams
+                -- note the only thing that is different is that we try to mint twice.
         )
         [shouldFail]
     , assertExecution
         "FUELMintingPolicy.mint"
-        (initAda [2, 2]) -- mint, fee
+        -- A basic test which 1) creates the committee, 2) saves a merkle root
+        -- with 2 transactions, 3) mints those two transactions that were just
+        -- saved.
+        (initAda [100, 100, 100, 100]) -- mint, fee
+        ( withContract $
+            const $ do
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+              h <- ownPaymentPubKeyHash
+
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+                  mte1 =
+                    MerkleTreeEntry
+                      { mteIndex = 1
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001"
+                      }
+              mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0, mte1]
+              -- Note that redeeming the @mte1@ is actually the worst case
+              -- for the distributed set since that will have the most data.
+
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+        )
+        [shouldSucceed]
+    , assertExecution
+        "FUELMintingPolicy.mint double mint"
+        (initAda [10, 10, 15]) -- mint, fee
         ( withContract $
             const $ do
               sidechainParams <- getSidechainParams
               h <- ownPaymentPubKeyHash
-              FUELMintingPolicy.mint $ MintParams 1 h sidechainParams
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+              mintparams <- saveMerkleRootEntries sidechainParams cmt [mte0]
+
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+              traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
         )
-        [shouldSucceed]
+        [shouldFail]
+    , assertExecution
+        "FUELMintingPolicy.mint with wrong committee"
+        (initAda [10, 10, 10]) -- mint, fee
+        ( withContract $
+            const $ do
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) $ map (const 0) [1 :: Integer .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+              h <- ownPaymentPubKeyHash
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+                  mte1 =
+                    MerkleTreeEntry
+                      { mteIndex = 1
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash h
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+
+              let cmt' :: [(Wallet.XPrv, PubKey)]
+                  cmt' = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              -- this should fail because the curent committee is @cmt@, but we are boldly asserting that the committee should be @cmt'@
+              saveMerkleRootEntries sidechainParams cmt' [mte0, mte1]
+        )
+        [shouldFail]
     , assertExecution
         "FUELMintingPolicy.mint FUEL to other"
-        (initAda [2, 2, 2] <> initAda [1]) -- mint, fee, ??? <> collateral
+        (initAda [100, 100, 101] Prelude.<> initAda [100, 100, 102]) -- mint, fee, ??? <> collateral
         ( do
-            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ _ <- withContract $ const getSidechainParams
-            void $
-              withContract $ \[pkh1] -> do
-                FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
+            -- Create a committee:
+            let cmt :: [(Wallet.XPrv, PubKey)]
+                cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+            PlutipInternal.ExecutionResult (Right (sidechainParams, _)) _ _ _ <- withContract $ const $ getSidechainParamsWith $ map fst cmt
+
+            -- let the first wallet @[100,100,101]@ save the root entries, which mints
+            -- to someone the second wallet @[100,100,102]@
+            PlutipInternal.ExecutionResult (Right (mintparams, _)) _ _ _ <- withContract $ \[pkh1] -> do
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh1
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+              saveMerkleRootEntries sidechainParams cmt [mte0]
+
+            -- Then, let the second wallet @[100,100,102]@ claim the mint; and burn it immediately
             withContractAs 1 $
-              const $
-                FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+              const $ do
+                traverse_ (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+                FUELMintingPolicy.burn
+                  BurnParams {amount = -1, recipient = "", sidechainParams}
+                  >>= awaitTxConfirmed . getCardanoTxId
         )
         [shouldSucceed]
     , assertExecution
         "FUELMintingPolicy.burn unowned FUEL"
-        (initAda [2, 2, 2] <> initAda [])
-        ( withContract $ \[pkh1] ->
-            do
-              sidechainParams <- getSidechainParams
-              t <- FUELMintingPolicy.mint $ MintParams 1 pkh1 sidechainParams
-              awaitTxConfirmed $ getCardanoTxId t
-              FUELMintingPolicy.burn $ BurnParams (-1) "" sidechainParams
+        (initAda [100, 100, 101] Prelude.<> initAda [100, 100, 102])
+        ( do
+            -- let the first wallet @[100,100,101]@ save the root entries, which mints
+            -- to someone the second wallet @[100,100,102]@
+            PlutipInternal.ExecutionResult (Right ((sidechainParams, mintparams), _)) _ _ _ <- withContract $ \[pkh1] -> do
+              -- Create a committee:
+              let cmt :: [(Wallet.XPrv, PubKey)]
+                  cmt = map (id Arrow.&&& Crypto.toPublicKey Arrow.<<< Crypto.generateFromSeed' Arrow.<<< ByteString.replicate 32) [1 .. 10]
+
+              sidechainParams <- getSidechainParamsWith $ map fst cmt
+
+              -- Create the merkle tree / proof
+              let mte0 =
+                    MerkleTreeEntry
+                      { mteIndex = 0
+                      , mteAmount = 1
+                      , mteRecipient = getPubKeyHash $ unPaymentPubKeyHash pkh1
+                      , mteSidechainEpoch = 1
+                      , mteHash = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000"
+                      }
+              fmap (sidechainParams,) $ saveMerkleRootEntries sidechainParams cmt [mte0]
+
+            -- Then, let the second wallet @[100,100,102]@ claim the mint
+            void $
+              withContractAs 1 $
+                const $ do
+                  traverse (awaitTxConfirmed . getCardanoTxId Monad.<=< FUELMintingPolicy.mint) mintparams
+
+            -- Then, let the first wallet try to burn the second wallet's FUEL
+            withContract $
+              -- N.B., if it's more clear, this is the same as:
+              -- > withContractAs 0 $
+              const $ do
+                FUELMintingPolicy.burn
+                  BurnParams {amount = -1, recipient = "", sidechainParams}
+                  >>= awaitTxConfirmed . getCardanoTxId
         )
         [shouldFail]
     , assertExecution
-        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet"
-        (initAda [3, 2])
+        "UpdateCommitteeHash.updateCommitteeHash on same wallet"
+        (initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -286,8 +653,8 @@ test =
         )
         [shouldSucceed]
     , assertExecution
-        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet"
-        (initAda [3, 2] <> initAda [3, 2])
+        "UpdateCommitteeHash.updateCommitteeHash on different wallet"
+        (initAda [5, 5] Prelude.<> initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -321,8 +688,8 @@ test =
         )
         [shouldSucceed]
     , assertExecution
-        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on same wallet with the wrong committee"
-        (initAda [3, 2])
+        "UpdateCommitteeHash.updateCommitteeHash on same wallet with the wrong committee"
+        (initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]
@@ -355,8 +722,8 @@ test =
         )
         [shouldFail]
     , assertExecution
-        "UpdateCommitteeHash.genesisCommitteeHash followed by UpdateCommitteeHash.updateCommitteeHash on different wallet with the wrong committee"
-        (initAda [3, 2] <> initAda [3, 2])
+        "UpdateCommitteeHash.updateCommitteeHash on different wallet with the wrong committee"
+        (initAda [5, 5] Prelude.<> initAda [5, 5])
         ( do
             -- Creating the committees:
             let cmtPrvKeys :: [Wallet.XPrv]

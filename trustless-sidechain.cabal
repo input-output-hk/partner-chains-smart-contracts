@@ -31,10 +31,10 @@ flag defer-plugin-errors
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-    -fobject-code -fno-ignore-interface-pragmas
-    -fno-omit-interface-pragmas -fplugin=RecordDotPreprocessor
-    -fplugin-opt PlutusTx.Plugin:defer-errors
+    -Wincomplete-uni-patterns -Wredundant-constraints -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -fplugin=RecordDotPreprocessor -fplugin-opt
+    PlutusTx.Plugin:defer-errors -Werror
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -88,6 +88,7 @@ library
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
+    TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator
