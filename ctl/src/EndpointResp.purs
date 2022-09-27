@@ -20,7 +20,7 @@ data EndpointResp
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
   | GetAddrsResp { addresses ∷ Array (Tuple String String) }
 
--- | Codec of the endpoint response data. Only includes an encoder, we don't need to decoder
+-- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
 endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
   where
