@@ -47,12 +47,12 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Options)
+import Options.Types (Config, Endpoint(..), Environment, Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
 -- | Argument option parser for ctl-main
-options ∷ Boolean → Maybe Config → ParserInfo Options
+options ∷ Environment → Maybe Config → ParserInfo Options
 options isTTY maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
@@ -200,7 +200,7 @@ options isTTY maybeConfig = info (helper <*> optSpec)
     ]
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
-getOptions ∷ Boolean → Effect Options
+getOptions ∷ Environment → Effect Options
 getOptions isTTY = do
   config ← readAndParseJsonFrom "./config.json"
   execParser (options isTTY config)
@@ -214,8 +214,8 @@ getOptions isTTY = do
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
 -- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
-toConfigParams ∷ Boolean → Maybe Config → FilePath → ConfigParams ()
-toConfigParams isTTY maybeConfig skey = testnetConfig
+toConfigParams ∷ Environment → Maybe Config → FilePath → ConfigParams ()
+toConfigParams { isTTY } maybeConfig skey = testnetConfig
   { logLevel = Info
   , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)

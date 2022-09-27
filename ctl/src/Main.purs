@@ -31,7 +31,7 @@ import Options.Types (Endpoint(..))
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
-  opts ← getOptions stdoutIsTTY
+  opts ← getOptions { isTTY: stdoutIsTTY }
 
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
