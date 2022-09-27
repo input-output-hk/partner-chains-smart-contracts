@@ -32,11 +32,11 @@ testScenario = do
       , genesisMint: Just genesisMint
       , genesisUtxo: toTxIn "aabbcc" 0
       }
-  runFuelMP scParams
+  void $ runFuelMP scParams
     ( passiveBridgeMintParams scParams
         { amount: BigInt.fromInt 5, recipient: pk }
     )
-  runFuelMP scParams
+  void $ runFuelMP scParams
     (Burn { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" })
-  runFuelMP scParams
+  void $ runFuelMP scParams
     (Burn { amount: BigInt.fromInt 3, recipient: hexToByteArrayUnsafe "aabbcc" })

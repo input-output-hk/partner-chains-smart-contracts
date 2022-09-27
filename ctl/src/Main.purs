@@ -11,7 +11,6 @@ import Contract.Address
   , validatorHashEnterpriseAddress
   )
 import Contract.Config (Message, testnetConfig)
-import Contract.Log (logInfo')
 import Contract.Monad
   ( ConfigParams
   , Contract
@@ -23,6 +22,7 @@ import Contract.Monad
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Log.Formatter.JSON (jsonFormatter)
+import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
   , passiveBridgeMintParams
@@ -31,15 +31,17 @@ import FUELMintingPolicy
 import Helpers (logWithLevel)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (appendTextFile)
+import Node.Process (stdoutIsTTY)
 import Options (getOptions)
 import Options.Types (Endpoint(..), Options)
 
 -- | Get the CTL configuration parameters based on CLI arguments
-toConfig ∷ Options → ConfigParams ()
-toConfig { skey } = testnetConfig
+toConfig ∷ Boolean → Options → ConfigParams ()
+toConfig isTTY { skey } = testnetConfig
   { logLevel = Info
   , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
+  , suppressLogs = not isTTY
   }
 
 -- | Store all log levels in a file
@@ -53,15 +55,21 @@ main ∷ Effect Unit
 main = do
   opts ← getOptions
 
-  launchAff_ $ runContract (toConfig opts) do
+  launchAff_ $ runContract (toConfig stdoutIsTTY opts) do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
-    case opts.endpoint of
+    endpointResp ← case opts.endpoint of
 
-      MintAct { amount } → runFuelMP opts.scParams
-        (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
+      MintAct { amount } →
+        runFuelMP opts.scParams
+          (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> MintActResp
 
-      BurnAct { amount, recipient } → runFuelMP opts.scParams
-        (Burn { amount, recipient })
+      BurnAct { amount, recipient } →
+        runFuelMP opts.scParams
+          (Burn { amount, recipient }) <#> unwrap >>> { transactionId: _ } >>>
+          BurnActResp
 
       CommitteeCandidateReg
         { spoPubKey
@@ -69,34 +77,61 @@ main = do
         , spoSig
         , sidechainSig
         , inputUtxo
-        } → CommitteCandidateValidator.register $
-        CommitteCandidateValidator.RegisterParams
-          { sidechainParams: opts.scParams
-          , spoPubKey
-          , sidechainPubKey
-          , spoSig
-          , sidechainSig
-          , inputUtxo
-          }
+        } →
+        let
+          params = CommitteCandidateValidator.RegisterParams
+            { sidechainParams: opts.scParams
+            , spoPubKey
+            , sidechainPubKey
+            , spoSig
+            , sidechainSig
+            , inputUtxo
+            }
+        in
+          CommitteCandidateValidator.register params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> CommitteeCandidateRegResp
 
       CommitteeCandidateDereg { spoPubKey } →
-        CommitteCandidateValidator.deregister $
-          CommitteCandidateValidator.DeregisterParams
+        let
+          params = CommitteCandidateValidator.DeregisterParams
             { sidechainParams: opts.scParams
             , spoPubKey
             }
+        in
+          CommitteCandidateValidator.deregister params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> CommitteeCandidateDeregResp
       GetAddrs → do
-        printAddr "CommitteCandidateValidator"
-          (getCommitteeCandidateValidator opts.scParams)
+        addresses ←
+          getAddrs
+            [ "CommitteCandidateValidator" /\
+                getCommitteeCandidateValidator opts.scParams
+            ]
+        pure $ GetAddrsResp { addresses }
+
+    printEndpointResp endpointResp
 
 -- | Print the bech32 serialised address of a given validator
-printAddr ∷ String → Contract () Validator → Contract () Unit
-printAddr name getValidator = do
+getAddrs ∷
+  Array (Tuple String (Contract () Validator)) →
+  Contract () (Array (Tuple String String))
+getAddrs xs = do
   netId ← getNetworkId
-  v ← getValidator
-  addr ← liftContractM ("Cannot get " <> name <> " address") $
-    validatorHashEnterpriseAddress
-      netId
-      (validatorHash v)
-  serialised ← addressToBech32 addr
-  logInfo' $ name <> " address: " <> serialised
+  traverse (getAddr netId) xs
+
+  where
+  getAddr netId (name /\ getValidator) = do
+    v ← getValidator
+    addr ← liftContractM ("Cannot get " <> name <> " address") $
+      validatorHashEnterpriseAddress
+        netId
+        (validatorHash v)
+    serialised ← addressToBech32 addr
+    pure $ name /\ serialised
+
+printEndpointResp ∷ EndpointResp → Contract () Unit
+printEndpointResp =
+  log <<< stringifyEndpointResp
