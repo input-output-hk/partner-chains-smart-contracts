@@ -37,13 +37,13 @@ See [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runt
 
 You can call the contract endpoints with the following CLI command (you need to add `--` before the arguments):
 ```
-nix run .#ctl-main -- -help
+nix run .#ctl-main -- --help
 ```
 
 Alternatively, you can run `make main.js` inside a `nix develop` shell to bundle CTL into an executable javascript file.
 Then, you can use it the following way (without the `--`):
 ```
-./main.js --help
+node main.js --help
 ```
 
 ### 3.1. Using the CLI commands

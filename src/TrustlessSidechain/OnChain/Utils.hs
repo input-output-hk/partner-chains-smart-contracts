@@ -25,6 +25,13 @@ verifyMulti isOK threshold pubKeys signatures =
           Nothing -> verifyMulti isOK threshold pks signatures -- KO skip pubkey and reuse siglist
           Just sgs -> verifyMulti isOK (threshold - 1) pks sgs -- OK update threshold and siglist
 
+{- | @'verifyMultisig' pubKeys threshold message signatures@ checks if at least
+ @threshold@ of @pubKeys@ have signed @message@ with @signatures@.
+
+ Preconditions
+
+      * @signatures@ should be sorted (otherwise this returns False)
+-}
 {-# INLINEABLE verifyMultisig #-}
 verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
 -- note. we need to test nub of either signatures or pubkeys

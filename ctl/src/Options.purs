@@ -52,8 +52,8 @@ import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
 -- | Argument option parser for ctl-main
-options ∷ Maybe Config → ParserInfo Options
-options maybeConfig = info (helper <*> optSpec)
+options ∷ Boolean → Maybe Config → ParserInfo Options
+options isTTY maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
@@ -87,7 +87,8 @@ options maybeConfig = info (helper <*> optSpec)
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
-    in { scParams, endpoint, configParams: toConfigParams maybeConfig skey }
+    in
+      { scParams, endpoint, configParams: toConfigParams isTTY maybeConfig skey }
   skeySpec =
     option str $ fold
       [ short 'k'
@@ -102,10 +103,10 @@ options maybeConfig = info (helper <*> optSpec)
 
   burnSpec = ado
     amount ← parseAmount
-    recipient ← option byteArray $ fold
+    recipient ← option sidechainAddress $ fold
       [ long "recipient"
-      , metavar "PUBLIC_KEY_HASH"
-      , help "Public key hash of the sidechain recipient"
+      , metavar "ADDRESS"
+      , help "Address of the sidechain recipient"
       ]
     in BurnAct { amount, recipient }
 
@@ -199,10 +200,10 @@ options maybeConfig = info (helper <*> optSpec)
     ]
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
-getOptions ∷ Effect Options
-getOptions = do
+getOptions ∷ Boolean → Effect Options
+getOptions isTTY = do
   config ← readAndParseJsonFrom "./config.json"
-  execParser (options config)
+  execParser (options isTTY config)
 
   where
   readAndParseJsonFrom loc = do
@@ -213,8 +214,8 @@ getOptions = do
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
 -- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
-toConfigParams ∷ Maybe Config → FilePath → ConfigParams ()
-toConfigParams maybeConfig skey = testnetConfig
+toConfigParams ∷ Boolean → Maybe Config → FilePath → ConfigParams ()
+toConfigParams isTTY maybeConfig skey = testnetConfig
   { logLevel = Info
   , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
@@ -224,6 +225,7 @@ toConfigParams maybeConfig skey = testnetConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
   , ctlServerConfig = Just $ fromMaybe defaultServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+  , suppressLogs = not isTTY
   }
 
 -- | Store all log levels in a file
@@ -255,3 +257,15 @@ byteArray = maybeReader $ hexToByteArray
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader $ BigInt.fromString
+
+-- | 'sidechainAddress' parses
+--    >  sidechainAddress
+--    >         -> 0x hexStr
+--    >         -> hexStr
+-- where @hexStr@ is a sequence of hex digits.
+sidechainAddress ∷ ReadM ByteArray
+sidechainAddress = maybeReader $ \str →
+  case split (Pattern "0x") str of
+    [ "", hex ] → hexToByteArray hex
+    [ hex ] → hexToByteArray hex
+    _ → Nothing

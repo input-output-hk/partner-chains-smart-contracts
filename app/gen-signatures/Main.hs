@@ -55,7 +55,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  PassiveBrdgSidechainParams (PassiveBrdgSidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
+  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
   SidechainPubKey (SidechainPubKey),
   convertSCParams,
  )
@@ -99,7 +99,7 @@ main = do
   args <- execParser opts
 
   let scParams =
-        PassiveBrdgSidechainParams
+        SidechainParams
           { chainId = args.chainId
           , genesisHash = args.genesisHash
           , genesisMint = args.genesisMint
