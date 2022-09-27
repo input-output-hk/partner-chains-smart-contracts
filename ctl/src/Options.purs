@@ -316,7 +316,7 @@ transactionInput = maybeReader $ \txIn →
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
-byteArray = maybeReader $ hexToByteArray
+byteArray = maybeReader hexToByteArray
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
