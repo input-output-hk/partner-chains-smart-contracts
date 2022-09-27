@@ -38,7 +38,8 @@ import Contract.TextEnvelope
   , textEnvelopeBytes
   )
 import Contract.Transaction
-  ( TransactionInput
+  ( TransactionHash
+  , TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
@@ -143,7 +144,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
-register ∷ RegisterParams → Contract () Unit
+register ∷ RegisterParams → Contract () TransactionHash
 register
   ( RegisterParams
       { sidechainParams
@@ -189,7 +190,9 @@ register
   awaitTxConfirmed txId
   logInfo' $ msg "Register Tx submitted successfully!"
 
-deregister ∷ DeregisterParams → Contract () Unit
+  pure txId
+
+deregister ∷ DeregisterParams → Contract () TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let msg = report "deregister"
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
@@ -234,6 +237,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   logInfo' $ msg ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' $ msg "Deregister submitted successfully!"
+
+  pure txId
 
 -- small utility function for error reporting.
 report ∷ String → ∀ e. Show e ⇒ e → String

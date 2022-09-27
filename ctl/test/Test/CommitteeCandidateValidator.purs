@@ -38,7 +38,7 @@ runRegister = do
   registrationUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
-  register $ RegisterParams
+  void $ register $ RegisterParams
     { sidechainParams: scParams
     , spoPubKey: hexToByteArrayUnsafe "ababab"
     , sidechainPubKey: hexToByteArrayUnsafe ""
@@ -49,7 +49,7 @@ runRegister = do
 
 runDeregister ∷ Contract () Unit
 runDeregister =
-  deregister $ DeregisterParams
+  void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: hexToByteArrayUnsafe "ababab" }
 
 -- Register then Deregister

@@ -561,14 +561,6 @@ dsConfValidator ds =
 dsConfValidatorHash :: Ds -> ValidatorHash
 dsConfValidatorHash = validatorHash . dsConfValidator
 
-{- | The address for the conf. of the distributed set.
-
- TODO: do this properly by fetching the right package...
--}
-
---dsConfAddress :: Ds -> Address
---dsConfAddress = Scripts.validatorAddress . Scripts.unsafeMkTypedValidator . dsConfValidator
-
 {- | 'mkDsConfPolicy' mints the nft which identifies the validator that stores
  the various minting policies that the distributed set depends on
 -}
