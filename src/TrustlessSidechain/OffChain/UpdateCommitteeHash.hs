@@ -26,7 +26,8 @@ import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
 import TrustlessSidechain.OffChain.Schema (TrustlessSidechainSchema)
 import TrustlessSidechain.OffChain.Types (
-  UpdateCommitteeHashParams,
+  SidechainParams (genesisUtxo),
+  UpdateCommitteeHashParams (sidechainParams),
  )
 import TrustlessSidechain.OffChain.Types qualified as OffChainTypes
 import TrustlessSidechain.OnChain.Types (
@@ -112,8 +113,8 @@ updateCommitteeHash uchp =
             UpdateCommitteeHash.committeeHashAssetClass
               InitCommitteeHashMint
                 { icTxOutRef =
-                    OffChainTypes.genesisUtxo $
-                      OffChainTypes.sidechainParams (uchp :: UpdateCommitteeHashParams)
+                    genesisUtxo $
+                      sidechainParams (uchp :: UpdateCommitteeHashParams)
                 }
         }
 

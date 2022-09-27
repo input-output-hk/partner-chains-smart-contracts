@@ -33,7 +33,9 @@ import DistributedSet
   , DsKeyMint(DsKeyMint)
   )
 import DistributedSet as DistributedSet
+import FUELMintingPolicy (FUELMint(FUELMint))
 import FUELMintingPolicy as FUELMintingPolicy
+import MPTRoot as MPTRoot
 import SidechainParams
   ( InitSidechainParams(InitSidechainParams)
   , SidechainParams(SidechainParams)
@@ -153,9 +155,22 @@ initSidechain (InitSidechainParams isp) = do
           }
 
   -- FUEL minting policy
-  -- TODO: we need to update the fuel minting policy to actually integrate the
-  -- distributed set in. This isn't quite right for now!
-  fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy sc
+  -- TODO the @mptRootTokenMintingPolicy@ needs to be synchronized so that it
+  -- verifies that the current committee has signed the given merkle root.
+  mptRootTokenMintingPolicy ← MPTRoot.getRootTokenMintingPolicy sc
+  mptRootTokenMintingPolicyCurrencySymbol ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+
+  fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
+    ( FUELMint
+        { mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
+        , sidechainParams: sc
+        , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
+        }
+    )
+
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
       "error 'initSidechain': failed to get 'fuelMintingPolicy' CurrencySymbol."

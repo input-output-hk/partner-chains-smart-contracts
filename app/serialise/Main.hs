@@ -1,4 +1,4 @@
--- Functions to serialise plutus scripts into a purescript readable TextEnvelope.texteEnvelope
+-- Functions to serialise plutus scripts into a purescript readable TextEnvelope.textEnvelope
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
 
@@ -10,6 +10,7 @@ import Data.ByteString.Short (toShort)
 import Data.Foldable (traverse_)
 import Ledger (Script, scriptHash)
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
@@ -35,4 +36,9 @@ main =
     , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
     , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
     , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
+    , -- Distributed set validators / minting policies
+      ("InsertValidator", DistributedSet.serialisableInsertValidator)
+    , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)
+    , ("DsConfPolicy", DistributedSet.serialisableDsConfPolicy)
+    , ("DsKeyPolicy", DistributedSet.serialisableDsKeyPolicy)
     ]

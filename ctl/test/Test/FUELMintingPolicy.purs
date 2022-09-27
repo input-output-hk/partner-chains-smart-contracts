@@ -2,17 +2,21 @@ module Test.FUELMintingPolicy (testScenario) where
 
 import Contract.Prelude
 
-import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Address
+  ( getWalletAddress
+  , ownPaymentPubKeyHash
+  )
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (utxosAt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
-import FUELMintingPolicy (FuelParams(..), runFuelMP)
+import FUELMintingPolicy (FuelParams(..), passiveBridgeMintParams, runFuelMP)
 import SidechainParams (SidechainParams(..))
 import Test.Utils (toTxIn)
 
+{-| Testing Passive bridge minting (genesis mint) and burning multiple times -}
 testScenario ∷ Contract () Unit
 testScenario = do
   pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
@@ -28,7 +32,10 @@ testScenario = do
       , genesisMint: Just genesisMint
       , genesisUtxo: toTxIn "aabbcc" 0
       }
-  runFuelMP scParams (Mint { amount: BigInt.fromInt 5, recipient: pk })
+  runFuelMP scParams
+    ( passiveBridgeMintParams scParams
+        { amount: BigInt.fromInt 5, recipient: pk }
+    )
   runFuelMP scParams
     (Burn { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" })
   runFuelMP scParams
