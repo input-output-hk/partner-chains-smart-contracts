@@ -142,10 +142,10 @@ options maybeConfig = info (helper <*> optSpec)
 
   burnSpec = ado
     amount ← parseAmount
-    recipient ← option byteArray $ fold
+    recipient ← option sidechainAddress $ fold
       [ long "recipient"
-      , metavar "PUBLIC_KEY_HASH"
-      , help "Public key hash of the sidechain recipient"
+      , metavar "ADDRESS"
+      , help "Address of the sidechain recipient"
       ]
     in BurnAct { amount, recipient }
 
@@ -226,3 +226,15 @@ byteArray = maybeReader hexToByteArray
 
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
+
+-- | 'sidechainAddress' parses
+--    >  sidechainAddress 
+--    >         -> 0x hexStr
+--    >         -> hexStr
+-- where @hexStr@ is a sequence of hex digits.
+sidechainAddress ∷ ReadM ByteArray
+sidechainAddress = maybeReader $ \str →
+  case split (Pattern "0x") str of
+    [ "", hex ] → hexToByteArray hex
+    [ hex ] → hexToByteArray hex
+    _ → Nothing
