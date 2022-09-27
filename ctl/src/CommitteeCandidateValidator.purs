@@ -187,7 +187,7 @@ register
   txId ← submit bsTx
   logInfo' $ msg ("Submitted committeeCandidate register Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' $ msg "register Tx submitted successfully!"
+  logInfo' $ msg "Register Tx submitted successfully!"
 
 deregister ∷ DeregisterParams → Contract () Unit
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
@@ -200,8 +200,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let valHash = validatorHash validator
   valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
     (validatorHashEnterpriseAddress netId valHash)
-  ownUtxos ← liftedM (msg "cannot get UTxOs") (utxosAt ownAddr)
-  valUtxos ← liftedM (msg "cannot get val UTxOs") (utxosAt valAddr)
+  ownUtxos ← liftedM (msg "Cannot get UTxOs") (utxosAt ownAddr)
+  valUtxos ← liftedM (msg "Cannot get val UTxOs") (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
 
   ourDatums ← liftAff $ flip parTraverse valUtxos'
@@ -233,7 +233,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   txId ← submit bsTx
   logInfo' $ msg ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' $ msg "deregister submitted successfully!"
+  logInfo' $ msg "Deregister submitted successfully!"
 
 -- small utility function for error reporting.
 report ∷ String → ∀ e. Show e ⇒ e → String
