@@ -171,6 +171,8 @@ Minting policy verifies the following:
 - recipient, amount, index and sidechainEpoch combined with merkleProof match against merkleRootHash
 - the merkleRoot where the transaction is in, and it's position in the list hashed `blake2(merkleRoot, txIdx)` of the transaction is NOT included in the distributed set[^1] (the actual hash might be subject to change)
 - a new entry with the value of `blake2(tx.recipient, tx.amount, merkleRoot)` is created in the distributed set
+- the transaction is signed by the recipient
+- the amount matches the actual tx body contents
 
 ![SC to MC](SC-MC.svg)
 
@@ -180,7 +182,7 @@ Minting policy verifies the following:
 data FUELRedeemer
   = MainToSide ByteString ByteString
   -- ^ Recipient address on the sidechain and the signature of its owner (see 2.)
-  | SideToMain MerkleProof
+  | SideToMain MerkleTreeEntry MerkleProof
 ```
 
 ### 4. Register committee candidate
