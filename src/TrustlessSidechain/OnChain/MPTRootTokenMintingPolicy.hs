@@ -3,28 +3,31 @@
 
 module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 
-import Ledger (
-  MintingPolicy,
-  ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint),
-  TxOut (txOutDatumHash, txOutValue),
- )
-import Ledger qualified
-import Ledger.Contexts qualified as Contexts
-import Ledger.Typed.Scripts qualified as Script
-import Plutus.V1.Ledger.Bytes (getLedgerBytes)
-import Plutus.V1.Ledger.Scripts (Datum (getDatum))
-import Plutus.V1.Ledger.Value (CurrencySymbol)
-import Plutus.V1.Ledger.Value qualified as Value
-import PlutusTx qualified
-import PlutusTx.IsData.Class qualified as Class
 import PlutusTx.Prelude
+
+import Ledger qualified
+import Ledger.Value qualified as Value
+import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
+import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
+import Plutus.V2.Ledger.Api (
+  CurrencySymbol,
+  Datum (getDatum),
+  LedgerBytes (getLedgerBytes),
+  OutputDatum (OutputDatum),
+  Script,
+  ScriptContext (..),
+  TxInInfo (txInInfoResolved),
+  TxInfo (..),
+  TxOut (txOutDatum, txOutValue),
+ )
+import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx qualified
+import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo))
-import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteHash), SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, merkleRoot, signatures, threshold))
-import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef), UpdateCommitteeHashDatum (committeeHash))
+import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteHash), SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
+import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.OnChain.Utils qualified as Utils
+import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
 
 {- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor.
 
@@ -56,6 +59,7 @@ data SignedMerkleRootMint = SignedMerkleRootMint
   }
 
 PlutusTx.makeLift ''SignedMerkleRootMint
+PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
 
 {- | 'signedMerkleRootMint' is a smart constructor to create the 'SignedMerkleRootMint'.
 
@@ -111,7 +115,6 @@ mkMintingPolicy
       , traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
       ]
     where
-      -- Aliases:
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
       ownTokenName = Value.TokenName merkleRoot
@@ -121,19 +124,20 @@ mkMintingPolicy
         let go :: [TxInInfo] -> UpdateCommitteeHashDatum
             go (t : ts)
               | o <- txInInfoResolved t
-                , v <- txOutValue o
                 , amt <-
                     Value.valueOf
-                      v
+                      (txOutValue o)
                       (smrmUpdateCommitteeHashCurrencySymbol smrm)
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
-                , Just dh <- txOutDatumHash o
-                , Just d <- Contexts.findDatum dh info =
-                Class.unsafeFromBuiltinData $ getDatum d
+                , -- TODO can we use inline datums? not sure how to datumHash -> datum in v2
+                  -- updateCommitteeHashDatum contains just a hash
+                  OutputDatum d <- txOutDatum o -- Just dh <- txOutDatumHash o , Just d <- findDatum dh info
+                =
+                IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
             go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo found"
-         in go $ txInfoInputs info
+         in go (txInfoInputs info)
 
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
@@ -143,8 +147,7 @@ mkMintingPolicy
       p2 = Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
-        [(_sym, tn, amt)] ->
-          amt == 1 && tn == ownTokenName
+        [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName
         -- There's no need to verify the following condition
         -- > sym == Contexts.ownCurrencySymbol ctx
         -- since we know that the the minting script is run in the case we are
@@ -156,12 +159,13 @@ mkMintingPolicy
 mintingPolicy :: SignedMerkleRootMint -> MintingPolicy
 mintingPolicy param =
   Ledger.mkMintingPolicyScript
-    ($$(PlutusTx.compile [||wrap . mkMintingPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
+    ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
   where
-    wrap = Script.wrapMintingPolicy
+    wrap = ScriptUtils.mkUntypedMintingPolicy
 
-{- | 'mintingPolicyCurrencySymbol' is the currency symbol of the minting policy
- for the signed merkle root tokens
--}
-mintingPolicyCurrencySymbol :: SignedMerkleRootMint -> CurrencySymbol
-mintingPolicyCurrencySymbol = Contexts.scriptCurrencySymbol . mintingPolicy
+-- CTL hack
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . IsData.unsafeFromBuiltinData
+
+serialisableMintingPolicy :: Script
+serialisableMintingPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

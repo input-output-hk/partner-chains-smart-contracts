@@ -46,9 +46,12 @@ module TrustlessSidechain.MerkleTree (
   -- * Building the Merkle Tree
   fromList,
   fromNonEmpty,
+  rootHashFromList,
 
   -- * Creating and querying Merkle proofs / the root hash
   lookupMp,
+  lookupsMp,
+  lookupsMpFromList,
   memberMp,
   rootMp,
   rootHash,
@@ -59,13 +62,24 @@ module TrustlessSidechain.MerkleTree (
   hash,
   hashLeaf,
   hashInternalNode,
+  Side (L, R),
+  Up (Up, siblingSide, sibling),
+
+  -- * Internal alternative pretty printers
+  pureScriptShowRootHash,
+  pureScriptShowUp,
+  pureScriptShowMerkleProof,
+  pureScriptShowMerkleTree,
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.ByteString.Base16 qualified as Base16
+import Data.List qualified as List
 import PlutusPrelude (NonEmpty, (<|>))
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.Prelude
 import Schema qualified
 import Prelude qualified
@@ -79,6 +93,18 @@ import Prelude qualified
 newtype RootHash = RootHash {unRootHash :: BuiltinByteString}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
+-- | 'pureScriptShowRootHash' shows the RootHash in a purescript friendly way.
+pureScriptShowRootHash :: RootHash -> Prelude.String
+pureScriptShowRootHash RootHash {unRootHash = rh} =
+  List.unwords
+    [ "RootHash"
+    , "("
+    , "hexToByteArrayUnsafe"
+    , Prelude.show $ case rh of
+        BuiltinByteString bs -> Base16.encode bs
+    , ")"
+    ]
 
 makeIsDataIndexed ''RootHash [('RootHash, 0)]
 deriveJSON defaultOptions ''RootHash
@@ -128,6 +154,26 @@ data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
 
+-- | 'pureScriptShowUp' shows Up in a purescript friendly way.
+pureScriptShowUp :: Up -> Prelude.String
+pureScriptShowUp (Up ss s) =
+  List.unwords
+    [ "("
+    , "Up"
+    , "{"
+    , "siblingSide"
+    , ":"
+    , Prelude.show ss
+    , ","
+    , "sibling"
+    , ":"
+    , "("
+    , pureScriptShowRootHash s
+    , ")"
+    , "}"
+    , ")"
+    ]
+
 makeIsDataIndexed ''Up [('Up, 0)]
 deriveJSON defaultOptions ''Up
 
@@ -139,6 +185,18 @@ deriveJSON defaultOptions ''Up
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+
+-- | 'pureScriptShowMerkleProof' shows the MerkleProof in a purescript friendly way.
+pureScriptShowMerkleProof :: MerkleProof -> Prelude.String
+pureScriptShowMerkleProof (MerkleProof proof) =
+  List.unwords
+    [ "("
+    , "MerkleProof"
+    , "["
+    , List.intercalate "," (map pureScriptShowUp proof)
+    , "]"
+    , ")"
+    ]
 
 makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
@@ -176,11 +234,35 @@ mergeRootHashes l r = hashInternalNode $ (Builtins.appendByteString `PlutusPrelu
  verifying 'MerkleProof'.
 -}
 data MerkleTree
-  = Bin !RootHash MerkleTree MerkleTree
-  | Tip !RootHash
+  = Bin RootHash MerkleTree MerkleTree
+  | Tip RootHash
   deriving (Prelude.Show, Prelude.Eq)
 
 makeIsDataIndexed ''MerkleTree [('Bin, 0), ('Tip, 1)]
+
+-- | 'pureScriptShowMerkleTree' shows the MerkleTree in a purescript friendly way.
+pureScriptShowMerkleTree :: MerkleTree -> Prelude.String
+pureScriptShowMerkleTree = \case
+  Bin rh l r ->
+    List.unwords
+      [ "Bin"
+      , "("
+      , pureScriptShowRootHash rh
+      , ")"
+      , "("
+      , pureScriptShowMerkleTree l
+      , ")"
+      , "("
+      , pureScriptShowMerkleTree r
+      , ")"
+      ]
+  Tip rh ->
+    List.unwords
+      [ "Tip"
+      , "("
+      , pureScriptShowRootHash rh
+      , ")"
+      ]
 
 -- Note [Merkle Tree Invariants]:
 --      1. @Bin h l r@ satisfies @h = rootHash l `mergeRootHashes` rootHash r@
@@ -199,8 +281,16 @@ rootHash = \case
   Bin h _ _ -> h
   Tip h -> h
 
-{- | /O(n log n)/. Throws an error when the list is empty, but otherwise executes
- 'fromNonEmpty'.
+{- | @'rootHashFromList' = 'rootHash' . 'fromList'@ i.e., 'rootHashFromList'
+ computes the merkle tree and returns the root. As in 'fromList', this throws
+ an exception in the case the input list is empty.
+-}
+{-# INLINEABLE rootHashFromList #-}
+rootHashFromList :: [BuiltinByteString] -> RootHash
+rootHashFromList = rootHash . fromList
+
+{- | /O(n)/.
+ Throws an error when the list is empty, but otherwise is 'fromNonEmpty'.
 
  > 'fromList' [] == error
  > fromList ["a", "b"] == fromNonEmpty ["a", "b"]
@@ -210,18 +300,39 @@ fromList :: [BuiltinByteString] -> MerkleTree
 fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
 fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
   where
+    -- Note [Number of Nodes in the MerkleTree / Run Time]
+    -- The number of nodes (Bin / Tip constructors) is in /O(n)/ where
+    -- /n/ is the size of the original list. Observe that we can count the number
+    -- of nodes created via the recurrence
+    -- > T(n) = T(n/2) + n
+    -- and a straightforward application of case 3 of the master theorem gives
+    -- us that this is /O(n)/ as it's easy to choose /\epsilon > 0/ s.t.
+    -- /n \in \Omega(n^(\log_2 1 + \epsilon)) = \Omega(n^(\epsilon))/.
+    -- The run time is analyzed similarly.
+    --
+    -- Note [Tail Recursive mergePairs]
+    -- Previously, the recursive step of @mergePairs :: [MerkleTree] ->
+    -- [MerkleTree]@ was written as
+    -- > mergePairs (a : b : cs) =
+    -- >   let a' = rootHash a
+    -- >       b' = rootHash b
+    -- >    in Bin (mergeRootHashes a' b') a b : mergePairs cs
+    -- but this causes problems in non-lazy functional languages since
+    -- mergePairs does not occur in the tail position, and hence this
+    -- accumulates stack space.
     mergeAll :: [MerkleTree] -> MerkleTree
     mergeAll [r] = r
-    mergeAll rs = mergeAll $ mergePairs rs
+    mergeAll rs = mergeAll $ mergePairs [] rs
 
-    mergePairs :: [MerkleTree] -> [MerkleTree]
-    mergePairs (a : b : cs) =
+    mergePairs :: [MerkleTree] -> [MerkleTree] -> [MerkleTree]
+    mergePairs acc (a : b : cs) =
       let a' = rootHash a
           b' = rootHash b
-       in Bin (mergeRootHashes a' b') a b : mergePairs cs
-    mergePairs cs = cs
+       in mergePairs (Bin (mergeRootHashes a' b') a b : acc) cs
+    mergePairs acc [a] = a : acc
+    mergePairs acc [] = acc
 
-{- | /O(n log n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
+{- | /O(n)/. Builds a 'MerkleTree' from a 'NonEmpty' list of
  'BuiltinByteString'.
 
  An example of using 'fromNonEmpty':
@@ -235,14 +346,19 @@ fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
  > merkleTree = MT.fromNonEmpty $ PlutusPrelude.fromList [ pubkey1, pubkey2 ]
 
  Pictorially, given @["p1", "p2", "p3"]@, this creates a tree like
- >              hash (hash (hash "p1" ++ hash "p2") ++ hash "p3")
+ >    hash (1 : hash (1 : hash (0:"p1") ++ hash (0:"p2")) ++ hash (0:"p3"))
  >              /                               |
- >    hash (hash "p1" ++ hash "p2")             |
+ >    hash (1 : hash (0:"p1") ++ hash (0:"p2")) |
  >      /                    \                  |
- > hash "p1"                hash "p2"       hash "p3"
+ > hash (0:"p1")          hash (0:"p2")       hash (0:"p3")
 
- N.B. it doesn't exactly do this anymore since this permits second preimage
- attacks: see Note [2nd Preimage Attack on The Merkle Tree].
+ N.B. observe how all the leaves are prepended with @0@ before being hashed,
+ and all the internal nodes are prepended by @1@ before being hashed. For more
+ details, see Note [2nd Preimage Attack on The Merkle Tree].
+
+ N.B. it doesn't follow exactly this anymore -- as it builds the tree up, each
+ layer is reversed to make constructing the tree tail recursive. See Note [Tail
+ Recursive mergePairs]
 -}
 {-# INLINEABLE fromNonEmpty #-}
 fromNonEmpty :: NonEmpty BuiltinByteString -> MerkleTree
@@ -256,10 +372,13 @@ Properties [Merkle Tree Height Bound]
 See: Note [Hydra-Poc People Merkle Tree Comparisons]
 -}
 
-{- | /O(log n)/. Lookup the the corresponding merkle proof of the
- 'BuiltinByteString' in the 'MerkleTree' i.e., this builds the merkle proof
- for the given 'BuiltinByteString' corresponding to this 'MerkleTree' if such
- a merkle proof exists.
+{- | /O(n)/ where /n/ is the size of the list used to make the merkle
+ tree.
+
+ Lookup the the corresponding merkle proof of the 'BuiltinByteString' in the
+ 'MerkleTree' i.e., this builds the merkle proof for the given
+ 'BuiltinByteString' corresponding to this 'MerkleTree' if such a merkle proof
+ exists.
 
  The function will return the corresponding proof as @('Just' value)@, or
  'Nothing' if the Merkle tree does not contain the hash of the
@@ -286,12 +405,15 @@ See: Note [Hydra-Poc People Merkle Tree Comparisons]
 lookupMp :: BuiltinByteString -> MerkleTree -> Maybe MerkleProof
 lookupMp bt mt = fmap MerkleProof $ go [] mt
   where
+    -- Note: this is implemented by doing a dfs through the tree and hence the
+    -- linear running time, since by Note [Number of Nodes in the MerkleTree /
+    -- Run Time] we know that there are a linear number of nodes.
     hsh :: RootHash
     hsh = hashLeaf bt
 
     go :: [Up] -> MerkleTree -> Maybe [Up]
     go prf = \case
-      -- Invariant:
+      -- Note [lookupMp Invariants].
       --
       --  1. @Left l@ means @l@ is on the *left* side so @hsh@ was on the
       --  *right* side
@@ -319,8 +441,61 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
     N.B. 2. follows from [Merkle Tree Height Bound].
 -}
 
+{- | @/O(n)/@ where /n/ is the size of the list used to make the merkle
+ tree.
+
+ 'lookupsMp' mt@ returns all leafs associated with its 'MerkleProof' in a list
+ (the order of the list output is unspecified and may be a bit surprising due
+ to Note [Tail Recursive mergePairs]). This is useful for making an efficient
+ mapping of the elements in the merkle tree to its corresponding merkle proof
+ since alternatively one would have to do repeated /n/ calls to 'lookupMp'
+ (which is O(/n/) being /O(n^2)/ altogether.
+
+ Example.
+ Given
+ > dogs = MT.fromList [ "pomeranian", "yorkie" ]
+ we have that @lookupsMp dogs@ (although the order of the list is
+ unspecified) is
+ > [ (hashLeaf "pomeranian", mp1), (hashLeaf "yorkie", mp2) ]
+ where @Just mp1 = lookupMp "pomeranian" dogs@ and @Just mp2 = lookupMp "yorkie" dogs@.
+-}
+lookupsMp :: MerkleTree -> [(RootHash, MerkleProof)]
+lookupsMp = ($ []) . go []
+  where
+    -- Similarly to 'lookupMp', this does a dfs through the tree to gather the
+    -- paths, and is implemented via a difference list for efficient
+    -- concatenation.
+    go :: [Up] -> MerkleTree -> [(RootHash, MerkleProof)] -> [(RootHash, MerkleProof)]
+    go prf mt = case mt of
+      -- See Note [lookupMp Invariants] for the invariants here.
+      Bin _h l r ->
+        let l' = rootHash l
+            r' = rootHash r
+         in go (Up L l' : prf) r . go (Up R r' : prf) l
+      Tip h -> ((h, MerkleProof prf) :)
+
+{-
+ Properties.
+    1. Suppose lst is an arbitrary non empty list of distinct elements.
+            (roothash, merkleProof) \in lookupsMp (fromNonEmpty lst)
+                ===> there exists x \in lst s.t.
+                    Just merkleProof' (lookupMp x (fromNonEmpty lst)),
+                    merkleProof == merkleProof',
+                    rootHash = hashLeaf x
+
+            x \in lst,  Just merkleProof = (lookupMp x (fromNonEmpty lst))
+                ===> (hash x, merkleProof) \in  lookupsMp (fromNonEmpty lst)
+    2. Suppose lst is an arbitrary non empty list of length n.
+        length (lookupsMp (fromNonEmpty lst)) == n
+-}
+
+-- | @'lookupsMpFromList'@ is @'lookupsMp' . 'fromList'@
+lookupsMpFromList :: [BuiltinByteString] -> [(RootHash, MerkleProof)]
+lookupsMpFromList = lookupsMp . fromList
+
 {- | /O(n)/ in the length of the 'MerkleProof' (which is /O(log n)/ of
- the size of the original 'MerkleTree' of the given 'RootHash').
+ the size of the original list to create the 'MerkleTree' of the given
+ 'RootHash').
 
  An example of using 'memberMp':
 
@@ -453,7 +628,7 @@ Observation 1.
 
     since this counts the number of times the mergePairs function gets called
     in 'fromList' where we may observe that the height of the tree increases by
-    iff mergePairs gets called.
+    one iff mergePairs gets called.
 
 Thus, it suffices to show
 
@@ -487,43 +662,4 @@ and observing that the recurrence T is obviously increasing, we get that
          = log_2 2^k + 2
          <= floor(log_2 n) + 2          [Apply (*)]
 as required.
-
-Practically, here are some benchmarks from the hydra-poc. The hydra-poc people
-have benchmarks like:
-
-| Size | % member max mem | % member max cpu | % builder max mem | % builder max cpu |
-| :--- | ---------------: | ---------------: | ----------------: | ----------------: |
-| 1    | 2.44             | 1.55             | 2.66              | 1.64              |
-| 2    | 2.58             | 1.66             | 3.31              | 2.09              |
-| 5    | 2.77             | 1.82             | 8.22              | 5.53              |
-| 10   | 2.91             | 1.93             | 25.49             | 17.62             |
-| 20   | 3.04             | 2.04             | 94.54             | 65.96             |
-| 50   | 3.22             | 2.19             | 0.00              | 0.00              |
-| 100  | 3.36             | 2.30             | 0.00              | 0.00              |
-| 500  | 3.66             | 2.56             | 0.00              | 0.00              |
-Benchmark on-chain-cost: FINISH
-
-And our method has running time like:
-| Size | % member max mem | % member max cpu | % builder max mem | % builder max cpu |
-| :--- | ---------------: | ---------------: | ----------------: | ----------------: |
-| 1    | 2.44             | 1.55             | 2.57              | 1.60              |
-| 2    | 2.58             | 1.66             | 2.76              | 1.74              |
-| 5    | 2.79             | 1.84             | 3.31              | 2.16              |
-| 10   | 2.93             | 1.95             | 4.08              | 2.80              |
-| 20   | 3.06             | 2.06             | 5.58              | 4.06              |
-| 50   | 3.24             | 2.20             | 9.98              | 7.81              |
-| 100  | 3.37             | 2.32             | 17.25             | 14.04             |
-| 500  | 3.66             | 2.55             | 75.18             | 63.70             |
-Benchmark on-chain-cost: FINISH
-
-where 'member' is 'memberMp' here and 'builder' is 'fromList'.
-
-We see that the bottom up implementation of 'fromList' is almost 10x more
-efficient on some cases, and I'm fairly certain the last 3 cases of the
-hydra-poc guys are botched and didn't actually run whereas our implementation
-actually did run.
-
-I'll note that the hydra-poc people have a slightly more efficient 'memberMp'
-I suspect this is just "lucky" with the test cases because in some cases our
-member function is faster as well. This follows from [Merkle Tree Height Bound].
 -}

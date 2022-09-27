@@ -3,12 +3,15 @@
 
 module TrustlessSidechain.OffChain.Types where
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.String (IsString)
 import GHC.Generics (Generic)
 import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, Signature)
-import Ledger.Orphans ()
-import Ledger.Tx (TxOutRef)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
+import Plutus.V2.Ledger.Tx (TxOutRef)
+import PlutusTx (FromData, ToData, UnsafeFromData, makeLift)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import Schema (
@@ -17,13 +20,33 @@ import Schema (
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
+newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''GenesisHash
+
+$(deriveJSON defaultOptions ''GenesisHash)
+
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''SidechainPubKey
+
+$(deriveJSON defaultOptions ''SidechainPubKey)
+
 -- | Parameters to initialize a sidechain
 data InitSidechainParams = InitSidechainParams
-  { initChainId :: !BuiltinByteString
-  , initGenesisHash :: !BuiltinByteString
+  { initChainId :: Integer
+  , initGenesisHash :: GenesisHash
   , -- | 'initUtxo ' is a 'TxOutRef' used for creating 'AssetClass's for the
     -- internal function of the side chain (e.g. InitCommitteeHashMint TODO: hyperlink this documentation)
-    initUtxo :: !TxOutRef
+    initUtxo :: TxOutRef
   , -- | 'initCommittee' is the initial committee of the sidechain
     initCommittee :: [PubKey]
   , initMint :: Maybe TxOutRef
@@ -33,33 +56,56 @@ data InitSidechainParams = InitSidechainParams
 
 $(deriveJSON defaultOptions ''InitSidechainParams)
 PlutusTx.makeLift ''InitSidechainParams
+PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
-  { chainId :: !BuiltinByteString
-  , genesisHash :: !BuiltinByteString
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
   , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
     -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
     -- will use the distributed set implementation.
     genesisMint :: Maybe TxOutRef
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: !TxOutRef
+    genesisUtxo :: TxOutRef
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
+PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
+
+{- | Parameters uniquely identifying a sidechain, used only in the block producer registration
+ TODO: This type has to be removed, when we deprecate Passive Bridge functionality
+-}
+data SidechainParams' = SidechainParams'
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
+  , -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
+    -- will use the distributed set implementation.
+
+    -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show, Generic)
+
+PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
+
+-- | Convert SidechainParams to the Active Bridge version
+convertSCParams :: SidechainParams -> SidechainParams'
+convertSCParams (SidechainParams i g _ u) = SidechainParams' i g u
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: !SidechainParams
-  , spoPubKey :: !PubKey
-  , sidechainPubKey :: !BuiltinByteString
-  , spoSig :: !Signature
-  , sidechainSig :: !Signature
-  , inputUtxo :: !TxOutRef
+  { sidechainParams :: SidechainParams
+  , spoPubKey :: PubKey
+  , sidechainPubKey :: SidechainPubKey
+  , spoSig :: Signature
+  , sidechainSig :: Signature
+  , inputUtxo :: TxOutRef
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -68,8 +114,8 @@ $(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: !SidechainParams
-  , spoPubKey :: !PubKey
+  { sidechainParams :: SidechainParams
+  , spoPubKey :: PubKey
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -123,7 +169,7 @@ $(deriveJSON defaultOptions ''MintParams)
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | See 'SidechainParams'.
-    sidechainParams :: !SidechainParams
+    sidechainParams :: SidechainParams
   , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
   , -- | The signature for the new committee hash.

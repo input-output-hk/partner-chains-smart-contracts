@@ -4,16 +4,20 @@ module TrustlessSidechain.OnChain.MPTRootTokenValidator (
   validator,
   hash,
   address,
+  serialisableValidator,
 ) where
 
-import Ledger qualified
-import Ledger.Typed.Scripts (Validator)
-import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Address (Address)
-import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Scripts qualified as Scripts
-import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx.Prelude
+
+import Ledger qualified -- dangerously contains lots of v1 stuff
+import Ledger.Typed.Scripts qualified as Scripts
+import Plutus.Script.Utils.V2.Scripts (Validator)
+import Plutus.V2.Ledger.Api (
+  Address,
+  ValidatorHash,
+  mkValidatorScript,
+ )
+import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
 {- | 'mkMptRootTokenValidator' always fails.
@@ -33,7 +37,7 @@ mkMptRootTokenValidator _sc _dat _red _ctx = ()
 
 validator :: SidechainParams -> Validator
 validator sc =
-  Scripts.mkValidatorScript
+  mkValidatorScript
     ( $$(PlutusTx.compile [||mkMptRootTokenValidator||])
         `PlutusTx.applyCode` PlutusTx.liftCode sc
     )
@@ -43,3 +47,10 @@ hash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . validator
 
 address :: SidechainParams -> Address
 address = Ledger.scriptHashAddress . hash
+
+-- CTL hack
+mkValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorUntyped = mkMptRootTokenValidator . PlutusTx.unsafeFromBuiltinData
+
+serialisableValidator :: Ledger.Script
+serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])

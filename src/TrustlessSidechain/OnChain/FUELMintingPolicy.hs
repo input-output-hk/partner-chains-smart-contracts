@@ -3,24 +3,15 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
-import Ledger (
-  MintingPolicy,
-  ScriptContext (scriptContextTxInfo),
- )
-import Ledger qualified
-import Ledger.Typed.Scripts qualified as Script
-import Plutus.V1.Ledger.Contexts (TxInInfo (txInInfoResolved), TxInfo (txInfoInputs, txInfoMint), TxOut (txOutValue), TxOutRef)
-import Plutus.V1.Ledger.Contexts qualified as Contexts
-import Plutus.V1.Ledger.Crypto (PubKeyHash (PubKeyHash, getPubKeyHash))
-import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName (TokenName, unTokenName), Value (getValue))
+import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
+import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (
-  SidechainParams (genesisMint),
- )
+import TrustlessSidechain.OffChain.Types (SidechainParams (genesisMint))
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
 
@@ -52,6 +43,7 @@ data FUELMint = FUELMint
   }
 
 PlutusTx.makeLift ''FUELMint
+PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
@@ -125,9 +117,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
            in RootHash $ unTokenName $ go $ txInfoInputs info
-     in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMteHashed mp merkleRoot)
-          && traceIfFalse "error 'FUELMintingPolicy' utxo not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
+     in traceIfFalse "error 'FUELMintingPolicy' tx not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           &&
           -- TODO: remove the oneshot minting policy later... yeah..
           --
@@ -135,12 +125,19 @@ mkMintingPolicy fm mode ctx = case mode of
           -- to test for now, even though it's not what we will use later and
           -- the distributed set replaces it.
           ( case genesisMint $ fmSidechainParams fm of
-              Nothing -> traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+              Nothing ->
+                traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+                  && traceIfFalse
+                    "error 'FUELMintingPolicy' merkle proof failed"
+                    (MerkleTree.memberMp cborMteHashed mp merkleRoot)
+                  && traceIfFalse
+                    "error 'FUELMintingPolicy' not inserting into distributed set"
+                    (dsInserted == cborMteHashed)
               Just gutxo ->
                 traceIfFalse "Oneshot Mintingpolicy utxo not present" $
                   let -- One shot minting policy checks.
                       hasUTxO :: TxOutRef -> Bool
-                      hasUTxO utxo = any (\i -> Ledger.txInInfoOutRef i == utxo) $ txInfoInputs info
+                      hasUTxO utxo = any (\i -> txInInfoOutRef i == utxo) $ txInfoInputs info
                    in hasUTxO gutxo
           )
   where
@@ -159,10 +156,11 @@ mkMintingPolicy fm mode ctx = case mode of
         amount
       | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
 
-mintingPolicy :: FUELMint -> MintingPolicy
-mintingPolicy param =
-  Ledger.mkMintingPolicyScript
-    ($$(PlutusTx.compile [||Script.wrapMintingPolicy . mkMintingPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode param)
+-- ctl hack
+-- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
+{-# INLINEABLE mkMintingPolicyUntyped #-}
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
 
-currencySymbol :: FUELMint -> CurrencySymbol
-currencySymbol = Ledger.scriptCurrencySymbol . mintingPolicy
+serialisableMintingPolicy :: Script
+serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
