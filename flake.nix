@@ -203,7 +203,13 @@
       devShells = perSystem (system: rec {
         ps = (psProjectFor system).devShell;
         hs = self.flake.${system}.devShell;
-        default = ps;
+        default = (nixpkgsFor system).mkShell {
+          inputsFrom = [ ps hs ];
+          shellHook = ''
+            ${hs.shellHook}
+            ${ps.shellHook}
+          '';
+        };
       });
     };
 }
