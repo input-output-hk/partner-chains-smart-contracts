@@ -2,7 +2,6 @@ module CommitteCandidateValidator where
 
 import Contract.Prelude
 
-import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
@@ -43,7 +42,7 @@ import Contract.Transaction
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , outputDatumDatum
   , submit
   )
@@ -54,6 +53,7 @@ import Control.Alternative (guard)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Control.Parallel (parTraverse)
 import Data.Array (catMaybes, (:))
+import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
@@ -154,10 +154,11 @@ register
       , inputUtxo
       }
   ) = do
-  ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  let msg = report "register"
+  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
 
-  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  ownUtxos ← liftedM (msg "Cannot get own UTxOs") (utxosAt ownAddr)
   validator ← getCommitteeCandidateValidator sidechainParams
   let
     valHash = validatorHash validator
@@ -179,40 +180,41 @@ register
     constraints =
       Constraints.mustSpendPubKeyOutput inputUtxo
         <> Constraints.mustPayToScript valHash (Datum (toData datum))
-          Constraints.DatumWitness
+          Constraints.DatumInline
           val
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx"
-    (balanceAndSignTx (reattachDatumsInline ubTx))
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
-  logInfo' ("Submitted committeeCandidate register Tx: " <> show txId)
+  logInfo' $ msg ("Submitted committeeCandidate register Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "register Tx submitted successfully!"
+  logInfo' $ msg "register Tx submitted successfully!"
 
 deregister ∷ DeregisterParams → Contract () Unit
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  let msg = report "deregister"
+  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
   netId ← getNetworkId
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM "committeeCandidateValidator: get validator address"
+  valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
     (validatorHashEnterpriseAddress netId valHash)
-  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  valUtxos ← liftedM "cannot get val UTxOs" (utxosAt valAddr)
+  ownUtxos ← liftedM (msg "cannot get UTxOs") (utxosAt ownAddr)
+  valUtxos ← liftedM (msg "cannot get val UTxOs") (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
 
-  ourDatums ← liftAff $ (flip parTraverse) valUtxos' $
+  ourDatums ← liftAff $ flip parTraverse valUtxos'
     \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
       runMaybeT $ do
         BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
           =<< outputDatumDatum out.datum
         guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
         pure input
+  let datums = catMaybes ourDatums
 
-  when (null (catMaybes ourDatums)) $ throwContractError
-    "Registration utxo cannot be found"
+  when (null datums) $ throwContractError
+    (msg "Registration utxo cannot be found")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
@@ -223,14 +225,16 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = mconcat
       ( Constraints.mustBeSignedBy ownPkh :
-          ( (\x → Constraints.mustSpendScriptOutput x unitRedeemer) <$> catMaybes
-              ourDatums
-          )
+          (flip Constraints.mustSpendScriptOutput unitRedeemer <$> datums)
       )
 
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
-  logInfo' ("Submitted committee deregister Tx: " <> show txId)
+  logInfo' $ msg ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "deregister submitted successfully!"
+  logInfo' $ msg "deregister submitted successfully!"
+
+-- small utility function for error reporting.
+report ∷ String → ∀ e. Show e ⇒ e → String
+report fn msg = "CommitteeCandidateValidator." <> fn <> ": " <> show msg
