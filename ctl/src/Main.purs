@@ -37,7 +37,7 @@ import Options (getOptions)
 import Options.Types (Endpoint(..), Options)
 
 -- | Get the CTL configuration parameters based on CLI arguments
-toConfig ∷ Options → ConfigParams ()
+toConfig ∷ Boolean → Options → ConfigParams ()
 toConfig isTTY { pSkey, stSkey } = testnetConfig
   { logLevel = Info
   , suppressLogs = not isTTY
