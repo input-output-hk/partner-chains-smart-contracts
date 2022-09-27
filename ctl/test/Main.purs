@@ -9,6 +9,7 @@ import Data.BigInt as BigInt
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
+import Test.InitSidechain as InitSidechain
 import Test.MerkleTree as MerkleTree
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
@@ -24,8 +25,11 @@ main = do
       distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
         /\ [ BigInt.fromInt 2_000_000_000 ]
 
-    runPlutipContract config distribute \(alice /\ _bob) → do
+    runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice $ do
         CommitteeCandidateValidator.testScenario
         FUELMintingPolicy.testScenario
         UpdateCommitteeHash.testScenario
+        InitSidechain.testScenario1
+
+        InitSidechain.testScenario2 alice bob
