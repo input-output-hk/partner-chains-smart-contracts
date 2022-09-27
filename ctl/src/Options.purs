@@ -320,7 +320,7 @@ byteArray = maybeReader $ hexToByteArray
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
-bigInt = maybeReader $ BigInt.fromString
+bigInt = maybeReader BigInt.fromString
 
 -- | Parse UInt
 uint ∷ ReadM UInt
