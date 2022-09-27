@@ -6,6 +6,7 @@ import ConfigFile (decodeConfig, readJson)
 import Contract.Config
   ( ConfigParams
   , Message
+  , ServerConfig
   , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
   , defaultServerConfig
@@ -19,6 +20,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Log.Formatter.JSON (jsonFormatter)
 import Data.String (Pattern(Pattern), split)
+import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
 import Helpers (logWithLevel)
@@ -26,11 +28,13 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff (appendTextFile)
 import Node.Path (FilePath)
 import Options.Applicative
-  ( ParserInfo
+  ( Parser
+  , ParserInfo
   , ReadM
   , action
   , command
   , execParser
+  , flag
   , fullDesc
   , header
   , help
@@ -44,6 +48,7 @@ import Options.Applicative
   , option
   , progDesc
   , short
+  , showDefault
   , str
   , value
   )
@@ -87,8 +92,30 @@ options isTTY maybeConfig = info (helper <*> optSpec)
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
+    ogmiosConfig ← serverConfigSpec "ogmios" $
+      fromMaybe defaultOgmiosWsConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
+
+    ogmiosDatumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
+      fromMaybe defaultDatumCacheWsConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
+
+    ctlServerConfig ← serverConfigSpec "ctl-server" $
+      fromMaybe defaultServerConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+
+    let
+      opts =
+        { skey
+        , ogmiosConfig
+        , ogmiosDatumCacheConfig
+        , ctlServerConfig
+        }
     in
-      { scParams, endpoint, configParams: toConfigParams isTTY maybeConfig skey }
+      { scParams
+      , endpoint
+      , configParams: toConfigParams isTTY opts
+      }
   skeySpec =
     option str $ fold
       [ short 'k'
@@ -98,6 +125,37 @@ options isTTY maybeConfig = info (helper <*> optSpec)
       , action "file"
       , maybe mempty value (maybeConfig >>= _.signingKeyFile)
       ]
+
+  serverConfigSpec ∷ String → ServerConfig → Parser ServerConfig
+  serverConfigSpec
+    name
+    { host: defHost, path: defPath, port: defPort, secure: defSecure } = ado
+    host ← option str $ fold
+      [ long $ name <> "-host"
+      , metavar "localhost"
+      , help $ "Address host of " <> name
+      , value defHost
+      , showDefault
+      ]
+    path ← optional $ option str $ fold
+      [ long $ name <> "-path"
+      , metavar "some/path"
+      , help $ "Address path of " <> name
+      , maybe mempty value defPath
+      , showDefault
+      ]
+    port ← option uint $ fold
+      [ long $ name <> "-port"
+      , metavar "1234"
+      , help $ "Port of " <> name
+      , value defPort
+      , showDefault
+      ]
+    secure ← flag false true $ fold
+      [ long $ name <> "-secure"
+      , help $ "Whether " <> name <> " is using an HTTPS connection"
+      ]
+    in { host, path, port, secure: secure || defSecure }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
 
@@ -214,17 +272,23 @@ getOptions isTTY = do
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
 -- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
-toConfigParams ∷ Environment → Maybe Config → FilePath → ConfigParams ()
-toConfigParams { isTTY } maybeConfig skey = testnetConfig
+toConfigParams ∷
+  Environment →
+  { skey ∷ FilePath
+  , ogmiosConfig ∷ ServerConfig
+  , ogmiosDatumCacheConfig ∷ ServerConfig
+  , ctlServerConfig ∷ ServerConfig
+  } →
+  ConfigParams ()
+toConfigParams
+  { isTTY }
+  { skey, ogmiosConfig, ogmiosDatumCacheConfig, ctlServerConfig } = testnetConfig
   { logLevel = Info
   , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
   , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
-  , ogmiosConfig = fromMaybe defaultOgmiosWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
-  , datumCacheConfig = fromMaybe defaultDatumCacheWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
-  , ctlServerConfig = Just $ fromMaybe defaultServerConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+  , ogmiosConfig = ogmiosConfig
+  , datumCacheConfig = ogmiosDatumCacheConfig
+  , ctlServerConfig = Just $ ctlServerConfig
   , suppressLogs = not isTTY
   }
 
@@ -257,6 +321,10 @@ byteArray = maybeReader $ hexToByteArray
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader $ BigInt.fromString
+
+-- | Parse UInt
+uint ∷ ReadM UInt
+uint = maybeReader $ UInt.fromString
 
 -- | 'sidechainAddress' parses
 --    >  sidechainAddress
