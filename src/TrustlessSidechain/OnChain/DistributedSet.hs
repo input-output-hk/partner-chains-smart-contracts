@@ -629,19 +629,19 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      Just _ <- AssocMap.lookup (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
-      case mintedTns of
-        [tn] | unTokenName tn == nKey rootNode ->
-          traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
-            case find (\txout -> txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)) (txInfoOutputs info) of
-              Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
-              Nothing -> False
-        -- TODO: check in the script output with the output that this
-        -- ownCS is actually where it should be.. Actually,
-        -- there's no need to do this -- we can verify this offchain
-        -- since we may assume that all participants know the protocol
-        -- ahead of time and may independently verify.
-        _ -> traceError "error 'mkDsKeyPolicy' bad initial mint"
+      AssocMap.member (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
+          case mintedTns of
+            [tn] | unTokenName tn == nKey rootNode ->
+              traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
+                case find (\txout -> txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)) (txInfoOutputs info) of
+                  Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
+                  Nothing -> False
+            -- TODO: check in the script output with the output that this
+            -- ownCS is actually where it should be.. Actually,
+            -- there's no need to do this -- we can verify this offchain
+            -- since we may assume that all participants know the protocol
+            -- ahead of time and may independently verify.
+            _ -> traceError "error 'mkDsKeyPolicy' bad initial mint"
   _ -> traceError "error 'mkDsKeyPolicy' bad inputs in transaction"
   where
     -- Aliases
