@@ -10,54 +10,30 @@ import Contract.Address
   , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
-import Contract.Config (Message, PrivateStakeKeySource(..), testnetConfig)
-import Contract.Log (logInfo')
 import Contract.Monad
-  ( ConfigParams
-  , Contract
+  ( Contract
   , launchAff_
   , liftContractM
   , liftedM
   , runContract
   )
 import Contract.Scripts (Validator, validatorHash)
-import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
-import Data.Log.Formatter.JSON (jsonFormatter)
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
   , passiveBridgeMintParams
   , runFuelMP
   )
-import Helpers (logWithLevel)
-import Node.Encoding (Encoding(..))
-import Node.FS.Aff (appendTextFile)
 import Node.Process (stdoutIsTTY)
 import Options (getOptions)
-import Options.Types (Endpoint(..), Options)
-
--- | Get the CTL configuration parameters based on CLI arguments
-toConfig ∷ Boolean → Options → ConfigParams ()
-toConfig isTTY { pSkey, stSkey } = testnetConfig
-  { logLevel = Info
-  , suppressLogs = not isTTY
-  , customLogger = Just \m → fileLogger m *> logWithLevel Info m
-  , walletSpec = Just
-      (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
-  }
-
--- | Store all log levels in a file
-fileLogger ∷ Message → Aff Unit
-fileLogger m = do
-  let filename = "./contractlog.json"
-  appendTextFile UTF8 filename (jsonFormatter m <> "\n")
+import Options.Types (Endpoint(..))
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
-  opts ← getOptions
+  opts ← getOptions stdoutIsTTY
 
-  launchAff_ $ runContract (toConfig stdoutIsTTY opts) do
+  launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     endpointResp ← case opts.endpoint of
 

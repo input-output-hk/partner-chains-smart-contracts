@@ -33,6 +33,7 @@ optExample =
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing
+  , runtimeConfig: Nothing
   }
 
 decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config

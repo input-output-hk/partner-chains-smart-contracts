@@ -3,14 +3,29 @@ module Options (getOptions) where
 import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
+import Contract.Config
+  ( ConfigParams
+  , Message
+  , PrivateStakeKeySource(..)
+  , defaultDatumCacheWsConfig
+  , defaultOgmiosWsConfig
+  , defaultServerConfig
+  , testnetConfig
+  )
 import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Log.Formatter.JSON (jsonFormatter)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Effect.Exception (error)
+import Helpers (logWithLevel)
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff (appendTextFile)
+import Node.Path (FilePath)
 import Options.Applicative
   ( ParserInfo
   , ReadM
@@ -37,8 +52,9 @@ import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-options ∷ Maybe Config → ParserInfo Options
-options maybeConfig = info (helper <*> optSpec)
+-- | Argument option parser for ctl-main
+options ∷ Boolean → Maybe Config → ParserInfo Options
+options isTTY maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
@@ -72,8 +88,11 @@ options maybeConfig = info (helper <*> optSpec)
     stSkey ← stSKeySpec
     scParams ← scParamsSpec
     endpoint ← endpointParser
-
-    in { pSkey, stSkey, scParams, endpoint }
+    in
+      { scParams
+      , endpoint
+      , configParams: toConfigParams isTTY maybeConfig pSkey stSkey
+      }
 
   pSkeySpec =
     option str $ fold
@@ -195,10 +214,11 @@ options maybeConfig = info (helper <*> optSpec)
     , help "SPO cold verification key value"
     ]
 
-getOptions ∷ Effect Options
-getOptions = do
+-- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
+getOptions ∷ Boolean → Effect Options
+getOptions isTTY = do
   config ← readAndParseJsonFrom "./config.json"
-  execParser (options config)
+  execParser (options isTTY config)
 
   where
   readAndParseJsonFrom loc = do
@@ -208,6 +228,32 @@ getOptions = do
   decodeConfigUnsafe json =
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
+-- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
+toConfigParams ∷
+  Boolean → Maybe Config → FilePath → Maybe FilePath → ConfigParams ()
+toConfigParams isTTY maybeConfig pSkey stSkey = testnetConfig
+  { logLevel = Info
+  , suppressLogs = not isTTY
+  , customLogger = Just \m → fileLogger m *> logWithLevel Info m
+  , walletSpec = Just
+      (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
+  , ogmiosConfig = fromMaybe defaultOgmiosWsConfig
+      (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
+  , datumCacheConfig = fromMaybe defaultDatumCacheWsConfig
+      (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
+  , ctlServerConfig = Just $ fromMaybe defaultServerConfig
+      (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+  }
+
+-- | Store all log levels in a file
+fileLogger ∷ Message → Aff Unit
+fileLogger m = do
+  let filename = "./contractlog.json"
+  appendTextFile UTF8 filename (jsonFormatter m <> "\n")
+
+-- * Custom Parsers
+
+-- | Parse a transaction input from a CLI format (e.g. aabbcc#0)
 transactionInput ∷ ReadM TransactionInput
 transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
@@ -221,14 +267,16 @@ transactionInput = maybeReader \txIn →
           }
     _ → Nothing
 
+-- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
 
+-- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
 
 -- | 'sidechainAddress' parses
---    >  sidechainAddress 
+--    >  sidechainAddress
 --    >         -> 0x hexStr
 --    >         -> hexStr
 -- where @hexStr@ is a sequence of hex digits.
