@@ -215,6 +215,11 @@ byteArray = maybeReader $ hexToByteArray
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader $ BigInt.fromString
 
+-- | 'sidechainAddress' parses
+--    >  sidechainAddress 
+--    >         -> 0x hexStr
+--    >         -> hexStr
+-- where @hexStr@ is a sequence of hex digits.
 sidechainAddress ∷ ReadM ByteArray
 sidechainAddress = maybeReader $ \str →
   case split (Pattern "0x") str of
