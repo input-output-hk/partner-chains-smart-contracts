@@ -31,9 +31,6 @@ data MerkleTreeEntry = MerkleTreeEntry
     mteRecipient :: BuiltinByteString
   , -- | sidechain epoch for which merkle tree was created
     mteSidechainEpoch :: Integer
-  , -- | 'mteHash' will be removed later TODO! Currently, we have this here to
-    -- help test the system.
-    mteHash :: BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
