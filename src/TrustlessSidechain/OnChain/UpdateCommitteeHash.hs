@@ -148,11 +148,25 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     hasNft :: Value -> Bool
     hasNft val = Value.assetClassValueOf val (cToken uch) == 1
 
+    threshold :: Integer
+    threshold =
+      -- Note: this computes floor(2/3 * length of committee), but the spec
+      -- says that we want strictly more than 2/3 majority? Indeed, the floor
+      -- computation will sometimes give us less than 2/3 majority... So I
+      -- think we really want to have ceil(2/3 * length of committee) i.e., we
+      -- should change this to
+      -- > ((length (committeePubKeys red) `Builtins.multiplyInteger` 2  - 1 )
+      -- >      `Builtins.divideInteger`  3)  + 1
+      -- where we use the fact @ceil(n/m) = floor((n - 1) / m) + 1@
+      -- for n non-negative and m positive. The proof of this fact isn't too
+      -- tricky :^)
+      length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
         (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        1 -- TODO: this should be the threshold?
+        threshold
         (newCommitteeHash red)
         (committeeSignatures red)
     isCurrentCommittee :: Bool
