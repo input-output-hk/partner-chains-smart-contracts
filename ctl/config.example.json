@@ -16,5 +16,6 @@
     "ogmiosDatumCache": null,
     "ctlServer": null
   },
-  "signingKeyFile": "/absolute/path/to/signing-key.skey"
+  "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
+  "stakeSigningKeyFile": null
 }
