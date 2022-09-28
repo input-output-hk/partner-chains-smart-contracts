@@ -10,9 +10,13 @@ import Data.ByteString.Short (toShort)
 import Data.Foldable (traverse_)
 import Ledger (Script, scriptHash)
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
+import TrustlessSidechain.OnChain.PoCReferenceInput qualified as PoCReferenceInput
+import TrustlessSidechain.OnChain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
@@ -35,4 +39,15 @@ main =
     , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
     , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
     , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
+    , -- Distributed set validators / minting policies
+      ("InsertValidator", DistributedSet.serialisableInsertValidator)
+    , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)
+    , ("DsConfPolicy", DistributedSet.serialisableDsConfPolicy)
+    , ("DsKeyPolicy", DistributedSet.serialisableDsKeyPolicy)
+    , -- Validators for proof of concept tests.
+      ("PoCInlineDatum", PoCInlineDatum.serialisablePoCInlineDatumValidator)
+    , ("PoCToReferenceInput", PoCReferenceInput.serialisablePoCToReferenceInputValidator)
+    , ("PoCReferenceInput", PoCReferenceInput.serialisablePoCReferenceInputValidator)
+    , ("PoCToReferenceScript", PoCReferenceScript.serialisablePoCToReferenceScriptValidator)
+    , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
     ]
