@@ -4,10 +4,27 @@
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
-import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Api (
+  CurrencySymbol,
+  PubKeyHash (PubKeyHash, getPubKeyHash),
+  Script,
+  TokenName (TokenName, unTokenName),
+  Value (getValue),
+ )
+import Plutus.V2.Ledger.Api qualified as Api
+import Plutus.V2.Ledger.Contexts (
+  ScriptContext (scriptContextTxInfo),
+  TxInInfo (txInInfoOutRef, txInInfoResolved),
+  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
+ )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
+import Plutus.V2.Ledger.Tx (
+  TxOut (txOutValue),
+  TxOutRef,
+ )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -71,10 +88,6 @@ fuelTokenName = TokenName "FUEL"
   3. amount matches the actual tx body contents
 
   4. The recipient has signed the transaction
-
-  TODO: this isn't in the spec, but we have to do this to ensure that only the
-  recipient is the one who is controlling where the FUEL goes i.e., so an
-  adversary can't impersonate the recipient to steal their FUEL.
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: FUELMint -> FUELRedeemer -> ScriptContext -> Bool
@@ -82,10 +95,10 @@ mkMintingPolicy fm mode ctx = case mode of
   MainToSide _ ->
     traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
   SideToMain mte mp ->
-    let cborMte :: BuiltinByteString
+    let cborMte, cborMteHashed :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
+        cborMteHashed = Builtins.blake2b_256 cborMte
 
-        cborMteHashed = cborMte --  TODO: actually hash this later.
         dsInserted :: BuiltinByteString
         dsInserted
           | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
@@ -116,8 +129,11 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- it.
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
-           in RootHash $ unTokenName $ go $ txInfoInputs info
-     in traceIfFalse "error 'FUELMintingPolicy' tx not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
+           in RootHash $ unTokenName $ go $ txInfoReferenceInputs info
+     in traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+          && traceIfFalse
+            "error 'FUELMintingPolicy' tx not signed by recipient"
+            (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           &&
           -- TODO: remove the oneshot minting policy later... yeah..
           --
@@ -126,10 +142,9 @@ mkMintingPolicy fm mode ctx = case mode of
           -- the distributed set replaces it.
           ( case genesisMint $ fmSidechainParams fm of
               Nothing ->
-                traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-                  && traceIfFalse
-                    "error 'FUELMintingPolicy' merkle proof failed"
-                    (MerkleTree.memberMp cborMteHashed mp merkleRoot)
+                traceIfFalse
+                  "error 'FUELMintingPolicy' merkle proof failed"
+                  (MerkleTree.memberMp cborMteHashed mp merkleRoot)
                   && traceIfFalse
                     "error 'FUELMintingPolicy' not inserting into distributed set"
                     (dsInserted == cborMteHashed)
@@ -160,7 +175,7 @@ mkMintingPolicy fm mode ctx = case mode of
 -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
 {-# INLINEABLE mkMintingPolicyUntyped #-}
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
+mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . PlutusTx.unsafeFromBuiltinData
 
 serialisableMintingPolicy :: Script
-serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy = Api.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

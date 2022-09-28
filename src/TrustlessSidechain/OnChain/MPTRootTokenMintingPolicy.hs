@@ -22,31 +22,17 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo))
-import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteHash), SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
+import TrustlessSidechain.OnChain.Types (MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
 
-{- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor.
-
- TODO: it doesn't encode the 'MerkleTreeEntry' to @cbor@. We would like to
- use something like
- [PlutusTx.serialiseData](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/Builtins.hs#L373)
- but for some reason it doesn't exist in the package plutus-tx for the
- version that we are using?
-
- It appears that we are using
- > plutus-tx                         >= 0.1.0 && < 0.2,
- which doesn't have our desired function, but version 1.0.0.0 does have it.
-
- While we wait, we /could/ actually reimplement such functionality onchain
- (but it would be very slow and expensive probably). See package plutus-core
- in module @PlutusCore.Data@
--}
+-- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 serialiseMte :: MerkleTreeEntry -> BuiltinByteString
-serialiseMte = mteHash
+serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
@@ -80,10 +66,9 @@ signedMerkleRootMint sc =
 
       1. UTXO with the last Merkle root is referenced in the transaction.
 
-      TODO: The spec mentions this, but this currently doesn't do this.
-      Actually I'm not really sure what this achieves / why we need to do
-      this.. and this certainly begs the question of what to do for the first
-      cross chain transaction when there is no last merkle root.
+      Note: actually, this condition is just done offchain because we can trust
+      the bridge is going to do the right thing when referencing the
+      transaction.
 
       2.  the signature can be verified with the submitted public key hashes of
       committee members, and the list of public keys are unique
@@ -107,13 +92,13 @@ mkMintingPolicy
     , threshold
     }
   ctx =
-    and
-      [ -- TODO: the first condition isn't done yet.. See 1. in the function documentation
-        traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
-      ]
+    -- The condition 1.  (referencing the last merkle root) is done by a
+    -- trusted entity (i.e., the bridge) so there's no need to verify this
+    -- onchain. See above.
+    -- > traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
+    traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
     where
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
@@ -141,8 +126,9 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
       -- documentation of this function.
-      p1, p2, p3, p4 :: Bool
-      p1 = True -- TODO: it doesn't do this yet.
+      -- Again, @p1@ doesn't exist because this transaction is done by a
+      -- trusted entity.
+      p2, p3, p4 :: Bool
       p2 = Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of

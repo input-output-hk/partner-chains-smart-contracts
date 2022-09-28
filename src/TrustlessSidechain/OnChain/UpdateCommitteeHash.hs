@@ -198,7 +198,7 @@ mkCommitteeHashPolicy ichm _red ctx =
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
-    -- assert that we have minted exactly one of this currency symbol
+    -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
       Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
