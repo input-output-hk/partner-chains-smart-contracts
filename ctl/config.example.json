@@ -10,6 +10,7 @@
     "ogmios": {
       "host": "localhost",
       "port": 1337,
+
       "secure": false,
       "path": null
     },
