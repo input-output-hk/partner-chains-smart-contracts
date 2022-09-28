@@ -76,6 +76,7 @@ We also compute the hash of the 'ScriptRef' for
 -}
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
+  Log.logInfo' "PoCReferenceScript: testScenario1"
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCToReferenceScript
@@ -176,6 +177,7 @@ include the script on chain, and hence 3. should fail.
 -}
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
+  Log.logInfo' "PoCReferenceScript: testScenario2"
   -- START of duplicated code from 'testScenario1'
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes

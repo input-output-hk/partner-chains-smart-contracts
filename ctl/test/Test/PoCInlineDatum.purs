@@ -46,6 +46,7 @@ import RawScripts as RawScripts
 --      the inline datum really was 69
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
+  Log.logInfo' "PoCInlineDatum: testScenario1"
 
   -- 1.
   validatorBytes ← TextEnvelope.textEnvelopeBytes RawScripts.rawPoCInlineDatum
@@ -118,6 +119,7 @@ testScenario1 = do
 --      transaction should fail because there is no inline datum.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
+  Log.logInfo' "PoCInlineDatum: testScenario2"
 
   -- 1.
   validatorBytes ← TextEnvelope.textEnvelopeBytes RawScripts.rawPoCInlineDatum

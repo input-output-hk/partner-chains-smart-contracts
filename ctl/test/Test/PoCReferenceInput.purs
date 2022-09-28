@@ -45,6 +45,8 @@ import Test.Utils as Utils
 --      (witness) datum really is 69
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
+  Log.logInfo' "PoCReferenceInput: testScenario1"
+
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCToReferenceInput
@@ -145,6 +147,7 @@ testScenario1 = do
 --      (witness) datum really is 69. This should fail!
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
+  Log.logInfo' "PoCReferenceInput: testScenario2"
   -- START of duplicated code from 'testScenario1'.
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes

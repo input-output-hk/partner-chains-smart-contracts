@@ -9,6 +9,7 @@ import Data.BigInt as BigInt
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
+import Test.InitSidechain as InitSidechain
 import Test.MerkleTree as MerkleTree
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
@@ -29,27 +30,25 @@ main = do
         /\ [ BigInt.fromInt 2_000_000_000 ]
 
     -- Run the plutip tests
-    runPlutipContract config distribute \(alice /\ _bob) → do
-      withKeyWallet alice $ do
+    runPlutipContract config distribute \(alice /\ bob) → do
+      withKeyWallet alice do
         CommitteeCandidateValidator.testScenario
         FUELMintingPolicy.testScenario
 
         UpdateCommitteeHash.testScenario
+        InitSidechain.testScenario1
 
-    -- Run the proof of concept tests (note that we run each test separately from
-    -- the other tests
-    let
-      pocTestScenarios =
-        [ PoCInlineDatum.testScenario1
-        , PoCInlineDatum.testScenario2
+        InitSidechain.testScenario2 alice bob
 
-        , PoCReferenceInput.testScenario1
-        , PoCReferenceInput.testScenario2
+    -- Run the plutip tests for the proof of concept tests (note we run these
+    -- separately from the actual sidechain tests.)
+    runPlutipContract config distribute \(alice /\ _bob) → do
+      withKeyWallet alice do
+        PoCInlineDatum.testScenario1
+        PoCInlineDatum.testScenario2
 
-        , PoCReferenceScript.testScenario1
-        , PoCReferenceScript.testScenario2
-        ]
+        PoCReferenceInput.testScenario1
+        PoCReferenceInput.testScenario2
 
-    for pocTestScenarios
-      \scenario → runPlutipContract config distribute
-        \(alice /\ _bob) → withKeyWallet alice scenario
+        PoCReferenceScript.testScenario1
+        PoCReferenceScript.testScenario2

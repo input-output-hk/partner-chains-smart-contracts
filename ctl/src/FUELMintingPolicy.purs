@@ -3,6 +3,7 @@ module FUELMintingPolicy
   , FUELMint(..)
   , FuelParams(..)
   , passiveBridgeMintParams
+  , fuelMintingPolicy
   ) where
 
 import Contract.Prelude
