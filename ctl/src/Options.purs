@@ -6,6 +6,7 @@ import ConfigFile (decodeConfig, readJson)
 import Contract.Config
   ( ConfigParams
   , Message
+  , PrivateStakeKeySource(..)
   , ServerConfig
   , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
@@ -58,13 +59,13 @@ import Types.ByteArray (ByteArray)
 
 -- | Argument option parser for ctl-main
 options ∷ Environment → Maybe Config → ParserInfo Options
-options isTTY maybeConfig = info (helper <*> optSpec)
+options env maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
   where
   optSpec =
-    hsubparser $ mconcat
+    hsubparser $ fold
       [ command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
@@ -88,7 +89,8 @@ options isTTY maybeConfig = info (helper <*> optSpec)
       ]
 
   withCommonOpts endpointParser = ado
-    skey ← skeySpec
+    pSkey ← pSkeySpec
+    stSkey ← stSKeySpec
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
@@ -106,7 +108,8 @@ options isTTY maybeConfig = info (helper <*> optSpec)
 
     let
       opts =
-        { skey
+        { pSkey
+        , stSkey
         , ogmiosConfig
         , ogmiosDatumCacheConfig
         , ctlServerConfig
@@ -114,16 +117,27 @@ options isTTY maybeConfig = info (helper <*> optSpec)
     in
       { scParams
       , endpoint
-      , configParams: toConfigParams isTTY opts
+      , configParams: toConfigParams env opts
       }
-  skeySpec =
+
+  pSkeySpec =
     option str $ fold
       [ short 'k'
-      , long "signing-key-file"
-      , metavar "/absolute/path/to/skey"
-      , help "Own signing key file"
+      , long "payment-signing-key-file"
+      , metavar "/absolute/path/to/payment.skey"
+      , help "Own payment signing key file path"
       , action "file"
-      , maybe mempty value (maybeConfig >>= _.signingKeyFile)
+      , maybe mempty value (maybeConfig >>= _.paymentSigningKeyFile)
+      ]
+
+  stSKeySpec =
+    optional $ option str $ fold
+      [ short 'K'
+      , long "stake-signing-key-file"
+      , metavar "/absolute/path/to/stake.skey"
+      , help "Own stake signing key file path"
+      , action "file"
+      , maybe mempty value (maybeConfig >>= _.stakeSigningKeyFile)
       ]
 
   serverConfigSpec ∷ String → ServerConfig → Parser ServerConfig
@@ -156,50 +170,6 @@ options isTTY maybeConfig = info (helper <*> optSpec)
       , help $ "Whether " <> name <> " is using an HTTPS connection"
       ]
     in { host, path, port, secure: secure || defSecure }
-
-  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
-
-  burnSpec = ado
-    amount ← parseAmount
-    recipient ← option sidechainAddress $ fold
-      [ long "recipient"
-      , metavar "ADDRESS"
-      , help "Address of the sidechain recipient"
-      ]
-    in BurnAct { amount, recipient }
-
-  regSpec = ado
-    spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
-      [ long "sidechain-public-key"
-      , metavar "PUBLIC_KEY"
-      , help "Sidechain public key"
-      ]
-    spoSig ← option byteArray $ fold
-      [ long "spo-signature"
-      , metavar "SIGNATURE"
-      , help "SPO signature"
-      ]
-    sidechainSig ← option byteArray $ fold
-      [ long "sidechain-signature"
-      , metavar "SIGNATURE"
-      , help "Sidechain signature"
-      ]
-    inputUtxo ← option transactionInput $ fold
-      [ long "registration-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO to be spend with the commitee candidate registration"
-      ]
-    in
-      CommitteeCandidateReg
-        { spoPubKey
-        , sidechainPubKey
-        , spoSig
-        , sidechainSig
-        , inputUtxo
-        }
-
-  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
 
   scParamsSpec = ado
     chainId ← option int $ fold
@@ -244,11 +214,16 @@ options isTTY maybeConfig = info (helper <*> optSpec)
         , genesisUtxo
         }
 
-  parseSpoPubKey = option byteArray $ fold
-    [ long "spo-public-key"
-    , metavar "PUBLIC_KEY"
-    , help "SPO cold verification key"
-    ]
+  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+
+  burnSpec = ado
+    amount ← parseAmount
+    recipient ← option sidechainAddress $ fold
+      [ long "recipient"
+      , metavar "ADDRESS"
+      , help "Address of the sidechain recipient"
+      ]
+    in BurnAct { amount, recipient }
 
   parseAmount = option bigInt $ fold
     [ short 'a'
@@ -257,11 +232,50 @@ options isTTY maybeConfig = info (helper <*> optSpec)
     , help "Amount of FUEL token to be burnt/minted"
     ]
 
+  regSpec = ado
+    spoPubKey ← parseSpoPubKey
+    sidechainPubKey ← option byteArray $ fold
+      [ long "sidechain-public-key"
+      , metavar "PUBLIC_KEY"
+      , help "Sidechain public key value"
+      ]
+    spoSig ← option byteArray $ fold
+      [ long "spo-signature"
+      , metavar "SIGNATURE"
+      , help "SPO signature"
+      ]
+    sidechainSig ← option byteArray $ fold
+      [ long "sidechain-signature"
+      , metavar "SIGNATURE"
+      , help "Sidechain signature"
+      ]
+    inputUtxo ← option transactionInput $ fold
+      [ long "registration-utxo"
+      , metavar "TX_ID#TX_IDX"
+      , help "Input UTxO to be spend with the commitee candidate registration"
+      ]
+    in
+      CommitteeCandidateReg
+        { spoPubKey
+        , sidechainPubKey
+        , spoSig
+        , sidechainSig
+        , inputUtxo
+        }
+
+  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
+
+  parseSpoPubKey = option byteArray $ fold
+    [ long "spo-public-key"
+    , metavar "PUBLIC_KEY"
+    , help "SPO cold verification key value"
+    ]
+
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Environment → Effect Options
-getOptions isTTY = do
+getOptions env = do
   config ← readAndParseJsonFrom "./config.json"
-  execParser (options isTTY config)
+  execParser (options env config)
 
   where
   readAndParseJsonFrom loc = do
@@ -274,7 +288,8 @@ getOptions isTTY = do
 -- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
 toConfigParams ∷
   Environment →
-  { skey ∷ FilePath
+  { pSkey ∷ FilePath
+  , stSkey ∷ Maybe FilePath
   , ogmiosConfig ∷ ServerConfig
   , ogmiosDatumCacheConfig ∷ ServerConfig
   , ctlServerConfig ∷ ServerConfig
@@ -282,15 +297,17 @@ toConfigParams ∷
   ConfigParams ()
 toConfigParams
   { isTTY }
-  { skey, ogmiosConfig, ogmiosDatumCacheConfig, ctlServerConfig } = testnetConfig
-  { logLevel = Info
-  , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
-  , walletSpec = Just (UseKeys (PrivatePaymentKeyFile skey) Nothing)
-  , ogmiosConfig = ogmiosConfig
-  , datumCacheConfig = ogmiosDatumCacheConfig
-  , ctlServerConfig = Just $ ctlServerConfig
-  , suppressLogs = not isTTY
-  }
+  { pSkey, stSkey, ogmiosConfig, ogmiosDatumCacheConfig, ctlServerConfig } =
+  testnetConfig
+    { logLevel = Info
+    , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
+    , walletSpec = Just
+        (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
+    , ogmiosConfig = ogmiosConfig
+    , datumCacheConfig = ogmiosDatumCacheConfig
+    , ctlServerConfig = Just $ ctlServerConfig
+    , suppressLogs = not isTTY
+    }
 
 -- | Store all log levels in a file
 fileLogger ∷ Message → Aff Unit
@@ -302,7 +319,7 @@ fileLogger m = do
 
 -- | Parse a transaction input from a CLI format (e.g. aabbcc#0)
 transactionInput ∷ ReadM TransactionInput
-transactionInput = maybeReader $ \txIn →
+transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
@@ -324,7 +341,7 @@ bigInt = maybeReader BigInt.fromString
 
 -- | Parse UInt
 uint ∷ ReadM UInt
-uint = maybeReader $ UInt.fromString
+uint = maybeReader UInt.fromString
 
 -- | 'sidechainAddress' parses
 --    >  sidechainAddress

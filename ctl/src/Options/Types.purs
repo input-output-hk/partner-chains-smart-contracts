@@ -38,9 +38,10 @@ type Config =
         , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
         }
-
-  , -- | Filepath of the signing key of the wallet owner
-    signingKeyFile ∷ Maybe FilePath
+  , -- | Filepath of the payment signing key of the wallet owner
+    paymentSigningKeyFile ∷ Maybe FilePath
+  , -- | Filepath of the stake signing key of the wallet owner
+    stakeSigningKeyFile ∷ Maybe FilePath
   , -- | Network configuration of the runtime dependencies (CTL-server, ogmios, ogmios-datum-cache)
     runtimeConfig ∷ Maybe RuntimeConfig
   }
