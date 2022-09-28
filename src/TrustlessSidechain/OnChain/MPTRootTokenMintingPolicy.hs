@@ -17,7 +17,7 @@ import Plutus.V2.Ledger.Api (
   Script,
   ScriptContext (..),
   TxInInfo (txInInfoResolved),
-  TxInfo (..),
+  TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
  )
 import PlutusTx (applyCode, compile, liftCode)
@@ -130,14 +130,13 @@ mkMintingPolicy
                       (smrmUpdateCommitteeHashCurrencySymbol smrm)
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
-                , -- TODO can we use inline datums? not sure how to datumHash -> datum in v2
-                  -- updateCommitteeHashDatum contains just a hash
-                  OutputDatum d <- txOutDatum o -- Just dh <- txOutDatumHash o , Just d <- findDatum dh info
-                =
+                , -- See Note [Committee Hash Inline Datum] in
+                  -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash'
+                  OutputDatum d <- txOutDatum o =
                 IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
-            go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo found"
-         in go (txInfoInputs info)
+            go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo given as reference input"
+         in go (txInfoReferenceInputs info)
 
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the

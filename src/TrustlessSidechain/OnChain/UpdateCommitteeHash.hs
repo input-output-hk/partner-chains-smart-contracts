@@ -35,6 +35,7 @@ import Plutus.V2.Ledger.Tx (OutputDatum (..))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OnChain.Types (
@@ -112,35 +113,24 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  -- TODO: remove the if statement here and just have the else clause. We do
-  -- this for now because this is needed in the signed merkle root to emulate
-  -- reference inputs... so we allow people to spend this output just to read
-  -- the data here essentially
-  -- BUT THIS SHOULD BE REMOVED WHEN WE HAVE REFERENCE INPUTS IN PLUTUSV2!
-  if newCommitteeHash red == committeeHash dat
-    then True
-    else
-      traceIfFalse "Token missing from output" outputHasToken
-        && traceIfFalse "Committee signature missing" signedByCurrentCommittee
-        && traceIfFalse "Wrong committee" isCurrentCommittee
-        && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+  traceIfFalse "Token missing from output" outputHasToken
+    && traceIfFalse "Committee signature missing" signedByCurrentCommittee
+    && traceIfFalse "Wrong committee" isCurrentCommittee
+    && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
-
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
       _ -> traceError "Expected exactly one committee output"
 
     outputDatum :: UpdateCommitteeHashDatum
-    outputDatum =
-      fromMaybe (traceError "Committee output datum missing") $
-        case txOutDatum ownOutput of
-          NoOutputDatum -> Nothing
-          OutputDatum d -> Just d
-          OutputDatumHash dh -> Contexts.findDatum dh info -- TODO: better return Nothing and disallow datumhashes entirely?
-          >>= PlutusTx.fromBuiltinData . getDatum
+    outputDatum = case txOutDatum ownOutput of
+      -- Note [Committee Hash Inline Datum]
+      -- We only accept the committtee has to be given as inline datum, so
+      -- all other scripts which rely on this script can safely assume that
+      -- the datum is given inline.
+      OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
+      _ -> traceError "error 'mkUpdateCommitteeHashValidator': no output inline datum missing"
 
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
@@ -148,13 +138,17 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     hasNft :: Value -> Bool
     hasNft val = Value.assetClassValueOf val (cToken uch) == 1
 
+    threshold :: Integer
+    threshold = length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
         (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        1 -- TODO: this should be the threshold?
+        threshold -- TODO: this should be the threshold?
         (newCommitteeHash red)
         (committeeSignatures red)
+
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
