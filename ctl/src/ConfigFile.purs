@@ -32,6 +32,7 @@ optExample =
           }
       }
   , signingKeyFile: Just "signing-key-file"
+  , runtimeConfig: Nothing
   }
 
 decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config

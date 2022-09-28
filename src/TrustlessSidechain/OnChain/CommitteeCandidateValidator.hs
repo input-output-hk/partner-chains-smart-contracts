@@ -22,14 +22,18 @@ import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedB
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OffChain.Types (PassiveBrdgSidechainParams, RegisterParams (..), convertSCParams)
+import TrustlessSidechain.OffChain.Types (
+  RegisterParams (..),
+  SidechainParams (..),
+  convertSCParams,
+ )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (..),
   BlockProducerRegistrationMsg (..),
  )
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
-mkCommitteeCandidateValidator :: PassiveBrdgSidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
+mkCommitteeCandidateValidator :: SidechainParams -> BlockProducerRegistration -> () -> ScriptContext -> Bool
 mkCommitteeCandidateValidator _ datum _ ctx =
   traceIfFalse "Must be signed by the original submitter" isSigned
   where
@@ -37,7 +41,7 @@ mkCommitteeCandidateValidator _ datum _ ctx =
     pkh = bprOwnPkh datum
     isSigned = txSignedBy info pkh
 
-committeeCanditateValidator :: PassiveBrdgSidechainParams -> TypedScripts.Validator
+committeeCanditateValidator :: SidechainParams -> TypedScripts.Validator
 committeeCanditateValidator sidechainParams =
   mkValidatorScript
     ( $$(PlutusTx.compile [||toValidator||])
@@ -53,13 +57,13 @@ committeeCandidateValidatorUntyped = ScriptUtils.mkUntypedValidator . mkCommitte
 serialisableValidator :: Ledger.Script
 serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
 
-script :: PassiveBrdgSidechainParams -> Scripts.Script
+script :: SidechainParams -> Scripts.Script
 script = Scripts.unValidatorScript . committeeCanditateValidator
 
-scriptSBS :: PassiveBrdgSidechainParams -> SBS.ShortByteString
+scriptSBS :: SidechainParams -> SBS.ShortByteString
 scriptSBS scParams = SBS.toShort . LBS.toStrict $ serialise $ script scParams
 
-lockScript :: PassiveBrdgSidechainParams -> PlutusScript PlutusScriptV2
+lockScript :: SidechainParams -> PlutusScript PlutusScriptV2
 lockScript = PlutusScriptSerialised . scriptSBS
 
 mockSpoPrivKey :: Wallet.XPrv
