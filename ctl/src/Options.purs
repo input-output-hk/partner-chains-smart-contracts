@@ -7,14 +7,6 @@ import Contract.Config
   ( ConfigParams
   , Message
   , PrivateStakeKeySource(..)
-  , defaultDatumCacheWsConfig
-  , defaultOgmiosWsConfig
-  , defaultServerConfig
-  , testnetConfig
-  )
-import Contract.Config
-  ( ConfigParams
-  , Message
   , ServerConfig
   , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
