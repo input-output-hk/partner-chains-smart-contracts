@@ -46,5 +46,6 @@ testScenario = do
         { sidechainParams: scParams
         , spoPubKey: hexToByteArrayUnsafe "ababab"
         }
-  register regParams
-  deregister deregParams
+
+  void $ register regParams
+  void $ deregister deregParams

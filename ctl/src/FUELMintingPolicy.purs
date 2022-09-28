@@ -24,7 +24,8 @@ import Contract.TextEnvelope
   , textEnvelopeBytes
   )
 import Contract.Transaction
-  ( TransactionOutputWithRefScript(..)
+  ( TransactionHash
+  , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTx
   , submit
@@ -149,7 +150,7 @@ data FuelParams
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
-runFuelMP ∷ SidechainParams → FuelParams → Contract () Unit
+runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
 
@@ -220,6 +221,8 @@ runFuelMP sp fp = do
   logInfo' ("Submitted fuelMP Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' "fuelMP Tx submitted successfully!"
+
+  pure txId
 
 {- | Empty currency symbol to be used with Passive Bridge transactions,
   where these tokens are not used
