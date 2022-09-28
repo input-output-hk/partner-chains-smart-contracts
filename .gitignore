@@ -47,6 +47,7 @@ Thumbs.db
 # Local configuration files
 cabal.project.local*
 .ghci
+config.json
 
 # Notes
 *.txt

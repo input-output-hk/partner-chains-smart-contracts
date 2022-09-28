@@ -3,20 +3,39 @@ module Options (getOptions) where
 import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
+import Contract.Config
+  ( ConfigParams
+  , Message
+  , PrivateStakeKeySource(..)
+  , ServerConfig
+  , defaultDatumCacheWsConfig
+  , defaultOgmiosWsConfig
+  , defaultServerConfig
+  , testnetConfig
+  )
 import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Log.Formatter.JSON (jsonFormatter)
 import Data.String (Pattern(Pattern), split)
+import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
+import Helpers (logWithLevel)
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff (appendTextFile)
+import Node.Path (FilePath)
 import Options.Applicative
-  ( ParserInfo
+  ( Parser
+  , ParserInfo
   , ReadM
   , action
   , command
   , execParser
+  , flag
   , fullDesc
   , header
   , help
@@ -30,21 +49,23 @@ import Options.Applicative
   , option
   , progDesc
   , short
+  , showDefault
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Options)
+import Options.Types (Config, Endpoint(..), Environment, Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray)
 
-options ∷ Maybe Config → ParserInfo Options
-options maybeConfig = info (helper <*> optSpec)
+-- | Argument option parser for ctl-main
+options ∷ Environment → Maybe Config → ParserInfo Options
+options env maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
   where
   optSpec =
-    hsubparser $ mconcat
+    hsubparser $ fold
       [ command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
@@ -68,64 +89,87 @@ options maybeConfig = info (helper <*> optSpec)
       ]
 
   withCommonOpts endpointParser = ado
-    skey ← skeySpec
+    pSkey ← pSkeySpec
+    stSkey ← stSKeySpec
     scParams ← scParamsSpec
     endpoint ← endpointParser
 
-    in { skey, scParams, endpoint }
-  skeySpec =
+    ogmiosConfig ← serverConfigSpec "ogmios" $
+      fromMaybe defaultOgmiosWsConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
+
+    ogmiosDatumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
+      fromMaybe defaultDatumCacheWsConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
+
+    ctlServerConfig ← serverConfigSpec "ctl-server" $
+      fromMaybe defaultServerConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+
+    let
+      opts =
+        { pSkey
+        , stSkey
+        , ogmiosConfig
+        , ogmiosDatumCacheConfig
+        , ctlServerConfig
+        }
+    in
+      { scParams
+      , endpoint
+      , configParams: toConfigParams env opts
+      }
+
+  pSkeySpec =
     option str $ fold
       [ short 'k'
-      , long "signing-key-file"
-      , metavar "/absolute/path/to/skey"
-      , help "Own signing key file"
+      , long "payment-signing-key-file"
+      , metavar "/absolute/path/to/payment.skey"
+      , help "Own payment signing key file path"
       , action "file"
-      , maybe mempty value (maybeConfig >>= _.signingKeyFile)
+      , maybe mempty value (maybeConfig >>= _.paymentSigningKeyFile)
       ]
 
-  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+  stSKeySpec =
+    optional $ option str $ fold
+      [ short 'K'
+      , long "stake-signing-key-file"
+      , metavar "/absolute/path/to/stake.skey"
+      , help "Own stake signing key file path"
+      , action "file"
+      , maybe mempty value (maybeConfig >>= _.stakeSigningKeyFile)
+      ]
 
-  burnSpec = ado
-    amount ← parseAmount
-    recipient ← option sidechainAddress $ fold
-      [ long "recipient"
-      , metavar "ADDRESS"
-      , help "Address of the sidechain recipient"
+  serverConfigSpec ∷ String → ServerConfig → Parser ServerConfig
+  serverConfigSpec
+    name
+    { host: defHost, path: defPath, port: defPort, secure: defSecure } = ado
+    host ← option str $ fold
+      [ long $ name <> "-host"
+      , metavar "localhost"
+      , help $ "Address host of " <> name
+      , value defHost
+      , showDefault
       ]
-    in BurnAct { amount, recipient }
-
-  regSpec = ado
-    spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
-      [ long "sidechain-public-key"
-      , metavar "PUBLIC_KEY"
-      , help "Sidechain public key"
+    path ← optional $ option str $ fold
+      [ long $ name <> "-path"
+      , metavar "some/path"
+      , help $ "Address path of " <> name
+      , maybe mempty value defPath
+      , showDefault
       ]
-    spoSig ← option byteArray $ fold
-      [ long "spo-signature"
-      , metavar "SIGNATURE"
-      , help "SPO signature"
+    port ← option uint $ fold
+      [ long $ name <> "-port"
+      , metavar "1234"
+      , help $ "Port of " <> name
+      , value defPort
+      , showDefault
       ]
-    sidechainSig ← option byteArray $ fold
-      [ long "sidechain-signature"
-      , metavar "SIGNATURE"
-      , help "Sidechain signature"
+    secure ← flag false true $ fold
+      [ long $ name <> "-secure"
+      , help $ "Whether " <> name <> " is using an HTTPS connection"
       ]
-    inputUtxo ← option transactionInput $ fold
-      [ long "registration-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO to be spend with the commitee candidate registration"
-      ]
-    in
-      CommitteeCandidateReg
-        { spoPubKey
-        , sidechainPubKey
-        , spoSig
-        , sidechainSig
-        , inputUtxo
-        }
-
-  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
+    in { host, path, port, secure: secure || defSecure }
 
   scParamsSpec = ado
     chainId ← option int $ fold
@@ -170,11 +214,16 @@ options maybeConfig = info (helper <*> optSpec)
         , genesisUtxo
         }
 
-  parseSpoPubKey = option byteArray $ fold
-    [ long "spo-public-key"
-    , metavar "PUBLIC_KEY"
-    , help "SPO cold verification key"
-    ]
+  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+
+  burnSpec = ado
+    amount ← parseAmount
+    recipient ← option sidechainAddress $ fold
+      [ long "recipient"
+      , metavar "ADDRESS"
+      , help "Address of the sidechain recipient"
+      ]
+    in BurnAct { amount, recipient }
 
   parseAmount = option bigInt $ fold
     [ short 'a'
@@ -183,10 +232,50 @@ options maybeConfig = info (helper <*> optSpec)
     , help "Amount of FUEL token to be burnt/minted"
     ]
 
-getOptions ∷ Effect Options
-getOptions = do
+  regSpec = ado
+    spoPubKey ← parseSpoPubKey
+    sidechainPubKey ← option byteArray $ fold
+      [ long "sidechain-public-key"
+      , metavar "PUBLIC_KEY"
+      , help "Sidechain public key value"
+      ]
+    spoSig ← option byteArray $ fold
+      [ long "spo-signature"
+      , metavar "SIGNATURE"
+      , help "SPO signature"
+      ]
+    sidechainSig ← option byteArray $ fold
+      [ long "sidechain-signature"
+      , metavar "SIGNATURE"
+      , help "Sidechain signature"
+      ]
+    inputUtxo ← option transactionInput $ fold
+      [ long "registration-utxo"
+      , metavar "TX_ID#TX_IDX"
+      , help "Input UTxO to be spend with the commitee candidate registration"
+      ]
+    in
+      CommitteeCandidateReg
+        { spoPubKey
+        , sidechainPubKey
+        , spoSig
+        , sidechainSig
+        , inputUtxo
+        }
+
+  deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
+
+  parseSpoPubKey = option byteArray $ fold
+    [ long "spo-public-key"
+    , metavar "PUBLIC_KEY"
+    , help "SPO cold verification key value"
+    ]
+
+-- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
+getOptions ∷ Environment → Effect Options
+getOptions env = do
   config ← readAndParseJsonFrom "./config.json"
-  execParser (options config)
+  execParser (options env config)
 
   where
   readAndParseJsonFrom loc = do
@@ -196,8 +285,41 @@ getOptions = do
   decodeConfigUnsafe json =
     liftEither $ lmap (error <<< show) $ decodeConfig json
 
+-- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
+toConfigParams ∷
+  Environment →
+  { pSkey ∷ FilePath
+  , stSkey ∷ Maybe FilePath
+  , ogmiosConfig ∷ ServerConfig
+  , ogmiosDatumCacheConfig ∷ ServerConfig
+  , ctlServerConfig ∷ ServerConfig
+  } →
+  ConfigParams ()
+toConfigParams
+  { isTTY }
+  { pSkey, stSkey, ogmiosConfig, ogmiosDatumCacheConfig, ctlServerConfig } =
+  testnetConfig
+    { logLevel = Info
+    , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
+    , walletSpec = Just
+        (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
+    , ogmiosConfig = ogmiosConfig
+    , datumCacheConfig = ogmiosDatumCacheConfig
+    , ctlServerConfig = Just $ ctlServerConfig
+    , suppressLogs = not isTTY
+    }
+
+-- | Store all log levels in a file
+fileLogger ∷ Message → Aff Unit
+fileLogger m = do
+  let filename = "./contractlog.json"
+  appendTextFile UTF8 filename (jsonFormatter m <> "\n")
+
+-- * Custom Parsers
+
+-- | Parse a transaction input from a CLI format (e.g. aabbcc#0)
 transactionInput ∷ ReadM TransactionInput
-transactionInput = maybeReader $ \txIn →
+transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
@@ -209,14 +331,20 @@ transactionInput = maybeReader $ \txIn →
           }
     _ → Nothing
 
+-- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
-byteArray = maybeReader $ hexToByteArray
+byteArray = maybeReader hexToByteArray
 
+-- | Parse BigInt
 bigInt ∷ ReadM BigInt
-bigInt = maybeReader $ BigInt.fromString
+bigInt = maybeReader BigInt.fromString
+
+-- | Parse UInt
+uint ∷ ReadM UInt
+uint = maybeReader UInt.fromString
 
 -- | 'sidechainAddress' parses
---    >  sidechainAddress 
+--    >  sidechainAddress
 --    >         -> 0x hexStr
 --    >         -> hexStr
 -- where @hexStr@ is a sequence of hex digits.

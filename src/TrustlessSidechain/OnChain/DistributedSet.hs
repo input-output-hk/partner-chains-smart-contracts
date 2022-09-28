@@ -47,6 +47,16 @@ module TrustlessSidechain.OnChain.DistributedSet (
   dsKeyPolicy,
   dsKeyCurrencySymbol,
   dsConfValidatorHash,
+
+  -- * CTL serialisable validators / policies
+  mkInsertValidatorUntyped,
+  serialisableInsertValidator,
+  mkDsConfValidatorUntyped,
+  serialisableDsConfValidator,
+  mkDsConfPolicyUntyped,
+  serialisableDsConfPolicy,
+  mkDsKeyPolicyUntyped,
+  serialisableDsKeyPolicy,
 ) where
 
 import PlutusTx.Prelude
@@ -54,7 +64,7 @@ import PlutusTx.Prelude
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Ledger.Address (scriptHashAddress)
 import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
-import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy, mkUntypedValidator)
+import Plutus.Script.Utils.V2.Typed.Scripts (UntypedMintingPolicy, UntypedValidator, mkUntypedMintingPolicy, mkUntypedValidator)
 import Plutus.V2.Ledger.Api (
   Address (Address),
   Credential (ScriptCredential),
@@ -63,6 +73,7 @@ import Plutus.V2.Ledger.Api (
   Map,
   MintingPolicy,
   OutputDatum (NoOutputDatum, OutputDatumHash),
+  Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
@@ -75,6 +86,7 @@ import Plutus.V2.Ledger.Api (
   mkMintingPolicyScript,
   mkValidatorScript,
  )
+import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
@@ -617,18 +629,19 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      Just _ <- AssocMap.lookup (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
+      AssocMap.member (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
       case mintedTns of
         [tn] | unTokenName tn == nKey rootNode ->
           traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
             case find (\txout -> txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)) (txInfoOutputs info) of
               Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
               Nothing -> False
-        -- TODO: check in the script output with the output that this
-        -- ownCS is actually where it should be.. Actually,
-        -- there's no need to do this -- we can verify this offchain
-        -- since we may assume that all participants know the protocol
-        -- ahead of time and may independently verify.
+        -- Note: Why don't we have to verify that the 'DsConf' validator has
+        -- 'ownCS' stored in the 'DsConfDatum' field 'dscKeyPolicy'? This is
+        -- because we assume that everyone knows the protocol to participate in
+        -- this system (and the 'DsConf' validator cannot be changed), so
+        -- everyone may independently verify offchain that the 'dscKeyPolicy'
+        -- is as expected.
         _ -> traceError "error 'mkDsKeyPolicy' bad initial mint"
   _ -> traceError "error 'mkDsKeyPolicy' bad inputs in transaction"
   where
@@ -687,3 +700,53 @@ dsKeyCurrencySymbol = scriptCurrencySymbol . dsKeyPolicy
 
     * Variations of a Patricia Tree. This also had budget issues.
 -}
+
+{- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
+ needed for ctl)
+-}
+mkInsertValidatorUntyped :: BuiltinData -> UntypedValidator
+mkInsertValidatorUntyped = mkUntypedValidator . mkInsertValidator . PlutusTx.unsafeFromBuiltinData
+
+{- | 'serialisableInsertValidator' is a serialisable version of the validator
+ (this is needed for ctl)
+-}
+serialisableInsertValidator :: Script
+serialisableInsertValidator =
+  Api.fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
+
+{- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
+ needed for ctl)
+-}
+mkDsConfValidatorUntyped :: BuiltinData -> UntypedValidator
+mkDsConfValidatorUntyped = mkDsConfValidator . PlutusTx.unsafeFromBuiltinData
+
+{- | 'serialisableDsConfValidator' creates a serialisable version of the
+ validator (this is needed for ctl)
+-}
+serialisableDsConfValidator :: Script
+serialisableDsConfValidator =
+  Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
+
+{- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
+ needed for ctl)
+-}
+mkDsConfPolicyUntyped :: BuiltinData -> UntypedMintingPolicy
+mkDsConfPolicyUntyped = mkUntypedMintingPolicy . mkDsConfPolicy . PlutusTx.unsafeFromBuiltinData
+
+{- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
+ policy (this is needed for ctl)
+-}
+serialisableDsConfPolicy :: Script
+serialisableDsConfPolicy = Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
+
+{- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
+ needed for ctl)
+-}
+mkDsKeyPolicyUntyped :: BuiltinData -> UntypedMintingPolicy
+mkDsKeyPolicyUntyped = mkUntypedMintingPolicy . mkDsKeyPolicy . PlutusTx.unsafeFromBuiltinData
+
+{- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
+ policy (this is needed for ctl)
+-}
+serialisableDsKeyPolicy :: Script
+serialisableDsKeyPolicy = Api.fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])

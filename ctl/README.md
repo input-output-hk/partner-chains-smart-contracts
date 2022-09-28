@@ -1,10 +1,10 @@
 # Trustless Sidechain CTL
 
-## Development
+## 1. Development
 
 If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
-## Environment setup
+## 2. Environment setup
 
 In order to run CTL you need to setup the runtime dependencies:
 * cardano-node
@@ -17,7 +17,7 @@ Luckily, we have a dockerised setup, that spins up all these easily with a prese
 nix run .#ctl-runtime
 ```
 
-To change the testnet you're using, you have to change the network name in the `flake.nix`, and make sure you have the updated configuration files in `ctl/cardano-configurations/network/NETWORK_NAME`
+To change the testnet you're using, you have to change the network name in the `flake.nix`
 ```
       runtimeConfig = {
         network = {
@@ -29,7 +29,28 @@ To change the testnet you're using, you have to change the network name in the `
 
 You can also run these components directly without using Docker, more about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
 
-## Running the CLI
+### 2.1. Configuring hosted runtime dependencies
+
+In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and ctlServer) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
+
+The arguments for each service are using the following scheme:
+```
+  --ogmios-host localhost  Address host of ogmios (default: "localhost")
+  --ogmios-path some/path  Address path of ogmios
+  --ogmios-port 1234       Port of ogmios (default: 1337u)
+  --ogmios-secure          Whether ogmios is using an HTTPS connection
+```
+
+So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
+```
+nix run .#ctl-main -- mint --amount 100 --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+```
+
+For more information about the arguments, please refer to `nix run .#ctl-main -- mint --help`
+
+To use a configuration file instead, see [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
+
+## 3. Running the CLI
 
 You can call the contract endpoints with the following CLI command (you need to add `--` before the arguments):
 ```
@@ -42,7 +63,7 @@ Then, you can use it the following way (without the `--`):
 node main.js --help
 ```
 
-### Using the CLI commands
+### 3.1. Using the CLI commands
 
 Below are some examples for running the Passive Bridge endpoints.
 Notes:
@@ -50,7 +71,7 @@ Notes:
 
 - `genesis-mint-utxo` is not a required argument. If omitted from the sidechain parameters, we can mint multiple times
 
-- prior to running the contracts - have available your signing key in the environment. Example:
+- prior to running the contracts - it may be desirable to have available your signing key in the environment. Example:
 
 ```bash
 export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
@@ -65,24 +86,24 @@ Available commands:
   deregister               Deregister a committee member
 ```
 
-#### Get script addresses of a sidechain
+#### 3.1.1. Get script addresses of a sidechain
 
 Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
 
 ```
 nix run .#ctl-main -- addresses \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233
 ```
 
-#### Mint FUEL tokens
+#### 3.1.2. Mint FUEL tokens
 
 ```
 nix run .#ctl-main -- mint \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -90,11 +111,11 @@ nix run .#ctl-main -- mint \
   --amount 5
 ```
 
-#### Burn user owned FUEL tokens
+#### 3.1.3. Burn user owned FUEL tokens
 
 ```
 nix run .#ctl-main -- burn \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -103,7 +124,7 @@ nix run .#ctl-main -- burn \
   --recipient aabbcc
 ```
 
-#### Register committee candidate
+#### 3.1.4. Register committee candidate
 
 In order to generate the signatures, you can use the signature generator tool:
 
@@ -122,7 +143,7 @@ And use it's output for the registration:
 
 ```
 nix run .#ctl-main -- register \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -134,11 +155,11 @@ nix run .#ctl-main -- register \
   --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
 ```
 
-#### Deregister committee candidate
+#### 3.1.5. Deregister committee candidate
 
 ```
 nix run .#ctl-main -- deregister \
-  --signing-key-file $SIGNING_KEY \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -146,11 +167,11 @@ nix run .#ctl-main -- deregister \
   --spo-public-key aabbcc
 ```
 
-### Using a configuration file
+### 3.2. Using a configuration file
 
-You can also provide a configuration file named `config.json` in the following format instead of repeating them in all commands.
+You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
 
-```
+```json
 {
   "sidechainParameters": {
     "chainId": 123,
@@ -158,7 +179,9 @@ You can also provide a configuration file named `config.json` in the following f
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
   },
-  "signingKeyFile": "/absolute/path/to/signing-key.skey"
+  "runtimeConfig": null,
+  "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
+  "stakeSigningKeyFile": null
 }
 ```
 
@@ -168,4 +191,36 @@ and now you can call the CLI without these values:
 nix run .#ctl-main -- mint --amount 5
 ```
 
+You can find a sample configuration file in `ctl/config.example.json`.
+
 When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null, if you don't want to set a default value for that property.
+
+### 3.3. Configuring hosted runtime dependencies
+
+ You can set the network configuration of the runtime dependecies in the configuration file using the following format:
+
+*$CWD/config.json*
+```json
+{
+  "sidechainParameters": null,
+  "runtimeConfig": {
+    "network": "testnet",
+    "ogmios": {
+      "host": "1.2.3.4.5",
+      "port": 1337,
+      "secure": true,
+      "path": null
+    },
+    "ogmiosDatumCache": {
+      "host": "2.3.4.5.6",
+      "port": 9999,
+      "secure": false,
+      "path": null
+    },
+    "ctlServer": null
+  },
+  "signingKeyFile": null
+}
+```
+
+Any service where no configuration is defined will fallback to its default value (localhost).
