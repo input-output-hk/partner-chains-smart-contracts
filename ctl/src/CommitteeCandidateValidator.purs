@@ -51,9 +51,8 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Control.Alternative (guard)
-import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Control.Parallel (parTraverse)
-import Data.Array (catMaybes, (:))
+import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -123,19 +122,16 @@ instance ToData BlockProducerRegistration where
     ]
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ])
-    | n == zero = BlockProducerRegistration <$>
-        ( ( { bprSpoPubKey: _
-            , bprSidechainPubKey: _
-            , bprSpoSignature: _
-            , bprSidechainSignature: _
-            , bprInputUtxo: _
-            , bprOwnPkh: _
-            }
-          ) <$> fromData a <*> fromData b <*> fromData c <*> fromData d
-            <*> fromData e
-            <*> fromData f
-        )
+  fromData (Constr n [ a, b, c, d, e, f ]) | n == zero =
+    { bprSpoPubKey: _
+    , bprSidechainPubKey: _
+    , bprSpoSignature: _
+    , bprSidechainSignature: _
+    , bprInputUtxo: _
+    , bprOwnPkh: _
+    } <$> fromData a <*> fromData b <*> fromData c <*> fromData d <*> fromData e
+      <*> fromData f
+      <#> BlockProducerRegistration
   fromData _ = Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
@@ -205,19 +201,18 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
     (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← liftedM (msg "Cannot get UTxOs") (utxosAt ownAddr)
   valUtxos ← liftedM (msg "Cannot get val UTxOs") (utxosAt valAddr)
-  let valUtxos' = Map.toUnfoldable valUtxos
 
-  ourDatums ← liftAff $ flip parTraverse valUtxos'
+  ourDatums ← liftAff $ Map.toUnfoldable valUtxos # parTraverse
     \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
-      runMaybeT $ do
-        BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
-          =<< outputDatumDatum out.datum
-        guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
+      pure do
+        Datum d ← outputDatumDatum out.datum
+        BlockProducerRegistration r ← fromData d
+        guard (r.bprSpoPubKey == spoPubKey && r.bprOwnPkh == ownPkh)
         pure input
   let datums = catMaybes ourDatums
 
-  when (null datums) $ throwContractError
-    (msg "Registration utxo cannot be found")
+  when (null datums)
+    $ throwContractError (msg "Registration utxo cannot be found")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
@@ -226,10 +221,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       <> Lookups.unspentOutputs valUtxos
 
     constraints ∷ Constraints.TxConstraints Void Void
-    constraints = mconcat
-      ( Constraints.mustBeSignedBy ownPkh :
-          (flip Constraints.mustSpendScriptOutput unitRedeemer <$> datums)
-      )
+    constraints = Constraints.mustBeSignedBy ownPkh
+      <> mconcat (flip Constraints.mustSpendScriptOutput unitRedeemer <$> datums)
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
