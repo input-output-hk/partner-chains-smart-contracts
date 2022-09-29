@@ -60,6 +60,7 @@ import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.Scripts (plutusV2Script)
+import Utils.Logging (class Display, mkReport)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -233,6 +234,5 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   pure txId
 
--- small utility function for error reporting.
-report ∷ String → ∀ e. Show e ⇒ e → String
-report fn msg = "CommitteeCandidateValidator." <> fn <> ": " <> show msg
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }

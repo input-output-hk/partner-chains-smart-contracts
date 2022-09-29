@@ -4,30 +4,23 @@ import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
 import Contract.Config
-  ( ConfigParams
-  , Message
-  , PrivateStakeKeySource(..)
+  ( PrivateStakeKeySource(..)
   , ServerConfig
   , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
   , defaultServerConfig
   , testnetConfig
   )
-import Contract.Prim.ByteArray (hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.Log.Formatter.JSON (jsonFormatter)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
 import Helpers (logWithLevel)
-import Node.Encoding (Encoding(..))
-import Node.FS.Aff (appendTextFile)
-import Node.Path (FilePath)
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -53,13 +46,14 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Environment, Options)
+import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
-import Types.ByteArray (ByteArray)
+import Types.ByteArray (ByteArray, hexToByteArray)
+import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
-options ∷ Environment → Maybe Config → ParserInfo Options
-options env maybeConfig = info (helper <*> optSpec)
+options ∷ Maybe Config → ParserInfo Options
+options maybeConfig = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
@@ -98,26 +92,28 @@ options env maybeConfig = info (helper <*> optSpec)
       fromMaybe defaultOgmiosWsConfig
         (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
 
-    ogmiosDatumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
+    datumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
       fromMaybe defaultDatumCacheWsConfig
         (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
 
     ctlServerConfig ← serverConfigSpec "ctl-server" $
       fromMaybe defaultServerConfig
         (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
-
-    let
-      opts =
-        { pSkey
-        , stSkey
-        , ogmiosConfig
-        , ogmiosDatumCacheConfig
-        , ctlServerConfig
-        }
     in
       { scParams
       , endpoint
-      , configParams: toConfigParams env opts
+      , configParams: testnetConfig
+          { logLevel = environment.logLevel
+          , suppressLogs = not environment.isTTY
+          , customLogger = Just
+              \m → fileLogger m *> logWithLevel environment.logLevel m
+          , walletSpec = Just $ UseKeys
+              (PrivatePaymentKeyFile pSkey)
+              (PrivateStakeKeyFile <$> stSkey)
+          , ctlServerConfig = Just ctlServerConfig
+          , datumCacheConfig = datumCacheConfig
+          , ogmiosConfig = ogmiosConfig
+          }
       }
 
   pSkeySpec =
@@ -272,10 +268,10 @@ options env maybeConfig = info (helper <*> optSpec)
     ]
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
-getOptions ∷ Environment → Effect Options
-getOptions env = do
+getOptions ∷ Effect Options
+getOptions = do
   config ← readAndParseJsonFrom "./config.json"
-  execParser (options env config)
+  execParser (options config)
 
   where
   readAndParseJsonFrom loc = do
@@ -284,36 +280,6 @@ getOptions env = do
 
   decodeConfigUnsafe json =
     liftEither $ lmap (error <<< show) $ decodeConfig json
-
--- | Get the CTL configuration parameters based on the config file parameters and CLI arguments
-toConfigParams ∷
-  Environment →
-  { pSkey ∷ FilePath
-  , stSkey ∷ Maybe FilePath
-  , ogmiosConfig ∷ ServerConfig
-  , ogmiosDatumCacheConfig ∷ ServerConfig
-  , ctlServerConfig ∷ ServerConfig
-  } →
-  ConfigParams ()
-toConfigParams
-  { isTTY }
-  { pSkey, stSkey, ogmiosConfig, ogmiosDatumCacheConfig, ctlServerConfig } =
-  testnetConfig
-    { logLevel = Info
-    , customLogger = Just $ \m → fileLogger m *> logWithLevel Info m
-    , walletSpec = Just
-        (UseKeys (PrivatePaymentKeyFile pSkey) (PrivateStakeKeyFile <$> stSkey))
-    , ogmiosConfig = ogmiosConfig
-    , datumCacheConfig = ogmiosDatumCacheConfig
-    , ctlServerConfig = Just $ ctlServerConfig
-    , suppressLogs = not isTTY
-    }
-
--- | Store all log levels in a file
-fileLogger ∷ Message → Aff Unit
-fileLogger m = do
-  let filename = "./contractlog.json"
-  appendTextFile UTF8 filename (jsonFormatter m <> "\n")
 
 -- * Custom Parsers
 

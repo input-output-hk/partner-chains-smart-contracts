@@ -3,7 +3,6 @@ module Options.Types
   , Options(..)
   , Config(..)
   , Endpoint(..)
-  , Environment
   ) where
 
 import Contract.Prelude
@@ -12,13 +11,10 @@ import Contract.Address (NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
-import Node.Path (FilePath)
+import Plutip.Types (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
-
-type Environment =
-  { isTTY ∷ Boolean }
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
