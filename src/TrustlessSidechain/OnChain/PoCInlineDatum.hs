@@ -51,7 +51,7 @@ mkPoCInlineDatumValidator _dat red ctx =
               | otherwise -> traceError "error 'mkPoCInlineDatum': 'fromBuiltinData' failed"
     Nothing -> traceError "error 'mkPoCInlineDatum': 'findOwnInput' failed"
 
--- | 'mkUntypedValidator' is an untyped script of 'mkPoCInlineDatumValidator'
+-- | 'mkPoCInlineDatumValidatorUntyped' is an untyped script of 'mkPoCInlineDatumValidator'
 mkPoCInlineDatumValidatorUntyped :: UntypedValidator
 mkPoCInlineDatumValidatorUntyped = Validators.mkUntypedValidator mkPoCInlineDatumValidator
 
