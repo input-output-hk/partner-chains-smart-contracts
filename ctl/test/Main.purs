@@ -55,3 +55,4 @@ main = do
         PoCReferenceScript.testScenario2
 
         PoCSerialiseData.testScenario1
+        PoCSerialiseData.testScenario2
