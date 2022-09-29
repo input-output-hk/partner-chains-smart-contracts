@@ -29,9 +29,8 @@
     cardano-transaction-lib.inputs.haskell-nix.follows = "plutip/haskell-nix";
     cardano-transaction-lib.inputs.nixpkgs.follows = "plutip/nixpkgs";
 
-
     nixpkgs.follows = "nixpkgs";
-    haskell-nix.url = "github:input-output-hk/haskell.nix?ref=extra-sources";
+    haskell-nix.url = "github:input-output-hk/haskell.nix?rev=220f8a9cd166e726aea62843bdafa7ecded3375c";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     flake-compat = {
       url = "github:edolstra/flake-compat";
