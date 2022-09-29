@@ -5,7 +5,7 @@
 
 module TrustlessSidechain.OnChain.Utils (verifyMulti, verifyMultisig) where
 
-import PlutusTx.Prelude (Bool (..), BuiltinByteString, Eq, Integer, Maybe (..), and, tail, verifyEd25519Signature, zipWith, (&&), (-), (<), (<$>), (<=), (||))
+import PlutusTx.Prelude
 
 -- ? can we require a single list [(Pubkey , Signature)] to validate
 
@@ -25,11 +25,18 @@ verifyMulti isOK threshold pubKeys signatures =
           Nothing -> verifyMulti isOK threshold pks signatures -- KO skip pubkey and reuse siglist
           Just sgs -> verifyMulti isOK (threshold - 1) pks sgs -- OK update threshold and siglist
 
+{- | @'verifyMultisig' pubKeys threshold message signatures@ checks if at least
+ @threshold@ of @pubKeys@ have signed @message@ with @signatures@.
+
+ Preconditions
+
+      * @signatures@ should be sorted (otherwise this returns False)
+-}
 {-# INLINEABLE verifyMultisig #-}
 verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
 -- note. we need to test nub of either signatures or pubkeys
---   | O(n^2) nub the signatures
---   | O(n)   require signatures to be sorted then test each elem greater than last O(n)
+--   | O(n^2) nub the public keys
+--   | O(n)   require public keys to be sorted then test each elem greater than last O(n)
 verifyMultisig pubKeys threshold message signatures =
-  let sigsSorted = and (zipWith (<) signatures (tail signatures)) -- insert (<) between all elements
-   in sigsSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifyEd25519Signature` message) threshold pubKeys signatures
+  let pubKeysSorted = and (zipWith (<) pubKeys (tail pubKeys)) -- insert (<) between all elements
+   in pubKeysSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifyEd25519Signature` message) threshold pubKeys signatures

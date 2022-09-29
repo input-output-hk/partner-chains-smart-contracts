@@ -39,8 +39,10 @@ import Contract.TextEnvelope
   , textEnvelopeBytes
   )
 import Contract.Transaction
-  ( TransactionInput
+  ( TransactionHash
+  , TransactionInput
   , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceAndSignTx
   , outputDatumDatum
@@ -57,11 +59,8 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
+import Types (PubKey, Signature)
 import Types.Scripts (plutusV2Script)
-
-type Signature = ByteArray -- Ed25519Signature
-type AssetClass = Value.CurrencySymbol
-type PubKey = ByteArray
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -84,43 +83,13 @@ getCommitteeCandidateValidator sp = do
     PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
 
-newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷
-      Array String -- | The current committee's signatures for the 'newCommitteeHash'
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- | 'committeePubKeys' is the current committee public keys
-  , newCommitteeHash ∷ String -- | 'newCommitteeHash' is the hash of the new committee
-  }
-
-derive instance Generic UpdateCommitteeHashRedeemer _
-derive instance Newtype UpdateCommitteeHashRedeemer _
-instance ToData UpdateCommitteeHashRedeemer where
-  toData
-    ( UpdateCommitteeHashRedeemer
-        { committeeSignatures, committeePubKeys, newCommitteeHash }
-    ) = Constr zero
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteeHash
-    ]
-
-newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { newCommitteePubKeys ∷
-      Array PaymentPubKeyHash -- The public keys of the new committee.
-  , token ∷ AssetClass -- The asset class of the NFT for this committee hash
-  , committeeSignatures ∷
-      Array String -- The signature for the new committee hash.
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- Public keys of the current committee members.
-  }
-
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ String
-  , signatures ∷ Array String
+  , merkleRoot ∷ ByteArray
+  , signatures ∷ Array Signature
   , threshold ∷ BigInt.BigInt
   , committeePubKeys ∷
-      Array PaymentPubKeyHash -- Public keys of all committee members
+      Array PubKey -- Public keys of all committee members
   }
 
 newtype BlockProducerRegistration = BlockProducerRegistration
@@ -172,10 +141,10 @@ instance FromData BlockProducerRegistration where
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
   , bprmSidechainPubKey ∷ String
-  , bprmInputUtxo ∷ TransactionOutput -- A UTxO that must be spent by the transaction
+  , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
-register ∷ RegisterParams → Contract () Unit
+register ∷ RegisterParams → Contract () TransactionHash
 register
   ( RegisterParams
       { sidechainParams
@@ -189,7 +158,7 @@ register
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
 
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr) -- TrustlessSidechainSchema Text CardanoTx
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   validator ← getCommitteeCandidateValidator sidechainParams
   let
     valHash = validatorHash validator
@@ -208,8 +177,11 @@ register
       <> Lookups.validator validator
 
     constraints ∷ Constraints.TxConstraints Void Void
-    constraints = Constraints.mustPayToScript valHash (Datum (toData datum)) val
-      <> Constraints.mustSpendPubKeyOutput inputUtxo
+    constraints =
+      Constraints.mustSpendPubKeyOutput inputUtxo
+        <> Constraints.mustPayToScript valHash (Datum (toData datum))
+          Constraints.DatumWitness
+          val
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"
     (balanceAndSignTx (reattachDatumsInline ubTx))
@@ -218,7 +190,9 @@ register
   awaitTxConfirmed txId
   logInfo' "register Tx submitted successfully!"
 
-deregister ∷ DeregisterParams → Contract () Unit
+  pure txId
+
+deregister ∷ DeregisterParams → Contract () TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
@@ -226,18 +200,19 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM "marketPlaceListNft: get validator address"
+  valAddr ← liftContractM "committeeCandidateValidator: get validator address"
     (validatorHashEnterpriseAddress netId valHash)
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  valUtxos ← unwrap <$> liftedM "cannot get val UTxOs" (utxosAt valAddr)
+  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  valUtxos ← liftedM "cannot get val UTxOs" (utxosAt valAddr)
   let valUtxos' = Map.toUnfoldable valUtxos
 
   ourDatums ← liftAff $ (flip parTraverse) valUtxos' $
-    \(input /\ (TransactionOutput out)) → runMaybeT $ do
-      BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
-        =<< outputDatumDatum out.datum
-      guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
-      pure input
+    \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
+      runMaybeT $ do
+        BlockProducerRegistration datum ← MaybeT $ pure $ (fromData <<< unwrap)
+          =<< outputDatumDatum out.datum
+        guard (datum.bprSpoPubKey == spoPubKey && ownPkh == datum.bprOwnPkh)
+        pure input
 
   when (null (catMaybes ourDatums)) $ throwContractError
     "Registration utxo cannot be found"
@@ -262,3 +237,5 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   logInfo' ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' "deregister submitted successfully!"
+
+  pure txId

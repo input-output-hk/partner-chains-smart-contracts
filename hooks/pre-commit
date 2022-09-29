@@ -6,6 +6,13 @@ die() {
 	echo $* >&2 && exit $code
 }
 
+check() {
+	command -v $1 >/dev/null \
+		|| die "please enter a shell environment where \`$1\` is present," \
+		       "then commit your changes."
+	$*
+}
+
 # If there are whitespace errors, print the offending file names and fail.
 git diff-index --cached --check HEAD --
 
@@ -15,10 +22,16 @@ set +e
 	nix=$(grep '\.nix$' <<< $changed)
 	cabal=$(grep '\.cabal$' <<< $changed)
 	haskell=$(grep '\.l\?hs$' <<< $changed)
+	purescript=$(grep '\.purs$' <<< $changed)
+	javascript=$(grep '\.js$' <<< $changed)
+	dhall=$(grep '\.dhall$' <<< $changed)
+	flake=$(grep '^flake\.nix$' <<< $changed)
 set -e
 
-! [ "$nix" ] || nixpkgs-fmt --check $nix
-! [ "$cabal" ] || cabal-fmt --check $cabal
+! [ "$nix" ] || check nixpkgs-fmt --check $nix
+! [ "$flake" ] || nix flake lock --no-update-lock-file
+
+! [ "$cabal" ] || check cabal-fmt --check $cabal
 ! [ "$haskell" ] || {
 	FOURMOLU_EXTENSIONS='
 		-o -XTypeApplications
@@ -27,9 +40,14 @@ set -e
 		-o -XPatternSynonyms
 		-o -fplugin=RecordDotPreprocessor
 	'
-	fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell \
+	check fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell \
 		|| die "Please check formatting in $haskell"
-	hlint --no-summary $haskell
+	check hlint --no-summary $haskell
 }
+
+! [ "$purescript" ] || check purs-tidy check $purescript
+! [ "$javascript" ] || check eslint $javascript
+! [ "$dhall" ] || check dhall lint --check $dhall
+
 # `test && cmd` would fail the script if the test fails
 # `! test || cmd` would only fail if cmd fails

@@ -10,29 +10,44 @@
     ];
     allow-import-from-derivation = "true";
   };
-  
+
   inputs = {
     # FIXME: https://github.com/NixOS/nix/issues/6986
     bot-plutus-interface.url = "github:mlabs-haskell/bot-plutus-interface?rev=1f18513d9a6326bf70a5cd68e74a40b5aa104861";
     bot-plutus-interface.inputs.haskell-nix.follows = "haskell-nix";
     bot-plutus-interface.inputs.nixpkgs.follows = "haskell-nix/nixpkgs";
+
     plutip.url = "github:mlabs-haskell/plutip?rev=88e5318e66e69145648d5ebeab9d411fa82f6945";
     plutip.inputs.bot-plutus-interface.follows = "bot-plutus-interface";
     plutip.inputs.haskell-nix.follows = "bot-plutus-interface/haskell-nix";
     plutip.inputs.iohk-nix.follows = "bot-plutus-interface/iohk-nix";
     plutip.inputs.nixpkgs.follows = "bot-plutus-interface/nixpkgs";
 
-    nixpkgs.follows = "bot-plutus-interface/nixpkgs";
+    cardano-transaction-lib.url =
+      "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+    cardano-transaction-lib.inputs.plutip.follows = "plutip";
+    cardano-transaction-lib.inputs.haskell-nix.follows = "plutip/haskell-nix";
+    cardano-transaction-lib.inputs.nixpkgs.follows = "plutip/nixpkgs";
+
+
+    nixpkgs.follows = "nixpkgs";
     haskell-nix.url = "github:input-output-hk/haskell.nix?ref=extra-sources";
-    iohk-nix.follows = "plutip/haskell-nix";
+    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, plutip, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, ... }@inputs:
     let
+      runtimeConfig = {
+        network = {
+          name = "vasil-dev";
+          magic = 9;
+        };
+      };
+
       supportedSystems = nixpkgs.lib.systems.flakeExposed;
 
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
@@ -42,61 +57,46 @@
           inherit system;
           overlays = [
             haskell-nix.overlay
-            (import "${plutip.inputs.iohk-nix}/overlays/crypto")
+            (import "${inputs.iohk-nix}/overlays/crypto")
+            cardano-transaction-lib.overlays.runtime
+            cardano-transaction-lib.overlays.purescript
           ];
           inherit (haskell-nix) config;
         };
-      nixpkgsFor' = system:
-        import nixpkgs {
-          inherit system;
-          inherit (haskell-nix) config;
-        };
 
-      ghcVersion = "ghc8107";
-
-      projectFor = system:
+      hsProjectFor = system:
         let
-          pkgs' = nixpkgsFor' system;
-          project = (nixpkgsFor system).haskell-nix.cabalProject {
+          pkgs = nixpkgsFor system;
+          plutip = cardano-transaction-lib.inputs.plutip;
+          project = pkgs.haskell-nix.cabalProject {
             src = ./.;
-            compiler-nix-name = ghcVersion;
-            inherit (plutip) cabalProjectLocal;
-            extraSources = plutip.extraSources ++ [{
-              src = plutip;
-              subdirs = [ "." ];
-            }];
-            modules = plutip.haskellModules ++ [{
-              packages = {
-                trustless-sidechain.components.tests.trustless-sidechain-test.build-tools =
-                  [
-                    project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                    project.hsPkgs.cardano-node.components.exes.cardano-node
-                  ];
-              };
-            }];
+            compiler-nix-name = "ghc8107";
+            inherit (plutip) cabalProjectLocal extraSources;
+            modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
               exactDeps = true;
-              nativeBuildInputs = with pkgs'; [
+              nativeBuildInputs = with pkgs; [
+                # Shell utils
                 bashInteractive
-                coreutils-full
-                direnv
-                lesspipe
                 git
-                haskellPackages.apply-refact
-                fd
-                jq
-                unixtools.xxd
                 cabal-install
+
+                # Lint / Format
+                fd
                 hlint
+                haskellPackages.apply-refact
                 haskellPackages.cabal-fmt
                 haskellPackages.fourmolu
                 nixpkgs-fmt
-                python3
-                project.hsPkgs.cardano-cli.components.exes.cardano-cli
-                project.hsPkgs.cardano-node.components.exes.cardano-node
               ];
-              additional = ps: [ ps.plutip ];
+              additional = ps: [
+                ps.cardano-crypto-class
+                ps.plutus-tx-plugin
+                ps.plutus-script-utils
+                ps.plutus-ledger
+                ps.playground-common
+              ];
               shellHook = ''
                 [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
                      git config core.hooksPath hooks
@@ -107,42 +107,133 @@
           };
         in
         project;
+
+      psProjectFor = system:
+        let
+          projectName = "trustless-sidechain-ctl";
+          pkgs = nixpkgsFor system;
+          src = builtins.path {
+            path = ./ctl;
+            name = "${projectName}-src";
+            # TODO: Add more filters
+            filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
+          };
+        in
+        pkgs.purescriptProject {
+          inherit src pkgs projectName;
+          packageJson = "${src}/package.json";
+          packageLock = "${src}/package-lock.json";
+          spagoPackages = "${src}/spago-packages.nix";
+          withRuntime = true;
+          shell.packages = with pkgs; [
+            # Shell Utils
+            bashInteractive
+            git
+            jq
+
+            # Lint / Format
+            fd
+            dhall
+
+            # CTL Runtime
+            docker
+          ];
+        };
+
       formatCheckFor = system:
         let
           pkgs = nixpkgsFor system;
         in
         pkgs.runCommand "format-check"
-          { nativeBuildInputs = [ self.devShell.${system}.nativeBuildInputs ]; } ''
+          {
+            nativeBuildInputs = self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
+          } ''
           cd ${self}
           export LC_CTYPE=C.UTF-8
           export LC_ALL=C.UTF-8
           export LANG=C.UTF-8
           export IN_NIX_SHELL='pure'
           make format_check cabalfmt_check nixpkgsfmt_check lint
+          cd ${self}/ctl
+          make check-format
           mkdir $out
         '';
+
+      # CTL's `runPursTest` won't pass command-line arugments to the `node`
+      # invocation, so we can essentially recreate `runPursTest` here with and
+      # pass the arguments
+      ctlMainFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          project = psProjectFor system;
+        in
+        pkgs.writeShellApplication {
+          name = "ctl-main";
+          runtimeInputs = [ pkgs.nodejs-14_x ];
+          # Node's `process.argv` always contains the executable name as the
+          # first argument, hence passing `ctl-main "$@"` rather than just
+          # `"$@"`
+          text = ''
+            export NODE_PATH="${project.nodeModules}/lib/node_modules"
+            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
+          '';
+        };
     in
     {
-      project = perSystem projectFor;
-      flake = perSystem (system: (projectFor system).flake { });
+      project = perSystem hsProjectFor;
 
-      packages = perSystem (system: self.flake.${system}.packages);
+      flake = perSystem (system: (hsProjectFor system).flake { });
 
-      apps = perSystem (system: self.flake.${system}.apps);
+      packages = perSystem (system: self.flake.${system}.packages // {
+        ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+        ctl-main = ctlMainFor system;
+        ctl-bundle-web = (psProjectFor system).bundlePursProject {
+          main = "Main";
+          entrypoint = "index.js"; # must be same as listed in webpack config
+          webpackConfig = "webpack.config.js";
+          bundledModuleName = "output.js";
+        };
+      });
 
+      apps = perSystem (system: self.flake.${system}.apps // {
+        ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
+        ctl-main = {
+          type = "app";
+          program = "${ctlMainFor system}/bin/ctl-main";
+        };
+      });
+
+      # This is used for nix build .#check.<system> because nix flake check
+      # does not work with haskell.nix import-from-derivtion.
       check = perSystem (system:
         (nixpkgsFor system).runCommand "combined-check"
           {
             nativeBuildInputs = builtins.attrValues self.checks.${system}
               ++ builtins.attrValues self.flake.${system}.packages
-              ++ [ self.flake.${system}.devShell.inputDerivation ];
+              ++ self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
           } "touch $out");
+
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
+        trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
+          testMain = "Test.Main";
+        };
       });
 
-      devShell = perSystem (system: self.flake.${system}.devShell);
-
-      herculesCI.ciSystems = [ "x86_64-linux" ];
+      devShells = perSystem (system: rec {
+        ps = (psProjectFor system).devShell;
+        hs = self.flake.${system}.devShell;
+        default = (nixpkgsFor system).mkShell {
+          inputsFrom = [ ps hs ];
+          shellHook = ''
+            ${hs.shellHook}
+            ${ps.shellHook}
+          '';
+        };
+      });
     };
 }

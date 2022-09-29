@@ -211,11 +211,11 @@ let
 
     "cardano-transaction-lib" = pkgs.stdenv.mkDerivation {
       name = "cardano-transaction-lib";
-      version = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
+      version = "1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
       src = pkgs.fetchgit {
         url = "https://github.com/Plutonomicon/cardano-transaction-lib.git";
-        rev = "bc3d56a0bdb1be9596f13ec965c300ec167d285f";
-        sha256 = "1cjhbj76y04s1h8y3jsirypal1n0pr6s55wwprd8dxfbpib38q23";
+        rev = "1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+        sha256 = "1kipxw96grx42ivmvypj2hqi1srhw41g44wnkqs5b57rfhwiys6w";
       };
       phases = "installPhase";
       installPhase = "ln -s $src $out";
@@ -240,6 +240,30 @@ let
         url = "https://github.com/natefaubion/purescript-checked-exceptions.git";
         rev = "6ece020df25d01ee95474f7545f28e75dcfb0f0c";
         sha256 = "0z5n73n8za8w7d26xbdpkm8d70dlz08gm267rhb9ixxv25acjd36";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
+    "codec" = pkgs.stdenv.mkDerivation {
+      name = "codec";
+      version = "v4.0.1";
+      src = pkgs.fetchgit {
+        url = "https://github.com/garyb/purescript-codec.git";
+        rev = "178d0e73c0a3ac972f9364eb43d1d001bd779cac";
+        sha256 = "1z1wimbpf832467rgc45jiiym7nrh4wxzx4p2ibxsgmcvqy6j0rx";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
+    "codec-argonaut" = pkgs.stdenv.mkDerivation {
+      name = "codec-argonaut";
+      version = "v8.0.0";
+      src = pkgs.fetchgit {
+        url = "https://github.com/garyb/purescript-codec-argonaut.git";
+        rev = "f84e6737baf895a658e5bb34b5e0e6144d5d62d0";
+        sha256 = "0jld7x4fd2yq6sa147y7qz27d7kg4r6lwijwcz7l7q2npjjw20c6";
       };
       phases = "installPhase";
       installPhase = "ln -s $src $out";

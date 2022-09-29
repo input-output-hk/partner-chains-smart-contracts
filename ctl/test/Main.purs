@@ -2,94 +2,53 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator
-  ( DeregisterParams(..)
-  , RegisterParams(..)
-  , deregister
-  , register
-  )
-import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
-import Contract.Monad (Contract, launchAff_, liftContractM, liftedM)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Monad (launchAff_)
 import Contract.Test.Plutip (runPlutipContract)
-import Contract.Transaction (TransactionHash(..), TransactionInput(..))
-import Contract.Utxos (utxosAt)
 import Contract.Wallet (withKeyWallet)
 import Data.BigInt as BigInt
-import Data.Map as Map
-import Data.Set as Set
-import Data.UInt as UInt
-import RunFuelMintingPolicy (FuelParams(..), runFuelMP)
-import SidechainParams (SidechainParams(..))
+import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
+import Test.FUELMintingPolicy as FUELMintingPolicy
+import Test.InitSidechain as InitSidechain
+import Test.MerkleTree as MerkleTree
+import Test.PoCInlineDatum as PoCInlineDatum
+import Test.PoCReferenceInput as PoCReferenceInput
+import Test.PoCReferenceScript as PoCReferenceScript
+import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
-main = launchAff_ $ do
-  let
-    distribute = [ BigInt.fromInt 1_000_000_000, BigInt.fromInt 2_000_000_000 ]
-      /\ [ BigInt.fromInt 2_000_000_000 ]
+main = do
+  -- Run the merkle tree integration tests
+  MerkleTree.test
 
-  runPlutipContract config distribute \(alice /\ _bob) → do
-    withKeyWallet alice $ do
-      mintAndBurnScenario
-      registerAndDeregisterScenario
+  -- Run the plutip tests
+  launchAff_ do
+    -- Default ada distribution
+    let
+      distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
+        /\ [ BigInt.fromInt 2_000_000_000 ]
 
-mintAndBurnScenario ∷ Contract () Unit
-mintAndBurnScenario = do
-  pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  genesisMint ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  let
-    scParams = SidechainParams
-      { chainId: BigInt.fromInt 1
-      , genesisHash: hexToByteArrayUnsafe "aabbcc"
-      , genesisMint: Just genesisMint
-      , genesisUtxo: toTxIn "aabbcc" 0
-      }
-  runFuelMP scParams (Mint { amount: 5, recipient: pk })
-  runFuelMP scParams
-    (Burn { amount: 2, recipient: hexToByteArrayUnsafe "aabbcc" })
-  runFuelMP scParams
-    (Burn { amount: 3, recipient: hexToByteArrayUnsafe "aabbcc" })
+    -- Run the plutip tests
+    runPlutipContract config distribute \(alice /\ bob) → do
+      withKeyWallet alice do
+        CommitteeCandidateValidator.testScenario
+        FUELMintingPolicy.testScenario
 
-registerAndDeregisterScenario ∷ Contract () Unit
-registerAndDeregisterScenario = do
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← unwrap <$> liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  registrationUtxo ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  let
-    scParams = SidechainParams
-      { chainId: BigInt.fromInt 1
-      , genesisHash: hexToByteArrayUnsafe "aabbcc"
-      , genesisMint: Nothing
-      , genesisUtxo: toTxIn "aabbcc" 0
-      }
-    regParams =
-      RegisterParams
-        { sidechainParams: scParams
-        , spoPubKey: hexToByteArrayUnsafe "ababab"
-        , sidechainPubKey: hexToByteArrayUnsafe ""
-        , spoSig: hexToByteArrayUnsafe ""
-        , sidechainSig: hexToByteArrayUnsafe ""
-        , inputUtxo: registrationUtxo
-        }
-    deregParams =
-      DeregisterParams
-        { sidechainParams: scParams
-        , spoPubKey: hexToByteArrayUnsafe "ababab"
-        }
-  register regParams
-  deregister deregParams
+        UpdateCommitteeHash.testScenario
+        InitSidechain.testScenario1
 
-toTxIn ∷ String → Int → TransactionInput
-toTxIn txId txIdx =
-  TransactionInput
-    { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
-    , index: UInt.fromInt txIdx
-    }
+        InitSidechain.testScenario2 alice bob
+
+    -- Run the plutip tests for the proof of concept tests (note we run these
+    -- separately from the actual sidechain tests.)
+    runPlutipContract config distribute \(alice /\ _bob) → do
+      withKeyWallet alice do
+        PoCInlineDatum.testScenario1
+        PoCInlineDatum.testScenario2
+
+        PoCReferenceInput.testScenario1
+        PoCReferenceInput.testScenario2
+
+        PoCReferenceScript.testScenario1
+        PoCReferenceScript.testScenario2

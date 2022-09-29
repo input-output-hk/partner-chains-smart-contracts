@@ -6,6 +6,9 @@
 -}
 module Test.TrustlessSidechain.MerkleTree (test) where
 
+import Data.List qualified as List
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Maybe qualified as Maybe
 import PlutusPrelude (NonEmpty ((:|)))
 import PlutusTx.Builtins.Class qualified as Builtins
 import PlutusTx.Prelude
@@ -32,6 +35,14 @@ genNonEmptyBuiltinByteString = do
 -}
 forAllNonEmptyBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
 forAllNonEmptyBuiltinByteString = QuickCheck.forAll genNonEmptyBuiltinByteString
+
+{- | @forAllNonEmptyDistinctBuiltinByteString prf@ is read as "for every nonempty list
+ of distinct BuiltinByteStrings, @prf@ is satisified.."
+-}
+forAllNonEmptyDistinctBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
+forAllNonEmptyDistinctBuiltinByteString =
+  QuickCheck.forAll
+    (Prelude.fmap (NonEmpty.fromList . List.nub . NonEmpty.toList) genNonEmptyBuiltinByteString)
 
 {- | @forAllNonEmptyBuiltinByteStringWithElem prf@ is read as "for every nonempty list @lst@, and @x \in lst@
  of BuiltinByteString, @prf (lst, x)@ is satisified.."
@@ -105,6 +116,48 @@ prop_inListMemberMp =
     let tree = MT.fromNonEmpty lst
         Just prf = MT.lookupMp x tree
      in MT.memberMp x prf (MT.rootHash tree)
+
+{-
+ Properties.
+    1. Suppose lst is an arbitrary non empty list of distinct elements.
+            (roothash, merkleProof) \in lookupsMp (fromNonEmpty lst)
+                ===> there exists x \in lst s.t.
+                    Just merkleProof' (lookupMp x (fromNonEmpty lst)),
+                    merkleProof == merkleProof',
+                    rootHash = hashLeaf x
+
+            x \in lst,  Just merkleProof = (lookupMp x (fromNonEmpty lst))
+                ===> (hashLeaf x, merkleProof) \in  lookupsMp (fromNonEmpty lst)
+    2. Suppose lst is an arbitrary non empty list of length n.
+        length (lookupsMp (fromNonEmpty lst)) == n
+-}
+prop_lookupsMp1 :: Property
+prop_lookupsMp1 =
+  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+     in QuickCheck.forAll (QuickCheck.elements (MT.lookupsMp mt)) $
+          \(rh, mp) ->
+            Prelude.any
+              ( \x ->
+                  MT.hashLeaf x == rh
+                    && Maybe.fromJust (MT.lookupMp x mt) Prelude.== mp
+              )
+              $ a : as
+
+prop_lookupsMp1Converse :: Property
+prop_lookupsMp1Converse =
+  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+        prfs = MT.lookupsMp mt
+     in QuickCheck.forAll (QuickCheck.elements (a : as)) $ \x ->
+          let mp = Maybe.fromJust $ MT.lookupMp x mt
+           in Maybe.fromJust (List.lookup (MT.hashLeaf x) prfs) Prelude.== mp
+
+prop_lookupsMp2 :: Property
+prop_lookupsMp2 =
+  forAllNonEmptyBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+     in length (MT.lookupsMp mt) == length (a : as)
 
 -- This is needed because of QuickCheck. It's explained in the QuickCheck
 -- documentation.

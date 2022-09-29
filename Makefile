@@ -63,6 +63,12 @@ nixpkgsfmt: requires_nix_shell
 nixpkgsfmt_check: requires_nix_shell
 	nixpkgs-fmt --check $(NIX_SOURCES)
 
+lock: requires_nix_shell
+	nix flake lock
+
+lock_check: requires_nix_shell
+	nix flake lock --no-update-lock-file
+
 CABAL_SOURCES := $(shell fd -ecabal)
 
 cabalfmt: requires_nix_shell

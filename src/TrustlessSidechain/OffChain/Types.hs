@@ -14,7 +14,10 @@ import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData, makeLift)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import Schema (ToSchema)
+import Schema (
+  ToSchema,
+ )
+import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
@@ -55,31 +58,17 @@ $(deriveJSON defaultOptions ''InitSidechainParams)
 PlutusTx.makeLift ''InitSidechainParams
 PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 
-{- | Parameters uniquely identifying a sidechain
- This version of the sidechain parameters includes the genesis mint utxo, which is only used in the Passive Bridge phase.
--}
-data PassiveBrdgSidechainParams = PassiveBrdgSidechainParams
-  { chainId :: Integer
-  , genesisHash :: GenesisHash
-  , genesisMint :: Maybe TxOutRef -- any random UTxO to prevent subsequent minting
-  , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
-    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: TxOutRef
-  }
-  deriving stock (Prelude.Show, Generic)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''PassiveBrdgSidechainParams)
-PlutusTx.makeLift ''PassiveBrdgSidechainParams
-
-PlutusTx.makeIsDataIndexed ''PassiveBrdgSidechainParams [('PassiveBrdgSidechainParams, 0)]
-
-{- | Parameters uniquely identifying a sidechain
- In the Passive Bridge phase, it should be only used in signed messages
--}
+-- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
+  , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
+    -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
+    -- will use the distributed set implementation.
+    genesisMint :: Maybe TxOutRef
+  , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: TxOutRef
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -88,12 +77,30 @@ $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
-convertSCParams :: PassiveBrdgSidechainParams -> SidechainParams
-convertSCParams (PassiveBrdgSidechainParams ci gh _ _) = SidechainParams ci gh
+{- | Parameters uniquely identifying a sidechain, used only in the block producer registration
+ TODO: This type has to be removed, when we deprecate Passive Bridge functionality
+-}
+data SidechainParams' = SidechainParams'
+  { chainId :: Integer
+  , genesisHash :: GenesisHash
+  , -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
+    -- will use the distributed set implementation.
+
+    -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+    genesisUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show, Generic)
+
+PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
+
+-- | Convert SidechainParams to the Active Bridge version
+convertSCParams :: SidechainParams -> SidechainParams'
+convertSCParams (SidechainParams i g _ u) = SidechainParams' i g u
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
-  { sidechainParams :: PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
   , sidechainPubKey :: SidechainPubKey
   , spoSig :: Signature
@@ -107,7 +114,7 @@ $(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
-  { sidechainParams :: PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
   }
   deriving stock (Generic, Prelude.Show)
@@ -121,7 +128,7 @@ data BurnParams = BurnParams
   , -- | SideChain address
     recipient :: BuiltinByteString
   , -- | passed for parametrization
-    sidechainParams :: PassiveBrdgSidechainParams
+    sidechainParams :: SidechainParams
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -129,13 +136,23 @@ data BurnParams = BurnParams
 $(deriveJSON defaultOptions ''BurnParams)
 
 data MintParams = MintParams
-  { -- | Minted amount in FUEL (Positive)
+  { -- | Minted amount in FUEL (this should be positive)
     amount :: Integer
   , -- | MainChain address
     recipient :: PaymentPubKeyHash
-  , -- | passed for parametrization
-    sidechainParams :: PassiveBrdgSidechainParams
-    -- , proof :: MerkleProof
+  , -- | the merkle proof to prove to the mainchain that the given unhandled transaction from the sidechain actually happened on the sidechain
+    merkleProof :: MerkleProof
+  , --  | passed for parametrization.
+    -- TODO: in the spec, we don't do this -- we just pass the chainId. Not sure if this is what we want?
+    sidechainParams :: SidechainParams
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'index' is here
+    index :: Integer
+  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
+    sidechainEpoch :: Integer
+  , -- | See
+    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for
+    -- why 'entryHash' is here. This is TODO and will be removed later
+    entryHash :: BuiltinByteString
   }
   deriving stock (Generic, Prelude.Show)
   deriving anyclass (ToSchema)
@@ -147,12 +164,12 @@ $(deriveJSON defaultOptions ''MintParams)
  TODO: it might not be a bad idea to factor out the 'signature' and
  'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
  'SaveRootParams' in a different data type. I'd imagine there will be lots of
- duplciated code when it comes to verifying that the committee has approved
+ duplicated code when it comes to verifying that the committee has approved
  of these transactions either way.
 -}
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | See 'SidechainParams'.
-    sidechainParams :: PassiveBrdgSidechainParams
+    sidechainParams :: SidechainParams
   , -- | The public keys of the new committee.
     newCommitteePubKeys :: [PubKey]
   , -- | The signature for the new committee hash.
@@ -166,7 +183,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
 $(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
 
 data SaveRootParams = SaveRootParams
-  { sidechainParams :: PassiveBrdgSidechainParams
+  { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
   , signatures :: [BuiltinByteString]
   , threshold :: Integer

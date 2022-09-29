@@ -1,0 +1,21 @@
+{
+  "sidechainParameters": {
+    "chainId": 123,
+    "genesisHash": "11223344aabbcc",
+    "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
+    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
+  },
+  "runtimeConfig": {
+    "network": "testnet",
+    "ogmios": {
+      "host": "localhost",
+      "port": 1337,
+      "secure": false,
+      "path": null
+    },
+    "ogmiosDatumCache": null,
+    "ctlServer": null
+  },
+  "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
+  "stakeSigningKeyFile": null
+}
