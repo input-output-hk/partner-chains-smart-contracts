@@ -59,12 +59,12 @@ testScenario1 = do
     validator = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
     validatorHash = Scripts.validatorHash validator
     validatorAddress = Address.scriptHashAddress validatorHash
-  -- Getting this validators datum is a bit confusing..
+  -- Getting this validator's datum is a bit confusing..
   -- First, we have
   --  - The integer 69
   --  - Convert it to Plutus Data
   --  - Serialise it to cbor (this is ByteArray)
-  --  - Then we need to conver the ByteArray back into PlutusData (types need to match!)
+  --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
   validatorDat ← Datum <<< PlutusData.toData <$>
     Monad.liftedM "Failed to serialise data to cbor"
       (pure $ serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
