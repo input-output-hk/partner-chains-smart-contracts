@@ -14,6 +14,7 @@ import Test.MerkleTree as MerkleTree
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
+import Test.PoCSerialiseData as PoCSerialiseData
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
@@ -52,3 +53,6 @@ main = do
 
         PoCReferenceScript.testScenario1
         PoCReferenceScript.testScenario2
+
+        PoCSerialiseData.testScenario1
+        PoCSerialiseData.testScenario2
