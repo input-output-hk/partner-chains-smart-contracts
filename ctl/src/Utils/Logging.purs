@@ -31,9 +31,11 @@ type Location = { mod ∷ String, fun ∷ String }
 
 -- | builds a unified look for error messages by giving them more structure.
 -- | this function is used to instantiate a message formatter as so:
--- | > myformatter ∷ ∀ e. Display e ⇒ e → String
--- | > myformatter = mkReport { mod : "MyModule", fun : "myFunction" }
--- | > myformatter "this is an error message."
+-- | ```purescript
+-- | myformatter ∷ ∀ e. Display e ⇒ e → String
+-- | myformatter = mkReport { mod : "MyModule", fun : "myFunction" }
+-- | myformatter "this is an error message."
+-- | ```
 mkReport ∷ Location → ∀ e. Display e ⇒ e → String
 mkReport { mod, fun } msg = mod <> "." <> fun <> ": " <> display msg
 

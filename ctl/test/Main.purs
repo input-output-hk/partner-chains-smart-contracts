@@ -32,6 +32,7 @@ main = do
       distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
         /\ [ BigInt.fromInt 2_000_000_000 ]
 
+    -- Run the plutip tests
     runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice do
         CommitteeCandidateValidator.testScenarioSuccess
