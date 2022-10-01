@@ -10,7 +10,6 @@ import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData (Datum(Datum), PlutusData, Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts (Validator)
@@ -32,15 +31,8 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Effect.Exception as Exception
 import RawScripts as RawScripts
-import Serialization as Serialization
-import Serialization.PlutusData as SerializationPlutusData
 import Test.Utils as Utils
-import Untagged.Union as Union
-
--- | 'serialiseData' is the offchain version of the Builtin 'serialiseData'.
-serialiseData ∷ PlutusData → Maybe ByteArray
-serialiseData = ((Serialization.toBytes <<< Union.asOneOf) <$> _) <<<
-  SerializationPlutusData.convertPlutusData
+import Utils.SerialiseData as SerialiseData
 
 -- | 'testScenario1' should succeed. It does the following.
 --  1.
@@ -69,7 +61,7 @@ testScenario1 = do
   --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
   validatorDat ← Datum <<< PlutusData.toData <$>
     Monad.liftedM "Failed to serialise data to cbor"
-      (pure $ serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
+      (pure $ SerialiseData.serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
 
   -- 2.
   void do
@@ -144,7 +136,7 @@ testScenario2 = do
   --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
   validatorDat ← Datum <<< PlutusData.toData <$>
     Monad.liftedM "Failed to serialise data to cbor"
-      (pure $ serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
+      (pure $ SerialiseData.serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
 
   -- 2.
   void do

@@ -29,9 +29,8 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy(..)
   , Validator(..)
-  , applyArgs
-  , validatorHash
   )
+import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
 import Contract.Transaction
   ( TransactionInput
@@ -50,6 +49,7 @@ import Data.Array as Array
 import Data.Bifunctor (rmap)
 import Data.BigInt as BigInt
 import Data.Foldable (find)
+import Data.FoldableWithIndex as FoldableWithIndex
 import Data.List (List, (:))
 import Data.List as List
 import Data.Map as Map
@@ -152,14 +152,14 @@ committeeHashPolicy sp = do
   policyUnapplied ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
     rawCommitteeHashPolicy
     PlutusScriptV2
-  liftedE (applyArgs policyUnapplied [ toData sp ])
+  liftedE (Scripts.applyArgs policyUnapplied [ toData sp ])
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
 updateCommitteeHashValidator sp = do
   validatorUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
     rawCommitteeHashValidator
     PlutusScriptV2
-  liftedE (applyArgs validatorUnapplied [ toData sp ])
+  liftedE (Scripts.applyArgs validatorUnapplied [ toData sp ])
 
 {- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
  the utxo which contains the committee hash. We use an empty bytestring for
@@ -182,6 +182,33 @@ committeeHashAssetClass ichm = do
 
   pure $ assetClass curSym initCommitteeHashMintTn
 
+-- | 'updateCommitteeHashUtxos' returns the (unique) utxo which hold the token which
+-- identifies the committee hash.
+--
+-- Time complexity: bad, it looks at all utxos at the update committee hash
+-- validator, then linearly scans through each utxo to determine which has token
+findUpdateCommitteeHashUtxo ∷
+  UpdateCommitteeHash →
+  Contract ()
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+findUpdateCommitteeHashUtxo uch = do
+  netId ← getNetworkId
+  validator ← updateCommitteeHashValidator uch
+  let validatorHash = Scripts.validatorHash validator
+
+  validatorAddress ← liftContractM
+    "error 'findUpdateCommitteeHashUtxo': failed to get validator address"
+    (validatorHashEnterpriseAddress netId validatorHash)
+  scriptUtxos ← liftedM
+    "error 'findUpdateCommitteeHashUtxo': 'Contract.Utxos.utxosAt' failed"
+    (utxosAt validatorAddress)
+  let
+    go _txIn txOut =
+      Value.valueOf (unwrap (unwrap txOut).output).amount
+        (fst (unwrap uch).uchAssetClass)
+        initCommitteeHashMintTn == one
+  pure $ FoldableWithIndex.findWithIndex go scriptUtxos
+
 -- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
@@ -196,11 +223,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   cs ← liftContractM "Cannot get currency symbol"
     (Value.scriptCurrencySymbol pol)
 
-  tn ← liftContractM "Cannot get token name"
-    (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
+  let tn = initCommitteeHashMintTn
 
   when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
-  let uch = { uchAssetClass: assetClass cs tn }
+  let uch = UpdateCommitteeHash { uchAssetClass: assetClass cs tn }
 
   let newCommitteePubKeys = uchp.newCommitteePubKeys
   unless (isSorted newCommitteePubKeys) $ throwContractError
@@ -215,29 +241,14 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       uchp.committeeSignatures
   curCommitteeHash ← liftContractE $ aggregateKeys curCommitteePubKeys
 
-  updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
-  let valHash = validatorHash updateValidator
+  updateValidator ← updateCommitteeHashValidator uch
+  let valHash = Scripts.validatorHash updateValidator
 
-  netId ← getNetworkId
-  valAddr ← liftContractM "updateCommitteeHash: get validator address"
-    (validatorHashEnterpriseAddress netId valHash)
-  scriptUtxos ← liftedM "Cannot get script utxos" (utxosAt valAddr)
-  let
-    findOwnValue
-      ( _tIN /\
-          ( TransactionOutputWithRefScript
-              { output: TransactionOutput { amount } }
-          )
-      ) =
-      assetClassValueOf amount uch.uchAssetClass == BigInt.fromInt 1
-    found = find findOwnValue
-      ( Map.toUnfoldable scriptUtxos ∷
-          (Array (TransactionInput /\ TransactionOutputWithRefScript))
-      )
-  (oref /\ (TransactionOutputWithRefScript { output: TransactionOutput tOut })) ←
-    liftContractM
-      "updateCommittee hash output not found"
-      found
+  lkup ← findUpdateCommitteeHashUtxo uch
+  { index: oref
+  , value: (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+  } ←
+    liftContractM "error 'updateCommitteeHash': failed to find token" $ lkup
 
   rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
   UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
@@ -247,7 +258,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     newDatum = Datum $ toData
       (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
-    value = assetClassValue uch.uchAssetClass (BigInt.fromInt 1)
+    value = assetClassValue (unwrap uch).uchAssetClass (BigInt.fromInt 1)
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures

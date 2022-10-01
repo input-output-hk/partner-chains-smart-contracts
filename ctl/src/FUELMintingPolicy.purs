@@ -4,6 +4,7 @@ module FUELMintingPolicy
   , FuelParams(..)
   , passiveBridgeMintParams
   , fuelMintingPolicy
+  , MerkleTreeEntry(MerkleTreeEntry)
   ) where
 
 import Contract.Prelude
@@ -98,9 +99,6 @@ newtype MerkleTreeEntry = MerkleTreeEntry
     recipient ∷ ByteArray
   , -- | sidechain epoch for which merkle tree was created
     sidechainEpoch ∷ BigInt
-  , -- | 'hash' will be removed later TODO! Currently, we have this here to
-    -- help test the system.
-    entryHash ∷ ByteArray
   }
 
 derive instance Generic MerkleTreeEntry _
@@ -108,14 +106,13 @@ derive instance Newtype MerkleTreeEntry _
 instance ToData MerkleTreeEntry where
   toData
     ( MerkleTreeEntry
-        { index, amount, recipient, sidechainEpoch, entryHash }
+        { index, amount, recipient, sidechainEpoch }
     ) =
     Constr zero
       [ toData index
       , toData amount
       , toData recipient
       , toData sidechainEpoch
-      , toData entryHash
       ]
 
 data FUELRedeemer
@@ -201,7 +198,6 @@ runFuelMP sp fp = do
               , recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap
                   mp.recipient
               , sidechainEpoch: mp.sidechainEpoch
-              , entryHash: mp.entryHash
               }
         in
           Constraints.mustMintValueWithRedeemer

@@ -35,6 +35,7 @@ import DistributedSet
 import DistributedSet as DistributedSet
 import FUELMintingPolicy (FUELMint(FUELMint))
 import FUELMintingPolicy as FUELMintingPolicy
+import MPTRoot (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot as MPTRoot
 import SidechainParams
   ( InitSidechainParams(InitSidechainParams)
@@ -45,11 +46,8 @@ import UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
   , UpdateCommitteeHash(..)
   , UpdateCommitteeHashDatum(..)
-  , aggregateKeys
-  , committeeHashAssetClass
-  , committeeHashPolicy
-  , updateCommitteeHashValidator
   )
+import UpdateCommitteeHash as UpdateCommitteeHash
 
 {- | 'initSidechain' creates the 'SidechainParams' of a new sidechain which
  parameterize validators and minting policies in order to uniquely identify
@@ -85,6 +83,7 @@ initSidechain (InitSidechainParams isp) = do
 
   -- Sidechain parameters
   -----------------------------------
+
   let
     sc = SidechainParams
       { chainId: isp.initChainId
@@ -95,20 +94,26 @@ initSidechain (InitSidechainParams isp) = do
 
   -- Initializing the committee hash
   -----------------------------------
-  -- TODO: this needs to be synchronized with the spec still.. There's some
-  -- problems with this...
+
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
-  assetClassCommitteeHash ← committeeHashAssetClass ichm
-  nftCommitteeHashPolicy ← committeeHashPolicy ichm
-  aggregatedKeys ← liftContractE $ aggregateKeys $ Array.sort isp.initCommittee
+  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy ichm
+  committeeHashCurrencySymbol ← Monad.liftContractM
+    "error 'initSidechain': failed to get committee hash currency symbol"
+    (Value.scriptCurrencySymbol committeeHashPolicy)
+  let
+    committeeHashAssetClass = committeeHashCurrencySymbol /\
+      UpdateCommitteeHash.initCommitteeHashMintTn
+  aggregatedKeys ← liftContractE $ UpdateCommitteeHash.aggregateKeys $ Array.sort
+    isp.initCommittee
   let
     committeeHashParam = UpdateCommitteeHash
-      { uchAssetClass: assetClassCommitteeHash }
+      { uchAssetClass: committeeHashAssetClass }
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
-    committeeHashValue = assetClassValue assetClassCommitteeHash one
-  committeeHashValidator ← updateCommitteeHashValidator committeeHashParam
+    committeeHashValue = assetClassValue committeeHashAssetClass one
+  committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
+    committeeHashParam
   let
     committeeHashValidatorHash = validatorHash committeeHashValidator
 
@@ -154,15 +159,16 @@ initSidechain (InitSidechainParams isp) = do
           { dsNext: (unwrap DistributedSet.rootNode).nNext
           }
 
-  -- FUEL minting policy
-  -- TODO the @mptRootTokenMintingPolicy@ needs to be synchronized so that it
-  -- verifies that the current committee has signed the given merkle root.
-  mptRootTokenMintingPolicy ← MPTRoot.getRootTokenMintingPolicy sc
+  -- FUEL minting policy (note we need the MPT root token minting policy first)
+  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
+    SignedMerkleRootMint
+      { sidechainParams: sc
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      }
   mptRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM
       "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
-
   fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
     ( FUELMint
         { mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
@@ -204,7 +210,7 @@ initSidechain (InitSidechainParams isp) = do
             )
         )
         -- Lookups for update committee hash
-        <> Lookups.mintingPolicy nftCommitteeHashPolicy
+        <> Lookups.mintingPolicy committeeHashPolicy
         <> Lookups.validator committeeHashValidator
         -- Lookups for the distributed set
         <> Lookups.validator insertValidator

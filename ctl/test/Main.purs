@@ -10,6 +10,7 @@ import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
+import Test.MPTRoot as MPTRoot
 import Test.MerkleTree as MerkleTree
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
@@ -27,8 +28,12 @@ main = do
   launchAff_ do
     -- Default ada distribution
     let
-      distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
-        /\ [ BigInt.fromInt 2_000_000_000 ]
+      distribute =
+        [ BigInt.fromInt 2_000_000_000
+        , BigInt.fromInt 2_000_000_000
+        , BigInt.fromInt 2_000_000_000
+        ]
+          /\ [ BigInt.fromInt 2_000_000_000 ]
 
     -- Run the plutip tests
     runPlutipContract config distribute \(alice /\ bob) → do
@@ -37,8 +42,14 @@ main = do
         FUELMintingPolicy.testScenario
 
         UpdateCommitteeHash.testScenario
-        InitSidechain.testScenario1
 
+        MPTRoot.testScenario
+
+        InitSidechain.testScenario1
+        -- Not actually too sure why, but the order of these contracts is important.
+        -- In particular, the 'InitSidechain.testScenario2' must be the last transaction
+        -- because otherwise, transactions which initialize the sidechain will have a
+        -- 'UtxoLookupFailedFor' error...
         InitSidechain.testScenario2 alice bob
 
     -- Run the plutip tests for the proof of concept tests (note we run these
