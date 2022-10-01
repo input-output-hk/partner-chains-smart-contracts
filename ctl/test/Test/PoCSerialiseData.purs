@@ -8,7 +8,7 @@ import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(Datum), PlutusData, Redeemer(Redeemer))
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups

@@ -22,7 +22,6 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray
   ( ByteArray
-  , byteArrayFromAscii
   , hexToByteArrayUnsafe
   )
 import Contract.ScriptLookups as Lookups
@@ -48,7 +47,6 @@ import Data.Array (toUnfoldable)
 import Data.Array as Array
 import Data.Bifunctor (rmap)
 import Data.BigInt as BigInt
-import Data.Foldable (find)
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.List (List, (:))
 import Data.List as List
@@ -64,7 +62,6 @@ import Types
   , Signature
   , assetClass
   , assetClassValue
-  , assetClassValueOf
   )
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)

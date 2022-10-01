@@ -2,11 +2,10 @@ module MPTRoot where
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData, unitDatum)
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy(..)
