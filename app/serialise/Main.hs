@@ -17,6 +17,7 @@ import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootToke
 import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.OnChain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.OnChain.PoCReferenceScript qualified as PoCReferenceScript
+import TrustlessSidechain.OnChain.PoCSerialiseData qualified as PoCSerialiseData
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
@@ -50,4 +51,5 @@ main =
     , ("PoCReferenceInput", PoCReferenceInput.serialisablePoCReferenceInputValidator)
     , ("PoCToReferenceScript", PoCReferenceScript.serialisablePoCToReferenceScriptValidator)
     , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
+    , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
     ]

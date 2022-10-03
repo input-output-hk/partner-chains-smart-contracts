@@ -95,6 +95,7 @@ library
     TrustlessSidechain.OnChain.PoCInlineDatum
     TrustlessSidechain.OnChain.PoCReferenceInput
     TrustlessSidechain.OnChain.PoCReferenceScript
+    TrustlessSidechain.OnChain.PoCSerialiseData
     TrustlessSidechain.OnChain.Types
     TrustlessSidechain.OnChain.UpdateCommitteeHash
     TrustlessSidechain.OnChain.Utils
