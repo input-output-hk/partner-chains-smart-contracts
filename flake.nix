@@ -2,11 +2,31 @@
   description = "trustless-sidechain";
 
   inputs = {
-    cardano-transaction-lib.url =
-      "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
+
+    ### Start of Maxim's cool trick to get `serialiseData` to work
+    cardano-transaction-lib.inputs = {
+      plutip.follows = "plutip";
+      haskell-nix.follows = "plutip/haskell-nix";
+      nixpkgs.follows = "plutip/nixpkgs";
+    };
+    bot-plutus-interface = {
+      url = github:mlabs-haskell/bot-plutus-interface/7235aa6fba12b0cf368d9976e1e1b21ba642c038;
+      inputs.cardano-wallet.url = github:sadMaxim/cardano-wallet/9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b;
+    };
+    plutip = {
+      url = github:mlabs-haskell/plutip/8364c43ac6bc9ea140412af9a23c691adf67a18b;
+      inputs = {
+        bot-plutus-interface.follows = "bot-plutus-interface";
+        haskell-nix.follows = "bot-plutus-interface/haskell-nix";
+        iohk-nix.follows = "bot-plutus-interface/iohk-nix";
+        nixpkgs.follows = "bot-plutus-interface/nixpkgs";
+      };
+    };
+    ### End of Maxim's cool trick to get `serialiseData` to work
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -14,7 +34,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, plutip, ... }@inputs:
     let
       runtimeConfig = {
         network = {
@@ -43,7 +63,6 @@
       hsProjectFor = system:
         let
           pkgs = nixpkgsFor system;
-          plutip = cardano-transaction-lib.inputs.plutip;
           project = pkgs.haskell-nix.cabalProject {
             src = ./.;
             compiler-nix-name = "ghc8107";
