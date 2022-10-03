@@ -97,7 +97,7 @@ data BurnParams = BurnParams
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: ByteString
-  , threshold :: Integer
+  , lastMerkleRoot :: Maybe ByteString
   , committeeSignatures :: [(PubKey, Maybe ByteString)] -- Public keys of all committee members with their corresponding signatures
   }
 ```
