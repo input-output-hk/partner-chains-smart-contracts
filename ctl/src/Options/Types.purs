@@ -3,7 +3,6 @@ module Options.Types
   , Options(..)
   , Config(..)
   , Endpoint(..)
-  , Environment
   ) where
 
 import Contract.Prelude
@@ -16,9 +15,6 @@ import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
-
-type Environment =
-  { isTTY ∷ Boolean }
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
