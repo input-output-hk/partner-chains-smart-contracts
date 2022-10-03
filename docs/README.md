@@ -117,7 +117,7 @@ Minting policy verifies the following:
 
 - signature can be verified with the submitted public keys of committee members, and the concatenated and hashed value of these keys correspond to the one saved on-chain
 - list of public keys does not contain duplicates
-- if `lastMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as reference input
+- if `lastMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
 
 Validator script verifies the following:
 
@@ -220,7 +220,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 ### 6. Committee handover
 
-In the current implementation of the sidechain, a [Merkle root insertion (3.1)](#3.1.-merkle-root-insertion) can only occur once per sidechain epoch at the time of the committee handover. We expose an endpoint which can handle this action, however the underlying implementation is detached, so in theory, we could do these action independently.
+In the current implementation of the sidechain, a [Merkle root insertion (3.1)](#3.1.-merkle-root-insertion) can only occur once per sidechain epoch at the time of the committee handover. We expose an endpoint which can handle this action, however the underlying implementation is detached, so in theory, we could do Merkle root insertion and Committee Hash Update actions independently.
 
 We have to be careful about the order of these actions. If the transaction inserting the merkle root for sidechain epoch 1 gets submitted *after* the committee handover from `committee of epoch 1` to `committee of epoch 2` transaction, the signature would become invalid, since it is signed by the `committee of epoch 1`. To mitigate this issue, we introduce `merkle root chain`, for details see: 6.2
 
@@ -307,20 +307,20 @@ signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committ
 As described in [6. Committee handover](#6.-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a sort of Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
 
 ![Merkle root chaining](MRChain-simple.svg)
-<figcaption align = "center"><i>Merkle root chaining</i></figcaption><br />
+<figcaption align = "center"><i>Merkle root chaining (SC ep = sidechain epoch)</i></figcaption><br />
 
-As seen in the graph above, the first Merkle root has no reference, which is completely valid. We do not enforce the existence of the
+As seen in the graph above, the first Merkle root has no reference, which is completely valid. We do not enforce the existence of the last Merkle root.
 
 In case a sidechain epoch passed without any cross-chain transactions, no Merkle root is inserted, resulting in two committee hash updates referencing the same Merkle root.
 
 ![Merkle root chaining - epoch without Merkle root](MRChain-empty.svg)
 
-<figcaption align = "center"><i>Merkle root chaining - epoch without Merkle root</i></figcaption><br />
+<figcaption align = "center"><i>Merkle root chaining - epoch without Merkle root (SC ep = sidechain epoch)</i></figcaption><br />
 
 In the future, we want to support multiple Merkle roots per sidechain epoch, so the result could look like the following:
 
 ![Merkle root chaining - multipe Merkle roots per epoch](MRChain-multi.svg)
-<figcaption align = "center"><i>Merkle root chaining - multiple Merkle roots per epoch</i></figcaption><br />
+<figcaption align = "center"><i>Merkle root chaining - multiple Merkle roots per epoch (SC ep = sidechain epoch)</i></figcaption><br />
 
 ## Appendix
 
