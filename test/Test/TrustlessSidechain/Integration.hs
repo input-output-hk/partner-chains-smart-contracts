@@ -35,7 +35,11 @@ import TrustlessSidechain.OnChain.CommitteeCandidateValidator (
 import TrustlessSidechain.OffChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 
+import Test.TrustlessSidechain.OnChain.MerkleTree as MerkleTree
+
 import Prelude
+
+import PlutusTx qualified
 
 import Test.Plutip.Internal.Types qualified as PlutipInternal
 
@@ -358,4 +362,13 @@ test =
               UpdateCommitteeHash.updateCommitteeHash uchp
         )
         [shouldFail]
+            , assertExecution
+                "MerkleTree size tests"
+                (initAda [3])
+                ( withContract $
+                    const $ do
+                      let genByte = map (PlutusTx.toBuiltin . ByteString.replicate 32) $ take 10 [0 ..]
+        
+                      MerkleTree.lock genByte
+                )
     ]

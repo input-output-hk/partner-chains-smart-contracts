@@ -146,6 +146,7 @@ test-suite trustless-sidechain-test
   other-modules:
     Test.TrustlessSidechain.Integration
     Test.TrustlessSidechain.MerkleTree
+    Test.TrustlessSidechain.OnChain.MerkleTree
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
@@ -157,11 +158,15 @@ test-suite trustless-sidechain-test
     , plutus-contract
     , plutus-core
     , plutus-ledger
+    , plutus-ledger-constraints
     , plutus-tx
     , QuickCheck
     , quickcheck-instances
+    , row-types
     , tasty
     , tasty-quickcheck
     , trustless-sidechain
+    , containers
+    , text
 
   hs-source-dirs: test
