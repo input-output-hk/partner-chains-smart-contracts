@@ -19,7 +19,8 @@ All of these policies/validators are parameterised by the sidechain parameters, 
 ```haskell
 data SidechainParams = SidechainParams
   { chainId :: Integer
-  , genesisHash :: BuiltinByteString
+  , genesisHash :: GenesisHash
+    -- ^ 'GenesisHash' is a type alias for ByteString
   , genesisMint :: Maybe TxOutRef
     -- ^ 'genesisMint' is an arbitrary 'TxOutRef' used in the Passive Bridge setup, where
     -- FUEL minting can only happen once. This parameter will be removed in the final product.
@@ -46,7 +47,8 @@ For initialisation, we need to set the first committee hash on chain using an NF
 ```haskell
 data InitSidechainParams = InitSidechainParams
   { initChainId :: Integer
-  , initGenesisHash :: BuiltinByteString
+  , initGenesisHash :: GenesisHash
+    -- ^ 'GenesisHash' is a type alias for ByteString
   , initUtxo :: TxOutRef
     -- ^ 'initUtxo' is used for creating the committee NFT
   , initCommittee :: [PubKey]
@@ -68,7 +70,8 @@ data InitSidechainParams = InitSidechainParams
 
 ```haskell
 data BurnParams = BurnParams
-  { recipient :: ByteString -- Sidechain address (e.g. 0x112233aabbcc)
+  { recipient :: SidechainAddress
+    -- ^ 'SidechainAddress' is a type alias for a ByteString (e.g. 0x112233aabbcc)
   , amount :: Integer
   }
 ```
@@ -93,9 +96,9 @@ data BurnParams = BurnParams
 ```haskell
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
-  , merkleRoot :: BuiltinByteString
+  , merkleRoot :: ByteString
   , threshold :: Integer
-  , committeeSignatures :: [(PubKey, Maybe BuiltinByteString)] -- Public keys of all committee members with their corresponding signatures
+  , committeeSignatures :: [(PubKey, Maybe ByteString)] -- Public keys of all committee members with their corresponding signatures
   }
 ```
 
@@ -207,7 +210,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , bprInputUtxo :: TxOutRef -- a utxo that must be spent with the transaction
   , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
   , bprSpoSignature :: Signature -- Signature of the SPO private key
-  , bprSidechainSignature :: Signature -- Signature of the sidechain private key
+  , bprSidechainSignature :: ByteString -- Signature of the sidechain private key
   }
 ```
 
@@ -238,7 +241,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- | The asset class of the NFT identifying this committee hash
     token :: AssetClass
   , -- | The signature for the new committee hash.
-    committeeSignatures :: [(SidechainPubKey, Maybe BuiltinByteString)]
+    committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
   }
 ```
 
@@ -274,7 +277,7 @@ keyN - 33 bytes compressed ecdsa public key of a committee member
 
 ```haskell
 data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
-  { signatures :: [BuiltinByteString]
+  { signatures :: [ByteString]
   , newCommitteePubKeys :: [SidechainPubKey]
   , committeePubKeys :: [SidechainPubKey]
   , sidechainEpoch :: Integer
