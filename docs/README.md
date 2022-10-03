@@ -63,7 +63,7 @@ data InitSidechainParams = InitSidechainParams
 **Workflow:**
 
 1. Call the burn endpoint of the contract with BurnParams
-2. A transaction will be submitted to mainchain with the burnt amount in the tx body and the sidechain recipient and the signature in the redeemer
+2. A transaction will be submitted to mainchain burning the specified amount of FUEL tokens and the corresponding sidechain address in the redeemer
 3. The Bridge component observing the mainchain where the given minting policy is handled, verifies the transaction and creates an appropriate sidechain transaction
 
 **Endpoint params:**
@@ -183,7 +183,7 @@ Minting policy verifies the following:
 - the transaction is signed by the recipient
 - the amount matches the actual tx body contents
 
-where the `claimTransactionHash` is a `blake2(merkleRoot, merkleEntryIndex)`, uniquely identifying a cross chain transaction by pointing to a Merkle tree and the index of the transaction in the tree's leaves
+where the `claimTransactionHash` is a `blake2(merkleRoot, merkleEntryIndex)`, uniquely identifying a cross chain transaction by pointing to a Merkle tree and the index of the transaction in the tree
 
 ![SC to MC](SC-MC.svg)
 <figcaption align = "center"><i>Sidechain to Mainchain transaction (claiming tokens)</i></figcaption><br />
