@@ -33,7 +33,7 @@ data SidechainParams = SidechainParams
 
 ### 1. Initialise contract
 
-For initialisation, we need to set the first committee hash on chain using an NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated each when the committee changes, see [6.](#6.-update-committee-hash) for more details.
+For initialisation, we need to set the first committee hash on chain using an NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated when the committee changes, see [6.1](#61-update-committee-hash) for more details.
 
 **Workflow:**
 
@@ -84,9 +84,9 @@ data BurnParams = BurnParams
 **Workflow:**
 
 1. Sidechain collects unhandled transactions and bundles them at the end of each sidechain epoch
-2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2(tx.recipient, tx.amount)` for each transaction, and create a Merkle-tree from these. The root of this tree is signed by the committee members with an appended signature
+2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2b(cbor(MerkleTreeEntry(tx)))` for each transaction (see `MerkleTreeEntry`), and create a Merkle-tree from these. The root of this tree is signed by the committee members with an appended signature
 3. Bridge broadcasts Merkle root to chain
-4. Txs can be claimed [individually](individually)
+4. Txs can be claimed [individually](#32-individual-claiming)
 
 
 #### 3.1. Merkle root insertion
@@ -244,6 +244,12 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
     token :: AssetClass
   , -- | The signature for the new committee hash.
     committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
+  , -- sidechain parameters
+     sidechainParams :: SidechainParams
+  ,   -- sidechain epoch for which we obtain the signature
+      sidechainEpoch :: Integer
+  , -- last merkle root inserted on chain
+    lastMerkleRoot :: Maybe ByteString
   }
 ```
 
