@@ -151,6 +151,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
   , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
   , merkleRoot :: ByteString
+  , lastMerkleRoot :: Maybe ByteString
   }
 ```
 
@@ -268,7 +269,6 @@ Validator script verifies the following:
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
   { committeePubKeysHash :: ByteString -- Hash of all lexicographically sorted public keys of the current committee members
-  , lastMerkleRoot :: Maybe ByteString
   }
 ```
 
@@ -289,6 +289,7 @@ data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   , newCommitteePubKeys :: [SidechainPubKey]
   , committeePubKeys :: [SidechainPubKey]
   , sidechainEpoch :: Integer
+  , lastMerkleRoot :: Maybe ByteString
   }
 ```
 
