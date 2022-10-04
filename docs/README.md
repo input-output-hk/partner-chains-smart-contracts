@@ -227,7 +227,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 In the current implementation of the sidechain, a [Merkle root insertion (3.1)](#3.1.-merkle-root-insertion) can only occur once per sidechain epoch at the time of the committee handover. We expose an endpoint which can handle this action, however the underlying implementation is detached, so in theory, we could do Merkle root insertion and Committee Hash Update actions independently.
 
-We have to be careful about the order of these actions. If the transaction inserting the merkle root for sidechain epoch 1 gets submitted *after* the committee handover from `committee of epoch 1` to `committee of epoch 2` transaction, the signature would become invalid, since it is signed by the `committee of epoch 1`. To mitigate this issue, we introduce `merkle root chain`, for details see: 6.2
+We have to be careful about the order of these actions. If the transaction inserting the merkle root for sidechain epoch 1 gets submitted *after* the committee handover from `committee of epoch 1` to `committee of epoch 2` transaction, the signature would become invalid, since it is signed by the `committee of epoch 1`. To mitigate this issue, we introduce `merkle root chain`, for details see: [6.2](#62-merkle-root-chaining)
 
 
 #### 6.1 Update committee hash
