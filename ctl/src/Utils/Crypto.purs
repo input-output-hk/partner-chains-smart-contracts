@@ -13,7 +13,6 @@ import Contract.Prelude
 import Contract.Monad (Contract)
 import Contract.Prim.ByteArray (byteArrayToIntArray)
 import Data.Array as Array
-import Data.Maybe as Maybe
 import Data.Ord as Ord
 import Serialization.Types (PrivateKey, PublicKey)
 import Types (PubKey, Signature)

@@ -26,7 +26,6 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
