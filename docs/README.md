@@ -97,7 +97,7 @@ data BurnParams = BurnParams
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: ByteString
-  , lastMerkleRoot :: Maybe ByteString
+  , previousMerkleRoot :: Maybe ByteString
   , committeeSignatures :: [(PubKey, Maybe ByteString)] -- Public keys of all committee members with their corresponding signatures
   }
 ```
@@ -109,7 +109,7 @@ Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` i
 ```haskell
 data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
-  , lastMerkleRoot :: Maybe ByteString -- Last Merkle root hash
+  , previousMerkleRoot :: Maybe ByteString -- Last Merkle root hash
   , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
   , beneficiary :: ByteString -- Sidechain address
   , committeePubKeys :: [SidechainPubKey] -- Lexicographically sorted public keys of all committee members
@@ -120,7 +120,7 @@ Minting policy verifies the following:
 
 - signature can be verified with the submitted public keys of committee members, and the concatenated and hashed value of these keys correspond to the one saved on-chain
 - list of public keys does not contain duplicates
-- if `lastMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
+- if `previousMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
 
 Validator script verifies the following:
 
@@ -136,7 +136,7 @@ data MerkleTreeEntry = MerkleTreeEntry
   { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-  , previousMerkleRoot :: Maybe ByteString -- lastMerkleRoot is added to make sure that the hashed entry is unique
+  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
 
@@ -169,6 +169,7 @@ data MintParams = MintParams
   , merkleProof :: MerkleProof
   , chainId :: Integer
   , index :: Integer
+  , merkleRoot :: ByteString
   }
 ```
 
@@ -245,7 +246,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- sidechain parameters
     sidechainParams :: SidechainParams
   , -- last merkle root inserted on chain
-    lastMerkleRoot :: Maybe ByteString
+    previousMerkleRoot :: Maybe ByteString
   }
 ```
 
@@ -283,7 +284,7 @@ data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signatures :: [ByteString]
   , newCommitteePubKeys :: [SidechainPubKey]
   , committeePubKeys :: [SidechainPubKey]
-  , lastMerkleRoot :: Maybe ByteString
+  , previousMerkleRoot :: Maybe ByteString
   }
 ```
 
@@ -297,7 +298,7 @@ SidechainPubKey - 33 bytes compressed ecdsa public key
 data UpdateCommitteeMessage = UpdateCommitteeMessage
   { sidechainParams :: SidechainParams
   , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
-  , lastMerkleRoot :: Maybe ByteString
+  , previousMerkleRoot :: Maybe ByteString
     -- ^ last Merkle root inserted on chain (Merkle root for the last sidechain epoch)
   }
 ```
