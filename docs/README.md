@@ -111,7 +111,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   { merkleRoot :: ByteString
   , previousMerkleRoot :: Maybe ByteString -- Last Merkle root hash
   , signatures :: [ByteString] -- Current committee signatures ordered as their corresponding keys
-  , beneficiary :: ByteString -- Sidechain address
+  , beneficiary :: SidechainAddress
   , committeePubKeys :: [SidechainPubKey] -- Lexicographically sorted public keys of all committee members
   }
 ```
