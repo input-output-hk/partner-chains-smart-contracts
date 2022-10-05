@@ -36,11 +36,11 @@ import DistributedSet as DistributedSet
 import FUELMintingPolicy (FUELMint(FUELMint))
 import FUELMintingPolicy as FUELMintingPolicy
 import MPTRoot as MPTRoot
-import SidechainParams
+import Types
   ( InitSidechainParams(InitSidechainParams)
   , SidechainParams(SidechainParams)
+  , assetClassValue
   )
-import Types (assetClassValue)
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
   , UpdateCommitteeHash(..)

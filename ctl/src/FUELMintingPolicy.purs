@@ -41,7 +41,7 @@ import MerkleTree (MerkleProof(..))
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
-import SidechainParams (SidechainParams)
+import Types (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See

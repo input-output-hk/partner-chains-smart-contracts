@@ -15,7 +15,7 @@ import Data.Map as Map
 import Data.Set as Set
 import Effect.Exception as Exception
 import InitSidechain as InitSidechain
-import SidechainParams (InitSidechainParams(..))
+import Types (InitSidechainParams(..))
 import Utils.Crypto as Crypto
 
 -- | 'testScenario1' just calls the init sidechain endpoint (which should

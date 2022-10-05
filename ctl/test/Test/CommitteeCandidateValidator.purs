@@ -20,8 +20,8 @@ import Contract.Wallet (KeyWallet, withKeyWallet)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
-import SidechainParams (SidechainParams(..))
 import Test.Utils (toTxIn)
+import Types (SidechainParams(..))
 
 scParams ∷ SidechainParams
 scParams = SidechainParams

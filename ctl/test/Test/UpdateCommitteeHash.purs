@@ -12,7 +12,7 @@ import Data.Int as Int
 import Data.Map as Map
 import Data.Set as Set
 import InitSidechain (initSidechain)
-import SidechainParams (InitSidechainParams(..))
+import Types (InitSidechainParams(..))
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(..)
   , aggregateKeys

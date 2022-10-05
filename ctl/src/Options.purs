@@ -47,7 +47,7 @@ import Options.Applicative
   , value
   )
 import Options.Types (Config, Endpoint(..), Options)
-import SidechainParams (SidechainParams(..))
+import Types (SidechainParams(..))
 import Types.ByteArray (ByteArray, hexToByteArray)
 import Utils.Logging (environment, fileLogger)
 

@@ -13,8 +13,8 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import FUELMintingPolicy (FuelParams(..), passiveBridgeMintParams, runFuelMP)
-import SidechainParams (SidechainParams(..))
 import Test.Utils (toTxIn)
+import Types (SidechainParams(..))
 
 {-| Testing Passive bridge minting (genesis mint) and burning multiple times -}
 testScenario ∷ Contract () Unit

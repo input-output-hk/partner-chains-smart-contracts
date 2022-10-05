@@ -57,24 +57,15 @@ import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
-import SidechainParams (SidechainParams)
-import Types (PubKey, Signature)
+import Types
+  ( DeregisterParams(DeregisterParams)
+  , PubKey
+  , RegisterParams(RegisterParams)
+  , SidechainParams
+  , Signature
+  )
 import Types.Scripts (plutusV2Script)
 import Utils.Logging (class Display, mkReport)
-
-newtype RegisterParams = RegisterParams
-  { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PubKey
-  , sidechainPubKey ∷ PubKey
-  , spoSig ∷ Signature
-  , sidechainSig ∷ Signature
-  , inputUtxo ∷ TransactionInput
-  }
-
-newtype DeregisterParams = DeregisterParams
-  { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PubKey
-  }
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
 getCommitteeCandidateValidator sp = do

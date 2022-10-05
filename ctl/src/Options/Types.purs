@@ -12,8 +12,7 @@ import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Node.Path (FilePath)
-import SidechainParams (SidechainParams)
-import Types (PubKey, Signature)
+import Types (PubKey, SidechainParams, Signature)
 import Types.ByteArray (ByteArray)
 
 -- | CLI arguments providing an interface to contract endpoints

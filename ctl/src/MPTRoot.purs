@@ -23,7 +23,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.BigInt (BigInt, fromInt)
 import RawScripts (rawMPTRootTokenMintingPolicy, rawMPTRootTokenValidator)
-import SidechainParams (SidechainParams)
+import Types (SidechainParams)
 import Types.Scripts (plutusV2Script)
 
 data SignedMerkleRoot = SignedMerkleRoot

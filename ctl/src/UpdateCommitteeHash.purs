@@ -1,4 +1,12 @@
-module UpdateCommitteeHash where
+module UpdateCommitteeHash
+  ( module Types
+  , committeeHashPolicy
+  , updateCommitteeHashValidator
+  , initCommitteeHashMintTn
+  , committeeHashAssetClass
+  , updateCommitteeHash
+  , aggregateKeys
+  ) where
 
 import Contract.Prelude
 
@@ -14,10 +22,7 @@ import Contract.Monad
   , throwContractError
   )
 import Contract.PlutusData
-  ( class FromData
-  , class ToData
-  , PlutusData(Constr)
-  , fromData
+  ( fromData
   , toData
   )
 import Contract.Prim.ByteArray
@@ -57,11 +62,16 @@ import Data.Maybe (Maybe(..))
 import MerkleTree as MT
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawCommitteeHashPolicy, rawCommitteeHashValidator)
-import SidechainParams (SidechainParams(..))
 import Types
   ( AssetClass
+  , InitCommitteeHashMint(InitCommitteeHashMint)
   , PubKey
+  , SidechainParams(SidechainParams)
   , Signature
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   , assetClass
   , assetClassValue
   , assetClassValueOf
@@ -71,81 +81,6 @@ import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
 import Utils.Crypto (verifyEd25519Signature)
-
-newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash ∷ ByteArray }
-
-derive instance Generic UpdateCommitteeHashDatum _
-derive instance Newtype UpdateCommitteeHashDatum _
-instance ToData UpdateCommitteeHashDatum where
-  toData (UpdateCommitteeHashDatum { committeeHash }) = Constr zero
-    [ toData committeeHash ]
-
-instance FromData UpdateCommitteeHashDatum where
-  fromData (Constr n [ a ])
-    | n == zero = UpdateCommitteeHashDatum <$> ({ committeeHash: _ }) <$>
-        fromData a
-  fromData _ = Nothing
-
--- plutus script is parameterised on AssetClass, which CTL doesn't have
--- the toData instance uses the underlying tuple so we do the same
-newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { uchAssetClass ∷ AssetClass }
-
-derive instance Generic UpdateCommitteeHash _
-derive instance Newtype UpdateCommitteeHash _
-instance ToData UpdateCommitteeHash where
-  toData (UpdateCommitteeHash { uchAssetClass }) = Constr zero
-    [ toData uchAssetClass ]
-
-newtype InitCommitteeHashMint = InitCommitteeHashMint
-  { icTxOutRef ∷ TransactionInput }
-
-derive instance Generic InitCommitteeHashMint _
-derive instance Newtype InitCommitteeHashMint _
-instance ToData InitCommitteeHashMint where
-  toData (InitCommitteeHashMint { icTxOutRef }) =
-    toData icTxOutRef
-
-data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
-  , newCommitteeHash ∷ ByteArray
-  }
-
-derive instance Generic UpdateCommitteeHashRedeemer _
-instance ToData UpdateCommitteeHashRedeemer where
-  toData
-    ( UpdateCommitteeHashRedeemer
-        { committeeSignatures, committeePubKeys, newCommitteeHash }
-    ) = Constr zero
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteeHash
-    ]
-
-data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array PubKey
-  , committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
-  }
-
-derive instance Generic UpdateCommitteeHashParams _
-instance ToData UpdateCommitteeHashParams where
-  toData
-    ( UpdateCommitteeHashParams
-        { sidechainParams
-        , newCommitteePubKeys
-        , committeeSignatures
-        , committeePubKeys
-        }
-    ) = Constr zero
-    [ toData sidechainParams
-    , toData newCommitteePubKeys
-    , toData committeeSignatures
-    , toData committeePubKeys
-    ]
 
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do
