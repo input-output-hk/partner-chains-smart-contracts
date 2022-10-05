@@ -136,7 +136,6 @@ data MerkleTreeEntry = MerkleTreeEntry
   { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-  , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
   , previousMerkleRoot :: Maybe ByteString -- lastMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
@@ -150,7 +149,6 @@ Signatures for merkle tree should be constructed as follow:
 ```haskell
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
-  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
   , merkleRoot :: ByteString
   , previousMerkleRoot :: Maybe ByteString
   }
@@ -171,7 +169,6 @@ data MintParams = MintParams
   , merkleProof :: MerkleProof
   , chainId :: Integer
   , index :: Integer
-  , sidechainEpoch :: Integer
   }
 ```
 
@@ -179,7 +176,7 @@ Minting policy verifies the following:
 
 - `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
 - chainId matches the minting policy chainId
-- recipient, amount, index and sidechainEpoch combined with merkleProof match against merkleRootHash
+- recipient, amount, index and previousMerkleRoot combined with merkleProof match against merkleRootHash
 - `claimTransactionHash` of the transaction is NOT included in the distributed set[^1]
 - a new entry with the `claimTransactionHash` of the transaction is created in the distributed set
 - the transaction is signed by the recipient
@@ -246,9 +243,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , -- | The signature for the new committee hash.
     committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
   , -- sidechain parameters
-     sidechainParams :: SidechainParams
-  , -- sidechain epoch for which we obtain the signature
-      sidechainEpoch :: Integer
+    sidechainParams :: SidechainParams
   , -- last merkle root inserted on chain
     lastMerkleRoot :: Maybe ByteString
   }
@@ -288,7 +283,6 @@ data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   { signatures :: [ByteString]
   , newCommitteePubKeys :: [SidechainPubKey]
   , committeePubKeys :: [SidechainPubKey]
-  , sidechainEpoch :: Integer
   , lastMerkleRoot :: Maybe ByteString
   }
 ```
@@ -302,7 +296,6 @@ SidechainPubKey - 33 bytes compressed ecdsa public key
 ```haskell
 data UpdateCommitteeMessage = UpdateCommitteeMessage
   { sidechainParams :: SidechainParams
-  , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
   , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
   , lastMerkleRoot :: Maybe ByteString
     -- ^ last Merkle root inserted on chain (Merkle root for the last sidechain epoch)
