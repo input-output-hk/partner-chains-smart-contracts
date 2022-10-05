@@ -1,4 +1,17 @@
-module UpdateCommitteeHash where
+module UpdateCommitteeHash
+  ( UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  , InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
+  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  , committeeHashPolicy
+  , updateCommitteeHashValidator
+  , initCommitteeHashMintTn
+  , committeeHashAssetClass
+  , findUpdateCommitteeHashUtxo
+  , updateCommitteeHash
+  , aggregateKeys
+  ) where
 
 import Contract.Prelude
 
@@ -45,11 +58,8 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.Array (toUnfoldable)
 import Data.Array as Array
-import Data.Bifunctor (rmap)
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.FoldableWithIndex as FoldableWithIndex
-import Data.List (List, (:))
-import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MerkleTree as MT
@@ -67,7 +77,8 @@ import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
-import Utils.Crypto (verifyEd25519Signature)
+import Utils.Crypto as Utils.Crypto
+import Utils.Utxos as Utils.Utxos
 
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash ∷ ByteArray }
@@ -121,28 +132,14 @@ instance ToData UpdateCommitteeHashRedeemer where
     , toData newCommitteeHash
     ]
 
+-- | 'UpdateCommitteeHashParams' is the parameter for the update committee hash endpoint.
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
-  , committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
+  , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
+  , sidechainEpoch ∷ BigInt
+  , lastMerkleRoot ∷ Maybe ByteArray
   }
-
-derive instance Generic UpdateCommitteeHashParams _
-instance ToData UpdateCommitteeHashParams where
-  toData
-    ( UpdateCommitteeHashParams
-        { sidechainParams
-        , newCommitteePubKeys
-        , committeeSignatures
-        , committeePubKeys
-        }
-    ) = Constr zero
-    [ toData sidechainParams
-    , toData newCommitteePubKeys
-    , toData committeeSignatures
-    , toData committeePubKeys
-    ]
 
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do
@@ -196,15 +193,11 @@ findUpdateCommitteeHashUtxo uch = do
   validatorAddress ← liftContractM
     "error 'findUpdateCommitteeHashUtxo': failed to get validator address"
     (validatorHashEnterpriseAddress netId validatorHash)
-  scriptUtxos ← liftedM
-    "error 'findUpdateCommitteeHashUtxo': 'Contract.Utxos.utxosAt' failed"
-    (utxosAt validatorAddress)
-  let
-    go _txIn txOut =
-      Value.valueOf (unwrap (unwrap txOut).output).amount
-        (fst (unwrap uch).uchAssetClass)
-        initCommitteeHashMintTn == one
-  pure $ FoldableWithIndex.findWithIndex go scriptUtxos
+
+  Utils.Utxos.findUtxoByValueAt validatorAddress \value →
+    -- Note: there should either be 0 or 1 tokens of this committee hash nft.
+    Value.valueOf value (fst (unwrap uch).uchAssetClass) initCommitteeHashMintTn
+      /= zero
 
 -- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
@@ -222,20 +215,15 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 
   let tn = initCommitteeHashMintTn
 
-  when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
+  when (null uchp.committeeSignatures) (throwContractError "Empty Committee")
   let uch = UpdateCommitteeHash { uchAssetClass: assetClass cs tn }
 
-  let newCommitteePubKeys = uchp.newCommitteePubKeys
-  unless (isSorted newCommitteePubKeys) $ throwContractError
-    "New committee member public keys must be sorted"
-
-  newCommitteeHash ← liftContractE $ aggregateKeys newCommitteePubKeys
+  newCommitteeHash ← liftContractE $ aggregateKeys $ Array.sort
+    uchp.newCommitteePubKeys
 
   let
-    curCommitteePubKeys /\ committeeSignatures = sortPubKeysAndSigs
-      newCommitteeHash
-      uchp.committeePubKeys
-      uchp.committeeSignatures
+    curCommitteePubKeys /\ committeeSignatures =
+      Utils.Crypto.normalizeCommitteePubKeysAndSignatures uchp.committeeSignatures
   curCommitteeHash ← liftContractE $ aggregateKeys curCommitteePubKeys
 
   updateValidator ← updateCommitteeHashValidator uch
@@ -284,34 +272,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   awaitTxConfirmed txId
   logInfo' "updateCommitteeHash transaction submitted successfully!"
 
+-- | 'aggregateKeys' aggregates a list of keys s.t. the resulting 'ByteArray'
+-- may be stored in the 'UpdateCommitteeHashDatum' in an onchain compatible way.
 aggregateKeys ∷ Array ByteArray → Either String ByteArray
 aggregateKeys ls =
   (MT.fromList (toUnfoldable ls) <#> MT.rootHash >>> MT.unRootHash)
-
-{-| Sorting public key and signatures pairs by public keys to be able to efficiently nub them on-chain -}
-sortPubKeysAndSigs ∷
-  ByteArray →
-  Array PubKey →
-  Array Signature →
-  Tuple (Array PubKey) (Array Signature)
-sortPubKeysAndSigs msg pks sigs =
-  pairSigs (Array.toUnfoldable pks) (Array.toUnfoldable sigs)
-    # List.sortBy (\x y → fst x `compare` fst y)
-    # Array.fromFoldable
-    # Array.unzip
-    # rmap Array.catMaybes
-  where
-  pairSigs ∷ List PubKey → List Signature → List (Tuple PubKey (Maybe Signature))
-  pairSigs List.Nil _ = List.Nil
-  pairSigs pks' List.Nil = map (_ /\ Nothing) pks'
-  pairSigs (pk : pks') (sig : sigs')
-    | verifyEd25519Signature pk msg sig =
-        (pk /\ Just sig) : pairSigs pks' sigs'
-    | otherwise =
-        (pk /\ Nothing) : pairSigs pks' (sig : sigs')
-
-{- | Verifies that the non empty array is sorted -}
-isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
-isSorted xss = case Array.tail xss of
-  Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
-  Nothing → false

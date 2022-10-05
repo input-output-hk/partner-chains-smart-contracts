@@ -12,7 +12,7 @@ import Ledger.Value (AssetClass, TokenName)
 import Plutus.V2.Ledger.Contexts (TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import PlutusTx.Prelude (BuiltinByteString, Eq ((==)), Integer)
+import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.OffChain.Types (SidechainParams', SidechainPubKey)
 import Prelude qualified
@@ -112,7 +112,7 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the 'newCommitteeHash'
     committeeSignatures :: [BuiltinByteString]
   , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [PubKey]
+    committeePubKeys :: [SidechainPubKey]
   , -- | 'newCommitteeHash' is the hash of the new committee
     newCommitteeHash :: BuiltinByteString
   }
@@ -152,12 +152,16 @@ data GenesisMintCommitteeHash = GenesisMintCommitteeHash
 
 PlutusTx.makeLift ''GenesisMintCommitteeHash
 
+-- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot :: BuiltinByteString
-  , -- , lastMerkleRoot :: BuiltinByteString
+  { -- | New merkle root to insert.
+    merkleRoot :: BuiltinByteString
+  , -- | Last merkle root
+    lastMerkleRoot :: Maybe BuiltinByteString
+  , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [BuiltinByteString]
-  , threshold :: Integer -- Natural: the number of committee pubkeys needed to sign off
-  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  , -- | Lexicographically sorted public keys of all committee members
+    committeePubKeys :: [SidechainPubKey]
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]

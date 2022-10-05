@@ -12,7 +12,6 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
-  LedgerBytes (getLedgerBytes),
   OutputDatum (OutputDatum),
   Script,
   ScriptContext (..),
@@ -24,7 +23,7 @@ import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo))
+import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo), SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -89,7 +88,6 @@ mkMintingPolicy
     { merkleRoot
     , signatures
     , committeePubKeys
-    , threshold
     }
   ctx =
     -- The condition 1.  (referencing the last merkle root) is done by a
@@ -123,13 +121,20 @@ mkMintingPolicy
             go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo given as reference input"
          in go (txInfoReferenceInputs info)
 
+      threshold :: Integer
+      threshold =
+        -- See Note [Threshold of Strictly More than 2/3 Majority] in
+        -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash' (this is mostly
+        -- duplicated from there)
+        (length committeePubKeys `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
+
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
       -- documentation of this function.
       -- Again, @p1@ doesn't exist because this transaction is done by a
       -- trusted entity.
       p2, p3, p4 :: Bool
-      p2 = Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
+      p2 = Utils.verifyMultisig (map getSidechainPubKey committeePubKeys) threshold merkleRoot signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName

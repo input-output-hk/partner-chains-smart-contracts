@@ -83,15 +83,6 @@ getCommitteeCandidateValidator sp = do
     PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
 
-newtype SaveRootParams = SaveRootParams
-  { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ ByteArray
-  , signatures ∷ Array Signature
-  , threshold ∷ BigInt.BigInt
-  , committeePubKeys ∷
-      Array PubKey -- Public keys of all committee members
-  }
-
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
   , bprSidechainPubKey ∷ PubKey -- public key in the sidechain's desired format

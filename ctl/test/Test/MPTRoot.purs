@@ -87,14 +87,28 @@ testScenario = do
         ]
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
-  let merkleRoot = MerkleTree.unRootHash $ MerkleTree.rootHash merkleTree
+  let
+    merkleRoot = MerkleTree.unRootHash $ MerkleTree.rootHash merkleTree
+    -- We create signatures for every committee member BUT the first key...
+    -- if you wanted to create keys for every committee member, we would write
+    -- > committeeSignatures = Array.zip
+    -- >     initCommitteePubKeys
+    -- >     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRoot)
+    committeeSignatures =
+      case
+        Array.uncons $ Array.zip
+          initCommitteePubKeys
+          (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRoot)
+        of
+        Just { head, tail } →
+          Array.cons ((fst head) /\ Nothing) tail
+        _ → [] -- should never happen
 
   MPTRoot.saveRoot $ SaveRootParams
     { sidechainParams
     , merkleRoot
-    , signatures: Crypto.multiSign initCommitteePrvKeys merkleRoot
-    , threshold: BigInt.fromInt committeeSize
-    , committeePubKeys: Array.sort initCommitteePubKeys
+    , lastMerkleRoot: Nothing
+    , committeeSignatures
     }
 
   pure unit

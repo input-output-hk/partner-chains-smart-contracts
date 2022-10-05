@@ -8,7 +8,6 @@ module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 import Cardano.Crypto.Wallet (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (PubKey)
 import Ledger qualified
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
@@ -18,7 +17,6 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
-  LedgerBytes (getLedgerBytes),
   MintingPolicy,
   TokenName (TokenName),
   Value (getValue),
@@ -38,6 +36,7 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.MerkleTree qualified as MT
+import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
@@ -54,9 +53,10 @@ import Prelude qualified
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [PubKey] -> BuiltinByteString
+aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
 aggregateKeys [] = traceError "Empty committee"
-aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBytes . Crypto.getPubKey) lst
+-- aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBytes . Crypto.getPubKey) lst
+aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map getSidechainPubKey lst
 
 {- Note [Aggregate Keys Append Scheme]
  In early versions, we used a "simple append scheme" i.e., we implemented this function with
@@ -70,7 +70,7 @@ aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBy
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [PubKey] -> BuiltinByteString -> Bool
+aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
 
 {- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
@@ -140,22 +140,30 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     threshold :: Integer
     threshold =
-      -- Note: this computes floor(2/3 * length of committee), but the spec
-      -- says that we want strictly more than 2/3 majority? Indeed, the floor
-      -- computation will sometimes give us less than 2/3 majority... So I
-      -- think we really want to have ceil(2/3 * length of committee) i.e., we
-      -- should change this to
-      -- > ((length (committeePubKeys red) `Builtins.multiplyInteger` 2  - 1 )
-      -- >      `Builtins.divideInteger`  3)  + 1
-      -- where we use the fact @ceil(n/m) = floor((n - 1) / m) + 1@
-      -- for n non-negative and m positive. The proof of this fact isn't too
-      -- tricky :^)
-      length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+      -- Note [Threshold of Strictly More than 2/3 Majority]
+      -- The spec wants us to have strictly more than 2/3 majority of the
+      -- committee size. Let @n@ denote the committee size. To have strictly
+      -- more than 2/3 majority, we are interested in the smallest integer that
+      -- is strictly greater than @2/3*n@ which is either:
+      --    1. if @2/3 * n@ is an integer, then the smallest integer strictly
+      --    greater than @2/3 * n@ is @2/3 * n + 1@
+      --    2. if @2/3 * n@ is not an integer, then the smallest integer is
+      --    @ceil(2/3 * n)@
+      -- We can capture both cases with the expression @floor((2 * n)/3) + 1@
+      -- via distinguishing cases (again) if @2/3 * n@ is an integer.
+      --    1.  if @2/3 * n@ is an integer, then @floor((2 * n)/3) + 1 = (2 *
+      --    n)/3 + 1@ is the smallest integer strictly greater than @2/3 * n@
+      --    as required.
+      --    2.  if @2/3 * n@ is not an integer, then @floor((2 * n)/3)@ is the
+      --    largest integer strictly smaller than @2/3 *n@, but adding @+1@
+      --    makes this smallest integer that is strictly larger than @2/3 *n@
+      --    i.e., we have @ceil(2/3 * n)@ as required.
+      (length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       verifyMultisig
-        (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
+        (getSidechainPubKey <$> committeePubKeys red)
         threshold
         (newCommitteeHash red)
         (committeeSignatures red)

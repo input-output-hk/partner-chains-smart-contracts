@@ -8,7 +8,6 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (utxosAt)
 import Data.Array as Array
 import Data.BigInt as BigInt
-import Data.Int as Int
 import Data.Map as Map
 import Data.Set as Set
 import InitSidechain (initSidechain)
@@ -26,20 +25,18 @@ testScenario = do
   ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   let
     keyCount = 101
-    threshold = 2.0 / 3.0
-    reqSigns = Int.ceil $ Int.toNumber keyCount / threshold
   genesisUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
-  committeePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let
-    initCommittee = map toPubKeyUnsafe committeePrvKeys
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
       , initMint: Nothing
       , initUtxo: genesisUtxo
-      , initCommittee
+      , initCommittee: initCommitteePubKeys
       }
 
   scParams ← initSidechain initScParams
@@ -47,14 +44,17 @@ testScenario = do
   let nextCommittee = Array.sort $ map toPubKeyUnsafe nextCommitteePrvKeys
   nextCommitteeHash ← liftContractE $ aggregateKeys nextCommittee
   let
-    sigs = multiSign (Array.take reqSigns committeePrvKeys) nextCommitteeHash
+    committeeSignatures = Array.zip
+      initCommitteePubKeys
+      (Just <$> multiSign initCommitteePrvKeys nextCommitteeHash)
 
     uchp =
       UpdateCommitteeHashParams
         { sidechainParams: scParams
         , newCommitteePubKeys: nextCommittee
-        , committeePubKeys: initCommittee
-        , committeeSignatures: sigs
+        , committeeSignatures: committeeSignatures
+        , lastMerkleRoot: Nothing
+        , sidechainEpoch: zero
         }
 
   updateCommitteeHash uchp
