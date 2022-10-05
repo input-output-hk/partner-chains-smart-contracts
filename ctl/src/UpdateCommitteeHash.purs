@@ -54,7 +54,6 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.Array (toUnfoldable)
 import Data.Array as Array
