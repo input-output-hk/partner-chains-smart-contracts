@@ -167,16 +167,14 @@ data MintParams = MintParams
   { amount :: Integer
   , recipient :: ByteString
   , merkleProof :: MerkleProof
-  , chainId :: Integer
   , index :: Integer
-  , merkleRoot :: ByteString
+  , previousMerkleRoot:: Maybe ByteString
   }
 ```
 
 Minting policy verifies the following:
 
 - `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
-- chainId matches the minting policy chainId
 - recipient, amount, index and previousMerkleRoot combined with merkleProof match against merkleRootHash
 - `claimTransactionHash` of the transaction is NOT included in the distributed set[^1]
 - a new entry with the `claimTransactionHash` of the transaction is created in the distributed set
