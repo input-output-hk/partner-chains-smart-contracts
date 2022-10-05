@@ -129,7 +129,7 @@ Validator script verifies the following:
 ![MPTRootToken minting](MPTRoot.svg)
 <figcaption align = "center"><i>Merkle root token minting</i></figcaption><br />
 
-The merkle tree has to be constructed in the exact same way as it is done by [following merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
+The merkle tree has to be constructed in the exact same way as it is done by the following [merkle tree implementation](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/src/TrustlessSidechain/MerkleTree.hs). Entries in the tree should be calculated as follow:
 
 ```haskell
 data MerkleTreeEntry = MerkleTreeEntry
@@ -137,7 +137,7 @@ data MerkleTreeEntry = MerkleTreeEntry
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
   , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
-  , lastMerkleRoot :: Maybe ByteString -- lastMerkleRoot is added to make sure that the hashed entry is unique
+  , previousMerkleRoot :: Maybe ByteString -- lastMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
 
@@ -152,7 +152,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
   , sidechainEpoch :: Integer -- sidechain epoch for which we obtain the signature
   , merkleRoot :: ByteString
-  , lastMerkleRoot :: Maybe ByteString
+  , previousMerkleRoot :: Maybe ByteString
   }
 ```
 
@@ -243,7 +243,6 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | The public keys of the new committee.
     newCommitteePubKeys :: [SidechainPubKey]
   , -- | The asset class of the NFT identifying this committee hash
-    token :: AssetClass
   , -- | The signature for the new committee hash.
     committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
   , -- sidechain parameters
@@ -317,7 +316,7 @@ signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committ
 #### 6.2. Merkle root chaining
 
 
-As described in [6. Committee handover](#6.-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a sort of Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
+As described in [6. Committee handover](#6.-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a new Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
 
 ![Merkle root chaining](MRChain-simple.svg)
 <figcaption align = "center"><i>Merkle root chaining (SC ep = sidechain epoch)</i></figcaption><br />
