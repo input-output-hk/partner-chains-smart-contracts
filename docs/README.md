@@ -137,6 +137,7 @@ data MerkleTreeEntry = MerkleTreeEntry
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
   , sidechainEpoch :: Integer -- sidechain epoch for which merkle tree was created
+  , lastMerkleRoot :: Maybe ByteString -- lastMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
 
@@ -184,7 +185,7 @@ Minting policy verifies the following:
 - the transaction is signed by the recipient
 - the amount matches the actual tx body contents
 
-where the `claimTransactionHash` is a `blake2(merkleRoot, merkleEntryIndex)`, uniquely identifying a cross chain transaction by pointing to a Merkle tree and the index of the transaction in the tree
+where the `claimTransactionHash` is a `blake2(cbor(MerkleTreeEntry))`, uniquely identifying a cross chain transaction by pointing to a Merkle tree and the index of the transaction in the tree
 
 ![SC to MC](SC-MC.svg)
 <figcaption align = "center"><i>Sidechain to Mainchain transaction (claiming tokens)</i></figcaption><br />
