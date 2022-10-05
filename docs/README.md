@@ -248,7 +248,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
     committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
   , -- sidechain parameters
      sidechainParams :: SidechainParams
-  ,   -- sidechain epoch for which we obtain the signature
+  , -- sidechain epoch for which we obtain the signature
       sidechainEpoch :: Integer
   , -- last merkle root inserted on chain
     lastMerkleRoot :: Maybe ByteString
