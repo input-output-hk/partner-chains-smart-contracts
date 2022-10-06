@@ -10,9 +10,9 @@ Mainchain utilizes the following components to handle interactions with a sidech
 
 - `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
 - `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#31-merkle-root-insertion))
-- `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-member%2Fcandidate))
+- `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
 - `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
-- `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-update-committee-hash))
+- `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
