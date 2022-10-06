@@ -19,7 +19,7 @@
       inputs.cardano-node.url = github:input-output-hk/cardano-node/e0719fdb491229b113114c2cb009f02c83f6118f;
     };
     plutip = {
-      url = github:mlabs-haskell/plutip/8364c43ac6bc9ea140412af9a23c691adf67a18b;
+      url = github:mlabs-haskell/plutip/1da1d04d13902166fcf301c5104eb6e1d5a624d1;
       inputs = {
         bot-plutus-interface.follows = "bot-plutus-interface";
         haskell-nix.follows = "bot-plutus-interface/haskell-nix";
