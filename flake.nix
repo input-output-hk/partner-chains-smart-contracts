@@ -8,24 +8,11 @@
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     ### Start of Maxim's cool trick to get `serialiseData` to work
+    plutip.url = github:hyphenrf/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9;
     cardano-transaction-lib.inputs = {
       plutip.follows = "plutip";
       haskell-nix.follows = "plutip/haskell-nix";
       nixpkgs.follows = "plutip/nixpkgs";
-    };
-    bot-plutus-interface = {
-      url = github:mlabs-haskell/bot-plutus-interface/7235aa6fba12b0cf368d9976e1e1b21ba642c038;
-      inputs.cardano-wallet.url = github:sadMaxim/cardano-wallet/9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b;
-      inputs.cardano-node.url = github:input-output-hk/cardano-node/e0719fdb491229b113114c2cb009f02c83f6118f;
-    };
-    plutip = {
-      url = github:mlabs-haskell/plutip/1da1d04d13902166fcf301c5104eb6e1d5a624d1;
-      inputs = {
-        bot-plutus-interface.follows = "bot-plutus-interface";
-        haskell-nix.follows = "bot-plutus-interface/haskell-nix";
-        iohk-nix.follows = "bot-plutus-interface/iohk-nix";
-        nixpkgs.follows = "bot-plutus-interface/nixpkgs";
-      };
     };
     ### End of Maxim's cool trick to get `serialiseData` to work
 
