@@ -16,6 +16,7 @@
     bot-plutus-interface = {
       url = github:mlabs-haskell/bot-plutus-interface/7235aa6fba12b0cf368d9976e1e1b21ba642c038;
       inputs.cardano-wallet.url = github:sadMaxim/cardano-wallet/9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b;
+      inputs.cardano-node.url = github:input-output-hk/cardano-node/1.35-cli-secp;
     };
     plutip = {
       url = github:mlabs-haskell/plutip/8364c43ac6bc9ea140412af9a23c691adf67a18b;
@@ -41,6 +42,7 @@
           name = "vasil-dev";
           magic = 9;
         };
+        # TODO: will cardano-node need to be overridden in runtime too?
       };
 
       supportedSystems = with nixpkgs.lib.systems.supported;
