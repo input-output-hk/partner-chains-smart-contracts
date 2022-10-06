@@ -8,11 +8,11 @@ This specification details the main chain contract of a trustless sidechain syst
 
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
-- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2.-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#3.2.-individual-claiming))
-- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#3.1.-merkle-root-insertion))
-- `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4.-register-committee-candidate), [5.](#5.-deregister-committee-member%2Fcandidate))
-- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#3.1.-merkle-root-insertion))
-- `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1.-initialise-contract), [6.](#6.-update-committee-hash))
+- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
+- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#31-merkle-root-insertion))
+- `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-member%2Fcandidate))
+- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
+- `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-update-committee-hash))
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
@@ -26,7 +26,7 @@ data SidechainParams = SidechainParams
     -- FUEL minting can only happen once. This parameter will be removed in the final product.
   , genesisUtxo :: TxOutRef
     -- ^ 'genesisUtxo' is an arbitrary 'TxOutRef' used to identify internal
-    -- 'AssetClass's (e.g. see [6.](#6.-update-committee-hash)) of the
+    -- 'AssetClass's (e.g. see [6.](#6-update-committee-hash)) of the
     -- sidechain
   }
 ```
@@ -223,7 +223,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 ### 6. Committee handover
 
-In the current implementation of the sidechain, a [Merkle root insertion (3.1)](#3.1.-merkle-root-insertion) can only occur once per sidechain epoch at the time of the committee handover. We expose an endpoint which can handle this action, however the underlying implementation is detached, so in theory, we could do Merkle root insertion and Committee Hash Update actions independently.
+In the current implementation of the sidechain, a [Merkle root insertion (3.1)](#31-merkle-root-insertion) can only occur once per sidechain epoch at the time of the committee handover. We expose an endpoint which can handle this action, however the underlying implementation is detached, so in theory, we could do Merkle root insertion and Committee Hash Update actions independently.
 
 We have to be careful about the order of these actions. If the transaction inserting the merkle root for sidechain epoch 1 gets submitted *after* the committee handover from `committee of epoch 1` to `committee of epoch 2` transaction, the signature would become invalid, since it is signed by the `committee of epoch 1`. To mitigate this issue, we introduce `merkle root chain`, for details see: [6.2](#62-merkle-root-chaining)
 
@@ -308,7 +308,7 @@ signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committ
 #### 6.2. Merkle root chaining
 
 
-As described in [6. Committee handover](#6.-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a new Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
+As described in [6. Committee handover](#6-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a new Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
 
 ![Merkle root chaining](MRChain-simple.svg)
 <figcaption align = "center"><i>Merkle root chaining (SC ep = sidechain epoch)</i></figcaption><br />
