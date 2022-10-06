@@ -317,8 +317,8 @@
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "1.35-cli-secp",
         "repo": "cardano-node",
+        "rev": "e0719fdb491229b113114c2cb009f02c83f6118f",
         "type": "github"
       }
     },
