@@ -35,7 +35,7 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
-import MPTRoot.Utils (findLastMptRootTokenUtxo)
+import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
 import Types
   ( assetClass
@@ -67,7 +67,8 @@ import Utils.Crypto as Utils.Crypto
 -- check if we have the right committee. This gets checked on chain also
 updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
-  -- Getting the minting policy / currency symbol / token name.
+  -- Getting the minting policy / currency symbol / token name for update
+  -- committee hash
   -------------------------------------------------------------
   pol ← committeeHashPolicy
     ( InitCommitteeHashMint
@@ -79,6 +80,19 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     (Value.scriptCurrencySymbol pol)
 
   let tn = initCommitteeHashMintTn
+
+  -- Getting the minting policy for the mpt root token
+  -------------------------------------------------------------
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: uchp.sidechainParams
+      , updateCommitteeHashCurrencySymbol: cs
+      }
+  mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
+  mptRootTokenCurrencySymbol ←
+    liftContractM
+      "error 'updateCommitteeHash': failed to get mptRootTokenCurrencySymbol"
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
   -- Building the new committee hash
   -------------------------------------------------------------
@@ -95,7 +109,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     uch = UpdateCommitteeHash
-      { sidechainParams: uchp.sidechainParams, uchAssetClass: assetClass cs tn }
+      { sidechainParams: uchp.sidechainParams
+      , uchAssetClass: assetClass cs tn
+      , mptRootTokenCurrencySymbol
+      }
   updateValidator ← updateCommitteeHashValidator uch
   let valHash = Scripts.validatorHash updateValidator
 
@@ -115,11 +132,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
-  maybeLastMerkleRoot ← findLastMptRootTokenUtxo uchp.lastMerkleRoot
-    $ SignedMerkleRootMint
-        { sidechainParams: uchp.sidechainParams
-        , updateCommitteeHashCurrencySymbol: cs
-        }
+  maybeLastMerkleRoot ← MPTRoot.Utils.findLastMptRootTokenUtxo
+    uchp.lastMerkleRoot
+    smrm
 
   -- Building / submitting the transaction.
   -------------------------------------------------------------

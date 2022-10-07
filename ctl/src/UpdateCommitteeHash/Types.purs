@@ -24,7 +24,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
-import Data.BigInt (BigInt)
+import Contract.Value (CurrencySymbol)
 import SidechainParams (SidechainParams)
 import Types (AssetClass, PubKey, Signature)
 
@@ -52,13 +52,20 @@ instance FromData UpdateCommitteeHashDatum where
 newtype UpdateCommitteeHash = UpdateCommitteeHash
   { sidechainParams ∷ SidechainParams
   , uchAssetClass ∷ AssetClass
+  , mptRootTokenCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic UpdateCommitteeHash _
 derive instance Newtype UpdateCommitteeHash _
 instance ToData UpdateCommitteeHash where
-  toData (UpdateCommitteeHash { sidechainParams, uchAssetClass }) = Constr zero
-    [ toData sidechainParams, toData uchAssetClass ]
+  toData
+    ( UpdateCommitteeHash
+        { sidechainParams, uchAssetClass, mptRootTokenCurrencySymbol }
+    ) = Constr zero
+    [ toData sidechainParams
+    , toData uchAssetClass
+    , toData mptRootTokenCurrencySymbol
+    ]
 
 -- | 'InitCommitteeHashMint' parameterizes the minting policy which identifies
 -- the utxo with the update committee hash validator script.
@@ -102,7 +109,6 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
   , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
-  , sidechainEpoch ∷ BigInt
   , lastMerkleRoot ∷ Maybe ByteArray
   }
 

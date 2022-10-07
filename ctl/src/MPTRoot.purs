@@ -77,6 +77,7 @@ saveRoot
       { sidechainParams
       , uchAssetClass: updateCommitteeHashCurrencySymbol /\
           UpdateCommitteeHash.initCommitteeHashMintTn
+      , mptRootTokenCurrencySymbol: rootTokenCS
       }
   { index: committeeHashTxIn, value: _committeeHashTxOut } ←
     liftedM "error 'saveRoot': failed to find committee hash utxo" $

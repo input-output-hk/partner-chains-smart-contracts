@@ -23,8 +23,8 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoInputs, txInfoMint),
+  TxInInfo (txInInfoOutRef, txInInfoResolved),
+  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -37,7 +37,7 @@ import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHash (cSidechainParams, cToken),
+  UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, lastMerkleRoot, newCommitteePubKeys),
@@ -127,6 +127,9 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       "error 'mkUpdateCommitteeHashValidator': expected different output datum"
       (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
   where
+    info :: TxInfo
+    info = scriptContextTxInfo ctx
+
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
@@ -187,14 +190,27 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
     referencesLastMerkleRoot :: Bool
-    referencesLastMerkleRoot = True
-
-{-
--- TODO: put this together later
-let go :: TxInInfo ->  Bool
-    go txInInfo = txOutValue (txInInfoResolved txInInfo)
-in go (txInfoReferenceInputs info)
--}
+    referencesLastMerkleRoot =
+      -- Either we want to reference the last merkle root or we don't (note
+      -- that this is signed by the committee -- this is where the security
+      -- guarantees come from).
+      -- If we do want to reference the last merkle root, we need to verify
+      -- that there exists at least one input with a nonzero amount of the
+      -- mpt root token.
+      case lastMerkleRoot red of
+        Nothing -> True
+        Just tn ->
+          let go :: [TxInInfo] -> Bool
+              go (txInInfo : rest) =
+                if Value.valueOf
+                  (txOutValue (txInInfoResolved txInInfo))
+                  (cMptRootTokenCurrencySymbol uch)
+                  (TokenName tn)
+                  > 0
+                  then True
+                  else go rest
+              go [] = False
+           in go (txInfoReferenceInputs info)
 
 -- * Initializing the committee hash
 

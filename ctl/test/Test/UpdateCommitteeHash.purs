@@ -16,7 +16,6 @@ import SidechainParams (InitSidechainParams(..))
 import UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
-  , aggregateKeys
   , serialiseUchmHash
   , updateCommitteeHash
   )
@@ -68,7 +67,6 @@ testScenario = do
         , newCommitteePubKeys: nextCommittee
         , committeeSignatures: committeeSignatures
         , lastMerkleRoot: Nothing
-        , sidechainEpoch: zero
         }
 
   updateCommitteeHash uchp

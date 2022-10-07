@@ -8,7 +8,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Typed.Scripts (ValidatorTypes (..))
-import Ledger.Value (AssetClass, TokenName)
+import Ledger.Value (AssetClass, CurrencySymbol, TokenName)
 import Plutus.V2.Ledger.Contexts (TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
@@ -130,12 +130,15 @@ instance ValidatorTypes UpdatingCommitteeHash where
   type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
 
--- | 'UpdateCommitteeHash' is used as the parameter for the contract.
+-- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
   { cSidechainParams :: SidechainParams
   , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     cToken :: AssetClass
+  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding mpt
+    -- root token. This is needed for verifying that the last merkle root is verified.
+    cMptRootTokenCurrencySymbol :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (FromJSON, ToJSON)

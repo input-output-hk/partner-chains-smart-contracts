@@ -92,7 +92,7 @@ initSidechain (InitSidechainParams isp) = do
       , genesisMint: isp.initMint
       }
 
-  -- Initializing the committee hash
+  -- Getting the committee hash minting policy
   -----------------------------------
 
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
@@ -100,15 +100,32 @@ initSidechain (InitSidechainParams isp) = do
   committeeHashCurrencySymbol ← Monad.liftContractM
     "error 'initSidechain': failed to get committee hash currency symbol"
     (Value.scriptCurrencySymbol committeeHashPolicy)
+
   let
     committeeHashAssetClass = committeeHashCurrencySymbol /\
       UpdateCommitteeHash.initCommitteeHashMintTn
     aggregatedKeys = UpdateCommitteeHash.aggregateKeys $ Array.sort
       isp.initCommittee
+
+  -- Getting the mpt root token minting policy / currency symbol
+  -----------------------------------
+  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
+    SignedMerkleRootMint
+      { sidechainParams: sc
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      }
+  mptRootTokenMintingPolicyCurrencySymbol ←
+    Monad.liftContractM
+      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+
+  -- Setting up the update committee hash validator
+  -----------------------------------
   let
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
       , uchAssetClass: committeeHashAssetClass
+      , mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
       }
     committeeHashDatum = Datum
       $ PlutusData.toData
@@ -161,16 +178,7 @@ initSidechain (InitSidechainParams isp) = do
           { dsNext: (unwrap DistributedSet.rootNode).nNext
           }
 
-  -- FUEL minting policy (note we need the MPT root token minting policy first)
-  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
-    SignedMerkleRootMint
-      { sidechainParams: sc
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      }
-  mptRootTokenMintingPolicyCurrencySymbol ←
-    Monad.liftContractM
-      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+  -- FUEL minting policy
   fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
     ( FUELMint
         { mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol

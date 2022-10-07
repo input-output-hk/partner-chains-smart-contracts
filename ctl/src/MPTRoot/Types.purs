@@ -17,7 +17,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value (CurrencySymbol)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 
