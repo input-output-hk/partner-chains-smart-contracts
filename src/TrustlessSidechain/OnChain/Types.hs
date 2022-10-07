@@ -14,7 +14,7 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
-import TrustlessSidechain.OffChain.Types (SidechainParams', SidechainPubKey)
+import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainParams', SidechainPubKey)
 import Prelude qualified
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
@@ -109,12 +109,14 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatu
  committee
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { -- | The current committee's signatures for the 'newCommitteeHash'
+  { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
     committeeSignatures :: [BuiltinByteString]
   , -- | 'committeePubKeys' is the current committee public keys
     committeePubKeys :: [SidechainPubKey]
-  , -- | 'newCommitteeHash' is the hash of the new committee
-    newCommitteeHash :: BuiltinByteString
+  , -- | 'newCommitteePubKeys' is the hash of the new committee
+    newCommitteePubKeys :: [SidechainPubKey]
+  , -- | 'lastMerkleRoot' is the last merkle root (if it exists)
+    lastMerkleRoot :: Maybe BuiltinByteString
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
@@ -129,16 +131,28 @@ instance ValidatorTypes UpdatingCommitteeHash where
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the contract.
-newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { -- | 'cToken' is the 'AssetClass' of the NFT that is used to
+data UpdateCommitteeHash = UpdateCommitteeHash
+  { cSidechainParams :: SidechainParams
+  , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     cToken :: AssetClass
   }
-  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving stock (Prelude.Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
+
+data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
+  { uchmSidechainParams :: SidechainParams
+  , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
+    -- be sorted lexicographically (recall that we can trust the bridge, so it
+    -- should do this for us
+    uchmNewCommitteePubKeys :: [SidechainPubKey]
+  , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+PlutusTx.makeLift ''UpdateCommitteeHashMessage
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
 -- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
 data GenesisMintCommitteeHash = GenesisMintCommitteeHash

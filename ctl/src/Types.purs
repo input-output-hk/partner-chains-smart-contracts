@@ -4,6 +4,7 @@ module Types
   ( PubKey
   , Signature
   , Ed25519Signature
+  , AssetClass
   , assetClass
   , assetClassValueOf
   , assetClassValue

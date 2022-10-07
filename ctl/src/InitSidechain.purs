@@ -5,7 +5,7 @@ import Contract.Prelude
 
 import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractE, liftedE, liftedM)
+import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.Monad as Monad
 import Contract.PlutusData (Datum(..))
 import Contract.PlutusData as PlutusData
@@ -103,11 +103,13 @@ initSidechain (InitSidechainParams isp) = do
   let
     committeeHashAssetClass = committeeHashCurrencySymbol /\
       UpdateCommitteeHash.initCommitteeHashMintTn
-  aggregatedKeys ← liftContractE $ UpdateCommitteeHash.aggregateKeys $ Array.sort
-    isp.initCommittee
+    aggregatedKeys = UpdateCommitteeHash.aggregateKeys $ Array.sort
+      isp.initCommittee
   let
     committeeHashParam = UpdateCommitteeHash
-      { uchAssetClass: committeeHashAssetClass }
+      { sidechainParams: sc
+      , uchAssetClass: committeeHashAssetClass
+      }
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }

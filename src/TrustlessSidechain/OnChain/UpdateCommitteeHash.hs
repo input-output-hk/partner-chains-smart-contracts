@@ -35,17 +35,23 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
-import TrustlessSidechain.MerkleTree qualified as MT
 import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHash (cToken),
+  UpdateCommitteeHash (cSidechainParams, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteeHash),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, lastMerkleRoot, newCommitteePubKeys),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 import Prelude qualified
 
 -- * Updating the committee hash
+
+{- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
+ to the Plutus data representation, then encoding it to cbor via the builtin.
+-}
+serialiseUchm :: UpdateCommitteeHashMessage -> BuiltinByteString
+serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
  committee hash by essentially computing the merkle root of all public keys
@@ -54,9 +60,7 @@ import Prelude qualified
 -}
 {-# INLINEABLE aggregateKeys #-}
 aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
-aggregateKeys [] = traceError "Empty committee"
--- aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBytes . Crypto.getPubKey) lst
-aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map getSidechainPubKey lst
+aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 
 {- Note [Aggregate Keys Append Scheme]
  In early versions, we used a "simple append scheme" i.e., we implemented this function with
@@ -99,7 +103,7 @@ Normally, the producer of a utxo is only required to include the datum hash,
 and not the datum itself (but can optionally do so). In this case, we rely on
 the fact that the producer actually does include the datum; and enforce this
 with 'outputDatum'.
-Note [Input has Token and Output has Token]:
+Note [Inpu has Token and Output has Token]:
 In an older iteration, we used to check if the tx's input has the token, but
 this is implicitly covered when checking if the output spends the token. Hence,
 we don't need to check if the input tx's spends the token which is a nice
@@ -113,10 +117,15 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "Token missing from output" outputHasToken
-    && traceIfFalse "Committee signature missing" signedByCurrentCommittee
-    && traceIfFalse "Wrong committee" isCurrentCommittee
-    && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+  traceIfFalse "error 'mkUpdateCommitteeHashValidator': output missing NFT" outputHasToken
+    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': committee signature invalid" signedByCurrentCommittee
+    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': current committee mismatch" isCurrentCommittee
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
+      referencesLastMerkleRoot
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': expected different output datum"
+      (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
   where
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
@@ -162,14 +171,30 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      verifyMultisig
-        (getSidechainPubKey <$> committeePubKeys red)
-        threshold
-        (newCommitteeHash red)
-        (committeeSignatures red)
+      let message =
+            UpdateCommitteeHashMessage
+              { uchmSidechainParams = cSidechainParams uch
+              , uchmNewCommitteePubKeys = newCommitteePubKeys red
+              , uchmPreviousMerkleRoot = lastMerkleRoot red
+              }
+       in verifyMultisig
+            (getSidechainPubKey <$> committeePubKeys red)
+            threshold
+            (Builtins.blake2b_256 (serialiseUchm message))
+            (committeeSignatures red)
 
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
+
+    referencesLastMerkleRoot :: Bool
+    referencesLastMerkleRoot = True
+
+{-
+-- TODO: put this together later
+let go :: TxInInfo ->  Bool
+    go txInInfo = txOutValue (txInInfoResolved txInInfo)
+in go (txInfoReferenceInputs info)
+-}
 
 -- * Initializing the committee hash
 

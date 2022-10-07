@@ -11,12 +11,16 @@ module Utils.Crypto
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Prim.ByteArray (byteArrayToIntArray)
+import Contract.Prim.ByteArray
+  ( ByteArray
+  , byteArrayFromIntArrayUnsafe
+  , byteArrayToIntArray
+  , hexToByteArrayUnsafe
+  )
 import Data.Array as Array
 import Data.Ord as Ord
 import Serialization.Types (PrivateKey, PublicKey)
 import Types (PubKey, Signature)
-import Types.ByteArray (ByteArray, hexToByteArrayUnsafe)
 
 foreign import publicKeyFromPrivateKeyUnsafe ∷ PrivateKey → PublicKey
 foreign import publicKeyToBytesUnsafe ∷ PublicKey → ByteArray
@@ -56,12 +60,14 @@ toPubKeyUnsafe = publicKeyToBytesUnsafe <<< publicKeyFromPrivateKeyUnsafe
 normalizeCommitteePubKeysAndSignatures ∷
   Array (PubKey /\ Maybe Signature) → Tuple (Array PubKey) (Array Signature)
 normalizeCommitteePubKeysAndSignatures =
-  ((fromMaybe dummySignature <$> _) <$> _) -- apply @(fromMaybe mempty <$> _)@ over the second element of the tuple.
+  ((fromMaybe dummySignature <$> _) <$> _) -- apply @(fromMaybe dummySignature <$> _)@ over the second element of the tuple.
 
     <<< Array.unzip
     <<< Array.sortBy (\l r → Ord.compare (fst l) (fst r))
 
 -- | 'dummySignature' is a signature that shouldn't prove any public key has
--- signed something. In particular, this is the empty string.
+-- signed something. In particular, this is a ByteArray of length 64 filled
+-- with 0s. Note: the length is important for the onchain builtin
+-- 'verifyEd25519Signature' as this builtin errors if inputs are of the wrong length.
 dummySignature ∷ Signature
-dummySignature = mempty
+dummySignature = byteArrayFromIntArrayUnsafe $ Array.replicate 64 0
