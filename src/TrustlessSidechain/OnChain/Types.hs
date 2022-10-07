@@ -29,8 +29,8 @@ data MerkleTreeEntry = MerkleTreeEntry
     -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- of bech32
     mteRecipient :: BuiltinByteString
-  , -- | sidechain epoch for which merkle tree was created
-    mteSidechainEpoch :: Integer
+  , -- | the previous merkle root to ensure that the hashed entry is unique
+    mtePreviousMerkleRoot :: Maybe BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]

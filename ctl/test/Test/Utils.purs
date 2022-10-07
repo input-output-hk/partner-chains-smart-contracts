@@ -1,11 +1,11 @@
-module Test.Utils (toTxIn, getUniqueUtxoAt) where
+module Test.Utils (toTxIn, getUniqueUtxoAt, paymentPubKeyHashToByteArray) where
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(..)
   , TransactionInput(..)
@@ -14,6 +14,7 @@ import Contract.Transaction
 import Contract.Utxos as Utxos
 import Data.Map as Map
 import Data.UInt as UInt
+import Serialization.Hash as Hash
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
@@ -39,3 +40,9 @@ getUniqueUtxoAt addr = do
       | length utxoMap == 1 → pure $ key /\ value
       | otherwise → err
     Nothing → err
+
+-- | Coerces a 'PaymentPubKeyHash' to a 'ByteArray'. This is useful when making
+-- the recipient for the 'MerkleTreeEntry'.
+paymentPubKeyHashToByteArray ∷ PaymentPubKeyHash → ByteArray
+paymentPubKeyHashToByteArray =
+  unwrap <<< Hash.ed25519KeyHashToBytes <<< unwrap <<< unwrap

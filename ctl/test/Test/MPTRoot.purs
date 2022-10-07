@@ -2,11 +2,10 @@ module Test.MPTRoot (testScenario) where
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
-import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (utxosAt)
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -20,16 +19,10 @@ import MPTRoot
   )
 import MPTRoot as MPTRoot
 import MerkleTree as MerkleTree
-import Serialization.Hash as Hash
 import SidechainParams (InitSidechainParams(..))
+import Test.Utils as Test.Utils
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
-
--- | Coerces a 'PaymentPubKeyHash' to a 'ByteArray'. This is useful when making
--- the recipient for the 'MerkleTreeEntry'.
-paymentPubKeyHashToByteArray ∷ PaymentPubKeyHash → ByteArray
-paymentPubKeyHashToByteArray =
-  unwrap <<< Hash.ed25519KeyHashToBytes <<< unwrap <<< unwrap
 
 -- | 'testScenario' does
 -- 1. Sets up the sidechain using thw 'InitSidechain.initSidechain' endpoint
@@ -84,8 +77,9 @@ testScenario = do
         [ MerkleTreeEntry
             { index: BigInt.fromInt 0
             , amount: BigInt.fromInt 69
-            , sidechainEpoch: BigInt.fromInt 420
-            , recipient: paymentPubKeyHashToByteArray ownPaymentPubKeyHash
+            , previousMerkleRoot: Nothing
+            , recipient: Test.Utils.paymentPubKeyHashToByteArray
+                ownPaymentPubKeyHash
             }
         ]
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
