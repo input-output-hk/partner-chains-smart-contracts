@@ -7,6 +7,7 @@ module MPTRoot.Types
   ( SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   , SaveRootParams(SaveRootParams)
+  , MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   ) where
 
 import Contract.Prelude
@@ -77,3 +78,26 @@ newtype SaveRootParams = SaveRootParams
   , -- Public keys of all committee members and their corresponding signatures.
     committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
   }
+
+-- | 'MerkleRootInsertionMessage' is a data type for which committee members
+-- create signatures for (this corresponds to how signatures are verified onchain)
+-- >  blake2b(cbor(MerkleRootInsertionMessage))
+-- See 'MPTRoot.Utils.serialiseMrimHash'.
+newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { sidechainParams ∷ SidechainParams
+  , merkleRoot ∷ ByteArray
+  , previousMerkleRoot ∷ Maybe ByteArray
+  }
+
+derive instance Generic MerkleRootInsertionMessage _
+derive instance Newtype MerkleRootInsertionMessage _
+instance ToData MerkleRootInsertionMessage where
+  toData
+    ( MerkleRootInsertionMessage
+        { sidechainParams, merkleRoot, previousMerkleRoot }
+    ) =
+    Constr zero
+      [ toData sidechainParams
+      , toData merkleRoot
+      , toData previousMerkleRoot
+      ]

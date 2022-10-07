@@ -26,14 +26,22 @@ import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo), SidechainPubKey (getSidechainPubKey))
-import TrustlessSidechain.OnChain.Types (MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
+import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
+{-# INLINEABLE serialiseMte #-}
 serialiseMte :: MerkleTreeEntry -> BuiltinByteString
 serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
+
+{- | 'serialiseMrimHash' is an alias for
+ > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
+-}
+{-# INLINEABLE serialiseMrimHash #-}
+serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
+serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
@@ -147,7 +155,18 @@ mkMintingPolicy
                   > 0 || go rest
               go [] = False
            in go (txInfoReferenceInputs info)
-      p2 = Utils.verifyMultisig (map getSidechainPubKey committeePubKeys) threshold merkleRoot signatures
+      p2 =
+        Utils.verifyMultisig
+          (map getSidechainPubKey committeePubKeys)
+          threshold
+          ( serialiseMrimHash
+              MerkleRootInsertionMessage
+                { mrimSidechainParams = smrmSidechainParams smrm
+                , mrimMerkleRoot = merkleRoot
+                , mrimPreviousMerkleRoot = lastMerkleRoot
+                }
+          )
+          signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName

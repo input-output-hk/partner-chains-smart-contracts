@@ -97,7 +97,7 @@ committeeHashAssetClass ichm = do
 aggregateKeys ∷ Array ByteArray → ByteArray
 aggregateKeys = Hashing.blake2b256Hash <<< mconcat
 
--- | 'serialiseUchmHash' is an alias for
+-- | 'serialiseUchmHash' is an alias for (ignoring the 'Maybe')
 -- > 'Contract.Hashing.blake2b256Hash' <<< 'Utils.SerialiseData.serialiseToData'
 -- The result of this function is what is signed by the committee members.
 serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe ByteArray

@@ -138,7 +138,6 @@ initSidechain (InitSidechainParams isp) = do
 
   -- Initializing the distributed set
   -----------------------------------
-
   -- Configuration policy of the distributed set
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint { dscmTxOutRef: txIn }
   dsConfPolicyCurrencySymbol ←

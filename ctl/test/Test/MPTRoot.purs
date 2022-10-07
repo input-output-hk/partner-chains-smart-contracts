@@ -14,7 +14,10 @@ import Data.Map as Map
 import Data.Set as Set
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
-import MPTRoot (SaveRootParams(SaveRootParams))
+import MPTRoot
+  ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
+  , SaveRootParams(SaveRootParams)
+  )
 import MPTRoot as MPTRoot
 import MerkleTree as MerkleTree
 import Serialization.Hash as Hash
@@ -89,16 +92,29 @@ testScenario = do
 
   let
     merkleRoot = MerkleTree.unRootHash $ MerkleTree.rootHash merkleTree
+
+  merkleRootInsertionMessage ←
+    liftContractM
+      "error 'Test.MPTRoot.testScenario': failed to create merkle root insertion message"
+      $ MPTRoot.serialiseMrimHash
+      $ MerkleRootInsertionMessage
+          { sidechainParams
+          , merkleRoot
+          , previousMerkleRoot: Nothing
+          }
+  let
     -- We create signatures for every committee member BUT the first key...
     -- if you wanted to create keys for every committee member, we would write
     -- > committeeSignatures = Array.zip
     -- >     initCommitteePubKeys
-    -- >     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRoot)
+    -- >     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
     committeeSignatures =
       case
         Array.uncons $ Array.zip
           initCommitteePubKeys
-          (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRoot)
+          ( Just <$> Crypto.multiSign initCommitteePrvKeys
+              merkleRootInsertionMessage
+          )
         of
         Just { head, tail } →
           Array.cons ((fst head) /\ Nothing) tail

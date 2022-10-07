@@ -21,7 +21,8 @@ import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import MPTRoot.Types
-  ( SaveRootParams(SaveRootParams)
+  ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
+  , SaveRootParams(SaveRootParams)
   , SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   )
@@ -30,6 +31,7 @@ import MPTRoot.Utils
   , findMptRootTokenUtxo
   , mptRootTokenMintingPolicy
   , mptRootTokenValidator
+  , serialiseMrimHash
   )
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)

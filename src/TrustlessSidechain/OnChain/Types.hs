@@ -35,6 +35,18 @@ data MerkleTreeEntry = MerkleTreeEntry
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
+{- | 'MerkleRootInsertionMessage' is a data type for which committee members
+ create signatures for
+ >  blake2b(cbor(MerkleRootInsertionMessage))
+-}
+data MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { mrimSidechainParams :: SidechainParams
+  , mrimMerkleRoot :: BuiltinByteString
+  , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+
+makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
+
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
   = MainToSide BuiltinByteString -- Recipient's sidechain address

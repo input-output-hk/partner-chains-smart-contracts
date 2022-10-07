@@ -13,11 +13,13 @@ module MPTRoot.Utils
   , mptRootTokenValidator
   , findMptRootTokenUtxo
   , findLastMptRootTokenUtxo
+  , serialiseMrimHash
   ) where
 
 import Contract.Prelude
 
 import Contract.Address as Address
+import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
@@ -36,9 +38,10 @@ import Contract.Transaction
 import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MPTRoot.Types (SignedMerkleRootMint)
+import MPTRoot.Types (MerkleRootInsertionMessage, SignedMerkleRootMint)
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams)
+import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
 
 -- | 'mptRootTokenMintingPolicy' gets the minting policy corresponding to
@@ -120,3 +123,9 @@ findLastMptRootTokenUtxo maybeLastMerkleRoot smrm = case maybeLastMerkleRoot of
       Monad.liftContractM
         "error 'findLastMptRootTokenUtxo': failed to find last merkle root" $ lkup
     pure $ Just lkup'
+
+-- | 'serialiseMrimHash' is an alias for  (ignoring the 'Maybe')
+-- > 'Contract.Hashing.blake2b256Hash' <<< 'Utils.SerialiseData.serialiseToData'
+serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe ByteArray
+serialiseMrimHash = (Hashing.blake2b256Hash <$> _) <<<
+  Utils.SerialiseData.serialiseToData
