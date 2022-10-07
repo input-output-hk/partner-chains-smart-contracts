@@ -18,7 +18,8 @@ import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
-import Test.UpdateCommitteeHash as UpdateCommitteeHash
+
+-- import Test.UpdateCommitteeHash as UpdateCommitteeHash
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -42,7 +43,7 @@ main = do
 
         FUELMintingPolicy.testScenario
 
-        UpdateCommitteeHash.testScenario
+        -- UpdateCommitteeHash.testScenario
 
         InitSidechain.testScenario1
         InitSidechain.testScenario2 alice bob

@@ -15,7 +15,7 @@ import Contract.Prelude
 import Contract.Monad (Contract)
 import Types.ByteArray (ByteArray)
 
--- | Invariant: ∀ x : PublicKey. length x = 33
+-- | Invariant: ∀ x : PublicKey. length x = 33 ∨ length x = 65
 type PublicKey = ByteArray
 
 -- | Invariant: ∀ x : PrivateKey. length x = 32
