@@ -1,40 +1,40 @@
 module Utils.Crypto
-  ( toPubKeyUnsafe
-  , sign
-  , verifyEd25519Signature
+  ( Message
+  , PrivateKey
+  , PublicKey
+  , Signature
+  , toPubKeyUnsafe
   , generatePrivKey
   , multiSign
-  , hexToPrivKeyUnsafe
+  , sign
+  , verifyEcdsaSecp256k1Signature
   ) where
 
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Prim.ByteArray (byteArrayToIntArray)
-import Serialization.Types (PrivateKey, PublicKey)
-import Types (PubKey, Signature)
-import Types.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Types.ByteArray (ByteArray)
 
-foreign import publicKeyFromPrivateKeyUnsafe ∷ PrivateKey → PublicKey
-foreign import publicKeyToBytesUnsafe ∷ PublicKey → ByteArray
-foreign import generateRandomBIP32PrivateKeyArrayInt8 ∷ Effect (Array Int)
-foreign import generateBIP32PrivateKeyFromArray ∷ Array Int → PrivateKey
-foreign import sign ∷ PrivateKey → ByteArray → Signature
-foreign import verifyEd25519Signature ∷
-  PubKey → ByteArray → Signature → Boolean
+-- | Invariant: ∀ x : PublicKey. length x = 33
+type PublicKey = ByteArray
 
-multiSign ∷ Array PrivateKey → ByteArray → Array Signature
+-- | Invariant: ∀ x : PrivateKey. length x = 32
+type PrivateKey = ByteArray
+
+-- | Invariant: ∀ x : Message. length x = 32
+type Message = ByteArray
+
+-- | Invariant: ∀ x : Signature. length x = 64
+type Signature = ByteArray
+
+foreign import generateRandomPrivateKey ∷ Effect PrivateKey
+foreign import toPubKeyUnsafe ∷ PrivateKey → PublicKey
+foreign import sign ∷ PrivateKey → Message → Signature
+foreign import verifyEcdsaSecp256k1Signature ∷
+  PublicKey → Message → Signature → Boolean
+
+multiSign ∷ Array PublicKey → Message → Array Signature
 multiSign xkeys msg = map (flip sign msg) xkeys
 
-hexToPrivKeyUnsafe ∷ String → PrivateKey
-hexToPrivKeyUnsafe =
-  hexToByteArrayUnsafe >>> byteArrayToIntArray >>>
-    generateBIP32PrivateKeyFromArray
-
-generatePrivKey ∷ Contract () PrivateKey
-generatePrivKey =
-  liftEffect $ generateBIP32PrivateKeyFromArray <$>
-    generateRandomBIP32PrivateKeyArrayInt8
-
-toPubKeyUnsafe ∷ PrivateKey → PubKey
-toPubKeyUnsafe = publicKeyToBytesUnsafe <<< publicKeyFromPrivateKeyUnsafe
+generatePrivKey ∷ Contract () ByteArray
+generatePrivKey = liftEffect generateRandomPrivateKey

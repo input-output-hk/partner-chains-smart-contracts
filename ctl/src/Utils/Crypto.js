@@ -1,26 +1,19 @@
-let lib = require("@emurgo/cardano-serialization-lib-nodejs");
+let secp = require("secp256k1");
+let { randomBytes } = require("crypto");
 
-exports.publicKeyFromPrivateKeyUnsafe = (bip32private_key) => {
-  return bip32private_key.to_public().to_raw_key();
-};
+exports.verifyEcdsaSecp256k1Signature = ecdsa_key => data => ecdsa_sig =>
+  secp.ecdsaVerify(ecdsa_sig, data, ecdsa_key);
 
-exports.sign = (bip32private_key) => (data) => {
-  return bip32private_key.to_raw_key().sign(data).to_bytes();
-};
+exports.sign = ecdsa_priv_key => data =>
+  secp.ecdsaSign(data, ecdsa_priv_key).signature;
 
-exports.verifyEd25519Signature = (ed25519pub_key) => (data) => (ed25519sig) => {
-  const pub_key = lib.PublicKey.from_bytes(ed25519pub_key);
-  const sig = lib.Ed25519Signature.from_bytes(ed25519sig);
-  return pub_key.verify(data, sig);
-};
-
-exports.publicKeyToBytesUnsafe = (public_key) => {
-  return public_key.as_bytes();
+exports.generateRandomPrivateKey = () => {
+  let priv_key;
+  do {
+    priv_key = randomBytes(32);
+  }
+  while (!secp.privateKeyVerify(priv_key));
+  return priv_key;
 };
 
-exports.generateRandomBIP32PrivateKeyArrayInt8 = () => {
-  return lib.Bip32PrivateKey.generate_ed25519_bip32().to_128_xprv();
-};
-exports.generateBIP32PrivateKeyFromArray = (array) => {
-  return lib.Bip32PrivateKey.from_128_xprv(array);
-};
+exports.toPubKeyUnsafe = secp.publicKeyCreate;

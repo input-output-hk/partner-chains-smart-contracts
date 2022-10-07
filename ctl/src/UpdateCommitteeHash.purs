@@ -70,7 +70,7 @@ import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
 import Types.Scripts (plutusV2Script)
-import Utils.Crypto (verifyEd25519Signature)
+import Utils.Crypto (verifyEcdsaSecp256k1Signature)
 
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash ∷ ByteArray }
@@ -297,7 +297,7 @@ sortPubKeysAndSigs msg pks sigs =
   pairSigs List.Nil _ = List.Nil
   pairSigs pks' List.Nil = map (_ /\ Nothing) pks'
   pairSigs (pk : pks') (sig : sigs')
-    | verifyEd25519Signature pk msg sig =
+    | verifyEcdsaSecp256k1Signature pk msg sig =
         (pk /\ Just sig) : pairSigs pks' sigs'
     | otherwise =
         (pk /\ Nothing) : pairSigs pks' (sig : sigs')
