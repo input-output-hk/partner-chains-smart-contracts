@@ -6,6 +6,7 @@ module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 import PlutusTx.Prelude
 
 import Ledger qualified
+import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
@@ -19,6 +20,7 @@ import Plutus.V2.Ledger.Api (
   TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
  )
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
@@ -88,18 +90,17 @@ mkMintingPolicy
     { merkleRoot
     , signatures
     , committeePubKeys
+    , lastMerkleRoot
     }
   ctx =
-    -- The condition 1.  (referencing the last merkle root) is done by a
-    -- trusted entity (i.e., the bridge) so there's no need to verify this
-    -- onchain. See above.
-    -- > traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
-    traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
+    traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
       && traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
       && traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
     where
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
+      ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
       ownTokenName = Value.TokenName merkleRoot
 
       committeeDatum :: UpdateCommitteeHashDatum
@@ -131,9 +132,21 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
       -- documentation of this function.
-      -- Again, @p1@ doesn't exist because this transaction is done by a
-      -- trusted entity.
-      p2, p3, p4 :: Bool
+      p1, p2, p3, p4 :: Bool
+      p1 = case lastMerkleRoot of
+        Nothing -> True
+        Just tn ->
+          -- Checks if any of the reference inputs have at least 1 of the last
+          -- merkle root.
+          let go :: [TxInInfo] -> Bool
+              go (txInInfo : rest) =
+                Value.valueOf
+                  (txOutValue (txInInfoResolved txInInfo))
+                  ownCurrencySymbol
+                  (TokenName tn)
+                  > 0 || go rest
+              go [] = False
+           in go (txInfoReferenceInputs info)
       p2 = Utils.verifyMultisig (map getSidechainPubKey committeePubKeys) threshold merkleRoot signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
