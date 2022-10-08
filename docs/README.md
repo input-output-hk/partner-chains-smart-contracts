@@ -87,7 +87,7 @@ data BurnParams = BurnParams
 **Workflow:**
 
 1. Sidechain collects unhandled transactions and bundles them at the end of each sidechain epoch
-2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2b(cbor(MerkleTreeEntry(tx)))` for each transaction (see `MerkleTreeEntry`), and create a Merkle-tree from these. The root of this tree is signed by the committee members with an appended signature
+2. Sidechain block producers compute `txs = outgoing_txs.map(tx => blake2b(cbor(MerkleTreeEntry(tx)))` for each transaction (see `MerkleTreeEntry`), and create a Merkle-tree from these. The root of this tree is signed by at least `t` (multisig threshold) of the committee members with an appended signature scheme
 3. Bridge broadcasts Merkle root to chain
 4. Txs can be claimed [individually](#32-individual-claiming)
 
@@ -98,9 +98,12 @@ data BurnParams = BurnParams
 ```haskell
 data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
+    -- ^ Parameters identifying the Sidechain
   , merkleRoot :: ByteString
   , previousMerkleRoot :: Maybe ByteString
-  , committeeSignatures :: [(PubKey, Maybe ByteString)] -- Public keys of all committee members with their corresponding signatures
+    -- ^ Chaining the Merkle roots to ensure ordering. The first root will have Nothing here.
+  , committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
+    -- ^ Public keys of all committee members with their corresponding signatures if there's one
   }
 ```
 
@@ -120,7 +123,9 @@ data SignedMerkleRoot = SignedMerkleRoot
 
 Minting policy verifies the following:
 
-- signature can be verified with the submitted public keys of committee members, and the concatenated and hashed value of these keys correspond to the one saved on-chain
+- verifies that hash of committeePublicKeys matches the hash saved on chain
+- verifies that all the provided signatures are valid
+- verifies that size(signatures) > 2/3 \* size(committeePubKeys)
 - list of public keys does not contain duplicates
 - if `previousMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
 
@@ -152,6 +157,7 @@ Signatures for merkle tree should be constructed as follow:
 ```haskell
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
+    -- ^ Parameters identifying the Sidechain
   , merkleRoot :: ByteString
   , previousMerkleRoot :: Maybe ByteString
   }
@@ -239,14 +245,14 @@ We have to be careful about the order of these actions. If the transaction inser
 
 ```haskell
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { -- | The public keys of the new committee.
-    newCommitteePubKeys :: [SidechainPubKey]
-  , -- | The signature for the new committee hash.
-    committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
-  , -- sidechain parameters
-    sidechainParams :: SidechainParams
-  , -- last merkle root inserted on chain
-    previousMerkleRoot :: Maybe ByteString
+  { newCommitteePubKeys :: [SidechainPubKey]
+    -- ^ The public keys of the new committee.
+  , committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
+    -- ^ Public keys of all committee members with their corresponding signatures if there's one
+  , sidechainParams :: SidechainParams
+    -- ^ Parameters identifying the Sidechain
+  , previousMerkleRoot :: Maybe ByteString
+    -- ^ last merkle root inserted on chain, unless there is no Merkle root inserted yet
   }
 ```
 
@@ -286,6 +292,7 @@ data UpdateCommitteeRedeemer = UpdateCommitteeRedeemer
   , newCommitteePubKeys :: [SidechainPubKey]
   , committeePubKeys :: [SidechainPubKey]
   , previousMerkleRoot :: Maybe ByteString
+    -- ^ last merkle root inserted on chain, unless there is no Merkle root inserted yet
   }
 ```
 
