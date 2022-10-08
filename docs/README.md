@@ -33,7 +33,7 @@ data SidechainParams = SidechainParams
 
 ### 1. Initialise contract
 
-For initialisation, we need to set the first committee hash on chain using an NFT (consuming some arbitrary utxo). We use this committee hash to verify signatures for sidechain to mainchain transfers. This is a hash of concatenated public key hashes of the committee members. This hash will be updated when the committee changes, see [6.1](#61-update-committee-hash) for more details.
+For initialisation, we use an NFT (consuming some arbitrary utxo) to uniquely identify the current committee members by storing the hash of the concatenated public keys on chain (see [6.1](#61-update-committee-hash)). This committee is used to verify signatures for sidechain to mainchain transfers (see [3.1](#31-merkle-root-insertion)).
 
 **Workflow:**
 
@@ -238,7 +238,6 @@ We have to be careful about the order of these actions. If the transaction inser
 data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { -- | The public keys of the new committee.
     newCommitteePubKeys :: [SidechainPubKey]
-  , -- | The asset class of the NFT identifying this committee hash
   , -- | The signature for the new committee hash.
     committeeSignatures :: [(SidechainPubKey, Maybe ByteString)]
   , -- sidechain parameters
