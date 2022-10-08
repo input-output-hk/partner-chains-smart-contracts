@@ -18,6 +18,7 @@ import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
+import Test.Utils as Test.Utils
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -39,7 +40,11 @@ main = do
     -- Run the plutip tests
     runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice do
-        CommitteeCandidateValidator.testScenario
+        CommitteeCandidateValidator.testScenarioSuccess
+        CommitteeCandidateValidator.testScenarioFailure1 # Test.Utils.fails
+        CommitteeCandidateValidator.testScenarioFailure2 alice bob #
+          Test.Utils.fails
+
         FUELMintingPolicy.testScenario
 
         UpdateCommitteeHash.testScenario
@@ -51,10 +56,6 @@ main = do
         MerkleRootChaining.testScenario2
 
         InitSidechain.testScenario1
-        -- Not actually too sure why, but the order of these contracts is important.
-        -- In particular, the 'InitSidechain.testScenario2' must be the last transaction
-        -- because otherwise, transactions which initialize the sidechain will have a
-        -- 'UtxoLookupFailedFor' error...
         InitSidechain.testScenario2 alice bob
 
     -- Run the plutip tests for the proof of concept tests (note we run these

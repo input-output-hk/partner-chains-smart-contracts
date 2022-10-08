@@ -25,12 +25,10 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Control.Monad.Error.Class as MonadError
 import Data.BigInt as BigInt
 import Data.Map as Map
-import Effect.Exception as Exception
 import RawScripts as RawScripts
-import Test.Utils as Utils
+import Test.Utils as Test.Utils
 
 -- | 'testScenario1' (which should succeed) goes as follows:
 --  1.
@@ -102,9 +100,10 @@ testScenario1 = do
 
   -- 3.
   void do
-    toReferenceIn /\ toReferenceOut ← Utils.getUniqueUtxoAt
+    toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
       toReferenceValidatorAddress
-    referenceIn /\ referenceOut ← Utils.getUniqueUtxoAt referenceValidatorAddress
+    referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+      referenceValidatorAddress
 
     let
       referenceValidatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt
@@ -205,47 +204,39 @@ testScenario2 = do
   -- END of duplicated code from 'testScenario1'.
 
   -- 3.
-  void do
-    result ← MonadError.try do
-      toReferenceIn /\ toReferenceOut ← Utils.getUniqueUtxoAt
-        toReferenceValidatorAddress
-      referenceIn /\ referenceOut ← Utils.getUniqueUtxoAt
-        referenceValidatorAddress
+  Test.Utils.fails do
+    toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
+      toReferenceValidatorAddress
+    referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+      referenceValidatorAddress
 
-      let
-        toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData unit
-        referenceValidatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt
-          69
+    let
+      toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData unit
+      referenceValidatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt
+        69
 
-        constraints ∷ TxConstraints Void Void
-        constraints =
-          TxConstraints.mustSpendScriptOutput toReferenceIn
-            toReferenceValidatorRedeemer
-            <> TxConstraints.mustSpendScriptOutput referenceIn
-              referenceValidatorRedeemer
-            <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
+      constraints ∷ TxConstraints Void Void
+      constraints =
+        TxConstraints.mustSpendScriptOutput toReferenceIn
+          toReferenceValidatorRedeemer
+          <> TxConstraints.mustSpendScriptOutput referenceIn
+            referenceValidatorRedeemer
+          <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
 
-        lookups ∷ ScriptLookups Void
-        lookups =
-          ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
-            <> ScriptLookups.unspentOutputs
-              (Map.singleton toReferenceIn toReferenceOut)
-            <> ScriptLookups.validator referenceValidator
-            <> ScriptLookups.validator toReferenceValidator
+      lookups ∷ ScriptLookups Void
+      lookups =
+        ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
+          <> ScriptLookups.unspentOutputs
+            (Map.singleton toReferenceIn toReferenceOut)
+          <> ScriptLookups.validator referenceValidator
+          <> ScriptLookups.validator toReferenceValidator
 
-      unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
-        constraints
-      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-      txId ← Transaction.submit balancedTx
-      Log.logInfo' $ "Transaction submitted: " <> show txId
-      Transaction.awaitTxConfirmed txId
-      Log.logInfo' $ "Transaction confirmed: " <> show txId
-
-    case result of
-      Right _ →
-        Monad.throwContractError $ Exception.error
-          "Contract should have failed but it didn't."
-      Left _err →
-        pure unit
+    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+      constraints
+    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
+    txId ← Transaction.submit balancedTx
+    Log.logInfo' $ "Transaction submitted: " <> show txId
+    Transaction.awaitTxConfirmed txId
+    Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   pure unit

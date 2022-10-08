@@ -3,11 +3,13 @@ module Test.Utils
   , getUniqueUtxoAt
   , paymentPubKeyHashToByteArray
   , getOwnTransactionInput
+  , fails
   ) where
 
 import Contract.Prelude
 
 import Contract.Address (Address, PaymentPubKeyHash)
+import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
@@ -17,9 +19,11 @@ import Contract.Transaction
   , TransactionOutputWithRefScript
   )
 import Contract.Utxos as Utxos
+import Control.Monad.Error.Class as MonadError
 import Data.Map as Map
 import Data.Set as Set
 import Data.UInt as UInt
+import Effect.Exception as Exception
 import Serialization.Hash as Hash
 
 toTxIn ∷ String → Int → TransactionInput
@@ -64,3 +68,21 @@ getOwnTransactionInput = do
   Monad.liftContractM "No utxo found in wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
+
+-- | @'fails' contract@ executes @contract@, and
+--
+--  - If @contract@ throws an exception, then the program continues as usual
+--
+--  - If @contract@ doesn't thrown an exception, then we throw an exception.
+--
+-- This is used to run tests on programs that _should_ fail e.g. to test if
+-- @myTest@ fails, we should write
+-- > Test.Utils.fails myTest
+fails ∷ Contract () Unit → Contract () Unit
+fails contract = do
+  result ← MonadError.try contract
+  case result of
+    Right _ → Monad.throwContractError $ Exception.error
+      "Contract should have failed but it didn't."
+    Left e →
+      Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)

@@ -9,10 +9,8 @@ import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
-import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
 import Data.BigInt as BigInt
-import Effect.Exception as Exception
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(InitSidechainParams))
@@ -242,24 +240,18 @@ testScenario2 = do
             previousMerkleRoot: Just merkleRoot2
           }
 
-  void do
-    result ← MonadError.try do
-
-      UpdateCommitteeHash.updateCommitteeHash $
-        UpdateCommitteeHashParams
-          { sidechainParams
-          , newCommitteePubKeys: committee3PubKeys
-          , committeeSignatures: Array.zip
-              committee1PubKeys
-              (Just <$> Utils.Crypto.multiSign committee1PrvKeys committee1Message)
-          ,
-            -- Note: this is the EVIL thing -- we try to update the
-            -- committee hash without really putting in the previous merkle
-            -- root
-            previousMerkleRoot: Nothing
-          }
-    case result of
-      Right _ →
-        Monad.throwContractError $ Exception.error
-          "Contract should have failed but it didn't."
-      Left _ → pure unit
+  Test.Utils.fails
+    $ UpdateCommitteeHash.updateCommitteeHash
+    $
+      UpdateCommitteeHashParams
+        { sidechainParams
+        , newCommitteePubKeys: committee3PubKeys
+        , committeeSignatures: Array.zip
+            committee1PubKeys
+            (Just <$> Utils.Crypto.multiSign committee1PrvKeys committee1Message)
+        ,
+          -- Note: this is the EVIL thing -- we try to update the
+          -- committee hash without really putting in the previous merkle
+          -- root
+          previousMerkleRoot: Nothing
+        }

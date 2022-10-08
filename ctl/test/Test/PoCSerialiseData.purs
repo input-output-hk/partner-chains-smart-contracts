@@ -26,12 +26,10 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Control.Monad.Error.Class as MonadError
 import Data.BigInt as BigInt
 import Data.Map as Map
-import Effect.Exception as Exception
 import RawScripts as RawScripts
-import Test.Utils as Utils
+import Test.Utils as Test.Utils
 import Utils.SerialiseData as SerialiseData
 
 -- | 'testScenario1' should succeed. It does the following.
@@ -84,7 +82,7 @@ testScenario1 = do
 
   -- 3.
   void do
-    (txIn /\ txOut) ← Utils.getUniqueUtxoAt validatorAddress
+    (txIn /\ txOut) ← Test.Utils.getUniqueUtxoAt validatorAddress
     let
       validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 69
 
@@ -158,31 +156,25 @@ testScenario2 = do
     Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   -- 3.
-  void do
-    result ← MonadError.try do
-      (txIn /\ txOut) ← Utils.getUniqueUtxoAt validatorAddress
-      let
-        -- The only distinct line from 'testScenario1'.
-        validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 70
+  Test.Utils.fails do
+    (txIn /\ txOut) ← Test.Utils.getUniqueUtxoAt validatorAddress
+    let
+      -- The only distinct line from 'testScenario1'.
+      validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 70
 
-        constraints ∷ TxConstraints Void Void
-        constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
+      constraints ∷ TxConstraints Void Void
+      constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
 
-        lookups ∷ ScriptLookups Void
-        lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
-          <> ScriptLookups.validator validator
+      lookups ∷ ScriptLookups Void
+      lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
+        <> ScriptLookups.validator validator
 
-      unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
-        constraints
-      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-      txId ← Transaction.submit balancedTx
-      Log.logInfo' $ "Transaction submitted: " <> show txId
-      Transaction.awaitTxConfirmed txId
-      Log.logInfo' $ "Transaction confirmed: " <> show txId
-    case result of
-      Right _ →
-        Monad.throwContractError $ Exception.error
-          "Contract should have failed but it didn't."
-      Left _err → pure unit
+    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+      constraints
+    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
+    txId ← Transaction.submit balancedTx
+    Log.logInfo' $ "Transaction submitted: " <> show txId
+    Transaction.awaitTxConfirmed txId
+    Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   pure unit
