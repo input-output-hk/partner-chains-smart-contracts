@@ -48,6 +48,8 @@ import UpdateCommitteeHash
   , UpdateCommitteeHashDatum(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
 {- | 'initSidechain' creates the 'SidechainParams' of a new sidechain which
  parameterize validators and minting policies in order to uniquely identify
@@ -76,9 +78,12 @@ import UpdateCommitteeHash as UpdateCommitteeHash
 -}
 initSidechain ∷ InitSidechainParams → Contract () SidechainParams
 initSidechain (InitSidechainParams isp) = do
-  let txIn = isp.initUtxo
 
-  txOut ← liftedM "error 'initSidechain': cannot find genesis UTxO" $ getUtxo
+  let
+    txIn = isp.initUtxo
+    msg = report "initSidechain"
+
+  txOut ← liftedM (msg "Cannot find genesis UTxO") $ getUtxo
     txIn
 
   -- Sidechain parameters
@@ -98,7 +103,7 @@ initSidechain (InitSidechainParams isp) = do
   let ichm = InitCommitteeHashMint { icTxOutRef: txIn }
   committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy ichm
   committeeHashCurrencySymbol ← Monad.liftContractM
-    "error 'initSidechain': failed to get committee hash currency symbol"
+    (msg "Failed to get updateCommitteeHash CurrencySymbol")
     (Value.scriptCurrencySymbol committeeHashPolicy)
 
   let
@@ -116,7 +121,7 @@ initSidechain (InitSidechainParams isp) = do
       }
   mptRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
+      (msg "Failed to get dsKeyPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
   -- Setting up the update committee hash validator
@@ -142,7 +147,7 @@ initSidechain (InitSidechainParams isp) = do
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint { dscmTxOutRef: txIn }
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
-      "error 'initSidechain': failed to get 'dsConfPolicy' CurrencySymbol."
+      (msg "Failed to get dsConfPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol dsConfPolicy
 
   -- Validator for insertion of the distributed set / the associated datum and
@@ -159,11 +164,11 @@ initSidechain (InitSidechainParams isp) = do
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
   dsKeyPolicyCurrencySymbol ←
     Monad.liftContractM
-      "error 'initSidechain': failed to get 'dsKeyPolicy' CurrencySymbol."
+      (msg "Failed to get dsKeyPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
-      "error 'initSidechain': failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
+      (msg "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName")
       $ Value.mkTokenName
       $ (unwrap DistributedSet.rootNode).nKey
 
@@ -188,7 +193,7 @@ initSidechain (InitSidechainParams isp) = do
 
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      "error 'initSidechain': failed to get 'fuelMintingPolicy' CurrencySymbol."
+      (msg "Failed to get fuelMintingPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol fuelMintingPolicy
 
   -- Validator for the configuration of the distributed set / the associated
@@ -249,11 +254,15 @@ initSidechain (InitSidechainParams isp) = do
           dsConfValue
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx"
+  bsTx ← liftedM (msg "Failed to balance/sign tx")
     (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
-  logInfo' "Submitted initial 'initSidechain' transaction."
+  logInfo' $ msg $ "Submitted initialise sidechain Tx: " <> show txId
   awaitTxConfirmed txId
-  logInfo' "Initial 'initSidechain' transaction submitted successfully."
+  logInfo' $ msg "Initialise sidechain transaction submitted successfully."
 
   pure sc
+
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "InitSidechain", fun: _ }

@@ -62,11 +62,16 @@ import UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   )
 import Utils.Crypto as Utils.Crypto
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
 updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
+  let -- @msg@ is used to help generate log messages
+    msg = report "updateCommitteeHash"
+
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
@@ -76,8 +81,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         }
     )
 
-  cs ← liftContractM "Cannot get currency symbol"
-    (Value.scriptCurrencySymbol pol)
+  cs ← liftContractM (msg "Failed to get updateCommitteeHash minting policy")
+    $ Value.scriptCurrencySymbol pol
 
   let tn = initCommitteeHashMintTn
 
@@ -91,7 +96,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
   mptRootTokenCurrencySymbol ←
     liftContractM
-      "error 'updateCommitteeHash': failed to get mptRootTokenCurrencySymbol"
+      (msg "Failed to get mptRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
   -- Building the new committee hash
@@ -122,10 +127,13 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   { index: oref
   , value: (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
-    liftContractM "error 'updateCommitteeHash': failed to find token" $ lkup
+    liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
 
-  rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
-  UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
+  rawDatum ←
+    liftContractM (msg "Update committee hash UTxO is missing inline datum")
+      $ outputDatumDatum tOut.datum
+  UpdateCommitteeHashDatum datum ← liftContractM
+    (msg "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
     (throwContractError "incorrect committee provided")
@@ -168,9 +176,13 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
           previousMerkleRootORef
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx"
+  bsTx ← liftedM (msg "Failed to balance/sign tx")
     (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
-  logInfo' "Submitted updateCommitteeHash transaction!"
+  logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "updateCommitteeHash transaction submitted successfully!"
+  logInfo' (msg "Update committee hash transaction submitted successfully")
+
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }

@@ -39,6 +39,8 @@ import UpdateCommitteeHash
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Crypto as Utils.Crypto
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
 -- | 'saveRoot' is the endpoint.
 saveRoot ∷ SaveRootParams → Contract () Unit
@@ -46,6 +48,7 @@ saveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
   ) = do
+  let msg = report "saveRoot"
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
@@ -53,7 +56,7 @@ saveRoot
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
-      "error 'saveRoot': failed to get update committee hash currency symbol"
+      (msg "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
   let
     smrm = SignedMerkleRootMint
@@ -61,12 +64,14 @@ saveRoot
       , updateCommitteeHashCurrencySymbol
       }
   rootTokenMP ← mptRootTokenMintingPolicy smrm
-  rootTokenCS ← liftContractM "Cannot get currency symbol"
-    (Value.scriptCurrencySymbol rootTokenMP)
+  rootTokenCS ←
+    liftContractM (msg "Cannot get CurrencySymbol of mptRootTokenMintingPolicy")
+      $ Value.scriptCurrencySymbol rootTokenMP
   rootTokenVal ← mptRootTokenValidator sidechainParams
-  merkleRootTokenName ← liftContractM
-    "error 'saveRoot': invalid merkle root token name"
-    (Value.mkTokenName merkleRoot)
+  merkleRootTokenName ←
+    liftContractM
+      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
+      $ Value.mkTokenName merkleRoot
 
   -- Grab the transaction holding the last merkle root
   ---------------------------------------------------------
@@ -83,7 +88,7 @@ saveRoot
       , mptRootTokenCurrencySymbol: rootTokenCS
       }
   { index: committeeHashTxIn, value: _committeeHashTxOut } ←
-    liftedM "error 'saveRoot': failed to find committee hash utxo" $
+    liftedM (msg "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
   -- Building the transaction
@@ -114,8 +119,12 @@ saveRoot
   -- Submitting the transaction
   ---------------------------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  bsTx ← liftedM (msg "Failed to balance/sign tx") $ balanceAndSignTx ubTx
   txId ← submit bsTx
-  logInfo' ("Submitted saveRoot Tx: " <> show txId)
+  logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
-  logInfo' "saveRoot Tx submitted successfully!"
+  logInfo' (msg "Save root Tx submitted successfully!")
+
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "MPTRoot", fun: _ }
