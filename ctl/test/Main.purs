@@ -11,6 +11,7 @@ import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MPTRoot as MPTRoot
+import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
@@ -45,6 +46,9 @@ main = do
 
         MPTRoot.testScenario1
         MPTRoot.testScenario2
+
+        MerkleRootChaining.testScenario1
+        MerkleRootChaining.testScenario2
 
         InitSidechain.testScenario1
         -- Not actually too sure why, but the order of these contracts is important.

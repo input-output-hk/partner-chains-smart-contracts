@@ -19,7 +19,6 @@ import MerkleTree as MerkleTree
 import Serialization.Types (PrivateKey)
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import Test.Utils as Test.Utils
-import Test.Utils as Test.Utils
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
@@ -57,7 +56,7 @@ saveRoot
       $ MerkleRootInsertionMessage
           { sidechainParams
           , merkleRoot
-          , previousMerkleRoot: Nothing
+          , previousMerkleRoot
           }
   let
     -- make every committee member sign the new root

@@ -25,22 +25,23 @@ updateCommitteeHash ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommittee ∷ Array PrivateKey
+    currentCommitteePrvKeys ∷ Array PrivateKey
   , -- The new committee
-    newCommittee ∷ Array PrivateKey
+    newCommitteePrvKeys ∷ Array PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe ByteArray
   } →
   Contract () Unit
 updateCommitteeHash
   { sidechainParams
-  , currentCommittee
-  , newCommittee
+  , currentCommitteePrvKeys
+  , newCommitteePrvKeys
   , previousMerkleRoot
   } = do
   let
-    currentCommitteePubKeys = Array.sort $ map toPubKeyUnsafe currentCommittee
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommittee
+    currentCommitteePubKeys = Array.sort $ map toPubKeyUnsafe
+      currentCommitteePrvKeys
+    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
 
   committeeMessage ←
     liftContractM
@@ -54,7 +55,7 @@ updateCommitteeHash
   let
     committeeSignatures = Array.zip
       currentCommitteePubKeys
-      (Just <$> multiSign currentCommittee committeeMessage)
+      (Just <$> multiSign currentCommitteePrvKeys committeeMessage)
 
     uchp =
       UpdateCommitteeHashParams
@@ -89,7 +90,7 @@ testScenario = do
 
   updateCommitteeHash
     { sidechainParams: scParams
-    , currentCommittee: initCommitteePrvKeys
-    , newCommittee: nextCommitteePrvKeys
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing
     }
