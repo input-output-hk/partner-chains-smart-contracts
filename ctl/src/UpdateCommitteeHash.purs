@@ -132,8 +132,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
-  maybeLastMerkleRoot ← MPTRoot.Utils.findLastMptRootTokenUtxo
-    uchp.lastMerkleRoot
+  maybePreviousMerkleRoot ← MPTRoot.Utils.findPreviousMptRootTokenUtxo
+    uchp.previousMerkleRoot
     smrm
 
   -- Building / submitting the transaction.
@@ -147,7 +147,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
           { committeeSignatures
           , committeePubKeys: curCommitteePubKeys
           , newCommitteePubKeys: uchp.newCommitteePubKeys
-          , lastMerkleRoot: uchp.lastMerkleRoot
+          , previousMerkleRoot: uchp.previousMerkleRoot
           }
       )
 
@@ -162,10 +162,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         <> Lookups.validator updateValidator
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
       <> TxConstraints.mustPayToScript valHash newDatum DatumWitness value
-      <> case maybeLastMerkleRoot of
+      <> case maybePreviousMerkleRoot of
         Nothing → mempty
-        Just { index: lastMerkleRootORef } → TxConstraints.mustReferenceOutput
-          lastMerkleRootORef
+        Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
+          previousMerkleRootORef
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedM "Failed to balance/sign tx"

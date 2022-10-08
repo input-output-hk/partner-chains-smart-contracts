@@ -27,8 +27,8 @@ import MPTRoot.Types
   , SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import MPTRoot.Utils
-  ( findLastMptRootTokenUtxo
-  , findMptRootTokenUtxo
+  ( findMptRootTokenUtxo
+  , findPreviousMptRootTokenUtxo
   , mptRootTokenMintingPolicy
   , mptRootTokenValidator
   , serialiseMrimHash
@@ -44,7 +44,7 @@ import Utils.Crypto as Utils.Crypto
 saveRoot ∷ SaveRootParams → Contract () Unit
 saveRoot
   ( SaveRootParams
-      { sidechainParams, merkleRoot, lastMerkleRoot, committeeSignatures }
+      { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
   ) = do
 
   -- Getting the required validators / minting policies...
@@ -70,7 +70,8 @@ saveRoot
 
   -- Grab the transaction holding the last merkle root
   ---------------------------------------------------------
-  maybeLastMerkleRootUtxo ← findLastMptRootTokenUtxo lastMerkleRoot smrm
+  maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo previousMerkleRoot
+    smrm
 
   -- Grab the utxo with the current committee hash
   ---------------------------------------------------------
@@ -93,7 +94,7 @@ saveRoot
       Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
 
     redeemer = SignedMerkleRoot
-      { merkleRoot, lastMerkleRoot, signatures, committeePubKeys }
+      { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
 
     constraints ∷ TxConstraints Void Void
     constraints =
@@ -103,7 +104,7 @@ saveRoot
           TxConstraints.DatumWitness
           value
         <> TxConstraints.mustReferenceOutput committeeHashTxIn
-        <> case maybeLastMerkleRootUtxo of
+        <> case maybePreviousMerkleRootUtxo of
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
 

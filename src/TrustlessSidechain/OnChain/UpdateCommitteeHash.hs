@@ -40,7 +40,7 @@ import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, lastMerkleRoot, newCommitteePubKeys),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 import Prelude qualified
@@ -122,7 +122,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     && traceIfFalse "error 'mkUpdateCommitteeHashValidator': current committee mismatch" isCurrentCommittee
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
-      referencesLastMerkleRoot
+      referencesPreviousMerkleRoot
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': expected different output datum"
       (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
@@ -178,7 +178,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
             UpdateCommitteeHashMessage
               { uchmSidechainParams = cSidechainParams uch
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
-              , uchmPreviousMerkleRoot = lastMerkleRoot red
+              , uchmPreviousMerkleRoot = previousMerkleRoot red
               }
        in verifyMultisig
             (getSidechainPubKey <$> committeePubKeys red)
@@ -189,15 +189,15 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
 
-    referencesLastMerkleRoot :: Bool
-    referencesLastMerkleRoot =
-      -- Either we want to reference the last merkle root or we don't (note
+    referencesPreviousMerkleRoot :: Bool
+    referencesPreviousMerkleRoot =
+      -- Either we want to reference the previous merkle root or we don't (note
       -- that this is signed by the committee -- this is where the security
       -- guarantees come from).
-      -- If we do want to reference the last merkle root, we need to verify
+      -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- mpt root token.
-      case lastMerkleRoot red of
+      case previousMerkleRoot red of
         Nothing -> True
         Just tn ->
           let go :: [TxInInfo] -> Bool

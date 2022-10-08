@@ -28,7 +28,7 @@ data SignedMerkleRoot = SignedMerkleRoot
     merkleRoot ∷ ByteArray
   , -- Either 'Just' the last merkle root (in the case it exists), or 'Nothing'
     -- if there is no such last merkle root (i.e., in the first transaction).
-    lastMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe ByteArray
   , -- Ordered as their corresponding keys (also the same length as
     -- 'committeePubKeys')
     signatures ∷ Array Signature
@@ -40,11 +40,11 @@ derive instance Generic SignedMerkleRoot _
 instance ToData SignedMerkleRoot where
   toData
     ( SignedMerkleRoot
-        { merkleRoot, lastMerkleRoot, signatures, committeePubKeys }
+        { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
     ) =
     Constr zero
       [ toData merkleRoot
-      , toData lastMerkleRoot
+      , toData previousMerkleRoot
       , toData signatures
       , toData committeePubKeys
       ]
@@ -74,7 +74,7 @@ instance ToData SignedMerkleRootMint where
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
   , merkleRoot ∷ ByteArray
-  , lastMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe ByteArray
   , -- Public keys of all committee members and their corresponding signatures.
     committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
   }

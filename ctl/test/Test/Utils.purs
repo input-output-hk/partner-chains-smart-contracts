@@ -1,4 +1,9 @@
-module Test.Utils (toTxIn, getUniqueUtxoAt, paymentPubKeyHashToByteArray) where
+module Test.Utils
+  ( toTxIn
+  , getUniqueUtxoAt
+  , paymentPubKeyHashToByteArray
+  , getOwnTransactionInput
+  ) where
 
 import Contract.Prelude
 
@@ -13,6 +18,7 @@ import Contract.Transaction
   )
 import Contract.Utxos as Utxos
 import Data.Map as Map
+import Data.Set as Set
 import Data.UInt as UInt
 import Serialization.Hash as Hash
 
@@ -46,3 +52,15 @@ getUniqueUtxoAt addr = do
 paymentPubKeyHashToByteArray ∷ PaymentPubKeyHash → ByteArray
 paymentPubKeyHashToByteArray =
   unwrap <<< Hash.ed25519KeyHashToBytes <<< unwrap <<< unwrap
+
+-- | 'getOwnTransactionInput' gets a single aribtrary 'TransactionInput' from
+-- the current key wallet.
+-- This throws an error if such a utxo does not exist.
+-- This is useful for initializing the sidechain because we need to mint an NFT
+-- for e.g. the committee, and various other scripts
+getOwnTransactionInput ∷ Contract () TransactionInput
+getOwnTransactionInput = do
+  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" Utxos.getWalletUtxos
+  Monad.liftContractM "No utxo found in wallet"
+    $ Set.findMin
+    $ Map.keys ownUtxos

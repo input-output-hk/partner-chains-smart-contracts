@@ -43,7 +43,8 @@ main = do
 
         UpdateCommitteeHash.testScenario
 
-        MPTRoot.testScenario
+        MPTRoot.testScenario1
+        MPTRoot.testScenario2
 
         InitSidechain.testScenario1
         -- Not actually too sure why, but the order of these contracts is important.

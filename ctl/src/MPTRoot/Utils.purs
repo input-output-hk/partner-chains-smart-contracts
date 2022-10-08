@@ -12,7 +12,7 @@ module MPTRoot.Utils
   ( mptRootTokenMintingPolicy
   , mptRootTokenValidator
   , findMptRootTokenUtxo
-  , findLastMptRootTokenUtxo
+  , findPreviousMptRootTokenUtxo
   , serialiseMrimHash
   ) where
 
@@ -100,29 +100,31 @@ findMptRootTokenUtxo merkleRoot smrm = do
     -- amount
     Value.valueOf value currencySymbol merkleRoot /= zero
 
--- | @'findLastMptRootTokenUtxo' maybeLastMerkleRoot smrm@ returns 'Nothing' in
+-- | @'findPreviousMptRootTokenUtxo' maybeLastMerkleRoot smrm@ returns 'Nothing' in
 -- the case that 'maybeLastMerkleRoot' is 'Nothing', and 'Just' the result of
 -- @'findMptRootTokenUtxo' lastMerkleRoot smrm@ provided that @Just lastMerkleRoot = maybeLastMerkleRoot@
 -- and there are no other errors.
 -- Note: the 'Maybe' return type does NOT denote the absense or existence of
 -- finding the utxo... rather it reflects the 'Maybe' in the last merkle root
 -- of whether it exists or not.
-findLastMptRootTokenUtxo ∷
+findPreviousMptRootTokenUtxo ∷
   Maybe ByteArray →
   SignedMerkleRootMint →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findLastMptRootTokenUtxo maybeLastMerkleRoot smrm = case maybeLastMerkleRoot of
-  Nothing → pure Nothing
-  Just lastMerkleRoot' → do
-    lastMerkleRootTokenName ← Monad.liftContractM
-      "error 'saveRoot': invalid lastMerkleRoot token name"
-      (Value.mkTokenName lastMerkleRoot')
-    lkup ← findMptRootTokenUtxo lastMerkleRootTokenName smrm
-    lkup' ←
-      Monad.liftContractM
-        "error 'findLastMptRootTokenUtxo': failed to find last merkle root" $ lkup
-    pure $ Just lkup'
+findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
+  case maybeLastMerkleRoot of
+    Nothing → pure Nothing
+    Just lastMerkleRoot' → do
+      lastMerkleRootTokenName ← Monad.liftContractM
+        "error 'saveRoot': invalid lastMerkleRoot token name"
+        (Value.mkTokenName lastMerkleRoot')
+      lkup ← findMptRootTokenUtxo lastMerkleRootTokenName smrm
+      lkup' ←
+        Monad.liftContractM
+          "error 'findPreviousMptRootTokenUtxo': failed to find last merkle root"
+          $ lkup
+      pure $ Just lkup'
 
 -- | 'serialiseMrimHash' is an alias for  (ignoring the 'Maybe')
 -- > 'Contract.Hashing.blake2b256Hash' <<< 'Utils.SerialiseData.serialiseToData'

@@ -127,8 +127,8 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
     committeePubKeys :: [SidechainPubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
     newCommitteePubKeys :: [SidechainPubKey]
-  , -- | 'lastMerkleRoot' is the last merkle root (if it exists)
-    lastMerkleRoot :: Maybe BuiltinByteString
+  , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
+    previousMerkleRoot :: Maybe BuiltinByteString
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
@@ -149,7 +149,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
     -- identify the transaction.
     cToken :: AssetClass
   , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding mpt
-    -- root token. This is needed for verifying that the last merkle root is verified.
+    -- root token. This is needed for verifying that the previous merkle root is verified.
     cMptRootTokenCurrencySymbol :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Generic)
@@ -185,8 +185,8 @@ PlutusTx.makeLift ''GenesisMintCommitteeHash
 data SignedMerkleRoot = SignedMerkleRoot
   { -- | New merkle root to insert.
     merkleRoot :: BuiltinByteString
-  , -- | Last merkle root
-    lastMerkleRoot :: Maybe BuiltinByteString
+  , -- | Previous merkle root (if it exists)
+    previousMerkleRoot :: Maybe BuiltinByteString
   , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [BuiltinByteString]
   , -- | Lexicographically sorted public keys of all committee members

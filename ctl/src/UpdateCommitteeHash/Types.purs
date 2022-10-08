@@ -84,7 +84,7 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array Signature
   , committeePubKeys ∷ Array PubKey
   , newCommitteePubKeys ∷ Array PubKey
-  , lastMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe ByteArray
   }
 
 derive instance Generic UpdateCommitteeHashRedeemer _
@@ -94,13 +94,13 @@ instance ToData UpdateCommitteeHashRedeemer where
         { committeeSignatures
         , committeePubKeys
         , newCommitteePubKeys
-        , lastMerkleRoot
+        , previousMerkleRoot
         }
     ) = Constr zero
     [ toData committeeSignatures
     , toData committeePubKeys
     , toData newCommitteePubKeys
-    , toData lastMerkleRoot
+    , toData previousMerkleRoot
     ]
 
 -- | 'UpdateCommitteeHashParams' is the offchain parameter for the update
@@ -109,7 +109,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
   , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
-  , lastMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe ByteArray
   }
 
 -- | 'UpdateCommitteeHashMessage' corresponds to the on chain type which is

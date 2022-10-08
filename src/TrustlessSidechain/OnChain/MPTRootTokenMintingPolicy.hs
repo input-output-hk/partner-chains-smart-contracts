@@ -98,10 +98,10 @@ mkMintingPolicy
     { merkleRoot
     , signatures
     , committeePubKeys
-    , lastMerkleRoot
+    , previousMerkleRoot
     }
   ctx =
-    traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
+    traceIfFalse "error 'MPTRootTokenMintingPolicy' previous merkle root not referenced" p1
       && traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
       && traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
       && traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
@@ -141,7 +141,7 @@ mkMintingPolicy
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
       -- documentation of this function.
       p1, p2, p3, p4 :: Bool
-      p1 = case lastMerkleRoot of
+      p1 = case previousMerkleRoot of
         Nothing -> True
         Just tn ->
           -- Checks if any of the reference inputs have at least 1 of the last
@@ -163,7 +163,7 @@ mkMintingPolicy
               MerkleRootInsertionMessage
                 { mrimSidechainParams = smrmSidechainParams smrm
                 , mrimMerkleRoot = merkleRoot
-                , mrimPreviousMerkleRoot = lastMerkleRoot
+                , mrimPreviousMerkleRoot = previousMerkleRoot
                 }
           )
           signatures
