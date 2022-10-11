@@ -123,7 +123,6 @@ initCommitteeHashMintLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCommitteeHashMintLookupsAndConstraints (InitSidechainParams isp) = do
-
   -- Get committee hash / associated values
   -----------------------------------
   { committeeHashPolicy, committeeHashCurrencySymbol } ← getCommitteeHashPolicy $
@@ -380,6 +379,8 @@ initSidechainTokens isp = do
   -- The distinguished transaction input to spend
 
   -- Grabbing the distributed set / update committee has constraints and lookups
+  -- Note: this uses the monoid instance of functions to monoids to run
+  -- all functions to get the desired lookups and contraints.
   ----------------------------------------
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
@@ -410,6 +411,9 @@ initSidechainTokens isp = do
 
 -- | 'initSidechainCommittee' pays the NFT which identifies the committee hash
 -- to the update committee hash validator script.
+--
+-- This is meant to be used _after_ 'initSidechainTokens'.
+--
 -- Note: you must have such an NFT in your wallet already.
 initSidechainCommittee ∷ InitSidechainParams → Contract () Unit
 initSidechainCommittee isp = do
@@ -468,6 +472,8 @@ initSidechain isp = do
 
   -- Grabbing all contraints for initialising the committee hash
   -- and distributed set.
+  -- Note: this uses the monoid instance of functions to monoids to run
+  -- all functions to get the desired lookups and contraints.
   ----------------------------------------
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
