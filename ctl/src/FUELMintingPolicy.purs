@@ -33,43 +33,42 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, mkCurrencySymbol)
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
+import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import MerkleTree (MerkleProof(..))
-import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams)
 import Types.Scripts (plutusV2Script)
+import Utils.Logging as Logging
 
-{- | 'FUELMint' is the data type to parameterize the minting policy. See
- 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
--}
+-- | `FUELMint` is the data type to parameterize the minting policy. See
+-- | `mkMintingPolicy` for details of why we need the datum in `FUELMint`.
+-- | `mptRootTokenCurrencySymbol` is the `CurrencySymbol` of a token
+-- | which contains a merkle root in the `TokenName`. See
+-- | `TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy` for details.
+-- | `sidechainParams` is the sidechain parameters.
+-- | `dsKeyCurrencySymbol` is th currency symbol for the tokens which
+-- | hold the key for the distributed set. In particular, this allows the
+-- | FUEL minting policy to verify if a string has _just been inserted_ into
+-- | the distributed set.
+-- `mptRootTokenValidator` is the hash of the validator script
+-- which _should_ have a token which has the merkle root in the token
+-- name. See `TrustlessSidechain.OnChain.MPTRootTokenValidator` for
+-- details.
+-- > mptRootTokenValidator :: ValidatorHash
+-- N.B. We don't need this! We're really only interested in the token,
+-- and indeed; anyone can pay a token to this script so there really
+-- isn't a reason to use this validator script as the "identifier" for
+-- MPTRootTokens.
 newtype FUELMint = FUELMint
-  { -- 'fmMptRootTokenValidator' is the hash of the validator script
-    -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.OnChain.MPTRootTokenValidator' for
-    -- details.
-    -- > fmMptRootTokenValidator :: ValidatorHash
-    -- N.B. We don't need this! We're really only interested in the token,
-    -- and indeed; anyone can pay a token to this script so there really
-    -- isn't a reason to use this validator script as the "identifier" for
-    -- MPTRootTokens.
-
-    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
-    -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy' for details.
-    mptRootTokenCurrencySymbol ∷ CurrencySymbol
-  , -- | 'fmSidechainParams' is the sidechain parameters
-    sidechainParams ∷ SidechainParams
-  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
-    -- hold the key for the distributed set. In particular, this allows the
-    -- FUEL minting policy to verify if a string has /just been inserted/ into
-    -- the distributed set.
-    dsKeyCurrencySymbol ∷ CurrencySymbol
+  { mptRootTokenCurrencySymbol ∷ CurrencySymbol
+  , sidechainParams ∷ SidechainParams
+  , dsKeyCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic FUELMint _
@@ -85,20 +84,18 @@ instance ToData FUELMint where
       , toData dsKeyCurrencySymbol
       ]
 
-{- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
- for the MPTRootToken.
--}
+-- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
+-- | for the MPTRootToken.
+-- | `index`: 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+-- | `amount`: 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+-- | `recipient`: arbitrary length bytestring that represents decoded bech32 cardano address. See
+-- | [here](https://cips.cardano.org/cips/cip19/) for more details of bech32.
+-- | `previousMerkleRoot`: if a previous merkle root exists, used to ensure uniqueness of entries.
 newtype MerkleTreeEntry = MerkleTreeEntry
-  { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-    index ∷ BigInt
-  , -- | 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-    amount ∷ BigInt
-  , -- | arbitrary length bytestring that represents decoded bech32 cardano
-    -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
-    -- of bech32
-    recipient ∷ ByteArray
-  , -- | the previous merkle root (if it exists). (used to ensure uniquness of entries)
-    previousMerkleRoot ∷ Maybe ByteArray
+  { index ∷ BigInt
+  , amount ∷ BigInt
+  , recipient ∷ ByteArray
+  , previousMerkleRoot ∷ Maybe ByteArray
   }
 
 derive instance Generic MerkleTreeEntry _
@@ -149,11 +146,11 @@ data FuelParams
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
-  ownPkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-
   let
+    msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
+
     inputTxIn = case fp of
-      Mint _ → (unwrap (unwrap fm).sidechainParams).genesisMint
+      Mint _ → (unwrap sp).genesisMint
       Burn _ → Nothing
 
     fm =
@@ -163,82 +160,77 @@ runFuelMP sp fp = do
         , dsKeyCurrencySymbol: dummyCS
         }
 
+  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
   fuelMP ← fuelMintingPolicy fm
 
-  inputUtxo ← traverse
-    ( \txIn → do
-        txOut ← liftedM "Cannot find genesis mint UTxO" $ getUtxo txIn
-        pure $ Map.singleton txIn $ TransactionOutputWithRefScript
-          { output: txOut, scriptRef: Nothing }
-    )
-    inputTxIn
+  inputUtxo ← inputTxIn # traverse \txIn → do
+    txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
+    pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+      { output: txOut, scriptRef: Nothing }
 
-  cs ← liftContractM "Cannot get currency symbol" $
+  cs ← liftContractM (msg "Cannot get currency symbol") $
     Value.scriptCurrencySymbol fuelMP
-  logInfo' ("fuelMP currency symbol: " <> show cs)
-  tn ← liftContractM "Cannot get token name"
+  logInfo' $ msg ("fuelMP currency symbol: " <> show cs)
+  tn ← liftContractM (msg "Cannot get token name")
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
   let
     mkValue i = Value.singleton cs tn i
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = case fp of
-      Burn bp →
+      Burn { recipient, amount } →
         let
-          redeemer = wrap (toData (MainToSide bp.recipient))
+          value = mkValue (-amount)
+          redeemer = wrap (toData (MainToSide recipient))
         in
-          Constraints.mustMintValueWithRedeemer redeemer (mkValue (-bp.amount))
-      Mint mp →
+          Constraints.mustMintValueWithRedeemer redeemer value
+      Mint { index, recipient, amount, previousMerkleRoot, merkleProof } →
         let
-          value = mkValue mp.amount
-          merkleTreeEntry =
-            MerkleTreeEntry
-              { index: mp.index
-              , amount: mp.amount
-              , recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap
-                  mp.recipient
-              , previousMerkleRoot: mp.previousMerkleRoot
-              }
+          value = mkValue amount
+          redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
+          merkleTreeEntry = MerkleTreeEntry
+            { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
+            , previousMerkleRoot
+            , amount
+            , index
+            }
         in
-          Constraints.mustMintValueWithRedeemer
-            (wrap (toData (SideToMain merkleTreeEntry mp.merkleProof)))
-            value
-            <> Constraints.mustPayToPubKey mp.recipient value
+          Constraints.mustMintValueWithRedeemer redeemer value
+            <> Constraints.mustPayToPubKey recipient value
             <> Constraints.mustBeSignedBy ownPkh
-            <> (maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn)
+            <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = (maybe mempty Lookups.unspentOutputs inputUtxo) <>
-      Lookups.mintingPolicy fuelMP
+    lookups = Lookups.mintingPolicy fuelMP
+      <> maybe mempty Lookups.unspentOutputs inputUtxo
 
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedM (msg "Failed to balance/sign tx") (balanceAndSignTx ubTx)
   txId ← submit bsTx
-  logInfo' ("Submitted fuelMP Tx: " <> show txId)
+  logInfo' $ msg ("Submitted Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "fuelMP Tx submitted successfully!"
+  logInfo' $ msg "Tx submitted successfully!"
 
   pure txId
 
-{- | Empty currency symbol to be used with Passive Bridge transactions,
-  where these tokens are not used
--}
+-- | Empty currency symbol to be used with Passive Bridge transactions,
+-- | where these tokens are not used
+-- NOTE: Just adaSymbol == mkCurrencySymbol (hexToByteArrayUnsafe "")
 dummyCS ∷ CurrencySymbol
-dummyCS = unsafePartial $ fromJust $ mkCurrencySymbol $
-  hexToByteArrayUnsafe ""
+dummyCS = Value.adaSymbol
 
-{- | Mocking unused data for Passive Bridge minting, where we use genesis minting -}
+-- | Mocking unused data for Passive Bridge minting, where we use genesis minting
 passiveBridgeMintParams ∷
   SidechainParams →
   { amount ∷ BigInt, recipient ∷ PaymentPubKeyHash } →
   FuelParams
 passiveBridgeMintParams sidechainParams { amount, recipient } =
   Mint
-    { amount
-    , recipient
-    , merkleProof: MerkleProof []
-    , sidechainParams
+    { merkleProof: MerkleProof []
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing
     , entryHash: hexToByteArrayUnsafe ""
+    , sidechainParams
+    , recipient
+    , amount
     }
