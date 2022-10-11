@@ -28,9 +28,10 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
+import Contract.TxConstraints (TxConstraint(..), singleton)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
@@ -194,9 +195,12 @@ runFuelMP sp fp = do
             , amount
             , index
             }
+          -- silence missing stake key warning
+          mustPayToPubKey p =
+            singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
         in
           Constraints.mustMintValueWithRedeemer redeemer value
-            <> Constraints.mustPayToPubKey recipient value
+            <> mustPayToPubKey recipient value
             <> Constraints.mustBeSignedBy ownPkh
             <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
 
@@ -205,7 +209,7 @@ runFuelMP sp fp = do
       <> maybe mempty Lookups.unspentOutputs inputUtxo
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx") (balanceAndSignTx ubTx)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' $ msg ("Submitted Tx: " <> show txId)
   awaitTxConfirmed txId
