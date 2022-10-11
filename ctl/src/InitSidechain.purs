@@ -390,8 +390,6 @@ initSidechainTokens isp = do
   txOut ← liftedM (msg "Cannot find genesis UTxO") $ getUtxo
     txIn
 
-  -- The distinguished transaction input to spend
-
   -- Grabbing the distributed set / update committee has constraints and lookups
   -- Note: this uses the monoid instance of functions to monoids to run
   -- all functions to get the desired lookups and contraints.
