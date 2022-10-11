@@ -89,6 +89,10 @@ main = do
             ]
         pure $ GetAddrsResp { addresses }
 
+      CommitteeHash → do
+        -- TODO: jp fill this out
+        pure CommitteeHashResp
+
     printEndpointResp endpointResp
 
 -- | Print the bech32 serialised address of a given validator

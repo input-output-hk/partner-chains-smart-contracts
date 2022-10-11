@@ -54,6 +54,7 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | CommitteeHash -- TODO: jp fill this out
   | GetAddrs
 
 derive instance Generic Endpoint _

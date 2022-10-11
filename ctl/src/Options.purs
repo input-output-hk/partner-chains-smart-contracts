@@ -80,6 +80,10 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
           )
+      , command "commiteeHash"
+          ( info (withCommonOpts committeeHashSpec)
+              (progDesc "Update the committee hash")
+          )
       ]
 
   withCommonOpts endpointParser = ado
@@ -266,6 +270,8 @@ options maybeConfig = info (helper <*> optSpec)
     , metavar "PUBLIC_KEY"
     , help "SPO cold verification key value"
     ]
+
+  committeeHashSpec = pure CommitteeHash -- TODO: jp fill this out
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
