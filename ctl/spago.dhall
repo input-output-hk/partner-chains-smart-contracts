@@ -24,7 +24,6 @@
   , "parallel"
   , "partial"
   , "prelude"
-  , "profunctor-lenses"
   , "strings"
   , "transformers"
   , "uint"

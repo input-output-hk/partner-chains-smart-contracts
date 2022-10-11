@@ -6,41 +6,34 @@ module UpdateCommitteeHash
 
 import Contract.Prelude
 
-import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractM
   , liftedE
-  , liftedM
   , throwContractError
   )
-import Contract.PlutusData
-  ( fromData
-  , toData
-  )
+import Contract.PlutusData (fromData, toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
-import Types
-  ( assetClass
-  , assetClassValue
-  )
+import Types (assetClass, assetClassValue)
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
@@ -169,15 +162,14 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         )
         <> Lookups.validator updateValidator
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
-      <> TxConstraints.mustPayToScript valHash newDatum DatumWitness value
+      <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
         Nothing → mempty
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
           previousMerkleRootORef
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx")
-    (balanceAndSignTx (reattachDatumsInline ubTx))
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId

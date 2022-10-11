@@ -3,7 +3,6 @@ module InitSidechain (initSidechain) where
 
 import Contract.Prelude
 
-import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.Monad as Monad
@@ -16,7 +15,7 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
@@ -24,6 +23,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value as Value
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.Map as Map
 import DistributedSet
   ( Ds(Ds)
@@ -239,23 +239,22 @@ initSidechain (InitSidechainParams isp) = do
         <> Constraints.mustMintValue committeeHashValue
         <> Constraints.mustPayToScript committeeHashValidatorHash
           committeeHashDatum
-          DatumWitness
+          DatumInline
           committeeHashValue
         -- Constraints for initializing the distributed set
         <> Constraints.mustMintValue insertValidatorValue
         <> Constraints.mustPayToScript insertValidatorHash
           insertValidatorDatum
-          DatumWitness
+          DatumInline
           insertValidatorValue
         <> Constraints.mustMintValue dsConfValue
         <> Constraints.mustPayToScript dsConfValidatorHash
           dsConfValidatorDatum
-          DatumWitness
+          DatumInline
           dsConfValue
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx")
-    (balanceAndSignTx (reattachDatumsInline ubTx))
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' $ msg $ "Submitted initialise sidechain Tx: " <> show txId
   awaitTxConfirmed txId
