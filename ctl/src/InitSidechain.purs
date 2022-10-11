@@ -1,4 +1,18 @@
 -- | 'InitSidechain' implements the endpoint for intializing the sidechain.
+-- There's two ways to initialie the sidechain.
+--
+--      1. In a single transaction with 'initSidechain'
+--
+--      2. In two transactions (to accomodate the time difference between
+--      sidechain creation, and the first committee setup):
+--
+--          - Start with 'initSidechainTokens' (returns the sidechain
+--          parameters), which will mint the genesis token for the committee hash
+--          (and set up other required tokens for the distributed set)
+--
+--          - Then, call 'initSidechainCommittee' which will pay the genesis
+--          token for the committee hash (assuming you have it in your wallet)
+--          to the required committee hash validator (with the initial committee).
 module InitSidechain
   ( initSidechain
   , initSidechainTokens
