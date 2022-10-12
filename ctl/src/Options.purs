@@ -300,7 +300,7 @@ options maybeConfig = info (helper <*> optSpec)
                   committeeSignature
                   ( fold
                       [ long "committee-pub-key-and-signature"
-                      , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+                      , metavar "PUBLIC_KEY[:SIGNATURE]"
                       , help
                           "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
                       ]
@@ -389,7 +389,7 @@ committeeSignature = maybeReader $ \str → do
 
 -- | 'parsePubKeyAndSignature' parses (in EBNF)
 --    >  sidechainAddress
---    >         -> hexStr[:[hexStr]]
+--    >         -> hexStr[:hexStr]
 -- where @hexStr@ is a sequence of hex digits i.e, it parses a @hexStr@
 -- public key, followed by an equal sign, followed by an optional signature
 -- @hexStr@.
