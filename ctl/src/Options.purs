@@ -288,8 +288,7 @@ options maybeConfig = info (helper <*> optSpec)
               ( option
                   byteArray
                   ( fold
-                      [ short 'n'
-                      , long "new-committee-pub-key"
+                      [ long "new-committee-pub-key"
                       , metavar "PUBLIC_KEY"
                       , help "Public key of a new committee member"
                       ]
@@ -300,8 +299,7 @@ options maybeConfig = info (helper <*> optSpec)
               ( option
                   committeeSignature
                   ( fold
-                      [ short 's'
-                      , long "committee-pub-key-and-signature"
+                      [ long "committee-pub-key-and-signature"
                       , metavar "PUBLIC_KEY[:[SIGNATURE]]"
                       , help
                           "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
@@ -312,8 +310,7 @@ options maybeConfig = info (helper <*> optSpec)
             ( option
                 (Just <$> byteArray)
                 ( fold
-                    [ short 'm'
-                    , long "previous-merkle-root"
+                    [ long "previous-merkle-root"
                     , metavar "MERKLE_ROOT"
                     , value Nothing
                     , help "Hex encoded previous merkle root if it exists"
