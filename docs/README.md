@@ -263,6 +263,7 @@ Validator script verifies the following:
 - verifies that size(signatures) > 2/3 \* size(committeePubKeys)
 - verifies the NFT of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
+- verifies that (sidechain epoch of the new committee hash > sidechain epoch of the consumed committee hash utxo)
 - outputs a new UTxO with the updated committee hash containing the NFT to the same script address
 - reference to the last Merkle root is referenced in the transaction
 
@@ -270,7 +271,10 @@ Validator script verifies the following:
 
 ```haskell
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { committeePubKeysHash :: ByteString -- Hash of all lexicographically sorted public keys of the current committee members
+  { committeePubKeysHash :: ByteString
+    -- ^ Hash of all lexicographically sorted public keys of the current committee members
+  , sidechainEpoch :: Integer
+    -- ^ sidechain epoch of the committee
   }
 ```
 
@@ -308,6 +312,8 @@ data UpdateCommitteeMessage = UpdateCommitteeMessage
   , newCommitteePubKeys :: [SidechainPubKey] -- sorted lexicographically
   , previousMerkleRoot :: Maybe ByteString
     -- ^ last Merkle root inserted on chain (Merkle root for the last sidechain epoch)
+  , sidechainEpoch :: Integer
+    -- ^ sidechain epoch of the newly registered committee
   }
 ```
 
