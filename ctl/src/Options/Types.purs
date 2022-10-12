@@ -11,6 +11,7 @@ import Contract.Address (NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
+import Data.List (List)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
@@ -54,7 +55,11 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
-  | CommitteeHash -- TODO: jp fill this out
+  | CommitteeHash
+      { newCommitteePubKeys ∷ List PubKey
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , previousMerkleRoot ∷ Maybe ByteArray
+      }
   | GetAddrs
 
 derive instance Generic Endpoint _

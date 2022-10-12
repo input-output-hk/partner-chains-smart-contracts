@@ -1,4 +1,11 @@
-module Options (getOptions) where
+module Options
+  (
+    -- * CLI parsing
+    getOptions
+  ,
+    -- * Internal parsers
+    parsePubKeyAndSignature
+  ) where
 
 import Contract.Prelude
 
@@ -37,6 +44,7 @@ import Options.Applicative
   , info
   , int
   , long
+  , many
   , maybeReader
   , metavar
   , option
@@ -271,7 +279,48 @@ options maybeConfig = info (helper <*> optSpec)
     , help "SPO cold verification key value"
     ]
 
-  committeeHashSpec = pure CommitteeHash -- TODO: jp fill this out
+  committeeHashSpec ∷ Parser Endpoint
+  committeeHashSpec =
+    CommitteeHash <$>
+      ( { newCommitteePubKeys: _, committeeSignatures: _, previousMerkleRoot: _ }
+          <$>
+            many
+              ( option
+                  byteArray
+                  ( fold
+                      [ short 'n'
+                      , long "new-committee-pub-key"
+                      , metavar "PUBLIC_KEY"
+                      , help "Public key of a new committee member"
+                      ]
+                  )
+              )
+          <*>
+            many
+              ( option
+                  committeeSignature
+                  ( fold
+                      [ short 's'
+                      , long "committee-pub-key-and-signature"
+                      , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+                      , help
+                          "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
+                      ]
+                  )
+              )
+          <*>
+            ( option
+                (Just <$> byteArray)
+                ( fold
+                    [ short 'm'
+                    , long "previous-merkle-root"
+                    , metavar "MERKLE_ROOT"
+                    , value Nothing
+                    , help "Hex encoded previous merkle root if it exists"
+                    ]
+                )
+            )
+      )
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
@@ -326,3 +375,41 @@ sidechainAddress = maybeReader $ \str →
     [ "", hex ] → hexToByteArray hex
     [ hex ] → hexToByteArray hex
     _ → Nothing
+
+-- | 'committeeSignature' is a wrapper around 'parsePubKeyAndSignature'.
+committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
+committeeSignature = maybeReader $ \str → do
+  { pubKey, signature } ← parsePubKeyAndSignature str
+  -- For performance, I suppose we could actually use the unsafe version of
+  -- 'hexToByteArray'
+  pubKey' ← hexToByteArray pubKey
+  signature' ← case signature of
+    Nothing → pure Nothing
+    Just sig → do
+      sig' ← hexToByteArray sig
+      pure $ Just sig'
+  pure $ pubKey' /\ signature'
+
+-- | 'parsePubKeyAndSignature' parses (in EBNF)
+--    >  sidechainAddress
+--    >         -> hexStr[:[hexStr]]
+-- where @hexStr@ is a sequence of hex digits i.e, it parses a @hexStr@
+-- public key, followed by an equal sign, followed by an optional signature
+-- @hexStr@.
+parsePubKeyAndSignature ∷
+  String →
+  Maybe
+    { -- hex encoded pub key
+      pubKey ∷ String
+    , -- hex encoded signature (if it exists)
+      signature ∷ Maybe String
+    }
+parsePubKeyAndSignature = parsePubKeyAndSignatureImpl Nothing Just
+
+-- See `Options.js` for details.
+foreign import parsePubKeyAndSignatureImpl ∷
+  ∀ c.
+  Maybe c →
+  (c → Maybe c) →
+  String →
+  Maybe { pubKey ∷ String, signature ∷ Maybe String }

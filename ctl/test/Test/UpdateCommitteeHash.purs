@@ -37,7 +37,7 @@ updateCommitteeHash
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
-  } = do
+  } = void do
   let
     currentCommitteePubKeys = Array.sort $ map toPubKeyUnsafe
       currentCommitteePrvKeys

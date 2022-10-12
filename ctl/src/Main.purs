@@ -18,6 +18,7 @@ import Contract.Monad
   , runContract
   )
 import Contract.Scripts (Validator, validatorHash)
+import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
@@ -26,6 +27,10 @@ import FUELMintingPolicy
   )
 import Options (getOptions)
 import Options.Types (Endpoint(..))
+import UpdateCommitteeHash
+  ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  )
+import UpdateCommitteeHash as UpdateCommitteeHash
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -89,9 +94,20 @@ main = do
             ]
         pure $ GetAddrsResp { addresses }
 
-      CommitteeHash → do
-        -- TODO: jp fill this out
-        pure CommitteeHashResp
+      CommitteeHash
+        { newCommitteePubKeys, committeeSignatures, previousMerkleRoot } →
+        let
+          params = UpdateCommitteeHashParams
+            { sidechainParams: opts.scParams
+            , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
+            , committeeSignatures: List.toUnfoldable committeeSignatures
+            , previousMerkleRoot
+            }
+        in
+          UpdateCommitteeHash.updateCommitteeHash params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> CommitteeHashResp
 
     printEndpointResp endpointResp
 
