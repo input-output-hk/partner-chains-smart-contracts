@@ -23,6 +23,7 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -56,6 +57,7 @@ import Options.Applicative
   )
 import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
+import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray, hexToByteArray)
 import Utils.Logging (environment, fileLogger)
 
@@ -91,6 +93,10 @@ options maybeConfig = info (helper <*> optSpec)
       , command "committeeHash"
           ( info (withCommonOpts committeeHashSpec)
               (progDesc "Update the committee hash")
+          )
+      , command "saveRoot"
+          ( info (withCommonOpts saveRootSpec)
+              (progDesc "Saving a new merkle root")
           )
       ]
 
@@ -295,28 +301,59 @@ options maybeConfig = info (helper <*> optSpec)
                   )
               )
           <*>
-            many
-              ( option
-                  committeeSignature
-                  ( fold
-                      [ long "committee-pub-key-and-signature"
-                      , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-                      , help
-                          "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
-                      ]
-                  )
+            parseCommitteeSignatures
+          <*>
+            parsePreviousMerkleRoot
+      )
+
+  saveRootSpec ∷ Parser Endpoint
+  saveRootSpec =
+    SaveRoot <$>
+      ( { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
+          <$>
+            option
+              byteArray
+              ( fold
+                  [ long "merkle-root"
+                  , metavar "MERKLE_ROOT"
+                  , help "Merkle root signed by the committee"
+                  ]
               )
           <*>
-            ( option
-                (Just <$> byteArray)
-                ( fold
-                    [ long "previous-merkle-root"
-                    , metavar "MERKLE_ROOT"
-                    , value Nothing
-                    , help "Hex encoded previous merkle root if it exists"
-                    ]
-                )
-            )
+            parsePreviousMerkleRoot
+          <*>
+            parseCommitteeSignatures
+      )
+
+  -- | 'parsePreviousMerkleRoot' gives the options for parsing a merkle root (this is
+  -- used in both @saveRootSpec@ and @committeeHashSpec@).
+  parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
+  parsePreviousMerkleRoot =
+    option
+      (Just <$> byteArray)
+      ( fold
+          [ long "previous-merkle-root"
+          , metavar "MERKLE_ROOT"
+          , value Nothing
+          , help "Hex encoded previous merkle root if it exists"
+          ]
+      )
+
+  -- | 'parseCommitteeSignatures' gives the options for parsing the current
+  -- committees' signatures. This is used in both @saveRootSpec@ and
+  -- @committeeHashSpec@).
+  parseCommitteeSignatures ∷ Parser (List (PubKey /\ Maybe Signature))
+  parseCommitteeSignatures =
+    many
+      ( option
+          committeeSignature
+          ( fold
+              [ long "committee-pub-key-and-signature"
+              , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+              , help
+                  "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
+              ]
+          )
       )
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.

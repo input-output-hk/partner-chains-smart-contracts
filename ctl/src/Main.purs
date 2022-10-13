@@ -25,6 +25,8 @@ import FUELMintingPolicy
   , passiveBridgeMintParams
   , runFuelMP
   )
+import MPTRoot (SaveRootParams(SaveRootParams))
+import MPTRoot as MPTRoot
 import Options (getOptions)
 import Options.Types (Endpoint(..))
 import UpdateCommitteeHash
@@ -108,6 +110,20 @@ main = do
             <#> unwrap
             >>> { transactionId: _ }
             >>> CommitteeHashResp
+
+      SaveRoot { merkleRoot, previousMerkleRoot, committeeSignatures } →
+        let
+          params = SaveRootParams
+            { sidechainParams: opts.scParams
+            , merkleRoot
+            , previousMerkleRoot
+            , committeeSignatures: List.toUnfoldable committeeSignatures
+            }
+        in
+          MPTRoot.saveRoot params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> SaveRootResp
 
     printEndpointResp endpointResp
 
