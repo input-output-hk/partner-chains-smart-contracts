@@ -13,6 +13,7 @@ import Test.InitSidechain as InitSidechain
 import Test.MPTRoot as MPTRoot
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
+import Test.Options as Options
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
@@ -25,6 +26,9 @@ main ∷ Effect Unit
 main = do
   -- Run the merkle tree integration tests
   MerkleTree.test
+
+  -- Run the Options tests.
+  Options.test
 
   -- Run the plutip tests
   launchAff_ do
