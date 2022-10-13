@@ -8,7 +8,7 @@
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     ### Start of Maxim's cool trick to get `serialiseData` to work
-    plutip.url = github:hyphenrf/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9;
+    plutip.url = "github:mlabs-haskell/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9";
     cardano-transaction-lib.inputs = {
       plutip.follows = "plutip";
       haskell-nix.follows = "plutip/haskell-nix";
@@ -29,7 +29,6 @@
           name = "vasil-dev";
           magic = 9;
         };
-        # TODO: will cardano-node need to be overridden in runtime too?
       };
 
       supportedSystems = with nixpkgs.lib.systems.supported;

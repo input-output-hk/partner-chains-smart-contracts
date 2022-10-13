@@ -1392,13 +1392,13 @@
       "locked": {
         "lastModified": 1665098651,
         "narHash": "sha256-1Wxb4BdISJGnfhxSsdYZHcffOmdhX1ntUzCkfZCFhI4=",
-        "owner": "hyphenrf",
+        "owner": "mlabs-haskell",
         "repo": "plutip",
         "rev": "ee7df5bfc86751e6199b118c13135a36cf3679b9",
         "type": "github"
       },
       "original": {
-        "owner": "hyphenrf",
+        "owner": "mlabs-haskell",
         "repo": "plutip",
         "rev": "ee7df5bfc86751e6199b118c13135a36cf3679b9",
         "type": "github"
