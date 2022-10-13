@@ -31,21 +31,23 @@ testParsePubKeyAndSignature = do
   assertBy eq
     ( Just
         { pubKey: "bb"
+        , signature: Nothing
+        }
+    )
+    ( Options.parsePubKeyAndSignature
+        "bb:"
+    )
+
+  assertBy eq
+    ( Just
+        { pubKey: "bb"
         , signature: Just "cc"
         }
     )
     ( Options.parsePubKeyAndSignature
         "bb:cc"
     )
-  assertBy eq
-    ( Just
-        { pubKey: "bb"
-        , signature: Just ""
-        }
-    )
-    ( Options.parsePubKeyAndSignature
-        "bb:"
-    )
+
   assertBy eq
     Nothing
     ( Options.parsePubKeyAndSignature
