@@ -6,7 +6,6 @@ import Contract.Prelude
 
 import Data.Maybe as Maybe
 import Effect.Class.Console as Console
-import Effect.Exception as Exception
 import MerkleTree
   ( MerkleProof(MerkleProof)
   , MerkleTree(Bin, Tip)
