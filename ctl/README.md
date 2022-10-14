@@ -187,6 +187,22 @@ nix run .#ctl-main -- committeeHash \
   --previousMerkleRoot abcdef
 ```
 
+#### 3.1.6. Save merkle root
+
+```
+nix run .#ctl-main -- committeeHash \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --merkle-root abababab \
+  --committee-pub-key-and-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-signature aabbcc02 \
+  --committee-pub-key-and-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-signature aabbcc04:cccccc \
+  --previousMerkleRoot abcdef
+```
+
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
