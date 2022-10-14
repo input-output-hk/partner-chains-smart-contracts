@@ -65,6 +65,16 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe ByteArray
       , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
       }
+  |
+    -- | 'CommitteeHandover' is a convenient alias for saving the root,
+    -- followed by updating the committee hash.
+    CommitteeHandover
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , newCommitteePubKeys ∷ List PubKey
+      , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      }
   | GetAddrs
 
 derive instance Generic Endpoint _
