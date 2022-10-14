@@ -13,7 +13,6 @@ import Contract.Prelude
 import Contract.Monad (Contract)
 import Contract.Prim.ByteArray
   ( ByteArray
-  , byteArrayFromIntArrayUnsafe
   , byteArrayToIntArray
   , hexToByteArrayUnsafe
   )
