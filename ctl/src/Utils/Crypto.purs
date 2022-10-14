@@ -48,10 +48,8 @@ toPubKeyUnsafe = publicKeyToBytesUnsafe <<< publicKeyFromPrivateKeyUnsafe
 
 -- | 'normalizeCommitteePubKeysAndSignatures' takes a list of public keys and their
 -- associated signatures, sorts by the natural lexicographical ordering of the
--- public keys, then unzips the resulting array.
---
--- In the case that the signature doesn't exist, this uses the empty bytestring
--- as a signature i.e., a signature that we know will not validate.
+-- public keys, then unzips the resulting array, removing all signatures that
+-- are 'Nothing'.
 --
 -- This useful since the onchain multisign method (see in the Haskell module
 -- 'TrustlessSidechain.OnChain.Utils') requires that the keys are sorted (this
@@ -60,14 +58,7 @@ toPubKeyUnsafe = publicKeyToBytesUnsafe <<< publicKeyFromPrivateKeyUnsafe
 normalizeCommitteePubKeysAndSignatures ∷
   Array (PubKey /\ Maybe Signature) → Tuple (Array PubKey) (Array Signature)
 normalizeCommitteePubKeysAndSignatures =
-  ((fromMaybe dummySignature <$> _) <$> _) -- apply @(fromMaybe dummySignature <$> _)@ over the second element of the tuple.
+  (Array.catMaybes <$> _) -- apply @Array.catMaybes@ over the second element of the tuple.
 
     <<< Array.unzip
     <<< Array.sortBy (\l r → Ord.compare (fst l) (fst r))
-
--- | 'dummySignature' is a signature that shouldn't prove any public key has
--- signed something. In particular, this is a ByteArray of length 64 filled
--- with 0s. Note: the length is important for the onchain builtin
--- 'verifyEd25519Signature' as this builtin errors if inputs are of the wrong length.
-dummySignature ∷ Signature
-dummySignature = byteArrayFromIntArrayUnsafe $ Array.replicate 64 0
