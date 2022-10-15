@@ -6,6 +6,7 @@ module Utils.Crypto
   , multiSign
   , hexToPrivKeyUnsafe
   , normalizeCommitteePubKeysAndSignatures
+  , verifyMultiSignature
   ) where
 
 import Contract.Prelude
@@ -17,6 +18,7 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Data.Array as Array
+import Data.Int as Int
 import Data.Ord as Ord
 import Serialization.Types (PrivateKey, PublicKey)
 import Types (PubKey, Signature)
@@ -61,3 +63,56 @@ normalizeCommitteePubKeysAndSignatures =
 
     <<< Array.unzip
     <<< Array.sortBy (\l r → Ord.compare (fst l) (fst r))
+
+-- | > @'verifyMultiSignature' thresholdNumerator thresholdDenominator pubKeys msg signatures@
+-- returns true iff
+--
+--      - @pubKeys@ is sorted lexicographically and are distinct
+--
+--      - @signatures@ are the corresponding signatures @pubKeys@ of @msg@
+--      as a subsequence of @pubKeys@ (i.e., ordered the same way as @pubKeys@).
+--
+--      - strictly more than @thresholdNumerator/thresholdDenominator@
+--      @pubKeys@ have signed @msg@
+--
+-- Note: this loosely replicates the behavior of the corresponding on chain
+-- function, but should be significantly more efficient (since we use the
+-- assumption that the signatures are essentially a subsequence of the public
+-- keys); and is generalized to allow arbitrary thresholds to be given.
+verifyMultiSignature ∷
+  Int → Int → Array PubKey → ByteArray → Array Signature → Boolean
+verifyMultiSignature
+  thresholdNumerator
+  thresholdDenominator
+  pubKeys
+  msg
+  signatures =
+  let
+    go ∷ Int → Array PubKey → Array Signature → Boolean
+    go signed pubs sigs =
+      let
+        ok = signed >
+          ( Int.quot (thresholdNumerator * Array.length pubKeys)
+              thresholdDenominator
+          )
+      in
+        case Array.uncons pubs of
+          Nothing → ok
+          Just { head: pub, tail: pubs' } →
+            case Array.uncons sigs of
+              Nothing → ok
+              Just { head: sig, tail: sigs' } →
+                if verifyEd25519Signature pub msg sig then
+                  -- the public key and signature match, so
+                  -- we move them both forward..
+                  go (signed + 1) pubs' sigs'
+
+                else
+                  -- otherwise, they don't match so since
+                  -- @sigs@ is essentially a subsequence of
+                  -- @pubs@, we move only @pubs@ forward
+                  -- since a later key should match with
+                  -- @sig@.
+                  go signed pubs' sigs
+  in
+    go 0 pubKeys signatures
