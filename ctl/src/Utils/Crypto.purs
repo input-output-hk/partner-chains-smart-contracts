@@ -115,4 +115,10 @@ verifyMultiSignature
                   -- @sig@.
                   go signed pubs' sigs
   in
-    go 0 pubKeys signatures
+    isSorted pubKeys && go 0 pubKeys signatures
+
+{- | Verifies that the non empty array is sorted -}
+isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
+isSorted xss = case Array.tail xss of
+  Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
+  Nothing → false
