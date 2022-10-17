@@ -25,7 +25,14 @@ import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo), SidechainPubKey (getSidechainPubKey))
+import TrustlessSidechain.OffChain.Types (
+  SidechainParams (
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
+  SidechainPubKey (getSidechainPubKey),
+ )
 import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -110,6 +117,7 @@ mkMintingPolicy
       minted = txInfoMint info
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
       ownTokenName = Value.TokenName merkleRoot
+      sc = smrmSidechainParams smrm
 
       committeeDatum :: UpdateCommitteeHashDatum
       committeeDatum =
@@ -132,10 +140,14 @@ mkMintingPolicy
 
       threshold :: Integer
       threshold =
-        -- See Note [Threshold of Strictly More than 2/3 Majority] in
+        -- See Note [Threshold of Strictly More than Threshold Majority] in
         -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash' (this is mostly
         -- duplicated from there)
-        (length committeePubKeys `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
+        ( length committeePubKeys
+            `Builtins.multiplyInteger` thresholdNumerator sc
+            `Builtins.divideInteger` thresholdDenominator sc
+        )
+          + 1
 
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
