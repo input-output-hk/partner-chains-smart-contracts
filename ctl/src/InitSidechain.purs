@@ -1,5 +1,5 @@
 -- | 'InitSidechain' implements the endpoint for intializing the sidechain.
--- There's two ways to initialie the sidechain.
+-- There's two ways to initialize the sidechain.
 --
 --      1. In a single transaction with 'initSidechain'
 --
