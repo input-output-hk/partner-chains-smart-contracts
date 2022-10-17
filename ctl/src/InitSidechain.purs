@@ -399,7 +399,7 @@ initSidechainTokens isp = do
         <> initCommitteeHashMintLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
-          { constraints: mempty
+          { constraints: Constraints.mustSpendPubKeyOutput txIn
           , lookups: Lookups.unspentOutputs
               ( Map.singleton txIn
                   ( TransactionOutputWithRefScript
@@ -493,7 +493,7 @@ initSidechain isp = do
         <> initCommitteeHashLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
-          { constraints: mempty
+          { constraints: Constraints.mustSpendPubKeyOutput txIn
           , lookups: Lookups.unspentOutputs
               ( Map.singleton txIn
                   ( TransactionOutputWithRefScript
