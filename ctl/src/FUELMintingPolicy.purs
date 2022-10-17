@@ -4,6 +4,7 @@ module FUELMintingPolicy
   , FuelParams(..)
   , passiveBridgeMintParams
   , fuelMintingPolicy
+  , MerkleTreeEntry(MerkleTreeEntry)
   ) where
 
 import Contract.Prelude
@@ -96,11 +97,8 @@ newtype MerkleTreeEntry = MerkleTreeEntry
     -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- of bech32
     recipient ∷ ByteArray
-  , -- | sidechain epoch for which merkle tree was created
-    sidechainEpoch ∷ BigInt
-  , -- | 'hash' will be removed later TODO! Currently, we have this here to
-    -- help test the system.
-    entryHash ∷ ByteArray
+  , -- | the previous merkle root (if it exists). (used to ensure uniquness of entries)
+    previousMerkleRoot ∷ Maybe ByteArray
   }
 
 derive instance Generic MerkleTreeEntry _
@@ -108,14 +106,13 @@ derive instance Newtype MerkleTreeEntry _
 instance ToData MerkleTreeEntry where
   toData
     ( MerkleTreeEntry
-        { index, amount, recipient, sidechainEpoch, entryHash }
+        { index, amount, recipient, previousMerkleRoot }
     ) =
     Constr zero
       [ toData index
       , toData amount
       , toData recipient
-      , toData sidechainEpoch
-      , toData entryHash
+      , toData previousMerkleRoot
       ]
 
 data FUELRedeemer
@@ -145,7 +142,7 @@ data FuelParams
       , merkleProof ∷ MerkleProof
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
-      , sidechainEpoch ∷ BigInt
+      , previousMerkleRoot ∷ Maybe ByteArray
       , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
@@ -200,8 +197,7 @@ runFuelMP sp fp = do
               , amount: mp.amount
               , recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap
                   mp.recipient
-              , sidechainEpoch: mp.sidechainEpoch
-              , entryHash: mp.entryHash
+              , previousMerkleRoot: mp.previousMerkleRoot
               }
         in
           Constraints.mustMintValueWithRedeemer
@@ -243,6 +239,6 @@ passiveBridgeMintParams sidechainParams { amount, recipient } =
     , merkleProof: MerkleProof []
     , sidechainParams
     , index: BigInt.fromInt 0
-    , sidechainEpoch: BigInt.fromInt 0
+    , previousMerkleRoot: Nothing
     , entryHash: hexToByteArrayUnsafe ""
     }

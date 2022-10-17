@@ -1,258 +1,180 @@
-module UpdateCommitteeHash where
+module UpdateCommitteeHash
+  ( module UpdateCommitteeHash.Types
+  , module UpdateCommitteeHash.Utils
+  , updateCommitteeHash
+  ) where
 
 import Contract.Prelude
 
 import BalanceTx.Extra (reattachDatumsInline)
-import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
-  , liftContractE
   , liftContractM
   , liftedE
   , liftedM
   , throwContractError
   )
 import Contract.PlutusData
-  ( class FromData
-  , class ToData
-  , PlutusData(Constr)
-  , fromData
+  ( fromData
   , toData
   )
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayFromAscii
-  , hexToByteArrayUnsafe
-  )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
-  , applyArgs
-  , validatorHash
-  )
-import Contract.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
+import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutput(..)
+  ( TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTx
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..))
-import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
+import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Data.Array (toUnfoldable)
 import Data.Array as Array
-import Data.Bifunctor (rmap)
-import Data.BigInt as BigInt
-import Data.Foldable (find)
-import Data.List (List, (:))
-import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import MerkleTree as MT
-import Partial.Unsafe (unsafePartial)
-import RawScripts (rawCommitteeHashPolicy, rawCommitteeHashValidator)
+import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
+import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
 import Types
-  ( AssetClass
-  , PubKey
-  , Signature
-  , assetClass
+  ( assetClass
   , assetClassValue
-  , assetClassValueOf
   )
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
-import Types.Scripts (plutusV2Script)
-import Utils.Crypto (verifyEd25519Signature)
+import UpdateCommitteeHash.Types
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
+  )
+import UpdateCommitteeHash.Utils
+  ( aggregateKeys
+  , committeeHashAssetClass
+  , committeeHashPolicy
+  , findUpdateCommitteeHashUtxo
+  , initCommitteeHashMintTn
+  , serialiseUchmHash
+  , updateCommitteeHashValidator
+  )
+import Utils.Crypto as Utils.Crypto
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
-newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash ∷ ByteArray }
-
-derive instance Generic UpdateCommitteeHashDatum _
-derive instance Newtype UpdateCommitteeHashDatum _
-instance ToData UpdateCommitteeHashDatum where
-  toData (UpdateCommitteeHashDatum { committeeHash }) = Constr zero
-    [ toData committeeHash ]
-
-instance FromData UpdateCommitteeHashDatum where
-  fromData (Constr n [ a ])
-    | n == zero = UpdateCommitteeHashDatum <$> ({ committeeHash: _ }) <$>
-        fromData a
-  fromData _ = Nothing
-
--- plutus script is parameterised on AssetClass, which CTL doesn't have
--- the toData instance uses the underlying tuple so we do the same
-newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { uchAssetClass ∷ AssetClass }
-
-derive instance Generic UpdateCommitteeHash _
-derive instance Newtype UpdateCommitteeHash _
-instance ToData UpdateCommitteeHash where
-  toData (UpdateCommitteeHash { uchAssetClass }) = Constr zero
-    [ toData uchAssetClass ]
-
-newtype InitCommitteeHashMint = InitCommitteeHashMint
-  { icTxOutRef ∷ TransactionInput }
-
-derive instance Generic InitCommitteeHashMint _
-derive instance Newtype InitCommitteeHashMint _
-instance ToData InitCommitteeHashMint where
-  toData (InitCommitteeHashMint { icTxOutRef }) =
-    toData icTxOutRef
-
-data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
-  , newCommitteeHash ∷ ByteArray
-  }
-
-derive instance Generic UpdateCommitteeHashRedeemer _
-instance ToData UpdateCommitteeHashRedeemer where
-  toData
-    ( UpdateCommitteeHashRedeemer
-        { committeeSignatures, committeePubKeys, newCommitteeHash }
-    ) = Constr zero
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteeHash
-    ]
-
-data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array PubKey
-  , committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
-  }
-
-derive instance Generic UpdateCommitteeHashParams _
-instance ToData UpdateCommitteeHashParams where
-  toData
-    ( UpdateCommitteeHashParams
-        { sidechainParams
-        , newCommitteePubKeys
-        , committeeSignatures
-        , committeePubKeys
-        }
-    ) = Constr zero
-    [ toData sidechainParams
-    , toData newCommitteePubKeys
-    , toData committeeSignatures
-    , toData committeePubKeys
-    ]
-
-committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
-committeeHashPolicy sp = do
-  policyUnapplied ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
-    rawCommitteeHashPolicy
-    PlutusScriptV2
-  liftedE (applyArgs policyUnapplied [ toData sp ])
-
-updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
-updateCommitteeHashValidator sp = do
-  validatorUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
-    rawCommitteeHashValidator
-    PlutusScriptV2
-  liftedE (applyArgs validatorUnapplied [ toData sp ])
-
-{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
- the utxo which contains the committee hash. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
-initCommitteeHashMintTn ∷ Value.TokenName
-initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
-  hexToByteArrayUnsafe ""
-
-{- | 'committeeHashCurSymbol' is the asset class. See 'initCommitteeHashMintTn'
- for details on the token name
--}
-{-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass ∷ InitCommitteeHashMint → Contract () AssetClass
-committeeHashAssetClass ichm = do
-  cp ← committeeHashPolicy ichm
-  curSym ← liftContractM "Couldn't get committeeHash currency symbol"
-    (Value.scriptCurrencySymbol cp)
-
-  pure $ assetClass curSym initCommitteeHashMintTn
-
--- N.B. on-chain code verifies the datum is contained in the output -- see Note [Committee hash in output datum]
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
 updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
+  let -- @msg@ is used to help generate log messages
+    msg = report "updateCommitteeHash"
+
+  -- Getting the minting policy / currency symbol / token name for update
+  -- committee hash
+  -------------------------------------------------------------
   pol ← committeeHashPolicy
     ( InitCommitteeHashMint
         { icTxOutRef: (\(SidechainParams x) → x.genesisUtxo) uchp.sidechainParams
         }
     )
 
-  cs ← liftContractM "Cannot get currency symbol"
-    (Value.scriptCurrencySymbol pol)
+  cs ← liftContractM (msg "Failed to get updateCommitteeHash minting policy")
+    $ Value.scriptCurrencySymbol pol
 
-  tn ← liftContractM "Cannot get token name"
-    (Value.mkTokenName =<< byteArrayFromAscii "") -- TODO init token name?
+  let tn = initCommitteeHashMintTn
 
-  when (null uchp.committeePubKeys) (throwContractError "Empty Committee")
-  let uch = { uchAssetClass: assetClass cs tn }
-
-  let newCommitteePubKeys = uchp.newCommitteePubKeys
-  unless (isSorted newCommitteePubKeys) $ throwContractError
-    "New committee member public keys must be sorted"
-
-  newCommitteeHash ← liftContractE $ aggregateKeys newCommitteePubKeys
-
+  -- Getting the minting policy for the mpt root token
+  -------------------------------------------------------------
   let
-    curCommitteePubKeys /\ committeeSignatures = sortPubKeysAndSigs
-      newCommitteeHash
-      uchp.committeePubKeys
-      uchp.committeeSignatures
-  curCommitteeHash ← liftContractE $ aggregateKeys curCommitteePubKeys
-
-  updateValidator ← updateCommitteeHashValidator (UpdateCommitteeHash uch)
-  let valHash = validatorHash updateValidator
-
-  netId ← getNetworkId
-  valAddr ← liftContractM "updateCommitteeHash: get validator address"
-    (validatorHashEnterpriseAddress netId valHash)
-  scriptUtxos ← liftedM "Cannot get script utxos" (utxosAt valAddr)
-  let
-    findOwnValue
-      ( _tIN /\
-          ( TransactionOutputWithRefScript
-              { output: TransactionOutput { amount } }
-          )
-      ) =
-      assetClassValueOf amount uch.uchAssetClass == BigInt.fromInt 1
-    found = find findOwnValue
-      ( Map.toUnfoldable scriptUtxos ∷
-          (Array (TransactionInput /\ TransactionOutputWithRefScript))
-      )
-  (oref /\ (TransactionOutputWithRefScript { output: TransactionOutput tOut })) ←
+    smrm = SignedMerkleRootMint
+      { sidechainParams: uchp.sidechainParams
+      , updateCommitteeHashCurrencySymbol: cs
+      }
+  mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
+  mptRootTokenCurrencySymbol ←
     liftContractM
-      "updateCommittee hash output not found"
-      found
+      (msg "Failed to get mptRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
-  rawDatum ← liftContractM "No inline datum found" (outputDatumDatum tOut.datum)
-  UpdateCommitteeHashDatum datum ← liftContractM "cannot get datum"
+  -- Building the new committee hash / verifying that the new committee was
+  -- signed (doing this offchain makes error messages better)...
+  -------------------------------------------------------------
+  when (null uchp.committeeSignatures)
+    (throwContractError $ msg "Empty Committee")
+
+  let
+    newCommitteeSorted = Array.sort uchp.newCommitteePubKeys
+    newCommitteeHash = aggregateKeys newCommitteeSorted
+
+    curCommitteePubKeys /\ committeeSignatures =
+      Utils.Crypto.normalizeCommitteePubKeysAndSignatures uchp.committeeSignatures
+    curCommitteeHash = aggregateKeys curCommitteePubKeys
+
+  uchmsg ← liftContractM (msg "Failed to get update committee hash message")
+    $ serialiseUchmHash
+    $ UpdateCommitteeHashMessage
+        { sidechainParams: uchp.sidechainParams
+        , newCommitteePubKeys: newCommitteeSorted
+        , previousMerkleRoot: uchp.previousMerkleRoot
+        }
+
+  unless
+    ( Utils.Crypto.verifyMultiSignature 2 3 curCommitteePubKeys uchmsg
+        committeeSignatures
+    )
+    ( throwContractError $ msg
+        "Invalid committee signatures for UpdateCommitteeHashMessage"
+    )
+
+  -- Getting the validator / building the validator hash
+  -------------------------------------------------------------
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams: uchp.sidechainParams
+      , uchAssetClass: assetClass cs tn
+      , mptRootTokenCurrencySymbol
+      }
+  updateValidator ← updateCommitteeHashValidator uch
+  let valHash = Scripts.validatorHash updateValidator
+
+  -- Grabbing the old committee / verifying that it really is the old committee
+  -------------------------------------------------------------
+  lkup ← findUpdateCommitteeHashUtxo uch
+  { index: oref
+  , value: (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+  } ←
+    liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
+
+  rawDatum ←
+    liftContractM (msg "Update committee hash UTxO is missing inline datum")
+      $ outputDatumDatum tOut.datum
+  UpdateCommitteeHashDatum datum ← liftContractM
+    (msg "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
-    (throwContractError "incorrect committee provided")
+    (throwContractError "Incorrect committee provided")
+
+  -- Grabbing the last merkle root reference
+  -------------------------------------------------------------
+  maybePreviousMerkleRoot ← MPTRoot.Utils.findPreviousMptRootTokenUtxo
+    uchp.previousMerkleRoot
+    smrm
+
+  -- Building / submitting the transaction.
+  -------------------------------------------------------------
   let
     newDatum = Datum $ toData
       (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
-    value = assetClassValue uch.uchAssetClass (BigInt.fromInt 1)
+    value = assetClassValue (unwrap uch).uchAssetClass one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCommitteeHash: newCommitteeHash
+          , newCommitteePubKeys: uchp.newCommitteePubKeys
+          , previousMerkleRoot: uchp.previousMerkleRoot
           }
       )
 
@@ -265,45 +187,21 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
             )
         )
         <> Lookups.validator updateValidator
-    constraints = Constraints.mustSpendScriptOutput oref redeemer
-      <> Constraints.mustPayToScript valHash newDatum DatumWitness value
+    constraints = TxConstraints.mustSpendScriptOutput oref redeemer
+      <> TxConstraints.mustPayToScript valHash newDatum DatumWitness value
+      <> case maybePreviousMerkleRoot of
+        Nothing → mempty
+        Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
+          previousMerkleRootORef
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx"
+  bsTx ← liftedM (msg "Failed to balance/sign tx")
     (balanceAndSignTx (reattachDatumsInline ubTx))
   txId ← submit bsTx
-  logInfo' "Submitted updateCommitteeHash transaction!"
+  logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' "updateCommitteeHash transaction submitted successfully!"
+  logInfo' (msg "Update committee hash transaction submitted successfully")
 
-aggregateKeys ∷ Array ByteArray → Either String ByteArray
-aggregateKeys ls =
-  (MT.fromList (toUnfoldable ls) <#> MT.rootHash >>> MT.unRootHash)
-
-{-| Sorting public key and signatures pairs by public keys to be able to efficiently nub them on-chain -}
-sortPubKeysAndSigs ∷
-  ByteArray →
-  Array PubKey →
-  Array Signature →
-  Tuple (Array PubKey) (Array Signature)
-sortPubKeysAndSigs msg pks sigs =
-  pairSigs (Array.toUnfoldable pks) (Array.toUnfoldable sigs)
-    # List.sortBy (\x y → fst x `compare` fst y)
-    # Array.fromFoldable
-    # Array.unzip
-    # rmap Array.catMaybes
-  where
-  pairSigs ∷ List PubKey → List Signature → List (Tuple PubKey (Maybe Signature))
-  pairSigs List.Nil _ = List.Nil
-  pairSigs pks' List.Nil = map (_ /\ Nothing) pks'
-  pairSigs (pk : pks') (sig : sigs')
-    | verifyEd25519Signature pk msg sig =
-        (pk /\ Just sig) : pairSigs pks' sigs'
-    | otherwise =
-        (pk /\ Nothing) : pairSigs pks' (sig : sigs')
-
-{- | Verifies that the non empty array is sorted -}
-isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
-isSorted xss = case Array.tail xss of
-  Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
-  Nothing → false
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }

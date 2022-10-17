@@ -18,22 +18,13 @@ import Plutus.V2.Ledger.Api (
   mkValidatorScript,
  )
 import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
+import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.OffChain.Types (SidechainParams)
 
-{- | 'mkMptRootTokenValidator' always fails.
-
- TODO: There's a security issue here -- someone could steal the token so no
- one else has access to it (and the honest individual would have to inspect
- the blockchain, and mint such token themselves). There was an attempt at one
- point to make this "forward" the token
--}
+-- | 'mkMptRootTokenValidator' always fails.
 {-# INLINEABLE mkMptRootTokenValidator #-}
 mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMptRootTokenValidator _sc _dat _red _ctx = ()
-
--- This should be the following when we get reference inputs
--- > mkMptRootTokenValidator :: SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
--- > mkMptRootTokenValidator _sc _dat _red _ctx = Builtins.error ()
+mkMptRootTokenValidator _sc _dat _red _ctx = Trace.traceError "error 'mkMptRootTokenValidator': illegal attempt to spend"
 
 validator :: SidechainParams -> Validator
 validator sc =

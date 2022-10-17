@@ -27,12 +27,11 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
 import Contract.Value as Value
 import Control.Applicative as Applicative
-import Control.Monad.Error.Class as MonadError
 import Data.BigInt as BigInt
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
-import Effect.Exception as Exception
 import RawScripts as RawScripts
+import Test.Utils as Test.Utils
 
 -- | 'testScenario1' goes as follows:
 --  1.
@@ -150,39 +149,32 @@ testScenario2 = do
     Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   -- 3.
-  void do
-    result ← MonadError.try do
-      utxoMap ← Monad.liftedM "Failed to get utxos at script address" $
-        Utxos.utxosAt validatorAddress
+  Test.Utils.fails do
+    utxoMap ← Monad.liftedM "Failed to get utxos at script address" $
+      Utxos.utxosAt validatorAddress
 
-      Applicative.when (length utxoMap /= 1)
-        $ Monad.throwContractError
-        $ "Expected exactly one PoCInlineDatum script address but got:"
-        <> show utxoMap
+    Applicative.when (length utxoMap /= 1)
+      $ Monad.throwContractError
+      $ "Expected exactly one PoCInlineDatum script address but got:"
+      <> show utxoMap
 
-      FoldableWithIndex.forWithIndex_ utxoMap $ \txIn txOut → void do
-        let
-          validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 69
+    FoldableWithIndex.forWithIndex_ utxoMap $ \txIn txOut → void do
+      let
+        validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 69
 
-          constraints ∷ TxConstraints Void Void
-          constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
+        constraints ∷ TxConstraints Void Void
+        constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
 
-          lookups ∷ ScriptLookups Void
-          lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
-            <> ScriptLookups.validator validator
+        lookups ∷ ScriptLookups Void
+        lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
+          <> ScriptLookups.validator validator
 
-        unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
-          constraints
-        balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-        txId ← Transaction.submit balancedTx
-        Log.logInfo' $ "Transaction submitted: " <> show txId
-        Transaction.awaitTxConfirmed txId
-        Log.logInfo' $ "Transaction confirmed: " <> show txId
-    case result of
-      Right _ →
-        Monad.throwContractError $ Exception.error
-          "Contract should have failed but it didn't."
-      Left _err →
-        pure unit
+      unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+        constraints
+      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
+      txId ← Transaction.submit balancedTx
+      Log.logInfo' $ "Transaction submitted: " <> show txId
+      Transaction.awaitTxConfirmed txId
+      Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   pure unit

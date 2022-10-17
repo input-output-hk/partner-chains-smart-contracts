@@ -186,7 +186,7 @@ data SaveRootParams = SaveRootParams
   { sidechainParams :: SidechainParams
   , merkleRoot :: BuiltinByteString
   , signatures :: [BuiltinByteString]
-  , threshold :: Integer
+  , lastMerkleRoot :: Maybe BuiltinByteString
   , committeePubKeys :: [PubKey] -- Public keys of all committee members
   }
   deriving stock (Generic, Prelude.Show)

@@ -2,6 +2,7 @@ module Test.InitSidechain (testScenario1, testScenario2) where
 
 import Contract.Prelude
 
+import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
@@ -16,18 +17,17 @@ import Data.Set as Set
 import Effect.Exception as Exception
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(..))
+import Test.Utils as Test.Utils
 import Utils.Crypto as Crypto
 
 -- | 'testScenario1' just calls the init sidechain endpoint (which should
 -- succeed!)
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
-  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" Utxos.getWalletUtxos
-  genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
+  Log.logInfo' "InitSidechain 'testScenario1'"
+  genesisUtxo ← Test.Utils.getOwnTransactionInput
   -- generate an initialize committee of @committeeSize@ committee members
-  let committeeSize = 1000
+  let committeeSize = 25
   committeePrvKeys ← sequence $ Array.replicate committeeSize
     Crypto.generatePrivKey
   let
@@ -53,10 +53,11 @@ testScenario2 alice bob = do
   aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
     "Failed to query wallet utxos"
     Utxos.getWalletUtxos
+  genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
+    $ Set.findMin
+    $ Map.keys aliceUtxos
+
   result ← MonadError.try $ Wallet.withKeyWallet bob do
-    genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
-      $ Set.findMin
-      $ Map.keys aliceUtxos
 
     -- generate an initialize committee of @committeeSize@ committee members
     let committeeSize = 1000
