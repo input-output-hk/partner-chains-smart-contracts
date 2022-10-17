@@ -103,7 +103,7 @@ Normally, the producer of a utxo is only required to include the datum hash,
 and not the datum itself (but can optionally do so). In this case, we rely on
 the fact that the producer actually does include the datum; and enforce this
 with 'outputDatum'.
-Note [Inpu has Token and Output has Token]:
+Note [Input has Token and Output has Token]:
 In an older iteration, we used to check if the tx's input has the token, but
 this is implicitly covered when checking if the output spends the token. Hence,
 we don't need to check if the input tx's spends the token which is a nice

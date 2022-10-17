@@ -8,7 +8,13 @@ module MPTRoot
 import Contract.Prelude
 
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.Monad
+  ( Contract
+  , liftContractM
+  , liftedE
+  , liftedM
+  , throwContractError
+  )
 import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
@@ -78,7 +84,9 @@ saveRoot
   maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo previousMerkleRoot
     smrm
 
-  -- Grab the utxo with the current committee hash
+  -- Grab the utxo with the current committee hash / verifying that
+  -- this committee has signed the current merkle root (for better error
+  -- messages)
   ---------------------------------------------------------
   let
     uch = UpdateCommitteeHash
@@ -91,12 +99,26 @@ saveRoot
     liftedM (msg "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
+  mrimHash ← liftContractM (msg "Failed to create MerkleRootInsertionMessage")
+    $ serialiseMrimHash
+    $ MerkleRootInsertionMessage
+        { sidechainParams
+        , merkleRoot
+        , previousMerkleRoot
+        }
+  let
+    committeePubKeys /\ signatures =
+      Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
+
+  unless
+    (Utils.Crypto.verifyMultiSignature 2 3 committeePubKeys mrimHash signatures)
+    $ throwContractError
+    $ msg "Invalid committee signatures for MerkleRootInsertionMessage"
+
   -- Building the transaction
   ---------------------------------------------------------
   let
     value = Value.singleton rootTokenCS merkleRootTokenName one
-    committeePubKeys /\ signatures =
-      Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
 
     redeemer = SignedMerkleRoot
       { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
