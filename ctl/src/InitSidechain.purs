@@ -1,10 +1,10 @@
 -- | 'InitSidechain' implements the endpoint for intializing the sidechain.
 -- There's two ways to initialize the sidechain.
 --
---      1. In a single transaction with 'initSidechain'
+--      1. In a single transaction with 'initSidechain' (the old way)
 --
---      2. In two transactions (to accomodate the time difference between
---      sidechain creation, and the first committee setup):
+--      2. In two transactions. This is the new way which is to accomodate the
+--      time difference between sidechain creation, and the first committee setup:
 --
 --          - Start with 'initSidechainTokens' (returns the sidechain
 --          parameters), which will mint the genesis token for the committee hash
@@ -369,7 +369,7 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
 -- Moreover, it returns the 'SidechainParams' of this sidechain.
 --
 -- To fully initialize the sidechain, this should be used with
--- 'initSidechainCommittee', and should this function _before_
+-- 'initSidechainCommittee', and you should use this function _before_
 -- 'initSidechainCommittee'.
 --
 -- Also, this should pay the committee hash NFT back to your own wallet (see
