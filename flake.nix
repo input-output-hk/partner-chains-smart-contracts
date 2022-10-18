@@ -67,12 +67,7 @@
             src = ./.;
             compiler-nix-name = "ghc8107";
             inherit (plutip) cabalProjectLocal extraSources;
-            modules = plutip.haskellModules ++ [
-              {
-                packages.cardano-crypto-class.components.library.pkgconfig =
-                  pkgs.lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
-              }
-            ];
+            modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
               exactDeps = true;
