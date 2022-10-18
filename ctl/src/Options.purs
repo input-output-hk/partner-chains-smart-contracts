@@ -16,7 +16,6 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.List (toUnfoldable)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt

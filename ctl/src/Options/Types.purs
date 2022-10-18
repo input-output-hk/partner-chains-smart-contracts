@@ -12,7 +12,7 @@ import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Node.Path (FilePath)
-import SidechainParams (InitSidechainParams, SidechainParams)
+import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
 
