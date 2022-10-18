@@ -16,6 +16,7 @@ import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.List (toUnfoldable)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -79,6 +80,10 @@ options maybeConfig = info (helper <*> optSpec)
       , command "deregister"
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
+          )
+      , command "init"
+          ( info (withCommonOpts initSpec)
+              (progDesc "Initialise sidechain")
           )
       ]
 
@@ -267,6 +272,14 @@ options maybeConfig = info (helper <*> optSpec)
     , help "SPO cold verification key value"
     ]
 
+  -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
+  initSpec = Init <$> parseCommitteePubKeys
+  parseCommitteePubKeys = option byteArrayArray $ fold
+    [ long "spo-public-key"
+    , metavar "PUBLIC_KEY"
+    , help "SPO cold verification key value"
+    ]
+
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
 getOptions = do
@@ -300,6 +313,12 @@ transactionInput = maybeReader \txIn →
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
+
+byteArrayArray ∷ ReadM (Array ByteArray)
+byteArrayArray = do
+  -- maybeReader (\s -> if s == "," then Just "," else Nothing)
+  a ← maybeReader hexToByteArray
+  pure $ [ a ]
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt

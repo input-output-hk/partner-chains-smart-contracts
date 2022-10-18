@@ -12,7 +12,7 @@ import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Node.Path (FilePath)
-import SidechainParams (SidechainParams)
+import SidechainParams (InitSidechainParams, SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
 
@@ -55,6 +55,7 @@ data Endpoint
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | GetAddrs
+  | Init (Array ByteArray)
 
 derive instance Generic Endpoint _
 

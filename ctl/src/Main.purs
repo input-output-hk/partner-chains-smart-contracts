@@ -24,6 +24,7 @@ import FUELMintingPolicy
   , passiveBridgeMintParams
   , runFuelMP
   )
+import InitSidechain (initSidechain)
 import Options (getOptions)
 import Options.Types (Endpoint(..))
 
@@ -35,7 +36,6 @@ main = do
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     endpointResp ← case opts.endpoint of
-
       MintAct { amount } →
         runFuelMP opts.scParams
           (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
@@ -88,6 +88,20 @@ main = do
                 getCommitteeCandidateValidator opts.scParams
             ]
         pure $ GetAddrsResp { addresses }
+
+      Init committeePubKeys →
+        let
+          sc = unwrap opts.scParams
+          isc = wrap
+            { initChainId: sc.chainId
+            , initGenesisHash: sc.genesisHash
+            , initUtxo: sc.genesisUtxo
+            -- v only difference between sidechain and initsidechain
+            , initCommittee: committeePubKeys
+            , initMint: sc.genesisMint
+            }
+        in
+          InitResp <<< { sp: _ } <$> initSidechain isc
 
     printEndpointResp endpointResp
 
