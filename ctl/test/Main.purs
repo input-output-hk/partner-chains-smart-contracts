@@ -57,7 +57,8 @@ main = do
         MerkleRootChaining.testScenario2
 
         InitSidechain.testScenario1
-        InitSidechain.testScenario2 alice bob
+        InitSidechain.testScenario2
+        InitSidechain.testScenario3 alice bob
 
     -- Run the plutip tests for the proof of concept tests (note we run these
     -- separately from the actual sidechain tests.)
