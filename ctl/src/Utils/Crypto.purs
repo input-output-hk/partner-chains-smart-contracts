@@ -20,7 +20,6 @@ import Contract.Prim.ByteArray
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.Int as Int
 import Data.Ord as Ord
 import Serialization.Types (PrivateKey, PublicKey)
 import Types (PubKey, Signature)
