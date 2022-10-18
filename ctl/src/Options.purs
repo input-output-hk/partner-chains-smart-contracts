@@ -202,12 +202,25 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
+    thresholdNumerator ← option bigInt $ fold
+      [ long "threshold-numerator"
+      , metavar "INT"
+      , help "The numerator for the ratio of the threshold"
+      ]
+    thresholdDenominator ← option bigInt $ fold
+      [ long "threshold-denominator"
+      , metavar "INT"
+      , help "The denominator for the ratio of the threshold"
+      ]
+
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
         , genesisHash
         , genesisMint
         , genesisUtxo
+        , thresholdNumerator
+        , thresholdDenominator
         }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount

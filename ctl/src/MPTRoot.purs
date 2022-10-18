@@ -111,7 +111,13 @@ saveRoot
       Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
 
   unless
-    (Utils.Crypto.verifyMultiSignature 2 3 committeePubKeys mrimHash signatures)
+    ( Utils.Crypto.verifyMultiSignature
+        ((unwrap sidechainParams).thresholdNumerator)
+        ((unwrap sidechainParams).thresholdDenominator)
+        committeePubKeys
+        mrimHash
+        signatures
+    )
     $ throwContractError
     $ msg "Invalid committee signatures for MerkleRootInsertionMessage"
 

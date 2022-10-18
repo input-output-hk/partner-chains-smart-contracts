@@ -95,6 +95,8 @@ initSidechain (InitSidechainParams isp) = do
       , genesisHash: isp.initGenesisHash
       , genesisUtxo: txIn
       , genesisMint: isp.initMint
+      , thresholdNumerator: isp.initThresholdNumerator
+      , thresholdDenominator: isp.initThresholdDenominator
       }
 
   -- Getting the committee hash minting policy

@@ -122,7 +122,11 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         }
 
   unless
-    ( Utils.Crypto.verifyMultiSignature 2 3 curCommitteePubKeys uchmsg
+    ( Utils.Crypto.verifyMultiSignature
+        ((unwrap uchp.sidechainParams).thresholdNumerator)
+        ((unwrap uchp.sidechainParams).thresholdDenominator)
+        curCommitteePubKeys
+        uchmsg
         committeeSignatures
     )
     ( throwContractError $ msg

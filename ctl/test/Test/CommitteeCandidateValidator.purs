@@ -29,6 +29,8 @@ scParams = SidechainParams
   , genesisHash: hexToByteArrayUnsafe "aabbcc"
   , genesisMint: Nothing
   , genesisUtxo: toTxIn "aabbcc" 0
+  , thresholdNumerator: BigInt.fromInt 2
+  , thresholdDenominator: BigInt.fromInt 3
   }
 
 runRegister ∷ Contract () Unit

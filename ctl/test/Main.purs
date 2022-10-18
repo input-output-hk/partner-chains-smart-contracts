@@ -47,7 +47,8 @@ main = do
 
         FUELMintingPolicy.testScenario
 
-        UpdateCommitteeHash.testScenario
+        UpdateCommitteeHash.testScenario1
+        UpdateCommitteeHash.testScenario2
 
         MPTRoot.testScenario1
         MPTRoot.testScenario2

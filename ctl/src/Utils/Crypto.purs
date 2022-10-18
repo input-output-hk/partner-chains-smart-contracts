@@ -18,6 +18,8 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Data.Array as Array
+import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Int as Int
 import Data.Ord as Ord
 import Serialization.Types (PrivateKey, PublicKey)
@@ -80,7 +82,7 @@ normalizeCommitteePubKeysAndSignatures =
 -- assumption that the signatures are essentially a subsequence of the public
 -- keys); and is generalized to allow arbitrary thresholds to be given.
 verifyMultiSignature ∷
-  Int → Int → Array PubKey → ByteArray → Array Signature → Boolean
+  BigInt → BigInt → Array PubKey → ByteArray → Array Signature → Boolean
 verifyMultiSignature
   thresholdNumerator
   thresholdDenominator
@@ -88,11 +90,12 @@ verifyMultiSignature
   msg
   signatures =
   let
-    go ∷ Int → Array PubKey → Array Signature → Boolean
+    go ∷ BigInt → Array PubKey → Array Signature → Boolean
     go signed pubs sigs =
       let
         ok = signed >
-          ( Int.quot (thresholdNumerator * Array.length pubKeys)
+          ( BigInt.quot
+              (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
               thresholdDenominator
           )
       in
@@ -105,7 +108,7 @@ verifyMultiSignature
                 if verifyEd25519Signature pub msg sig then
                   -- the public key and signature match, so
                   -- we move them both forward..
-                  go (signed + 1) pubs' sigs'
+                  go (signed + one) pubs' sigs'
 
                 else
                   -- otherwise, they don't match so since
@@ -115,7 +118,7 @@ verifyMultiSignature
                   -- @sig@.
                   go signed pubs' sigs
   in
-    isSorted pubKeys && go 0 pubKeys signatures
+    isSorted pubKeys && go zero pubKeys signatures
 
 {- | Verifies that the non empty array is sorted -}
 isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean

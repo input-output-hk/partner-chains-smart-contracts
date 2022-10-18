@@ -13,17 +13,38 @@ newtype SidechainParams = SidechainParams
   , genesisHash ∷ ByteArray
   , genesisMint ∷ Maybe TransactionInput
   , genesisUtxo ∷ TransactionInput
+  ,
+    -- | 'thresholdNumerator' is the numerator of the ratio required for the
+    -- committee to verify that committee has signed something (e.g. updating the
+    -- committee hash, or saving a new merkle root).
+    thresholdNumerator ∷ BigInt
+  ,
+    -- | 'thresholdDenominator' is the denominator of the ratio required for the
+    -- committee to verify that committee has signed something (e.g. updating the
+    -- committee hash, or saving a new merkle root).
+    thresholdDenominator ∷ BigInt
   }
 
 derive instance Generic SidechainParams _
 derive instance Newtype SidechainParams _
 instance ToData SidechainParams where
-  toData (SidechainParams { chainId, genesisHash, genesisMint, genesisUtxo }) =
+  toData
+    ( SidechainParams
+        { chainId
+        , genesisHash
+        , genesisMint
+        , genesisUtxo
+        , thresholdNumerator
+        , thresholdDenominator
+        }
+    ) =
     Constr zero
       [ toData chainId
       , toData genesisHash
       , toData genesisMint
       , toData genesisUtxo
+      , toData thresholdNumerator
+      , toData thresholdDenominator
       ]
 
 instance Show SidechainParams where
@@ -39,6 +60,8 @@ newtype InitSidechainParams = InitSidechainParams
   , -- | 'initCommittee' is the initial committee of the sidechain
     initCommittee ∷ Array PubKey
   , initMint ∷ Maybe TransactionInput
+  , initThresholdNumerator ∷ BigInt
+  , initThresholdDenominator ∷ BigInt
   }
 
 derive instance Generic InitSidechainParams _
@@ -46,7 +69,14 @@ derive instance Newtype InitSidechainParams _
 instance ToData InitSidechainParams where
   toData
     ( InitSidechainParams
-        { initChainId, initGenesisHash, initUtxo, initCommittee, initMint }
+        { initChainId
+        , initGenesisHash
+        , initUtxo
+        , initCommittee
+        , initMint
+        , initThresholdNumerator
+        , initThresholdDenominator
+        }
     ) =
     Constr zero
       [ toData initChainId
@@ -54,6 +84,8 @@ instance ToData InitSidechainParams where
       , toData initUtxo
       , toData initCommittee
       , toData initMint
+      , toData initThresholdNumerator
+      , toData initThresholdDenominator
       ]
 
 instance Show InitSidechainParams where
