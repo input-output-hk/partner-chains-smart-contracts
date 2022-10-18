@@ -8,11 +8,23 @@
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     ### Start of Maxim's cool trick to get `serialiseData` to work
-    plutip.url = "github:mlabs-haskell/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9";
     cardano-transaction-lib.inputs = {
       plutip.follows = "plutip";
       haskell-nix.follows = "plutip/haskell-nix";
       nixpkgs.follows = "plutip/nixpkgs";
+    };
+    bot-plutus-interface = {
+      url = github:hyphenrf/bot-plutus-interface/cardano-base-patch;
+      inputs.cardano-base.url = github:input-output-hk/cardano-base/c16a1ebf60a27051303ec4ea76495311e3d2c4b1;
+    };
+    plutip = {
+      url = github:mlabs-haskell/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9;
+      inputs = {
+        bot-plutus-interface.follows = "bot-plutus-interface";
+        haskell-nix.follows = "bot-plutus-interface/haskell-nix";
+        iohk-nix.follows = "bot-plutus-interface/iohk-nix";
+        nixpkgs.follows = "bot-plutus-interface/nixpkgs";
+      };
     };
     ### End of Maxim's cool trick to get `serialiseData` to work
 
@@ -55,7 +67,12 @@
             src = ./.;
             compiler-nix-name = "ghc8107";
             inherit (plutip) cabalProjectLocal extraSources;
-            modules = plutip.haskellModules;
+            modules = plutip.haskellModules ++ [
+              {
+                packages.cardano-crypto-class.components.library.pkgconfig =
+                  pkgs.lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
+              }
+            ];
             shell = {
               withHoogle = true;
               exactDeps = true;
