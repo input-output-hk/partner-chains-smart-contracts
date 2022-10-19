@@ -335,16 +335,16 @@ options maybeConfig = info (helper <*> optSpec)
   -- used in both @saveRootSpec@ and @committeeHashSpec@).
   parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
   parsePreviousMerkleRoot =
-            optional
-              ( option
-                  (byteArray)
-                  ( fold
-                      [ long "previous-merkle-root"
-                      , metavar "MERKLE_ROOT"
-                      , help "Hex encoded previous merkle root if it exists"
-                      ]
-                  )
-              )
+    optional
+      ( option
+          (byteArray)
+          ( fold
+              [ long "previous-merkle-root"
+              , metavar "MERKLE_ROOT"
+              , help "Hex encoded previous merkle root if it exists"
+              ]
+          )
+      )
 
   -- | 'parseCommitteeSignatures' gives the options for parsing the current
   -- committees' signatures. This is used in both @saveRootSpec@ and
