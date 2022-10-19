@@ -100,16 +100,35 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       (msg "Failed to get mptRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
-  -- Building the new committee hash
+  -- Building the new committee hash / verifying that the new committee was
+  -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
-  when (null uchp.committeeSignatures) (throwContractError "Empty Committee")
-
-  let newCommitteeHash = aggregateKeys $ Array.sort uchp.newCommitteePubKeys
+  when (null uchp.committeeSignatures)
+    (throwContractError $ msg "Empty Committee")
 
   let
+    newCommitteeSorted = Array.sort uchp.newCommitteePubKeys
+    newCommitteeHash = aggregateKeys newCommitteeSorted
+
     curCommitteePubKeys /\ committeeSignatures =
       Utils.Crypto.normalizeCommitteePubKeysAndSignatures uchp.committeeSignatures
     curCommitteeHash = aggregateKeys curCommitteePubKeys
+
+  uchmsg ← liftContractM (msg "Failed to get update committee hash message")
+    $ serialiseUchmHash
+    $ UpdateCommitteeHashMessage
+        { sidechainParams: uchp.sidechainParams
+        , newCommitteePubKeys: newCommitteeSorted
+        , previousMerkleRoot: uchp.previousMerkleRoot
+        }
+
+  unless
+    ( Utils.Crypto.verifyMultiSignature 2 3 curCommitteePubKeys uchmsg
+        committeeSignatures
+    )
+    ( throwContractError $ msg
+        "Invalid committee signatures for UpdateCommitteeHashMessage"
+    )
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------
@@ -137,7 +156,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     (msg "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
-    (throwContractError "incorrect committee provided")
+    (throwContractError "Incorrect committee provided")
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
