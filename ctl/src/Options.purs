@@ -88,7 +88,7 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
           )
-      , command "committeeHash"
+      , command "committee-hash"
           ( info (withCommonOpts committeeHashSpec)
               (progDesc "Update the committee hash")
           )
