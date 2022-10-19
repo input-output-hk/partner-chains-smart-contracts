@@ -139,7 +139,9 @@ testScenario2 = do
   logInfo' "UpdateCommitteeHash 'testScenario2'"
   genesisUtxo ← Test.Utils.getOwnTransactionInput
   let
-    keyCount = 2 -- woohoo!! smaller committee size!!
+    keyCount = 2
+  -- woohoo!! smaller committee size so it's easy to remove the majority
+  -- sign below, and make this test case fail...
   initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let
     initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
