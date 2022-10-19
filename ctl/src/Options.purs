@@ -100,7 +100,7 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts committeeHashSpec)
               (progDesc "Update the committee hash")
           )
-      , command "saveRoot"
+      , command "save-root"
           ( info (withCommonOpts saveRootSpec)
               (progDesc "Saving a new merkle root")
           )
