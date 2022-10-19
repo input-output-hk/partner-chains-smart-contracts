@@ -33,12 +33,10 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Control.Monad.Error.Class as MonadError
 import Data.Map as Map
-import Effect.Exception as Exception
 import Hashing as Hashing
 import RawScripts as RawScripts
-import Test.Utils as Utils
+import Test.Utils as Test.Utils
 
 {- | 'testScenario1' runs the following contract (which should succeed):
 1. Grabs the validators for
@@ -135,9 +133,10 @@ testScenario1 = do
 
   -- 3.
   void do
-    toReferenceIn /\ toReferenceOut ← Utils.getUniqueUtxoAt
+    toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
       toReferenceValidatorAddress
-    referenceIn /\ referenceOut ← Utils.getUniqueUtxoAt referenceValidatorAddress
+    referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+      referenceValidatorAddress
 
     let
       toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData $ unit
@@ -239,48 +238,41 @@ testScenario2 = do
     Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   -- 3.
-  void do
-    result ← MonadError.try do
-      toReferenceIn /\ toReferenceOut ← Utils.getUniqueUtxoAt
-        toReferenceValidatorAddress
-      referenceIn /\ referenceOut ← Utils.getUniqueUtxoAt
-        referenceValidatorAddress
+  Test.Utils.fails do
+    toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
+      toReferenceValidatorAddress
+    referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+      referenceValidatorAddress
 
-      let
-        toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData $ unit
-        referenceValidatorRedeemer = Redeemer $ PlutusData.toData $
-          referenceScriptHash
+    let
+      toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData $ unit
+      referenceValidatorRedeemer = Redeemer $ PlutusData.toData $
+        referenceScriptHash
 
-        constraints ∷ TxConstraints Void Void
-        constraints =
+      constraints ∷ TxConstraints Void Void
+      constraints =
+        -- START: of line that changes in 3.
+        TxConstraints.mustSpendScriptOutput referenceIn
+          referenceValidatorRedeemer
           -- START: of line that changes in 3.
-          TxConstraints.mustSpendScriptOutput referenceIn
-            referenceValidatorRedeemer
-            -- START: of line that changes in 3.
-            <> TxConstraints.mustSpendScriptOutput toReferenceIn
-              toReferenceValidatorRedeemer
-            <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
-            <> TxConstraints.mustIncludeDatum referenceValidatorDat
+          <> TxConstraints.mustSpendScriptOutput toReferenceIn
+            toReferenceValidatorRedeemer
+          <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
+          <> TxConstraints.mustIncludeDatum referenceValidatorDat
 
-        lookups ∷ ScriptLookups Void
-        lookups =
-          ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
-            <> ScriptLookups.unspentOutputs
-              (Map.singleton toReferenceIn toReferenceOut)
-            <> ScriptLookups.validator toReferenceValidator
+      lookups ∷ ScriptLookups Void
+      lookups =
+        ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
+          <> ScriptLookups.unspentOutputs
+            (Map.singleton toReferenceIn toReferenceOut)
+          <> ScriptLookups.validator toReferenceValidator
 
-      unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
-        constraints
-      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-      txId ← Transaction.submit balancedTx
-      Log.logInfo' $ "Transaction submitted: " <> show txId
-      Transaction.awaitTxConfirmed txId
-      Log.logInfo' $ "Transaction confirmed: " <> show txId
-
-    case result of
-      Right _ →
-        Monad.throwContractError $ Exception.error
-          "Contract should have failed but it didn't."
-      Left _err → pure unit
+    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+      constraints
+    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
+    txId ← Transaction.submit balancedTx
+    Log.logInfo' $ "Transaction submitted: " <> show txId
+    Transaction.awaitTxConfirmed txId
+    Log.logInfo' $ "Transaction confirmed: " <> show txId
 
   pure unit

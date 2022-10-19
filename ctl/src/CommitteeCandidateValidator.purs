@@ -25,7 +25,6 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
@@ -82,15 +81,6 @@ getCommitteeCandidateValidator sp = do
     rawCommitteeCandidateValidator
     PlutusScriptV2
   liftedE (applyArgs ccvUnapplied [ toData sp ])
-
-newtype SaveRootParams = SaveRootParams
-  { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ ByteArray
-  , signatures ∷ Array Signature
-  , threshold ∷ BigInt.BigInt
-  , committeePubKeys ∷
-      Array PubKey -- Public keys of all committee members
-  }
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash

@@ -8,13 +8,13 @@ import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Typed.Scripts (ValidatorTypes (..))
-import Ledger.Value (AssetClass, TokenName)
+import Ledger.Value (AssetClass, CurrencySymbol, TokenName)
 import Plutus.V2.Ledger.Contexts (TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import PlutusTx.Prelude (BuiltinByteString, Eq ((==)), Integer)
+import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
-import TrustlessSidechain.OffChain.Types (SidechainParams', SidechainPubKey)
+import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainParams', SidechainPubKey)
 import Prelude qualified
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
@@ -29,14 +29,23 @@ data MerkleTreeEntry = MerkleTreeEntry
     -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- of bech32
     mteRecipient :: BuiltinByteString
-  , -- | sidechain epoch for which merkle tree was created
-    mteSidechainEpoch :: Integer
-  , -- | 'mteHash' will be removed later TODO! Currently, we have this here to
-    -- help test the system.
-    mteHash :: BuiltinByteString
+  , -- | the previous merkle root to ensure that the hashed entry is unique
+    mtePreviousMerkleRoot :: Maybe BuiltinByteString
   }
 
 makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
+
+{- | 'MerkleRootInsertionMessage' is a data type for which committee members
+ create signatures for
+ >  blake2b(cbor(MerkleRootInsertionMessage))
+-}
+data MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { mrimSidechainParams :: SidechainParams
+  , mrimMerkleRoot :: BuiltinByteString
+  , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+
+makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
@@ -112,12 +121,14 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatu
  committee
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { -- | The current committee's signatures for the 'newCommitteeHash'
+  { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
     committeeSignatures :: [BuiltinByteString]
   , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [PubKey]
-  , -- | 'newCommitteeHash' is the hash of the new committee
-    newCommitteeHash :: BuiltinByteString
+    committeePubKeys :: [SidechainPubKey]
+  , -- | 'newCommitteePubKeys' is the hash of the new committee
+    newCommitteePubKeys :: [SidechainPubKey]
+  , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
+    previousMerkleRoot :: Maybe BuiltinByteString
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
@@ -131,17 +142,32 @@ instance ValidatorTypes UpdatingCommitteeHash where
   type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
   type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
 
--- | 'UpdateCommitteeHash' is used as the parameter for the contract.
-newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { -- | 'cToken' is the 'AssetClass' of the NFT that is used to
+-- | 'UpdateCommitteeHash' is used as the parameter for the validator.
+data UpdateCommitteeHash = UpdateCommitteeHash
+  { cSidechainParams :: SidechainParams
+  , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     cToken :: AssetClass
+  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding mpt
+    -- root token. This is needed for verifying that the previous merkle root is verified.
+    cMptRootTokenCurrencySymbol :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
+  deriving stock (Prelude.Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
+
+data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
+  { uchmSidechainParams :: SidechainParams
+  , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
+    -- be sorted lexicographically (recall that we can trust the bridge, so it
+    -- should do this for us
+    uchmNewCommitteePubKeys :: [SidechainPubKey]
+  , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+PlutusTx.makeLift ''UpdateCommitteeHashMessage
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
 -- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
 data GenesisMintCommitteeHash = GenesisMintCommitteeHash
@@ -155,12 +181,16 @@ data GenesisMintCommitteeHash = GenesisMintCommitteeHash
 
 PlutusTx.makeLift ''GenesisMintCommitteeHash
 
+-- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot :: BuiltinByteString
-  , -- , lastMerkleRoot :: BuiltinByteString
+  { -- | New merkle root to insert.
+    merkleRoot :: BuiltinByteString
+  , -- | Previous merkle root (if it exists)
+    previousMerkleRoot :: Maybe BuiltinByteString
+  , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [BuiltinByteString]
-  , threshold :: Integer -- Natural: the number of committee pubkeys needed to sign off
-  , committeePubKeys :: [PubKey] -- Public keys of all committee members
+  , -- | Lexicographically sorted public keys of all committee members
+    committeePubKeys :: [SidechainPubKey]
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]

@@ -109,7 +109,8 @@ updateCommitteeHash uchp =
     uch :: UpdateCommitteeHash
     uch =
       UpdateCommitteeHash
-        { cToken =
+        { sidechainParams = sidechainParams uchp
+        , cToken =
             UpdateCommitteeHash.committeeHashAssetClass
               InitCommitteeHashMint
                 { icTxOutRef =
