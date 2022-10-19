@@ -1,36 +1,26 @@
 strict digraph { 
   node [shape=record]
 
-//  pubKey [
-//    label = "UTxO with datum | ATMS verification key"
-//    ]
-
   pubKey [
-    label = "UTxO with datum | committee hash"
-    ]
+    label = "UTxO with datum |
+        committee hash\l
+        sidechain epoch\l
+    "]
 
   merkleRoot [
     label = "UTxO with datum | Merkle root"
     ]
 
-//  newPubKey [
-//    label = "UTxO with datum | ATMS verification key"
-//    ]
-
   newPubKey [
-    label = "UTxO with datum | committee hash"
-    ]
+    label = "UTxO with datum |
+        committee hash\l
+        sidechain epoch\l
+    "]
 
   tx [label = "Verification key update tx |
         redeemer: UpdateCommitteeRedeemer\l
         tx in: committee hash UTxO\l
       "]
-
-//  tx [label = "Verification key update tx |
-//        redeemer: signature\l
-//        tx in: ATMS vkey UTxO\l
-//      "]
-//
 
   merkleRoot -> tx [style = dashed, label = "references"]
   pubKey -> tx [label = "consumes"]

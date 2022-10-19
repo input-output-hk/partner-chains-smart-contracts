@@ -39,8 +39,13 @@ updateCommitteeHash
   , previousMerkleRoot
   } = void do
   let
-    currentCommitteePubKeys = Array.sort $ map toPubKeyUnsafe
-      currentCommitteePrvKeys
+    -- Order the private keys by lexicographical ordering of the signatures, so
+    -- it's easy to give the sorted pubkey with its associated signature.
+    currentCommitteePubKeys /\ currentCommitteePrvKeys' =
+      Array.unzip
+        $ Array.sortWith fst
+        $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
+
     newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
 
   committeeMessage ←
@@ -55,7 +60,7 @@ updateCommitteeHash
   let
     committeeSignatures = Array.zip
       currentCommitteePubKeys
-      (Just <$> multiSign currentCommitteePrvKeys committeeMessage)
+      (Just <$> multiSign currentCommitteePrvKeys' committeeMessage)
 
     uchp =
       UpdateCommitteeHashParams
