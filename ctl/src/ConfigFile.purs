@@ -30,6 +30,8 @@ optExample =
           { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
           , index: UInt.fromInt 2
           }
+      , thresholdNumerator: Just 2
+      , thresholdDenominator: Just 3
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

@@ -177,7 +177,9 @@ You can also provide a configuration in `$CWD/config.json` in the following form
     "chainId": 123,
     "genesisHash": "11223344aabbcc",
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
-    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
+    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
+    "thresholdNumerator": 2,
+    "thresholdDenominator": 3
   },
   "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",

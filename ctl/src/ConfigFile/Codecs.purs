@@ -36,6 +36,8 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
+        , thresholdNumerator: CAC.maybe CA.int
+        , thresholdDenominator: CAC.maybe CA.int
         }
     )
   runtimeConfigCodec =

@@ -33,6 +33,8 @@ type Config =
         , genesisHash ∷ Maybe ByteArray
         , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
+        , thresholdNumerator ∷ Maybe Int
+        , thresholdDenominator ∷ Maybe Int
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath

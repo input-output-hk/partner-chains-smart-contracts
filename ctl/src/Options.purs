@@ -50,6 +50,13 @@ import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types.ByteArray (ByteArray, hexToByteArray)
 import Utils.Logging (environment, fileLogger)
+import Data.String.Regex (Regex)
+import Data.String.Regex as Regex
+import Data.String.Regex.Flags as Regex.Flags
+import Data.String.Regex.Unsafe as Regex.Unsafe
+import Control.Bind as Bind
+import Data.Array.NonEmpty as NonEmpty
+import Control.Alternative ((<|>))
 
 -- | Argument option parser for ctl-main
 options ∷ Maybe Config → ParserInfo Options
@@ -202,17 +209,43 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
-    thresholdNumerator ← option bigInt $ fold
-      [ long "threshold-numerator"
-      , metavar "INT"
-      , help "The numerator for the ratio of the threshold"
-      ]
-    thresholdDenominator ← option bigInt $ fold
-      [ long "threshold-denominator"
-      , metavar "INT"
-      , help "The denominator for the ratio of the threshold"
-      ]
-
+    {thresholdNumerator, thresholdDenominator} <-
+        option thresholdFraction
+            (fold
+              [ long "threshold"
+              , metavar "INT/INT"
+              , help "The ratio of the threshold"
+              , maybe mempty value $ do
+                    numerator <- maybeConfig >>= _.sidechainParameters >>= _.thresholdNumerator
+                    denominator <- maybeConfig >>= _.sidechainParameters >>= _.thresholdDenominator
+                    pure
+                        { thresholdNumerator: BigInt.fromInt numerator
+                        , thresholdDenominator:BigInt.fromInt denominator
+                        }
+              ]
+            )
+        <|>
+        (  (\thresholdNumerator thresholdDenominator ->
+                {thresholdNumerator, thresholdDenominator}
+            ) <$>
+            (option bigInt $ fold
+              [ long "threshold-numerator"
+              , metavar "INT"
+              , help "The numerator for the ratio of the threshold"
+              , maybe mempty value
+                (BigInt.fromInt <$> (maybeConfig >>= _.sidechainParameters >>= _.thresholdNumerator))
+              ]
+              )
+              <*>
+            (option bigInt $ fold
+              [ long "threshold-denominator"
+              , metavar "INT"
+              , help "The denominator for the ratio of the threshold"
+              , maybe mempty value
+                (BigInt.fromInt <$> (maybeConfig >>= _.sidechainParameters >>= _.thresholdDenominator))
+              ]
+              )
+          )
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
@@ -333,3 +366,31 @@ sidechainAddress = maybeReader $ \str →
     [ "", hex ] → hexToByteArray hex
     [ hex ] → hexToByteArray hex
     _ → Nothing
+
+-- | `thresholdFraction` is the CLI parser for `parseThresholdFraction`.
+thresholdFraction :: ReadM {thresholdNumerator ::BigInt, thresholdDenominator :: BigInt}
+thresholdFraction = maybeReader $ \str →do
+    {thresholdNumerator, thresholdDenominator} <- parseThresholdFraction str
+    thresholdNumerator' ← BigInt.fromString thresholdNumerator
+    thresholdDenominator' ← BigInt.fromString thresholdDenominator
+    pure $ {thresholdNumerator: thresholdNumerator', thresholdDenominator: thresholdDenominator'}
+
+-- | `parseThresholdFraction` parses the threshold represented as a fraction. See
+-- | `thresholdRegex` for more details.
+parseThresholdFraction :: String -> Maybe {thresholdNumerator ::String, thresholdDenominator :: String}
+parseThresholdFraction input = do
+    matches ← Regex.match thresholdRegex input
+    thresholdNumerator<-Bind.join $ NonEmpty.index matches 1
+    thresholdDenominator<-Bind.join $ NonEmpty.index matches 2
+    pure $ {thresholdNumerator, thresholdDenominator}
+
+-- | `thresholdRegex` parses the threshold i.e., an integer followed by a
+-- | slash, followed by integer.
+-- | As a slightly more readable regex, we are parsing
+-- | > [-+]?[0-9]+/[-+]?[0-9]+
+-- Note: we accept negatives and positives, and when the denominator is 0...
+-- not sure why you'd want that, but we accept it anyways...
+thresholdRegex :: Regex
+thresholdRegex = Regex.Unsafe.unsafeRegex
+    """^([-+]?[0-9]+)/([-+]?[0-9]+)$"""
+    Regex.Flags.ignoreCase
