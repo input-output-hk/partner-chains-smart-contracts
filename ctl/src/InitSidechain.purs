@@ -31,7 +31,8 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( TransactionOutputWithRefScript(..)
+  ( TransactionHash
+  , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTx
   , submit
@@ -464,7 +465,10 @@ this will do the following:
 
 For details, see 'initSidechainTokens' and 'initSidechainCommittee'.
 -}
-initSidechain ∷ InitSidechainParams → Contract () SidechainParams
+initSidechain ∷
+  InitSidechainParams →
+  Contract ()
+    { transactionId ∷ TransactionHash, sidechainParams ∷ SidechainParams }
 initSidechain isp = do
   -- Warning: this code is essentially duplicated code from
   -- 'initSidechainTokens' and 'initSidechainCommittee'....
@@ -513,7 +517,10 @@ initSidechain isp = do
   logInfo' $ msg
     "Initialise sidechain tokens transaction submitted successfully."
 
-  pure $ toSidechainParams isp
+  pure
+    { transactionId: txId
+    , sidechainParams: toSidechainParams isp
+    }
 
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
