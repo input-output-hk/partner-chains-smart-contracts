@@ -274,9 +274,9 @@ options maybeConfig = info (helper <*> optSpec)
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = Init <$> parseCommitteePubKeys
   parseCommitteePubKeys = option byteArrayArray $ fold
-    [ long "committee-public-keys"
+    [ long "committee-public-key"
     , metavar "PUBLIC_KEY"
-    , help "Public keys for committee members at sidechain initialisation"
+    , help "Public key for a committee member at sidechain initialisation"
     ]
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
