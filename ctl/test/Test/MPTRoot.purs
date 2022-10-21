@@ -107,7 +107,7 @@ testScenario1 = do
       , initCommittee: initCommitteePubKeys
       }
 
-  sidechainParams ← InitSidechain.initSidechain initSidechainParams
+  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
   -- Building / saving the root that pays lots of FUEL to this wallet :)
   ----------------------------------------------------------------------
@@ -201,7 +201,7 @@ testScenario2 = do
       , initCommittee: initCommitteePubKeys
       }
 
-  sidechainParams ← InitSidechain.initSidechain initSidechainParams
+  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
   -- Building / saving the root that pays lots of FUEL to this wallet :)
   ----------------------------------------------------------------------

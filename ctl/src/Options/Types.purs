@@ -61,6 +61,7 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe ByteArray
       }
   | GetAddrs
+  | Init { committeePubKeys ∷ List ByteArray }
 
 derive instance Generic Endpoint _
 

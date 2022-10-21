@@ -74,7 +74,11 @@ options maybeConfig = info (helper <*> optSpec)
   where
   optSpec =
     hsubparser $ fold
-      [ command "addresses"
+      [ command "init"
+          ( info (withCommonOpts initSpec)
+              (progDesc "Initialise sidechain")
+          )
+      , command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
           )
@@ -324,6 +328,15 @@ options maybeConfig = info (helper <*> optSpec)
                   )
               )
       )
+  -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
+  initSpec = ado
+    committeePubKeys ← many $ option byteArray $ fold
+      [ long "committee-pub-key"
+      , metavar "PUBLIC_KEY"
+      , help "Public key for a committee member at sidechain initialisation"
+      ]
+    in
+      Init { committeePubKeys }
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
