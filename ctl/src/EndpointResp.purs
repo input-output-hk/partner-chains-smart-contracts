@@ -10,7 +10,7 @@ import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
-import SidechainParams (SidechainParams)
+import SidechainParams (SidechainParams, scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
@@ -58,6 +58,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "Init"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
           ]
 
 -- | Encode the endpoint response to a json object
