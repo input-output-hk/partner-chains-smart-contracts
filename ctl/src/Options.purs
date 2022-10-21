@@ -37,6 +37,7 @@ import Options.Applicative
   , info
   , int
   , long
+  , many
   , maybeReader
   , metavar
   , option
@@ -272,12 +273,14 @@ options maybeConfig = info (helper <*> optSpec)
     ]
 
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
-  initSpec = Init <$> parseCommitteePubKeys
-  parseCommitteePubKeys = option byteArrayArray $ fold
-    [ long "committee-public-key"
-    , metavar "PUBLIC_KEY"
-    , help "Public key for a committee member at sidechain initialisation"
-    ]
+  initSpec = ado
+    committeePubKeys ← many $ option byteArray $ fold
+      [ long "committee-pub-key"
+      , metavar "PUBLIC_KEY"
+      , help "Public key for a committee member at sidechain initialisation"
+      ]
+    in
+      Init { committeePubKeys }
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
@@ -312,12 +315,6 @@ transactionInput = maybeReader \txIn →
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
-
-byteArrayArray ∷ ReadM (Array ByteArray)
-byteArrayArray = do
-  -- maybeReader (\s -> if s == "," then Just "," else Nothing)
-  a ← maybeReader hexToByteArray
-  pure $ [ a ]
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt

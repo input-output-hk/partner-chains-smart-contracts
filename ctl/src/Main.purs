@@ -18,12 +18,9 @@ import Contract.Monad
   , runContract
   )
 import Contract.Scripts (Validator, validatorHash)
+import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
-import FUELMintingPolicy
-  ( FuelParams(Burn)
-  , passiveBridgeMintParams
-  , runFuelMP
-  )
+import FUELMintingPolicy (FuelParams(Burn), passiveBridgeMintParams, runFuelMP)
 import InitSidechain (initSidechain)
 import Options (getOptions)
 import Options.Types (Endpoint(..))
@@ -89,7 +86,7 @@ main = do
             ]
         pure $ GetAddrsResp { addresses }
 
-      Init committeePubKeys →
+      Init { committeePubKeys } → do
         let
           sc = unwrap opts.scParams
           isc = wrap
@@ -97,11 +94,12 @@ main = do
             , initGenesisHash: sc.genesisHash
             , initUtxo: sc.genesisUtxo
             -- v only difference between sidechain and initsidechain
-            , initCommittee: committeePubKeys
+            , initCommittee: List.toUnfoldable committeePubKeys
             , initMint: sc.genesisMint
             }
-        in
-          InitResp <<< { sp: _ } <$> initSidechain isc
+        { transactionId, sidechainParams } ← initSidechain isc
+
+        pure $ InitResp { transactionId: unwrap transactionId, sidechainParams }
 
     printEndpointResp endpointResp
 

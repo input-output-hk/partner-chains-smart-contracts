@@ -19,7 +19,7 @@ data EndpointResp
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
   | GetAddrsResp { addresses ∷ Array (Tuple String String) }
-  | InitResp { sp ∷ SidechainParams }
+  | InitResp { transactionId ∷ ByteArray, sidechainParams ∷ SidechainParams }
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
@@ -53,8 +53,12 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "addresses" /\ J.fromObject
             (Object.fromFoldable (map (rmap J.fromString) addresses))
         ]
-    -- Is it worth returning the SidechainParams here?
-    InitResp _sp → J.fromObject $ Object.fromFoldable []
+    InitResp { transactionId, sidechainParams } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "Init"
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp ∷ EndpointResp → J.Json
