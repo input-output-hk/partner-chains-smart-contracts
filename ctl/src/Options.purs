@@ -61,7 +61,11 @@ options maybeConfig = info (helper <*> optSpec)
   where
   optSpec =
     hsubparser $ fold
-      [ command "addresses"
+      [ command "init"
+          ( info (withCommonOpts initSpec)
+              (progDesc "Initialise sidechain")
+          )
+      , command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
           )
@@ -80,10 +84,6 @@ options maybeConfig = info (helper <*> optSpec)
       , command "deregister"
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
-          )
-      , command "init"
-          ( info (withCommonOpts initSpec)
-              (progDesc "Initialise sidechain")
           )
       ]
 
