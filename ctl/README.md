@@ -170,7 +170,7 @@ nix run .#ctl-main -- deregister \
 #### 3.1.5. Committee hash update
 
 ```
-nix run .#ctl-main -- committeeHash \
+nix run .#ctl-main -- committee-hash \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
@@ -190,7 +190,7 @@ nix run .#ctl-main -- committeeHash \
 #### 3.1.6. Save merkle root
 
 ```
-nix run .#ctl-main -- saveRoot \
+nix run .#ctl-main -- save-root \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \

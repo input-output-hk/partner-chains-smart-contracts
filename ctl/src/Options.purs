@@ -20,11 +20,17 @@ import Contract.Config
   )
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
+import Control.Bind as Bind
+import Data.Array.NonEmpty as NonEmpty
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)
 import Data.String (Pattern(Pattern), split)
+import Data.String.Regex (Regex)
+import Data.String.Regex as Regex
+import Data.String.Regex.Flags as Regex.Flags
+import Data.String.Regex.Unsafe as Regex.Unsafe
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
@@ -70,7 +76,11 @@ options maybeConfig = info (helper <*> optSpec)
   where
   optSpec =
     hsubparser $ fold
-      [ command "addresses"
+      [ command "init"
+          ( info (withCommonOpts initSpec)
+              (progDesc "Initialise sidechain")
+          )
+      , command "addresses"
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
           )
@@ -90,11 +100,11 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
           )
-      , command "committeeHash"
+      , command "committee-hash"
           ( info (withCommonOpts committeeHashSpec)
               (progDesc "Update the committee hash")
           )
-      , command "saveRoot"
+      , command "save-root"
           ( info (withCommonOpts saveRootSpec)
               (progDesc "Saving a new merkle root")
           )
@@ -374,14 +384,15 @@ options maybeConfig = info (helper <*> optSpec)
   -- used in both @saveRootSpec@ and @committeeHashSpec@).
   parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
   parsePreviousMerkleRoot =
-    option
-      (Just <$> byteArray)
-      ( fold
-          [ long "previous-merkle-root"
-          , metavar "MERKLE_ROOT"
-          , value Nothing
-          , help "Hex encoded previous merkle root if it exists"
-          ]
+    optional
+      ( option
+          (byteArray)
+          ( fold
+              [ long "previous-merkle-root"
+              , metavar "MERKLE_ROOT"
+              , help "Hex encoded previous merkle root if it exists"
+              ]
+          )
       )
 
   -- | 'parseCommitteeSignatures' gives the options for parsing the current
@@ -409,6 +420,15 @@ options maybeConfig = info (helper <*> optSpec)
       )
       -}
       )
+  -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
+  initSpec = ado
+    committeePubKeys ← many $ option byteArray $ fold
+      [ long "committee-pub-key"
+      , metavar "PUBLIC_KEY"
+      , help "Public key for a committee member at sidechain initialisation"
+      ]
+    in
+      Init { committeePubKeys }
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
@@ -492,12 +512,21 @@ parsePubKeyAndSignature ∷
     , -- hex encoded signature (if it exists)
       signature ∷ Maybe String
     }
-parsePubKeyAndSignature = parsePubKeyAndSignatureImpl Nothing Just
+parsePubKeyAndSignature input = do
+  matches ← Regex.match pubKeyAndSignatureRegex input
+  pubKey ← Bind.join $ NonEmpty.index matches 1
+  signature ← NonEmpty.index matches 2
+  pure $ { pubKey, signature }
 
--- See `Options.js` for details.
-foreign import parsePubKeyAndSignatureImpl ∷
-  ∀ c.
-  Maybe c →
-  (c → Maybe c) →
-  String →
-  Maybe { pubKey ∷ String, signature ∷ Maybe String }
+-- Regexes tend to be a bit unreadable.. As a EBNF grammar, we're matching:
+--   > pubKeyAndSig
+--   >      -> hexStr [ ':' [hexStr]]
+-- where `hexStr` is a a sequence of non empty hex digits of even length (the even
+-- length requirement is imposed by 'Contract.Prim.ByteArray.hexToByteArray').
+-- i.e., we are parsing a `hexStr` followed optionally by a colon ':', and
+-- followed optionally by another non empty `hexStr`.
+pubKeyAndSignatureRegex ∷ Regex
+pubKeyAndSignatureRegex =
+  Regex.Unsafe.unsafeRegex
+    """^((?:[0-9a-f]{2})+)(?::((?:[0-9a-f]{2})+)?)?$"""
+    Regex.Flags.ignoreCase

@@ -76,6 +76,7 @@ data Endpoint
       , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
       }
   | GetAddrs
+  | Init { committeePubKeys ∷ List ByteArray }
 
 derive instance Generic Endpoint _
 
