@@ -14,6 +14,7 @@ import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MerkleTree as MerkleTree
+import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
@@ -63,6 +64,8 @@ main = do
 
         PoCSerialiseData.testScenario1
         PoCSerialiseData.testScenario2
+
+        PoCECDSA.testScenario
 
 -- print nicer failing tests that don't have a stack trace and don't halt the program
 fails ∷ Contract () Unit → Contract () Unit

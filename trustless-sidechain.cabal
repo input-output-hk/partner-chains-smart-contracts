@@ -92,6 +92,7 @@ library
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator
+    TrustlessSidechain.OnChain.PoCECDSA
     TrustlessSidechain.OnChain.PoCInlineDatum
     TrustlessSidechain.OnChain.PoCReferenceInput
     TrustlessSidechain.OnChain.PoCReferenceScript
