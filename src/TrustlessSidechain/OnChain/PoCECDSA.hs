@@ -8,6 +8,7 @@ module TrustlessSidechain.OnChain.PoCECDSA (
   ecdsaVerifyScriptHash,
   ecdsaVerifyAddress,
   serialisableValidator,
+  ECDSARed (..),
 ) where
 
 import PlutusTx.Prelude
