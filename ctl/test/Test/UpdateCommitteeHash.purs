@@ -90,11 +90,11 @@ testScenario = do
       , initCommittee: initCommitteePubKeys
       }
 
-  scParams ← initSidechain initScParams
+  { sidechainParams } ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
   updateCommitteeHash
-    { sidechainParams: scParams
+    { sidechainParams
     , currentCommitteePrvKeys: initCommitteePrvKeys
     , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing
