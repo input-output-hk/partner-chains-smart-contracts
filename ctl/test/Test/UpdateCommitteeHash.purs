@@ -37,7 +37,7 @@ updateCommitteeHash
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
-  } = do
+  } = void do
   let
     -- Order the private keys by lexicographical ordering of the signatures, so
     -- it's easy to give the sorted pubkey with its associated signature.

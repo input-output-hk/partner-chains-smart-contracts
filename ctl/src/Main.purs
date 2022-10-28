@@ -24,6 +24,10 @@ import FUELMintingPolicy (FuelParams(Burn), passiveBridgeMintParams, runFuelMP)
 import InitSidechain (initSidechain)
 import Options (getOptions)
 import Options.Types (Endpoint(..))
+import UpdateCommitteeHash
+  ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  )
+import UpdateCommitteeHash as UpdateCommitteeHash
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -85,6 +89,21 @@ main = do
                 getCommitteeCandidateValidator opts.scParams
             ]
         pure $ GetAddrsResp { addresses }
+
+      CommitteeHash
+        { newCommitteePubKeys, committeeSignatures, previousMerkleRoot } →
+        let
+          params = UpdateCommitteeHashParams
+            { sidechainParams: opts.scParams
+            , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
+            , committeeSignatures: List.toUnfoldable committeeSignatures
+            , previousMerkleRoot
+            }
+        in
+          UpdateCommitteeHash.updateCommitteeHash params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> CommitteeHashResp
 
       Init { committeePubKeys } → do
         let

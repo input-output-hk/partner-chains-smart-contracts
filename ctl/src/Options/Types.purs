@@ -55,6 +55,11 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | CommitteeHash
+      { newCommitteePubKeys ∷ List PubKey
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , previousMerkleRoot ∷ Maybe ByteArray
+      }
   | GetAddrs
   | Init { committeePubKeys ∷ List ByteArray }
 

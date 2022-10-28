@@ -1,4 +1,11 @@
-module Options (getOptions) where
+module Options
+  (
+    -- * CLI parsing
+    getOptions
+  ,
+    -- * Internal parsers
+    parsePubKeyAndSignature
+  ) where
 
 import Contract.Prelude
 
@@ -13,10 +20,16 @@ import Contract.Config
   )
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
+import Control.Bind as Bind
+import Data.Array.NonEmpty as NonEmpty
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
+import Data.String.Regex (Regex)
+import Data.String.Regex as Regex
+import Data.String.Regex.Flags as Regex.Flags
+import Data.String.Regex.Unsafe as Regex.Unsafe
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
@@ -84,6 +97,10 @@ options maybeConfig = info (helper <*> optSpec)
       , command "deregister"
           ( info (withCommonOpts deregSpec)
               (progDesc "Deregister a committee member")
+          )
+      , command "committee-hash"
+          ( info (withCommonOpts committeeHashSpec)
+              (progDesc "Update the committee hash")
           )
       ]
 
@@ -272,6 +289,45 @@ options maybeConfig = info (helper <*> optSpec)
     , help "SPO cold verification key value"
     ]
 
+  committeeHashSpec ∷ Parser Endpoint
+  committeeHashSpec =
+    CommitteeHash <$>
+      ( { newCommitteePubKeys: _, committeeSignatures: _, previousMerkleRoot: _ }
+          <$>
+            many
+              ( option
+                  byteArray
+                  ( fold
+                      [ long "new-committee-pub-key"
+                      , metavar "PUBLIC_KEY"
+                      , help "Public key of a new committee member"
+                      ]
+                  )
+              )
+          <*>
+            many
+              ( option
+                  committeeSignature
+                  ( fold
+                      [ long "committee-pub-key-and-signature"
+                      , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+                      , help
+                          "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
+                      ]
+                  )
+              )
+          <*>
+            optional
+              ( option
+                  (byteArray)
+                  ( fold
+                      [ long "previous-merkle-root"
+                      , metavar "MERKLE_ROOT"
+                      , help "Hex encoded previous merkle root if it exists"
+                      ]
+                  )
+              )
+      )
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
     committeePubKeys ← many $ option byteArray $ fold
@@ -335,3 +391,50 @@ sidechainAddress = maybeReader $ \str →
     [ "", hex ] → hexToByteArray hex
     [ hex ] → hexToByteArray hex
     _ → Nothing
+
+-- | 'committeeSignature' is a wrapper around 'parsePubKeyAndSignature'.
+committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
+committeeSignature = maybeReader $ \str → do
+  { pubKey, signature } ← parsePubKeyAndSignature str
+  -- For performance, I suppose we could actually use the unsafe version of
+  -- 'hexToByteArray'
+  pubKey' ← hexToByteArray pubKey
+  signature' ← case signature of
+    Nothing → pure Nothing
+    Just sig → do
+      sig' ← hexToByteArray sig
+      pure $ Just sig'
+  pure $ pubKey' /\ signature'
+
+-- | 'parsePubKeyAndSignature' parses (in EBNF)
+--    >  sidechainAddress
+--    >         -> hexStr[:[hexStr]]
+-- where @hexStr@ is a sequence of non empty hex digits i.e, it parses a @hexStr@
+-- public key, followed by an equal sign, followed by an optional signature
+-- @hexStr@.
+parsePubKeyAndSignature ∷
+  String →
+  Maybe
+    { -- hex encoded pub key
+      pubKey ∷ String
+    , -- hex encoded signature (if it exists)
+      signature ∷ Maybe String
+    }
+parsePubKeyAndSignature input = do
+  matches ← Regex.match pubKeyAndSignatureRegex input
+  pubKey ← Bind.join $ NonEmpty.index matches 1
+  signature ← NonEmpty.index matches 2
+  pure $ { pubKey, signature }
+
+-- Regexes tend to be a bit unreadable.. As a EBNF grammar, we're matching:
+--   > pubKeyAndSig
+--   >      -> hexStr [ ':' [hexStr]]
+-- where `hexStr` is a a sequence of non empty hex digits of even length (the even
+-- length requirement is imposed by 'Contract.Prim.ByteArray.hexToByteArray').
+-- i.e., we are parsing a `hexStr` followed optionally by a colon ':', and
+-- followed optionally by another non empty `hexStr`.
+pubKeyAndSignatureRegex ∷ Regex
+pubKeyAndSignatureRegex =
+  Regex.Unsafe.unsafeRegex
+    """^((?:[0-9a-f]{2})+)(?::((?:[0-9a-f]{2})+)?)?$"""
+    Regex.Flags.ignoreCase

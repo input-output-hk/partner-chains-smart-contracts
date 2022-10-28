@@ -241,6 +241,7 @@ testScenario2 = do
           }
 
   Test.Utils.fails
+    $ void
     $ UpdateCommitteeHash.updateCommitteeHash
     $
       UpdateCommitteeHashParams

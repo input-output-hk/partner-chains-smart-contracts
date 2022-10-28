@@ -193,6 +193,26 @@ nix run .#ctl-main -- deregister \
   --spo-public-key aabbcc
 ```
 
+#### 3.1.5. Committee hash update
+
+```
+nix run .#ctl-main -- committee-hash \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --committee-pub-key-and-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-signature aabbcc02 \
+  --committee-pub-key-and-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-signature aabbcc04:cccccc \
+  --new-committee-pub-key ddeeff01 \
+  --new-committee-pub-key ddeeff02 \
+  --new-committee-pub-key ddeeff03 \
+  --new-committee-pub-key ddeeff04 \
+  --previousMerkleRoot abcdef
+```
+
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
