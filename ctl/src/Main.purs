@@ -21,16 +21,18 @@ import Contract.Scripts (Validator, validatorHash)
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
+  , getCurrencySymbolHex
   , passiveBridgeMintParams
   , runFuelMP
   )
+import Node.Process (stdoutIsTTY)
 import Options (getOptions)
 import Options.Types (Endpoint(..))
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
-  opts ← getOptions
+  opts ← getOptions { isTTY: stdoutIsTTY }
 
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
@@ -82,32 +84,28 @@ main = do
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
       GetAddrs → do
-        addresses ←
-          getAddrs
-            [ "CommitteCandidateValidator" /\
-                getCommitteeCandidateValidator opts.scParams
+        fuelMintingPolicyId ← getCurrencySymbolHex opts.scParams
+        validator ← getCommitteeCandidateValidator opts.scParams
+        validatorAddr ← getAddr validator
+        let
+          addresses =
+            [ "CommitteCandidateValidator" /\ validatorAddr
+            , "FuelMintingPolicyId" /\ fuelMintingPolicyId
             ]
         pure $ GetAddrsResp { addresses }
 
     printEndpointResp endpointResp
 
 -- | Print the bech32 serialised address of a given validator
-getAddrs ∷
-  Array (Tuple String (Contract () Validator)) →
-  Contract () (Array (Tuple String String))
-getAddrs xs = do
+getAddr ∷ Validator → Contract () String
+getAddr v = do
   netId ← getNetworkId
-  traverse (getAddr netId) xs
-
-  where
-  getAddr netId (name /\ getValidator) = do
-    v ← getValidator
-    addr ← liftContractM ("Cannot get " <> name <> " address") $
-      validatorHashEnterpriseAddress
-        netId
-        (validatorHash v)
-    serialised ← addressToBech32 addr
-    pure $ name /\ serialised
+  addr ← liftContractM ("Cannot get validator address") $
+    validatorHashEnterpriseAddress
+      netId
+      (validatorHash v)
+  serialised ← addressToBech32 addr
+  pure serialised
 
 printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =

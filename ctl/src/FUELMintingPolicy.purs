@@ -5,6 +5,7 @@ module FUELMintingPolicy
   , passiveBridgeMintParams
   , fuelMintingPolicy
   , MerkleTreeEntry(MerkleTreeEntry)
+  , getCurrencySymbolHex
   ) where
 
 import Contract.Prelude
@@ -146,6 +147,21 @@ data FuelParams
       , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
+
+getCurrencySymbolHex ∷ SidechainParams → Contract () String
+getCurrencySymbolHex sp = do
+  let
+    fm =
+      FUELMint
+        { sidechainParams: sp
+        , mptRootTokenCurrencySymbol: dummyCS
+        , dsKeyCurrencySymbol: dummyCS
+        }
+
+  fuelMP ← fuelMintingPolicy fm
+  cs ← liftContractM "Cannot get currency symbol" $ Value.scriptCurrencySymbol
+    fuelMP
+  pure $ show cs
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
