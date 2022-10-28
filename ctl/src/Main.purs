@@ -22,6 +22,8 @@ import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy (FuelParams(Burn), passiveBridgeMintParams, runFuelMP)
 import InitSidechain (initSidechain)
+import MPTRoot (SaveRootParams(SaveRootParams))
+import MPTRoot as MPTRoot
 import Options (getOptions)
 import Options.Types (Endpoint(..))
 import UpdateCommitteeHash
@@ -105,6 +107,19 @@ main = do
             >>> { transactionId: _ }
             >>> CommitteeHashResp
 
+      SaveRoot { merkleRoot, previousMerkleRoot, committeeSignatures } →
+        let
+          params = SaveRootParams
+            { sidechainParams: opts.scParams
+            , merkleRoot
+            , previousMerkleRoot
+            , committeeSignatures: List.toUnfoldable committeeSignatures
+            }
+        in
+          MPTRoot.saveRoot params
+            <#> unwrap
+            >>> { transactionId: _ }
+            >>> SaveRootResp
       Init { committeePubKeys } → do
         let
           sc = unwrap opts.scParams

@@ -60,6 +60,11 @@ data Endpoint
       , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
       , previousMerkleRoot ∷ Maybe ByteArray
       }
+  | SaveRoot
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      }
   | GetAddrs
   | Init { committeePubKeys ∷ List ByteArray }
 
