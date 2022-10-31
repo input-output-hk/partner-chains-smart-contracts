@@ -427,17 +427,17 @@
     "cardano-wallet": {
       "flake": false,
       "locked": {
-        "lastModified": 1660141505,
-        "narHash": "sha256-3Rnj/g3KLzOW5YSieqsUa9IF1Td22Eskk5KuVsOFgEQ=",
-        "owner": "input-output-hk",
+        "lastModified": 1664469260,
+        "narHash": "sha256-/uvo/qXoMVeFpe4Bev0+hyRRlVkHv7WYBzfNtREEuSM=",
+        "owner": "sadMaxim",
         "repo": "cardano-wallet",
-        "rev": "18a931648550246695c790578d4a55ee2f10463e",
+        "rev": "9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b",
         "type": "github"
       },
       "original": {
-        "owner": "input-output-hk",
+        "owner": "sadMaxim",
         "repo": "cardano-wallet",
-        "rev": "18a931648550246695c790578d4a55ee2f10463e",
+        "rev": "9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b",
         "type": "github"
       }
     },

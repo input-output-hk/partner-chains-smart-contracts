@@ -16,6 +16,7 @@
     bot-plutus-interface = {
       url = github:hyphenrf/bot-plutus-interface/cardano-base-patch;
       inputs.cardano-base.url = github:input-output-hk/cardano-base/c16a1ebf60a27051303ec4ea76495311e3d2c4b1;
+      inputs.cardano-wallet.url = github:sadMaxim/cardano-wallet/9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b;
     };
     plutip = {
       url = github:mlabs-haskell/plutip/ee7df5bfc86751e6199b118c13135a36cf3679b9;
