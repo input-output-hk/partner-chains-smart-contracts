@@ -28,8 +28,7 @@ type PrivateKey = ByteArray
 -- | Format: raw bytes
 type Message = ByteArray
 
--- | Invariant: ∀ x : Signature. length x = 71
--- | Format: DER encoding
+-- | Invariant: ∀ x : Signature. length x = 64
 type Signature = ByteArray
 
 -- TODO: newtype checks the type aliases above

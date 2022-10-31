@@ -2,11 +2,10 @@ let secp = require("secp256k1");
 let crypto = require("crypto");
 
 exports.verifyEcdsaSecp256k1Signature = ecdsa_pub_key => data => ecdsa_der_sig =>
-  secp.ecdsaVerify(secp.signatureImport(ecdsa_der_sig), data, ecdsa_pub_key);
+  secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
 
-// Signature must be serialized in DER format.
 exports.sign = data => ecdsa_priv_key =>
-  secp.signatureExport(secp.ecdsaSign(data, ecdsa_priv_key).signature);
+  secp.ecdsaSign(data, ecdsa_priv_key).signature;
 
 // rawSerialiseDSIGN for private keys is just hex decoding them, so we need to do nothing here
 exports.generateRandomPrivateKey = () => {
