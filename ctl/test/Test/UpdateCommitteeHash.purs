@@ -37,7 +37,7 @@ updateCommitteeHash
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
-  } = do
+  } = void do
   let
     -- Order the private keys by lexicographical ordering of the signatures, so
     -- it's easy to give the sorted pubkey with its associated signature.
@@ -90,11 +90,11 @@ testScenario = do
       , initCommittee: initCommitteePubKeys
       }
 
-  scParams ← initSidechain initScParams
+  { sidechainParams } ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
   updateCommitteeHash
-    { sidechainParams: scParams
+    { sidechainParams
     , currentCommitteePrvKeys: initCommitteePrvKeys
     , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing

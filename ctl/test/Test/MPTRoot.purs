@@ -66,7 +66,7 @@ saveRoot
           merkleRootInsertionMessage
       )
 
-  MPTRoot.saveRoot $ SaveRootParams
+  void $ MPTRoot.saveRoot $ SaveRootParams
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
@@ -107,7 +107,7 @@ testScenario1 = do
       , initCommittee: initCommitteePubKeys
       }
 
-  sidechainParams ← InitSidechain.initSidechain initSidechainParams
+  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
   -- Building / saving the root that pays lots of FUEL to this wallet :)
   ----------------------------------------------------------------------
@@ -158,7 +158,7 @@ testScenario1 = do
           Array.cons ((fst head) /\ Nothing) tail
         _ → [] -- should never happen
 
-  MPTRoot.saveRoot $ SaveRootParams
+  void $ MPTRoot.saveRoot $ SaveRootParams
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot: Nothing
@@ -201,7 +201,7 @@ testScenario2 = do
       , initCommittee: initCommitteePubKeys
       }
 
-  sidechainParams ← InitSidechain.initSidechain initSidechainParams
+  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
   -- Building / saving the root that pays lots of FUEL to this wallet :)
   ----------------------------------------------------------------------

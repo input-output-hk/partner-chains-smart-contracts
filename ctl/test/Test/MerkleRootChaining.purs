@@ -52,7 +52,7 @@ testScenario1 = do
   committee1PrvKeys ← sequence $ Array.replicate keyCount
     Utils.Crypto.generatePrivKey
 
-  sidechainParams ← InitSidechain.initSidechain $
+  { sidechainParams } ← InitSidechain.initSidechain $
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
@@ -187,7 +187,7 @@ testScenario2 = do
   committee1PrvKeys ← sequence $ Array.replicate keyCount
     Utils.Crypto.generatePrivKey
 
-  sidechainParams ← InitSidechain.initSidechain $
+  { sidechainParams } ← InitSidechain.initSidechain $
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
@@ -241,6 +241,7 @@ testScenario2 = do
           }
 
   Test.Utils.fails
+    $ void
     $ UpdateCommitteeHash.updateCommitteeHash
     $
       UpdateCommitteeHashParams

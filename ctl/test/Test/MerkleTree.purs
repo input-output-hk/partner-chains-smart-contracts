@@ -6,7 +6,6 @@ import Contract.Prelude
 
 import Data.Maybe as Maybe
 import Effect.Class.Console as Console
-import Effect.Exception as Exception
 import MerkleTree
   ( MerkleProof(MerkleProof)
   , MerkleTree(Bin, Tip)
@@ -16,6 +15,7 @@ import MerkleTree
   )
 import MerkleTree as MerkleTree
 import Partial.Unsafe as Unsafe
+import Test.Utils (assertBy)
 import Types.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Types.ByteArray as ByteArray
 
@@ -23,19 +23,6 @@ import Types.ByteArray as ByteArray
 unsafeByteArrayFromAscii ∷ String → ByteArray
 unsafeByteArrayFromAscii = Unsafe.unsafePartial
   (Maybe.fromJust <<< ByteArray.byteArrayFromAscii)
-
--- | @'assert' eqBy expected actual@ does nothing if @eqBy expected actual ==
--- true@, and logs and throws an exception otherwise.
-assertBy ∷ ∀ a. Show a ⇒ (a → a → Boolean) → a → a → Effect Unit
-assertBy eqBy expected actual =
-  if eqBy expected actual then pure unit
-  else do
-    Console.warn "Assertion failed!"
-    Console.warn "Expected:"
-    Console.warnShow expected
-    Console.warn "But got:"
-    Console.warnShow actual
-    Exception.throwException (Exception.error "Test case failed!")
 
 -- | 'eqUpToLeft' returns 'true' if either: both arguments are 'Right' and the
 -- arguments are equal; or both arguments are 'Left' (note the arguments to left
