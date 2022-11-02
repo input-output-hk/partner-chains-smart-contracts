@@ -17,12 +17,14 @@ import Contract.Monad
   , liftedM
   , runContract
   )
-import Contract.Scripts (Validator, validatorHash)
+import Contract.Prim.ByteArray (byteArrayToHex)
+import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Value (getCurrencySymbol, scriptCurrencySymbol)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
-  , getCurrencySymbolHex
+  , getFuelMintingPolicy
   , passiveBridgeMintParams
   , runFuelMP
   )
@@ -35,6 +37,8 @@ import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -90,14 +94,18 @@ main = do
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
       GetAddrs → do
-        fuelMintingPolicyId ← getCurrencySymbolHex opts.scParams
+        fuelMintingPolicyId ← do
+          mp ← getFuelMintingPolicy opts.scParams
+          getCurrencySymbolHex mp
+
         committeeCandidateValidatorAddr ← do
           validator ← getCommitteeCandidateValidator opts.scParams
           getAddr validator
         let
           addresses =
             [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
-            , "FuelMintingPolicyId" /\ fuelMintingPolicyId
+            -- , "FuelMintingPolicyId" /\ fuelMintingPolicyId
+            -- , "MPTRootTokenMintingPolicy" /\ fuelMintingPolicyId
             ]
         pure $ GetAddrsResp { addresses }
 
@@ -184,6 +192,19 @@ getAddr v = do
   serialised ← addressToBech32 addr
   pure serialised
 
+-- | `getCurrencySymbolHex` converts a mintingpolicy to its hex encoded
+-- | currency symbol
+getCurrencySymbolHex ∷ MintingPolicy → Contract () String
+getCurrencySymbolHex mp = do
+  let msg = report "getCurrencySymbolHex"
+  cs ← liftContractM (msg "Cannot get currency symbol") $
+    scriptCurrencySymbol mp
+  pure $ byteArrayToHex $ getCurrencySymbol cs
+
 printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =
   log <<< stringifyEndpointResp
+
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "Main", fun: _ }

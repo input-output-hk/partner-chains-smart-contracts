@@ -4,8 +4,8 @@ module FUELMintingPolicy
   , FuelParams(..)
   , passiveBridgeMintParams
   , fuelMintingPolicy
+  , getFuelMintingPolicy
   , MerkleTreeEntry(MerkleTreeEntry)
-  , getCurrencySymbolHex
   ) where
 
 import Contract.Prelude
@@ -17,7 +17,6 @@ import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayFromAscii
-  , byteArrayToHex
   , hexToByteArrayUnsafe
   )
 import Contract.ScriptLookups as Lookups
@@ -137,6 +136,22 @@ fuelMintingPolicy fm = do
     PlutusScriptV2
   liftedE (applyArgs fuelMPUnapplied [ toData fm ])
 
+-- | `getFuelMintingPolicy` creates the parameter `FUELMint`
+-- | (as required by the onchain mintng policy) via the given sidechain params, and calls
+-- | `fuelMintingPolicy` to give us the minting policy
+-- TODO: the "creation of `FUELMint` via the given sidechain params" needs more
+-- work i.e. we should actually fill up the currency symbols with their proper
+-- currency symbols instead of `dummyCS`.
+-- For now, we copy what the offchain code is doing.
+getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getFuelMintingPolicy sidechainParams = do
+  fuelMintingPolicy $
+    FUELMint
+      { sidechainParams
+      , mptRootTokenCurrencySymbol: dummyCS
+      , dsKeyCurrencySymbol: dummyCS
+      }
+
 data FuelParams
   = Mint
       { amount ∷ BigInt
@@ -148,23 +163,6 @@ data FuelParams
       , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
-
--- | 'getCurrencySymbolHex' returns the hex encoded string of the currency
--- | symbol of the FUEL minting policy.
-getCurrencySymbolHex ∷ SidechainParams → Contract () String
-getCurrencySymbolHex sp = do
-  let
-    fm =
-      FUELMint
-        { sidechainParams: sp
-        , mptRootTokenCurrencySymbol: dummyCS
-        , dsKeyCurrencySymbol: dummyCS
-        }
-
-  fuelMP ← fuelMintingPolicy fm
-  cs ← liftContractM "Cannot get currency symbol" $ Value.scriptCurrencySymbol
-    fuelMP
-  pure $ byteArrayToHex $ getCurrencySymbol cs
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
