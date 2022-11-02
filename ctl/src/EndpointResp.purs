@@ -21,6 +21,10 @@ data EndpointResp
   | GetAddrsResp { addresses ∷ Array (Tuple String String) }
   | CommitteeHashResp { transactionId ∷ ByteArray }
   | SaveRootResp { transactionId ∷ ByteArray }
+  | CommitteeHandoverResp
+      { saveRootTransactionId ∷ ByteArray
+      , committeeHashTransactionId ∷ ByteArray
+      }
   | InitResp { transactionId ∷ ByteArray, sidechainParams ∷ SidechainParams }
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
@@ -64,6 +68,14 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CommitteeHash"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+    CommitteeHandoverResp { saveRootTransactionId, committeeHashTransactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "CommitteeHash"
+        , "saveRootTransactionId" /\ J.fromString
+            (byteArrayToHex saveRootTransactionId)
+        , "committeeHashTransactionId" /\ J.fromString
+            (byteArrayToHex committeeHashTransactionId)
         ]
     InitResp { transactionId, sidechainParams } →
       J.fromObject $

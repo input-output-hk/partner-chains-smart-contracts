@@ -135,6 +135,33 @@ main = do
 
         pure $ InitResp { transactionId: unwrap transactionId, sidechainParams }
 
+      CommitteeHandover
+        { merkleRoot
+        , previousMerkleRoot
+        , newCommitteePubKeys
+        , newCommitteeSignatures
+        , newMerkleRootSignatures
+        } → do
+        let
+          saveRootParams = SaveRootParams
+            { sidechainParams: opts.scParams
+            , merkleRoot
+            , previousMerkleRoot
+            , committeeSignatures: List.toUnfoldable newMerkleRootSignatures
+            }
+          uchParams = UpdateCommitteeHashParams
+            { sidechainParams: opts.scParams
+            , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
+            , committeeSignatures: List.toUnfoldable newCommitteeSignatures
+            , -- the previous merkle root is the merkle root we just saved..
+              previousMerkleRoot: Just merkleRoot
+            }
+        saveRootTransactionId ← unwrap <$> MPTRoot.saveRoot saveRootParams
+        committeeHashTransactionId ← unwrap <$>
+          UpdateCommitteeHash.updateCommitteeHash uchParams
+        pure $ CommitteeHandoverResp
+          { saveRootTransactionId, committeeHashTransactionId }
+
     printEndpointResp endpointResp
 
 -- | Print the bech32 serialised address of a given validator

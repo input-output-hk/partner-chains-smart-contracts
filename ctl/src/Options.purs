@@ -108,6 +108,12 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts saveRootSpec)
               (progDesc "Saving a new merkle root")
           )
+      , command "committee-handover"
+          ( info (withCommonOpts committeeHandoverSpec)
+              ( progDesc
+                  "An alias for saving the merkle root, followed by updating the committee hash"
+              )
+          )
       ]
 
   withCommonOpts endpointParser = ado
@@ -300,18 +306,11 @@ options maybeConfig = info (helper <*> optSpec)
     CommitteeHash <$>
       ( { newCommitteePubKeys: _, committeeSignatures: _, previousMerkleRoot: _ }
           <$>
-            many
-              ( option
-                  byteArray
-                  ( fold
-                      [ long "new-committee-pub-key"
-                      , metavar "PUBLIC_KEY"
-                      , help "Public key of a new committee member"
-                      ]
-                  )
-              )
+            parseNewCommitteePubKeys
           <*>
             parseCommitteeSignatures
+              "committee-pub-key-and-signature"
+              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
           <*>
             parsePreviousMerkleRoot
       )
@@ -321,18 +320,64 @@ options maybeConfig = info (helper <*> optSpec)
     SaveRoot <$>
       ( { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
           <$>
-            option
-              byteArray
-              ( fold
-                  [ long "merkle-root"
-                  , metavar "MERKLE_ROOT"
-                  , help "Merkle root signed by the committee"
-                  ]
-              )
+            parseMerkleRoot
           <*>
             parsePreviousMerkleRoot
           <*>
             parseCommitteeSignatures
+              "committee-pub-key-and-signature"
+              "Public key and (optionally) the signature of the new merkle root seperated by a colon"
+      )
+
+  committeeHandoverSpec ∷ Parser Endpoint
+  committeeHandoverSpec =
+    CommitteeHandover <$>
+      ( { merkleRoot: _
+        , previousMerkleRoot: _
+        , newCommitteePubKeys: _
+        , newCommitteeSignatures: _
+        , newMerkleRootSignatures: _
+        }
+          <$>
+            parseMerkleRoot
+          <*>
+            parsePreviousMerkleRoot
+          <*>
+            parseNewCommitteePubKeys
+          <*>
+            parseCommitteeSignatures
+              "committee-pub-key-and-new-committee-signature"
+              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+          <*>
+            parseCommitteeSignatures
+              "committee-pub-key-and-new-merkle-root-signature"
+              "Public key and (optionally) the signature of the merkle root seperated by a colon"
+      )
+
+  -- | 'parseMerkleRoot' parses the option of a new merkle root. This is used
+  -- in @saveRootSpec@ and @committeeHashSpec@
+  parseMerkleRoot ∷ Parser ByteArray
+  parseMerkleRoot = option
+    byteArray
+    ( fold
+        [ long "merkle-root"
+        , metavar "MERKLE_ROOT"
+        , help "Merkle root signed by the committee"
+        ]
+    )
+
+  -- | 'parseNewCommitteePubKeys' parses the new committee public keys.
+  parseNewCommitteePubKeys ∷ Parser (List ByteArray)
+  parseNewCommitteePubKeys =
+    many
+      ( option
+          byteArray
+          ( fold
+              [ long "new-committee-pub-key"
+              , metavar "PUBLIC_KEY"
+              , help "Public key of a new committee member"
+              ]
+          )
       )
 
   -- | 'parsePreviousMerkleRoot' gives the options for parsing a merkle root (this is
@@ -352,19 +397,28 @@ options maybeConfig = info (helper <*> optSpec)
 
   -- | 'parseCommitteeSignatures' gives the options for parsing the current
   -- committees' signatures. This is used in both @saveRootSpec@ and
-  -- @committeeHashSpec@).
-  parseCommitteeSignatures ∷ Parser (List (PubKey /\ Maybe Signature))
-  parseCommitteeSignatures =
+  -- @committeeHashSpec@.
+  parseCommitteeSignatures ∷
+    String → String → Parser (List (PubKey /\ Maybe Signature))
+  parseCommitteeSignatures longDesc helpDesc =
     many
       ( option
           committeeSignature
           ( fold
-              [ long "committee-pub-key-and-signature"
+              [ long longDesc
               , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-              , help
-                  "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
+              , help helpDesc
               ]
           )
+      {-
+      ( fold
+          [ long "committee-pub-key-and-signature"
+          , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+          , help
+              "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
+          ]
+      )
+      -}
       )
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado

@@ -229,6 +229,27 @@ nix run .#ctl-main -- save-root \
   --previousMerkleRoot abcdef
 ```
 
+#### 3.1.7 Committee handover
+
+```
+nix run .#ctl-main -- committee-handover \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --merkle-root abababab \
+  --previousMerkleRoot abcdef \
+  --new-committee-pub-key ddeeff01 \
+  --new-committee-pub-key ddeeff02 \
+  --new-committee-pub-key ddeeff03 \
+  --committee-pub-key-and-new-committee-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-new-committee-signature aabbcc02 \
+  --committee-pub-key-and-new-committee-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc02 \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
+```
+
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
