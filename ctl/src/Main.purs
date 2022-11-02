@@ -25,14 +25,13 @@ import FUELMintingPolicy
   , passiveBridgeMintParams
   , runFuelMP
   )
-import Node.Process (stdoutIsTTY)
 import Options (getOptions)
 import Options.Types (Endpoint(..))
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
-  opts ← getOptions { isTTY: stdoutIsTTY }
+  opts ← getOptions
 
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
@@ -85,11 +84,12 @@ main = do
             >>> CommitteeCandidateDeregResp
       GetAddrs → do
         fuelMintingPolicyId ← getCurrencySymbolHex opts.scParams
-        validator ← getCommitteeCandidateValidator opts.scParams
-        validatorAddr ← getAddr validator
+        committeeCandidateValidatorAddr ← do
+          validator ← getCommitteeCandidateValidator opts.scParams
+          getAddr validator
         let
           addresses =
-            [ "CommitteCandidateValidator" /\ validatorAddr
+            [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
             , "FuelMintingPolicyId" /\ fuelMintingPolicyId
             ]
         pure $ GetAddrsResp { addresses }

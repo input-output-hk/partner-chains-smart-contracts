@@ -17,6 +17,7 @@ import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayFromAscii
+  , byteArrayToHex
   , hexToByteArrayUnsafe
   )
 import Contract.ScriptLookups as Lookups
@@ -34,7 +35,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, mkCurrencySymbol)
+import Contract.Value (CurrencySymbol, getCurrencySymbol, mkCurrencySymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -148,6 +149,8 @@ data FuelParams
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
+-- | 'getCurrencySymbolHex' returns the hex encoded string of the currency
+-- | symbol of the FUEL minting policy.
 getCurrencySymbolHex ∷ SidechainParams → Contract () String
 getCurrencySymbolHex sp = do
   let
@@ -161,7 +164,7 @@ getCurrencySymbolHex sp = do
   fuelMP ← fuelMintingPolicy fm
   cs ← liftContractM "Cannot get currency symbol" $ Value.scriptCurrencySymbol
     fuelMP
-  pure $ show cs
+  pure $ byteArrayToHex $ getCurrencySymbol cs
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
