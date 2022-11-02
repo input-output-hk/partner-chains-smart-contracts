@@ -104,7 +104,7 @@ main = do
         let
           addresses =
             [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
-            -- , "FuelMintingPolicyId" /\ fuelMintingPolicyId
+            , "FuelMintingPolicyId" /\ fuelMintingPolicyId
             -- , "MPTRootTokenMintingPolicy" /\ fuelMintingPolicyId
             ]
         pure $ GetAddrsResp { addresses }
