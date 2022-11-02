@@ -108,7 +108,7 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts saveRootSpec)
               (progDesc "Saving a new merkle root")
           )
-      , command "committeeHandover"
+      , command "committee-handover"
           ( info (withCommonOpts committeeHandoverSpec)
               ( progDesc
                   "An alias for saving the merkle root, followed by updating the committee hash"
