@@ -2,16 +2,13 @@
   description = "trustless-sidechain";
 
   inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/85208c5c705d2947e50e32c5eb9f22c3b0b72401";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
-    ### Start of Maxim's cool trick to get `serialiseData` to work
     cardano-transaction-lib.inputs = {
       plutip.follows = "plutip";
-      haskell-nix.follows = "plutip/haskell-nix";
-      nixpkgs.follows = "plutip/nixpkgs";
     };
     bot-plutus-interface = {
       url = github:hyphenrf/bot-plutus-interface/cardano-base-patch;
@@ -27,15 +24,16 @@
         nixpkgs.follows = "bot-plutus-interface/nixpkgs";
       };
     };
-    ### End of Maxim's cool trick to get `serialiseData` to work
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
     };
+
+    CHaP.follows = "cardano-transaction-lib/CHaP";
   };
 
-  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, plutip, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
       runtimeConfig = {
         network = {
@@ -44,8 +42,7 @@
         };
       };
 
-      supportedSystems = with nixpkgs.lib.systems.supported;
-        tier1 ++ tier2 ++ tier3;
+      supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
 
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
@@ -66,8 +63,10 @@
           pkgs = nixpkgsFor system;
           project = pkgs.haskell-nix.cabalProject {
             src = ./.;
+            inputMap = {
+              "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+            };
             compiler-nix-name = "ghc8107";
-            inherit (plutip) cabalProjectLocal extraSources;
             modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
