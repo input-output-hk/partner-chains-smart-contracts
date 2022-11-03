@@ -71,4 +71,4 @@ getCurrencySymbolHex mp = do
 
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "GetAddresses", fun: _ }
+report = Utils.Logging.mkReport <<< { mod: "GetSidechainAddresses", fun: _ }
