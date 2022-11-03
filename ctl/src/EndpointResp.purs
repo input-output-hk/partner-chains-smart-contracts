@@ -83,12 +83,14 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
         ]
-    InitResp { transactionId, sidechainParams } →
+    InitResp { transactionId, sidechainParams, addresses } →
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "Init"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
+          , "addresses" /\ J.fromObject
+              (Object.fromFoldable (map (rmap J.fromString) addresses))
           ]
 
 -- | Encode the endpoint response to a json object
