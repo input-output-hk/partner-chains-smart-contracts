@@ -794,13 +794,13 @@
       "locked": {
         "lastModified": 1664469260,
         "narHash": "sha256-/uvo/qXoMVeFpe4Bev0+hyRRlVkHv7WYBzfNtREEuSM=",
-        "owner": "sadMaxim",
+        "owner": "input-output-hk",
         "repo": "cardano-wallet",
         "rev": "9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b",
         "type": "github"
       },
       "original": {
-        "owner": "sadMaxim",
+        "owner": "input-output-hk",
         "repo": "cardano-wallet",
         "rev": "9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b",
         "type": "github"
