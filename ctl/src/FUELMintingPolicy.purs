@@ -34,7 +34,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, getCurrencySymbol, mkCurrencySymbol)
+import Contract.Value (CurrencySymbol, mkCurrencySymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
