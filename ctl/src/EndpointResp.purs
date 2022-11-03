@@ -4,12 +4,14 @@ module EndpointResp
   , stringifyEndpointResp
   ) where
 
-import Contract.Prelude (Maybe(..), Tuple, map, ($), (/\), (>>>))
+import Contract.Prelude
+
 import Contract.Prim.ByteArray (ByteArray, byteArrayToHex)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
+import GetSidechainAddresses (SidechainAddresses)
 import SidechainParams (SidechainParams, scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
@@ -18,14 +20,18 @@ data EndpointResp
   | BurnActResp { transactionId ∷ ByteArray }
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
-  | GetAddrsResp { addresses ∷ Array (Tuple String String) }
+  | GetAddrsResp { addresses ∷ SidechainAddresses }
   | CommitteeHashResp { transactionId ∷ ByteArray }
   | SaveRootResp { transactionId ∷ ByteArray }
   | CommitteeHandoverResp
       { saveRootTransactionId ∷ ByteArray
       , committeeHashTransactionId ∷ ByteArray
       }
-  | InitResp { transactionId ∷ ByteArray, sidechainParams ∷ SidechainParams }
+  | InitResp
+      { transactionId ∷ ByteArray
+      , sidechainParams ∷ SidechainParams
+      , addresses ∷ SidechainAddresses
+      }
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
