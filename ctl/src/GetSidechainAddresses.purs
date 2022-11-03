@@ -17,8 +17,18 @@ import SidechainParams (SidechainParams)
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
+-- | `SidechainAddresses` is an `Array` which uniquely associates a `String`
+-- | identifier with a hex encoded validator address / currency symbol of a
+-- | sidechain validator / minting policy.
+-- |
+-- | See `getSidechainAddresses` for more details.
 type SidechainAddresses = Array (Tuple String String)
 
+-- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
+-- | the given `SidechainParams` which contains
+-- |    - the validator address of the committee candidate validator
+-- |    - the currency symbol of the fuel minting policy
+-- |    - the currency symbol of the mpt root token minting policy
 getSidechainAddresses ∷ SidechainParams → Contract () SidechainAddresses
 getSidechainAddresses scParams = do
   fuelMintingPolicyId ← do
