@@ -12,7 +12,7 @@
       bot-plutus-interface.follows = "plutip/bot-plutus-interface";
       ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
     };
-    plutip.url = github:mlabs-haskell/plutip/2e851982c932a17320c64504b1bf8997389e39f4;
+    plutip.url = github:mlabs-haskell/plutip/e58de5aedab914d898a92b6f618db8d2d3d702b9;
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
