@@ -15,17 +15,11 @@ module Utils.Crypto
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayToIntArray
-  , hexToByteArrayUnsafe
-  )
-import Contract.Prim.ByteArray (byteArrayToIntArray)
+import Contract.Prim.ByteArray (ByteArray)
 import Data.Array as Array
 import Data.Int as Int
 import Data.Ord as Ord
 import Types (PubKey)
-import Types.ByteArray (ByteArray, hexToByteArrayUnsafe)
 
 -- | Invariant: ∀ x : PublicKey. length x = 33
 -- | Format: Compressed & Serialized as per secp256k1 implementation
