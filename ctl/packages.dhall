@@ -21,7 +21,6 @@ let additions =
           , "foreign-object"
           , "gen"
           , "identity"
-          , "integers"
           , "maybe"
           , "newtype"
           , "node-buffer"

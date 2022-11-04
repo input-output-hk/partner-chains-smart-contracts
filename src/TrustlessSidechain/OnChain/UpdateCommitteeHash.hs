@@ -8,7 +8,6 @@ module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 import Cardano.Crypto.Wallet (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Ledger (PubKey)
 import Ledger qualified
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
@@ -18,15 +17,14 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
-  LedgerBytes (getLedgerBytes),
   MintingPolicy,
   TokenName (TokenName),
   Value (getValue),
  )
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
-  TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoInputs, txInfoMint),
+  TxInInfo (txInInfoOutRef, txInInfoResolved),
+  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
  )
@@ -35,17 +33,25 @@ import Plutus.V2.Ledger.Tx (OutputDatum (..))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
-import TrustlessSidechain.MerkleTree qualified as MT
+import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (
-  UpdateCommitteeHash (cToken),
+  UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
   UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteeHash),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
+  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
 import Prelude qualified
 
 -- * Updating the committee hash
+
+{- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
+ to the Plutus data representation, then encoding it to cbor via the builtin.
+-}
+serialiseUchm :: UpdateCommitteeHashMessage -> BuiltinByteString
+serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
  committee hash by essentially computing the merkle root of all public keys
@@ -53,9 +59,8 @@ import Prelude qualified
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [PubKey] -> BuiltinByteString
-aggregateKeys [] = traceError "Empty committee"
-aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBytes . Crypto.getPubKey) lst
+aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
+aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 
 {- Note [Aggregate Keys Append Scheme]
  In early versions, we used a "simple append scheme" i.e., we implemented this function with
@@ -69,7 +74,7 @@ aggregateKeys lst = MT.unRootHash $ MT.rootHash $ MT.fromList $ map (getLedgerBy
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [PubKey] -> BuiltinByteString -> Bool
+aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
 
 {- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
@@ -112,18 +117,15 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  -- TODO: remove the if statement here and just have the else clause. We do
-  -- this for now because this is needed in the signed merkle root to emulate
-  -- reference inputs... so we allow people to spend this output just to read
-  -- the data here essentially
-  -- BUT THIS SHOULD BE REMOVED WHEN WE HAVE REFERENCE INPUTS IN PLUTUSV2!
-  if newCommitteeHash red == committeeHash dat
-    then True
-    else
-      traceIfFalse "Token missing from output" outputHasToken
-        && traceIfFalse "Committee signature missing" signedByCurrentCommittee
-        && traceIfFalse "Wrong committee" isCurrentCommittee
-        && traceIfFalse "Wrong output datum" (outputDatum == UpdateCommitteeHashDatum (newCommitteeHash red))
+  traceIfFalse "error 'mkUpdateCommitteeHashValidator': output missing NFT" outputHasToken
+    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': committee signature invalid" signedByCurrentCommittee
+    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': current committee mismatch" isCurrentCommittee
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
+      referencesPreviousMerkleRoot
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': expected different output datum"
+      (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -134,13 +136,13 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       _ -> traceError "Expected exactly one committee output"
 
     outputDatum :: UpdateCommitteeHashDatum
-    outputDatum =
-      fromMaybe (traceError "Committee output datum missing") $
-        case txOutDatum ownOutput of
-          NoOutputDatum -> Nothing
-          OutputDatum d -> Just d
-          OutputDatumHash dh -> Contexts.findDatum dh info -- TODO: better return Nothing and disallow datumhashes entirely?
-          >>= PlutusTx.fromBuiltinData . getDatum
+    outputDatum = case txOutDatum ownOutput of
+      -- Note [Committee Hash Inline Datum]
+      -- We only accept the committtee has to be given as inline datum, so
+      -- all other scripts which rely on this script can safely assume that
+      -- the datum is given inline.
+      OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
+      _ -> traceError "error 'mkUpdateCommitteeHashValidator': no output inline datum missing"
 
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
@@ -150,27 +152,65 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     threshold :: Integer
     threshold =
-      -- Note: this computes floor(2/3 * length of committee), but the spec
-      -- says that we want strictly more than 2/3 majority? Indeed, the floor
-      -- computation will sometimes give us less than 2/3 majority... So I
-      -- think we really want to have ceil(2/3 * length of committee) i.e., we
-      -- should change this to
-      -- > ((length (committeePubKeys red) `Builtins.multiplyInteger` 2  - 1 )
-      -- >      `Builtins.divideInteger`  3)  + 1
-      -- where we use the fact @ceil(n/m) = floor((n - 1) / m) + 1@
-      -- for n non-negative and m positive. The proof of this fact isn't too
-      -- tricky :^)
-      length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3
+      -- Note [Threshold of Strictly More than 2/3 Majority]
+      -- The spec wants us to have strictly more than 2/3 majority of the
+      -- committee size. Let @n@ denote the committee size. To have strictly
+      -- more than 2/3 majority, we are interested in the smallest integer that
+      -- is strictly greater than @2/3*n@ which is either:
+      --    1. if @2/3 * n@ is an integer, then the smallest integer strictly
+      --    greater than @2/3 * n@ is @2/3 * n + 1@
+      --    2. if @2/3 * n@ is not an integer, then the smallest integer is
+      --    @ceil(2/3 * n)@
+      -- We can capture both cases with the expression @floor((2 * n)/3) + 1@
+      -- via distinguishing cases (again) if @2/3 * n@ is an integer.
+      --    1.  if @2/3 * n@ is an integer, then @floor((2 * n)/3) + 1 = (2 *
+      --    n)/3 + 1@ is the smallest integer strictly greater than @2/3 * n@
+      --    as required.
+      --    2.  if @2/3 * n@ is not an integer, then @floor((2 * n)/3)@ is the
+      --    largest integer strictly smaller than @2/3 *n@, but adding @+1@
+      --    makes this smallest integer that is strictly larger than @2/3 *n@
+      --    i.e., we have @ceil(2/3 * n)@ as required.
+      (length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      verifyMultisig
-        (getLedgerBytes . Crypto.getPubKey <$> committeePubKeys red)
-        threshold
-        (newCommitteeHash red)
-        (committeeSignatures red)
+      let message =
+            UpdateCommitteeHashMessage
+              { uchmSidechainParams = cSidechainParams uch
+              , uchmNewCommitteePubKeys = newCommitteePubKeys red
+              , uchmPreviousMerkleRoot = previousMerkleRoot red
+              }
+       in verifyMultisig
+            (getSidechainPubKey <$> committeePubKeys red)
+            threshold
+            (Builtins.blake2b_256 (serialiseUchm message))
+            (committeeSignatures red)
+
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
+
+    referencesPreviousMerkleRoot :: Bool
+    referencesPreviousMerkleRoot =
+      -- Either we want to reference the previous merkle root or we don't (note
+      -- that this is signed by the committee -- this is where the security
+      -- guarantees come from).
+      -- If we do want to reference the previous merkle root, we need to verify
+      -- that there exists at least one input with a nonzero amount of the
+      -- mpt root token.
+      case previousMerkleRoot red of
+        Nothing -> True
+        Just tn ->
+          let go :: [TxInInfo] -> Bool
+              go (txInInfo : rest) =
+                if Value.valueOf
+                  (txOutValue (txInInfoResolved txInInfo))
+                  (cMptRootTokenCurrencySymbol uch)
+                  (TokenName tn)
+                  > 0
+                  then True
+                  else go rest
+              go [] = False
+           in go (txInfoReferenceInputs info)
 
 -- * Initializing the committee hash
 
@@ -218,7 +258,7 @@ mkCommitteeHashPolicy ichm _red ctx =
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
 
-    -- assert that we have minted exactly one of this currency symbol
+    -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
       Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount

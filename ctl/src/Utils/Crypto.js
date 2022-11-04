@@ -1,10 +1,11 @@
 let secp = require("secp256k1");
 let crypto = require("crypto");
 
-exports.verifyEcdsaSecp256k1Signature = ecdsa_pub_key => data => ecdsa_der_sig =>
-  secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
+exports.verifyEcdsaSecp256k1Signature =
+  (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>
+    secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
 
-exports.sign = data => ecdsa_priv_key =>
+exports.sign = (data) => (ecdsa_priv_key) =>
   secp.ecdsaSign(data, ecdsa_priv_key).signature;
 
 // rawSerialiseDSIGN for private keys is just hex decoding them, so we need to do nothing here
@@ -12,8 +13,7 @@ exports.generateRandomPrivateKey = () => {
   let priv_key;
   do {
     priv_key = crypto.randomBytes(32);
-  }
-  while (!secp.privateKeyVerify(priv_key));
+  } while (!secp.privateKeyVerify(priv_key));
   return priv_key;
 };
 
@@ -26,5 +26,5 @@ exports.generateRandomPrivateKey = () => {
 // - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/DSIGN/EcdsaSecp256k1.hs#L225
 // - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/SECP256K1/C.hs#L157-L164
 // - https://github.com/input-output-hk/cardano-base/pull/289
-exports.toPubKeyUnsafe = ecdsa_priv_key =>
+exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
   secp.publicKeyCreate(ecdsa_priv_key, /*compressed =*/ true);

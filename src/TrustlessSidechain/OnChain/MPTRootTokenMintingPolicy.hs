@@ -6,47 +6,42 @@ module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 import PlutusTx.Prelude
 
 import Ledger qualified
+import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
-  LedgerBytes (getLedgerBytes),
   OutputDatum (OutputDatum),
   Script,
   ScriptContext (..),
   TxInInfo (txInInfoResolved),
-  TxInfo (..),
+  TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
  )
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo))
-import TrustlessSidechain.OnChain.Types (MerkleTreeEntry (mteHash), SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
+import TrustlessSidechain.OffChain.Types (SidechainParams (genesisUtxo), SidechainPubKey (getSidechainPubKey))
+import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
 
-{- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor.
-
- TODO: it doesn't encode the 'MerkleTreeEntry' to @cbor@. We would like to
- use something like
- [PlutusTx.serialiseData](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/Builtins.hs#L373)
- but for some reason it doesn't exist in the package plutus-tx for the
- version that we are using?
-
- It appears that we are using
- > plutus-tx                         >= 0.1.0 && < 0.2,
- which doesn't have our desired function, but version 1.0.0.0 does have it.
-
- While we wait, we /could/ actually reimplement such functionality onchain
- (but it would be very slow and expensive probably). See package plutus-core
- in module @PlutusCore.Data@
--}
+-- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
+{-# INLINEABLE serialiseMte #-}
 serialiseMte :: MerkleTreeEntry -> BuiltinByteString
-serialiseMte = mteHash
+serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
+
+{- | 'serialiseMrimHash' is an alias for
+ > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
+-}
+{-# INLINEABLE serialiseMrimHash #-}
+serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
+serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
@@ -80,10 +75,9 @@ signedMerkleRootMint sc =
 
       1. UTXO with the last Merkle root is referenced in the transaction.
 
-      TODO: The spec mentions this, but this currently doesn't do this.
-      Actually I'm not really sure what this achieves / why we need to do
-      this.. and this certainly begs the question of what to do for the first
-      cross chain transaction when there is no last merkle root.
+      Note: actually, this condition is just done offchain because we can trust
+      the bridge is going to do the right thing when referencing the
+      transaction.
 
       2.  the signature can be verified with the submitted public key hashes of
       committee members, and the list of public keys are unique
@@ -104,19 +98,17 @@ mkMintingPolicy
     { merkleRoot
     , signatures
     , committeePubKeys
-    , threshold
+    , previousMerkleRoot
     }
   ctx =
-    and
-      [ -- TODO: the first condition isn't done yet.. See 1. in the function documentation
-        traceIfFalse "error 'MPTRootTokenMintingPolicy' last merkle root not referenced" p1
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
-      , traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
-      ]
+    traceIfFalse "error 'MPTRootTokenMintingPolicy' previous merkle root not referenced" p1
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
+      && traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
     where
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
+      ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
       ownTokenName = Value.TokenName merkleRoot
 
       committeeDatum :: UpdateCommitteeHashDatum
@@ -130,21 +122,51 @@ mkMintingPolicy
                       (smrmUpdateCommitteeHashCurrencySymbol smrm)
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
-                , -- TODO can we use inline datums? not sure how to datumHash -> datum in v2
-                  -- updateCommitteeHashDatum contains just a hash
-                  OutputDatum d <- txOutDatum o -- Just dh <- txOutDatumHash o , Just d <- findDatum dh info
-                =
+                , -- See Note [Committee Hash Inline Datum] in
+                  -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash'
+                  OutputDatum d <- txOutDatum o =
                 IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
-            go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo found"
-         in go (txInfoInputs info)
+            go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo given as reference input"
+         in go (txInfoReferenceInputs info)
+
+      threshold :: Integer
+      threshold =
+        -- See Note [Threshold of Strictly More than 2/3 Majority] in
+        -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash' (this is mostly
+        -- duplicated from there)
+        (length committeePubKeys `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
 
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
       -- documentation of this function.
       p1, p2, p3, p4 :: Bool
-      p1 = True -- TODO: it doesn't do this yet.
-      p2 = Utils.verifyMultisig (map (getLedgerBytes . Ledger.getPubKey) committeePubKeys) threshold merkleRoot signatures
+      p1 = case previousMerkleRoot of
+        Nothing -> True
+        Just tn ->
+          -- Checks if any of the reference inputs have at least 1 of the last
+          -- merkle root.
+          let go :: [TxInInfo] -> Bool
+              go (txInInfo : rest) =
+                Value.valueOf
+                  (txOutValue (txInInfoResolved txInInfo))
+                  ownCurrencySymbol
+                  (TokenName tn)
+                  > 0 || go rest
+              go [] = False
+           in go (txInfoReferenceInputs info)
+      p2 =
+        Utils.verifyMultisig
+          (map getSidechainPubKey committeePubKeys)
+          threshold
+          ( serialiseMrimHash
+              MerkleRootInsertionMessage
+                { mrimSidechainParams = smrmSidechainParams smrm
+                , mrimMerkleRoot = merkleRoot
+                , mrimPreviousMerkleRoot = previousMerkleRoot
+                }
+          )
+          signatures
       p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName

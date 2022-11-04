@@ -2,59 +2,99 @@ module Test.UpdateCommitteeHash where
 
 import Contract.Prelude
 
-import Contract.Address (getWalletAddress)
-import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Utxos (utxosAt)
+import Contract.Log (logInfo')
+import Contract.Monad (Contract, liftContractM)
+import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt as BigInt
-import Data.Int as Int
-import Data.Map as Map
-import Data.Set as Set
 import InitSidechain (initSidechain)
-import SidechainParams (InitSidechainParams(..))
+import SidechainParams (InitSidechainParams(..), SidechainParams)
+import Test.Utils as Test.Utils
 import UpdateCommitteeHash
-  ( UpdateCommitteeHashParams(..)
-  , aggregateKeys
-  , updateCommitteeHash
+  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashParams(..)
   )
-import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
+import UpdateCommitteeHash as UpdateCommitteeHash
+import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
 
+-- | 'updateCommitteeHash' is a convenient wrapper around
+-- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
+-- Note that this makes the entire current committee sign the message.
+updateCommitteeHash ∷
+  { sidechainParams ∷ SidechainParams
+  ,
+    -- the current committee stored on chain
+    currentCommitteePrvKeys ∷ Array PrivateKey
+  , -- The new committee
+    newCommitteePrvKeys ∷ Array PrivateKey
+  , -- the last merkle root
+    previousMerkleRoot ∷ Maybe ByteArray
+  } →
+  Contract () Unit
+updateCommitteeHash
+  { sidechainParams
+  , currentCommitteePrvKeys
+  , newCommitteePrvKeys
+  , previousMerkleRoot
+  } = void do
+  let
+    -- Order the private keys by lexicographical ordering of the signatures, so
+    -- it's easy to give the sorted pubkey with its associated signature.
+    currentCommitteePubKeys /\ currentCommitteePrvKeys' =
+      Array.unzip
+        $ Array.sortWith fst
+        $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
+
+    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
+
+  committeeMessage ←
+    liftContractM
+      "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to serialise and hash update committee hash message"
+      $ UpdateCommitteeHash.serialiseUchmHash
+      $ UpdateCommitteeHashMessage
+          { sidechainParams
+          , newCommitteePubKeys: newCommitteePubKeys
+          , previousMerkleRoot
+          }
+  let
+    committeeSignatures = Array.zip
+      currentCommitteePubKeys
+      (Just <$> multiSign currentCommitteePrvKeys' committeeMessage)
+
+    uchp =
+      UpdateCommitteeHashParams
+        { sidechainParams
+        , newCommitteePubKeys: newCommitteePubKeys
+        , committeeSignatures: committeeSignatures
+        , previousMerkleRoot
+        }
+
+  UpdateCommitteeHash.updateCommitteeHash uchp
+
+-- | 'testScenario' updates the committee hash
 testScenario ∷ Contract () Unit
 testScenario = do
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
+  logInfo' "UpdateCommitteeHash 'testScenario'"
+  genesisUtxo ← Test.Utils.getOwnTransactionInput
   let
-    keyCount = 101
-    threshold = 2.0 / 3.0
-    reqSigns = Int.ceil $ Int.toNumber keyCount / threshold
-  genesisUtxo ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  committeePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+    keyCount = 25
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let
-    initCommittee = map toPubKeyUnsafe committeePrvKeys
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
       , initMint: Nothing
       , initUtxo: genesisUtxo
-      , initCommittee
+      , initCommittee: initCommitteePubKeys
       }
 
-  scParams ← initSidechain initScParams
+  { sidechainParams } ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-  let nextCommittee = Array.sort $ map toPubKeyUnsafe nextCommitteePrvKeys
-  nextCommitteeHash ← liftContractE $ aggregateKeys nextCommittee
-  let
-    sigs = multiSign (Array.take reqSigns committeePrvKeys) nextCommitteeHash
 
-    uchp =
-      UpdateCommitteeHashParams
-        { sidechainParams: scParams
-        , newCommitteePubKeys: nextCommittee
-        , committeePubKeys: initCommittee
-        , committeeSignatures: sigs
-        }
-
-  updateCommitteeHash uchp
+  updateCommitteeHash
+    { sidechainParams
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , newCommitteePrvKeys: nextCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    }

@@ -1,115 +1,155 @@
-module MPTRoot where
+-- | 'MPTRoot' contains the endpoint functionality for the 'MPTRoot' endpoint
+module MPTRoot
+  ( module MPTRoot.Types
+  , module MPTRoot.Utils
+  , saveRoot
+  ) where
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
-import Contract.PlutusData (class ToData, PlutusData(Constr), toData, unitDatum)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Contract.Monad
+  ( Contract
+  , liftContractM
+  , liftedE
+  , liftedM
+  , throwContractError
+  )
+import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
-  , applyArgs
-  , validatorHash
+import Contract.Scripts as Scripts
+import Contract.Transaction
+  ( TransactionHash
+  , awaitTxConfirmed
+  , balanceAndSignTx
+  , submit
   )
-import Contract.TextEnvelope
-  ( TextEnvelopeType(PlutusScriptV2)
-  , textEnvelopeBytes
-  )
-import Contract.Transaction (awaitTxConfirmed, balanceAndSignTx, submit)
-import Contract.TxConstraints as Constraints
+import Contract.TxConstraints (TxConstraints)
+import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Data.BigInt (BigInt, fromInt)
-import RawScripts (rawMPTRootTokenMintingPolicy, rawMPTRootTokenValidator)
-import SidechainParams (SidechainParams)
-import Types.Scripts (plutusV2Script)
+import MPTRoot.Types
+  ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
+  , SaveRootParams(SaveRootParams)
+  , SignedMerkleRoot(SignedMerkleRoot)
+  , SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import MPTRoot.Utils
+  ( findMptRootTokenUtxo
+  , findPreviousMptRootTokenUtxo
+  , mptRootTokenMintingPolicy
+  , mptRootTokenValidator
+  , serialiseMrimHash
+  )
+import UpdateCommitteeHash
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  )
+import UpdateCommitteeHash as UpdateCommitteeHash
+import Utils.Crypto as Utils.Crypto
+import Utils.Logging (class Display)
+import Utils.Logging as Utils.Logging
 
-data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot ∷ String
-  , signatures ∷ Array String
-  , threshold ∷ BigInt -- Natural: the number of committee pubkeys needed to sign off
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- PubKey -- Public keys of all committee members
-  }
-
-derive instance Generic SignedMerkleRoot _
-instance ToData SignedMerkleRoot where
-  toData
-    (SignedMerkleRoot { merkleRoot, signatures, threshold, committeePubKeys }) =
-    Constr zero
-      [ toData merkleRoot
-      , toData signatures
-      , toData threshold
-      , toData committeePubKeys
-      ]
-
-newtype SaveRootParams = SaveRootParams
-  { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ String
-  , signatures ∷ Array String
-  , threshold ∷ BigInt
-  , committeePubKeys ∷
-      Array PaymentPubKeyHash -- PubKey -- Public keys of all committee members
-  }
-
-derive instance Generic SaveRootParams _
-derive instance Newtype SaveRootParams _
-instance ToData SaveRootParams where
-  toData
-    ( SaveRootParams
-        { sidechainParams, merkleRoot, signatures, threshold, committeePubKeys }
-    ) = Constr zero
-    [ toData sidechainParams
-    , toData merkleRoot
-    , toData signatures
-    , toData threshold
-    , toData committeePubKeys
-    ]
-
-getRootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
-getRootTokenMintingPolicy sp = do
-  mptRootMP ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
-    rawMPTRootTokenMintingPolicy
-    PlutusScriptV2
-  liftedE (applyArgs mptRootMP [ toData sp ])
-
-getRootTokenValidator ∷ SidechainParams → Contract () Validator
-getRootTokenValidator sp = do
-  mptRootVal ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
-    rawMPTRootTokenValidator
-    PlutusScriptV2
-  liftedE (applyArgs mptRootVal [ toData sp ])
-
-saveRoot ∷ SaveRootParams → Contract () Unit
+-- | 'saveRoot' is the endpoint.
+saveRoot ∷ SaveRootParams → Contract () TransactionHash
 saveRoot
   ( SaveRootParams
-      { sidechainParams, merkleRoot, threshold, signatures, committeePubKeys }
+      { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
   ) = do
-  rootTokenMP ← getRootTokenMintingPolicy sidechainParams
-  rootTokenCS ← liftContractM "Cannot get currency symbol"
-    (Value.scriptCurrencySymbol rootTokenMP)
-  rootTokenVal ← getRootTokenValidator sidechainParams
-  tn ← liftContractM "Cannot get token name"
-    (Value.mkTokenName =<< byteArrayFromAscii merkleRoot)
-  let
-    value = Value.singleton rootTokenCS tn (fromInt 1)
-    redeemer = SignedMerkleRoot
-      { merkleRoot, signatures, threshold, committeePubKeys }
+  let msg = report "saveRoot"
 
-    constraints ∷ Constraints.TxConstraints Void Void
+  -- Getting the required validators / minting policies...
+  ---------------------------------------------------------
+  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
+    $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
+  updateCommitteeHashCurrencySymbol ←
+    liftContractM
+      (msg "Failed to get updateCommitteeHash CurrencySymbol")
+      $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams
+      , updateCommitteeHashCurrencySymbol
+      }
+  rootTokenMP ← mptRootTokenMintingPolicy smrm
+  rootTokenCS ←
+    liftContractM (msg "Cannot get CurrencySymbol of mptRootTokenMintingPolicy")
+      $ Value.scriptCurrencySymbol rootTokenMP
+  rootTokenVal ← mptRootTokenValidator sidechainParams
+  merkleRootTokenName ←
+    liftContractM
+      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
+      $ Value.mkTokenName merkleRoot
+
+  -- Grab the transaction holding the last merkle root
+  ---------------------------------------------------------
+  maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo previousMerkleRoot
+    smrm
+
+  -- Grab the utxo with the current committee hash / verifying that
+  -- this committee has signed the current merkle root (for better error
+  -- messages)
+  ---------------------------------------------------------
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , uchAssetClass: updateCommitteeHashCurrencySymbol /\
+          UpdateCommitteeHash.initCommitteeHashMintTn
+      , mptRootTokenCurrencySymbol: rootTokenCS
+      }
+  { index: committeeHashTxIn, value: _committeeHashTxOut } ←
+    liftedM (msg "Failed to find committee hash utxo") $
+      UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
+
+  mrimHash ← liftContractM (msg "Failed to create MerkleRootInsertionMessage")
+    $ serialiseMrimHash
+    $ MerkleRootInsertionMessage
+        { sidechainParams
+        , merkleRoot
+        , previousMerkleRoot
+        }
+  let
+    committeePubKeys /\ signatures =
+      Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
+
+  unless
+    (Utils.Crypto.verifyMultiSignature 2 3 committeePubKeys mrimHash signatures)
+    $ throwContractError
+    $ msg "Invalid committee signatures for MerkleRootInsertionMessage"
+
+  -- Building the transaction
+  ---------------------------------------------------------
+  let
+    value = Value.singleton rootTokenCS merkleRootTokenName one
+
+    redeemer = SignedMerkleRoot
+      { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
+
+    constraints ∷ TxConstraints Void Void
     constraints =
-      Constraints.mustMintValueWithRedeemer (wrap (toData redeemer)) value
-        <> Constraints.mustPayToScript (validatorHash rootTokenVal) unitDatum
-          Constraints.DatumWitness
+      TxConstraints.mustMintValueWithRedeemer (wrap (toData redeemer)) value
+        <> TxConstraints.mustPayToScript (Scripts.validatorHash rootTokenVal)
+          unitDatum
+          TxConstraints.DatumWitness
           value
+        <> TxConstraints.mustReferenceOutput committeeHashTxIn
+        <> case maybePreviousMerkleRootUtxo of
+          Nothing → mempty
+          Just { index: oref } → TxConstraints.mustReferenceOutput oref
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
+
+  -- Submitting the transaction
+  ---------------------------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM "Failed to balance/sign tx" (balanceAndSignTx ubTx)
+  bsTx ← liftedM (msg "Failed to balance/sign tx") $ balanceAndSignTx ubTx
   txId ← submit bsTx
-  logInfo' ("Submitted saveRoot Tx: " <> show txId)
+  logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
-  logInfo' "saveRoot Tx submitted successfully!"
+  logInfo' (msg "Save root Tx submitted successfully!")
+
+  pure txId
+
+-- | 'report' is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Utils.Logging.mkReport <<< { mod: "MPTRoot", fun: _ }

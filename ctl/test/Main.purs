@@ -2,25 +2,25 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, launchAff_)
+import Contract.Monad (launchAff_)
 import Contract.Test.Plutip (runPlutipContract)
 import Contract.Wallet (withKeyWallet)
-import Control.Monad.Error.Class (catchError)
 import Data.BigInt as BigInt
-import Effect.Exception (message)
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
+import Test.MPTRoot as MPTRoot
+import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
+import Test.Options as Options
 import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
-
--- import Test.UpdateCommitteeHash as UpdateCommitteeHash
+import Test.UpdateCommitteeHash as UpdateCommitteeHash
+import Test.Utils as Test.Utils
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -28,26 +28,41 @@ main = do
   -- Run the merkle tree integration tests
   MerkleTree.test
 
+  -- Run the Options tests.
+  Options.test
+
   -- Run the plutip tests
   launchAff_ do
     -- Default ada distribution
     let
-      distribute = [ BigInt.fromInt 2_000_000_000, BigInt.fromInt 2_000_000_000 ]
-        /\ [ BigInt.fromInt 2_000_000_000 ]
+      distribute =
+        [ BigInt.fromInt 2_000_000_000
+        , BigInt.fromInt 2_000_000_000
+        , BigInt.fromInt 2_000_000_000
+        ]
+          /\ [ BigInt.fromInt 2_000_000_000 ]
 
     -- Run the plutip tests
     runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice do
         CommitteeCandidateValidator.testScenarioSuccess
-        CommitteeCandidateValidator.testScenarioFailure1 # fails
-        CommitteeCandidateValidator.testScenarioFailure2 alice bob # fails
+        CommitteeCandidateValidator.testScenarioFailure1 # Test.Utils.fails
+        CommitteeCandidateValidator.testScenarioFailure2 alice bob #
+          Test.Utils.fails
 
         FUELMintingPolicy.testScenario
 
-        -- UpdateCommitteeHash.testScenario
+        UpdateCommitteeHash.testScenario
+
+        MPTRoot.testScenario1
+        MPTRoot.testScenario2
+
+        MerkleRootChaining.testScenario1
+        MerkleRootChaining.testScenario2
 
         InitSidechain.testScenario1
-        InitSidechain.testScenario2 alice bob
+        InitSidechain.testScenario2
+        InitSidechain.testScenario3 alice bob
 
     -- Run the plutip tests for the proof of concept tests (note we run these
     -- separately from the actual sidechain tests.)
@@ -66,7 +81,3 @@ main = do
         PoCSerialiseData.testScenario2
 
         PoCECDSA.testScenario
-
--- print nicer failing tests that don't have a stack trace and don't halt the program
-fails ∷ Contract () Unit → Contract () Unit
-fails = flip catchError \e → logInfo' ("Expected failure: " <> message e)
