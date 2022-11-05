@@ -134,7 +134,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     -- the redeemer, and we can construct / verify if the
     -- UpdateCommitteeHashMessage is signed by the committee by looking at
     -- the values directly provided in the datum...
-    -- This would let use remove this last check as well.
+    -- This would let use remove the above check as well.
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
       (sidechainEpoch dat < sidechainEpoch outputDatum)
