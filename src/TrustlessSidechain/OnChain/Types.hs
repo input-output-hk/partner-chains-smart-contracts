@@ -106,14 +106,15 @@ instance ValidatorTypes FUELRedeemer where
  TODO: this isn't actually used to verify signatures in the FUEL minting /
  burning policies (perhaps this will be used in a later iteration)
 -}
-newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
+data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash :: BuiltinByteString
+  , sidechainEpoch :: Integer
   }
 
 instance Eq UpdateCommitteeHashDatum where
   {-# INLINEABLE (==) #-}
-  UpdateCommitteeHashDatum cmtHsh == UpdateCommitteeHashDatum cmtHsh' =
-    cmtHsh == cmtHsh'
+  UpdateCommitteeHashDatum cmtHsh epoch == UpdateCommitteeHashDatum cmtHsh' epoch' =
+    cmtHsh == cmtHsh' && epoch == epoch'
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
@@ -165,6 +166,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- should do this for us
     uchmNewCommitteePubKeys :: [SidechainPubKey]
   , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
+  , uchmSidechainEpoch :: Integer
   }
 PlutusTx.makeLift ''UpdateCommitteeHashMessage
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]

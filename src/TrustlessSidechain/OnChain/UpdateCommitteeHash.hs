@@ -38,8 +38,8 @@ import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
+  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash, sidechainEpoch),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
@@ -125,7 +125,19 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       referencesPreviousMerkleRoot
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': expected different output datum"
-      (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
+      ( outputDatum
+          == UpdateCommitteeHashDatum
+            (aggregateKeys (newCommitteePubKeys red))
+            (sidechainEpoch outputDatum)
+      )
+    -- TODO: an optimization we don't need to have 'newCommitteePubKeys' in
+    -- the redeemer, and we can construct / verify if the
+    -- UpdateCommitteeHashMessage is signed by the committee by looking at
+    -- the values directly provided in the datum...
+    -- This would let use remove this last check as well.
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+      (sidechainEpoch dat < sidechainEpoch outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -179,6 +191,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               { uchmSidechainParams = cSidechainParams uch
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
               , uchmPreviousMerkleRoot = previousMerkleRoot red
+              , uchmSidechainEpoch = sidechainEpoch outputDatum
               }
        in verifyMultisig
             (getSidechainPubKey <$> committeePubKeys red)
