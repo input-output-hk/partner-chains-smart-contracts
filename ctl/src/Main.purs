@@ -82,8 +82,9 @@ main = do
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
       GetAddrs → do
-        addresses ← GetSidechainAddresses.getSidechainAddresses opts.scParams
-        pure $ GetAddrsResp { addresses }
+        sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
+          opts.scParams
+        pure $ GetAddrsResp { sidechainAddresses }
 
       CommitteeHash
         { newCommitteePubKeys, committeeSignatures, previousMerkleRoot } →
@@ -124,10 +125,13 @@ main = do
             , initCommittee: List.toUnfoldable committeePubKeys
             , initMint: sc.genesisMint
             }
-        { transactionId, sidechainParams, addresses } ← initSidechain isc
+        { transactionId, sidechainParams, sidechainAddresses } ← initSidechain isc
 
         pure $ InitResp
-          { transactionId: unwrap transactionId, sidechainParams, addresses }
+          { transactionId: unwrap transactionId
+          , sidechainParams
+          , sidechainAddresses
+          }
 
       CommitteeHandover
         { merkleRoot

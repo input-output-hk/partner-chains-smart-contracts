@@ -472,7 +472,7 @@ initSidechain ∷
   Contract ()
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
-    , addresses ∷ SidechainAddresses
+    , sidechainAddresses ∷ SidechainAddresses
     }
 initSidechain isp = do
   -- Warning: this code is essentially duplicated code from
@@ -526,11 +526,12 @@ initSidechain isp = do
   -- minting policies as in issue #224
   -----------------------------------------
   let sidechainParams = toSidechainParams isp
-  addresses ← GetSidechainAddresses.getSidechainAddresses sidechainParams
+  sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
+    sidechainParams
   pure
     { transactionId: txId
     , sidechainParams
-    , addresses
+    , sidechainAddresses
     }
 
 -- | 'report' is an internal function used for helping writing log messages.

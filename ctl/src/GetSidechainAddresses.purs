@@ -17,12 +17,15 @@ import SidechainParams (SidechainParams)
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
--- | `SidechainAddresses` is an `Array` which uniquely associates a `String`
+-- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a
 -- | sidechain validator / minting policy.
 -- |
 -- | See `getSidechainAddresses` for more details.
-type SidechainAddresses = Array (Tuple String String)
+type SidechainAddresses =
+  { addresses ∷ Array (Tuple String String)
+  , mintingPolicies ∷ Array (Tuple String String)
+  }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
 -- | the given `SidechainParams` which contains
@@ -43,11 +46,15 @@ getSidechainAddresses scParams = do
     getAddr validator
   let
     addresses =
-      [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
-      , "FuelMintingPolicyId" /\ fuelMintingPolicyId
+      [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr ]
+    mintingPolicies =
+      [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
       , "MPTRootTokenMintingPolicyId" /\ mptRootTokenMintingPolicyId
       ]
-  pure addresses
+  pure
+    { addresses
+    , mintingPolicies
+    }
 
 -- | Print the bech32 serialised address of a given validator
 getAddr ∷ Validator → Contract () String
