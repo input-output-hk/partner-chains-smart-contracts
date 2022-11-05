@@ -29,9 +29,11 @@ type SidechainAddresses =
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
 -- | the given `SidechainParams` which contains
--- |    - the validator address of the committee candidate validator
--- |    - the currency symbol of the fuel minting policy
--- |    - the currency symbol of the mpt root token minting policy
+-- |    - addresses:
+-- |        - the validator address of the committee candidate validator
+-- |    - minting policies:
+-- |        - the currency symbol of the fuel minting policy
+-- |        - the currency symbol of the mpt root token minting policy
 getSidechainAddresses ∷ SidechainParams → Contract () SidechainAddresses
 getSidechainAddresses scParams = do
   fuelMintingPolicyId ← do
