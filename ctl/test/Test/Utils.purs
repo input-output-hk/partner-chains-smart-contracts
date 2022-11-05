@@ -4,6 +4,7 @@ module Test.Utils
   , paymentPubKeyHashToByteArray
   , getOwnTransactionInput
   , fails
+  , assertBy
   ) where
 
 import Contract.Prelude
@@ -23,6 +24,7 @@ import Control.Monad.Error.Class as MonadError
 import Data.Map as Map
 import Data.Set as Set
 import Data.UInt as UInt
+import Effect.Class.Console as Console
 import Effect.Exception as Exception
 import Serialization.Hash as Hash
 
@@ -86,3 +88,16 @@ fails contract = do
       "Contract should have failed but it didn't."
     Left e →
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
+
+-- | @'assertBy' eqBy expected actual@ does nothing if @eqBy expected actual ==
+-- true@, and logs and throws an exception otherwise.
+assertBy ∷ ∀ a. Show a ⇒ (a → a → Boolean) → a → a → Effect Unit
+assertBy eqBy expected actual =
+  if eqBy expected actual then pure unit
+  else do
+    Console.warn "Assertion failed!"
+    Console.warn "Expected:"
+    Console.warnShow expected
+    Console.warn "But got:"
+    Console.warnShow actual
+    Exception.throwException (Exception.error "Test case failed!")

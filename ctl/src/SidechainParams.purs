@@ -5,8 +5,15 @@ import Contract.Prelude
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
+import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Compat as CAC
+import Data.Codec.Argonaut.Record as CAR
+import Data.Profunctor (wrapIso)
+import Partial.Unsafe (unsafePartial)
 import Types (PubKey)
 import Types.Transaction (TransactionInput)
+import Utils.Codecs (byteArrayCodec, transactionInputCodec)
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
@@ -90,3 +97,33 @@ instance ToData InitSidechainParams where
 
 instance Show InitSidechainParams where
   show = genericShow
+
+scParamsCodec ∷ CA.JsonCodec SidechainParams
+scParamsCodec =
+  wrapIso SidechainParams $
+    ( CAR.object "sidechainParameters"
+        { chainId: chainIdCodec
+        , genesisHash: byteArrayCodec
+        , genesisMint: CAC.maybe transactionInputCodec
+        , genesisUtxo: transactionInputCodec
+        , thresholdNumerator:
+            CA.prismaticCodec "thresholdNumerator"
+              (Just <<< BigInt.fromInt)
+              unsafeToInt
+              CA.int
+        , thresholdDenominator:
+            CA.prismaticCodec "thresholdDenominator"
+              (Just <<< BigInt.fromInt)
+              unsafeToInt
+              CA.int
+        }
+    )
+  where
+  chainIdCodec ∷ CA.JsonCodec BigInt
+  chainIdCodec = CA.prismaticCodec "chainId"
+    (Just <<< BigInt.fromInt)
+    unsafeToInt
+    CA.int
+
+  unsafeToInt ∷ BigInt → Int
+  unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x

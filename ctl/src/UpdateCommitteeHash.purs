@@ -22,7 +22,8 @@ import Contract.PlutusData
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( TransactionOutput(..)
+  ( TransactionHash
+  , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTx
@@ -67,7 +68,7 @@ import Utils.Logging as Utils.Logging
 
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
-updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
+updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let -- @msg@ is used to help generate log messages
     msg = report "updateCommitteeHash"
@@ -205,6 +206,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
   logInfo' (msg "Update committee hash transaction submitted successfully")
+
+  pure txId
 
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

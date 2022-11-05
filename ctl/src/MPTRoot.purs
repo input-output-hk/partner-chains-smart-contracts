@@ -19,7 +19,8 @@ import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( awaitTxConfirmed
+  ( TransactionHash
+  , awaitTxConfirmed
   , balanceAndSignTx
   , submit
   )
@@ -49,7 +50,7 @@ import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
 -- | 'saveRoot' is the endpoint.
-saveRoot ∷ SaveRootParams → Contract () Unit
+saveRoot ∷ SaveRootParams → Contract () TransactionHash
 saveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
@@ -152,6 +153,8 @@ saveRoot
   logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
   logInfo' (msg "Save root Tx submitted successfully!")
+
+  pure txId
 
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

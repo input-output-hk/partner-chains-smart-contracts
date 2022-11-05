@@ -11,6 +11,7 @@ import Contract.Address (NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
+import Data.List (List)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
@@ -59,7 +60,28 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | CommitteeHash
+      { newCommitteePubKeys ∷ List PubKey
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , previousMerkleRoot ∷ Maybe ByteArray
+      }
+  | SaveRoot
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      }
+  |
+    -- | 'CommitteeHandover' is a convenient alias for saving the root,
+    -- followed by updating the committee hash.
+    CommitteeHandover
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , newCommitteePubKeys ∷ List PubKey
+      , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      }
   | GetAddrs
+  | Init { committeePubKeys ∷ List ByteArray }
 
 derive instance Generic Endpoint _
 

@@ -24,6 +24,7 @@
   , "parallel"
   , "partial"
   , "prelude"
+  , "profunctor"
   , "profunctor-lenses"
   , "strings"
   , "transformers"
