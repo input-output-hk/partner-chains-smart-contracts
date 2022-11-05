@@ -25,24 +25,32 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
+import Data.BigInt (BigInt)
 import SidechainParams (SidechainParams)
 import Types (AssetClass, PubKey, Signature)
 
 -- | 'UpdateCommitteeHashDatum' is the datum for the update committee has
 -- validator
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash ∷ ByteArray }
+  { committeeHash ∷ ByteArray
+  , sidechainEpoch ∷ BigInt
+  }
 
 derive instance Generic UpdateCommitteeHashDatum _
 derive instance Newtype UpdateCommitteeHashDatum _
 instance ToData UpdateCommitteeHashDatum where
-  toData (UpdateCommitteeHashDatum { committeeHash }) = Constr zero
-    [ toData committeeHash ]
+  toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) = Constr
+    zero
+    [ toData committeeHash, toData sidechainEpoch ]
 
 instance FromData UpdateCommitteeHashDatum where
-  fromData (Constr n [ a ])
-    | n == zero = UpdateCommitteeHashDatum <$> ({ committeeHash: _ }) <$>
-        fromData a
+  fromData (Constr n [ a, b ])
+    | n == zero =
+        UpdateCommitteeHashDatum <$>
+          ( { committeeHash: _, sidechainEpoch: _ }
+              <$> fromData a
+              <*> fromData b
+          )
   fromData _ = Nothing
 
 -- | 'UpdateCommitteeHash' paramaterizes the the validator for the update
@@ -110,6 +118,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
   , newCommitteePubKeys ∷ Array PubKey
   , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
   , previousMerkleRoot ∷ Maybe ByteArray
+  , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }
 
 -- | 'UpdateCommitteeHashMessage' corresponds to the on chain type which is
@@ -123,6 +132,7 @@ newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- should do this for us
     newCommitteePubKeys ∷ Array PubKey
   , previousMerkleRoot ∷ Maybe ByteArray
+  , sidechainEpoch ∷ BigInt
   }
 
 derive instance Generic UpdateCommitteeHashMessage _
@@ -132,9 +142,11 @@ instance ToData UpdateCommitteeHashMessage where
         { sidechainParams
         , newCommitteePubKeys
         , previousMerkleRoot
+        , sidechainEpoch
         }
     ) = Constr zero
     [ toData sidechainParams
     , toData newCommitteePubKeys
     , toData previousMerkleRoot
+    , toData sidechainEpoch
     ]

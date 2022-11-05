@@ -196,7 +196,10 @@ initCommitteeHashLookupsAndConstraints (InitSidechainParams isp) = do
       }
     committeeHashDatum = Datum
       $ PlutusData.toData
-      $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
+      $ UpdateCommitteeHashDatum
+          { committeeHash: aggregatedKeys
+          , sidechainEpoch: isp.initSidechainEpoch
+          }
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol

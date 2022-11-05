@@ -120,6 +120,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         { sidechainParams: uchp.sidechainParams
         , newCommitteePubKeys: newCommitteeSorted
         , previousMerkleRoot: uchp.previousMerkleRoot
+        , sidechainEpoch: uchp.sidechainEpoch
         }
 
   unless
@@ -168,7 +169,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     newDatum = Datum $ toData
-      (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
+      ( UpdateCommitteeHashDatum
+          { committeeHash: newCommitteeHash, sidechainEpoch: uchp.sidechainEpoch }
+      )
     value = assetClassValue (unwrap uch).uchAssetClass one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer

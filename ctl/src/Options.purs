@@ -304,7 +304,11 @@ options maybeConfig = info (helper <*> optSpec)
   committeeHashSpec ∷ Parser Endpoint
   committeeHashSpec =
     CommitteeHash <$>
-      ( { newCommitteePubKeys: _, committeeSignatures: _, previousMerkleRoot: _ }
+      ( { newCommitteePubKeys: _
+        , committeeSignatures: _
+        , previousMerkleRoot: _
+        , sidechainEpoch: _
+        }
           <$>
             parseNewCommitteePubKeys
           <*>
@@ -313,6 +317,8 @@ options maybeConfig = info (helper <*> optSpec)
               "Public key and (optionally) the signature of the new committee hash seperated by a colon"
           <*>
             parsePreviousMerkleRoot
+          <*>
+            parseSidechainEpoch
       )
 
   saveRootSpec ∷ Parser Endpoint
@@ -337,6 +343,7 @@ options maybeConfig = info (helper <*> optSpec)
         , newCommitteePubKeys: _
         , newCommitteeSignatures: _
         , newMerkleRootSignatures: _
+        , sidechainEpoch: _
         }
           <$>
             parseMerkleRoot
@@ -352,6 +359,8 @@ options maybeConfig = info (helper <*> optSpec)
             parseCommitteeSignatures
               "committee-pub-key-and-new-merkle-root-signature"
               "Public key and (optionally) the signature of the merkle root seperated by a colon"
+          <*>
+            parseSidechainEpoch
       )
 
   -- | 'parseMerkleRoot' parses the option of a new merkle root. This is used
@@ -395,6 +404,17 @@ options maybeConfig = info (helper <*> optSpec)
           )
       )
 
+  parseSidechainEpoch ∷ Parser BigInt
+  parseSidechainEpoch =
+    option
+      bigInt
+      ( fold
+          [ long "sidechain-epoch"
+          , metavar "INT"
+          , help "Sidechain epoch"
+          ]
+      )
+
   -- | 'parseCommitteeSignatures' gives the options for parsing the current
   -- committees' signatures. This is used in both @saveRootSpec@ and
   -- @committeeHashSpec@.
@@ -427,8 +447,9 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "PUBLIC_KEY"
       , help "Public key for a committee member at sidechain initialisation"
       ]
+    initSidechainEpoch ← parseSidechainEpoch
     in
-      Init { committeePubKeys }
+      Init { committeePubKeys, initSidechainEpoch }
 
 -- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
 getOptions ∷ Effect Options
