@@ -38,6 +38,7 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee
+      , initSidechainEpoch: zero
       }
 
   void $ InitSidechain.initSidechain initScParams
@@ -66,6 +67,7 @@ testScenario2 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee
+      , initSidechainEpoch: zero
       }
 
   void do
@@ -102,6 +104,7 @@ testScenario3 alice bob = do
         , initMint: Nothing
         , initUtxo: genesisUtxo
         , initCommittee
+        , initSidechainEpoch: zero
         }
 
     void $ InitSidechain.initSidechain initScParams

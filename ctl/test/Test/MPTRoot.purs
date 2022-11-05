@@ -105,6 +105,7 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -199,6 +200,7 @@ testScenario2 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

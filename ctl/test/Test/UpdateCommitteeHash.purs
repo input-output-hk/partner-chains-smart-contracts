@@ -6,6 +6,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Data.Array as Array
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
 import Serialization.Types (PrivateKey)
@@ -30,6 +31,8 @@ updateCommitteeHash ∷
     newCommitteePrvKeys ∷ Array PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe ByteArray
+  , -- sidechain epoch
+    sidechainEpoch ∷ BigInt
   } →
   Contract () Unit
 updateCommitteeHash
@@ -37,6 +40,7 @@ updateCommitteeHash
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
+  , sidechainEpoch
   } = void do
   let
     -- Order the private keys by lexicographical ordering of the signatures, so
@@ -56,6 +60,7 @@ updateCommitteeHash
           { sidechainParams
           , newCommitteePubKeys: newCommitteePubKeys
           , previousMerkleRoot
+          , sidechainEpoch
           }
   let
     committeeSignatures = Array.zip
@@ -68,6 +73,7 @@ updateCommitteeHash
         , newCommitteePubKeys: newCommitteePubKeys
         , committeeSignatures: committeeSignatures
         , previousMerkleRoot
+        , sidechainEpoch
         }
 
   UpdateCommitteeHash.updateCommitteeHash uchp
@@ -88,6 +94,7 @@ testScenario = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       }
 
   { sidechainParams } ← initSidechain initScParams
@@ -98,4 +105,5 @@ testScenario = do
     , currentCommitteePrvKeys: initCommitteePrvKeys
     , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing
+    , sidechainEpoch: BigInt.fromInt 1
     }
