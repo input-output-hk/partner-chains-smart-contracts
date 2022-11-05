@@ -36,8 +36,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
-        , thresholdNumerator: CAC.maybe CA.int
-        , thresholdDenominator: CAC.maybe CA.int
+        , threshold: CAC.maybe thresholdCodec
         }
     )
   runtimeConfigCodec =
@@ -71,6 +70,13 @@ networkIdCodec = CA.prismaticCodec "Network" dec enc CA.string
 byteArrayCodec ∷ CA.JsonCodec ByteArray
 byteArrayCodec = CA.prismaticCodec "ByteArray" hexToByteArray byteArrayToHex
   CA.string
+
+thresholdCodec ∷ CA.JsonCodec { numerator ∷ Int, denominator ∷ Int }
+thresholdCodec = CA.object "threshold" $
+  CAR.record
+    { numerator: CA.int
+    , denominator: CA.int
+    }
 
 transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string

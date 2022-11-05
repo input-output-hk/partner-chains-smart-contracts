@@ -14,12 +14,12 @@ newtype SidechainParams = SidechainParams
   , genesisMint ∷ Maybe TransactionInput
   , genesisUtxo ∷ TransactionInput
   ,
-    -- | 'thresholdNumerator' is the numerator of the ratio required for the
+    -- 'thresholdNumerator' is the numerator of the ratio required for the
     -- committee to verify that committee has signed something (e.g. updating the
     -- committee hash, or saving a new merkle root).
     thresholdNumerator ∷ BigInt
   ,
-    -- | 'thresholdDenominator' is the denominator of the ratio required for the
+    -- 'thresholdDenominator' is the denominator of the ratio required for the
     -- committee to verify that committee has signed something (e.g. updating the
     -- committee hash, or saving a new merkle root).
     thresholdDenominator ∷ BigInt
