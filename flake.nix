@@ -15,7 +15,7 @@
 
     plutip.url = github:mlabs-haskell/plutip/08204cc223138d53932004db31fb0292e8f7dfe3;
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/85208c5c705d2947e50e32c5eb9f22c3b0b72401";
+      url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
       inputs = {
         plutip.follows = "plutip";
         bot-plutus-interface.follows = "plutip/bot-plutus-interface";
