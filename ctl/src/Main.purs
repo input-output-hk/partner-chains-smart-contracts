@@ -2,25 +2,22 @@ module Main (main) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator (getCommitteeCandidateValidator)
 import CommitteCandidateValidator as CommitteCandidateValidator
-import Contract.Address
-  ( addressToBech32
-  , getNetworkId
-  , ownPaymentPubKeyHash
-  , validatorHashEnterpriseAddress
-  )
+import Contract.Address (ownPaymentPubKeyHash)
 import Contract.Monad
   ( Contract
   , launchAff_
-  , liftContractM
   , liftedM
   , runContract
   )
-import Contract.Scripts (Validator, validatorHash)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
-import FUELMintingPolicy (FuelParams(Burn), passiveBridgeMintParams, runFuelMP)
+import FUELMintingPolicy
+  ( FuelParams(Burn)
+  , passiveBridgeMintParams
+  , runFuelMP
+  )
+import GetSidechainAddresses as GetSidechainAddresses
 import InitSidechain (initSidechain)
 import MPTRoot (SaveRootParams(SaveRootParams))
 import MPTRoot as MPTRoot
@@ -85,12 +82,9 @@ main = do
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
       GetAddrs → do
-        addresses ←
-          getAddrs
-            [ "CommitteCandidateValidator" /\
-                getCommitteeCandidateValidator opts.scParams
-            ]
-        pure $ GetAddrsResp { addresses }
+        sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
+          opts.scParams
+        pure $ GetAddrsResp { sidechainAddresses }
 
       CommitteeHash
         { newCommitteePubKeys, committeeSignatures, previousMerkleRoot } →
@@ -133,9 +127,13 @@ main = do
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator
             }
-        { transactionId, sidechainParams } ← initSidechain isc
+        { transactionId, sidechainParams, sidechainAddresses } ← initSidechain isc
 
-        pure $ InitResp { transactionId: unwrap transactionId, sidechainParams }
+        pure $ InitResp
+          { transactionId: unwrap transactionId
+          , sidechainParams
+          , sidechainAddresses
+          }
 
       CommitteeHandover
         { merkleRoot
@@ -165,24 +163,6 @@ main = do
           { saveRootTransactionId, committeeHashTransactionId }
 
     printEndpointResp endpointResp
-
--- | Print the bech32 serialised address of a given validator
-getAddrs ∷
-  Array (Tuple String (Contract () Validator)) →
-  Contract () (Array (Tuple String String))
-getAddrs xs = do
-  netId ← getNetworkId
-  traverse (getAddr netId) xs
-
-  where
-  getAddr netId (name /\ getValidator) = do
-    v ← getValidator
-    addr ← liftContractM ("Cannot get " <> name <> " address") $
-      validatorHashEnterpriseAddress
-        netId
-        (validatorHash v)
-    serialised ← addressToBech32 addr
-    pure $ name /\ serialised
 
 printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =

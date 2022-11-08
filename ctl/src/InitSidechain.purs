@@ -54,6 +54,8 @@ import DistributedSet
 import DistributedSet as DistributedSet
 import FUELMintingPolicy (FUELMint(FUELMint))
 import FUELMintingPolicy as FUELMintingPolicy
+import GetSidechainAddresses (SidechainAddresses)
+import GetSidechainAddresses as GetSidechainAddresses
 import MPTRoot (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot as MPTRoot
 import SidechainParams
@@ -470,7 +472,10 @@ For details, see 'initSidechainTokens' and 'initSidechainCommittee'.
 initSidechain ∷
   InitSidechainParams →
   Contract ()
-    { transactionId ∷ TransactionHash, sidechainParams ∷ SidechainParams }
+    { transactionId ∷ TransactionHash
+    , sidechainParams ∷ SidechainParams
+    , sidechainAddresses ∷ SidechainAddresses
+    }
 initSidechain isp = do
   -- Warning: this code is essentially duplicated code from
   -- 'initSidechainTokens' and 'initSidechainCommittee'....
@@ -519,9 +524,16 @@ initSidechain isp = do
   logInfo' $ msg
     "Initialise sidechain tokens transaction submitted successfully."
 
+  -- Grabbing the required sidechain addresses of particular validators /
+  -- minting policies as in issue #224
+  -----------------------------------------
+  let sidechainParams = toSidechainParams isp
+  sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
+    sidechainParams
   pure
     { transactionId: txId
-    , sidechainParams: toSidechainParams isp
+    , sidechainParams
+    , sidechainAddresses
     }
 
 -- | 'report' is an internal function used for helping writing log messages.

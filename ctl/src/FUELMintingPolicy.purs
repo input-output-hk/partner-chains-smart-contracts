@@ -4,6 +4,7 @@ module FUELMintingPolicy
   , FuelParams(..)
   , passiveBridgeMintParams
   , fuelMintingPolicy
+  , getFuelMintingPolicy
   , MerkleTreeEntry(MerkleTreeEntry)
   ) where
 
@@ -134,6 +135,22 @@ fuelMintingPolicy fm = do
     rawFUELMintingPolicy
     PlutusScriptV2
   liftedE (applyArgs fuelMPUnapplied [ toData fm ])
+
+-- | `getFuelMintingPolicy` creates the parameter `FUELMint`
+-- | (as required by the onchain mintng policy) via the given sidechain params, and calls
+-- | `fuelMintingPolicy` to give us the minting policy
+-- TODO: the "creation of `FUELMint` via the given sidechain params" needs more
+-- work i.e. we should actually fill up the currency symbols with their proper
+-- currency symbols instead of `dummyCS`.
+-- For now, we copy what the offchain code is doing.
+getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getFuelMintingPolicy sidechainParams = do
+  fuelMintingPolicy $
+    FUELMint
+      { sidechainParams
+      , mptRootTokenCurrencySymbol: dummyCS
+      , dsKeyCurrencySymbol: dummyCS
+      }
 
 data FuelParams
   = Mint
