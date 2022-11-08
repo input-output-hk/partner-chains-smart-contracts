@@ -9,17 +9,19 @@
   };
 
   inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/85208c5c705d2947e50e32c5eb9f22c3b0b72401";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
-    cardano-transaction-lib.inputs = {
-      plutip.follows = "plutip";
-      bot-plutus-interface.follows = "plutip/bot-plutus-interface";
-      ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
+    plutip.url = github:mlabs-haskell/plutip/08204cc223138d53932004db31fb0292e8f7dfe3;
+    cardano-transaction-lib = {
+      url = "github:Plutonomicon/cardano-transaction-lib/85208c5c705d2947e50e32c5eb9f22c3b0b72401";
+      inputs = {
+        plutip.follows = "plutip";
+        bot-plutus-interface.follows = "plutip/bot-plutus-interface";
+        ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
+      };
     };
-    plutip.url = github:mlabs-haskell/plutip/f531f13834806dba2a981021f03c2c6f118cfee6;
 
     flake-compat = {
       url = "github:edolstra/flake-compat";

@@ -20,17 +20,17 @@
     "CHaP_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1666726035,
-        "narHash": "sha256-EBodp9DJb8Z+aVbuezVwLJ9Q9XIJUXFd/n2skay3FeU=",
+        "lastModified": 1667557577,
+        "narHash": "sha256-Ka599AMLa5J8L+OAZkeUF5TxSdjKbonnNFYWMz4O7Bo=",
         "owner": "input-output-hk",
         "repo": "cardano-haskell-packages",
-        "rev": "b074321c4c8cbf2c3789436ab11eaa43e1c441a7",
+        "rev": "9510ea6b12779d0cef602e78924c115f1ec3b0f9",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "repo",
         "repo": "cardano-haskell-packages",
-        "rev": "b074321c4c8cbf2c3789436ab11eaa43e1c441a7",
         "type": "github"
       }
     },
@@ -96,17 +96,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1667554815,
-        "narHash": "sha256-+cD2qvY8l3lJaJ52OpxC/d4K+NkiLQLf/svqRfVwFwI=",
+        "lastModified": 1667916204,
+        "narHash": "sha256-SIqFPS/yVtOnUZ5Wo2IvpYLR9nItkEQHhA7vfojMYvI=",
         "owner": "mlabs-haskell",
         "repo": "bot-plutus-interface",
-        "rev": "def9b215a974326eb7237df84bc4d07970c07294",
+        "rev": "9c7e06ec1b6911d5814982ef3dc563a8bc74909a",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "bot-plutus-interface",
-        "rev": "def9b215a974326eb7237df84bc4d07970c07294",
+        "rev": "9c7e06ec1b6911d5814982ef3dc563a8bc74909a",
         "type": "github"
       }
     },
@@ -1192,17 +1192,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1649070135,
-        "narHash": "sha256-UFKqcOSdPWk3TYUCPHF22p1zf7aXQpCmmgf7UMg7fWA=",
+        "lastModified": 1667394105,
+        "narHash": "sha256-YhS7zGd6jK/QM/+wWyj0zUBZmE3HOXAL/kpJptGYIWg=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "cecab9c71d1064f05f1615eead56ac0b9196bc20",
+        "rev": "7fc7625a9ab2ba137bc70ddbc89a13d3fdb78c8b",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "cecab9c71d1064f05f1615eead56ac0b9196bc20",
         "type": "github"
       }
     },
@@ -1875,6 +1874,11 @@
     },
     "plutip": {
       "inputs": {
+        "CHaP": [
+          "plutip",
+          "bot-plutus-interface",
+          "CHaP"
+        ],
         "bot-plutus-interface": "bot-plutus-interface",
         "flake-compat": "flake-compat_10",
         "haskell-nix": [
@@ -1895,17 +1899,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1667555539,
-        "narHash": "sha256-Mw6OzlYoU71sW2FRM/+3WRAjiD/RBN8Ai5qT5HWKz/c=",
+        "lastModified": 1667921913,
+        "narHash": "sha256-bLCXEzzFjIEsC6sbuVlymO/G5SyTj8obTeOgqpz8ydI=",
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "f531f13834806dba2a981021f03c2c6f118cfee6",
+        "rev": "08204cc223138d53932004db31fb0292e8f7dfe3",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "f531f13834806dba2a981021f03c2c6f118cfee6",
+        "rev": "08204cc223138d53932004db31fb0292e8f7dfe3",
         "type": "github"
       }
     },
