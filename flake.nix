@@ -18,7 +18,6 @@
       url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
       inputs = {
         plutip.follows = "plutip";
-        bot-plutus-interface.follows = "plutip/bot-plutus-interface";
         ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
       };
     };
