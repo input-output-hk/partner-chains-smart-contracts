@@ -59,6 +59,8 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   -- 2. Saving a merkle root.
@@ -194,6 +196,8 @@ testScenario2 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   -- 2. Saving a merkle root

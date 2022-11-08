@@ -1,6 +1,7 @@
 module Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
+  , thresholdCodec
   ) where
 
 import Contract.Prelude
@@ -13,6 +14,7 @@ import Contract.Prim.ByteArray
   )
 import Contract.Transaction (TransactionHash(TransactionHash))
 import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Record as CAR
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Types.Transaction (TransactionInput(TransactionInput))
@@ -47,3 +49,13 @@ transactionInputCodec =
     indexStr = UInt.toString txIn.index
     txHashStr = case txIn.transactionId of
       TransactionHash txId → byteArrayToHex txId
+
+-- | `thresholdCodec` is the codec for the threshold in `Options.Types.Config`.
+-- | Note that this codec has no relation to the `thresholdNumerator` and
+-- | `thresholdDenominator` fields in `SidechainParams`.
+thresholdCodec ∷ CA.JsonCodec { numerator ∷ Int, denominator ∷ Int }
+thresholdCodec = CA.object "threshold" $
+  CAR.record
+    { numerator: CA.int
+    , denominator: CA.int
+    }

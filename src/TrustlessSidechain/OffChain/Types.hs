@@ -50,6 +50,10 @@ data InitSidechainParams = InitSidechainParams
   , -- | 'initCommittee' is the initial committee of the sidechain
     initCommittee :: [PubKey]
   , initMint :: Maybe TxOutRef
+  , -- | See 'thresholdNumerator'
+    initThresholdNumerator :: Integer
+  , -- | See 'thresholdDenominator'
+    initThresholdDenominator :: Integer
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -69,6 +73,12 @@ data SidechainParams = SidechainParams
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: TxOutRef
+  , -- | 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+    thresholdNumerator :: Integer
+  , -- | 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
+    thresholdDenominator :: Integer
   }
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
@@ -89,6 +99,12 @@ data SidechainParams' = SidechainParams'
     -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: TxOutRef
+  , -- | 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+    thresholdNumerator :: Integer
+  , -- | 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
+    thresholdDenominator :: Integer
   }
   deriving stock (Prelude.Show, Generic)
 
@@ -96,7 +112,8 @@ PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
 
 -- | Convert SidechainParams to the Active Bridge version
 convertSCParams :: SidechainParams -> SidechainParams'
-convertSCParams (SidechainParams i g _ u) = SidechainParams' i g u
+convertSCParams (SidechainParams i g _ u numerator denominator) =
+  SidechainParams' i g u numerator denominator
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams

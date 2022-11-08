@@ -124,6 +124,8 @@ main = do
             -- v only difference between sidechain and initsidechain
             , initCommittee: List.toUnfoldable committeePubKeys
             , initMint: sc.genesisMint
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
             }
         { transactionId, sidechainParams, sidechainAddresses } ← initSidechain isc
 

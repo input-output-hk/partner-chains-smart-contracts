@@ -127,6 +127,8 @@ toSidechainParams (InitSidechainParams isp) = SidechainParams
   , genesisHash: isp.initGenesisHash
   , genesisUtxo: isp.initUtxo
   , genesisMint: isp.initMint
+  , thresholdNumerator: isp.initThresholdNumerator
+  , thresholdDenominator: isp.initThresholdDenominator
   }
 
 -- | 'initCommitteeHashMintLookupsAndConstraints' creates lookups and
