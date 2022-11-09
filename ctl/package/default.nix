@@ -13,6 +13,7 @@ pkgs.stdenv.mkDerivation rec {
   buildInputs = [
     pkgs.spago
     pkgs.purescript
+    pkgs.nodejs
     spagoPkgs.installSpagoStyle
     spagoPkgs.buildSpagoStyle
     spagoPkgs.buildFromNixStore
@@ -21,18 +22,22 @@ pkgs.stdenv.mkDerivation rec {
   unpackPhase = ''
     cp $src/{packages,spago}.dhall .
     cp -r $src/src .
+    cp -r $src/package.json $src/package-lock.json .
+    chmod +rw ./*.json
     install-spago-style
   '';
 
   buildPhase = ''
+    export HOME=$(pwd)
+    npm install --prefix $(pwd)
+
     build-spago-style ./src/*.purs ./src/*/*.purs
     spago bundle-app --no-build --no-install --global-cache skip
+    mv index.js main.js
   '';
 
   installPhase = ''
     mkdir -p $out
-    cp index.js $out/main.js
-    cp $src/package-lock.json $out/package-lock.json
-    cp $src/package/README.md $out/README.md
+    tar cvf $out/ctl-scripts-${version}.tar main.js node_modules
   '';
 }
