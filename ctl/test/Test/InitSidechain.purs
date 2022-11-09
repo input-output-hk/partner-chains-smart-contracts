@@ -39,6 +39,8 @@ testScenario1 = do
       , initUtxo: genesisUtxo
       , initCommittee
       , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   void $ InitSidechain.initSidechain initScParams
@@ -68,6 +70,8 @@ testScenario2 = do
       , initUtxo: genesisUtxo
       , initCommittee
       , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   void do
@@ -105,6 +109,8 @@ testScenario3 alice bob = do
         , initUtxo: genesisUtxo
         , initCommittee
         , initSidechainEpoch: zero
+        , initThresholdNumerator: BigInt.fromInt 2
+        , initThresholdDenominator: BigInt.fromInt 3
         }
 
     void $ InitSidechain.initSidechain initScParams

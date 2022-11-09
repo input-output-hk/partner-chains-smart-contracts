@@ -31,6 +31,8 @@ testScenario = do
       , genesisHash: hexToByteArrayUnsafe "aabbcc"
       , genesisMint: Just genesisMint
       , genesisUtxo: toTxIn "aabbcc" 0
+      , thresholdNumerator: BigInt.fromInt 2
+      , thresholdDenominator: BigInt.fromInt 3
       }
   void $ runFuelMP scParams
     ( passiveBridgeMintParams scParams

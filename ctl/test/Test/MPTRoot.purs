@@ -106,6 +106,8 @@ testScenario1 = do
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -201,6 +203,8 @@ testScenario2 = do
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

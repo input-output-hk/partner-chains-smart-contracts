@@ -3,6 +3,7 @@ module MPTRoot
   ( module MPTRoot.Types
   , module MPTRoot.Utils
   , saveRoot
+  , getMptRootTokenMintingPolicy
   ) where
 
 import Contract.Prelude
@@ -17,6 +18,7 @@ import Contract.Monad
   )
 import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -40,6 +42,7 @@ import MPTRoot.Utils
   , mptRootTokenValidator
   , serialiseMrimHash
   )
+import SidechainParams (SidechainParams)
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -48,6 +51,23 @@ import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Crypto as Utils.Crypto
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
+
+-- | `getMptRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
+-- | parameter from the given sidechain parameters, and calls
+-- | `mptRootTokenValidator`
+getMptRootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getMptRootTokenMintingPolicy sidechainParams = do
+  let msg = report "getMptRootTokenMintingPolicy"
+  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
+    $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
+  updateCommitteeHashCurrencySymbol ←
+    liftContractM
+      (msg "Failed to get updateCommitteeHash CurrencySymbol")
+      $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
+  mptRootTokenMintingPolicy $ SignedMerkleRootMint
+    { sidechainParams
+    , updateCommitteeHashCurrencySymbol
+    }
 
 -- | 'saveRoot' is the endpoint.
 saveRoot ∷ SaveRootParams → Contract () TransactionHash
@@ -112,7 +132,13 @@ saveRoot
       Utils.Crypto.normalizeCommitteePubKeysAndSignatures committeeSignatures
 
   unless
-    (Utils.Crypto.verifyMultiSignature 2 3 committeePubKeys mrimHash signatures)
+    ( Utils.Crypto.verifyMultiSignature
+        ((unwrap sidechainParams).thresholdNumerator)
+        ((unwrap sidechainParams).thresholdDenominator)
+        committeePubKeys
+        mrimHash
+        signatures
+    )
     $ throwContractError
     $ msg "Invalid committee signatures for MerkleRootInsertionMessage"
 

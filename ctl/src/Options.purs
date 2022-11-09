@@ -20,7 +20,9 @@ import Contract.Config
   )
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
+import Control.Alternative ((<|>))
 import Control.Bind as Bind
+import Control.MonadZero (guard)
 import Data.Array.NonEmpty as NonEmpty
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
@@ -236,12 +238,56 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
+    { thresholdNumerator, thresholdDenominator } ←
+      let
+        thresholdFractionOption =
+          option thresholdFraction
+            ( fold
+                [ long "threshold"
+                , metavar "INT/INT"
+                , help "The ratio of the threshold"
+                , maybe mempty value do
+                    { numerator, denominator } ← maybeConfig
+                      >>= _.sidechainParameters
+                      >>= _.threshold
+                    pure
+                      { thresholdNumerator: BigInt.fromInt numerator
+                      , thresholdDenominator: BigInt.fromInt denominator
+                      }
+                ]
+            )
+        thresholdNumeratorDenominatorOption = ado
+          thresholdNumerator ← option bigInt $ fold
+            [ long "threshold-numerator"
+            , metavar "INT"
+            , help "The numerator for the ratio of the threshold"
+            , maybe mempty value
+                $ map (BigInt.fromInt <<< _.numerator)
+                    ( maybeConfig >>= _.sidechainParameters >>=
+                        _.threshold
+                    )
+            ]
+          thresholdDenominator ← option bigInt $ fold
+            [ long "threshold-denominator"
+            , metavar "INT"
+            , help "The denominator for the ratio of the threshold"
+            , maybe mempty value
+                $ map (BigInt.fromInt <<< _.denominator)
+                    ( maybeConfig >>= _.sidechainParameters >>=
+                        _.threshold
+                    )
+            ]
+          in { thresholdNumerator, thresholdDenominator }
+      in
+        thresholdFractionOption <|> thresholdNumeratorDenominatorOption
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
         , genesisHash
         , genesisMint
         , genesisUtxo
+        , thresholdNumerator
+        , thresholdDenominator
         }
 
   mintSpec = MintAct <<< { amount: _ } <$> parseAmount
@@ -503,6 +549,25 @@ sidechainAddress = maybeReader $ \str →
   case split (Pattern "0x") str of
     [ "", hex ] → hexToByteArray hex
     [ hex ] → hexToByteArray hex
+    _ → Nothing
+
+-- | `thresholdFraction` is the CLI parser for `parseThresholdFraction`.
+thresholdFraction ∷
+  ReadM { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
+thresholdFraction = maybeReader parseThresholdFraction
+
+-- | `parseThresholdFraction` parses the threshold represented as a fraction. See
+-- | `thresholdRegex` for more details.
+parseThresholdFraction ∷
+  String → Maybe { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
+parseThresholdFraction str =
+  case split (Pattern "/") str of
+    [ n, d ] → do
+      guard $ n /= "" && d /= ""
+      thresholdNumerator ← BigInt.fromString n
+      thresholdDenominator ← BigInt.fromString d
+      guard $ thresholdNumerator > zero && thresholdDenominator > zero
+      pure { thresholdNumerator, thresholdDenominator }
     _ → Nothing
 
 -- | 'committeeSignature' is a wrapper around 'parsePubKeyAndSignature'.
