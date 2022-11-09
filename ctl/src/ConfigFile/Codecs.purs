@@ -9,7 +9,7 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.UInt as UInt
 import Options.Types (Config)
-import Utils.Codecs (byteArrayCodec, transactionInputCodec)
+import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
 
 configCodec ∷ CA.JsonCodec Config
 configCodec =
@@ -28,6 +28,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
+        , threshold: CAC.maybe thresholdCodec
         }
     )
   runtimeConfigCodec =
