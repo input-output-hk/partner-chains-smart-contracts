@@ -102,9 +102,6 @@ instance ValidatorTypes FUELRedeemer where
 {- | Datum for the committee hash. This /committee hash/ is used to verify
  signatures for sidechain to mainchain transfers. This is a hash of
  concatenated public key hashes of the committee members
-
- TODO: this isn't actually used to verify signatures in the FUEL minting /
- burning policies (perhaps this will be used in a later iteration)
 -}
 data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash :: BuiltinByteString
