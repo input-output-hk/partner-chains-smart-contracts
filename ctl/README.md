@@ -220,7 +220,7 @@ nix run .#ctl-main -- committee-hash \
   --new-committee-pub-key ddeeff03 \
   --new-committee-pub-key ddeeff04 \
   --sidechain-epoch 6 \
-  --previousMerkleRoot abcdef
+  --previous-merkle-root abcdef
 ```
 
 #### 3.1.6. Save merkle root
@@ -253,7 +253,7 @@ nix run .#ctl-main -- committee-handover \
   --threshold 2/3 \
   --merkle-root abababab \
   --sidechain-epoch 6 \
-  --previousMerkleRoot abcdef \
+  --previous-merkle-root abcdef \
   --new-committee-pub-key ddeeff01 \
   --new-committee-pub-key ddeeff02 \
   --new-committee-pub-key ddeeff03 \
