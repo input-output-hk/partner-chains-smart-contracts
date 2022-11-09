@@ -41,6 +41,7 @@ import TrustlessSidechain.OffChain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
+  convertSCParams,
  )
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
@@ -197,7 +198,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     signedByCurrentCommittee =
       let message =
             UpdateCommitteeHashMessage
-              { uchmSidechainParams = sc
+              { uchmSidechainParams = convertSCParams sc
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
               , uchmPreviousMerkleRoot = previousMerkleRoot red
               }

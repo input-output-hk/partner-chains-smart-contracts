@@ -108,6 +108,7 @@ data SidechainParams' = SidechainParams'
   }
   deriving stock (Prelude.Show, Generic)
 
+PlutusTx.makeLift ''SidechainParams'
 PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
 
 -- | Convert SidechainParams to the Active Bridge version

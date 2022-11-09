@@ -25,7 +25,7 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
-import SidechainParams (SidechainParams)
+import SidechainParams (SidechainParams, SidechainParams')
 import Types (AssetClass, PubKey, Signature)
 
 -- | 'UpdateCommitteeHashDatum' is the datum for the update committee has
@@ -117,7 +117,7 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
 -- 'UpdateCommitteeHashMessage', then the committee signs
 -- @blake2b256Hash(serialiseToData (toBuiltinData uchm))@)
 newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { sidechainParams ∷ SidechainParams
+  { sidechainParams ∷ SidechainParams'
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us

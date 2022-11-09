@@ -19,7 +19,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Value (CurrencySymbol)
-import SidechainParams (SidechainParams)
+import SidechainParams (SidechainParams, SidechainParams')
 import Types (PubKey, Signature)
 
 -- | 'SignedMerkleRoot' is the redeemer for the minting policy.
@@ -84,7 +84,7 @@ newtype SaveRootParams = SaveRootParams
 -- >  blake2b(cbor(MerkleRootInsertionMessage))
 -- See 'MPTRoot.Utils.serialiseMrimHash'.
 newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
-  { sidechainParams ∷ SidechainParams
+  { sidechainParams ∷ SidechainParams'
   , merkleRoot ∷ ByteArray
   , previousMerkleRoot ∷ Maybe ByteArray
   }

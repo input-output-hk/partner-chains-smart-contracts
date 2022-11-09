@@ -38,6 +38,7 @@ import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
+import SidechainParams as SidechainParams
 import Types
   ( assetClass
   , assetClassValue
@@ -117,7 +118,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
     $ serialiseUchmHash
     $ UpdateCommitteeHashMessage
-        { sidechainParams: uchp.sidechainParams
+        { sidechainParams: SidechainParams.convertSCParams uchp.sidechainParams
         , newCommitteePubKeys: newCommitteeSorted
         , previousMerkleRoot: uchp.previousMerkleRoot
         }

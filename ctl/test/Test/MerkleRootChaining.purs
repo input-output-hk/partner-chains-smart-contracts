@@ -14,6 +14,7 @@ import Data.BigInt as BigInt
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(InitSidechainParams))
+import SidechainParams as SidechainParams
 import Test.MPTRoot as Test.MPTRoot
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils as Test.Utils
@@ -235,7 +236,7 @@ testScenario2 = do
       "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
       $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , newCommitteePubKeys: committee3PubKeys
           ,
             -- Note: since we can trust the committee will sign the "correct" root,
