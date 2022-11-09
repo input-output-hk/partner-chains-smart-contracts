@@ -44,7 +44,7 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash, sidechainEpoch),
+  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
@@ -130,17 +130,12 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
       referencesPreviousMerkleRoot
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': expected different output datum"
-      ( outputDatum
-          == UpdateCommitteeHashDatum
-            (aggregateKeys (newCommitteePubKeys red))
-            (sidechainEpoch outputDatum)
-      )
-    -- TODO: an optimization we don't need to have 'newCommitteePubKeys' in
-    -- the redeemer, and we can construct / verify if the
-    -- UpdateCommitteeHashMessage is signed by the committee by looking at
-    -- the values directly provided in the datum...
-    -- This would let use remove the above check as well.
+      "error 'mkUpdateCommitteeHashValidator': expected different new committee"
+      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
+    -- Note: we only need to check if the new committee is "as signed
+    -- by the committee", since we already know that the sidechainEpoch in
+    -- the datum was "as signed by the committee" -- see how we constructed
+    -- the 'UpdateCommitteeHashMessage'
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
       (sidechainEpoch dat < sidechainEpoch outputDatum)
