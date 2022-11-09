@@ -66,7 +66,7 @@ newtype InitSidechainParams = InitSidechainParams
     initUtxo ∷ TransactionInput
   , -- | 'initCommittee' is the initial committee of the sidechain
     initCommittee ∷ Array PubKey
-  , -- | 'initSidechainEpoch' is the initial sidechain epoch of the sidechain
+  , -- 'initSidechainEpoch' is the initial sidechain epoch of the first committee
     initSidechainEpoch ∷ BigInt
   , initMint ∷ Maybe TransactionInput
   , initThresholdNumerator ∷ BigInt
