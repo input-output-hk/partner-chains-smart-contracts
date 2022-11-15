@@ -1,10 +1,13 @@
 module Utils.Crypto
-  ( toPubKeyUnsafe
-  , sign
-  , verifyEd25519Signature
+  ( Message
+  , PrivateKey
+  , PublicKey
+  , Signature
+  , toPubKeyUnsafe
   , generatePrivKey
   , multiSign
-  , hexToPrivKeyUnsafe
+  , sign
+  , verifyEcdsaSecp256k1Signature
   , normalizeCommitteePubKeysAndSignatures
   , verifyMultiSignature
   ) where
@@ -12,41 +15,43 @@ module Utils.Crypto
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayToIntArray
-  , hexToByteArrayUnsafe
-  )
+import Contract.Prim.ByteArray (ByteArray)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Ord as Ord
-import Serialization.Types (PrivateKey, PublicKey)
-import Types (PubKey, Signature)
+import Types (PubKey)
 
-foreign import publicKeyFromPrivateKeyUnsafe ∷ PrivateKey → PublicKey
-foreign import publicKeyToBytesUnsafe ∷ PublicKey → ByteArray
-foreign import generateRandomBIP32PrivateKeyArrayInt8 ∷ Effect (Array Int)
-foreign import generateBIP32PrivateKeyFromArray ∷ Array Int → PrivateKey
-foreign import sign ∷ PrivateKey → ByteArray → Signature
-foreign import verifyEd25519Signature ∷
-  PubKey → ByteArray → Signature → Boolean
+-- | Invariant: ∀ x : PublicKey. length x = 33
+-- | Format: Compressed & Serialized as per secp256k1 implementation
+-- make sure to check the leading byte for valid key format
+type PublicKey = ByteArray
 
-multiSign ∷ Array PrivateKey → ByteArray → Array Signature
-multiSign xkeys msg = map (flip sign msg) xkeys
+-- | Invariant: ∀ x : PrivateKey. length x = 32
+-- | Format: raw bytes
+type PrivateKey = ByteArray
 
-hexToPrivKeyUnsafe ∷ String → PrivateKey
-hexToPrivKeyUnsafe =
-  hexToByteArrayUnsafe >>> byteArrayToIntArray >>>
-    generateBIP32PrivateKeyFromArray
+-- | Invariant: ∀ x : Message. length x = 32
+-- | Format: raw bytes
+type Message = ByteArray
+
+-- | Invariant: ∀ x : Signature. length x = 64
+type Signature = ByteArray
+
+-- TODO: newtype checks the type aliases above
+
+foreign import generateRandomPrivateKey ∷ Effect PrivateKey
+foreign import toPubKeyUnsafe ∷ PrivateKey → PublicKey
+foreign import sign ∷ Message → PrivateKey → Signature
+foreign import verifyEcdsaSecp256k1Signature ∷
+  PublicKey → Message → Signature → Boolean
 
 generatePrivKey ∷ Contract () PrivateKey
 generatePrivKey =
-  liftEffect $ generateBIP32PrivateKeyFromArray <$>
-    generateRandomBIP32PrivateKeyArrayInt8
+  liftEffect generateRandomPrivateKey
 
-toPubKeyUnsafe ∷ PrivateKey → PubKey
-toPubKeyUnsafe = publicKeyToBytesUnsafe <<< publicKeyFromPrivateKeyUnsafe
+multiSign ∷ Array PrivateKey → Message → Array Signature
+multiSign xkeys msg = map (sign msg) xkeys
 
 -- | 'normalizeCommitteePubKeysAndSignatures' takes a list of public keys and their
 -- associated signatures, sorts by the natural lexicographical ordering of the
@@ -104,7 +109,7 @@ verifyMultiSignature
             case Array.uncons sigs of
               Nothing → ok
               Just { head: sig, tail: sigs' } →
-                if verifyEd25519Signature pub msg sig then
+                if verifyEcdsaSecp256k1Signature pub msg sig then
                   -- the public key and signature match, so
                   -- we move them both forward..
                   go (signed + one) pubs' sigs'

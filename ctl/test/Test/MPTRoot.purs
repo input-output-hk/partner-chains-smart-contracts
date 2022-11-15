@@ -16,10 +16,10 @@ import MPTRoot
   )
 import MPTRoot as MPTRoot
 import MerkleTree as MerkleTree
-import Serialization.Types (PrivateKey)
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
+import Utils.Crypto (PrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
