@@ -11,7 +11,6 @@
   , "exceptions"
   , "foldable-traversable"
   , "foreign-object"
-  , "integers"
   , "lists"
   , "maybe"
   , "monad-logger"

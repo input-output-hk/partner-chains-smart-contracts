@@ -38,6 +38,7 @@ import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
+import SidechainParams as SidechainParams
 import Types
   ( assetClass
   , assetClassValue
@@ -117,13 +118,18 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
     $ serialiseUchmHash
     $ UpdateCommitteeHashMessage
-        { sidechainParams: uchp.sidechainParams
+        { sidechainParams: SidechainParams.convertSCParams uchp.sidechainParams
         , newCommitteePubKeys: newCommitteeSorted
         , previousMerkleRoot: uchp.previousMerkleRoot
+        , sidechainEpoch: uchp.sidechainEpoch
         }
 
   unless
-    ( Utils.Crypto.verifyMultiSignature 2 3 curCommitteePubKeys uchmsg
+    ( Utils.Crypto.verifyMultiSignature
+        ((unwrap uchp.sidechainParams).thresholdNumerator)
+        ((unwrap uchp.sidechainParams).thresholdDenominator)
+        curCommitteePubKeys
+        uchmsg
         committeeSignatures
     )
     ( throwContractError $ msg
@@ -168,7 +174,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     newDatum = Datum $ toData
-      (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
+      ( UpdateCommitteeHashDatum
+          { committeeHash: newCommitteeHash, sidechainEpoch: uchp.sidechainEpoch }
+      )
     value = assetClassValue (unwrap uch).uchAssetClass one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer

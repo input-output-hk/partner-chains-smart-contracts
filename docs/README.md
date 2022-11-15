@@ -53,6 +53,8 @@ data InitSidechainParams = InitSidechainParams
     -- ^ 'initUtxo' is used for creating the committee NFT
   , initCommittee :: [PubKey]
     -- ^ 'initCommittee' is the initial committee of the sidechain
+  , initSidechainEpoch :: Integer
+    -- ^ 'initSidechainEpoch' is the initial sidechain epoch of the sidechain
   , initMint :: Maybe TxOutRef
     -- ^ 'initMint' is used in the Passive Bridge only, and will be removed in the final product
   }
@@ -253,6 +255,8 @@ data UpdateCommitteeHashParams = UpdateCommitteeHashParams
     -- ^ Parameters identifying the Sidechain
   , previousMerkleRoot :: Maybe ByteString
     -- ^ last merkle root inserted on chain, unless there is no Merkle root inserted yet
+  , sidechainEpoch :: Integer
+    -- ^ sidechain epoch of the new committee
   }
 ```
 

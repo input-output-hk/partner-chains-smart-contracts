@@ -127,6 +127,8 @@ toSidechainParams (InitSidechainParams isp) = SidechainParams
   , genesisHash: isp.initGenesisHash
   , genesisUtxo: isp.initUtxo
   , genesisMint: isp.initMint
+  , thresholdNumerator: isp.initThresholdNumerator
+  , thresholdDenominator: isp.initThresholdDenominator
   }
 
 -- | 'initCommitteeHashMintLookupsAndConstraints' creates lookups and
@@ -198,7 +200,10 @@ initCommitteeHashLookupsAndConstraints (InitSidechainParams isp) = do
       }
     committeeHashDatum = Datum
       $ PlutusData.toData
-      $ UpdateCommitteeHashDatum { committeeHash: aggregatedKeys }
+      $ UpdateCommitteeHashDatum
+          { committeeHash: aggregatedKeys
+          , sidechainEpoch: isp.initSidechainEpoch
+          }
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol

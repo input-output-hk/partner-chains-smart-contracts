@@ -35,11 +35,18 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
-import TrustlessSidechain.OffChain.Types (SidechainPubKey (getSidechainPubKey))
+import TrustlessSidechain.OffChain.Types (
+  SidechainParams (
+    thresholdDenominator,
+    thresholdNumerator
+  ),
+  SidechainPubKey (getSidechainPubKey),
+  convertSCParams,
+ )
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
+  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
@@ -124,11 +131,21 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
       referencesPreviousMerkleRoot
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': expected different output datum"
-      (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
+      "error 'mkUpdateCommitteeHashValidator': expected different new committee"
+      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
+    -- Note: we only need to check if the new committee is "as signed
+    -- by the committee", since we already know that the sidechainEpoch in
+    -- the datum was "as signed by the committee" -- see how we constructed
+    -- the 'UpdateCommitteeHashMessage'
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+      (sidechainEpoch dat < sidechainEpoch outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
+
+    sc :: SidechainParams
+    sc = cSidechainParams uch
 
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
@@ -152,33 +169,46 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
     threshold :: Integer
     threshold =
-      -- Note [Threshold of Strictly More than 2/3 Majority]
-      -- The spec wants us to have strictly more than 2/3 majority of the
+      -- Note [Threshold of Strictly More than Threshold Majority]
+      -- The spec wants us to have strictly more than numerator/denominator majority of the
       -- committee size. Let @n@ denote the committee size. To have strictly
-      -- more than 2/3 majority, we are interested in the smallest integer that
-      -- is strictly greater than @2/3*n@ which is either:
-      --    1. if @2/3 * n@ is an integer, then the smallest integer strictly
-      --    greater than @2/3 * n@ is @2/3 * n + 1@
-      --    2. if @2/3 * n@ is not an integer, then the smallest integer is
-      --    @ceil(2/3 * n)@
-      -- We can capture both cases with the expression @floor((2 * n)/3) + 1@
-      -- via distinguishing cases (again) if @2/3 * n@ is an integer.
-      --    1.  if @2/3 * n@ is an integer, then @floor((2 * n)/3) + 1 = (2 *
-      --    n)/3 + 1@ is the smallest integer strictly greater than @2/3 * n@
-      --    as required.
-      --    2.  if @2/3 * n@ is not an integer, then @floor((2 * n)/3)@ is the
-      --    largest integer strictly smaller than @2/3 *n@, but adding @+1@
-      --    makes this smallest integer that is strictly larger than @2/3 *n@
-      --    i.e., we have @ceil(2/3 * n)@ as required.
-      (length (committeePubKeys red) `Builtins.multiplyInteger` 2 `Builtins.divideInteger` 3) + 1
+      -- more than numerator/denominator majority, we are interested in the smallest integer that
+      -- is strictly greater than @numerator/denominator*n@ which is either:
+      --    1. if @numerator/denominator * n@ is an integer, then the smallest
+      --    integer strictly greater than @numerator/denominator * n@ is
+      --    @numerator/denominator * n + 1@.
+      --
+      --    2. if @numerator/denominator * n@ is not an integer, then the
+      --    smallest integer is @ceil(numerator/denominator * n)@
+      --
+      -- We can capture both cases with the expression @floor((numerator * n)/denominator) + 1@
+      -- via distinguishing cases (again) if @numerator/denominator * n@ is an integer.
+      --
+      --    1.  if @numerator/denominator * n@ is an integer, then
+      --    @floor((numerator * n)/denominator) + 1 = (numerator *
+      --    n)/denominator + 1@ is the smallest integer strictly greater than
+      --    @numerator/denominator * n@ as required.
+      --
+      --    2.  if @numerator/denominator * n@ is not an integer, then
+      --    @floor((numerator * n)/denominator)@ is the largest integer
+      --    strictly smaller than @numerator/denominator *n@, but adding @+1@
+      --    makes this smallest integer that is strictly larger than
+      --    @numerator/denominator *n@ i.e., we have
+      --    @ceil(numerator/denominator * n)@ as required.
+      ( length (committeePubKeys red)
+          `Builtins.multiplyInteger` thresholdNumerator sc
+          `Builtins.divideInteger` thresholdDenominator sc
+      )
+        + 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       let message =
             UpdateCommitteeHashMessage
-              { uchmSidechainParams = cSidechainParams uch
+              { uchmSidechainParams = convertSCParams sc
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
               , uchmPreviousMerkleRoot = previousMerkleRoot red
+              , uchmSidechainEpoch = sidechainEpoch outputDatum
               }
        in verifyMultisig
             (getSidechainPubKey <$> committeePubKeys red)

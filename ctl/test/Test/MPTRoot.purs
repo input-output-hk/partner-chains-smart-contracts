@@ -17,6 +17,7 @@ import MPTRoot
 import MPTRoot as MPTRoot
 import MerkleTree as MerkleTree
 import SidechainParams (InitSidechainParams(..), SidechainParams)
+import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
 import Utils.Crypto (PrivateKey)
 import Utils.Crypto as Crypto
@@ -54,7 +55,7 @@ saveRoot
       "error 'Test.MPTRoot.testScenario': failed to create merkle root insertion message"
       $ MPTRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , merkleRoot
           , previousMerkleRoot
           }
@@ -105,6 +106,9 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -136,7 +140,7 @@ testScenario1 = do
       "error 'Test.MPTRoot.testScenario1': failed to create merkle root insertion message"
       $ MPTRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , merkleRoot
           , previousMerkleRoot: Nothing
           }
@@ -199,6 +203,9 @@ testScenario2 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

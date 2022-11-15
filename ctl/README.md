@@ -107,9 +107,11 @@ nix run .#ctl-main -- init \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
+  --threshold 2/3 \
   --sidechain-genesis-hash 112233 \
   --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0
 ```
 
 #### 3.1.2. Get script addresses of a sidechain
@@ -122,6 +124,7 @@ nix run .#ctl-main -- addresses \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
+  --threshold 2/3 \
   --sidechain-genesis-hash 112233
 ```
 
@@ -134,6 +137,7 @@ nix run .#ctl-main -- mint \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --amount 5
 ```
 
@@ -146,6 +150,7 @@ nix run .#ctl-main -- burn \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --amount 5 \
   --recipient aabbcc
 ```
@@ -160,6 +165,7 @@ cabal run trustless-sidechain-gen-signatures -- \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
   --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
   --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
@@ -174,6 +180,7 @@ nix run .#ctl-main -- register \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --spo-public-key f71ff66b6b8da0702444183b5ce5de09f6754457a6a71b3354b81ced8dcd7e30 \
   --sidechain-public-key 03eef26d3cf978e0fc2d786c443b1284b27b265a7c82eeeec68c24cd3fd0bb6428 \
   --spo-signature 980db1db31457189326e948c7f292b16278ab91bd45f5fd6ee9ad637bf993f26936c17ee126e510c52d0a3381b52acb36a2a89d4fe55a587cf3478678114dd0f \
@@ -190,6 +197,7 @@ nix run .#ctl-main -- deregister \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --spo-public-key aabbcc
 ```
 
@@ -202,6 +210,7 @@ nix run .#ctl-main -- committee-hash \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
   --committee-pub-key-and-signature aabbcc03:bbbbbb \
@@ -210,7 +219,8 @@ nix run .#ctl-main -- committee-hash \
   --new-committee-pub-key ddeeff02 \
   --new-committee-pub-key ddeeff03 \
   --new-committee-pub-key ddeeff04 \
-  --previousMerkleRoot abcdef
+  --sidechain-epoch 6 \
+  --previous-merkle-root abcdef
 ```
 
 #### 3.1.6. Save merkle root
@@ -220,13 +230,15 @@ nix run .#ctl-main -- save-root \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --sidechain-id 1 \
   --merkle-root abababab \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
   --committee-pub-key-and-signature aabbcc03:bbbbbb \
   --committee-pub-key-and-signature aabbcc04:cccccc \
-  --previousMerkleRoot abcdef
+  --previous-merkle-root abcdef
 ```
 
 #### 3.1.7 Committee handover
@@ -237,8 +249,11 @@ nix run .#ctl-main -- committee-handover \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
   --merkle-root abababab \
-  --previousMerkleRoot abcdef \
+  --sidechain-epoch 6 \
+  --previous-merkle-root abcdef \
   --new-committee-pub-key ddeeff01 \
   --new-committee-pub-key ddeeff02 \
   --new-committee-pub-key ddeeff03 \
@@ -260,7 +275,11 @@ You can also provide a configuration in `$CWD/config.json` in the following form
     "chainId": 123,
     "genesisHash": "11223344aabbcc",
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
-    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1"
+    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
+    "threshold":
+        { "numerator": 2
+        , "denominator": 3
+        }
   },
   "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",

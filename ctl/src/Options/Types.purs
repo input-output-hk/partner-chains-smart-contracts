@@ -34,6 +34,11 @@ type Config =
         , genesisHash ∷ Maybe ByteArray
         , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
+        , threshold ∷
+            Maybe
+              { numerator ∷ Int
+              , denominator ∷ Int
+              }
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath
@@ -59,6 +64,7 @@ data Endpoint
       { newCommitteePubKeys ∷ List PubKey
       , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
       , previousMerkleRoot ∷ Maybe ByteArray
+      , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
       { merkleRoot ∷ ByteArray
@@ -74,9 +80,10 @@ data Endpoint
       , newCommitteePubKeys ∷ List PubKey
       , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
       , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
-  | Init { committeePubKeys ∷ List ByteArray }
+  | Init { committeePubKeys ∷ List ByteArray, initSidechainEpoch ∷ BigInt }
 
 derive instance Generic Endpoint _
 

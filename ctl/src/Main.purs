@@ -87,13 +87,18 @@ main = do
         pure $ GetAddrsResp { sidechainAddresses }
 
       CommitteeHash
-        { newCommitteePubKeys, committeeSignatures, previousMerkleRoot } →
+        { newCommitteePubKeys
+        , committeeSignatures
+        , previousMerkleRoot
+        , sidechainEpoch
+        } →
         let
           params = UpdateCommitteeHashParams
             { sidechainParams: opts.scParams
             , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
             , committeeSignatures: List.toUnfoldable committeeSignatures
             , previousMerkleRoot
+            , sidechainEpoch
             }
         in
           UpdateCommitteeHash.updateCommitteeHash params
@@ -114,7 +119,7 @@ main = do
             <#> unwrap
             >>> { transactionId: _ }
             >>> SaveRootResp
-      Init { committeePubKeys } → do
+      Init { committeePubKeys, initSidechainEpoch } → do
         let
           sc = unwrap opts.scParams
           isc = wrap
@@ -124,6 +129,9 @@ main = do
             -- v only difference between sidechain and initsidechain
             , initCommittee: List.toUnfoldable committeePubKeys
             , initMint: sc.genesisMint
+            , initSidechainEpoch
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
             }
         { transactionId, sidechainParams, sidechainAddresses } ← initSidechain isc
 
@@ -139,6 +147,7 @@ main = do
         , newCommitteePubKeys
         , newCommitteeSignatures
         , newMerkleRootSignatures
+        , sidechainEpoch
         } → do
         let
           saveRootParams = SaveRootParams
@@ -153,6 +162,7 @@ main = do
             , committeeSignatures: List.toUnfoldable newCommitteeSignatures
             , -- the previous merkle root is the merkle root we just saved..
               previousMerkleRoot: Just merkleRoot
+            , sidechainEpoch
             }
         saveRootTransactionId ← unwrap <$> MPTRoot.saveRoot saveRootParams
         committeeHashTransactionId ← unwrap <$>
