@@ -16,6 +16,7 @@ import InitSidechain (initSidechain)
 import Partial.Unsafe as Unsafe
 import Serialization.Types (PrivateKey)
 import SidechainParams (InitSidechainParams(..), SidechainParams)
+import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
 import UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
@@ -80,7 +81,7 @@ updateCommitteeHashWith
       "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to serialise and hash update committee hash message"
       $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , newCommitteePubKeys: newCommitteePubKeys
           , previousMerkleRoot
           }

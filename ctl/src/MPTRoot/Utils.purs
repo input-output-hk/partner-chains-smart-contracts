@@ -126,8 +126,10 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
           $ lkup
       pure $ Just lkup'
 
--- | 'serialiseMrimHash' is an alias for  (ignoring the 'Maybe')
--- > 'Contract.Hashing.blake2b256Hash' <<< 'Utils.SerialiseData.serialiseToData'
+-- | 'serialiseMrimHash' is an alias for (ignoring the 'Maybe')
+-- | ```purescript
+-- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
+-- | ```
 serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe ByteArray
 serialiseMrimHash = (Hashing.blake2b256Hash <$> _) <<<
   Utils.SerialiseData.serialiseToData
