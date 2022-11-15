@@ -17,23 +17,6 @@
         "type": "github"
       }
     },
-    "CHaP_2": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1667557577,
-        "narHash": "sha256-Ka599AMLa5J8L+OAZkeUF5TxSdjKbonnNFYWMz4O7Bo=",
-        "owner": "input-output-hk",
-        "repo": "cardano-haskell-packages",
-        "rev": "9510ea6b12779d0cef602e78924c115f1ec3b0f9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "ref": "repo",
-        "repo": "cardano-haskell-packages",
-        "type": "github"
-      }
-    },
     "HTTP": {
       "flake": false,
       "locked": {
@@ -52,7 +35,9 @@
     },
     "bot-plutus-interface": {
       "inputs": {
-        "CHaP": "CHaP",
+        "CHaP": [
+          "CHaP"
+        ],
         "flake-compat": "flake-compat",
         "haskell-nix": [
           "haskell-nix"
@@ -653,7 +638,7 @@
     },
     "ogmios": {
       "inputs": {
-        "CHaP": "CHaP_2",
+        "CHaP": "CHaP",
         "flake-compat": "flake-compat_3",
         "haskell-nix": "haskell-nix",
         "iohk-nix": "iohk-nix",

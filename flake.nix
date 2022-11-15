@@ -13,6 +13,7 @@
         nixpkgs.follows = "nixpkgs";
         haskell-nix.follows = "haskell-nix";
         iohk-nix.follows = "iohk-nix";
+        CHaP.follows = "CHaP";
       };
     };
 
