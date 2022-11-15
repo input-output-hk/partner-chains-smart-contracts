@@ -54,6 +54,58 @@ instance ToData SidechainParams where
       , toData thresholdDenominator
       ]
 
+-- | `SidechainParams'` is the `SidechainParams` for the Active Bridge
+-- | version... We use this to sign messages.
+-- | See #266 for details.
+newtype SidechainParams' = SidechainParams'
+  { chainId ∷ BigInt
+  , genesisHash ∷ ByteArray
+  , genesisUtxo ∷ TransactionInput
+  , thresholdNumerator ∷ BigInt
+  , thresholdDenominator ∷ BigInt
+  }
+
+-- | `convertSCParams` converts `SidechainParams` to the active bridge version.
+-- | This matches the onchain function `convertSCParams` in
+-- | `TrustlessSidechain/OffChain/Types.hs`
+convertSCParams ∷ SidechainParams → SidechainParams'
+convertSCParams
+  ( SidechainParams
+      { chainId
+      , genesisHash
+      , genesisMint: _genesisMint
+      , genesisUtxo
+      , thresholdNumerator
+      , thresholdDenominator
+      }
+  ) = SidechainParams'
+  { chainId
+  , genesisHash
+  , genesisUtxo
+  , thresholdNumerator
+  , thresholdDenominator
+  }
+
+derive instance Generic SidechainParams' _
+derive instance Newtype SidechainParams' _
+instance ToData SidechainParams' where
+  toData
+    ( SidechainParams'
+        { chainId
+        , genesisHash
+        , genesisUtxo
+        , thresholdNumerator
+        , thresholdDenominator
+        }
+    ) =
+    Constr zero
+      [ toData chainId
+      , toData genesisHash
+      , toData genesisUtxo
+      , toData thresholdNumerator
+      , toData thresholdDenominator
+      ]
+
 instance Show SidechainParams where
   show = genericShow
 

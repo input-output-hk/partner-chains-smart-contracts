@@ -40,7 +40,7 @@ makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
  >  blake2b(cbor(MerkleRootInsertionMessage))
 -}
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
-  { mrimSidechainParams :: SidechainParams
+  { mrimSidechainParams :: SidechainParams'
   , mrimMerkleRoot :: BuiltinByteString
   , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
   }
@@ -157,7 +157,7 @@ PlutusTx.makeLift ''UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { uchmSidechainParams :: SidechainParams
+  { uchmSidechainParams :: SidechainParams'
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
