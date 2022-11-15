@@ -15,7 +15,6 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
 import Partial.Unsafe as Unsafe
-import Serialization.Types (PrivateKey)
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
@@ -24,7 +23,7 @@ import UpdateCommitteeHash
   , UpdateCommitteeHashParams(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
+import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
 
 -- | 'updateCommitteeHash' is a convenient wrapper around
 -- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
