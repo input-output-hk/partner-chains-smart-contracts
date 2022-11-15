@@ -7,15 +7,22 @@
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
 
-    bot-plutus-interface.url = "github:jaredponn/bot-plutus-interface/segfault-fix";
+    bot-plutus-interface = {
+      url = github:jaredponn/bot-plutus-interface/segfault-fix;
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        haskell-nix.follows = "haskell-nix";
+        iohk-nix.follows = "iohk-nix";
+      };
+    };
 
     plutip = {
       url = github:mlabs-haskell/plutip/08204cc223138d53932004db31fb0292e8f7dfe3;
       inputs = {
         bot-plutus-interface.follows = "bot-plutus-interface";
-        haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
-        iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
-        nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
+        haskell-nix.follows = "haskell-nix";
+        iohk-nix.follows = "iohk-nix";
+        nixpkgs.follows = "nixpkgs";
         CHaP.follows = "CHaP";
       };
     };
@@ -24,7 +31,7 @@
       url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
       inputs = {
         plutip.follows = "plutip";
-        ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
+        ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
         bot-plutus-interface.follows = "bot-plutus-interface";
       };
     };
