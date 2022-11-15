@@ -106,6 +106,7 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       , initThresholdNumerator: BigInt.fromInt 2
       , initThresholdDenominator: BigInt.fromInt 3
       }
@@ -202,6 +203,7 @@ testScenario2 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       , initThresholdNumerator: BigInt.fromInt 2
       , initThresholdDenominator: BigInt.fromInt 3
       }

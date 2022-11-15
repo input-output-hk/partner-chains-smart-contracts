@@ -110,7 +110,8 @@ nix run .#ctl-main -- init \
   --threshold 2/3 \
   --sidechain-genesis-hash 112233 \
   --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0
 ```
 
 #### 3.1.2. Get script addresses of a sidechain
@@ -218,6 +219,7 @@ nix run .#ctl-main -- committee-hash \
   --new-committee-pub-key ddeeff02 \
   --new-committee-pub-key ddeeff03 \
   --new-committee-pub-key ddeeff04 \
+  --sidechain-epoch 6 \
   --previous-merkle-root abcdef
 ```
 
@@ -250,6 +252,7 @@ nix run .#ctl-main -- committee-handover \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --merkle-root abababab \
+  --sidechain-epoch 6 \
   --previous-merkle-root abcdef \
   --new-committee-pub-key ddeeff01 \
   --new-committee-pub-key ddeeff02 \

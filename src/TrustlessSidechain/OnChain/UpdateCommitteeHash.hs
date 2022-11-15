@@ -45,8 +45,8 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (UpdateCommitteeHashDatum, committeeHash),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainParams),
+  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.OnChain.Utils (verifyMultisig)
@@ -131,8 +131,15 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
       referencesPreviousMerkleRoot
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': expected different output datum"
-      (outputDatum == UpdateCommitteeHashDatum (aggregateKeys (newCommitteePubKeys red)))
+      "error 'mkUpdateCommitteeHashValidator': expected different new committee"
+      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
+    -- Note: we only need to check if the new committee is "as signed
+    -- by the committee", since we already know that the sidechainEpoch in
+    -- the datum was "as signed by the committee" -- see how we constructed
+    -- the 'UpdateCommitteeHashMessage'
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+      (sidechainEpoch dat < sidechainEpoch outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -201,6 +208,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               { uchmSidechainParams = convertSCParams sc
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
               , uchmPreviousMerkleRoot = previousMerkleRoot red
+              , uchmSidechainEpoch = sidechainEpoch outputDatum
               }
        in verifyMultisig
             (getSidechainPubKey <$> committeePubKeys red)
