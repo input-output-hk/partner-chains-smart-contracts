@@ -1,24 +1,19 @@
 {
   description = "trustless-sidechain";
 
-  nixConfig = {
-    extra-experimental-features = [ "nix-command" "flakes" ];
-    extra-substituters = [ "https://cache.iog.io" "https://public-plutonomicon.cachix.org" "https://mlabs.cachix.org" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc=" ];
-    allow-import-from-derivation = "true";
-  };
-
-  inputs = {
+  inputs = rec {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
+    CHaP.follows = "cardano-transaction-lib/CHaP";
 
-    plutip.url = github:mlabs-haskell/plutip/08204cc223138d53932004db31fb0292e8f7dfe3;
+    plutip.url = github:jaredponn/plutip/697dfd248b9c80098d0a0d4d0bad986902c93fbc;
+
     cardano-transaction-lib = {
       url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
       inputs = {
-        plutip.follows = "plutip";
-        ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7";
+        plutip = plutip;
+        ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
       };
     };
 
@@ -26,8 +21,6 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
-
-    CHaP.follows = "cardano-transaction-lib/CHaP";
   };
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
