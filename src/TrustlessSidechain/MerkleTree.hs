@@ -238,6 +238,7 @@ deriveJSON defaultOptions ''Up
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
+  deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | 'pureScriptShowMerkleProof' shows the MerkleProof in a purescript friendly way.
 pureScriptShowMerkleProof :: MerkleProof -> Prelude.String
@@ -251,7 +252,6 @@ pureScriptShowMerkleProof (MerkleProof proof) =
     , ")"
     ]
 
-makeIsDataIndexed ''MerkleProof [('MerkleProof, 0)]
 deriveJSON defaultOptions ''MerkleProof
 
 -- | 'emptyMp' is an empty 'MerkleProof'.
