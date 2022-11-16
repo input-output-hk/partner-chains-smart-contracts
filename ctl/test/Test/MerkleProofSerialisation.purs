@@ -69,8 +69,8 @@ test = do
         }
 
     expectedPlutusData =
-      Constr zero $
-        [ Constr zero $
+      Constr zero
+        [ Constr zero
             [ Integer $ Test.Utils.unsafeBigIntFromString "-8858258933817599851"
             , Integer $ Test.Utils.unsafeBigIntFromString "8887194232705394223"
             , Bytes $ ByteArray.hexToByteArrayUnsafe
