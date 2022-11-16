@@ -21,7 +21,7 @@ import Contract.Hashing as Hashing
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Constr)
+  , PlutusData(..)
   , fromData
   , toData
   )
@@ -98,23 +98,16 @@ instance Show RootHash where
 
 -- Note ['ToData' / 'FromData' Instances of the Merkle Tree]
 -- All of these instances should correspond to `/src/TrustlessSidechain/MerkleTree.hs`
-instance ToData RootHash where
-  -- TODO: maybe for these newtype instances we should just get rid of them
-  -- (as an optimization) so there's no need to have the 'Constr'
-  toData (RootHash ba) = Constr zero [ toData ba ]
-
-instance FromData RootHash where
-  fromData plutusData = case plutusData of
-    Constr n [ ba ] | n == zero → RootHash <$> fromData ba
-    _ → Nothing
+derive newtype instance ToData RootHash
+derive newtype instance FromData RootHash
 
 instance ToData Side where
-  toData L = Constr zero []
-  toData R = Constr one []
+  toData L = Integer zero
+  toData R = Integer one
 
 instance FromData Side where
   fromData plutusData = case plutusData of
-    Constr n []
+    Integer n
       | n == zero → Just L
       | n == one → Just R
     _ → Nothing
@@ -130,14 +123,8 @@ instance FromData Up where
           Up <$> (({ siblingSide: _, sibling: _ }) <$> fromData a <*> fromData b)
     _ → Nothing
 
-instance ToData MerkleProof where
-  toData (MerkleProof prf) = Constr zero [ toData prf ]
-
-instance FromData MerkleProof where
-  fromData plutusData = case plutusData of
-    Constr n [ a ]
-      | n == zero → MerkleProof <$> fromData a
-    _ → Nothing
+derive newtype instance ToData MerkleProof
+derive newtype instance FromData MerkleProof
 
 instance ToData MerkleTree where
   toData (Bin roothash l r) =
