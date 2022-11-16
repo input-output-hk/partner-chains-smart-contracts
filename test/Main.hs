@@ -24,4 +24,5 @@ tests =
     , MerkleProofSerialisation.testSide
     , MerkleProofSerialisation.testRootHash
     , MerkleProofSerialisation.testUp
+    , MerkleProofSerialisation.testCombinedMerkleProof
     ]

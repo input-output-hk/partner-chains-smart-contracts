@@ -177,7 +177,9 @@ test-suite trustless-sidechain-test
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
+    , bytestring
     , plutus-core
+    , plutus-ledger-api
     , plutus-tx
     , QuickCheck
     , tasty
