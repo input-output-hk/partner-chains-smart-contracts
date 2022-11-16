@@ -224,7 +224,7 @@ testCombinedMerkleProof =
         0
         [ Constr
             0
-            [ I (- 8858258933817599851)
+            [ I (-8858258933817599851)
             , I 8887194232705394223
             , B
                 ( unsafeFromHex
