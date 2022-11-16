@@ -11,10 +11,10 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Data.Array as Array
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
 import Partial.Unsafe as Unsafe
-import Serialization.Types (PrivateKey)
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
@@ -23,7 +23,7 @@ import UpdateCommitteeHash
   , UpdateCommitteeHashParams(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
+import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
 
 -- | 'updateCommitteeHash' is a convenient wrapper around
 -- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
@@ -37,6 +37,8 @@ updateCommitteeHash ∷
     newCommitteePrvKeys ∷ Array PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe ByteArray
+  , -- sidechain epoch of the new committee
+    sidechainEpoch ∷ BigInt
   } →
   Contract () Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
@@ -56,6 +58,8 @@ updateCommitteeHashWith ∷
     newCommitteePrvKeys ∷ Array PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe ByteArray
+  , -- sidechain epoch of the new committee
+    sidechainEpoch ∷ BigInt
   } →
   (UpdateCommitteeHashParams → Contract () UpdateCommitteeHashParams) →
   Contract () Unit
@@ -64,6 +68,7 @@ updateCommitteeHashWith
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
+  , sidechainEpoch
   }
   f = void do
   let
@@ -84,6 +89,7 @@ updateCommitteeHashWith
           { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , newCommitteePubKeys: newCommitteePubKeys
           , previousMerkleRoot
+          , sidechainEpoch
           }
   let
     committeeSignatures = Array.zip
@@ -96,6 +102,7 @@ updateCommitteeHashWith
         , newCommitteePubKeys: newCommitteePubKeys
         , committeeSignatures: committeeSignatures
         , previousMerkleRoot
+        , sidechainEpoch
         }
 
   uchp' ← f uchp
@@ -118,6 +125,7 @@ testScenario1 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
       , initThresholdNumerator: BigInt.fromInt 2
       , initThresholdDenominator: BigInt.fromInt 3
       }
@@ -130,6 +138,7 @@ testScenario1 = do
     , currentCommitteePrvKeys: initCommitteePrvKeys
     , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing
+    , sidechainEpoch: BigInt.fromInt 1
     }
 
 -- | 'testScenario2' updates the committee hash with a threshold ratio of 1/1,
@@ -154,6 +163,7 @@ testScenario2 = do
       , initCommittee: initCommitteePubKeys
       , initThresholdNumerator: BigInt.fromInt 1
       , initThresholdDenominator: BigInt.fromInt 1
+      , initSidechainEpoch: BigInt.fromInt 0
       }
 
   { sidechainParams: scParams } ← initSidechain initScParams
@@ -165,6 +175,7 @@ testScenario2 = do
         , currentCommitteePrvKeys: initCommitteePrvKeys
         , newCommitteePrvKeys: nextCommitteePrvKeys
         , previousMerkleRoot: Nothing
+        , sidechainEpoch: BigInt.fromInt 1
         }
     $ \(UpdateCommitteeHashParams params) →
         pure
