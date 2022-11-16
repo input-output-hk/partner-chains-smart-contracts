@@ -33,8 +33,7 @@ common common-lang
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wredundant-constraints -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fplugin=RecordDotPreprocessor -fplugin-opt
-    PlutusTx.Plugin:defer-errors -Werror
+    -fplugin-opt PlutusTx.Plugin:defer-errors -Werror
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -92,6 +91,7 @@ library
     TrustlessSidechain.OnChain.FUELMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
     TrustlessSidechain.OnChain.MPTRootTokenValidator
+    TrustlessSidechain.OnChain.PoCECDSA
     TrustlessSidechain.OnChain.PoCInlineDatum
     TrustlessSidechain.OnChain.PoCReferenceInput
     TrustlessSidechain.OnChain.PoCReferenceScript
@@ -173,6 +173,7 @@ test-suite trustless-sidechain-test
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
+    , bytestring
     , plutus-core
     , plutus-tx
     , QuickCheck

@@ -39,4 +39,4 @@ verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [Builti
 --   | O(n)   require public keys to be sorted then test each elem greater than last O(n)
 verifyMultisig pubKeys threshold message signatures =
   let pubKeysSorted = and (zipWith (<) pubKeys (tail pubKeys)) -- insert (<) between all elements
-   in pubKeysSorted && verifyMulti @BuiltinByteString @BuiltinByteString (`verifyEd25519Signature` message) threshold pubKeys signatures
+   in pubKeysSorted && verifyMulti (`verifyEcdsaSecp256k1Signature` message) threshold pubKeys signatures

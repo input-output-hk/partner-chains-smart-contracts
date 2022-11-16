@@ -64,6 +64,7 @@ data Endpoint
       { newCommitteePubKeys ∷ List PubKey
       , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
       , previousMerkleRoot ∷ Maybe ByteArray
+      , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
       { merkleRoot ∷ ByteArray
@@ -79,9 +80,10 @@ data Endpoint
       , newCommitteePubKeys ∷ List PubKey
       , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
       , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
-  | Init { committeePubKeys ∷ List ByteArray }
+  | Init { committeePubKeys ∷ List ByteArray, initSidechainEpoch ∷ BigInt }
 
 derive instance Generic Endpoint _
 

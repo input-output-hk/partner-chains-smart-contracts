@@ -1,26 +1,30 @@
-let lib = require("@emurgo/cardano-serialization-lib-nodejs");
+let secp = require("secp256k1");
+let crypto = require("crypto");
 
-exports.publicKeyFromPrivateKeyUnsafe = (bip32private_key) => {
-  return bip32private_key.to_public().to_raw_key();
+exports.verifyEcdsaSecp256k1Signature =
+  (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>
+    secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
+
+exports.sign = (data) => (ecdsa_priv_key) =>
+  secp.ecdsaSign(data, ecdsa_priv_key).signature;
+
+// rawSerialiseDSIGN for private keys is just hex decoding them, so we need to do nothing here
+exports.generateRandomPrivateKey = () => {
+  let priv_key;
+  do {
+    priv_key = crypto.randomBytes(32);
+  } while (!secp.privateKeyVerify(priv_key));
+  return priv_key;
 };
 
-exports.sign = (bip32private_key) => (data) => {
-  return bip32private_key.to_raw_key().sign(data).to_bytes();
-};
-
-exports.verifyEd25519Signature = (ed25519pub_key) => (data) => (ed25519sig) => {
-  const pub_key = lib.PublicKey.from_bytes(ed25519pub_key);
-  const sig = lib.Ed25519Signature.from_bytes(ed25519sig);
-  return pub_key.verify(data, sig);
-};
-
-exports.publicKeyToBytesUnsafe = (public_key) => {
-  return public_key.as_bytes();
-};
-
-exports.generateRandomBIP32PrivateKeyArrayInt8 = () => {
-  return lib.Bip32PrivateKey.generate_ed25519_bip32().to_128_xprv();
-};
-exports.generateBIP32PrivateKeyFromArray = (array) => {
-  return lib.Bip32PrivateKey.from_128_xprv(array);
-};
+// rawSerialiseDSIGN for public keys format:
+// - 33-bit compressed pubkey.
+// - both the cardano version and this version call to secp256k1_ec_pubkey_serialize c function
+// - neither deals directly with the internal state of the pubkeys, especially not onchain
+// see:
+// - https://github.com/cardano-foundation/CIPs/blob/c5bdd66fe49c19c341499f86cebaa2eef9e90b74/CIP-0049/README.md#specification
+// - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/DSIGN/EcdsaSecp256k1.hs#L225
+// - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/SECP256K1/C.hs#L157-L164
+// - https://github.com/input-output-hk/cardano-base/pull/289
+exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
+  secp.publicKeyCreate(ecdsa_priv_key, /*compressed =*/ true);
