@@ -15,6 +15,7 @@ import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options as Options
+import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
@@ -83,3 +84,5 @@ main = do
 
         PoCSerialiseData.testScenario1
         PoCSerialiseData.testScenario2
+
+        PoCECDSA.testScenario

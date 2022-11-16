@@ -14,6 +14,7 @@ import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.OnChain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.OnChain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.OnChain.PoCReferenceScript qualified as PoCReferenceScript
@@ -52,4 +53,5 @@ main =
     , ("PoCToReferenceScript", PoCReferenceScript.serialisablePoCToReferenceScriptValidator)
     , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
     , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
+    , ("PoCECDSA", PoCECDSA.serialisableValidator)
     ]

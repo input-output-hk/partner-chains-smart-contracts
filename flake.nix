@@ -1,32 +1,21 @@
 {
   description = "trustless-sidechain";
 
-  inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=1ec5a7a82e2a119364a3577022b6ff3c7e84a612";
+  inputs = rec {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
+    CHaP.follows = "cardano-transaction-lib/CHaP";
 
-    ### Start of Maxim's cool trick to get `serialiseData` to work
-    cardano-transaction-lib.inputs = {
-      plutip.follows = "plutip";
-      haskell-nix.follows = "plutip/haskell-nix";
-      nixpkgs.follows = "plutip/nixpkgs";
-    };
-    bot-plutus-interface = {
-      url = github:mlabs-haskell/bot-plutus-interface/7235aa6fba12b0cf368d9976e1e1b21ba642c038;
-      inputs.cardano-wallet.url = github:sadMaxim/cardano-wallet/9d34b2633ace6aa32c1556d33c8c2df63dbc8f5b;
-    };
-    plutip = {
-      url = github:mlabs-haskell/plutip/8364c43ac6bc9ea140412af9a23c691adf67a18b;
+    plutip.url = github:jaredponn/plutip/697dfd248b9c80098d0a0d4d0bad986902c93fbc;
+
+    cardano-transaction-lib = {
+      url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
       inputs = {
-        bot-plutus-interface.follows = "bot-plutus-interface";
-        haskell-nix.follows = "bot-plutus-interface/haskell-nix";
-        iohk-nix.follows = "bot-plutus-interface/iohk-nix";
-        nixpkgs.follows = "bot-plutus-interface/nixpkgs";
+        plutip = plutip;
+        ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
       };
     };
-    ### End of Maxim's cool trick to get `serialiseData` to work
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -34,7 +23,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, cardano-transaction-lib, plutip, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
       runtimeConfig = {
         network = {
@@ -43,8 +32,7 @@
         };
       };
 
-      supportedSystems = with nixpkgs.lib.systems.supported;
-        tier1 ++ tier2 ++ tier3;
+      supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
 
       perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
@@ -65,8 +53,10 @@
           pkgs = nixpkgsFor system;
           project = pkgs.haskell-nix.cabalProject {
             src = ./.;
+            inputMap = {
+              "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+            };
             compiler-nix-name = "ghc8107";
-            inherit (plutip) cabalProjectLocal extraSources;
             modules = plutip.haskellModules;
             shell = {
               withHoogle = true;
