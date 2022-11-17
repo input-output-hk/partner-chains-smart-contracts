@@ -196,3 +196,15 @@ PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
 instance ValidatorTypes SignedMerkleRoot where
   type RedeemerType SignedMerkleRoot = SignedMerkleRoot
+
+{- | 'CombinedMerkleProof' is a product type to include both the
+ 'MerkleTreeEntry' and the 'MerkleProof'.
+
+ This exists as for testing in #249.
+-}
+data CombinedMerkleProof = CombinedMerkleProof
+  { cmpTransaction :: MerkleTreeEntry
+  , cmpMerkleProof :: MerkleProof
+  }
+
+PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]

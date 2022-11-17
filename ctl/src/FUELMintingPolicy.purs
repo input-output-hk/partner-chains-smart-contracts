@@ -6,6 +6,7 @@ module FUELMintingPolicy
   , fuelMintingPolicy
   , getFuelMintingPolicy
   , MerkleTreeEntry(MerkleTreeEntry)
+  , CombinedMerkleProof(CombinedMerkleProof)
   ) where
 
 import Contract.Prelude
@@ -86,9 +87,8 @@ instance ToData FUELMint where
       , toData dsKeyCurrencySymbol
       ]
 
-{- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
- for the MPTRootToken.
--}
+-- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
+-- | for the MPTRootToken.
 newtype MerkleTreeEntry = MerkleTreeEntry
   { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
     index ∷ BigInt
@@ -114,6 +114,25 @@ instance ToData MerkleTreeEntry where
       , toData amount
       , toData recipient
       , toData previousMerkleRoot
+      ]
+
+-- | `CombinedMerkleProof` contains both the `MerkleTreeEntry` and its
+-- | corresponding `MerkleProof`. See #249 for details.
+newtype CombinedMerkleProof = CombinedMerkleProof
+  { transaction ∷ MerkleTreeEntry
+  , merkleProof ∷ MerkleProof
+  }
+
+derive instance Generic CombinedMerkleProof _
+derive instance Newtype CombinedMerkleProof _
+instance ToData CombinedMerkleProof where
+  toData
+    ( CombinedMerkleProof
+        { transaction, merkleProof }
+    ) =
+    Constr zero
+      [ toData transaction
+      , toData merkleProof
       ]
 
 data FUELRedeemer

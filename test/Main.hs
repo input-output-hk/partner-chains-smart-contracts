@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Test.Tasty
+import Test.TrustlessSidechain.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.TrustlessSidechain.MerkleTree as MerkleTree
 import Test.TrustlessSidechain.MultiSig as MultiSig
 import Prelude (IO)
@@ -19,4 +20,9 @@ tests =
     "TrustlessSidechain"
     [ MerkleTree.test
     , MultiSig.test
+    , MultiSig.test
+    , MerkleProofSerialisation.testSide
+    , MerkleProofSerialisation.testRootHash
+    , MerkleProofSerialisation.testUp
+    , MerkleProofSerialisation.testCombinedMerkleProof
     ]

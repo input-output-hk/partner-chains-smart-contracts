@@ -5,6 +5,7 @@ module Test.Utils
   , getOwnTransactionInput
   , fails
   , assertBy
+  , unsafeBigIntFromString
   ) where
 
 import Contract.Prelude
@@ -21,11 +22,15 @@ import Contract.Transaction
   )
 import Contract.Utxos as Utxos
 import Control.Monad.Error.Class as MonadError
+import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Map as Map
+import Data.Maybe as Maybe
 import Data.Set as Set
 import Data.UInt as UInt
 import Effect.Class.Console as Console
 import Effect.Exception as Exception
+import Partial.Unsafe as Unsafe
 import Serialization.Hash as Hash
 
 toTxIn ∷ String → Int → TransactionInput
@@ -101,3 +106,8 @@ assertBy eqBy expected actual =
     Console.warn "But got:"
     Console.warnShow actual
     Exception.throwException (Exception.error "Test case failed!")
+
+-- | Unsafely converts a String to a BigInt
+unsafeBigIntFromString ∷ String → BigInt
+unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
+  (BigInt.fromString str)
