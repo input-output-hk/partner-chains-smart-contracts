@@ -5,6 +5,7 @@ module Utils.Crypto
   , Signature
   , toPubKeyUnsafe
   , generatePrivKey
+  , generateRandomPrivateKey
   , multiSign
   , sign
   , verifyEcdsaSecp256k1Signature
@@ -54,14 +55,14 @@ multiSign ∷ Array PrivateKey → Message → Array Signature
 multiSign xkeys msg = map (sign msg) xkeys
 
 -- | 'normalizeCommitteePubKeysAndSignatures' takes a list of public keys and their
--- associated signatures, sorts by the natural lexicographical ordering of the
--- public keys, then unzips the resulting array, removing all signatures that
--- are 'Nothing'.
---
--- This useful since the onchain multisign method (see in the Haskell module
--- 'TrustlessSidechain.OnChain.Utils') requires that the keys are sorted (this
--- makes testing if the list is nubbed easy), and the signatures are associated
--- with the public keys
+-- | associated signatures, sorts by the natural lexicographical ordering of the
+-- | public keys, then unzips the resulting array, removing all signatures that
+-- | are 'Nothing'.
+-- |
+-- | This useful since the onchain multisign method (see in the Haskell module
+-- | 'TrustlessSidechain.OnChain.Utils') requires that the keys are sorted (this
+-- | makes testing if the list is nubbed easy), and the signatures are associated
+-- | with the public keys
 normalizeCommitteePubKeysAndSignatures ∷
   Array (PubKey /\ Maybe Signature) → Tuple (Array PubKey) (Array Signature)
 normalizeCommitteePubKeysAndSignatures =
@@ -71,20 +72,20 @@ normalizeCommitteePubKeysAndSignatures =
     <<< Array.sortBy (\l r → Ord.compare (fst l) (fst r))
 
 -- | > @'verifyMultiSignature' thresholdNumerator thresholdDenominator pubKeys msg signatures@
--- returns true iff
---
---      - @pubKeys@ is sorted lexicographically and are distinct
---
---      - @signatures@ are the corresponding signatures @pubKeys@ of @msg@
---      as a subsequence of @pubKeys@ (i.e., ordered the same way as @pubKeys@).
---
---      - strictly more than @thresholdNumerator/thresholdDenominator@
---      @pubKeys@ have signed @msg@
---
--- Note: this loosely replicates the behavior of the corresponding on chain
--- function, but should be significantly more efficient (since we use the
--- assumption that the signatures are essentially a subsequence of the public
--- keys); and is generalized to allow arbitrary thresholds to be given.
+-- | returns true iff
+-- |
+-- |      - @pubKeys@ is sorted lexicographically and are distinct
+-- |
+-- |      - @signatures@ are the corresponding signatures @pubKeys@ of @msg@
+-- |      as a subsequence of @pubKeys@ (i.e., ordered the same way as @pubKeys@).
+-- |
+-- |      - strictly more than @thresholdNumerator/thresholdDenominator@
+-- |      @pubKeys@ have signed @msg@
+-- |
+-- | Note: this loosely replicates the behavior of the corresponding on chain
+-- | function, but should be significantly more efficient (since we use the
+-- | assumption that the signatures are essentially a subsequence of the public
+-- | keys); and is generalized to allow arbitrary thresholds to be given.
 verifyMultiSignature ∷
   BigInt → BigInt → Array PubKey → ByteArray → Array Signature → Boolean
 verifyMultiSignature

@@ -24,6 +24,53 @@ import UpdateCommitteeHash
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
+import Types (PubKey, Signature)
+
+-- | `generateUchmSignatures` generates the public keys and corresponding
+-- | signatures of the current committee for the new committee given.
+generateUchmSignatures ::
+  { sidechainParams ∷ SidechainParams
+  ,
+    -- the current committee stored on chain
+    currentCommitteePrvKeys ∷ Array PrivateKey
+  , -- The new committee
+    newCommitteePrvKeys ∷ Array PrivateKey
+    , -- the last merkle root
+    previousMerkleRoot ∷ Maybe ByteArray
+    , -- the sidechain epoch
+    sidechainEpoch ∷ BigInt
+  } → Maybe (Array (Tuple PubKey Signature))
+generateUchmSignatures
+  { sidechainParams
+  , currentCommitteePrvKeys
+  , newCommitteePrvKeys
+  , previousMerkleRoot
+  , sidechainEpoch
+  } = do
+      let
+        -- Order the private keys by lexicographical ordering of the signatures, so
+        -- it's easy to give the sorted pubkey with its associated signature.
+        currentCommitteePubKeys /\ currentCommitteePrvKeys' =
+          Array.unzip
+            $ Array.sortWith fst
+            $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
+
+        newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
+
+      committeeMessage <-
+          UpdateCommitteeHash.serialiseUchmHash
+          $ UpdateCommitteeHashMessage
+              { sidechainParams: SidechainParams.convertSCParams sidechainParams
+              , newCommitteePubKeys
+              , previousMerkleRoot
+              , sidechainEpoch
+              }
+      let
+        committeeSignatures = Array.zip
+          currentCommitteePubKeys
+          (multiSign currentCommitteePrvKeys' committeeMessage)
+
+      pure committeeSignatures
 
 -- | 'updateCommitteeHash' is a convenient wrapper around
 -- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
@@ -63,46 +110,23 @@ updateCommitteeHashWith ∷
   } →
   (UpdateCommitteeHashParams → Contract () UpdateCommitteeHashParams) →
   Contract () Unit
-updateCommitteeHashWith
-  { sidechainParams
-  , currentCommitteePrvKeys
-  , newCommitteePrvKeys
-  , previousMerkleRoot
-  , sidechainEpoch
-  }
-  f = void do
-  let
-    -- Order the private keys by lexicographical ordering of the signatures, so
-    -- it's easy to give the sorted pubkey with its associated signature.
-    currentCommitteePubKeys /\ currentCommitteePrvKeys' =
-      Array.unzip
-        $ Array.sortWith fst
-        $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
-
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
-
-  committeeMessage ←
+updateCommitteeHashWith params f = void do
+  committeeSignatures ←
     liftContractM
-      "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to serialise and hash update committee hash message"
-      $ UpdateCommitteeHash.serialiseUchmHash
-      $ UpdateCommitteeHashMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
-          , newCommitteePubKeys: newCommitteePubKeys
-          , previousMerkleRoot
-          , sidechainEpoch
-          }
-  let
-    committeeSignatures = Array.zip
-      currentCommitteePubKeys
-      (Just <$> multiSign currentCommitteePrvKeys' committeeMessage)
+      "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to generate the committee signatures for the committee hash message"
+      $ generateUchmSignatures params
 
+  let
+    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe $ params.newCommitteePrvKeys
     uchp =
       UpdateCommitteeHashParams
-        { sidechainParams
-        , newCommitteePubKeys: newCommitteePubKeys
-        , committeeSignatures: committeeSignatures
-        , previousMerkleRoot
-        , sidechainEpoch
+        { sidechainParams: params.sidechainParams
+        , newCommitteePubKeys
+        , committeeSignatures:
+            map (Just <$> _) committeeSignatures
+            -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
+        , previousMerkleRoot: params.previousMerkleRoot
+        , sidechainEpoch: params.sidechainEpoch
         }
 
   uchp' ← f uchp
