@@ -4,20 +4,12 @@ import Contract.Prelude
 
 import Contract.Address (NetworkId(..))
 import Contract.Config (ServerConfig)
-import Contract.Prim.ByteArray
-  ( byteArrayToHex
-  , hexToByteArray
-  , hexToByteArrayUnsafe
-  )
-import Contract.Transaction (TransactionHash(..))
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
-import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Options.Types (Config)
-import Types.ByteArray (ByteArray)
-import Types.Transaction (TransactionInput(TransactionInput))
+import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
 
 configCodec ∷ CA.JsonCodec Config
 configCodec =
@@ -36,6 +28,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
+        , threshold: CAC.maybe thresholdCodec
         }
     )
   runtimeConfigCodec =
@@ -65,28 +58,3 @@ networkIdCodec = CA.prismaticCodec "Network" dec enc CA.string
   enc = case _ of
     MainnetId → "mainnet"
     TestnetId → "testnet"
-
-byteArrayCodec ∷ CA.JsonCodec ByteArray
-byteArrayCodec = CA.prismaticCodec "ByteArray" hexToByteArray byteArrayToHex
-  CA.string
-
-transactionInputCodec ∷ CA.JsonCodec TransactionInput
-transactionInputCodec = CA.prismaticCodec "TransactionInput" toF fromF CA.string
-  where
-  toF txIn =
-    case split (Pattern "#") txIn of
-      [ txId, txIdx ] → ado
-        index ← UInt.fromString txIdx
-        in
-          TransactionInput
-            { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
-            , index
-            }
-      _ → Nothing
-
-  fromF ∷ TransactionInput → String
-  fromF (TransactionInput txIn) = txHashStr <> "#" <> indexStr
-    where
-    indexStr = UInt.toString txIn.index
-    txHashStr = case txIn.transactionId of
-      TransactionHash x → byteArrayToHex x

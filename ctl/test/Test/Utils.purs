@@ -4,6 +4,8 @@ module Test.Utils
   , paymentPubKeyHashToByteArray
   , getOwnTransactionInput
   , fails
+  , assertBy
+  , unsafeBigIntFromString
   ) where
 
 import Contract.Prelude
@@ -20,10 +22,15 @@ import Contract.Transaction
   )
 import Contract.Utxos as Utxos
 import Control.Monad.Error.Class as MonadError
+import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Map as Map
+import Data.Maybe as Maybe
 import Data.Set as Set
 import Data.UInt as UInt
+import Effect.Class.Console as Console
 import Effect.Exception as Exception
+import Partial.Unsafe as Unsafe
 import Serialization.Hash as Hash
 
 toTxIn ∷ String → Int → TransactionInput
@@ -86,3 +93,21 @@ fails contract = do
       "Contract should have failed but it didn't."
     Left e →
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
+
+-- | @'assertBy' eqBy expected actual@ does nothing if @eqBy expected actual ==
+-- true@, and logs and throws an exception otherwise.
+assertBy ∷ ∀ a. Show a ⇒ (a → a → Boolean) → a → a → Effect Unit
+assertBy eqBy expected actual =
+  if eqBy expected actual then pure unit
+  else do
+    Console.warn "Assertion failed!"
+    Console.warn "Expected:"
+    Console.warnShow expected
+    Console.warn "But got:"
+    Console.warnShow actual
+    Exception.throwException (Exception.error "Test case failed!")
+
+-- | Unsafely converts a String to a BigInt
+unsafeBigIntFromString ∷ String → BigInt
+unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
+  (BigInt.fromString str)

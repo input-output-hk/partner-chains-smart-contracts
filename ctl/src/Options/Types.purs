@@ -11,6 +11,7 @@ import Contract.Address (NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
+import Data.List (List)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
@@ -33,6 +34,11 @@ type Config =
         , genesisHash ∷ Maybe ByteArray
         , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
+        , threshold ∷
+            Maybe
+              { numerator ∷ Int
+              , denominator ∷ Int
+              }
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath
@@ -54,7 +60,30 @@ data Endpoint
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | CommitteeHash
+      { newCommitteePubKeys ∷ List PubKey
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , sidechainEpoch ∷ BigInt
+      }
+  | SaveRoot
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      }
+  |
+    -- | 'CommitteeHandover' is a convenient alias for saving the root,
+    -- followed by updating the committee hash.
+    CommitteeHandover
+      { merkleRoot ∷ ByteArray
+      , previousMerkleRoot ∷ Maybe ByteArray
+      , newCommitteePubKeys ∷ List PubKey
+      , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
+      , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      , sidechainEpoch ∷ BigInt
+      }
   | GetAddrs
+  | Init { committeePubKeys ∷ List ByteArray, initSidechainEpoch ∷ BigInt }
 
 derive instance Generic Endpoint _
 

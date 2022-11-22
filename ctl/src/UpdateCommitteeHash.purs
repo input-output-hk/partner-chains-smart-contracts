@@ -17,7 +17,8 @@ import Contract.PlutusData (fromData, toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( TransactionOutput(..)
+  ( TransactionHash
+  , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTxE
@@ -33,7 +34,11 @@ import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
-import Types (assetClass, assetClassValue)
+import SidechainParams as SidechainParams
+import Types
+  ( assetClass
+  , assetClassValue
+  )
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
@@ -60,7 +65,7 @@ import Utils.Logging as Utils.Logging
 
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
 -- check if we have the right committee. This gets checked on chain also
-updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () Unit
+updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
 updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let -- @msg@ is used to help generate log messages
     msg = report "updateCommitteeHash"
@@ -92,16 +97,40 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       (msg "Failed to get mptRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
-  -- Building the new committee hash
+  -- Building the new committee hash / verifying that the new committee was
+  -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
-  when (null uchp.committeeSignatures) (throwContractError "Empty Committee")
-
-  let newCommitteeHash = aggregateKeys $ Array.sort uchp.newCommitteePubKeys
+  when (null uchp.committeeSignatures)
+    (throwContractError $ msg "Empty Committee")
 
   let
+    newCommitteeSorted = Array.sort uchp.newCommitteePubKeys
+    newCommitteeHash = aggregateKeys newCommitteeSorted
+
     curCommitteePubKeys /\ committeeSignatures =
       Utils.Crypto.normalizeCommitteePubKeysAndSignatures uchp.committeeSignatures
     curCommitteeHash = aggregateKeys curCommitteePubKeys
+
+  uchmsg ← liftContractM (msg "Failed to get update committee hash message")
+    $ serialiseUchmHash
+    $ UpdateCommitteeHashMessage
+        { sidechainParams: SidechainParams.convertSCParams uchp.sidechainParams
+        , newCommitteePubKeys: newCommitteeSorted
+        , previousMerkleRoot: uchp.previousMerkleRoot
+        , sidechainEpoch: uchp.sidechainEpoch
+        }
+
+  unless
+    ( Utils.Crypto.verifyMultiSignature
+        ((unwrap uchp.sidechainParams).thresholdNumerator)
+        ((unwrap uchp.sidechainParams).thresholdDenominator)
+        curCommitteePubKeys
+        uchmsg
+        committeeSignatures
+    )
+    ( throwContractError $ msg
+        "Invalid committee signatures for UpdateCommitteeHashMessage"
+    )
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------
@@ -129,7 +158,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
     (msg "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
-    (throwContractError "incorrect committee provided")
+    (throwContractError "Incorrect committee provided")
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
@@ -141,7 +170,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     newDatum = Datum $ toData
-      (UpdateCommitteeHashDatum { committeeHash: newCommitteeHash })
+      ( UpdateCommitteeHashDatum
+          { committeeHash: newCommitteeHash, sidechainEpoch: uchp.sidechainEpoch }
+      )
     value = assetClassValue (unwrap uch).uchAssetClass one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
@@ -174,6 +205,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
   logInfo' (msg "Update committee hash transaction submitted successfully")
+
+  pure txId
 
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

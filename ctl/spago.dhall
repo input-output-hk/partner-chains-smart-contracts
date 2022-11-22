@@ -24,6 +24,7 @@
   , "parallel"
   , "partial"
   , "prelude"
+  , "profunctor"
   , "strings"
   , "transformers"
   , "uint"

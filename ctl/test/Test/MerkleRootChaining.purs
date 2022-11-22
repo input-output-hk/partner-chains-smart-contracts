@@ -14,6 +14,7 @@ import Data.BigInt as BigInt
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(InitSidechainParams))
+import SidechainParams as SidechainParams
 import Test.MPTRoot as Test.MPTRoot
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils as Test.Utils
@@ -52,13 +53,16 @@ testScenario1 = do
   committee1PrvKeys ← sequence $ Array.replicate keyCount
     Utils.Crypto.generatePrivKey
 
-  sidechainParams ← InitSidechain.initSidechain $
+  { sidechainParams } ← InitSidechain.initSidechain $
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   -- 2. Saving a merkle root.
@@ -90,6 +94,7 @@ testScenario1 = do
     , currentCommitteePrvKeys: committee1PrvKeys
     , newCommitteePrvKeys: committee3PrvKeys
     , previousMerkleRoot: Just merkleRoot2
+    , sidechainEpoch: BigInt.fromInt 1
     }
 
   -- 4. Updating the committee hash
@@ -104,6 +109,7 @@ testScenario1 = do
     , newCommitteePrvKeys: committee4PrvKeys
     , -- Note: this is the same merkle root as the last committee update.
       previousMerkleRoot: Just merkleRoot2
+    , sidechainEpoch: BigInt.fromInt 2
     }
 
   -- 5. Saving a merkle root
@@ -160,16 +166,16 @@ testScenario1 = do
     , currentCommitteePrvKeys: committee4PrvKeys
     , newCommitteePrvKeys: committee7PrvKeys
     , previousMerkleRoot: Just merkleRoot6
+    , sidechainEpoch: BigInt.fromInt 3
     }
 
   pure unit
 
--- | 'testScenario1' demonstrates (should succeed)
+-- | 'testScenario2' demonstrates (should fail)
 --  1. Initializing the sidechain with a committee.
 --  2. Saving a merkle root
 --  3. Attempt (but fail) to update the committee hash with the merkle root
 --  as 'Nothing'
--- Note how this demonstrates how one must
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "Testing 'Test.MerkleRootChaining.testScenario2'"
@@ -187,13 +193,16 @@ testScenario2 = do
   committee1PrvKeys ← sequence $ Array.replicate keyCount
     Utils.Crypto.generatePrivKey
 
-  sidechainParams ← InitSidechain.initSidechain $
+  { sidechainParams } ← InitSidechain.initSidechain $
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
   -- 2. Saving a merkle root
@@ -231,16 +240,18 @@ testScenario2 = do
       "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
       $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , newCommitteePubKeys: committee3PubKeys
           ,
             -- Note: since we can trust the committee will sign the "correct" root,
             -- we necessarily know that the message that they sign should be
             -- the previousMerkleRoot which is @merkleRoot2@ in this case.
             previousMerkleRoot: Just merkleRoot2
+          , sidechainEpoch: BigInt.fromInt 1
           }
 
   Test.Utils.fails
+    $ void
     $ UpdateCommitteeHash.updateCommitteeHash
     $
       UpdateCommitteeHashParams
@@ -254,4 +265,5 @@ testScenario2 = do
           -- committee hash without really putting in the previous merkle
           -- root
           previousMerkleRoot: Nothing
+        , sidechainEpoch: BigInt.fromInt 1
         }

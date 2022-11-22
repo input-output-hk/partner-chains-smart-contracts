@@ -1,4 +1,9 @@
-module Test.UpdateCommitteeHash where
+module Test.UpdateCommitteeHash
+  ( testScenario1
+  , testScenario2
+  , updateCommitteeHash
+  , updateCommitteeHashWith
+  ) where
 
 import Contract.Prelude
 
@@ -6,17 +11,19 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Data.Array as Array
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
-import Serialization.Types (PrivateKey)
+import Partial.Unsafe as Unsafe
 import SidechainParams (InitSidechainParams(..), SidechainParams)
+import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
 import UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto (generatePrivKey, multiSign, toPubKeyUnsafe)
+import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
 
 -- | 'updateCommitteeHash' is a convenient wrapper around
 -- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
@@ -30,17 +37,48 @@ updateCommitteeHash ∷
     newCommitteePrvKeys ∷ Array PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe ByteArray
+  , -- sidechain epoch of the new committee
+    sidechainEpoch ∷ BigInt
   } →
   Contract () Unit
-updateCommitteeHash
+updateCommitteeHash params = updateCommitteeHashWith params pure
+
+-- | @'updateCommitteeHashWith' params f@ is a convenient wrapper around
+-- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests which modify the
+-- inputted 'UpdateCommitteeHashParams' with the given function @f@.
+--
+-- In particular, the function @f@ can be used to change the signatures
+-- provided by the committee.
+updateCommitteeHashWith ∷
+  { sidechainParams ∷ SidechainParams
+  ,
+    -- the current committee stored on chain
+    currentCommitteePrvKeys ∷ Array PrivateKey
+  , -- The new committee
+    newCommitteePrvKeys ∷ Array PrivateKey
+  , -- the last merkle root
+    previousMerkleRoot ∷ Maybe ByteArray
+  , -- sidechain epoch of the new committee
+    sidechainEpoch ∷ BigInt
+  } →
+  (UpdateCommitteeHashParams → Contract () UpdateCommitteeHashParams) →
+  Contract () Unit
+updateCommitteeHashWith
   { sidechainParams
   , currentCommitteePrvKeys
   , newCommitteePrvKeys
   , previousMerkleRoot
-  } = do
+  , sidechainEpoch
+  }
+  f = void do
   let
-    currentCommitteePubKeys = Array.sort $ map toPubKeyUnsafe
-      currentCommitteePrvKeys
+    -- Order the private keys by lexicographical ordering of the signatures, so
+    -- it's easy to give the sorted pubkey with its associated signature.
+    currentCommitteePubKeys /\ currentCommitteePrvKeys' =
+      Array.unzip
+        $ Array.sortWith fst
+        $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
+
     newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
 
   committeeMessage ←
@@ -48,14 +86,15 @@ updateCommitteeHash
       "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to serialise and hash update committee hash message"
       $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams
+          { sidechainParams: SidechainParams.convertSCParams sidechainParams
           , newCommitteePubKeys: newCommitteePubKeys
           , previousMerkleRoot
+          , sidechainEpoch
           }
   let
     committeeSignatures = Array.zip
       currentCommitteePubKeys
-      (Just <$> multiSign currentCommitteePrvKeys committeeMessage)
+      (Just <$> multiSign currentCommitteePrvKeys' committeeMessage)
 
     uchp =
       UpdateCommitteeHashParams
@@ -63,14 +102,17 @@ updateCommitteeHash
         , newCommitteePubKeys: newCommitteePubKeys
         , committeeSignatures: committeeSignatures
         , previousMerkleRoot
+        , sidechainEpoch
         }
 
-  UpdateCommitteeHash.updateCommitteeHash uchp
+  uchp' ← f uchp
 
--- | 'testScenario' updates the committee hash
-testScenario ∷ Contract () Unit
-testScenario = do
-  logInfo' "UpdateCommitteeHash 'testScenario'"
+  UpdateCommitteeHash.updateCommitteeHash uchp'
+
+-- | 'testScenario1' updates the committee hash
+testScenario1 ∷ Contract () Unit
+testScenario1 = do
+  logInfo' "UpdateCommitteeHash 'testScenario1'"
   genesisUtxo ← Test.Utils.getOwnTransactionInput
   let
     keyCount = 25
@@ -83,14 +125,70 @@ testScenario = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
       }
 
-  scParams ← initSidechain initScParams
+  { sidechainParams } ← initSidechain initScParams
   nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
   updateCommitteeHash
-    { sidechainParams: scParams
+    { sidechainParams
     , currentCommitteePrvKeys: initCommitteePrvKeys
     , newCommitteePrvKeys: nextCommitteePrvKeys
     , previousMerkleRoot: Nothing
+    , sidechainEpoch: BigInt.fromInt 1
     }
+
+-- | 'testScenario2' updates the committee hash with a threshold ratio of 1/1,
+-- but should fail because there isn't enough committee members signing the update
+-- off.
+testScenario2 ∷ Contract () Unit
+testScenario2 = do
+  logInfo' "UpdateCommitteeHash 'testScenario2'"
+  genesisUtxo ← Test.Utils.getOwnTransactionInput
+  let
+    keyCount = 2
+  -- woohoo!! smaller committee size so it's easy to remove the majority
+  -- sign below, and make this test case fail...
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 1
+      , initGenesisHash: hexToByteArrayUnsafe "aabbccddeeffgghhiijjkkllmmnnoo"
+      , initMint: Nothing
+      , initUtxo: genesisUtxo
+      , initCommittee: initCommitteePubKeys
+      , initThresholdNumerator: BigInt.fromInt 1
+      , initThresholdDenominator: BigInt.fromInt 1
+      , initSidechainEpoch: BigInt.fromInt 0
+      }
+
+  { sidechainParams: scParams } ← initSidechain initScParams
+  nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+
+  Test.Utils.fails
+    $ updateCommitteeHashWith
+        { sidechainParams: scParams
+        , currentCommitteePrvKeys: initCommitteePrvKeys
+        , newCommitteePrvKeys: nextCommitteePrvKeys
+        , previousMerkleRoot: Nothing
+        , sidechainEpoch: BigInt.fromInt 1
+        }
+    $ \(UpdateCommitteeHashParams params) →
+        pure
+          $ UpdateCommitteeHashParams
+          $ params
+              { committeeSignatures =
+                  Unsafe.unsafePartial
+                    ( case params.committeeSignatures of
+                        [ c1 /\ _s1
+                        , c2 /\ s2
+                        ] →
+                          [ c1 /\ Nothing
+                          , c2 /\ s2
+                          ]
+                    )
+              }

@@ -11,8 +11,11 @@ import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MPTRoot as MPTRoot
+import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
+import Test.Options as Options
+import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
@@ -25,6 +28,12 @@ main ∷ Effect Unit
 main = do
   -- Run the merkle tree integration tests
   MerkleTree.test
+
+  -- Run the merkle proof integration test for #249
+  MerkleProofSerialisation.test
+
+  -- Run the Options tests.
+  Options.test
 
   -- Run the plutip tests
   launchAff_ do
@@ -47,7 +56,8 @@ main = do
 
         FUELMintingPolicy.testScenario
 
-        UpdateCommitteeHash.testScenario
+        UpdateCommitteeHash.testScenario1
+        UpdateCommitteeHash.testScenario2
 
         MPTRoot.testScenario1
         MPTRoot.testScenario2
@@ -56,7 +66,8 @@ main = do
         MerkleRootChaining.testScenario2
 
         InitSidechain.testScenario1
-        InitSidechain.testScenario2 alice bob
+        InitSidechain.testScenario2
+        InitSidechain.testScenario3 alice bob
 
     -- Run the plutip tests for the proof of concept tests (note we run these
     -- separately from the actual sidechain tests.)
@@ -73,3 +84,5 @@ main = do
 
         PoCSerialiseData.testScenario1
         PoCSerialiseData.testScenario2
+
+        PoCECDSA.testScenario

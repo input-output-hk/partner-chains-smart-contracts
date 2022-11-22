@@ -4,7 +4,9 @@ module FUELMintingPolicy
   , FuelParams(..)
   , passiveBridgeMintParams
   , fuelMintingPolicy
+  , getFuelMintingPolicy
   , MerkleTreeEntry(MerkleTreeEntry)
+  , CombinedMerkleProof(CombinedMerkleProof)
   ) where
 
 import Contract.Prelude
@@ -113,6 +115,25 @@ instance ToData MerkleTreeEntry where
       , toData previousMerkleRoot
       ]
 
+-- | `CombinedMerkleProof` contains both the `MerkleTreeEntry` and its
+-- | corresponding `MerkleProof`. See #249 for details.
+newtype CombinedMerkleProof = CombinedMerkleProof
+  { transaction ∷ MerkleTreeEntry
+  , merkleProof ∷ MerkleProof
+  }
+
+derive instance Generic CombinedMerkleProof _
+derive instance Newtype CombinedMerkleProof _
+instance ToData CombinedMerkleProof where
+  toData
+    ( CombinedMerkleProof
+        { transaction, merkleProof }
+    ) =
+    Constr zero
+      [ toData transaction
+      , toData merkleProof
+      ]
+
 data FUELRedeemer
   = MainToSide ByteArray -- recipient sidechain (addr , signature)
   | SideToMain MerkleTreeEntry MerkleProof
@@ -132,6 +153,22 @@ fuelMintingPolicy fm = do
     rawFUELMintingPolicy
     PlutusScriptV2
   liftedE (applyArgs fuelMPUnapplied [ toData fm ])
+
+-- | `getFuelMintingPolicy` creates the parameter `FUELMint`
+-- | (as required by the onchain mintng policy) via the given sidechain params, and calls
+-- | `fuelMintingPolicy` to give us the minting policy
+-- TODO: the "creation of `FUELMint` via the given sidechain params" needs more
+-- work i.e. we should actually fill up the currency symbols with their proper
+-- currency symbols instead of `dummyCS`.
+-- For now, we copy what the offchain code is doing.
+getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getFuelMintingPolicy sidechainParams = do
+  fuelMintingPolicy $
+    FUELMint
+      { sidechainParams
+      , mptRootTokenCurrencySymbol: dummyCS
+      , dsKeyCurrencySymbol: dummyCS
+      }
 
 data FuelParams
   = Mint
