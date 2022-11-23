@@ -8,8 +8,8 @@
 
       - 'GetOpts': provides functionality to parse the CLI arguments
 
-      - 'GenOutput': provides functionality to generate the CLI calls for the
-      purescript project
+      - 'GenOutput': provides functionality to generate the output displayed to
+      the user
 -}
 module Main (main) where
 
