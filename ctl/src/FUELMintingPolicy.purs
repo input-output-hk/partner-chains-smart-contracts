@@ -16,11 +16,7 @@ import Contract.Address (PaymentPubKeyHash, ownPaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayFromAscii
-  , hexToByteArrayUnsafe
-  )
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -36,13 +32,12 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, mkCurrencySymbol)
+import Contract.Value (CurrencySymbol, adaSymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import MerkleTree (MerkleProof(..))
-import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams)
@@ -260,8 +255,7 @@ runFuelMP sp fp = do
   where these tokens are not used
 -}
 dummyCS ∷ CurrencySymbol
-dummyCS = unsafePartial $ fromJust $ mkCurrencySymbol $
-  hexToByteArrayUnsafe ""
+dummyCS = adaSymbol
 
 {- | Mocking unused data for Passive Bridge minting, where we use genesis minting -}
 passiveBridgeMintParams ∷
