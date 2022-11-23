@@ -11,6 +11,7 @@ import Test.Config (config)
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MPTRoot as MPTRoot
+import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options as Options
@@ -27,6 +28,9 @@ main ∷ Effect Unit
 main = do
   -- Run the merkle tree integration tests
   MerkleTree.test
+
+  -- Run the merkle proof integration test for #249
+  MerkleProofSerialisation.test
 
   -- Run the Options tests.
   Options.test
