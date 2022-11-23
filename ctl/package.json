@@ -29,6 +29,7 @@
     "ws": "8.4.0",
     "xhr2": "0.2.1"
   },
+  "bundleDependencies": true,
   "devDependencies": {
     "eslint": "^8.22.0",
     "buffer": "6.0.3",
