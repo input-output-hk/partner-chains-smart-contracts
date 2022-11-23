@@ -204,13 +204,18 @@ testScenario3 = do
     keyCount = 25
   initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
   let
-    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initCommitteePubKeys = Array.sort (map toPubKeyUnsafe initCommitteePrvKeys)
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 6
       , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
       , initMint: Nothing
       , initUtxo: genesisUtxo
-      , initCommittee: Array.reverse initCommitteePubKeys
+      , initCommittee: case Array.uncons initCommitteePubKeys of
+          Nothing → mempty
+          Just { head, tail } → tail <> Array.singleton head
+      -- note how we mess up the order of the initial public keys
+      -- assuming that all entries are distinct (which should be the case
+      -- with high probability)
       , initSidechainEpoch: zero
       , initThresholdNumerator: BigInt.fromInt 2
       , initThresholdDenominator: BigInt.fromInt 3
