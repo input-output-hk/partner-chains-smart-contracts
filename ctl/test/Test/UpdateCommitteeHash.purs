@@ -194,8 +194,10 @@ testScenario2 = do
                     )
               }
 
--- | 'testScenario3' updates the committee hash when the signatures / new
--- | committee are given out of order; and updates it again
+-- | 'testScenario3' initialises the committee with an out of order committee
+-- | (by moving the smallest committee member to the end), and updates the committee
+-- | hash when the signatures / new committee are given out of order (in
+-- |reverse order actually); and updates it again
 testScenario3 ∷ Contract () Unit
 testScenario3 = do
   logInfo' "UpdateCommitteeHash 'testScenario3'"
