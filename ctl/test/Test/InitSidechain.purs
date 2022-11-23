@@ -1,4 +1,9 @@
-module Test.InitSidechain (testScenario1, testScenario2, testScenario3) where
+module Test.InitSidechain
+  ( generateInitCommittee
+  , testScenario1
+  , testScenario2
+  , testScenario3
+  ) where
 
 import Contract.Prelude
 
@@ -18,7 +23,22 @@ import Effect.Exception as Exception
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(..))
 import Test.Utils as Test.Utils
+import Utils.Crypto (PrivateKey, PublicKey)
 import Utils.Crypto as Crypto
+
+-- | `generateInitCommittee` generates an intial committee of the given size as
+-- | an array of tuple associating public key to private key.
+-- |
+-- | Note: this also sorts the inital committee lexicographically by the public
+-- | keys (this technically isn't needed since the endpoint will do it for you)
+generateInitCommittee ∷
+  Int → Effect (Array (PublicKey /\ PrivateKey))
+generateInitCommittee committeeSize = do
+  committeePrvKeys ← sequence $ Array.replicate committeeSize
+    Crypto.generateRandomPrivateKey
+  pure $ Array.sortWith fst $ map
+    (\prvKey → Crypto.toPubKeyUnsafe prvKey /\ prvKey)
+    committeePrvKeys
 
 -- | 'testScenario1' just calls the init sidechain endpoint (which should
 -- succeed!)
