@@ -55,6 +55,7 @@ main = do
         UpdateCommitteeHash.testScenario1
         UpdateCommitteeHash.testScenario2
         UpdateCommitteeHash.testScenario3
+        UpdateCommitteeHash.testScenario4
 
         MPTRoot.testScenario1
         MPTRoot.testScenario2
