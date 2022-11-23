@@ -1,6 +1,7 @@
 module Test.UpdateCommitteeHash
   ( testScenario1
   , testScenario2
+  , testScenario3
   , updateCommitteeHash
   , updateCommitteeHashWith
   ) where
@@ -192,3 +193,61 @@ testScenario2 = do
                           ]
                     )
               }
+
+-- | 'testScenario3' updates the committee hash when the signatures / new
+-- | committee are given out of order; and updates it again
+testScenario3 ∷ Contract () Unit
+testScenario3 = do
+  logInfo' "UpdateCommitteeHash 'testScenario3'"
+  genesisUtxo ← Test.Utils.getOwnTransactionInput
+  let
+    keyCount = 25
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 6
+      , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
+      , initMint: Nothing
+      , initUtxo: genesisUtxo
+      , initCommittee: Array.reverse initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
+      }
+
+  { sidechainParams } ← initSidechain initScParams
+  nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  nextNextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+
+  let
+    reverseSignaturesAndNewCommittee ∷
+      UpdateCommitteeHashParams → UpdateCommitteeHashParams
+    reverseSignaturesAndNewCommittee uchp =
+      wrap
+        ( (unwrap uchp)
+            { committeeSignatures = Array.reverse
+                ((unwrap uchp).committeeSignatures)
+            , newCommitteePubKeys = Array.reverse
+                ((unwrap uchp).newCommitteePubKeys)
+            }
+        )
+
+  -- the first update
+  updateCommitteeHashWith
+    { sidechainParams
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , newCommitteePrvKeys: nextCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    , sidechainEpoch: BigInt.fromInt 1
+    }
+    (pure <<< reverseSignaturesAndNewCommittee)
+
+  -- the second update
+  updateCommitteeHash
+    { sidechainParams
+    , currentCommitteePrvKeys: nextCommitteePrvKeys
+    , newCommitteePrvKeys: nextNextCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    , sidechainEpoch: BigInt.fromInt 2
+    }
