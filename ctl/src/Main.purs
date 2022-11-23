@@ -14,6 +14,7 @@ import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn)
+  , activeBridgeMintParams
   , passiveBridgeMintParams
   , runFuelMP
   )
@@ -22,7 +23,7 @@ import InitSidechain (initSidechain)
 import MPTRoot (SaveRootParams(SaveRootParams))
 import MPTRoot as MPTRoot
 import Options (getOptions)
-import Options.Types (Endpoint(..))
+import Options.Types (BridgeType(..), Endpoint(..))
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
@@ -36,12 +37,23 @@ main = do
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     endpointResp ← case opts.endpoint of
-      MintAct { amount } →
-        runFuelMP opts.scParams
-          (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
+      MintAct { amount, bridge: Passive genesisMint } →
+        runFuelMP sp
+          (passiveBridgeMintParams sp { amount, recipient: pkh })
           <#> unwrap
           >>> { transactionId: _ }
           >>> MintActResp
+        where
+        sp = wrap ((unwrap opts.scParams) { genesisMint = Just genesisMint })
+
+      MintAct { amount, bridge: Active merkleProof } →
+        runFuelMP sp
+          (activeBridgeMintParams sp { amount, recipient: pkh, merkleProof })
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> MintActResp
+        where
+        sp = opts.scParams
 
       BurnAct { amount, recipient } →
         runFuelMP opts.scParams

@@ -18,5 +18,6 @@
     "ctlServer": null
   },
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
-  "stakeSigningKeyFile": null
+  "stakeSigningKeyFile": null,
+  "merkleProof": null
 }

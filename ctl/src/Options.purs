@@ -35,8 +35,12 @@ import Data.String.Regex.Flags as Regex.Flags
 import Data.String.Regex.Unsafe as Regex.Unsafe
 import Data.UInt (UInt)
 import Data.UInt as UInt
+import Deserialization.FromBytes (fromBytes)
+import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
+import FromData (fromData)
 import Helpers (logWithLevel)
+import MerkleTree (MerkleProof)
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -58,15 +62,17 @@ import Options.Applicative
   , metavar
   , option
   , progDesc
+  , readerError
   , short
   , showDefault
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Options)
+import Options.Types (BridgeType(..), Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray, hexToByteArray)
+import Types.CborBytes (CborBytes, cborBytesFromByteArray)
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -222,14 +228,6 @@ options maybeConfig = info (helper <*> optSpec)
           (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
       ]
 
-    genesisMint ← optional $ option transactionInput $ fold
-      [ short 'm'
-      , long "genesis-mint-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO to be spend with the genesis mint"
-      , maybe mempty value
-          (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
-      ]
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
@@ -238,6 +236,7 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
+
     { thresholdNumerator, thresholdDenominator } ←
       let
         thresholdFractionOption =
@@ -283,14 +282,39 @@ options maybeConfig = info (helper <*> optSpec)
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
+        , genesisMint: Nothing
         , genesisHash
-        , genesisMint
         , genesisUtxo
         , thresholdNumerator
         , thresholdDenominator
         }
 
-  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+  -- it is currently the responsibility of the programmer to maintain the mutual
+  -- exclusion between genesisMint and merkleProof. Perhaps there is a better way
+  -- to do this such that it is impossible to have SidechainParams with genesisMint
+  -- equal to Nothing, while at the same time we have no merkle proof supplied.
+  mintSpec = ado
+    amount ← parseAmount
+    bridge ←
+      let
+        active = option merkleProofParser $ fold
+          [ short 'p'
+          , long "merkle-proof"
+          , metavar "CBOR"
+          , help "CBOR-encoded Merkle Proof (enables active claiming)"
+          , maybe mempty value (maybeConfig >>= _.mintProof >>= toMerkleProof)
+          ]
+        passive = option transactionInput $ fold
+          [ short 'm'
+          , long "genesis-mint-utxo"
+          , metavar "TX_ID#TX_IDX"
+          , help "Input UTxO to be spend with the genesis mint"
+          , maybe mempty value
+              (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
+          ]
+      in
+        map Active active <|> map Passive passive
+    in MintAct { amount, bridge }
 
   burnSpec = ado
     amount ← parseAmount
@@ -527,9 +551,22 @@ transactionInput = maybeReader \txIn →
           }
     _ → Nothing
 
+toMerkleProof ∷ CborBytes → Maybe MerkleProof
+toMerkleProof = unwrap >>> fromBytes >=> convertPlutusData >=> fromData
+
+merkleProofParser ∷ ReadM MerkleProof
+merkleProofParser = cbor >>= toMerkleProof >>>
+  maybe (readerError "Error while parsing supplied CBOR as MerkleProof.") pure
+
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
+
+-- | Parse only CBOR encoded hexadecimal
+-- Note: This assumes there will be some validation with the CborBytes, otherwise
+-- we should simplify the code and fall back to ByteArray.
+cbor ∷ ReadM CborBytes
+cbor = cborBytesFromByteArray <$> byteArray
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt

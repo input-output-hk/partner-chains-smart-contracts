@@ -1,12 +1,13 @@
 module FUELMintingPolicy
-  ( runFuelMP
+  ( CombinedMerkleProof(..)
   , FUELMint(..)
   , FuelParams(..)
-  , passiveBridgeMintParams
+  , MerkleTreeEntry(..)
+  , activeBridgeMintParams
   , fuelMintingPolicy
   , getFuelMintingPolicy
-  , MerkleTreeEntry(MerkleTreeEntry)
-  , CombinedMerkleProof(CombinedMerkleProof)
+  , passiveBridgeMintParams
+  , runFuelMP
   ) where
 
 import Contract.Prelude
@@ -179,7 +180,6 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe ByteArray
-      , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -272,9 +272,22 @@ passiveBridgeMintParams sidechainParams { amount, recipient } =
   Mint
     { amount
     , recipient
-    , merkleProof: MerkleProof []
     , sidechainParams
+    , merkleProof: MerkleProof []
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing
-    , entryHash: hexToByteArrayUnsafe ""
+    }
+
+activeBridgeMintParams ∷
+  SidechainParams →
+  { amount ∷ BigInt, merkleProof ∷ MerkleProof, recipient ∷ PaymentPubKeyHash } →
+  FuelParams
+activeBridgeMintParams sidechainParams { amount, recipient, merkleProof } =
+  Mint
+    { amount
+    , recipient
+    , sidechainParams
+    , merkleProof
+    , index: BigInt.fromInt 0
+    , previousMerkleRoot: Nothing
     }

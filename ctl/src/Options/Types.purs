@@ -1,8 +1,9 @@
 module Options.Types
-  ( RuntimeConfig(..)
-  , Options(..)
+  ( BridgeType(..)
   , Config(..)
   , Endpoint(..)
+  , Options(..)
+  , RuntimeConfig(..)
   ) where
 
 import Contract.Prelude
@@ -12,10 +13,12 @@ import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Data.List (List)
+import MerkleTree (MerkleProof)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
+import Types.CborBytes (CborBytes)
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
@@ -46,11 +49,13 @@ type Config =
     stakeSigningKeyFile ∷ Maybe FilePath
   , -- | Network configuration of the runtime dependencies (CTL-server, ogmios, ogmios-datum-cache)
     runtimeConfig ∷ Maybe RuntimeConfig
+  , -- | Proof for claim endpoint
+    mintProof ∷ Maybe CborBytes
   }
 
 -- | CLI arguments including required data to run each individual endpoint
 data Endpoint
-  = MintAct { amount ∷ BigInt }
+  = MintAct { amount ∷ BigInt, bridge ∷ BridgeType }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
@@ -98,3 +103,9 @@ type RuntimeConfig =
   , ctlServer ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }
+
+data BridgeType = Active MerkleProof | Passive TransactionInput
+
+derive instance Generic BridgeType _
+instance Show BridgeType where
+  show = genericShow
