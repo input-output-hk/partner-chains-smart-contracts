@@ -573,7 +573,7 @@ dsConfValidator ds =
 dsConfValidatorHash :: Ds -> ValidatorHash
 dsConfValidatorHash = validatorHash . dsConfValidator
 
-{- | 'mkDsConfPolicy' mints the nft which identifies the validator that stores
+{- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
  the various minting policies that the distributed set depends on
 -}
 mkDsConfPolicy :: DsConfMint -> () -> ScriptContext -> Bool
