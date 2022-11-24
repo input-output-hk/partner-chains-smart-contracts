@@ -223,6 +223,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
   , bprSpoSignature :: Signature -- Signature of the SPO private key
   , bprSidechainSignature :: ByteString -- Signature of the sidechain private key
+  , bprOwnPkh :: PubKeyHash -- payment public key hash of the wallet owner (who is allowed to deregister)
   }
 ```
 
