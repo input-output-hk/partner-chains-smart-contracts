@@ -132,6 +132,7 @@ executable trustless-sidechain-gen-signatures
     , base16-bytestring
     , bytestring
     , cardano-crypto-class
+    , cryptonite
     , either
     , optparse-applicative
     , plutus-core

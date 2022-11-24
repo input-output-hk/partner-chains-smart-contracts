@@ -33,3 +33,5 @@ main =
           gccCliCommand
     MerkleTreeCommand {..} ->
       GenOutput.merkleTreeCommand mtcCommand >>= putStrLn
+    SidechainKeyCommand {..} ->
+      GenOutput.sidechainKeyCommand skCommand >>= putStrLn

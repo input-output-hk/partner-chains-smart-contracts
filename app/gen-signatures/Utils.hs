@@ -6,7 +6,25 @@
 
       -  converting public keys to private keys
 -}
-module Utils where
+module Utils (
+  signWithSPOKey,
+  signWithSidechainKey,
+  showTxOutRef,
+  showBS,
+  showBuiltinBS,
+  showRootHash,
+  showPubKey,
+  showScPubKey,
+  showScPubKeyAndSig,
+  showSig,
+  showThreshold,
+  showMerkleTree,
+  showMerkleProof,
+  toSpoPubKey,
+  toSidechainPubKey,
+  secpPubKeyToSidechainPubKey,
+  generateRandomSidechainPrivateKey,
+) where
 
 import Prelude
 
@@ -18,7 +36,9 @@ import Cardano.Crypto.DSIGN.Class (
   rawSerialiseVerKeyDSIGN,
   signDSIGN,
  )
+import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
+import Crypto.Secp256k1.Internal qualified as SECP.Internal
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -41,6 +61,46 @@ import TrustlessSidechain.OffChain.Types (
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg,
  )
+
+-- * Generating a private sidechain key
+
+{- | Generates a random sidechain private key.
+
+ The implementation is a translation of the underlying example in the C
+ library: https://github.com/bitcoin-core/secp256k1/blob/master/examples/ecdsa.c
+ where we use the module 'Crypto.Random' from cryptonite to handle the cross
+ platform random bytestring generation
+
+ Surprisingly, the Haskell library we're using doesn't include a nice wrapper
+ for this, so we do it ourselves I guess.
+
+ Some implementation notes:
+
+      - We use the default context 'Crypto.Secp256k1.Internal.ctx' which is
+      thread safe and used internally for precomputed values (and adding
+      randomization to prevent side channel attacks)
+
+      - As given in the C example, we loop forever until we find a "valid"
+      key i.e., a non-zero key smaller than the group's order (see
+      [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)...
+      Ostensibly, the probability of a secret key being "invalid" is
+      neglible, so we _expect_ this loop to run at most once.
+
+ TODO: might be a good idea to put this in a newtype wrapper...
+-}
+generateRandomSidechainPrivateKey :: IO BuiltinByteString
+generateRandomSidechainPrivateKey =
+  let go = do
+        bs <- Random.getRandomBytes 32
+        ret <- SECP.Internal.useByteString bs $ \(ptr, _len) ->
+          SECP.Internal.ecSecKeyVerify SECP.Internal.ctx ptr
+        -- Returns 1 in the case that this is valid, see the FFI
+        -- call
+        -- [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)
+        if ret == 1
+          then return bs
+          else go
+   in fmap Builtins.toBuiltin go
 
 -- * Signing a message
 

@@ -4,10 +4,10 @@
  data from the module 'GetOpts', and create the appropriate output to display
  to the user.
 -}
-module GenOutput (genCliCommand, merkleTreeCommand) where
+module GenOutput (genCliCommand, merkleTreeCommand, sidechainKeyCommand) where
 
 import Data.List qualified as List
-import GetOpts (GenCliCommand (..), MerkleTreeCommand (..))
+import GetOpts (GenCliCommand (..), MerkleTreeCommand (..), SidechainKeyCommand (..))
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
  )
@@ -143,3 +143,15 @@ merkleTreeCommand = \case
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData mpcMerkleTreeEntry)) mpcMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
       Just mp -> pure $ Utils.showMerkleProof mp
+
+{- | 'sidechainKeyCommand' creates the output for commands relating to the
+ sidechain keys.
+
+ Note: this is in the IO monad because generating fresh private keys is an IO
+ action.
+-}
+sidechainKeyCommand :: SidechainKeyCommand -> IO String
+sidechainKeyCommand = \case
+  FreshSidechainPrivateKey -> Utils.showBuiltinBS <$> Utils.generateRandomSidechainPrivateKey
+  SidechainPrivateKeyToPublicKey {..} ->
+    return $ Utils.showScPubKey $ Utils.toSidechainPubKey spktpkPrivateKey

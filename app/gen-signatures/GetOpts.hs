@@ -4,7 +4,14 @@
 {- | The module 'GetOpts' provides functionality / data types to parse the command line
  arguments
 -}
-module GetOpts (getOpts, Args (..), Command (..), GenCliCommand (..), MerkleTreeCommand (..)) where
+module GetOpts (
+  getOpts,
+  Args (..),
+  Command (..),
+  GenCliCommand (..),
+  MerkleTreeCommand (..),
+  SidechainKeyCommand (..),
+) where
 
 import Prelude
 
@@ -87,6 +94,17 @@ data Command
       , gccCliCommand :: GenCliCommand
       }
   | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
+  | SidechainKeyCommand {skCommand :: SidechainKeyCommand}
+
+{- | 'SidechainKeyCommand' is for commands related to working with sidechain
+ keys
+-}
+data SidechainKeyCommand
+  = -- | For generating a fresh (with high probability) sidechain private key
+    FreshSidechainPrivateKey
+  | -- | Converts a sidechain private key to a public key
+    SidechainPrivateKeyToPublicKey
+      {spktpkPrivateKey :: SECP.SecKey}
 
 {- | 'MerkleTreeCommand' is for commands related to creating / querying merkle
  trees.
@@ -550,6 +568,31 @@ merkleProofCommand = command "merkle-proof" $
             ]
       pure $ MerkleTreeCommand $ MerkleProofCommand {..}
 
+-- | 'freshSidechainPrivateKeyCommand' generates a fresh sidechain private key
+freshSidechainPrivateKeyCommand :: OptParse.Mod OptParse.CommandFields Command
+freshSidechainPrivateKeyCommand =
+  command "fresh-sidechain-private-key" $
+    flip
+      info
+      (progDesc "Generates a fresh hex encoded sidechain private key")
+      $ pure $ SidechainKeyCommand FreshSidechainPrivateKey
+
+-- | 'freshSidechainPrivateKeyCommand' generates a fresh sidechain private key
+sidechainPrivateKeyToPublicKeyCommand :: OptParse.Mod OptParse.CommandFields Command
+sidechainPrivateKeyToPublicKeyCommand = command "sidechain-private-key-to-public-key" $
+  flip
+    info
+    (progDesc "Computes the corresponding public key to a given private key")
+    $ do
+      spktpkPrivateKey <-
+        option parseSidechainPrivKey $
+          mconcat
+            [ long "sidechain-signing-key"
+            , metavar "SIGNING_KEY"
+            , help "Signing key of the sidechain block producer candidate"
+            ]
+      pure $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
+
 -- * Main CLI parser (aggregates all parsers into a single parser)
 
 -- | Parser for the CLI arguments
@@ -564,5 +607,7 @@ argParser = do
         , merkleTreeCommand
         , merkleProofCommand
         , rootHashCommand
+        , freshSidechainPrivateKeyCommand
+        , sidechainPrivateKeyToPublicKeyCommand
         ]
   pure Args {..}
