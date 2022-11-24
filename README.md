@@ -5,6 +5,7 @@ This is the repository of Trustless Sidechain with the Cardano Plutus contracts.
 Currently we only support Passive Bridge functionality using our CLI, but we will support light wallets in the future.
 
 - [Instruction for the CLI tool](./ctl/README.md)
+- [Bundling the CLI tool](./ctl/BUILD.md)
 - [The specification of the Plutus contracts](./docs/README.md)
 - [High level technical specifications](https://docs.google.com/document/d/1UJs4ews1wnKIv4RMyPjFtJcyniyRHi7GmU2JPdUfbQk)
 - [Proof-of-Stake Sidechains - White Paper](https://eprint.iacr.org/2018/1239.pdf)
