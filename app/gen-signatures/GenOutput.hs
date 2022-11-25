@@ -59,7 +59,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
       sidechainParamFlags =
         filter
           (not . null)
-          [ ["--signing-key-file", signingKeyFile]
+          [ ["--payment-signing-key-file", signingKeyFile]
           , ["--genesis-committee-hash-utxo", Utils.showTxOutRef genesisUtxo]
           , maybe [] (\oref -> ["--genesis-mint-utxo", Utils.showTxOutRef oref]) genesisMint
           , ["--sidechain-id", show chainId]

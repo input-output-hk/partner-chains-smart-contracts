@@ -379,9 +379,9 @@ sidechainParamsParser = do
 
 signingKeyFileParser :: OptParse.Parser FilePath
 signingKeyFileParser =
-  option auto $
+  option OptParse.str $
     mconcat
-      [ long "signing-key-file"
+      [ long "payment-signing-key-file"
       , metavar "FILEPATH"
       , help "Path to the signing key file"
       ]
