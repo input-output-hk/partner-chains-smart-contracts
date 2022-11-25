@@ -12,6 +12,7 @@ import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
  )
 import PlutusTx.Builtins qualified as Builtins
+import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain.Types (SidechainParams (..), convertSCParams)
 import TrustlessSidechain.OnChain.Types (
@@ -120,10 +121,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         ]
                     )
                     srcCurrentCommitteePrivKeys
-             in ["nix run .#ctl-main -- committee-hash"] :
+             in ["nix run .#ctl-main -- save-root"] :
                 sidechainParamFlags
                   ++ currentCommitteePubKeysAndSigsFlags
-                  ++ [["--merkle-root", Utils.showRootHash srcMerkleRoot]]
+                  ++ [["--merkle-root", Utils.showBuiltinBS srcMerkleRoot]]
                   ++ maybe [] (\bs -> [["--previous-merkle-root", Utils.showBuiltinBS bs]]) srcPreviousMerkleRoot
 
 {- | 'merkleTreeCommand' creates output for the merkle tree commands.
@@ -138,7 +139,7 @@ merkleTreeCommand = \case
       then ioError $ userError "Invalid empty list merkle tree entries"
       else pure $ Utils.showMerkleTree $ MerkleTree.fromList $ map (Builtins.serialiseData . toBuiltinData) mtecEntries
   RootHashCommand {..} ->
-    pure $ Utils.showRootHash $ MerkleTree.rootHash rhcMerkleTree
+    pure $ Utils.showBuiltinBS $ unRootHash $ MerkleTree.rootHash rhcMerkleTree
   MerkleProofCommand {..} ->
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData mpcMerkleTreeEntry)) mpcMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"

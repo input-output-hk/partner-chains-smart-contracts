@@ -54,7 +54,7 @@ import Plutus.V2.Ledger.Api (
   TxOutRef (TxOutRef),
  )
 import PlutusTx.Builtins qualified as Builtins
-import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash (RootHash))
+import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.OffChain.Types (
   SidechainPubKey (SidechainPubKey),
  )
@@ -153,7 +153,7 @@ showBuiltinBS = showBS . Builtins.fromBuiltin
 
 -- | Serialise a RootHash into hex string
 showRootHash :: RootHash -> String
-showRootHash (RootHash bs) = showBuiltinBS bs
+showRootHash = showBuiltinBS . Builtins.serialiseData . toBuiltinData
 
 -- | Serialise public key
 showPubKey :: PubKey -> String

@@ -63,7 +63,6 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
-  RootHash,
  )
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
@@ -149,7 +148,8 @@ data GenCliCommand
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
-      { srcMerkleRoot :: RootHash
+      { -- | 32 byte merkle root hash
+        srcMerkleRoot :: BuiltinByteString
       , -- | current committee's (as stored on chain) private keys
         srcCurrentCommitteePrivKeys :: [SECP.SecKey]
       , -- | the previous merkle root (as needed to create the CLI command)
@@ -302,11 +302,24 @@ parseMerkleTree = eitherReader $ \str -> do
 {- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
  of a root hash of a merkle tree given as a CLI argument.
 -}
-parseRootHash :: OptParse.ReadM RootHash
-parseRootHash = eitherReader $ \str -> do
-  binary <- mapLeft ("Invalid root hash of merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
-  builtindata :: Builtins.BuiltinData <- mapLeft show $ Codec.Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
-  maybe (Left "'fromBuiltinData' for root hash of merkle tree failed") Right $ fromBuiltinData builtindata
+parseRootHash :: OptParse.ReadM BuiltinByteString
+parseRootHash =
+  eitherReader
+    ( fmap Builtins.toBuiltin
+        . mapLeft ("Invalid merkle root hash: " <>)
+        . Base16.decode
+        . Char8.pack
+    )
+
+-- Commented out this code for legacy reasons. Originally, we parsed the
+-- roothash in its cbor representation, but really we want to actually just
+-- parse / output the actual 32 byte root hash.
+-- > parseRootHash :: OptParse.ReadM RootHash
+-- > parseRootHash = eitherReader $ \str -> do
+-- >   binary <- mapLeft ("Invalid root hash of merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
+-- >   builtindata :: Builtins.BuiltinData <- mapLeft (mappend "Cbor deserialization failed: " . show)
+-- >     $ Codec.Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
+-- >   maybe (Left "'fromBuiltinData' for root hash of merkle tree failed") Right $ fromBuiltinData builtindata
 
 -- | Decode a hexadecimal string into a BuiltinByteString
 decodeHash :: Parser Text -> Parser Builtins.BuiltinByteString
@@ -532,7 +545,7 @@ rootHashCommand =
   command "root-hash" $
     flip
       info
-      (progDesc "Creates a hex encoded BuiltinData representation of a merkle tree")
+      (progDesc "Gets the hex encoded merkle root hash of a given merkle tree")
       $ do
         rhcMerkleTree <-
           option parseMerkleTree $
