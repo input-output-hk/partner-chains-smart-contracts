@@ -66,7 +66,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           , ["--sidechain-genesis-hash", show genesisHash]
           , ["--threshold", Utils.showThreshold thresholdNumerator thresholdDenominator]
           ]
-   in List.intercalate "\\\n" $
+   in List.intercalate " \\\n" $
         map List.unwords $ case cliCommand of
           RegistrationCommand {..} ->
             let msg =
