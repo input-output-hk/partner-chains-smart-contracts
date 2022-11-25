@@ -22,6 +22,12 @@ import TrustlessSidechain.OnChain.Types (
     bprmSidechainParams,
     bprmSidechainPubKey
   ),
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    mrimMerkleRoot,
+    mrimPreviousMerkleRoot,
+    mrimSidechainParams
+  ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     uchmNewCommitteePubKeys,
@@ -110,7 +116,12 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   ++ [["--sidechain-epoch", show uchcSidechainEpoch]]
                   ++ maybe [] (\bs -> [["--previous-merkle-root", Utils.showBuiltinBS bs]]) uchcPreviousMerkleRoot
           SaveRootCommand {..} ->
-            let msg = srcMerkleRoot
+            let msg =
+                  MerkleRootInsertionMessage
+                    { mrimSidechainParams = convertSCParams scParams
+                    , mrimMerkleRoot = srcMerkleRoot
+                    , mrimPreviousMerkleRoot = srcPreviousMerkleRoot
+                    }
                 currentCommitteePubKeysAndSigsFlags =
                   map
                     ( \sidechainPrvKey ->
