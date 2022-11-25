@@ -18,8 +18,6 @@ import GetOpts (Args (..), Command (..))
 import GetOpts qualified
 import Prelude
 
--- * Main function
-
 -- | Main entrypoint for the registration signature generator tool
 main :: IO ()
 main =

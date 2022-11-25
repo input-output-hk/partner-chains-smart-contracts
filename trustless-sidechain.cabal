@@ -176,6 +176,7 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
 
@@ -183,6 +184,7 @@ test-suite trustless-sidechain-test
   build-depends:
     , bytestring
     , plutus-core
+    , plutus-ledger-api
     , plutus-tx
     , QuickCheck
     , tasty

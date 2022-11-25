@@ -21,6 +21,12 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
+
+    # TODO: spago bundle-app is not working in a derivation with spago 0.20.9 (https://github.com/purescript/spago/issues/888)
+    easy-ps = {
+      url = "github:justinwoo/easy-purescript-nix/ddd2ded8d37ab5d3013f353ca3b6ee05eb23d5c0";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
@@ -233,23 +239,75 @@
             node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
           '';
         };
+      ctlBundleCliFor = system:
+        let
+          src = ./ctl;
+          pkgs = nixpkgsFor system;
+          spagoPkgs = import "${src}/spago-packages.nix" { inherit pkgs; };
+          project = psProjectFor system;
+        in
+        pkgs.stdenv.mkDerivation rec {
+          inherit src;
+
+          pname = "ctl-bundle-cli";
+          version = "0.1.0";
+          buildInputs = [
+            pkgs.spago
+            pkgs.purescript
+            pkgs.nodejs
+            spagoPkgs.installSpagoStyle
+            spagoPkgs.buildSpagoStyle
+            spagoPkgs.buildFromNixStore
+          ];
+          unpackPhase = ''
+            cp $src/{packages,spago}.dhall .
+            cp -r ${project.compiled} .
+            mkdir node_modules
+            cp -r ${project.nodeModules} ./node_modules/
+          '';
+          buildPhase = ''
+            spago bundle-app --no-build --no-install --global-cache skip
+            mv index.js main.js
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            tar cvf $out/ctl-scripts-${version}.tar main.js node_modules
+          '';
+        };
+      # { } ''
+      # mkdir $out
+      # cp -r ${project.compiled} .
+      # cp -r ${project.nodeModules} .
+      # spago bundle-app --no-build --no-install --global-cache skip
+      # mv index.js main.js
+      # tar cvf $out/ctl-scripts-${version}.tar main.js ${project.nodeModules}
+      # '';
     in
     {
       project = perSystem hsProjectFor;
 
       flake = perSystem (system: (hsProjectFor system).flake { });
 
-      packages = perSystem (system: self.flake.${system}.packages // {
-        ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
-        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
-        ctl-main = ctlMainFor system;
-        ctl-bundle-web = (psProjectFor system).bundlePursProject {
-          main = "Main";
-          entrypoint = "index.js"; # must be same as listed in webpack config
-          webpackConfig = "webpack.config.js";
-          bundledModuleName = "output.js";
-        };
-      });
+      packages = perSystem
+        (system: self.flake.${system}.packages // {
+          ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
+          ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
+          ctl-main = ctlMainFor system;
+          ctl-bundle-web = (psProjectFor system).bundlePursProject {
+            main = "Main";
+            entrypoint = "index.js"; # must be same as listed in webpack config
+            webpackConfig = "webpack.config.js";
+            bundledModuleName = "output.js";
+          };
+          # ctl-bundle-cli = ctlBundleCliFor system;
+          ctl-bundle-cli = import ./nix/ctl-bundle-cli.nix rec {
+            pkgs = nixpkgsFor system;
+            easy-ps = import inputs.easy-ps { inherit pkgs; };
+            purs = easy-ps.purs-0_14_5;
+            nodejs = pkgs.nodejs-14_x;
+          };
+        });
 
       apps = perSystem (system: self.flake.${system}.apps // {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
