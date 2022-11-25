@@ -25,10 +25,78 @@
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
-      runtimeConfig = {
+      vasilDevRuntimeConfig = {
         network = {
           name = "vasil-dev";
           magic = 9;
+        };
+      };
+
+      previewRuntimeConfig = pkgs: _final: rec {
+        # See the [ctl runtime
+        # documentation](https://github.com/Plutonomicon/cardano-transaction-lib/blob/1ec5a7a82e2a119364a3577022b6ff3c7e84a612/doc/runtime.md)
+        # Note that we include the current systems packages as an argument so we
+        # can spin up our own version of ogmios-datum-cache which is called with
+        # a CLI argument that syncs ogmios-datum-cache up from the origin.
+        name = "preview";
+        magic = 2;
+
+        ogmios.port = 1337;
+
+        ctlServer = { enable = true; port = 8081; };
+        node = {
+          port = 3001;
+          # the version of the node to use, corresponds to the image version tag,
+          # i.e. `"inputoutput/cardano-node:${tag}"`
+          tag = "1.35.4";
+        };
+
+        postgres = {
+          port = 5432;
+          user = "ctxlib";
+          password = "ctxlib";
+          db = "ctxlib";
+        };
+
+        datumCache = {
+          port = 9999;
+          controlApiToken = "user:password";
+          # some easy login info here, this is used for someone to fix the
+          # control API -- see the ogmios-datum-cache documentation
+        };
+
+        extraServices = {
+          # Spin up our own service of ogmios-datum-cache that allows us to
+          # sync up with the node from the origin
+          ogmios-datum-cache =
+            {
+              service = {
+                useHostStore = true;
+                ports = [ ("${toString datumCache.port}:${toString datumCache.port}") ];
+                restart = "on-failure";
+                depends_on = [ "postgres-${name}" "ogmios" ];
+                command = [
+                  "${pkgs.bash}/bin/sh"
+                  "-c"
+                  ''
+                    ${pkgs.ogmios-datum-cache}/bin/ogmios-datum-cache \
+                      --log-level warn \
+                      --use-latest \
+                      --server-api "${toString datumCache.controlApiToken}" \
+                      --server-port ${toString datumCache.port} \
+                      --ogmios-address ogmios \
+                      --ogmios-port ${toString ogmios.port} \
+                      --db-port "${toString postgres.port}" \
+                      --db-host "postgres-${name}" \
+                      --db-user "${postgres.user}" \
+                      --db-name "${postgres.db}" \
+                      --db-password "${postgres.password}" \
+                      --from-origin
+                  ''
+                ];
+              };
+            };
+
         };
       };
 
@@ -172,7 +240,8 @@
       flake = perSystem (system: (hsProjectFor system).flake { });
 
       packages = perSystem (system: self.flake.${system}.packages // {
-        ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+        ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
+        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
         ctl-main = ctlMainFor system;
         ctl-bundle-web = (psProjectFor system).bundlePursProject {
           main = "Main";
@@ -183,7 +252,8 @@
       });
 
       apps = perSystem (system: self.flake.${system}.apps // {
-        ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
+        ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
+        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
         ctl-main = {
           type = "app";
           program = "${ctlMainFor system}/bin/ctl-main";
