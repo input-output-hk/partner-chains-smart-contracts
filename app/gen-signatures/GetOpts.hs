@@ -172,7 +172,7 @@ instance FromJSON MerkleTreeEntryJson where
         <$> v Aeson..: "index"
         <*> v Aeson..: "amount"
         <*> v Aeson..: "recipient"
-        <*> v Aeson..: "previousMerkleRoot"
+        <*> v Aeson..:? "previousMerkleRoot"
 
 -- * CLI parser
 
