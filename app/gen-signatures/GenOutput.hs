@@ -87,7 +87,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   UpdateCommitteeHashMessage
                     { uchmSidechainParams = convertSCParams scParams
-                    , uchmNewCommitteePubKeys = map Utils.secpPubKeyToSidechainPubKey uchcNewCommitteePubKeys
+                    , uchmNewCommitteePubKeys = List.sort $ map Utils.secpPubKeyToSidechainPubKey uchcNewCommitteePubKeys
                     , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
                     , uchmSidechainEpoch = uchcSidechainEpoch
                     }
