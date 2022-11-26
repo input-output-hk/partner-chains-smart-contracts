@@ -14,8 +14,9 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 - `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
-- `DsInsertValidator`: validator handling distributed set entry ([Distributed Set](./DistributedSet.md)
+- `DsConfValidator`: validator holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
 - `DsConfPolicy`: oneshot token identifying the UTxO holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
+- `DsInsertValidator`: validator handling distributed set entry ([Distributed Set](./DistributedSet.md)
 - `DsKeyPolicy`: tokens identifying the distributed set entries ([Distributed Set](./DistributedSet.md))
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
