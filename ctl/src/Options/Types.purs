@@ -18,7 +18,6 @@ import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray)
-import Types.CborBytes (CborBytes)
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
@@ -49,8 +48,6 @@ type Config =
     stakeSigningKeyFile ∷ Maybe FilePath
   , -- | Network configuration of the runtime dependencies (CTL-server, ogmios, ogmios-datum-cache)
     runtimeConfig ∷ Maybe RuntimeConfig
-  , -- | Proof for claim endpoint
-    mintProof ∷ Maybe CborBytes
   }
 
 -- | CLI arguments including required data to run each individual endpoint

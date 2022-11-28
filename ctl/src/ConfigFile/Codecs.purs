@@ -9,7 +9,6 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.UInt as UInt
 import Options.Types (Config)
-import Types.CborBytes (CborBytes, cborBytesToHex, hexToCborBytes)
 import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
 
 configCodec ∷ CA.JsonCodec Config
@@ -20,7 +19,6 @@ configCodec =
         , paymentSigningKeyFile: CAC.maybe CA.string
         , stakeSigningKeyFile: CAC.maybe CA.string
         , runtimeConfig: CAC.maybe runtimeConfigCodec
-        , mintProof: CAC.maybe cborCodec
         }
     )
   where
@@ -60,9 +58,3 @@ networkIdCodec = CA.prismaticCodec "Network" dec enc CA.string
   enc = case _ of
     MainnetId → "mainnet"
     TestnetId → "testnet"
-
-cborCodec ∷ CA.JsonCodec CborBytes
-cborCodec = CA.prismaticCodec "TransactionInput"
-  hexToCborBytes
-  cborBytesToHex
-  CA.string
