@@ -15,11 +15,7 @@ import Contract.Address (PaymentPubKeyHash, ownPaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayFromAscii
-  , hexToByteArrayUnsafe
-  )
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -178,7 +174,6 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe ByteArray
-      , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -270,7 +265,6 @@ passiveBridgeMintParams sidechainParams { amount, recipient } =
     { merkleProof: MerkleProof []
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing
-    , entryHash: hexToByteArrayUnsafe ""
     , sidechainParams
     , recipient
     , amount

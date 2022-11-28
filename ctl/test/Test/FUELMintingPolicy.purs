@@ -65,11 +65,14 @@ testScenarioPassiveFailure = do
     { amount: BigInt.fromInt 5, recipient: pk }
 
 testScenarioActiveSuccess ∷ Contract () Unit
-testScenarioActiveSuccess = do
+testScenarioActiveSuccess = liftedM "unemplemented" (pure Nothing)
+
+testScenarioActiveFailure ∷ Contract () Unit
+testScenarioActiveFailure = do
   pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   let
     scParams = mkScParams Nothing
-  -- TODO: This is not how you create a working merkleproof that passes onchain validator..
+  -- This is not how you create a working merkleproof that passes onchain validator.
   mp' ← liftedM "impossible" $ pure (serialiseData (toData (MerkleProof [])))
   mt ← liftedE $ pure (fromList (pure mp'))
   mp ← liftedM "couldn't lookup merkleproof" $ pure (lookupMp mp' mt)
@@ -78,14 +81,9 @@ testScenarioActiveSuccess = do
     { merkleProof: mp
     , recipient: pk
     , sidechainParams: scParams
-    , amount: BigInt.fromInt 5
+    , amount: BigInt.fromInt 1
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing -- Just $ byteArrayFromIntArrayUnsafe (replicate 32 0)
     }
   void $ runFuelMP scParams $ Burn
-    { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" }
-  void $ runFuelMP scParams $ Burn
-    { amount: BigInt.fromInt 3, recipient: hexToByteArrayUnsafe "aabbcc" }
-
-testScenarioActiveFailure ∷ Contract () Unit
-testScenarioActiveFailure = liftedM "unemplemented" (pure Nothing)
+    { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }
