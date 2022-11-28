@@ -26,7 +26,7 @@ message digests; we have a connected directed graph with
   lexicographically) and there does not exist a node `k` such that `a < k` and
   `k < b`.
 
-In code, we represent this graph with the 'Node' type
+In code, we represent this graph with the `Node` type
 ```
 data Node = Node
     { nKey :: BuiltinByteString
