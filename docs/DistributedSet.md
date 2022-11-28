@@ -3,7 +3,7 @@ Following the requirements of the
 [FUELMintingPolicy](./README.md#32-individual-claiming), we need a mechanism to
 ensure that each individual claim can occur at most once. This document
 outlines a method to achieve this by providing a currency symbol
-[DsKeyPolicy](51-DsKeyPolicy) which mints iff a given `claimTransactionHash`
+[DsKeyPolicy](#51-DsKeyPolicy) which mints iff a given `claimTransactionHash`
 has never occurred before.
 
 We describe the system by giving a graph theoretic definition of what we would
@@ -41,8 +41,8 @@ We say that a message digest _`str` is in the set_, iff there exists a node
 
 Since we are storing message digests (which are a fixed finite size), we know
 that there exists a lower and upper bound to the message digests. In
-particular, we are interested in storing message digests of blake2b_256 (which
-are 32 bytes). Thus, it follows that
+particular, we are interested in storing message digests of `blake2b_256`
+(which are 32 bytes). Thus, it follows that
 
 - `""` the empty string is a lower bound; and
 - `replicate 33 '\255'` is an upper bound
@@ -128,7 +128,7 @@ set configuration. It must be parametrized by a distinguished UTxO.
 This minting policy verifies the following:
 - It spends the distinguished UTxO, and exactly one of this token is minted (to
   ensure that this is a oneshot token)
-- This token is paid to [DsConfValidator](42-DsConfValidator)
+- This token is paid to [DsConfValidator](#42-DsConfValidator)
 
 ### 4.2. DsConfValidator
 This is the validator which holds the configuration of the distributed set as
@@ -139,9 +139,9 @@ datum. It need not be parametrized by anything.
 data DsConfDatum = DsConfDatum
   { dscKeyPolicy :: CurrencySymbol
     -- ^ minting policy for identifying nodes in the distributed set see
-    -- [DsKeyPolicy](51-DsKeyPolicy)
+    -- [DsKeyPolicy](#51-DsKeyPolicy)
   , dscFUELPolicy :: CurrencySymbol
-    -- ^ minting policy for FUEL which [DsConfValidator](52-DsConfValidator) succeeds
+    -- ^ minting policy for FUEL which [DsConfValidator](#52-DsConfValidator) succeeds
     -- only if the FUEL minting policy succeeds
   }
 ```
@@ -154,8 +154,8 @@ This validator verifies the following:
 ### 5.1. DsKeyPolicy
 The keys of the distributed set are stored on-chain using the token name of the
 minting policy `DsKeyPolicy`. It must be parameterized by the validator hash of
-[`DsInsertValidator`](52-DsInsertValidator) and
-[`DsConfPolicy`](41-DsConfPolicy). It uses the trivial redeemer, and verifies:
+[`DsInsertValidator`](#52-DsInsertValidator) and
+[`DsConfPolicy`](#41-DsConfPolicy). It uses the trivial redeemer, and verifies:
 
 - It is spending exactly one `DsInsertValidator` with exactly one `DsKeyPolicy`
   token.
@@ -201,7 +201,7 @@ succeeds.
 
 ### 5.2. DsInsertValidator
 This validator does the heavy lifting / verification of the [insertion
-operation](2-Insertion-Operation). It must be parameterized by the currency
+operation](#2-Insertion-Operation). It must be parameterized by the currency
 symbol of `DsConfPolicy` which we recall uniquely identifies `DsConfValidator`.
 
 **Datum:**
@@ -271,13 +271,13 @@ the `dsNext` field of `DsDatum`. Then, as output to the transaction, we have
 ... --> str' -------> str -------> ...
 ```
 
-Indeed, this gives us the properties in [1.](1-Basic-Definitions) and
-[2.](2-Insertion-Operation) which proves that `str` is not in the set, and we
+Indeed, this gives us the properties in [1.](#1-Basic-Definitions) and
+[2.](#2-Insertion-Operation) which proves that `str` is not in the set, and we
 are inserting `str` in the set in this transaction.
 
 Most of the other verifications verify that we aren't "doing anything sneaky"
 to create more nodes, or steal a token somewhere. Precisely, we have the
-following claim (which continues the claim in [5.1](51-DsKeyPolicy))
+following claim (which continues the claim in [5.1](#51-DsKeyPolicy))
 
 _Claim._  Every `DsKeyPolicy` is sitting at a `DsInsertValidator`, and there is
 at most one such `DsKeyPolicy` token at each `DsInsertValidator`.
@@ -286,7 +286,7 @@ Finally, we want to discuss one last obvious fact and its importance.
 
 _Claim._ If `DsInsertValidator` succeeds, then `DsKeyPolicy` succeeds.
 
-This immediately implies the final claim introduced in [5.1](51-DsKeyPolicy)
+This immediately implies the final claim introduced in [5.1](#51-DsKeyPolicy)
 which was as follows
 
 _Claim._ For every `DsKeyPolicy` mint (except the first mint), `DsKeyPolicy`
@@ -334,5 +334,5 @@ After, participants who wish to insert a string `str` should do the following st
    be). Without this check, we cannot be certain that the mutual dependence of
    minting policies and validators has been attained.
 2. Mint a `DsKeyPolicy` with token name as `str` and build the transaction as
-   discussed in [5.2.](52-DsInsertValidator).
+   discussed in [5.2.](#52-DsInsertValidator).
 3. Repeat 2. for every string one would like to insert.
