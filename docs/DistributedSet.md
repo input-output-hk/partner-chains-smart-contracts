@@ -221,9 +221,9 @@ this `DsDatum`[^1]. After these offchain computations to build the transaction,
 we verify the following.
 
 [^1]: Astute readers will notice that this would be a linear scan through every
-  UTxO at the `DsConfValidator` address offchain which would make the system
-  cripplingly slow as time goes on. Indeed, we should implement an efficient
-  offchain query to optimize this later.
+  UTxO at the `DsConfValidator` address. As time goes on, this offchain
+  computation would make the system cripplingly slow. Indeed, we should
+  implement an efficient offchain query to optimize this later.
 
 - The `FUELMintingPolicy` (stored in the datum of `DsConfValidator`) has minted
   a token.
