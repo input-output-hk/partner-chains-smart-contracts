@@ -2,10 +2,12 @@
 Following the requirements of the
 [FUELMintingPolicy](./README.md#32-individual-claiming), we need a mechanism to
 ensure that each individual claim can occur at most once. This document
-outlines a method to achieve this, by providing a currency symbol
+outlines a method to achieve this by providing a currency symbol
 [DsKeyPolicy](51-DsKeyPolicy) which mints iff a given `claimTransactionHash`
-has never occurred before -- allowing the FUEL minting policy to simply verify
-whether `DsKeyPolicy` is minted with token name `claimTransactionHash`.
+has never occurred before.
+
+We describe the system by giving a graph theoretic definition of what we would
+like to achieve, then discuss how to implement this in the block chain.
 
 ## 1. Basic Definitions
 We want the following operations:
@@ -17,12 +19,14 @@ We want the following operations:
   policy)
 
 We realize this through an ordered linked list i.e., formally, given a set of
-message digests; we have a directed graph with
+message digests; we have a connected directed graph with
 
 - Nodes: message digests (we call these message digests a _key_)
 - Edges: there is an edge between nodes `a` and `b` iff `a < b` (ordered
   lexicographically) and there does not exist a node `k` such that `a < k` and
   `k < b`.
+
+We also require that each node has in and out degree at most one.
 
 In code, we represent this graph with the 'Node' type
 ```
@@ -66,9 +70,11 @@ Let `a` and `b` be nodes such that there exists an edge `a` to `b`.
 Then, for every message digest `str` such that `a < str` and `str < b`,
 `str` is not in the set.
 
-Why do we care about this? This claim asserts that to show that `str` is not
-already in the set, it suffices to find a node `a` with an edge to `b`
-satisfying `a < str` and `str < b`. Note that otherwise this is inconclusive.
+_Sketch._ Immediately follows from defn. of the graph.
+
+We reiterate: this claim asserts that to show that `str` is not already in the
+set, it suffices to find a node `a` with an edge to `b` satisfying `a < str`
+and `str < b`. Note that otherwise this is inconclusive.
 
 ## 2. Insertion Operation
 To insert a string `str` (not already in the set) into the set, we need to find
@@ -317,7 +323,7 @@ cannot compute this hash. Indeed,
 [CIP-0069](https://github.com/cardano-foundation/CIPs/pull/321) provides a more
 elegant solution but has not been completed yet.
 
-## 7. Implementation on Block Chain: Workflow
+## 7 Implementation on Block Chain: Workflow
 We discuss the workflow. First, we must initialize the system with the
 following step.
 1. Mint `DsConfPolicy`, and pay this token to the `DsConfValidator` with the
