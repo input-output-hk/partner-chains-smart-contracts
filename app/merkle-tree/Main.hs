@@ -59,14 +59,14 @@ unBuiltinByteString (BuiltinByteString bs) = bs
  denotes parsing a 'FilePath', and 'Nothing' denotes no input was provided
  and we are hence interested in reading input from stdin.
 -}
-newtype Input = Input {unInput :: Maybe FilePath}
+newtype Input = Input (Maybe FilePath)
   deriving newtype (Show, Eq)
 
 {- | 'Output' is a newtype wrapper for @Maybe FilePath@ and is identical to
  'Input' except 'Nothing' denotes no input was provided and we are hence
  interested in writing output to stdout.
 -}
-newtype Output = Output {unOutput :: Maybe FilePath}
+newtype Output = Output (Maybe FilePath)
   deriving newtype (Show, Eq)
 
 {- | 'pFileInput' parses an input file and returns 'Nothing' as the default.

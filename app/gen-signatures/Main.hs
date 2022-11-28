@@ -55,10 +55,11 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  SidechainParams (SidechainParams, chainId, genesisHash, genesisMint, genesisUtxo),
+  SidechainParams (SidechainParams),
   SidechainPubKey (SidechainPubKey),
   convertSCParams,
  )
+import TrustlessSidechain.OffChain.Types qualified
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -100,24 +101,26 @@ main = do
 
   let scParams =
         SidechainParams
-          { chainId = args.chainId
-          , genesisHash = args.genesisHash
-          , genesisMint = args.genesisMint
-          , genesisUtxo = args.genesisUtxo -- This is not needed for the Passive Bridge, so we're just using the same tx in
+          { chainId = chainId args
+          , genesisHash = genesisHash args
+          , genesisMint = genesisMint args
+          , genesisUtxo = genesisUtxo args -- This is not needed for the Passive Bridge, so we're just using the same tx in
+          , thresholdNumerator = 2
+          , thresholdDenominator = 3
           }
 
       regData =
         RegistrationArgs
-          { spoPubKey = toSpoPubKey args.spoPrivKey
-          , sidechainPubKey = toSidechainPubKey args.sidechainPrivKey
-          , spoSignature = signWithSPOKey args.spoPrivKey msg
-          , sidechainSignature = signWithSidechainKey args.sidechainPrivKey msg
+          { spoPubKey = toSpoPubKey (spoPrivKey args)
+          , sidechainPubKey = toSidechainPubKey (sidechainPrivKey args)
+          , spoSignature = signWithSPOKey (spoPrivKey args) msg
+          , sidechainSignature = signWithSidechainKey (sidechainPrivKey args) msg
           }
       msg =
         BlockProducerRegistrationMsg
           { bprmSidechainParams = convertSCParams scParams
-          , bprmSidechainPubKey = toSidechainPubKey args.sidechainPrivKey
-          , bprmInputUtxo = args.registrationUtxo
+          , bprmSidechainPubKey = toSidechainPubKey (sidechainPrivKey args)
+          , bprmInputUtxo = registrationUtxo args
           }
 
   putStrLn "Please call ctl-main with the following arguments:"
@@ -133,15 +136,15 @@ mkRegistrationCliSample args regData =
     . fmap unwords
     $ [ ["nix run .#ctl-main -- register"]
       , ["--signing-key-file $SIGNING_KEY"]
-      , ["--genesis-committee-hash-utxo", showTxOutRef args.genesisUtxo]
-      , maybe [] (\oref -> ["--genesis-mint-utxo", showTxOutRef oref]) args.genesisMint
-      , ["--sidechain-id", show args.chainId]
-      , ["--sidechain-genesis-hash", show args.genesisHash]
-      , ["--spo-public-key", showPubKey regData.spoPubKey]
-      , ["--sidechain-public-key", showScPubKey regData.sidechainPubKey]
-      , ["--spo-signature", showSig regData.spoSignature]
-      , ["--sidechain-signature", showSig regData.sidechainSignature]
-      , ["--registration-utxo", showTxOutRef args.registrationUtxo]
+      , ["--genesis-committee-hash-utxo", showTxOutRef (genesisUtxo args)]
+      , maybe [] (\oref -> ["--genesis-mint-utxo", showTxOutRef oref]) (genesisMint args)
+      , ["--sidechain-id", show (chainId args)]
+      , ["--sidechain-genesis-hash", show (genesisHash args)]
+      , ["--spo-public-key", showPubKey (spoPubKey regData)]
+      , ["--sidechain-public-key", showScPubKey (sidechainPubKey regData)]
+      , ["--spo-signature", showSig (spoSignature regData)]
+      , ["--sidechain-signature", showSig (sidechainSignature regData)]
+      , ["--registration-utxo", showTxOutRef (registrationUtxo args)]
       ]
 
 -- | Parser info for the CLI arguments

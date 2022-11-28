@@ -182,7 +182,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCommitteePubKeys: uchp.newCommitteePubKeys
+          , newCommitteePubKeys: newCommitteeSorted
           , previousMerkleRoot: uchp.previousMerkleRoot
           }
       )
@@ -197,7 +197,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         )
         <> Lookups.validator updateValidator
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
-      <> TxConstraints.mustPayToScript valHash newDatum DatumWitness value
+      <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
         Nothing → mempty
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
