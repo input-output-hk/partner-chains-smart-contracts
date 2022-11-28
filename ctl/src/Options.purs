@@ -10,6 +10,7 @@ module Options
 import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
+import Contract.Address (PaymentPubKeyHash(..), PubKeyHash(..))
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -32,9 +33,9 @@ import Data.UInt as UInt
 import Deserialization.FromBytes (fromBytes)
 import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
+import FUELMintingPolicy (CombinedMerkleProof(..), MerkleTreeEntry(..))
 import FromData (fromData)
 import Helpers (logWithLevel)
-import MerkleTree (MerkleProof)
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -62,11 +63,13 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Types (BridgeType(..), Config, Endpoint(..), Options)
+import Options.Types (Config, Endpoint(..), Options)
+import Serialization.Hash (ed25519KeyHashFromBytes)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray, hexToByteArray)
 import Types.CborBytes (CborBytes, cborBytesFromByteArray)
+import Types.RawBytes (RawBytes(..))
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -88,7 +91,11 @@ options maybeConfig = info (helper <*> optSpec)
           )
       , command "mint"
           ( info (withCommonOpts mintSpec)
-              (progDesc "Mint a certain amount of FUEL tokens")
+              (progDesc "Mint a certain amount of FUEL tokens (Passive Bridge)")
+          )
+      , command "claim"
+          ( info (withCommonOpts claimSpec)
+              (progDesc "Claim a FUEL tokens from a proof (Active Bridge)")
           )
       , command "burn"
           ( info (withCommonOpts burnSpec)
@@ -283,32 +290,30 @@ options maybeConfig = info (helper <*> optSpec)
         , thresholdDenominator
         }
 
-  -- it is currently the responsibility of the programmer to maintain the mutual
-  -- exclusion between genesisMint and merkleProof. Perhaps there is a better way
-  -- to do this such that it is impossible to have SidechainParams with genesisMint
-  -- equal to Nothing, while at the same time we have no merkle proof supplied.
-  mintSpec = ado
-    amount ← parseAmount
-    bridge ←
-      let
-        active = option merkleProofParser $ fold
+  mintSpec =
+    MintAct <<< { amount: _ } <$> parseAmount
+
+  claimSpec = ado
+    (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
+      $ fold
           [ short 'p'
           , long "merkle-proof"
           , metavar "CBOR"
-          , help "CBOR-encoded Merkle Proof (enables active claiming)"
-          , maybe mempty value (maybeConfig >>= _.mintProof >>= toMerkleProof)
+          , help "CBOR-encoded Combined Merkle Proof"
           ]
-        passive = option transactionInput $ fold
-          [ short 'm'
-          , long "genesis-mint-utxo"
-          , metavar "TX_ID#TX_IDX"
-          , help "Input UTxO to be spend with the genesis mint"
-          , maybe mempty value
-              (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
-          ]
-      in
-        map Active active <|> map Passive passive
-    in MintAct { amount, bridge }
+    let
+      CombinedMerkleProof
+        { transaction: MerkleTreeEntry { amount, index, previousMerkleRoot }
+        , merkleProof
+        } = combinedMerkleProof
+    in
+      ClaimAct
+        { amount
+        , recipient
+        , merkleProof
+        , index
+        , previousMerkleRoot
+        }
 
   burnSpec = ado
     amount ← parseAmount
@@ -545,12 +550,25 @@ transactionInput = maybeReader \txIn →
           }
     _ → Nothing
 
-toMerkleProof ∷ CborBytes → Maybe MerkleProof
-toMerkleProof = unwrap >>> fromBytes >=> convertPlutusData >=> fromData
+toCombinedMerkleProof ∷ CborBytes → Maybe CombinedMerkleProof
+toCombinedMerkleProof = unwrap >>> fromBytes >=> convertPlutusData >=> fromData
 
-merkleProofParser ∷ ReadM MerkleProof
-merkleProofParser = cbor >>= toMerkleProof >>>
-  maybe (readerError "Error while parsing supplied CBOR as MerkleProof.") pure
+combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
+combinedMerkleProofParser = cbor >>= toCombinedMerkleProof >>>
+  maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
+    pure
+
+-- | This parser will convert the raw bytestring to a valid Cardano payment public key hash
+combinedMerkleProofParserWithPkh ∷
+  ReadM (CombinedMerkleProof /\ PaymentPubKeyHash)
+combinedMerkleProofParserWithPkh = do
+  cmp ← combinedMerkleProofParser
+  edKeyHash ← maybe (readerError "Couldn't convert recipient to pub key hash")
+    pure
+    ( ed25519KeyHashFromBytes
+        (RawBytes (unwrap (unwrap cmp).transaction).recipient)
+    )
+  pure (cmp /\ PaymentPubKeyHash (PubKeyHash edKeyHash))
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray

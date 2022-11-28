@@ -1,6 +1,5 @@
 module Options.Types
-  ( BridgeType(..)
-  , Config(..)
+  ( Config(..)
   , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
@@ -8,7 +7,7 @@ module Options.Types
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId)
+import Contract.Address (NetworkId, PaymentPubKeyHash)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
@@ -52,7 +51,14 @@ type Config =
 
 -- | CLI arguments including required data to run each individual endpoint
 data Endpoint
-  = MintAct { amount ∷ BigInt, bridge ∷ BridgeType }
+  = MintAct { amount ∷ BigInt }
+  | ClaimAct
+      { amount ∷ BigInt
+      , recipient ∷ PaymentPubKeyHash
+      , merkleProof ∷ MerkleProof
+      , index ∷ BigInt
+      , previousMerkleRoot ∷ Maybe ByteArray
+      }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
@@ -100,9 +106,3 @@ type RuntimeConfig =
   , ctlServer ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }
-
-data BridgeType = Active MerkleProof | Passive TransactionInput
-
-derive instance Generic BridgeType _
-instance Show BridgeType where
-  show = genericShow

@@ -4,17 +4,11 @@ import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
 import Contract.Address (ownPaymentPubKeyHash)
-import Contract.Monad
-  ( Contract
-  , launchAff_
-  , liftedM
-  , runContract
-  )
+import Contract.Monad (Contract, launchAff_, liftedM, runContract)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
-  ( FuelParams(Burn)
-  , activeBridgeMintParams
+  ( FuelParams(Burn, Mint)
   , passiveBridgeMintParams
   , runFuelMP
   )
@@ -23,7 +17,7 @@ import InitSidechain (initSidechain)
 import MPTRoot (SaveRootParams(SaveRootParams))
 import MPTRoot as MPTRoot
 import Options (getOptions)
-import Options.Types (BridgeType(..), Endpoint(..))
+import Options.Types (Endpoint(..))
 import UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
@@ -37,21 +31,27 @@ main = do
   launchAff_ $ runContract opts.configParams do
     pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
     endpointResp ← case opts.endpoint of
-      MintAct { amount, bridge: Passive genesisMint } →
-        runFuelMP sp
-          (passiveBridgeMintParams sp { amount, recipient: pkh })
+      MintAct { amount } →
+        runFuelMP opts.scParams
+          (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
           <#> unwrap
           >>> { transactionId: _ }
           >>> MintActResp
-        where
-        sp = wrap ((unwrap opts.scParams) { genesisMint = Just genesisMint })
 
-      MintAct { amount, bridge: Active merkleProof } →
+      ClaimAct { amount, recipient, merkleProof, index, previousMerkleRoot } →
         runFuelMP sp
-          (activeBridgeMintParams sp { amount, recipient: pkh, merkleProof })
+          ( Mint
+              { amount
+              , recipient
+              , sidechainParams: opts.scParams
+              , merkleProof
+              , index
+              , previousMerkleRoot
+              }
+          )
           <#> unwrap
           >>> { transactionId: _ }
-          >>> MintActResp
+          >>> ClaimActResp
         where
         sp = opts.scParams
 
