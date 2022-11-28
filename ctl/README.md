@@ -59,12 +59,20 @@ To use a configuration file instead, see [3.3. Configuring hosted runtime depend
 
 You can call the contract endpoints with the following CLI command (you need to add `--` before the arguments):
 
+**Running with nix:**
+
 ```
 nix run .#ctl-main -- --help
 ```
 
-Alternatively, you can run `make main.js` inside a `nix develop` shell to bundle CTL into an executable javascript file.
-Then, you can use it the following way (without the `--`):
+**Bundle to a JavaScript file and run using node:**
+
+```shell
+nix-build src/ctl-bundle-cli.nix
+```
+
+This will produce a package `ctl-scripts-<version>.tar` with the compiled `main.js` script that can be run using Node
+and all necessary dependencies in `node_modules` directory.
 
 ```
 node main.js --help
@@ -276,10 +284,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
     "genesisHash": "11223344aabbcc",
     "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
-    "threshold":
-        { "numerator": 2
-        , "denominator": 3
-        }
+    "threshold": { "numerator": 2, "denominator": 3 }
   },
   "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",

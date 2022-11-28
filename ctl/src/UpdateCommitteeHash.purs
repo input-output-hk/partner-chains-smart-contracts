@@ -178,7 +178,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCommitteePubKeys: uchp.newCommitteePubKeys
+          , newCommitteePubKeys: newCommitteeSorted
           , previousMerkleRoot: uchp.previousMerkleRoot
           }
       )

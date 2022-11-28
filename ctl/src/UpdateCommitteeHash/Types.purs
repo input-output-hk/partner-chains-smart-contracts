@@ -113,13 +113,16 @@ instance ToData UpdateCommitteeHashRedeemer where
 
 -- | 'UpdateCommitteeHashParams' is the offchain parameter for the update
 -- committee hash endpoint.
-data UpdateCommitteeHashParams = UpdateCommitteeHashParams
+newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
   , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
   , previousMerkleRoot ∷ Maybe ByteArray
   , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }
+
+derive newtype instance Show UpdateCommitteeHashParams
+derive instance Newtype UpdateCommitteeHashParams _
 
 -- | 'UpdateCommitteeHashMessage' corresponds to the on chain type which is
 -- signed by the committee (technically, if @uchm@ is an
