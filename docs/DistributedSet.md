@@ -26,8 +26,6 @@ message digests; we have a connected directed graph with
   lexicographically) and there does not exist a node `k` such that `a < k` and
   `k < b`.
 
-We also require that each node has in and out degree at most one.
-
 In code, we represent this graph with the 'Node' type
 ```
 data Node = Node
@@ -70,33 +68,34 @@ Let `a` and `b` be nodes such that there exists an edge `a` to `b`.
 Then, for every message digest `str` such that `a < str` and `str < b`,
 `str` is not in the set.
 
-_Sketch._ Immediately follows from defn. of the graph.
+_Sketch._ Immediately follows from defn. of an edge.
 
 We reiterate: this claim asserts that to show that `str` is not already in the
 set, it suffices to find a node `a` with an edge to `b` satisfying `a < str`
 and `str < b`. Note that otherwise this is inconclusive.
 
 ## 2. Insertion Operation
-To insert a string `str` (not already in the set) into the set, we need to find
+To insert a string `str` (not already in the set) in the set, we need to find
 the greatest lower bound of `str` of the keys already stored (think infimum).
-Graphically, we find
+Graphically, we find nodes `str'` and `str''` with an edge as follows.
 
 ```
-str' --------> str''
+... --> str' --> str'' --> ...
 ```
-where `str' < str < str''`.
 
 Note `str'` is unique with respect to `str` (this follows from the defn. of infimum), so what follows will be a
 well defined mapping.
 
-Then, to complete the insertion operation, we transform this into
+Then, to complete the insertion operation, we remove the edge `str'` to
+`str''`, add the node `str`, and add edges `str'` to `str` and `str` to
+`str''`. Graphically, we now have
 
 ```
-str' ---> str ---> str''
+... --> str' --> str --> str'' --> ...
+```
 
-and it's easy to see that the invariants of the graph are still satisfied,
+It's easy to see that the invariants of the graph are still satisfied,
 and by defn. `str` is now included in the set.
-```
 
 To summarize, we have the following results.
 
@@ -170,12 +169,12 @@ Or, it verifies all of the following:
 - The `DsInsertValidator`'s datum is `DsDatum { dsNext = nEdge rootNode}` (see [5.2](#52-DsInsertValidator))
 
 In more "plain English", we are either: in the former case where we are
-initializing the distributed set to just contain the root node, or in the
-latter case where we inserting a new string.
+inserting a new string, or in the latter case where we are initializing the
+distributed set to just contain the root node.
 
 _Remark._
-The latter verifications is loosely known as a _forwarding minting policy_, and
-has some details
+The former case is loosely known as a _forwarding minting policy_, and has some
+details
 [here](https://github.com/Plutonomicon/plutonomicon/blob/main/forwarding1.md).
 
 _Claim._ `DsKeyPolicy` will always be sitting at a `DsInsertValidator` UTxO.
@@ -183,12 +182,12 @@ Moreover, if there is `DsKeyPolicy` sitting at a `DsInsertValidator` UTxO,
 there is at most 1 `DsKeyPolicy` sitting at that UTxO.
 
 _Proof._ Consider the first instance `DsKeyPolicy` is minted. This means that
-the former case must have succeeded, which means that `DsConfPolicy` must be
-minted. Indeed, `DsConfPolicy` is a oneshot token, so the former case can only
+the latter case must have succeeded, which means that `DsConfPolicy` must be
+minted. Indeed, `DsConfPolicy` is a oneshot token, so the latter case can only
 occur at most once. But in which case, this means that the `DsKeyPolicy` must
 be paid to `DsConfValidator`.
 
-As for the latter case and the "moreover" claim, the correctness depends on
+As for the former case and the "moreover" claim, the correctness depends on
 `DsInsertValidator` which we will see maintains the invariant that
 `DsKeyPolicy` will always be sitting at a `DsInsertValidator` UTxO.
 QED.
@@ -197,13 +196,13 @@ We will also state a totally obvious fact with the aim of showing that for
 every `DsKeyPolicy` mint (except the first mint), `DsKeyPolicy` succeeds iff
 `DsInsertValidator` succeeds.
 
-_Claim._ If `DsKeyPolicy` succeeds in the latter case, then `DsInsertValidator`
+_Claim._ If `DsKeyPolicy` succeeds in the former case, then `DsInsertValidator`
 succeeds.
 
 ### 5.2. DsInsertValidator
 This validator does the heavy lifting / verification of the [insertion
-operation](2-Insertion-Operation). It must be parameterized by the oneshot
-token `DsConfPolicy` which we may recall uniquely identifies `DsConfValidator`.
+operation](2-Insertion-Operation). It must be parameterized by the currency
+symbol of `DsConfPolicy` which we recall uniquely identifies `DsConfValidator`.
 
 **Datum:**
 ```
@@ -242,7 +241,7 @@ we verify the following.
 - The outputs `s` and `t` are "relatively small"[^2]
 - The token name of `DsKeyPolicy` in `s` is `str'`.
 - The datum of `s` is has the field `dsNext` as `str`.
-- The token name of `DsKeyPolicy` in `t` is `str'`.
+- The token name of `DsKeyPolicy` in `t` is `str`.
 - The datum of `t` is has the field `dsNext` as `str''`.
 
 
@@ -261,15 +260,15 @@ We'll discuss some minor details here.
 Graphically, the last 4 steps are verifying that as input to the transaction,
 we have
 ```
-     str''
-str' ------>
+               str''
+... --> str' ------> ...
 ```
 where `str'` is the token name of the `DsKeyPolicy` identifying the node, and
 the `str''` above the arrow represents an edge from `str'` to `str''` which is
 the `dsNext` field of `DsDatum`. Then, as output to the transaction, we have
 ```
-       str          str''
-str' -------> str ------->
+               str          str''
+... --> str' -------> str -------> ...
 ```
 
 Indeed, this gives us the properties in [1.](1-Basic-Definitions) and
