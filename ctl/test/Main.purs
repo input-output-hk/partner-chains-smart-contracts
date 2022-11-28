@@ -21,7 +21,7 @@ import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
-import Test.Utils as Test.Utils
+import Test.Utils (fails)
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -50,11 +50,13 @@ main = do
     runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice do
         CommitteeCandidateValidator.testScenarioSuccess
-        CommitteeCandidateValidator.testScenarioFailure1 # Test.Utils.fails
-        CommitteeCandidateValidator.testScenarioFailure2 alice bob #
-          Test.Utils.fails
+        CommitteeCandidateValidator.testScenarioFailure1 # fails
+        CommitteeCandidateValidator.testScenarioFailure2 alice bob # fails
 
-        FUELMintingPolicy.testScenario
+        FUELMintingPolicy.testScenarioPassiveSuccess
+        FUELMintingPolicy.testScenarioPassiveFailure # fails
+        FUELMintingPolicy.testScenarioActiveSuccess
+        FUELMintingPolicy.testScenarioActiveFailure # fails
 
         UpdateCommitteeHash.testScenario1
         UpdateCommitteeHash.testScenario2
