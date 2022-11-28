@@ -8,14 +8,24 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionInput)
 import Contract.Utxos (utxosAt)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List.Lazy (List, replicateM)
 import Data.Map as Map
 import Data.Set as Set
-import FUELMintingPolicy (FuelParams(..), passiveBridgeMintParams, runFuelMP)
+import FUELMintingPolicy
+  ( FuelParams(..)
+  , MerkleTreeEntry(..)
+  , passiveBridgeMintParams
+  , runFuelMP
+  )
+import InitSidechain (initSidechain)
 import MerkleTree (MerkleProof(..), fromList, lookupMp)
-import SidechainParams (SidechainParams(..))
-import Test.Utils (toTxIn)
+import MerkleTree as MerkleTree
+import Partial.Unsafe (unsafePartial)
+import SidechainParams (InitSidechainParams(..), SidechainParams(..))
+import Test.MPTRoot as Test.MPTRoot
+import Test.Utils (getOwnTransactionInput, paymentPubKeyHashToByteArray, toTxIn)
 import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
 import Utils.SerialiseData (serialiseData)
 
@@ -65,7 +75,63 @@ testScenarioPassiveFailure = do
     { amount: BigInt.fromInt 5, recipient: pk }
 
 testScenarioActiveSuccess ∷ Contract () Unit
-testScenarioActiveSuccess = liftedM "unemplemented" (pure Nothing)
+testScenarioActiveSuccess = do
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  genesisUtxo ← getOwnTransactionInput
+  let
+    keyCount = 25
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 1
+      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+      , initMint: Nothing
+      , initUtxo: genesisUtxo
+      , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
+      }
+
+  { sidechainParams } ← initSidechain initScParams
+  let
+    amount = BigInt.fromInt 5
+    recipient = pkh
+    index = BigInt.fromInt 0
+    previousMerkleRoot = Nothing
+    ownEntry =
+      MerkleTreeEntry
+        { index
+        , amount
+        , previousMerkleRoot
+        , recipient: paymentPubKeyHashToByteArray recipient
+        }
+
+    ownEntryBytes = unsafePartial $ fromJust $ serialiseData $ toData ownEntry
+    merkleTree =
+      unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
+        [ ownEntryBytes ]
+
+    merkleProof = unsafePartial $ fromJust $ MerkleTree.lookupMp ownEntryBytes
+      merkleTree
+  void $ Test.MPTRoot.saveRoot
+    { sidechainParams
+    , merkleTreeEntries: [ ownEntry ]
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    }
+
+  void $ runFuelMP sidechainParams
+    ( Mint
+        { amount
+        , recipient
+        , sidechainParams
+        , merkleProof
+        , index
+        , previousMerkleRoot
+        }
+    )
 
 testScenarioActiveFailure ∷ Contract () Unit
 testScenarioActiveFailure = do
