@@ -223,7 +223,7 @@ reference input) the input `DsConfValidator` uniquely identified by
 name of the `DsKeyPolicy` (from the `DsConfValidator`), say `str'`, is the
 greatest lower bound of `str`; and let `str''` denote the `dsNext` field in
 this `DsDatum`[^1]. After these offchain computations to build the transaction,
-we verify the following.
+the onchain code verifies the following.
 
 [^1]: Astute readers will notice that this would be a linear scan through every
   UTxO at the `DsConfValidator` address. As time goes on, this offchain
