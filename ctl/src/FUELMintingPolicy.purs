@@ -12,13 +12,21 @@ module FUELMintingPolicy
 import Contract.Prelude
 
 import Contract.Address (PaymentPubKeyHash, ownPaymentPubKeyHash)
+import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
-import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
+import Contract.PlutusData
+  ( class ToData
+  , Datum(..)
+  , PlutusData(Constr)
+  , toData
+  , unitRedeemer
+  )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
+import Contract.Scripts as Scripts
 import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
   , textEnvelopeBytes
@@ -31,23 +39,29 @@ import Contract.Transaction
   , balanceAndSignTxE
   , submit
   )
-import Contract.TxConstraints (TxConstraint(..), TxConstraints, singleton)
+import Contract.TxConstraints
+  ( DatumPresence(..)
+  , TxConstraint(..)
+  , TxConstraints
+  , singleton
+  )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol)
+import Contract.Value (CurrencySymbol, getTokenName, mkTokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import DistributedSet (getDsKeyPolicy)
+import DistributedSet (insertValidator)
+import DistributedSet as DistributedSet
 import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
-import SidechainParams (SidechainParams)
+import SidechainParams (SidechainParams(..))
 import Test.Utils (paymentPubKeyHashToByteArray)
 import Types.Scripts (plutusV2Script)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
@@ -166,7 +180,7 @@ getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 getFuelMintingPolicy sidechainParams = do
   { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy
     sidechainParams
-  { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy sidechainParams
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
 
   fuelMintingPolicy $
     FUELMint
@@ -289,6 +303,8 @@ claimFUEL
     tn ← liftContractM (msg "Cannot get token name")
       (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
 
+    ds ← DistributedSet.getDs sidechainParams
+
     let
       merkleTreeEntry =
         MerkleTreeEntry
@@ -303,30 +319,76 @@ claimFUEL
 
       rootHash = rootMp entryBytes merkleProof
 
+    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
+      $ mkTokenName
+      $ blake2b256Hash entryBytes
+
     { index: mptUtxo, value: mptUtxoOut } ←
-      findMptRootTokenUtxoByRootHash sidechainParams rootHash
-        >>=
-          liftContractM
-            ( msg
-                "Couldn't find the parent Merkle tree root hash of the transaction"
-            )
+      liftContractM
+        (msg "Couldn't find the parent Merkle tree root hash of the transaction")
+        =<< findMptRootTokenUtxoByRootHash sidechainParams rootHash
+
+    { inUtxo:
+        { nodeRef
+        , oNode
+        , datNode
+        , tnNode
+        }
+    , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
+    } ← liftedM (msg "Couldn't find distributed set nodes") $
+      DistributedSet.findDsOutput ds cborMteHashedTn
+
+    insertValidator ← Scripts.validatorHash
+      <$> DistributedSet.insertValidator ds
+    { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
 
     let
+      node = DistributedSet.mkNode (getTokenName tnNode) datNode
       value = Value.singleton cs tn amount
       redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
       -- silence missing stake key warning
       mustPayToPubKey p =
         singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
 
+      mkNodeConstraints n = do
+        nTn ← liftContractM "Couldn't convert node token name"
+          $ mkTokenName
+          $ (unwrap n).nKey
+
+        let val = Value.singleton dsKeyPolicyCurrencySymbol nTn (BigInt.fromInt 1)
+        if getTokenName nTn == (unwrap node).nKey then
+          pure $ Constraints.mustPayToScript
+            insertValidator
+            (Datum (toData (DistributedSet.nodeToDatum n)))
+            DatumInline
+            val
+        else
+          pure
+            $ Constraints.mustPayToScript
+                insertValidator
+                (Datum (toData (DistributedSet.nodeToDatum n)))
+                DatumInline
+                val
+            <> Constraints.mustMintValue val
+
+    mustAddDSNodeA ← mkNodeConstraints nodeA
+    mustAddDSNodeB ← mkNodeConstraints nodeB
+
     pure
       { lookups:
-          Lookups.mintingPolicy fuelMP <> Lookups.unspentOutputs
-            (Map.singleton mptUtxo mptUtxoOut)
+          Lookups.mintingPolicy fuelMP
+            <> Lookups.unspentOutputs (Map.singleton mptUtxo mptUtxoOut)
+            <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
           <> mustPayToPubKey recipient value
           <> Constraints.mustBeSignedBy ownPkh
           <> Constraints.mustReferenceOutput mptUtxo
+
+          <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
+
+          <> mustAddDSNodeA
+          <> mustAddDSNodeB
       }
 
 burnFUEL ∷

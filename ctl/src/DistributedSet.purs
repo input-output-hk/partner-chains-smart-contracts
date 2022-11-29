@@ -9,12 +9,15 @@ module DistributedSet
   , Node(Node)
   , Ib(Ib)
   , rootNode
+  , mkNode
+  , nodeToDatum
   , dsConfTokenName
 
   , insertValidator
   , dsConfValidator
   , dsConfPolicy
   , dsKeyPolicy
+  , getDs
   , getDsKeyPolicy
   , findDsOutput
   ) where
@@ -36,7 +39,6 @@ import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
   ( Language(PlutusV2)
   , TransactionInput
-  , TransactionOutput
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
   )
@@ -100,6 +102,11 @@ mkNode str (DsDatum d) =
     { nKey: str
     , nNext: d.dsNext
     }
+
+-- | Converts a 'Node' to the correpsonding 'DsDatum'
+nodeToDatum ∷ Node → DsDatum
+nodeToDatum (Node node) =
+  DsDatum { dsNext: node.nNext }
 
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
  length "array" of how many new nodes (this is always 2, see 'lengthIb') are
@@ -297,6 +304,22 @@ insertNode str (Node node)
 
 -- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
 -- (potentially throwing an error in the case that it is not possible).
+getDs ∷ SidechainParams → Contract () Ds
+getDs (SidechainParams sp) = do
+  let
+    msg = Logging.mkReport
+      { mod: "DistributedSet", fun: "getDs" }
+
+  dsConfPolicy' ← dsConfPolicy $ DsConfMint
+    { dscmTxOutRef: sp.genesisUtxo }
+  dsConfPolicyCurrencySymbol ←
+    Monad.liftContractM
+      (msg "Failed to get dsConfPolicy CurrencySymbol")
+      $ Value.scriptCurrencySymbol dsConfPolicy'
+  pure $ Ds { dsConf: dsConfPolicyCurrencySymbol }
+
+-- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
+-- (potentially throwing an error in the case that it is not possible).
 getDsKeyPolicy ∷
   SidechainParams →
   Contract ()
@@ -306,21 +329,14 @@ getDsKeyPolicy (SidechainParams sp) = do
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDsKeyPolicy" }
 
-  dsConfPolicy' ← dsConfPolicy $ DsConfMint
-    { dscmTxOutRef: sp.genesisUtxo }
-  dsConfPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (msg "Failed to get dsConfPolicy CurrencySymbol")
-      $ Value.scriptCurrencySymbol dsConfPolicy'
-  let ds = Ds { dsConf: dsConfPolicyCurrencySymbol }
-
+  ds ← getDs (SidechainParams sp)
   insertValidator' ← insertValidator ds
 
   let
     insertValidatorHash = Scripts.validatorHash insertValidator'
     dskm = DsKeyMint
       { dskmValidatorHash: insertValidatorHash
-      , dskmConfCurrencySymbol: dsConfPolicyCurrencySymbol
+      , dskmConfCurrencySymbol: (unwrap ds).dsConf
       }
   policy ← dsKeyPolicy dskm
 
@@ -347,12 +363,12 @@ findDsOutput ∷
   Contract ()
     ( Maybe
         { inUtxo ∷
-            { txIn ∷ TransactionInput
-            , txOut ∷ TransactionOutput
-            , dsDatum ∷ DsDatum
-            , dsTokenName ∷ TokenName
+            { nodeRef ∷ TransactionInput
+            , oNode ∷ TransactionOutputWithRefScript
+            , datNode ∷ DsDatum
+            , tnNode ∷ TokenName
             }
-        , inputBuffer ∷ Ib Node
+        , nodes ∷ Ib Node
         }
     )
 findDsOutput ds tn = do
@@ -385,15 +401,15 @@ findDsOutput ds tn = do
 
             tn' ← hoistMaybe $ Array.head $ AssocMap.keys tns
 
-            nnodes ← hoistMaybe $ insertNode (getTokenName tn) $ mkNode
+            nodes ← hoistMaybe $ insertNode (getTokenName tn) $ mkNode
               (getTokenName tn')
               dat
 
             pure $
               Just
                 { inUtxo:
-                    { txIn: ref, txOut: o.output, dsDatum: dat, dsTokenName: tn' }
-                , inputBuffer: nnodes
+                    { nodeRef: ref, oNode: wrap o, datNode: dat, tnNode: tn' }
+                , nodes
                 }
         in
           c >>= case _ of
