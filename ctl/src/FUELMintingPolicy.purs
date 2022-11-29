@@ -62,7 +62,6 @@ import MPTRoot
   )
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
-import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams(..))
@@ -318,9 +317,11 @@ claimFUEL
           , recipient: paymentPubKeyHashToByteArray recipient
           }
 
-      entryBytes = unsafePartial $ fromJust $ serialiseData $ toData
-        merkleTreeEntry
-
+    entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")
+      $ serialiseData
+      $ toData
+          merkleTreeEntry
+    let
       rootHash = rootMp entryBytes merkleProof
 
     cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
@@ -397,16 +398,18 @@ claimFUEL
             <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
-      , constraints: Constraints.mustMintValueWithRedeemer redeemer value
-          <> mustPayToPubKey recipient value
-          <> Constraints.mustBeSignedBy ownPkh
-          <> Constraints.mustReferenceOutput mptUtxo
-          <> Constraints.mustReferenceOutput confRef
+      , constraints:
+          Constraints.mustMintValueWithRedeemer redeemer value -- minting the FUEL
 
-          <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
+            <> mustPayToPubKey recipient value
+            <> Constraints.mustBeSignedBy ownPkh
+            <> Constraints.mustReferenceOutput mptUtxo
+            <> Constraints.mustReferenceOutput confRef
 
-          <> mustAddDSNodeA
-          <> mustAddDSNodeB
+            <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
+
+            <> mustAddDSNodeA
+            <> mustAddDSNodeB
       }
 
 burnFUEL ∷
