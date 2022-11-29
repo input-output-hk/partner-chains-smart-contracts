@@ -41,12 +41,19 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import MerkleTree (MerkleProof(..))
+import MPTRoot (SignedMerkleRootMint(..))
+import MPTRoot.Utils (findMptRootTokenUtxoByRootHash)
+import MerkleTree (MerkleProof(..), rootMp, unRootHash)
+import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
-import SidechainParams (SidechainParams)
+import SidechainParams (SidechainParams(..))
+import Test.Utils (paymentPubKeyHashToByteArray)
 import Types.Scripts (plutusV2Script)
+import UpdateCommitteeHash (InitCommitteeHashMint(..))
+import UpdateCommitteeHash.Utils as UpdateCommitteeHash
 import Utils.Logging as Logging
+import Utils.SerialiseData (serialiseData)
 
 -- | `FUELMint` is the data type to parameterize the minting policy. See
 -- | `mkMintingPolicy` for details of why we need the datum in `FUELMint`.
@@ -212,6 +219,9 @@ runFuelMP sp fp = do
 
   pure txId
 
+-- | Mint FUEL tokens using the Passive Bridge configuration, consuming the genesis utxo
+-- | This minting strategy allows only one mint per sidechain, and will be deprecated once the
+-- | active bridge claim script is stablisied
 mintFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt
@@ -264,6 +274,7 @@ mintFUEL
           <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
       }
 
+-- | Mint FUEL tokens using the Active Bridge configuration, verifying the Merkle proof
 claimFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt
@@ -287,12 +298,25 @@ claimFUEL
     tn ← liftContractM (msg "Cannot get token name")
       (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
 
-    -- Find the passive bridge genesis mint utxo
-    let inputTxIn = (unwrap sidechainParams).genesisMint
-    inputUtxo ← inputTxIn # traverse \txIn → do
-      txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
-      pure $ Map.singleton txIn $ TransactionOutputWithRefScript
-        { output: txOut, scriptRef: Nothing }
+    let
+      merkleTreeEntry =
+        MerkleTreeEntry
+          { index
+          , amount
+          , previousMerkleRoot
+          , recipient: paymentPubKeyHashToByteArray recipient
+          }
+
+      entryBytes = unsafePartial $ fromJust $ serialiseData $ toData
+        merkleTreeEntry
+
+      rootHash = unRootHash $ rootMp entryBytes merkleProof
+
+    { index: mptUtxo } ←
+      liftM "Couldn't find the parent Merkle tree root hash of the transaction" $
+        findMptRootTokenUtxoByRootHash sidechainParams rootHash
+
+    let merkeRootUtxo = findMptRootTokenUtxo (TokenName) smrm
 
     let
       value = Value.singleton cs tn amount
@@ -308,12 +332,13 @@ claimFUEL
         singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
 
     pure
-      { lookups: Lookups.mintingPolicy fuelMP
-          <> maybe mempty Lookups.unspentOutputs inputUtxo
+      { lookups:
+          Lookups.mintingPolicy fuelMP <> Lookups.unspentOutputs mptUtxo
+
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
           <> mustPayToPubKey recipient value
           <> Constraints.mustBeSignedBy ownPkh
-          <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
+          <> Constraints.mustReferenceOutput mptUtxo
       }
 
 burnFUEL ∷
