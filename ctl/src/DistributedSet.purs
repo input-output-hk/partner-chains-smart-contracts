@@ -19,6 +19,7 @@ module DistributedSet
   , dsKeyPolicy
   , getDs
   , getDsKeyPolicy
+  , findDsConfOutput
   , findDsOutput
   ) where
 
@@ -346,6 +347,50 @@ getDsKeyPolicy (SidechainParams sp) = do
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
+
+{- | 'findDsConfOutput' finds the utxo which holds the configuration of the
+ distributed set.
+-}
+findDsConfOutput ∷
+  Ds →
+  Contract ()
+    { confRef ∷ TransactionInput
+    , confO ∷ TransactionOutputWithRefScript
+    , confDat ∷ DsConfDatum
+    }
+findDsConfOutput ds = do
+  let msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsConfOutput" }
+
+  netId ← getNetworkId
+  v ← dsConfValidator ds
+  scriptAddr ←
+    liftContractM
+      "Couldn't derive distributed set configuration validator address"
+      $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
+
+  utxos ← liftedM (msg "Cannot get Distributed Set configuration UTxOs")
+    (utxosAt scriptAddr)
+
+  out ←
+    liftContractM
+      (msg "Distributed Set config utxo does not contain oneshot token")
+      $ Array.find
+          ( \(_ /\ TransactionOutputWithRefScript o) → not $ null
+              $ AssocMap.lookup (unwrap ds).dsConf
+              $ getValue
+                  (unwrap o.output).amount
+          )
+      $ Map.toUnfoldable utxos
+
+  confDat ←
+    liftContractM (msg "Couldn't find Distributed Set configuration datum")
+      $ outputDatumDatum (unwrap (unwrap (snd out)).output).datum
+      >>= (fromData <<< unwrap)
+  pure
+    { confRef: fst out
+    , confO: snd out
+    , confDat
+    }
 
 {- | 'findDsOutput' finds the transaction which we must insert to
  (if it exists) for the distributed set. It returns
