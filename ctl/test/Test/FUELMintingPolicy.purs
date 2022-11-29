@@ -3,6 +3,7 @@ module Test.FUELMintingPolicy where
 import Contract.Prelude
 
 import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Hashing as Hashing
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
@@ -108,7 +109,10 @@ testScenarioActiveSuccess = do
         , recipient: paymentPubKeyHashToByteArray recipient
         }
 
-    ownEntryBytes = unsafePartial $ fromJust $ serialiseData $ toData ownEntry
+    ownEntryBytes = unsafePartial $ Hashing.blake2b256Hash $ unsafePartial
+      $ fromJust
+      $ serialiseData
+      $ toData ownEntry
     merkleTree =
       unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
         [ ownEntryBytes ]

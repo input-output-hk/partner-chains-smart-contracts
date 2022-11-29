@@ -8,6 +8,7 @@ import Plutus.V2.Ledger.Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -85,7 +86,7 @@ mkMintingPolicy fm mode ctx = case mode of
     let cborMte :: BuiltinByteString
         cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
 
-        cborMteHashed = cborMte --  TODO: actually hash this later.
+        cborMteHashed = Builtins.blake2b_256 cborMte --  TODO: actually hash this later.
         dsInserted :: BuiltinByteString
         dsInserted
           | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
@@ -116,7 +117,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- it.
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
-           in RootHash $ unTokenName $ go $ txInfoInputs info
+           in RootHash $ unTokenName $ go $ txInfoReferenceInputs info
      in traceIfFalse "error 'FUELMintingPolicy' tx not signed by recipient" (Contexts.txSignedBy info (PubKeyHash {getPubKeyHash = mteRecipient mte}))
           &&
           -- TODO: remove the oneshot minting policy later... yeah..
@@ -129,7 +130,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
                   && traceIfFalse
                     "error 'FUELMintingPolicy' merkle proof failed"
-                    (MerkleTree.memberMp cborMteHashed mp merkleRoot)
+                    (MerkleTree.memberMp cborMte mp merkleRoot)
                   && traceIfFalse
                     "error 'FUELMintingPolicy' not inserting into distributed set"
                     (dsInserted == cborMteHashed)
