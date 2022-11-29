@@ -151,9 +151,9 @@ showBS =
 showBuiltinBS :: BuiltinByteString -> String
 showBuiltinBS = showBS . Builtins.fromBuiltin
 
--- | Serialise a RootHash into hex string
+-- | Serialise a RootHash into hex of serialized built in data.
 showRootHash :: RootHash -> String
-showRootHash = showBuiltinBS . Builtins.serialiseData . toBuiltinData
+showRootHash = showHexOfCborBuiltinData
 
 -- | Serialise public key
 showPubKey :: PubKey -> String
@@ -184,13 +184,21 @@ showThreshold n m = show n ++ "/" ++ show m
  data representation
 -}
 showMerkleTree :: MerkleTree -> String
-showMerkleTree = showBuiltinBS . Builtins.serialiseData . toBuiltinData
+showMerkleTree = showHexOfCborBuiltinData
 
 {- | 'showMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
  data representation
 -}
 showMerkleProof :: MerkleProof -> String
-showMerkleProof = showBuiltinBS . Builtins.serialiseData . toBuiltinData
+showMerkleProof = showHexOfCborBuiltinData
+
+{- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
+ BuiltinData representation of the given argument.
+
+ Many serialization mechanisms are an alias of this.
+-}
+showHexOfCborBuiltinData :: ToData a => a -> String
+showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinData
 
 -- * Covnerting converting private keys to public keys
 
