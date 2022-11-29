@@ -120,6 +120,11 @@ data MerkleTreeCommand
       { mpcMerkleTree :: MerkleTree
       , mpcMerkleTreeEntry :: MerkleTreeEntry
       }
+  | -- | CLI arguments for getting a combined merkle proof from a merkle tree
+    CombinedMerkleProofCommand
+      { cmpMerkleTree :: MerkleTree
+      , cmpMerkleTreeEntry :: MerkleTreeEntry
+      }
 
 --  | 'GenCliCommand' is for commands which generate CLI commands for the
 --  purescript interface.
@@ -566,7 +571,36 @@ rootHashCommand =
         pure $ MerkleTreeCommand $ RootHashCommand {..}
         <**> helper
 
--- | 'merkleProofCommand' grabs the root hash from a merkle tree
+{- | 'combinedMerkleProofCommand' grabs the 'CombinedMerkleProof' from a merkle
+ tree entry, and a merkle tree
+-}
+combinedMerkleProofCommand :: OptParse.Mod OptParse.CommandFields Command
+combinedMerkleProofCommand =
+  command "combined-merkle-proof" $
+    flip
+      info
+      (progDesc "Creates a hex encoded BuiltinData representation of a combined merkle proof")
+      $ do
+        -- duplicated code from 'rootHashCommand'
+        cmpMerkleTree <-
+          option parseMerkleTree $
+            mconcat
+              [ long "merkle-tree"
+              , metavar "MERKLE_TREE"
+              , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
+              ]
+        -- duplicated code from 'merkleTreeCommand'
+        cmpMerkleTreeEntry <-
+          option parseMerkleTreeEntry $
+            mconcat
+              [ long "merkle-tree-entry"
+              , metavar "JSON_MERKLE_TREE_ENTRY"
+              , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
+              ]
+        pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
+        <**> helper
+
+-- | 'merkleProofCommand' grabs the merkle proof from a merkle tree and merkle tree entry
 merkleProofCommand :: OptParse.Mod OptParse.CommandFields Command
 merkleProofCommand =
   command "merkle-proof" $
@@ -633,10 +667,13 @@ argParser = do
         [ registerCommand
         , updateCommitteeHashCommand
         , saveRootCommand
-        , merkleTreeCommand
+        , -- generating merkle tree stuff
+          merkleTreeCommand
         , merkleProofCommand
         , rootHashCommand
-        , freshSidechainPrivateKeyCommand
+        , combinedMerkleProofCommand
+        , -- generating sidechain keys
+          freshSidechainPrivateKeyCommand
         , sidechainPrivateKeyToPublicKeyCommand
         ]
   pure Args {..}

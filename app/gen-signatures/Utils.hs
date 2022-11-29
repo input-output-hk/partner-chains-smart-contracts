@@ -20,6 +20,7 @@ module Utils (
   showThreshold,
   showMerkleTree,
   showMerkleProof,
+  showCombinedMerkleProof,
   toSpoPubKey,
   toSidechainPubKey,
   secpPubKeyToSidechainPubKey,
@@ -60,6 +61,7 @@ import TrustlessSidechain.OffChain.Types (
  )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg,
+  CombinedMerkleProof,
  )
 
 -- * Generating a private sidechain key
@@ -191,6 +193,12 @@ showMerkleTree = showHexOfCborBuiltinData
 -}
 showMerkleProof :: MerkleProof -> String
 showMerkleProof = showHexOfCborBuiltinData
+
+{- | 'showCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
+ cbor builtin data representation
+-}
+showCombinedMerkleProof :: CombinedMerkleProof -> String
+showCombinedMerkleProof = showHexOfCborBuiltinData
 
 {- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
  BuiltinData representation of the given argument.

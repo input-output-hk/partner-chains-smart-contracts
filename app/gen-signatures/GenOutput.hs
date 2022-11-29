@@ -22,6 +22,11 @@ import TrustlessSidechain.OnChain.Types (
     bprmSidechainParams,
     bprmSidechainPubKey
   ),
+  CombinedMerkleProof (
+    CombinedMerkleProof,
+    cmpMerkleProof,
+    cmpTransaction
+  ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     mrimMerkleRoot,
@@ -155,6 +160,17 @@ merkleTreeCommand = \case
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData mpcMerkleTreeEntry)) mpcMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
       Just mp -> pure $ Utils.showMerkleProof mp
+  CombinedMerkleProofCommand {..} ->
+    -- Mostly duplicated from the 'MerkleProofCommand' case
+    case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData cmpMerkleTreeEntry)) cmpMerkleTree of
+      Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
+      Just mp ->
+        pure $
+          Utils.showCombinedMerkleProof
+            CombinedMerkleProof
+              { cmpTransaction = cmpMerkleTreeEntry
+              , cmpMerkleProof = mp
+              }
 
 {- | 'sidechainKeyCommand' creates the output for commands relating to the
  sidechain keys.
