@@ -16,6 +16,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.ScriptLookups (ScriptLookups(..))
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -24,12 +25,14 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
+  , TransactionOutput
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTxE
   , submit
   )
-import Contract.TxConstraints (TxConstraint(..), singleton)
+import Contract.TxConstraints (TxConstraint(..), TxConstraints(..), singleton)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
@@ -182,10 +185,6 @@ runFuelMP sp fp = do
   let
     msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
 
-    inputTxIn = case fp of
-      Mint _ → (unwrap sp).genesisMint
-      Burn _ → Nothing
-
     fm =
       FUELMint
         { sidechainParams: sp
@@ -193,52 +192,16 @@ runFuelMP sp fp = do
         , dsKeyCurrencySymbol: dummyCS
         }
 
-  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
   fuelMP ← fuelMintingPolicy fm
 
-  inputUtxo ← inputTxIn # traverse \txIn → do
-    txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
-    pure $ Map.singleton txIn $ TransactionOutputWithRefScript
-      { output: txOut, scriptRef: Nothing }
-
-  cs ← liftContractM (msg "Cannot get currency symbol") $
-    Value.scriptCurrencySymbol fuelMP
-  logInfo' $ msg ("fuelMP currency symbol: " <> show cs)
-  tn ← liftContractM (msg "Cannot get token name")
-    (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
-  let
-    mkValue i = Value.singleton cs tn i
-
-    constraints ∷ Constraints.TxConstraints Void Void
-    constraints = case fp of
-      Burn { recipient, amount } →
-        let
-          value = mkValue (-amount)
-          redeemer = wrap (toData (MainToSide recipient))
-        in
-          Constraints.mustMintValueWithRedeemer redeemer value
-      Mint { index, recipient, amount, previousMerkleRoot, merkleProof } →
-        let
-          value = mkValue amount
-          redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
-          merkleTreeEntry = MerkleTreeEntry
-            { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
-            , previousMerkleRoot
-            , amount
-            , index
-            }
-          -- silence missing stake key warning
-          mustPayToPubKey p =
-            singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
-        in
-          Constraints.mustMintValueWithRedeemer redeemer value
-            <> mustPayToPubKey recipient value
-            <> Constraints.mustBeSignedBy ownPkh
-            <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
-
-    lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.mintingPolicy fuelMP
-      <> maybe mempty Lookups.unspentOutputs inputUtxo
+  { lookups, constraints } ← case fp of
+    Burn params →
+      burnFUEL fuelMP params
+    Mint params →
+      if isJust (unwrap sp).genesisMint then
+        mintFUEL fuelMP params
+      else
+        claimFUEL fuelMP params
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
@@ -248,6 +211,132 @@ runFuelMP sp fp = do
   logInfo' $ msg "Tx submitted successfully!"
 
   pure txId
+
+mintFUEL ∷
+  MintingPolicy →
+  { amount ∷ BigInt
+  , recipient ∷ PaymentPubKeyHash
+  , merkleProof ∷ MerkleProof
+  , sidechainParams ∷ SidechainParams
+  , index ∷ BigInt
+  , previousMerkleRoot ∷ Maybe ByteArray
+  } →
+  Contract ()
+    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+mintFUEL
+  fuelMP
+  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  do
+    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
+    ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+
+    cs ← liftContractM (msg "Cannot get currency symbol") $
+      Value.scriptCurrencySymbol fuelMP
+    tn ← liftContractM (msg "Cannot get token name")
+      (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+
+    -- Find the passive bridge genesis mint utxo
+    let inputTxIn = (unwrap sidechainParams).genesisMint
+    inputUtxo ← inputTxIn # traverse \txIn → do
+      txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
+      pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+        { output: txOut, scriptRef: Nothing }
+
+    let
+      value = Value.singleton cs tn amount
+      redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
+      merkleTreeEntry = MerkleTreeEntry
+        { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
+        , previousMerkleRoot
+        , amount
+        , index
+        }
+      -- silence missing stake key warning
+      mustPayToPubKey p =
+        singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
+
+    pure
+      { lookups: Lookups.mintingPolicy fuelMP
+          <> maybe mempty Lookups.unspentOutputs inputUtxo
+      , constraints: Constraints.mustMintValueWithRedeemer redeemer value
+          <> mustPayToPubKey recipient value
+          <> Constraints.mustBeSignedBy ownPkh
+          <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
+      }
+
+claimFUEL ∷
+  MintingPolicy →
+  { amount ∷ BigInt
+  , recipient ∷ PaymentPubKeyHash
+  , merkleProof ∷ MerkleProof
+  , sidechainParams ∷ SidechainParams
+  , index ∷ BigInt
+  , previousMerkleRoot ∷ Maybe ByteArray
+  } →
+  Contract ()
+    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+claimFUEL
+  fuelMP
+  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  do
+    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
+    ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+
+    cs ← liftContractM (msg "Cannot get currency symbol") $
+      Value.scriptCurrencySymbol fuelMP
+    tn ← liftContractM (msg "Cannot get token name")
+      (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+
+    -- Find the passive bridge genesis mint utxo
+    let inputTxIn = (unwrap sidechainParams).genesisMint
+    inputUtxo ← inputTxIn # traverse \txIn → do
+      txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
+      pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+        { output: txOut, scriptRef: Nothing }
+
+    let
+      value = Value.singleton cs tn amount
+      redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
+      merkleTreeEntry = MerkleTreeEntry
+        { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
+        , previousMerkleRoot
+        , amount
+        , index
+        }
+      -- silence missing stake key warning
+      mustPayToPubKey p =
+        singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
+
+    pure
+      { lookups: Lookups.mintingPolicy fuelMP
+          <> maybe mempty Lookups.unspentOutputs inputUtxo
+      , constraints: Constraints.mustMintValueWithRedeemer redeemer value
+          <> mustPayToPubKey recipient value
+          <> Constraints.mustBeSignedBy ownPkh
+          <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
+      }
+
+burnFUEL ∷
+  MintingPolicy →
+  { amount ∷ BigInt, recipient ∷ ByteArray } →
+  Contract ()
+    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+burnFUEL fuelMP { amount, recipient } = do
+  let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "burnFUEL" }
+
+  cs ← liftContractM (msg "Cannot get currency symbol") $
+    Value.scriptCurrencySymbol fuelMP
+  logInfo' $ msg ("fuelMP currency symbol: " <> show cs)
+  tn ← liftContractM (msg "Cannot get token name")
+    (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+
+  let
+    value = Value.singleton cs tn (-amount)
+    redeemer = wrap (toData (MainToSide recipient))
+  pure
+    { lookups: Lookups.mintingPolicy fuelMP
+    , constraints: Constraints.mustMintValueWithRedeemer redeemer value
+    }
 
 -- | Empty currency symbol to be used with Passive Bridge transactions,
 -- | where these tokens are not used
