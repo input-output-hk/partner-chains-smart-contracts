@@ -7,6 +7,7 @@ module DistributedSet
   , DsConfMint(DsConfMint)
   , DsKeyMint(DsKeyMint)
   , Node(Node)
+  , Ib(Ib)
   , rootNode
   , dsConfTokenName
 
@@ -15,12 +16,16 @@ module DistributedSet
   , dsConfPolicy
   , dsKeyPolicy
   , getDsKeyPolicy
+  , findDsOutput
   ) where
 
 import Contract.Prelude
 
 import Cardano.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.Monad (Contract, liftContractM)
+import Contract.Address (Address, NetworkId, getNetworkId)
+import Contract.Address as Address
+import Contract.AssocMap as AssocMap
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Monad as Monad
 import Contract.PlutusData (PlutusData(..))
 import Contract.Prim.ByteArray (ByteArray)
@@ -28,13 +33,23 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash)
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction (Language(PlutusV2), TransactionInput)
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Transaction
+  ( Language(PlutusV2)
+  , TransactionInput
+  , TransactionOutput
+  , TransactionOutputWithRefScript(..)
+  , outputDatumDatum
+  )
+import Contract.Utxos (utxosAt)
+import Contract.Value (CurrencySymbol, TokenName, getTokenName)
 import Contract.Value as Value
+import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Array as Array
+import Data.Map as Map
 import Data.Maybe as Maybe
 import FromData (class FromData, fromData)
 import Partial.Unsafe as Unsafe
+import Plutus.Types.Value (getValue)
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams(..))
 import ToData (class ToData, toData)
@@ -76,6 +91,21 @@ newtype Node = Node
   { nKey ∷ ByteArray
   , nNext ∷ ByteArray
   }
+
+-- | 'mkNode' is a wrapper to create a Node from a prefix and the datum.
+{-# INLINEABLE mkNode #-}
+mkNode ∷ ByteArray → DsDatum → Node
+mkNode str (DsDatum d) =
+  Node
+    { nKey: str
+    , nNext: d.dsNext
+    }
+
+{- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
+ length "array" of how many new nodes (this is always 2, see 'lengthIb') are
+ generated after inserting into a node.
+-}
+newtype Ib a = Ib { unIb ∷ Tuple a a }
 
 -- | 'rootNode' is the initial node used when initializing the distributed set.
 -- It contains the min bound / max bound of the strings contained in the
@@ -177,6 +207,13 @@ dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyParams RawScripts.rawDsKeyPolicy $ map toData
   [ dskm ]
 
+-- | The address for the distributed set.
+insertAddress ∷ NetworkId → Ds → Contract () Address
+insertAddress netId ds = do
+  v ← insertValidator ds
+  liftContractM "Couldn't derive distributed set insert validator address"
+    $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
+
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
 
@@ -225,6 +262,39 @@ instance ToData DsKeyMint where
   toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
     [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
 
+dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
+dsToDsKeyMint ds = do
+  insertValidator' ← insertValidator ds
+
+  let insertValidatorHash = Scripts.validatorHash insertValidator'
+
+  pure $ DsKeyMint
+    { dskmValidatorHash: insertValidatorHash
+    , dskmConfCurrencySymbol: (unwrap ds).dsConf
+    }
+
+{- | `'insertNode' str node` inserts returns the new nodes which should be
+ created (in place of the old @node@) provided that @str@ can actually be
+ inserted here. See Note [How This All Works].
+
+ Note that the first projection of 'Ib' will always be the node which should
+ replace @node@, which also should be the node which is strictly less than
+ @str@. This property is helpful in 'mkInsertValidator' when verifying that the
+ nodes generated are as they should be.
+-}
+{-# INLINEABLE insertNode #-}
+insertNode ∷ ByteArray → Node → Maybe (Ib Node)
+insertNode str (Node node)
+  | node.nKey < str && str < node.nNext =
+      Just $
+        Ib
+          { unIb:
+              ( Node (node { nNext = str }) /\ Node
+                  { nKey: str, nNext: node.nNext }
+              )
+          }
+  | otherwise = Nothing
+
 -- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
 -- (potentially throwing an error in the case that it is not possible).
 getDsKeyPolicy ∷
@@ -260,3 +330,75 @@ getDsKeyPolicy (SidechainParams sp) = do
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
+
+{- | 'findDsOutput' finds the transaction which we must insert to
+ (if it exists) for the distributed set. It returns
+ the 'TransactionInput' of the output to spend, the transaction output information, the datum
+ at that utxo to spend, and the 'TokenName' of the key of the utxo we want to
+ spend; and finally the new nodes to insert (after replacing the given node)
+
+ N.B. this is linear in the size of the distributed set... one should maintain
+ an efficient offchain index of the utxos, and set up the appropriate actions
+ when the list gets updated by someone else.
+-}
+findDsOutput ∷
+  Ds →
+  TokenName →
+  Contract ()
+    ( Maybe
+        { inUtxo ∷
+            { txIn ∷ TransactionInput
+            , txOut ∷ TransactionOutput
+            , dsDatum ∷ DsDatum
+            , dsTokenName ∷ TokenName
+            }
+        , inputBuffer ∷ Ib Node
+        }
+    )
+findDsOutput ds tn = do
+  netId ← getNetworkId
+  scriptAddr ← insertAddress netId ds
+  utxos ← liftedM (msg "Cannot get Distributed Set UTxOs") (utxosAt scriptAddr)
+  go $ Map.toUnfoldable utxos
+
+  where
+
+  msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
+
+  go utxos' =
+    case Array.uncons utxos' of
+      Nothing → pure Nothing
+      Just { head: ref /\ TransactionOutputWithRefScript o, tail } →
+        let
+          c = runMaybeT do
+            dskm ← lift $ dsToDsKeyMint ds
+            policy ← lift $ dsKeyPolicy dskm
+
+            currencySymbol ← hoistMaybe $ Value.scriptCurrencySymbol policy
+
+            dat ← hoistMaybe $ outputDatumDatum (unwrap o.output).datum >>=
+              (fromData <<< unwrap)
+
+            tns ←
+              hoistMaybe $ AssocMap.lookup currencySymbol
+                $ getValue (unwrap o.output).amount
+
+            tn' ← hoistMaybe $ Array.head $ AssocMap.keys tns
+
+            nnodes ← hoistMaybe $ insertNode (getTokenName tn) $ mkNode
+              (getTokenName tn')
+              dat
+
+            pure $
+              Just
+                { inUtxo:
+                    { txIn: ref, txOut: o.output, dsDatum: dat, dsTokenName: tn' }
+                , inputBuffer: nnodes
+                }
+        in
+          c >>= case _ of
+            Nothing → go tail
+            Just r → pure $ r
+
+hoistMaybe ∷ ∀ m b. Applicative m ⇒ Maybe b → MaybeT m b
+hoistMaybe = MaybeT <<< pure
