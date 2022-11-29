@@ -606,7 +606,7 @@ merkleProofCommand =
   command "merkle-proof" $
     flip
       info
-      (progDesc "Cretaes a hex encoded BuiltinData representation of a merkle proof")
+      (progDesc "Creates a hex encoded BuiltinData representation of a merkle proof")
       $ do
         -- duplicated code from 'rootHashCommand'
         mpcMerkleTree <-
