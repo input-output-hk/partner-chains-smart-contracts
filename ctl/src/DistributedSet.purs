@@ -14,12 +14,13 @@ module DistributedSet
   , dsConfValidator
   , dsConfPolicy
   , dsKeyPolicy
+  , getDsKeyPolicy
   ) where
 
 import Contract.Prelude
 
 import Cardano.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
 import Contract.PlutusData (PlutusData(..))
 import Contract.Prim.ByteArray (ByteArray)
@@ -35,7 +36,9 @@ import Data.Maybe as Maybe
 import FromData (class FromData, fromData)
 import Partial.Unsafe as Unsafe
 import RawScripts as RawScripts
+import SidechainParams (SidechainParams(..))
 import ToData (class ToData, toData)
+import Utils.Logging as Logging
 
 -- * Types
 -- $types
@@ -221,3 +224,39 @@ instance FromData DsKeyMint where
 instance ToData DsKeyMint where
   toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
     [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
+
+-- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
+-- (potentially throwing an error in the case that it is not possible).
+getDsKeyPolicy ∷
+  SidechainParams →
+  Contract ()
+    { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
+getDsKeyPolicy (SidechainParams sp) = do
+  let
+    msg = Logging.mkReport
+      { mod: "DistributedSet", fun: "getDsKeyPolicy" }
+
+  dsConfPolicy' ← dsConfPolicy $ DsConfMint
+    { dscmTxOutRef: sp.genesisUtxo }
+  dsConfPolicyCurrencySymbol ←
+    Monad.liftContractM
+      (msg "Failed to get dsConfPolicy CurrencySymbol")
+      $ Value.scriptCurrencySymbol dsConfPolicy'
+  let ds = Ds { dsConf: dsConfPolicyCurrencySymbol }
+
+  insertValidator' ← insertValidator ds
+
+  let
+    insertValidatorHash = Scripts.validatorHash insertValidator'
+    dskm = DsKeyMint
+      { dskmValidatorHash: insertValidatorHash
+      , dskmConfCurrencySymbol: dsConfPolicyCurrencySymbol
+      }
+  policy ← dsKeyPolicy dskm
+
+  currencySymbol ←
+    liftContractM
+      (msg "Failed to get dsKeyPolicy CurrencySymbol")
+      $ Value.scriptCurrencySymbol policy
+
+  pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }

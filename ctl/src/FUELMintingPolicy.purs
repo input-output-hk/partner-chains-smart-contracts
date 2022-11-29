@@ -16,7 +16,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
-import Contract.ScriptLookups (ScriptLookups(..))
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -26,13 +26,12 @@ import Contract.TextEnvelope
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutput
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceAndSignTxE
   , submit
   )
-import Contract.TxConstraints (TxConstraint(..), TxConstraints(..), singleton)
+import Contract.TxConstraints (TxConstraint(..), TxConstraints, singleton)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
@@ -41,17 +40,17 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import MPTRoot (SignedMerkleRootMint(..))
-import MPTRoot.Utils (findMptRootTokenUtxoByRootHash)
-import MerkleTree (MerkleProof(..), rootMp, unRootHash)
+import DistributedSet (getDsKeyPolicy)
+import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
+import MPTRoot.Utils as MPTRoot
+import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
 import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
-import SidechainParams (SidechainParams(..))
+import SidechainParams (SidechainParams)
 import Test.Utils (paymentPubKeyHashToByteArray)
 import Types.Scripts (plutusV2Script)
-import UpdateCommitteeHash (InitCommitteeHashMint(..))
-import UpdateCommitteeHash.Utils as UpdateCommitteeHash
+import UpdateCommitteeHash (getCommitteeHashPolicy)
 import Utils.Logging as Logging
 import Utils.SerialiseData (serialiseData)
 
@@ -163,17 +162,17 @@ fuelMintingPolicy fm = do
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
 -- | (as required by the onchain mintng policy) via the given sidechain params, and calls
 -- | `fuelMintingPolicy` to give us the minting policy
--- TODO: the "creation of `FUELMint` via the given sidechain params" needs more
--- work i.e. we should actually fill up the currency symbols with their proper
--- currency symbols instead of `dummyCS`.
--- For now, we copy what the offchain code is doing.
 getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 getFuelMintingPolicy sidechainParams = do
+  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy
+    sidechainParams
+  { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy sidechainParams
+
   fuelMintingPolicy $
     FUELMint
       { sidechainParams
-      , mptRootTokenCurrencySymbol: dummyCS
-      , dsKeyCurrencySymbol: dummyCS
+      , mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
+      , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
 
 data FuelParams
@@ -189,17 +188,9 @@ data FuelParams
 
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
-  let
-    msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
+  let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
 
-    fm =
-      FUELMint
-        { sidechainParams: sp
-        , mptRootTokenCurrencySymbol: dummyCS
-        , dsKeyCurrencySymbol: dummyCS
-        }
-
-  fuelMP ← fuelMintingPolicy fm
+  fuelMP ← getFuelMintingPolicy sp
 
   { lookups, constraints } ← case fp of
     Burn params →
@@ -310,30 +301,27 @@ claimFUEL
       entryBytes = unsafePartial $ fromJust $ serialiseData $ toData
         merkleTreeEntry
 
-      rootHash = unRootHash $ rootMp entryBytes merkleProof
+      rootHash = rootMp entryBytes merkleProof
 
-    { index: mptUtxo } ←
-      liftM "Couldn't find the parent Merkle tree root hash of the transaction" $
-        findMptRootTokenUtxoByRootHash sidechainParams rootHash
-
-    let merkeRootUtxo = findMptRootTokenUtxo (TokenName) smrm
+    { index: mptUtxo, value: mptUtxoOut } ←
+      findMptRootTokenUtxoByRootHash sidechainParams rootHash
+        >>=
+          liftContractM
+            ( msg
+                "Couldn't find the parent Merkle tree root hash of the transaction"
+            )
 
     let
       value = Value.singleton cs tn amount
       redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
-      merkleTreeEntry = MerkleTreeEntry
-        { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
-        , previousMerkleRoot
-        , amount
-        , index
-        }
       -- silence missing stake key warning
       mustPayToPubKey p =
         singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
 
     pure
       { lookups:
-          Lookups.mintingPolicy fuelMP <> Lookups.unspentOutputs mptUtxo
+          Lookups.mintingPolicy fuelMP <> Lookups.unspentOutputs
+            (Map.singleton mptUtxo mptUtxoOut)
 
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
           <> mustPayToPubKey recipient value
@@ -363,12 +351,6 @@ burnFUEL fuelMP { amount, recipient } = do
     , constraints: Constraints.mustMintValueWithRedeemer redeemer value
     }
 
--- | Empty currency symbol to be used with Passive Bridge transactions,
--- | where these tokens are not used
--- NOTE: Just adaSymbol == mkCurrencySymbol (hexToByteArrayUnsafe "")
-dummyCS ∷ CurrencySymbol
-dummyCS = Value.adaSymbol
-
 -- | Mocking unused data for Passive Bridge minting, where we use genesis minting
 passiveBridgeMintParams ∷
   SidechainParams →
@@ -383,3 +365,58 @@ passiveBridgeMintParams sidechainParams { amount, recipient } =
     , recipient
     , amount
     }
+
+-- TODO: refactor to utility module
+findMptRootTokenUtxoByRootHash ∷
+  SidechainParams →
+  RootHash →
+  Contract ()
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+findMptRootTokenUtxoByRootHash sidechainParams rootHash = do
+  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
+
+  -- Then, we get the mpt root token minting policy..
+  let
+
+    msg = Logging.mkReport
+      { mod: "FUELMintingPolicy", fun: "findMptRootTokenUtxoByRootHash" }
+    smrm = SignedMerkleRootMint
+      { sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      }
+  merkleRootTokenName ←
+    liftContractM
+      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
+      $ Value.mkTokenName
+      $ unRootHash rootHash
+  findMptRootTokenUtxo merkleRootTokenName smrm
+
+-- | 'getMptRootTokenPolicy' grabs the mpt root token policy and currency
+-- | symbol (potentially throwing an error if this is not possible).
+-- TODO: refactor to utility module
+getMptRootTokenPolicy ∷
+  SidechainParams →
+  Contract
+    ()
+    { mptRootTokenMintingPolicy ∷ MintingPolicy
+    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
+    }
+getMptRootTokenPolicy sidechainParams = do
+  let
+    msg = Logging.mkReport
+      { mod: "FUELMintingPolicy", fun: "getMptRootTokenPolicy" }
+
+  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
+
+  -- Then, we get the mpt root token minting policy..
+  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
+    SignedMerkleRootMint
+      { sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      }
+  mptRootTokenMintingPolicyCurrencySymbol ←
+    liftContractM
+      (msg "Failed to get mptRootToken CurrencySymbol")
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+
+  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }

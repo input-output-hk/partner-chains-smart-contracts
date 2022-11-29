@@ -12,7 +12,6 @@ module MPTRoot.Utils
   ( mptRootTokenMintingPolicy
   , mptRootTokenValidator
   , findMptRootTokenUtxo
-  , findMptRootTokenUtxoByRootHash
   , findPreviousMptRootTokenUtxo
   , serialiseMrimHash
   ) where
@@ -33,11 +32,9 @@ import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MPTRoot (SignedMerkleRootMint(..))
 import MPTRoot.Types (MerkleRootInsertionMessage, SignedMerkleRootMint)
-import MerkleTree (RootHash(..))
 import RawScripts as RawScripts
-import SidechainParams (SidechainParams(..))
+import SidechainParams (SidechainParams)
 import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
 
@@ -97,26 +94,6 @@ findMptRootTokenUtxo merkleRoot smrm = do
     -- amount
     Value.valueOf value currencySymbol merkleRoot /= zero
 
-findMptRootTokenUtxoByRootHash ∷
-  SidechainParams →
-  RootHash →
-  Contract ()
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findMptRootTokenUtxoByRootHash sidechainParams rootHash = do
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
-
-  -- Then, we get the mpt root token minting policy..
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      }
-  merkleRootTokenName ←
-    liftContractM
-      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
-      $ Value.mkTokenName merkleRoot
-  findMptRootTokenUtxo merkleRootTokenName smrm
-
 -- | @'findPreviousMptRootTokenUtxo' maybeLastMerkleRoot smrm@ returns 'Nothing' in
 -- the case that 'maybeLastMerkleRoot' is 'Nothing', and 'Just' the result of
 -- @'findMptRootTokenUtxo' lastMerkleRoot smrm@ provided that @Just lastMerkleRoot = maybeLastMerkleRoot@
@@ -150,52 +127,3 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
 serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe ByteArray
 serialiseMrimHash = (Hashing.blake2b256Hash <$> _) <<<
   Utils.SerialiseData.serialiseToData
-
--- | 'getCommitteeHashPolicy' grabs the committee hash policy and currency symbol
--- (potentially throwing an error in the case that it is not possible).
-getCommitteeHashPolicy ∷
-  SidechainParams →
-  Contract ()
-    { committeeHashPolicy ∷ MintingPolicy
-    , committeeHashCurrencySymbol ∷ CurrencySymbol
-    }
-getCommitteeHashPolicy (SidechainParams sp) = do
-  let
-    msg = Logging.mkReport
-      { mod: "FUELMintingPolicy", fun: "getCommitteeHashPolicy" }
-  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
-    InitCommitteeHashMint { icTxOutRef: sp.initUtxo }
-  committeeHashCurrencySymbol ← liftContractM
-    (msg "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeHashPolicy)
-  pure { committeeHashPolicy, committeeHashCurrencySymbol }
-
--- | 'getMptRootTokenPolicy' grabs the mpt root token policy and currency
--- symbol (potentially throwing an error if this is not possible).
-getMptRootTokenPolicy ∷
-  SidechainParams →
-  Contract
-    ()
-    { mptRootTokenMintingPolicy ∷ MintingPolicy
-    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
-    }
-getMptRootTokenPolicy sidechainParams = do
-  let
-    msg = Logging.mkReport
-      { mod: "FUELMintingPolicy", fun: "getMptRootTokenPolicy" }
-
-  -- some awkwardness that we need the committee hash policy first.
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
-
-  -- Then, we get the mpt root token minting policy..
-  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
-    SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      }
-  mptRootTokenMintingPolicyCurrencySymbol ←
-    liftContractM
-      (msg "Failed to get dsKeyPolicy CurrencySymbol")
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
-
-  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
