@@ -22,7 +22,7 @@ import Cardano.Crypto.DSIGN.Class (
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Codec.Serialise qualified
-import Control.Applicative (many, (<**>))
+import Control.Applicative (many, some, (<**>))
 import Control.Monad (MonadPlus (mzero), guard, void)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson (FromJSON (parseJSON))
@@ -538,7 +538,7 @@ merkleTreeCommand =
       (progDesc "Creates a hex encoded BuiltinData representation of a merkle tree")
       $ do
         mtecEntries <-
-          many $
+          some $
             option parseMerkleTreeEntry $
               mconcat
                 [ long "merkle-tree-entry"
