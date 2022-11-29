@@ -53,9 +53,13 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import DistributedSet (insertValidator)
+import DistributedSet (dsConfValidator, insertValidator)
 import DistributedSet as DistributedSet
-import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
+import MPTRoot
+  ( SignedMerkleRootMint(..)
+  , findMptRootTokenUtxo
+  , mptRootTokenValidator
+  )
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
 import Partial.Unsafe (unsafePartial)
@@ -338,9 +342,15 @@ claimFUEL
     } ← liftedM (msg "Couldn't find distributed set nodes") $
       DistributedSet.findDsOutput ds cborMteHashedTn
 
-    insertValidator ← Scripts.validatorHash
-      <$> DistributedSet.insertValidator ds
-    { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
+    { confRef, confO } ← DistributedSet.findDsConfOutput ds
+
+    insertValidator ← DistributedSet.insertValidator ds
+    let insertValidatorHash = Scripts.validatorHash insertValidator
+    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
+      sidechainParams
+
+    dsConfV ← dsConfValidator ds
+    rootTokenValidator ← mptRootTokenValidator sidechainParams
 
     let
       node = DistributedSet.mkNode (getTokenName tnNode) datNode
@@ -358,14 +368,14 @@ claimFUEL
         let val = Value.singleton dsKeyPolicyCurrencySymbol nTn (BigInt.fromInt 1)
         if getTokenName nTn == (unwrap node).nKey then
           pure $ Constraints.mustPayToScript
-            insertValidator
+            insertValidatorHash
             (Datum (toData (DistributedSet.nodeToDatum n)))
             DatumInline
             val
         else
           pure
             $ Constraints.mustPayToScript
-                insertValidator
+                insertValidatorHash
                 (Datum (toData (DistributedSet.nodeToDatum n)))
                 DatumInline
                 val
@@ -377,13 +387,21 @@ claimFUEL
     pure
       { lookups:
           Lookups.mintingPolicy fuelMP
+            <> Lookups.validator rootTokenValidator
             <> Lookups.unspentOutputs (Map.singleton mptUtxo mptUtxoOut)
+
+            <> Lookups.validator dsConfV
+            <> Lookups.unspentOutputs (Map.singleton confRef confO)
+
+            <> Lookups.mintingPolicy dsKeyPolicy
+            <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
           <> mustPayToPubKey recipient value
           <> Constraints.mustBeSignedBy ownPkh
           <> Constraints.mustReferenceOutput mptUtxo
+          <> Constraints.mustReferenceOutput confRef
 
           <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
 
