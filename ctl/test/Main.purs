@@ -21,7 +21,7 @@ import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
-import Test.Utils as Test.Utils
+import Test.Utils (fails)
 
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
 main ∷ Effect Unit
@@ -49,42 +49,44 @@ main = do
     -- Run the plutip tests
     runPlutipContract config distribute \(alice /\ bob) → do
       withKeyWallet alice do
-        CommitteeCandidateValidator.testScenarioSuccess
-        CommitteeCandidateValidator.testScenarioFailure1 # Test.Utils.fails
-        CommitteeCandidateValidator.testScenarioFailure2 alice bob #
-          Test.Utils.fails
+        -- CommitteeCandidateValidator.testScenarioSuccess
+        -- CommitteeCandidateValidator.testScenarioFailure1 # fails
+        -- CommitteeCandidateValidator.testScenarioFailure2 alice bob # fails
 
-        FUELMintingPolicy.testScenario
+        -- FUELMintingPolicy.testScenarioPassiveSuccess
+        -- FUELMintingPolicy.testScenarioPassiveFailure # fails
+        FUELMintingPolicy.testScenarioActiveSuccess
+-- FUELMintingPolicy.testScenarioActiveFailure # fails
 
-        UpdateCommitteeHash.testScenario1
-        UpdateCommitteeHash.testScenario2
-        UpdateCommitteeHash.testScenario3
-        UpdateCommitteeHash.testScenario4
+-- UpdateCommitteeHash.testScenario1
+-- UpdateCommitteeHash.testScenario2
+-- UpdateCommitteeHash.testScenario3
+-- UpdateCommitteeHash.testScenario4
 
-        MPTRoot.testScenario1
-        MPTRoot.testScenario2
+-- MPTRoot.testScenario1
+-- MPTRoot.testScenario2
 
-        MerkleRootChaining.testScenario1
-        MerkleRootChaining.testScenario2
+-- MerkleRootChaining.testScenario1
+-- MerkleRootChaining.testScenario2
 
-        InitSidechain.testScenario1
-        InitSidechain.testScenario2
-        InitSidechain.testScenario3 alice bob
+-- InitSidechain.testScenario1
+-- InitSidechain.testScenario2
+-- InitSidechain.testScenario3 alice bob
 
-    -- Run the plutip tests for the proof of concept tests (note we run these
-    -- separately from the actual sidechain tests.)
-    runPlutipContract config distribute \(alice /\ _bob) → do
-      withKeyWallet alice do
-        PoCInlineDatum.testScenario1
-        PoCInlineDatum.testScenario2
+-- -- Run the plutip tests for the proof of concept tests (note we run these
+-- -- separately from the actual sidechain tests.)
+-- runPlutipContract config distribute \(alice /\ _bob) → do
+-- withKeyWallet alice do
+-- PoCInlineDatum.testScenario1
+-- PoCInlineDatum.testScenario2
 
-        PoCReferenceInput.testScenario1
-        PoCReferenceInput.testScenario2
+-- PoCReferenceInput.testScenario1
+-- PoCReferenceInput.testScenario2
 
-        PoCReferenceScript.testScenario1
-        PoCReferenceScript.testScenario2
+-- PoCReferenceScript.testScenario1
+-- PoCReferenceScript.testScenario2
 
-        PoCSerialiseData.testScenario1
-        PoCSerialiseData.testScenario2
+-- PoCSerialiseData.testScenario1
+-- PoCSerialiseData.testScenario2
 
-        PoCECDSA.testScenario
+-- PoCECDSA.testScenario

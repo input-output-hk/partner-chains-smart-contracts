@@ -23,12 +23,13 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
+import Data.Bifunctor (lmap)
 import MPTRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -169,7 +170,7 @@ saveRoot
   -- Submitting the transaction
   ---------------------------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx") $ balanceAndSignTx ubTx
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
