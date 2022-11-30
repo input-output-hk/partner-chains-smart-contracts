@@ -10,6 +10,7 @@ module Options
 import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
+import Contract.Address (PaymentPubKeyHash(..), PubKeyHash(..))
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -21,21 +22,19 @@ import Contract.Config
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Control.Alternative ((<|>))
-import Control.Bind as Bind
 import Control.MonadZero (guard)
-import Data.Array.NonEmpty as NonEmpty
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)
 import Data.String (Pattern(Pattern), split)
-import Data.String.Regex (Regex)
-import Data.String.Regex as Regex
-import Data.String.Regex.Flags as Regex.Flags
-import Data.String.Regex.Unsafe as Regex.Unsafe
 import Data.UInt (UInt)
 import Data.UInt as UInt
+import Deserialization.FromBytes (fromBytes)
+import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
+import FUELMintingPolicy (CombinedMerkleProof)
+import FromData (fromData)
 import Helpers (logWithLevel)
 import Options.Applicative
   ( Parser
@@ -58,15 +57,19 @@ import Options.Applicative
   , metavar
   , option
   , progDesc
+  , readerError
   , short
   , showDefault
   , str
   , value
   )
 import Options.Types (Config, Endpoint(..), Options)
+import Serialization.Hash (ed25519KeyHashFromBytes)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray, hexToByteArray)
+import Types.CborBytes (CborBytes, cborBytesFromByteArray)
+import Types.RawBytes (RawBytes(..))
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -88,7 +91,11 @@ options maybeConfig = info (helper <*> optSpec)
           )
       , command "mint"
           ( info (withCommonOpts mintSpec)
-              (progDesc "Mint a certain amount of FUEL tokens")
+              (progDesc "Mint a certain amount of FUEL tokens (Passive Bridge)")
+          )
+      , command "claim"
+          ( info (withCommonOpts claimSpec)
+              (progDesc "Claim a FUEL tokens from a proof (Active Bridge)")
           )
       , command "burn"
           ( info (withCommonOpts burnSpec)
@@ -230,6 +237,7 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
       ]
+
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
@@ -238,6 +246,7 @@ options maybeConfig = info (helper <*> optSpec)
       , maybe mempty value
           (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
       ]
+
     { thresholdNumerator, thresholdDenominator } ←
       let
         thresholdFractionOption =
@@ -283,14 +292,35 @@ options maybeConfig = info (helper <*> optSpec)
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
-        , genesisHash
         , genesisMint
+        , genesisHash
         , genesisUtxo
         , thresholdNumerator
         , thresholdDenominator
         }
 
-  mintSpec = MintAct <<< { amount: _ } <$> parseAmount
+  mintSpec =
+    MintAct <<< { amount: _ } <$> parseAmount
+
+  claimSpec = ado
+    (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
+      $ fold
+          [ short 'p'
+          , long "combined-proof"
+          , metavar "CBOR"
+          , help "CBOR-encoded Combined Merkle Proof"
+          ]
+    let
+      { transaction, merkleProof } = unwrap combinedMerkleProof
+      { amount, index, previousMerkleRoot } = unwrap transaction
+    in
+      ClaimAct
+        { amount
+        , recipient
+        , merkleProof
+        , index
+        , previousMerkleRoot
+        }
 
   burnSpec = ado
     amount ← parseAmount
@@ -527,9 +557,36 @@ transactionInput = maybeReader \txIn →
           }
     _ → Nothing
 
+toCombinedMerkleProof ∷ CborBytes → Maybe CombinedMerkleProof
+toCombinedMerkleProof = unwrap >>> fromBytes >=> convertPlutusData >=> fromData
+
+combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
+combinedMerkleProofParser = cbor >>= toCombinedMerkleProof >>>
+  maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
+    pure
+
+-- | This parser will convert the raw bytestring to a valid Cardano payment public key hash
+combinedMerkleProofParserWithPkh ∷
+  ReadM (CombinedMerkleProof /\ PaymentPubKeyHash)
+combinedMerkleProofParserWithPkh = do
+  cmp ← combinedMerkleProofParser
+  -- Getting the parsed recipient from the combined proof and deserialising to an Ed25519 public key hash
+  let recipient = (unwrap (unwrap cmp).transaction).recipient
+  edKeyHash ← maybe (readerError "Couldn't convert recipient to pub key hash")
+    pure
+    (ed25519KeyHashFromBytes (RawBytes recipient))
+
+  pure (cmp /\ PaymentPubKeyHash (PubKeyHash edKeyHash))
+
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
+
+-- | Parse only CBOR encoded hexadecimal
+-- Note: This assumes there will be some validation with the CborBytes, otherwise
+-- we should simplify the code and fall back to ByteArray.
+cbor ∷ ReadM CborBytes
+cbor = cborBytesFromByteArray <$> byteArray
 
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
@@ -556,63 +613,34 @@ thresholdFraction ∷
   ReadM { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
 thresholdFraction = maybeReader parseThresholdFraction
 
--- | `parseThresholdFraction` parses the threshold represented as a fraction. See
--- | `thresholdRegex` for more details.
+-- | `parseThresholdFraction` parses the threshold represented as `Num/Denom`.
 parseThresholdFraction ∷
   String → Maybe { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
 parseThresholdFraction str =
   case split (Pattern "/") str of
-    [ n, d ] → do
-      guard $ n /= "" && d /= ""
+    [ n, d ] | n /= "" && d /= "" → do
       thresholdNumerator ← BigInt.fromString n
       thresholdDenominator ← BigInt.fromString d
       guard $ thresholdNumerator > zero && thresholdDenominator > zero
       pure { thresholdNumerator, thresholdDenominator }
     _ → Nothing
 
--- | 'committeeSignature' is a wrapper around 'parsePubKeyAndSignature'.
+-- | 'committeeSignature' is a the CLI parser for 'parsePubKeyAndSignature'.
 committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
-committeeSignature = maybeReader $ \str → do
-  { pubKey, signature } ← parsePubKeyAndSignature str
-  -- For performance, I suppose we could actually use the unsafe version of
-  -- 'hexToByteArray'
-  pubKey' ← hexToByteArray pubKey
-  signature' ← case signature of
-    Nothing → pure Nothing
-    Just sig → do
-      sig' ← hexToByteArray sig
-      pure $ Just sig'
-  pure $ pubKey' /\ signature'
+committeeSignature = maybeReader parsePubKeyAndSignature
 
--- | 'parsePubKeyAndSignature' parses (in EBNF)
---    >  sidechainAddress
---    >         -> hexStr[:[hexStr]]
--- where @hexStr@ is a sequence of non empty hex digits i.e, it parses a @hexStr@
--- public key, followed by an equal sign, followed by an optional signature
--- @hexStr@.
-parsePubKeyAndSignature ∷
-  String →
-  Maybe
-    { -- hex encoded pub key
-      pubKey ∷ String
-    , -- hex encoded signature (if it exists)
-      signature ∷ Maybe String
-    }
-parsePubKeyAndSignature input = do
-  matches ← Regex.match pubKeyAndSignatureRegex input
-  pubKey ← Bind.join $ NonEmpty.index matches 1
-  signature ← NonEmpty.index matches 2
-  pure $ { pubKey, signature }
-
--- Regexes tend to be a bit unreadable.. As a EBNF grammar, we're matching:
---   > pubKeyAndSig
---   >      -> hexStr [ ':' [hexStr]]
--- where `hexStr` is a a sequence of non empty hex digits of even length (the even
--- length requirement is imposed by 'Contract.Prim.ByteArray.hexToByteArray').
--- i.e., we are parsing a `hexStr` followed optionally by a colon ':', and
--- followed optionally by another non empty `hexStr`.
-pubKeyAndSignatureRegex ∷ Regex
-pubKeyAndSignatureRegex =
-  Regex.Unsafe.unsafeRegex
-    """^((?:[0-9a-f]{2})+)(?::((?:[0-9a-f]{2})+)?)?$"""
-    Regex.Flags.ignoreCase
+-- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
+-- Note: should we make this more strict and disallow `aa:`? in a sense:
+-- `aa` denotes a pubkey without a signature
+-- `aa:bb` denotes a pubkey and a signature
+-- anything else is likely an error, and should be treated as malformed input
+parsePubKeyAndSignature ∷ String → Maybe (ByteArray /\ Maybe ByteArray)
+parsePubKeyAndSignature str =
+  case split (Pattern ":") str of
+    [ l, r ] | l /= "" → ado
+      l' ← hexToByteArray l
+      r' ← hexToByteArray r
+      in l' /\ (r' <$ guard (r /= ""))
+    [ l ] →
+      (_ /\ Nothing) <$> hexToByteArray l
+    _ → Nothing

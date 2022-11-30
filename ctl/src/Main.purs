@@ -4,16 +4,11 @@ import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
 import Contract.Address (ownPaymentPubKeyHash)
-import Contract.Monad
-  ( Contract
-  , launchAff_
-  , liftedM
-  , runContract
-  )
+import Contract.Monad (Contract, launchAff_, liftedM, runContract)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
-  ( FuelParams(Burn)
+  ( FuelParams(Burn, Mint)
   , passiveBridgeMintParams
   , runFuelMP
   )
@@ -42,6 +37,23 @@ main = do
           <#> unwrap
           >>> { transactionId: _ }
           >>> MintActResp
+
+      ClaimAct { amount, recipient, merkleProof, index, previousMerkleRoot } →
+        runFuelMP sp
+          ( Mint
+              { amount
+              , recipient
+              , sidechainParams: opts.scParams
+              , merkleProof
+              , index
+              , previousMerkleRoot
+              }
+          )
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> ClaimActResp
+        where
+        sp = opts.scParams
 
       BurnAct { amount, recipient } →
         runFuelMP opts.scParams

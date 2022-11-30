@@ -1,12 +1,12 @@
 module FUELMintingPolicy
-  ( runFuelMP
+  ( CombinedMerkleProof(..)
   , FUELMint(..)
   , FuelParams(..)
-  , passiveBridgeMintParams
+  , MerkleTreeEntry(..)
   , fuelMintingPolicy
   , getFuelMintingPolicy
-  , MerkleTreeEntry(MerkleTreeEntry)
-  , CombinedMerkleProof(CombinedMerkleProof)
+  , passiveBridgeMintParams
+  , runFuelMP
   ) where
 
 import Contract.Prelude
@@ -14,12 +14,14 @@ import Contract.Prelude
 import Contract.Address (PaymentPubKeyHash, ownPaymentPubKeyHash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
-import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayFromAscii
-  , hexToByteArrayUnsafe
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  , PlutusData(Constr)
+  , fromData
+  , toData
   )
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(..), applyArgs)
 import Contract.TextEnvelope
@@ -35,13 +37,12 @@ import Contract.Transaction
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, mkCurrencySymbol)
+import Contract.Value (CurrencySymbol, adaSymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import MerkleTree (MerkleProof(..))
-import Partial.Unsafe (unsafePartial)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
 import SidechainParams (SidechainParams)
@@ -102,6 +103,15 @@ newtype MerkleTreeEntry = MerkleTreeEntry
     previousMerkleRoot ∷ Maybe ByteArray
   }
 
+instance FromData MerkleTreeEntry where
+  fromData (Constr n [ a, b, c, d ]) | n == zero = ado
+    index ← fromData a
+    amount ← fromData b
+    recipient ← fromData c
+    previousMerkleRoot ← fromData d
+    in MerkleTreeEntry { index, amount, recipient, previousMerkleRoot }
+  fromData _ = Nothing
+
 derive instance Generic MerkleTreeEntry _
 derive instance Newtype MerkleTreeEntry _
 instance ToData MerkleTreeEntry where
@@ -116,12 +126,18 @@ instance ToData MerkleTreeEntry where
       , toData previousMerkleRoot
       ]
 
+instance Show MerkleTreeEntry where
+  show = genericShow
+
 -- | `CombinedMerkleProof` contains both the `MerkleTreeEntry` and its
 -- | corresponding `MerkleProof`. See #249 for details.
 newtype CombinedMerkleProof = CombinedMerkleProof
   { transaction ∷ MerkleTreeEntry
   , merkleProof ∷ MerkleProof
   }
+
+instance Show CombinedMerkleProof where
+  show = genericShow
 
 derive instance Generic CombinedMerkleProof _
 derive instance Newtype CombinedMerkleProof _
@@ -134,6 +150,13 @@ instance ToData CombinedMerkleProof where
       [ toData transaction
       , toData merkleProof
       ]
+
+instance FromData CombinedMerkleProof where
+  fromData (Constr n [ a, b ]) | n == zero = ado
+    transaction ← fromData a
+    merkleProof ← fromData b
+    in CombinedMerkleProof { transaction, merkleProof }
+  fromData _ = Nothing
 
 data FUELRedeemer
   = MainToSide ByteArray -- recipient sidechain (addr , signature)
@@ -179,7 +202,6 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe ByteArray
-      , entryHash ∷ ByteArray
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -260,8 +282,7 @@ runFuelMP sp fp = do
   where these tokens are not used
 -}
 dummyCS ∷ CurrencySymbol
-dummyCS = unsafePartial $ fromJust $ mkCurrencySymbol $
-  hexToByteArrayUnsafe ""
+dummyCS = adaSymbol
 
 {- | Mocking unused data for Passive Bridge minting, where we use genesis minting -}
 passiveBridgeMintParams ∷
@@ -272,9 +293,8 @@ passiveBridgeMintParams sidechainParams { amount, recipient } =
   Mint
     { amount
     , recipient
-    , merkleProof: MerkleProof []
     , sidechainParams
+    , merkleProof: MerkleProof []
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing
-    , entryHash: hexToByteArrayUnsafe ""
     }
