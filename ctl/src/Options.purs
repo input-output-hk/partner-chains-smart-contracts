@@ -10,7 +10,7 @@ module Options
 import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
-import Contract.Address (PaymentPubKeyHash(..), PubKeyHash(..))
+import Contract.Address (Address)
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -64,12 +64,12 @@ import Options.Applicative
   , value
   )
 import Options.Types (Config, Endpoint(..), Options)
-import Serialization.Hash (ed25519KeyHashFromBytes)
+import Plutus.Conversion.Address (toPlutusAddress)
+import Serialization.Address (addressFromBytes)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
 import Types.ByteArray (ByteArray, hexToByteArray)
-import Types.CborBytes (CborBytes, cborBytesFromByteArray)
-import Types.RawBytes (RawBytes(..))
+import Types.CborBytes (CborBytes(..), cborBytesFromByteArray)
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -567,16 +567,17 @@ combinedMerkleProofParser = cbor >>= toCombinedMerkleProof >>>
 
 -- | This parser will convert the raw bytestring to a valid Cardano payment public key hash
 combinedMerkleProofParserWithPkh ∷
-  ReadM (CombinedMerkleProof /\ PaymentPubKeyHash)
+  ReadM (CombinedMerkleProof /\ Address)
 combinedMerkleProofParserWithPkh = do
   cmp ← combinedMerkleProofParser
-  -- Getting the parsed recipient from the combined proof and deserialising to an Ed25519 public key hash
+  -- Getting the parsed recipient from the combined proof and deserialising to an address
   let recipient = (unwrap (unwrap cmp).transaction).recipient
-  edKeyHash ← maybe (readerError "Couldn't convert recipient to pub key hash")
+  addr ← maybe
+    (readerError "Couldn't convert recipient bech32 to Plutus address")
     pure
-    (ed25519KeyHashFromBytes (RawBytes recipient))
+    (toPlutusAddress =<< addressFromBytes (CborBytes recipient))
 
-  pure (cmp /\ PaymentPubKeyHash (PubKeyHash edKeyHash))
+  pure (cmp /\ addr)
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
