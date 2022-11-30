@@ -33,7 +33,7 @@ import Data.UInt as UInt
 import Deserialization.FromBytes (fromBytes)
 import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
-import FUELMintingPolicy (CombinedMerkleProof(..), MerkleTreeEntry(..))
+import FUELMintingPolicy (CombinedMerkleProof)
 import FromData (fromData)
 import Helpers (logWithLevel)
 import Options.Applicative
@@ -311,10 +311,8 @@ options maybeConfig = info (helper <*> optSpec)
           , help "CBOR-encoded Combined Merkle Proof"
           ]
     let
-      CombinedMerkleProof
-        { transaction: MerkleTreeEntry { amount, index, previousMerkleRoot }
-        , merkleProof
-        } = combinedMerkleProof
+      { transaction, merkleProof } = unwrap combinedMerkleProof
+      { amount, index, previousMerkleRoot } = unwrap transaction
     in
       ClaimAct
         { amount
