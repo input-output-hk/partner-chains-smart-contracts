@@ -297,7 +297,7 @@ options maybeConfig = info (helper <*> optSpec)
     (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
       $ fold
           [ short 'p'
-          , long "merkle-proof"
+          , long "combined-proof"
           , metavar "CBOR"
           , help "CBOR-encoded Combined Merkle Proof"
           ]
