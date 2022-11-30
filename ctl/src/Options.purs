@@ -33,7 +33,7 @@ import Data.UInt as UInt
 import Deserialization.FromBytes (fromBytes)
 import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
-import FUELMintingPolicy (CombinedMerkleProof(..), MerkleTreeEntry(..))
+import FUELMintingPolicy (CombinedMerkleProof)
 import FromData (fromData)
 import Helpers (logWithLevel)
 import Options.Applicative
@@ -229,6 +229,15 @@ options maybeConfig = info (helper <*> optSpec)
           (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
       ]
 
+    genesisMint ← optional $ option transactionInput $ fold
+      [ short 'm'
+      , long "genesis-mint-utxo"
+      , metavar "TX_ID#TX_IDX"
+      , help "Input UTxO to be spend with the genesis mint"
+      , maybe mempty value
+          (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
+      ]
+
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
@@ -283,7 +292,7 @@ options maybeConfig = info (helper <*> optSpec)
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
-        , genesisMint: Nothing
+        , genesisMint
         , genesisHash
         , genesisUtxo
         , thresholdNumerator
@@ -297,15 +306,13 @@ options maybeConfig = info (helper <*> optSpec)
     (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
       $ fold
           [ short 'p'
-          , long "merkle-proof"
+          , long "combined-proof"
           , metavar "CBOR"
           , help "CBOR-encoded Combined Merkle Proof"
           ]
     let
-      CombinedMerkleProof
-        { transaction: MerkleTreeEntry { amount, index, previousMerkleRoot }
-        , merkleProof
-        } = combinedMerkleProof
+      { transaction, merkleProof } = unwrap combinedMerkleProof
+      { amount, index, previousMerkleRoot } = unwrap transaction
     in
       ClaimAct
         { amount
@@ -563,11 +570,12 @@ combinedMerkleProofParserWithPkh ∷
   ReadM (CombinedMerkleProof /\ PaymentPubKeyHash)
 combinedMerkleProofParserWithPkh = do
   cmp ← combinedMerkleProofParser
+  -- Getting the parsed recipient from the combined proof and deserialising to an Ed25519 public key hash
+  let recipient = (unwrap (unwrap cmp).transaction).recipient
   edKeyHash ← maybe (readerError "Couldn't convert recipient to pub key hash")
     pure
-    ( ed25519KeyHashFromBytes
-        (RawBytes (unwrap (unwrap cmp).transaction).recipient)
-    )
+    (ed25519KeyHashFromBytes (RawBytes recipient))
+
   pure (cmp /\ PaymentPubKeyHash (PubKeyHash edKeyHash))
 
 -- | Parse ByteArray from hexadecimal representation
