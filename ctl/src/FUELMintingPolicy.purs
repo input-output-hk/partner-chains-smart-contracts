@@ -53,7 +53,7 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import DistributedSet (dsConfValidator, insertValidator)
+import DistributedSet (dsConfValidator)
 import DistributedSet as DistributedSet
 import MPTRoot
   ( SignedMerkleRootMint(..)
@@ -64,7 +64,7 @@ import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
 import RawScripts (rawFUELMintingPolicy)
 import Serialization.Hash (ed25519KeyHashToBytes)
-import SidechainParams (SidechainParams(..))
+import SidechainParams (SidechainParams)
 import Test.Utils (paymentPubKeyHashToByteArray)
 import Types.Scripts (plutusV2Script)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
