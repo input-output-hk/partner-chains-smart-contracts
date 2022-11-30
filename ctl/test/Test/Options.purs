@@ -7,6 +7,7 @@ import Contract.Prelude
 import Effect.Class.Console as Console
 import Options as Options
 import Test.Utils (assertBy)
+import Types.ByteArray (hexToByteArrayUnsafe)
 
 -- | 'tests' is the collection of tests for this module
 test ∷ Effect Unit
@@ -18,38 +19,26 @@ test = do
 -- for parsing a pub key and a signature.
 testParsePubKeyAndSignature ∷ Effect Unit
 testParsePubKeyAndSignature = do
+  let
+    go s = Options.parsePubKeyAndSignature s
+      <#> \(pubKey /\ signature) → { pubKey, signature }
+
   assertBy eq
-    ( Just
-        { pubKey: "aa"
-        , signature: Nothing
-        }
-    )
-    ( Options.parsePubKeyAndSignature
-        "aa"
-    )
+    (Just { pubKey: hexToByteArrayUnsafe "aa", signature: Nothing })
+    (go "aa")
+
+  assertBy eq
+    (Just { pubKey: hexToByteArrayUnsafe "bb", signature: Nothing })
+    (go "bb:")
 
   assertBy eq
     ( Just
-        { pubKey: "bb"
-        , signature: Nothing
+        { pubKey: hexToByteArrayUnsafe "bb"
+        , signature: Just (hexToByteArrayUnsafe "cc")
         }
     )
-    ( Options.parsePubKeyAndSignature
-        "bb:"
-    )
-
-  assertBy eq
-    ( Just
-        { pubKey: "bb"
-        , signature: Just "cc"
-        }
-    )
-    ( Options.parsePubKeyAndSignature
-        "bb:cc"
-    )
+    (go "bb:cc")
 
   assertBy eq
     Nothing
-    ( Options.parsePubKeyAndSignature
-        "bb:bb:bb"
-    )
+    (go "bb:bb:bb")

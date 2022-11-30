@@ -1,17 +1,18 @@
 module Options.Types
-  ( RuntimeConfig(..)
-  , Options(..)
-  , Config(..)
+  ( Config(..)
   , Endpoint(..)
+  , Options(..)
+  , RuntimeConfig(..)
   ) where
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId)
+import Contract.Address (NetworkId, PaymentPubKeyHash)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Data.List (List)
+import MerkleTree (MerkleProof)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
@@ -51,6 +52,13 @@ type Config =
 -- | CLI arguments including required data to run each individual endpoint
 data Endpoint
   = MintAct { amount ∷ BigInt }
+  | ClaimAct
+      { amount ∷ BigInt
+      , recipient ∷ PaymentPubKeyHash
+      , merkleProof ∷ MerkleProof
+      , index ∷ BigInt
+      , previousMerkleRoot ∷ Maybe ByteArray
+      }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
