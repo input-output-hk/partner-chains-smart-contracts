@@ -17,6 +17,7 @@ import SidechainParams (SidechainParams, scParamsCodec)
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
   = MintActResp { transactionId ∷ ByteArray }
+  | ClaimActResp { transactionId ∷ ByteArray }
   | BurnActResp { transactionId ∷ ByteArray }
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
@@ -42,6 +43,11 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
     MintActResp { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "MintAct"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+    ClaimActResp { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "ClaimAct"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
     BurnActResp { transactionId } →

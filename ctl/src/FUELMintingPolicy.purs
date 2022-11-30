@@ -1,12 +1,12 @@
 module FUELMintingPolicy
-  ( runFuelMP
+  ( CombinedMerkleProof(..)
   , FUELMint(..)
   , FuelParams(..)
-  , passiveBridgeMintParams
+  , MerkleTreeEntry(..)
   , fuelMintingPolicy
   , getFuelMintingPolicy
-  , MerkleTreeEntry(MerkleTreeEntry)
-  , CombinedMerkleProof(CombinedMerkleProof)
+  , passiveBridgeMintParams
+  , runFuelMP
   ) where
 
 import Contract.Prelude
@@ -16,9 +16,11 @@ import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData
-  ( class ToData
+  ( class FromData
+  , class ToData
   , Datum(..)
   , PlutusData(Constr)
+  , fromData
   , toData
   , unitRedeemer
   )
@@ -123,6 +125,15 @@ newtype MerkleTreeEntry = MerkleTreeEntry
   , previousMerkleRoot ∷ Maybe ByteArray
   }
 
+instance FromData MerkleTreeEntry where
+  fromData (Constr n [ a, b, c, d ]) | n == zero = ado
+    index ← fromData a
+    amount ← fromData b
+    recipient ← fromData c
+    previousMerkleRoot ← fromData d
+    in MerkleTreeEntry { index, amount, recipient, previousMerkleRoot }
+  fromData _ = Nothing
+
 derive instance Generic MerkleTreeEntry _
 derive instance Newtype MerkleTreeEntry _
 instance ToData MerkleTreeEntry where
@@ -137,12 +148,18 @@ instance ToData MerkleTreeEntry where
       , toData previousMerkleRoot
       ]
 
+instance Show MerkleTreeEntry where
+  show = genericShow
+
 -- | `CombinedMerkleProof` contains both the `MerkleTreeEntry` and its
 -- | corresponding `MerkleProof`. See #249 for details.
 newtype CombinedMerkleProof = CombinedMerkleProof
   { transaction ∷ MerkleTreeEntry
   , merkleProof ∷ MerkleProof
   }
+
+instance Show CombinedMerkleProof where
+  show = genericShow
 
 derive instance Generic CombinedMerkleProof _
 derive instance Newtype CombinedMerkleProof _
@@ -155,6 +172,13 @@ instance ToData CombinedMerkleProof where
       [ toData transaction
       , toData merkleProof
       ]
+
+instance FromData CombinedMerkleProof where
+  fromData (Constr n [ a, b ]) | n == zero = ado
+    transaction ← fromData a
+    merkleProof ← fromData b
+    in CombinedMerkleProof { transaction, merkleProof }
+  fromData _ = Nothing
 
 data FUELRedeemer
   = MainToSide ByteArray -- recipient sidechain (addr , signature)
@@ -441,12 +465,12 @@ passiveBridgeMintParams ∷
   FuelParams
 passiveBridgeMintParams sidechainParams { amount, recipient } =
   Mint
-    { merkleProof: MerkleProof []
+    { amount
+    , recipient
+    , sidechainParams
+    , merkleProof: MerkleProof []
     , index: BigInt.fromInt 0
     , previousMerkleRoot: Nothing
-    , sidechainParams
-    , recipient
-    , amount
     }
 
 -- TODO: refactor to utility module
