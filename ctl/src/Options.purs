@@ -563,11 +563,12 @@ combinedMerkleProofParserWithPkh ∷
   ReadM (CombinedMerkleProof /\ PaymentPubKeyHash)
 combinedMerkleProofParserWithPkh = do
   cmp ← combinedMerkleProofParser
+  -- Getting the parsed recipient from the combined proof and deserialising to an Ed25519 public key hash
+  let recipient = (unwrap (unwrap cmp).transaction).recipient
   edKeyHash ← maybe (readerError "Couldn't convert recipient to pub key hash")
     pure
-    ( ed25519KeyHashFromBytes
-        (RawBytes (unwrap (unwrap cmp).transaction).recipient)
-    )
+    (ed25519KeyHashFromBytes (RawBytes recipient))
+
   pure (cmp /\ PaymentPubKeyHash (PubKeyHash edKeyHash))
 
 -- | Parse ByteArray from hexadecimal representation
