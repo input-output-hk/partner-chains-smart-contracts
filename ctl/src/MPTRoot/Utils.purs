@@ -24,17 +24,11 @@ import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
-  )
+import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value

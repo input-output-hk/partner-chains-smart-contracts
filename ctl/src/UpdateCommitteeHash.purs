@@ -2,47 +2,38 @@ module UpdateCommitteeHash
   ( module UpdateCommitteeHash.Types
   , module UpdateCommitteeHash.Utils
   , updateCommitteeHash
+  , getCommitteeHashPolicy
   ) where
 
 import Contract.Prelude
 
-import BalanceTx.Extra (reattachDatumsInline)
 import Contract.Log (logInfo')
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , liftedE
-  , liftedM
-  , throwContractError
-  )
-import Contract.PlutusData
-  ( fromData
-  , toData
-  )
+import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
+import Contract.PlutusData (fromData, toData)
 import Contract.ScriptLookups as Lookups
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as TxConstraints
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
 import SidechainParams as SidechainParams
-import Types
-  ( assetClass
-  , assetClassValue
-  )
+import Types (assetClass, assetClassValue)
 import Types.Datum (Datum(..))
 import Types.OutputDatum (outputDatumDatum)
 import Types.Redeemer (Redeemer(..))
@@ -65,6 +56,7 @@ import UpdateCommitteeHash.Utils
   )
 import Utils.Crypto as Utils.Crypto
 import Utils.Logging (class Display)
+import Utils.Logging as Logging
 import Utils.Logging as Utils.Logging
 
 -- | 'updateCommitteeHash' is the endpoint to submit the transaction to update the committee hash.
@@ -204,8 +196,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
           previousMerkleRootORef
 
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx")
-    (balanceAndSignTx (reattachDatumsInline ubTx))
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
@@ -216,3 +207,22 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
 -- | 'report' is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
 report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
+
+-- | 'getCommitteeHashPolicy' grabs the committee hash policy and currency symbol
+-- (potentially throwing an error in the case that it is not possible).
+getCommitteeHashPolicy ∷
+  SidechainParams →
+  Contract ()
+    { committeeHashPolicy ∷ MintingPolicy
+    , committeeHashCurrencySymbol ∷ CurrencySymbol
+    }
+getCommitteeHashPolicy (SidechainParams sp) = do
+  let
+    msg = Logging.mkReport
+      { mod: "FUELMintingPolicy", fun: "getCommitteeHashPolicy" }
+  committeeHashPolicy ← committeeHashPolicy $
+    InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
+  committeeHashCurrencySymbol ← liftContractM
+    (msg "Failed to get updateCommitteeHash CurrencySymbol")
+    (Value.scriptCurrencySymbol committeeHashPolicy)
+  pure { committeeHashPolicy, committeeHashCurrencySymbol }

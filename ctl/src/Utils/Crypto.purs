@@ -19,6 +19,7 @@ import Contract.Prim.ByteArray (ByteArray)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Function (on)
 import Data.Ord as Ord
 import Types (PubKey)
 
@@ -65,10 +66,7 @@ multiSign xkeys msg = map (sign msg) xkeys
 normalizeCommitteePubKeysAndSignatures ∷
   Array (PubKey /\ Maybe Signature) → Tuple (Array PubKey) (Array Signature)
 normalizeCommitteePubKeysAndSignatures =
-  (Array.catMaybes <$> _) -- apply @Array.catMaybes@ over the second element of the tuple.
-
-    <<< Array.unzip
-    <<< Array.sortBy (\l r → Ord.compare (fst l) (fst r))
+  map Array.catMaybes <<< Array.unzip <<< Array.sortBy (Ord.compare `on` fst)
 
 -- | > @'verifyMultiSignature' thresholdNumerator thresholdDenominator pubKeys msg signatures@
 -- returns true iff
