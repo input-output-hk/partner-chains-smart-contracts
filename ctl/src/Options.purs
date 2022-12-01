@@ -565,7 +565,7 @@ combinedMerkleProofParser = cbor >>= toCombinedMerkleProof >>>
   maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
     pure
 
--- | This parser will convert the raw bytestring to a valid Cardano payment public key hash
+-- | This parser will convert the raw bytestring to a valid Cardano address
 combinedMerkleProofParserWithPkh ∷
   ReadM (CombinedMerkleProof /\ Address)
 combinedMerkleProofParserWithPkh = do
