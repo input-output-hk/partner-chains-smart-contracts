@@ -13,6 +13,11 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
 - `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
+- `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
+- `DsConfValidator`: validator holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
+- `DsConfPolicy`: oneshot token identifying the UTxO holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
+- `DsInsertValidator`: validator handling distributed set entry ([Distributed Set](./DistributedSet.md)
+- `DsKeyPolicy`: tokens identifying the distributed set entries ([Distributed Set](./DistributedSet.md))
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
@@ -187,7 +192,7 @@ Minting policy verifies the following:
 
 - `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
 - recipient, amount, index and previousMerkleRoot combined with merkleProof match against merkleRootHash
-- `claimTransactionHash` of the transaction is NOT included in the distributed set[^1]
+- `claimTransactionHash` of the transaction is NOT included in the distributed set (more details about the distributed set can be found [here](./DistributedSet.md))
 - a new entry with the `claimTransactionHash` of the transaction is created in the distributed set
 - the transaction is signed by the recipient
 - the amount matches the actual tx body contents
@@ -223,6 +228,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , bprSidechainPubKey :: ByteString -- public key in the sidechain's desired format
   , bprSpoSignature :: Signature -- Signature of the SPO private key
   , bprSidechainSignature :: ByteString -- Signature of the sidechain private key
+  , bprOwnPkh :: PubKeyHash -- payment public key hash of the wallet owner (who is allowed to deregister)
   }
 ```
 
@@ -265,10 +271,10 @@ Validator script verifies the following:
 - verifies that hash of committeePublicKeys matches the hash saved on chain
 - verifies that all the provided signatures are valid
 - verifies that size(signatures) > 2/3 \* size(committeePubKeys)
-- verifies the NFT of the UTxO holding the old verification key at the script address
+- verifies the oneshot token `CommitteeHashPolicy` of the UTxO holding the old verification key at the script address
 - consumes the above mentioned UTxO
 - verifies that (sidechain epoch of the new committee hash > sidechain epoch of the consumed committee hash utxo)
-- outputs a new UTxO with the updated committee hash containing the NFT to the same script address
+- outputs a new UTxO with the updated committee hash containing the oneshot token `CommitteeHashPolicy` to the same script address
 - reference to the last Merkle root is referenced in the transaction
 
 **Datum:**
@@ -346,7 +352,3 @@ In the future, we want to support multiple Merkle roots per sidechain epoch, so 
 ![Merkle root chaining - multipe Merkle roots per epoch](MRChain-multi.svg)
 
 <figcaption align = "center"><i>Merkle root chaining - multiple Merkle roots per epoch (SC ep = sidechain epoch)</i></figcaption><br />
-
-## Appendix
-
-[^1]: Distributed set implementation details are still WIP, but we plan to use something like this: https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md

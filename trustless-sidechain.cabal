@@ -179,11 +179,14 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
+    Test.TrustlessSidechain.UpdateCommitteeHashMessage
 
   ghc-options:    -Wall -threaded -rtsopts
   build-depends:
+    , base16-bytestring
     , bytestring
     , plutus-core
+    , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
     , QuickCheck
