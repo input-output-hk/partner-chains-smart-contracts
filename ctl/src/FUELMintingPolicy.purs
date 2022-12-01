@@ -53,7 +53,7 @@ import Contract.Transaction
 import Contract.TxConstraints
   ( DatumPresence(..)
   , TxConstraint(..)
-  , TxConstraints(..)
+  , TxConstraints
   , singleton
   )
 import Contract.TxConstraints as Constraints

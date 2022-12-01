@@ -7,7 +7,7 @@ module Options.Types
 
 import Contract.Prelude
 
-import Contract.Address (Address, NetworkId, PaymentPubKeyHash)
+import Contract.Address (Address, NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
