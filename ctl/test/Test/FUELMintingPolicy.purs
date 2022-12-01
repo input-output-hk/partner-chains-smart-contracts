@@ -2,7 +2,12 @@ module Test.FUELMintingPolicy where
 
 import Contract.Prelude
 
-import Contract.Address (getWalletAddress, ownPaymentPubKeyHash)
+import Contract.Address
+  ( getNetworkId
+  , getWalletAddress
+  , ownPaymentPubKeyHash
+  , pubKeyHashAddress
+  )
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
@@ -23,9 +28,11 @@ import InitSidechain (initSidechain)
 import MerkleTree (MerkleProof(..), fromList, lookupMp)
 import MerkleTree as MerkleTree
 import Partial.Unsafe (unsafePartial)
+import Plutus.Conversion.Address (fromPlutusAddress)
+import Serialization.Address (addressBytes)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
-import Test.Utils (getOwnTransactionInput, paymentPubKeyHashToByteArray, toTxIn)
+import Test.Utils (getOwnTransactionInput, toTxIn)
 import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
 import Utils.SerialiseData (serialiseData)
 
@@ -45,15 +52,18 @@ mkCommittee n = replicateM n (Tuple <*> toPubKeyUnsafe <$> generatePrivKey)
 -- | Testing Passive bridge minting (genesis mint) and burning multiple times
 testScenarioPassiveSuccess ∷ Contract () Unit
 testScenarioPassiveSuccess = do
-  pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
   ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   genesisMint ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
-  let scParams = mkScParams (Just genesisMint)
+  let
+    scParams = mkScParams (Just genesisMint)
+    recipient = pubKeyHashAddress pkh Nothing
+
   void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient: pk }
+    { amount: BigInt.fromInt 5, recipient }
   void $ runFuelMP scParams $ Burn
     { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" }
   void $ runFuelMP scParams $ Burn
@@ -62,21 +72,24 @@ testScenarioPassiveSuccess = do
 -- | Testing multiple mints on passive bridge (should fail)
 testScenarioPassiveFailure ∷ Contract () Unit
 testScenarioPassiveFailure = do
-  pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
   ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
   genesisMint ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
-  let scParams = mkScParams (Just genesisMint)
+  let
+    scParams = mkScParams (Just genesisMint)
+    recipient = pubKeyHashAddress pkh Nothing
   void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient: pk }
+    { amount: BigInt.fromInt 5, recipient }
   void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient: pk }
+    { amount: BigInt.fromInt 5, recipient }
 
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  netId ← getNetworkId
   genesisUtxo ← getOwnTransactionInput
   let
     keyCount = 25
@@ -97,7 +110,7 @@ testScenarioActiveSuccess = do
   { sidechainParams } ← initSidechain initScParams
   let
     amount = BigInt.fromInt 5
-    recipient = pkh
+    recipient = pubKeyHashAddress pkh Nothing
     index = BigInt.fromInt 0
     previousMerkleRoot = Nothing
     ownEntry =
@@ -105,7 +118,7 @@ testScenarioActiveSuccess = do
         { index
         , amount
         , previousMerkleRoot
-        , recipient: paymentPubKeyHashToByteArray recipient
+        , recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
         }
 
     ownEntryBytes = unsafePartial
@@ -138,8 +151,9 @@ testScenarioActiveSuccess = do
 
 testScenarioActiveFailure ∷ Contract () Unit
 testScenarioActiveFailure = do
-  pk ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   let
+    recipient = pubKeyHashAddress pkh Nothing
     scParams = mkScParams Nothing
   -- This is not how you create a working merkleproof that passes onchain validator.
   mp' ← liftedM "impossible" $ pure (serialiseData (toData (MerkleProof [])))
@@ -148,7 +162,7 @@ testScenarioActiveFailure = do
 
   void $ runFuelMP scParams $ Mint
     { merkleProof: mp
-    , recipient: pk
+    , recipient
     , sidechainParams: scParams
     , amount: BigInt.fromInt 1
     , index: BigInt.fromInt 0
