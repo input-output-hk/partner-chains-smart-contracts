@@ -34,7 +34,7 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTx
+  , balanceAndSignTxE
   , submit
   )
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
@@ -43,6 +43,7 @@ import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.Map as Map
 import DistributedSet
   ( Ds(Ds)
@@ -420,7 +421,7 @@ initSidechainTokens isp = do
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx") (balanceAndSignTx ubTx)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
@@ -450,7 +451,7 @@ initSidechainCommittee isp = do
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx") (balanceAndSignTx ubTx)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
@@ -520,7 +521,7 @@ initSidechain isp = do
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
   ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedM (msg "Failed to balance/sign tx") (balanceAndSignTx ubTx)
+  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
   txId ← submit bsTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId

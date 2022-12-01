@@ -72,12 +72,12 @@ import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   Map,
   MintingPolicy,
-  OutputDatum (NoOutputDatum, OutputDatumHash),
+  OutputDatum (..),
   Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs),
+  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
   Validator,
@@ -190,30 +190,25 @@ data DsKeyMint = DsKeyMint
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
- TODO: Using inline datum is probably a good idea for this.
 -}
 {-# INLINEABLE unsafeGetDatum #-}
 unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxInfo -> TxOut -> a
-unsafeGetDatum info o = case txOutDatum o of
-  OutputDatumHash dhash
-    | Just bn <- Contexts.findDatum dhash info ->
-      PlutusTx.unsafeFromBuiltinData (getDatum bn)
-  --OutputDatum d   -> PlutusTx.unsafeFromBuiltinData d TODO
-  NoOutputDatum -> traceError "error 'unsafeGetDatum' failed"
+unsafeGetDatum _info o = case txOutDatum o of
+  -- Legacy code which used to accept a regular old datum.... we only allow
+  -- inline datum now.
+  -- > OutputDatumHash dhash
+  -- >   | Just bn <- Contexts.findDatum dhash info ->
+  -- >     PlutusTx.unsafeFromBuiltinData (getDatum bn)
+  OutputDatum d -> PlutusTx.unsafeFromBuiltinData (getDatum d)
   _ -> traceError "error 'unsafeGetDatum' failed"
-
---  | Just bn <- txOutDatum o , Just bn <- Contexts.findDatum dhash info =
---    = PlutusTx.unsafeFromBuiltinData (getDatum bn)
---  | otherwise = traceError "error 'unsafeGetDatum' failed"
 
 {- | 'getConf' gets the config associated with a distributed set and throws an
  error if it does not exist.
 -}
 {-# INLINEABLE getConf #-}
 getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
-getConf currencySymbol info = go $ txInfoInputs info
+getConf currencySymbol info = go $ txInfoReferenceInputs info
   where
-    -- TODO: this should be changed to a reference input
     go :: [TxInInfo] -> DsConfDatum
     go (t : ts) =
       case txInInfoResolved t of
@@ -520,7 +515,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     ownCS :: CurrencySymbol
     ownCS = Contexts.ownCurrencySymbol ctx
 
-    -- determines the branches that we are consuming
+    -- determines the nodes we are consuming
     ins :: [TokenName]
     ins =
       let go [] = []
