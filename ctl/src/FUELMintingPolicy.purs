@@ -11,7 +11,16 @@ module FUELMintingPolicy
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash, ownPaymentPubKeyHash)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash(..)
+  , StakePubKeyHash(..)
+  , getNetworkId
+  , ownPaymentPubKeyHash
+  , toPubKeyHash
+  , toStakingCredential
+  )
+import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
@@ -49,7 +58,7 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, getTokenName, mkTokenName)
+import Contract.Value (CurrencySymbol, Value, getTokenName, mkTokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
@@ -64,10 +73,10 @@ import MPTRoot
   )
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
+import Plutus.Conversion.Address (fromPlutusAddress)
 import RawScripts (rawFUELMintingPolicy)
-import Serialization.Hash (ed25519KeyHashToBytes)
+import Serialization.Address (addressBytes)
 import SidechainParams (SidechainParams)
-import Test.Utils (paymentPubKeyHashToByteArray)
 import Types.Scripts (plutusV2Script)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
 import Utils.Logging as Logging
@@ -219,7 +228,7 @@ getFuelMintingPolicy sidechainParams = do
 data FuelParams
   = Mint
       { amount ∷ BigInt
-      , recipient ∷ PaymentPubKeyHash
+      , recipient ∷ Address
       , merkleProof ∷ MerkleProof
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
@@ -257,7 +266,7 @@ runFuelMP sp fp = do
 mintFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt
-  , recipient ∷ PaymentPubKeyHash
+  , recipient ∷ Address
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
@@ -271,11 +280,19 @@ mintFUEL
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+    netId ← getNetworkId
 
     cs ← liftContractM (msg "Cannot get currency symbol") $
       Value.scriptCurrencySymbol fuelMP
     tn ← liftContractM (msg "Cannot get token name")
       (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+
+    recipientPkh ←
+      liftContractM (msg "Couldn't derive payment public key hash from address")
+        $ PaymentPubKeyHash
+        <$> toPubKeyHash recipient
+
+    let recipientSt = toStakePubKeyHash recipient
 
     -- Find the passive bridge genesis mint utxo
     let inputTxIn = (unwrap sidechainParams).genesisMint
@@ -288,20 +305,17 @@ mintFUEL
       value = Value.singleton cs tn amount
       redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
       merkleTreeEntry = MerkleTreeEntry
-        { recipient: unwrap $ ed25519KeyHashToBytes $ unwrap $ unwrap recipient
+        { recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
         , previousMerkleRoot
         , amount
         , index
         }
-      -- silence missing stake key warning
-      mustPayToPubKey p =
-        singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
 
     pure
       { lookups: Lookups.mintingPolicy fuelMP
           <> maybe mempty Lookups.unspentOutputs inputUtxo
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
-          <> mustPayToPubKey recipient value
+          <> mustPayToPubKeyAddress recipientPkh recipientSt value
           <> Constraints.mustBeSignedBy ownPkh
           <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
       }
@@ -310,7 +324,7 @@ mintFUEL
 claimFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt
-  , recipient ∷ PaymentPubKeyHash
+  , recipient ∷ Address
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
@@ -324,6 +338,7 @@ claimFUEL
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+    netId ← getNetworkId
 
     cs ← liftContractM (msg "Cannot get currency symbol") $
       Value.scriptCurrencySymbol fuelMP
@@ -338,7 +353,7 @@ claimFUEL
           { index
           , amount
           , previousMerkleRoot
-          , recipient: paymentPubKeyHashToByteArray recipient
+          , recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
           }
 
     entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")
@@ -377,13 +392,18 @@ claimFUEL
     dsConfV ← dsConfValidator ds
     rootTokenValidator ← mptRootTokenValidator sidechainParams
 
+    recipientPkh ←
+      liftContractM (msg "Couldn't derive payment public key hash from address")
+        $ PaymentPubKeyHash
+        <$> toPubKeyHash recipient
+
+    let recipientSt = toStakePubKeyHash recipient
+
     let
       node = DistributedSet.mkNode (getTokenName tnNode) datNode
       value = Value.singleton cs tn amount
       redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
       -- silence missing stake key warning
-      mustPayToPubKey p =
-        singleton <<< MustPayToPubKeyAddress p Nothing Nothing Nothing
 
       mkNodeConstraints n = do
         nTn ← liftContractM "Couldn't convert node token name"
@@ -425,7 +445,7 @@ claimFUEL
       , constraints:
           Constraints.mustMintValueWithRedeemer redeemer value -- minting the FUEL
 
-            <> mustPayToPubKey recipient value
+            <> mustPayToPubKeyAddress recipientPkh recipientSt value
             <> Constraints.mustBeSignedBy ownPkh
             <> Constraints.mustReferenceOutput mptUtxo
             <> Constraints.mustReferenceOutput confRef
@@ -461,7 +481,7 @@ burnFUEL fuelMP { amount, recipient } = do
 -- | Mocking unused data for Passive Bridge minting, where we use genesis minting
 passiveBridgeMintParams ∷
   SidechainParams →
-  { amount ∷ BigInt, recipient ∷ PaymentPubKeyHash } →
+  { amount ∷ BigInt, recipient ∷ Address } →
   FuelParams
 passiveBridgeMintParams sidechainParams { amount, recipient } =
   Mint
@@ -527,3 +547,14 @@ getMptRootTokenPolicy sidechainParams = do
       $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
 
   pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
+
+toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
+toStakePubKeyHash addr =
+  case toStakingCredential addr of
+    Just (StakingHash (PubKeyCredential pkh)) → Just (StakePubKeyHash pkh)
+    _ → Nothing
+
+mustPayToPubKeyAddress ∷
+  PaymentPubKeyHash → Maybe StakePubKeyHash → Value → TxConstraints Void Void
+mustPayToPubKeyAddress pkh mStPkh =
+  singleton <<< MustPayToPubKeyAddress pkh mStPkh Nothing Nothing

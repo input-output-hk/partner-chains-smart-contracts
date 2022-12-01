@@ -3,7 +3,7 @@ module Main (main) where
 import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
-import Contract.Address (ownPaymentPubKeyHash)
+import Contract.Address (getWalletAddress)
 import Contract.Monad (Contract, launchAff_, liftedM, runContract)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
@@ -29,11 +29,12 @@ main = do
   opts ← getOptions
 
   launchAff_ $ runContract opts.configParams do
-    pkh ← liftedM "Couldn't find own PKH" ownPaymentPubKeyHash
+    ownAddr ← liftedM "Couldn't get own wallet address" getWalletAddress
+
     endpointResp ← case opts.endpoint of
       MintAct { amount } →
         runFuelMP opts.scParams
-          (passiveBridgeMintParams opts.scParams { amount, recipient: pkh })
+          (passiveBridgeMintParams opts.scParams { amount, recipient: ownAddr })
           <#> unwrap
           >>> { transactionId: _ }
           >>> MintActResp

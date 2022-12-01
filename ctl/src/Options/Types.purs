@@ -7,7 +7,7 @@ module Options.Types
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId, PaymentPubKeyHash)
+import Contract.Address (Address, NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
@@ -54,7 +54,7 @@ data Endpoint
   = MintAct { amount ∷ BigInt }
   | ClaimAct
       { amount ∷ BigInt
-      , recipient ∷ PaymentPubKeyHash
+      , recipient ∷ Address
       , merkleProof ∷ MerkleProof
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe ByteArray
