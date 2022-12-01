@@ -30,6 +30,8 @@ import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
 
 -- | `generateUchmSignatures` generates the public keys and corresponding
 -- | signatures of the current committee for the new committee given.
+-- This may be helpful when attempting to use the CLI interface to generate
+-- test cases manually.
 generateUchmSignatures ∷
   { sidechainParams ∷ SidechainParams
   ,

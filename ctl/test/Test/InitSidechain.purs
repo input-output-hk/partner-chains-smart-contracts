@@ -31,6 +31,8 @@ import Utils.Crypto as Crypto
 -- |
 -- | Note: this also sorts the inital committee lexicographically by the public
 -- | keys (this technically isn't needed since the endpoint will do it for you)
+-- This may be helpful when attempting to use the CLI interface to generate
+-- test cases manually.
 generateInitCommittee ∷
   Int → Effect (Array (PublicKey /\ PrivateKey))
 generateInitCommittee committeeSize = do

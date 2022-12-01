@@ -38,71 +38,33 @@
         };
       };
 
-      previewRuntimeConfig = pkgs: _final: rec {
-        # See the [ctl runtime
-        # documentation](https://github.com/Plutonomicon/cardano-transaction-lib/blob/1ec5a7a82e2a119364a3577022b6ff3c7e84a612/doc/runtime.md)
-        # Note that we include the current systems packages as an argument so we
-        # can spin up our own version of ogmios-datum-cache which is called with
-        # a CLI argument that syncs ogmios-datum-cache up from the origin.
-        name = "preview";
-        magic = 2;
+      previewRuntimeConfig = {
+        # Conveniently, by default the ctl runtime configuration uses the
+        # preview network. See here:
+        # https://github.com/Plutonomicon/cardano-transaction-lib/blob/87233da45b7c433c243c539cb4d05258e551e9a1/nix/runtime.nix
+        network = {
+          name = "preview";
+          magic = 2;
+        };
 
-        ogmios.port = 1337;
-
-        ctlServer = { enable = true; port = 8081; };
+        # Need use a more recent node version -- iirc. there was a hard fork
+        # somewhat recently?
         node = {
-          port = 3001;
           # the version of the node to use, corresponds to the image version tag,
           # i.e. `"inputoutput/cardano-node:${tag}"`
           tag = "1.35.4";
         };
 
-        postgres = {
-          port = 5432;
-          user = "ctxlib";
-          password = "ctxlib";
-          db = "ctxlib";
-        };
-
         datumCache = {
-          port = 9999;
-          controlApiToken = "user:password";
-          # some easy login info here, this is used for someone to fix the
-          # control API -- see the ogmios-datum-cache documentation
-        };
-
-        extraServices = {
-          # Spin up our own service of ogmios-datum-cache that allows us to
-          # sync up with the node from the origin
-          ogmios-datum-cache =
-            {
-              service = {
-                useHostStore = true;
-                ports = [ ("${toString datumCache.port}:${toString datumCache.port}") ];
-                restart = "on-failure";
-                depends_on = [ "postgres-${name}" "ogmios" ];
-                command = [
-                  "${pkgs.bash}/bin/sh"
-                  "-c"
-                  ''
-                    ${pkgs.ogmios-datum-cache}/bin/ogmios-datum-cache \
-                      --log-level warn \
-                      --use-latest \
-                      --server-api "${toString datumCache.controlApiToken}" \
-                      --server-port ${toString datumCache.port} \
-                      --ogmios-address ogmios \
-                      --ogmios-port ${toString ogmios.port} \
-                      --db-port "${toString postgres.port}" \
-                      --db-host "postgres-${name}" \
-                      --db-user "${postgres.user}" \
-                      --db-name "${postgres.db}" \
-                      --db-password "${postgres.password}" \
-                      --from-origin
-                  ''
-                ];
-              };
+          # The `firstBlock` is essentially what ogmios-datum-cache starts
+          # "syncing" from, and the default doesn't exist apparently... so
+          # we give it a block which actually exists.
+          blockFetcher = {
+            firstBlock = {
+              slot = 3212169;
+              id = "199a5953f54a216532b396b112c7b8c561710e93a978383173dddadda3b9bc17";
             };
-
+          };
         };
       };
 
@@ -291,7 +253,7 @@
 
       packages = perSystem
         (system: self.flake.${system}.packages // {
-          ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
+          ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
           ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           ctl-main = ctlMainFor system;
           ctl-bundle-web = (psProjectFor system).bundlePursProject {
@@ -311,7 +273,7 @@
 
       apps = perSystem (system: self.flake.${system}.apps // {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
-        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime (previewRuntimeConfig (nixpkgsFor system));
+        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
         ctl-main = {
           type = "app";
           program = "${ctlMainFor system}/bin/ctl-main";
