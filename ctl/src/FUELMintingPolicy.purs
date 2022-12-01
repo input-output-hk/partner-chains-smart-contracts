@@ -58,7 +58,13 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol, Value, getTokenName, mkTokenName)
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  , Value
+  , getTokenName
+  , mkTokenName
+  )
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
@@ -246,10 +252,11 @@ runFuelMP sp fp = do
     Burn params →
       burnFUEL fuelMP params
     Mint params →
-      if isJust (unwrap sp).genesisMint then
-        mintFUEL fuelMP params
-      else
-        claimFUEL fuelMP params
+      case (unwrap sp).genesisMint of
+        Just genesisMintUtxo →
+          mintFUEL fuelMP genesisMintUtxo params
+        Nothing →
+          claimFUEL fuelMP params
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
@@ -265,6 +272,7 @@ runFuelMP sp fp = do
 -- | active bridge claim script is stablisied
 mintFUEL ∷
   MintingPolicy →
+  TransactionInput →
   { amount ∷ BigInt
   , recipient ∷ Address
   , merkleProof ∷ MerkleProof
@@ -276,16 +284,17 @@ mintFUEL ∷
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mintFUEL
   fuelMP
-  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  genesisMintUtxo
+  { amount
+  , recipient
+  , merkleProof
+  , index
+  , previousMerkleRoot
+  } =
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
     netId ← getNetworkId
-
-    cs ← liftContractM (msg "Cannot get currency symbol") $
-      Value.scriptCurrencySymbol fuelMP
-    tn ← liftContractM (msg "Cannot get token name")
-      (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")
@@ -295,12 +304,13 @@ mintFUEL
     let recipientSt = toStakePubKeyHash recipient
 
     -- Find the passive bridge genesis mint utxo
-    let inputTxIn = (unwrap sidechainParams).genesisMint
-    inputUtxo ← inputTxIn # traverse \txIn → do
-      txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo txIn
-      pure $ Map.singleton txIn $ TransactionOutputWithRefScript
+    txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo
+      genesisMintUtxo
+    let
+      inputUtxo = Map.singleton genesisMintUtxo $ TransactionOutputWithRefScript
         { output: txOut, scriptRef: Nothing }
 
+    cs /\ tn ← getFuelAssetClass fuelMP
     let
       value = Value.singleton cs tn amount
       redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
@@ -313,11 +323,11 @@ mintFUEL
 
     pure
       { lookups: Lookups.mintingPolicy fuelMP
-          <> maybe mempty Lookups.unspentOutputs inputUtxo
+          <> Lookups.unspentOutputs inputUtxo
       , constraints: Constraints.mustMintValueWithRedeemer redeemer value
           <> mustPayToPubKeyAddress recipientPkh recipientSt value
           <> Constraints.mustBeSignedBy ownPkh
-          <> maybe mempty Constraints.mustSpendPubKeyOutput inputTxIn
+          <> Constraints.mustSpendPubKeyOutput genesisMintUtxo
       }
 
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the Merkle proof
@@ -340,10 +350,7 @@ claimFUEL
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
     netId ← getNetworkId
 
-    cs ← liftContractM (msg "Cannot get currency symbol") $
-      Value.scriptCurrencySymbol fuelMP
-    tn ← liftContractM (msg "Cannot get token name")
-      (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+    cs /\ tn ← getFuelAssetClass fuelMP
 
     ds ← DistributedSet.getDs sidechainParams
 
@@ -360,14 +367,14 @@ claimFUEL
       $ serialiseData
       $ toData
           merkleTreeEntry
-    let
-      rootHash = rootMp entryBytes merkleProof
+
+    let rootHash = rootMp entryBytes merkleProof
 
     cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
       $ mkTokenName
       $ blake2b256Hash entryBytes
 
-    { index: mptUtxo, value: mptUtxoOut } ←
+    { index: mptUtxo } ←
       liftContractM
         (msg "Couldn't find the parent Merkle tree root hash of the transaction")
         =<< findMptRootTokenUtxoByRootHash sidechainParams rootHash
@@ -382,15 +389,12 @@ claimFUEL
     } ← liftedM (msg "Couldn't find distributed set nodes") $
       DistributedSet.findDsOutput ds cborMteHashedTn
 
-    { confRef, confO } ← DistributedSet.findDsConfOutput ds
+    { confRef } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
     { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
       sidechainParams
-
-    dsConfV ← dsConfValidator ds
-    rootTokenValidator ← mptRootTokenValidator sidechainParams
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")
@@ -432,26 +436,22 @@ claimFUEL
     pure
       { lookups:
           Lookups.mintingPolicy fuelMP
-            <> Lookups.validator rootTokenValidator
-            <> Lookups.unspentOutputs (Map.singleton mptUtxo mptUtxoOut)
-
-            <> Lookups.validator dsConfV
-            <> Lookups.unspentOutputs (Map.singleton confRef confO)
-
             <> Lookups.mintingPolicy dsKeyPolicy
             <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
       , constraints:
-          Constraints.mustMintValueWithRedeemer redeemer value -- minting the FUEL
-
+          -- Minting the FUEL tokens
+          Constraints.mustMintValueWithRedeemer redeemer value
             <> mustPayToPubKeyAddress recipientPkh recipientSt value
             <> Constraints.mustBeSignedBy ownPkh
+
+            -- Referencing Merkle root
             <> Constraints.mustReferenceOutput mptUtxo
+
+            -- Updating the distributed set
             <> Constraints.mustReferenceOutput confRef
-
             <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
-
             <> mustAddDSNodeA
             <> mustAddDSNodeB
       }
@@ -462,13 +462,7 @@ burnFUEL ∷
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 burnFUEL fuelMP { amount, recipient } = do
-  let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "burnFUEL" }
-
-  cs ← liftContractM (msg "Cannot get currency symbol") $
-    Value.scriptCurrencySymbol fuelMP
-  logInfo' $ msg ("fuelMP currency symbol: " <> show cs)
-  tn ← liftContractM (msg "Cannot get token name")
-    (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+  cs /\ tn ← getFuelAssetClass fuelMP
 
   let
     value = Value.singleton cs tn (-amount)
@@ -548,13 +542,25 @@ getMptRootTokenPolicy sidechainParams = do
 
   pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
 
+-- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
 toStakePubKeyHash addr =
   case toStakingCredential addr of
     Just (StakingHash (PubKeyCredential pkh)) → Just (StakePubKeyHash pkh)
     _ → Nothing
 
+-- | Pay values to a public key address (with optional staking key)
 mustPayToPubKeyAddress ∷
   PaymentPubKeyHash → Maybe StakePubKeyHash → Value → TxConstraints Void Void
 mustPayToPubKeyAddress pkh mStPkh =
   singleton <<< MustPayToPubKeyAddress pkh mStPkh Nothing Nothing
+
+-- | Return the currency symbol and token name of the FUEL token
+getFuelAssetClass ∷ MintingPolicy → Contract () (CurrencySymbol /\ TokenName)
+getFuelAssetClass fuelMP = do
+  cs ← liftContractM "Cannot get FUEL currency symbol" $
+    Value.scriptCurrencySymbol fuelMP
+  tn ← liftContractM "Cannot get FUEL token name"
+    (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
+
+  pure (cs /\ tn)
