@@ -70,13 +70,8 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import DistributedSet (dsConfValidator)
 import DistributedSet as DistributedSet
-import MPTRoot
-  ( SignedMerkleRootMint(..)
-  , findMptRootTokenUtxo
-  , mptRootTokenValidator
-  )
+import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
 import Plutus.Conversion.Address (fromPlutusAddress)
