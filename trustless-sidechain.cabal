@@ -130,7 +130,9 @@ executable trustless-sidechain-gen-signatures
     , aeson
     , attoparsec
     , base16-bytestring
+    , bech32
     , bytestring
+    , cardano-addresses
     , cardano-crypto-class
     , cryptonite
     , either

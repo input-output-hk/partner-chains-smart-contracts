@@ -1,4 +1,8 @@
+{-# LANGUAGE RecordWildCards #-}
+
 {- | 'Utils' includes utility functions for tasks like:
+
+      -  Working with bech32 recipients values
 
       -  signing messages
 
@@ -7,6 +11,7 @@
       -  converting public keys to private keys
 -}
 module Utils (
+  Bech32Recipient (bech32RecipientBytes),
   signWithSPOKey,
   signWithSidechainKey,
   showTxOutRef,
@@ -29,6 +34,7 @@ module Utils (
 
 import Prelude
 
+import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
@@ -37,13 +43,19 @@ import Cardano.Crypto.DSIGN.Class (
   rawSerialiseVerKeyDSIGN,
   signDSIGN,
  )
+import Codec.Binary.Bech32 (DataPart, HumanReadablePart)
+import Codec.Binary.Bech32 qualified as Bech32
 import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
+import Data.Aeson (FromJSON)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson.Types
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
+import Data.List qualified as List
 import Data.Maybe (fromMaybe)
 import Ledger (PubKey (PubKey), Signature (Signature))
 import Ledger.Crypto qualified as Crypto
@@ -55,6 +67,7 @@ import Plutus.V2.Ledger.Api (
   TxOutRef (TxOutRef),
  )
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.OffChain.Types (
   SidechainPubKey (SidechainPubKey),
@@ -63,6 +76,69 @@ import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
  )
+
+-- * Bech32 addresses
+
+-- For references, see:
+--
+--      [1] The bitcoin specification:
+--      https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+--
+--      [2] Discussion on prefixes in Cardano:
+--      https://github.com/cardano-foundation/CIPs/tree/master/CIP-0005
+--
+--      [3] The CIP for the data part (fairly certain that's what it's talking
+--      about although it doesn't explicitly say that):
+--      https://cips.cardano.org/cips/cip19/
+
+{- | 'Bech32' is a thin wrapper around decoding a bech32 encoded value. See the
+ bitcoin reference [3] for more details on the encoding.
+-}
+data Bech32 = Bech32
+  { bech32HumanReadablePart :: HumanReadablePart
+  , bech32DataPart :: DataPart
+  }
+  deriving (Show, Eq)
+
+-- | Converts the data part into bytes
+bech32DataPartBytes :: Bech32 -> Maybe ByteString
+bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
+
+{- | 'Bech32Recipient' is a newtype wrapper around the binary data part of
+ specialized Bech32 type meant to only represent recipients on the main chain...
+
+ In particular, we verify that the human readable part is @addr@ or @addr_test@.
+ See Discussion on prefixes in Cardano [2]
+
+ This exists so we can parse
+ JSON of 'TrustlessSidechain.OnChain.Types.MerkleTreeEntry'...
+-}
+newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
+  deriving (Show, Eq)
+
+instance FromJSON Bech32Recipient where
+  parseJSON = Aeson.withText "bech32" $ \str -> case Bech32.decode str of
+    Left err -> Aeson.Types.parseFail $ "Failed decoding bech32: " ++ show err
+    Right (bech32HumanReadablePart, bech32DataPart)
+      | isAddr -> case bech32DataPartBytes Bech32 {..} of
+        Just bs -> pure $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
+        Nothing ->
+          Aeson.Types.parseFail
+            "Failed decoding bytes in bech32 recipient"
+      | otherwise ->
+        Aeson.Types.parseFail $
+          List.unwords
+            [ "Expected human readable part to be either:"
+            , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr
+            , "or"
+            , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr_test
+            ]
+      where
+        surroundAndShowTextWithBackticks t = "`" ++ show t ++ "`"
+
+        isAddr =
+          bech32HumanReadablePart == Bech32.Prefixes.addr
+            || bech32HumanReadablePart == Bech32.Prefixes.addr_test
 
 -- * Generating a private sidechain key
 

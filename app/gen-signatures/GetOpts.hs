@@ -28,6 +28,7 @@ import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson (FromJSON (parseJSON))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Extras (tryDecode)
+import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -71,6 +72,7 @@ import TrustlessSidechain.OffChain.Types (
 import TrustlessSidechain.OnChain.Types (
   MerkleTreeEntry (..),
  )
+import Utils (Bech32Recipient (bech32RecipientBytes))
 
 -- | 'getArgs' grabs the command line options ('Args').
 getOpts :: IO Args
@@ -176,7 +178,7 @@ instance FromJSON MerkleTreeEntryJson where
       MerkleTreeEntry
         <$> v Aeson..: "index"
         <*> v Aeson..: "amount"
-        <*> v Aeson..: "recipient"
+        <*> fmap bech32RecipientBytes (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
         <*> v Aeson..:? "previousMerkleRoot"
 
 -- * CLI parser
