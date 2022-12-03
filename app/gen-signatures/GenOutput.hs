@@ -82,6 +82,21 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           ]
    in List.intercalate " \\\n" $
         map List.unwords $ case cliCommand of
+          InitSidechainCommand {..} ->
+            -- note: this will look similar to the UpdateCommitteeHashCommand
+            -- case
+            let committeeFlags =
+                  map
+                    ( \pubKey ->
+                        [ "--committee-pub-key"
+                        , Utils.showScPubKey pubKey
+                        ]
+                    )
+                    iscNewCommitteePubKeys
+             in ["nix run .#ctl-main -- init"] :
+                sidechainParamFlags
+                  ++ committeeFlags
+                  ++ [["--sidechain-epoch", show iscSidechainEpoch]]
           RegistrationCommand {..} ->
             let msg =
                   BlockProducerRegistrationMsg
@@ -195,7 +210,7 @@ sidechainKeyCommand = \case
   FreshSidechainCommittee {..} -> do
     committeePrvKeys <- Monad.replicateM fscCommitteeSize Utils.generateRandomSecpPrivKey
     let committeePubKeys = map Utils.toSidechainPubKey committeePrvKeys
-        committee = SidechainCommittee $ zipWith (uncurry SidechainCommitteeMember) committeePrvKeys committeePubKeys
+        committee = SidechainCommittee $ zipWith SidechainCommitteeMember committeePrvKeys committeePubKeys
     return $ ByteString.Lazy.Char8.unpack $ Aeson.encode committee
 
 -- probably should just use bytestrings or text for all output

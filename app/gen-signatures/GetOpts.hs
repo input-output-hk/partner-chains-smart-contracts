@@ -178,6 +178,13 @@ data GenCliCommand
       , -- | the previous merkle root (as needed to create the CLI command)
         srcPreviousMerkleRoot :: Maybe BuiltinByteString
       }
+  | -- | CLI arguments for saving a new merkle root
+    InitSidechainCommand
+      { -- | initial committee public keys
+        iscNewCommitteePubKeys :: [SidechainPubKey]
+      , -- | inital sidechain epoch
+        iscSidechainEpoch :: Integer
+      }
 
 {- | A newtype wrapper around 'MerkleTreeEntry'  to admit json parsing parsing
  as specified in the spec. Note that we use this newtype wrapper because
@@ -229,7 +236,8 @@ argParser =
     ioCmd <-
       subparser $
         mconcat
-          [ registerCommand
+          [ initSidechainCommand
+          , registerCommand
           , updateCommitteeHashCommand
           , saveRootCommand
           , -- generating merkle tree stuff
@@ -539,6 +547,33 @@ registerCommand =
               ]
 
         pure $ pure (scParamsAndSigningKeyFunction $ RegistrationCommand {..})
+        <**> helper
+
+{- | 'initSidechainCommand' parses the cli arguments for gathering the
+ parameters for initalizing the sidechain
+-}
+initSidechainCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
+initSidechainCommand =
+  command "init" $
+    flip
+      info
+      (progDesc "Generates the CLI command to initialize the sidechain")
+      $ do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+
+        ioIscNewCommitteePubKeys <- newCommitteePublicKeysParser
+
+        -- mostly duplicated from 'updateCommitteeHashCommand'
+        iscSidechainEpoch <-
+          option auto $
+            mconcat
+              [ long "sidechain-epoch"
+              , metavar "INTEGER"
+              , help "Sidechain epoch of the initial committee"
+              ]
+        pure $ do
+          iscNewCommitteePubKeys <- ioIscNewCommitteePubKeys
+          return $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
         <**> helper
 
 {- | 'committeeHashCommand' parses the cli arguments for gathering the parameters for
