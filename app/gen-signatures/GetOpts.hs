@@ -181,7 +181,7 @@ data GenCliCommand
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
       { -- | initial committee public keys
-        iscNewCommitteePubKeys :: [SidechainPubKey]
+        iscInitCommitteePubKeys :: [SidechainPubKey]
       , -- | inital sidechain epoch
         iscSidechainEpoch :: Integer
       }
@@ -412,10 +412,10 @@ currentCommitteePrivateKeysParser =
 -- | CLI parser for parsing the new committee's public keys
 newCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
 newCommitteePublicKeysParser =
-  fmap return {- need to introduce io monad -} manyNewCommittePublicKeys
+  fmap return {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
   where
-    manyNewCommittePublicKeys =
+    manyCommitteePublicKeys =
       many $
         option parseSidechainPubKey $
           mconcat
@@ -429,6 +429,38 @@ newCommitteePublicKeysParser =
         option OptParse.str $
           mconcat
             [ long "new-committee"
+            , metavar "FILEPATH"
+            , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
+            ]
+
+      return $
+        Aeson.decodeFileStrict' committeeFilepath >>= \case
+          Just (SidechainCommittee members) -> return $ map scmPublicKey members
+          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " ++ committeeFilepath
+
+{- | 'initCommitteePublicKeysParser' is essentially identical to
+ 'newCommitteePublicKeysParser' except the help strings / command line flag
+ is changed to reflect that this is the inital committee.
+-}
+initCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
+initCommitteePublicKeysParser =
+  fmap return {- need to introduce io monad -} manyCommitteePublicKeys
+    OptParse.<|> newCommitteeFile
+  where
+    manyCommitteePublicKeys =
+      many $
+        option parseSidechainPubKey $
+          mconcat
+            [ long "committee-pub-key"
+            , metavar "PUBLIC_KEY"
+            , help "Secp256k1 public key of an initial committee member (hex DER encoded [33 bytes])"
+            ]
+
+    newCommitteeFile = do
+      committeeFilepath <-
+        option OptParse.str $
+          mconcat
+            [ long "committee"
             , metavar "FILEPATH"
             , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
             ]
@@ -561,7 +593,7 @@ initSidechainCommand =
       $ do
         scParamsAndSigningKeyFunction <- genCliCommandHelperParser
 
-        ioIscNewCommitteePubKeys <- newCommitteePublicKeysParser
+        ioIscInitCommitteePubKeys <- initCommitteePublicKeysParser
 
         -- mostly duplicated from 'updateCommitteeHashCommand'
         iscSidechainEpoch <-
@@ -572,7 +604,7 @@ initSidechainCommand =
               , help "Sidechain epoch of the initial committee"
               ]
         pure $ do
-          iscNewCommitteePubKeys <- ioIscNewCommitteePubKeys
+          iscInitCommitteePubKeys <- ioIscInitCommitteePubKeys
           return $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
         <**> helper
 
@@ -774,7 +806,7 @@ freshSidechainCommittee = do
         fscCommitteeSize <-
           option (eitherReader nonNegativeIntParser) $
             mconcat
-              [ long "sidechain-committee-size"
+              [ long "size"
               , metavar "INT"
               , help "Non-negative int to determine the size of the sidechain committee"
               ]

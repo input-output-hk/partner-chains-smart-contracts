@@ -92,7 +92,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         , Utils.showScPubKey pubKey
                         ]
                     )
-                    iscNewCommitteePubKeys
+                    iscInitCommitteePubKeys
              in ["nix run .#ctl-main -- init"] :
                 sidechainParamFlags
                   ++ committeeFlags
