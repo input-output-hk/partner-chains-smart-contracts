@@ -1,8 +1,14 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {- | 'Utils' includes utility functions for tasks like:
 
       -  Working with bech32 recipients values
+
+      -  Conveient wrapper type for the sidechain committee public and private
+      key pairs
+
+      - Parsing hex encoded sidechain public keys and private keys.
 
       -  signing messages
 
@@ -25,11 +31,16 @@ module Utils (
   showThreshold,
   showMerkleTree,
   showMerkleProof,
+  showSecpPrivKey,
   showCombinedMerkleProof,
   toSpoPubKey,
   toSidechainPubKey,
   secpPubKeyToSidechainPubKey,
-  generateRandomSidechainPrivateKey,
+  generateRandomSecpPrivKey,
+  SidechainCommittee (..),
+  SidechainCommitteeMember (..),
+  strToSecpPrivKey,
+  strToSecpPubKey,
 ) where
 
 import Prelude
@@ -48,15 +59,17 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
-import Data.Aeson (FromJSON)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson.Types
+import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
 import Data.List qualified as List
 import Data.Maybe (fromMaybe)
+import Data.Text qualified as Text
 import Ledger (PubKey (PubKey), Signature (Signature))
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
@@ -140,6 +153,78 @@ instance FromJSON Bech32Recipient where
           bech32HumanReadablePart == Bech32.Prefixes.addr
             || bech32HumanReadablePart == Bech32.Prefixes.addr_test
 
+-- * Convenient sidechain committee public / private key wrapper + utility
+
+-- parsing functions
+
+-- | SidechainCommitteeMember is a sidechain (SECP) public and private key pair
+data SidechainCommitteeMember = SidechainCommitteeMember
+  { scmPrivateKey :: SECP.SecKey
+  , scmPublicKey :: SidechainPubKey
+  }
+  deriving (Show, Eq)
+
+{- | 'SidechainCommittee' is a newtype wrapper around a lsit of
+ @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
+ members (i.e., the 'Data.Aeson.FromJSON' is a derived via the newtype
+ wrapper)
+-}
+newtype SidechainCommittee = SidechainCommittee
+  {unSidechainCommittee :: [SidechainCommitteeMember]}
+  deriving stock (Show, Eq)
+  deriving newtype (FromJSON, ToJSON)
+
+instance FromJSON SidechainCommitteeMember where
+  parseJSON = Aeson.withObject "SidechainCommitteeMember" $ \v ->
+    -- wraps up 'strToSecpPrivKey' and 'strToSecpPubKey' as JSON
+    -- parsers.
+    let pPrivKey :: Aeson.Value -> Aeson.Types.Parser SECP.SecKey
+        pPrivKey (Aeson.String text) =
+          case strToSecpPrivKey (Text.unpack text) of
+            Left err -> Aeson.Types.parseFail err
+            Right ans -> pure ans
+        pPrivKey _ = Aeson.Types.parseFail "Expected hex encoded SECP private key"
+
+        pPubKey :: Aeson.Value -> Aeson.Types.Parser SidechainPubKey
+        pPubKey (Aeson.String text) =
+          case fmap secpPubKeyToSidechainPubKey $ strToSecpPubKey (Text.unpack text) of
+            Left err -> Aeson.Types.parseFail err
+            Right ans -> pure ans
+        pPubKey _ = Aeson.Types.parseFail "Expected hex encoded DER SECP public key"
+     in SidechainCommitteeMember
+          <$> Aeson.Types.explicitParseField pPrivKey v "private-key"
+          <*> Aeson.Types.explicitParseField pPubKey v "public-key"
+
+instance ToJSON SidechainCommitteeMember where
+  toJSON (SidechainCommitteeMember {..}) =
+    Aeson.object
+      [ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
+      , "public-key" Aeson..= showScPubKey scmPublicKey
+      ]
+
+-- | Parses a hex encoded string into a sidechain private key
+strToSecpPrivKey :: String -> Either String SECP.SecKey
+strToSecpPrivKey raw = do
+  decoded <-
+    Bifunctor.first ("Invalid sidechain key hex: " <>)
+      . Base16.decode
+      . Char8.pack
+      $ raw
+  maybe (Left "Unable to parse sidechain private key") Right $ SECP.secKey decoded
+
+{- | Parses a hex encoded string into a sidechain public key. Note that this
+ uses 'Crypto.Secp256k1.importPubKey' which imports a DER-encoded
+ public key.
+-}
+strToSecpPubKey :: String -> Either String SECP.PubKey
+strToSecpPubKey raw = do
+  decoded <-
+    Bifunctor.first ("Invalid sidechain public key hex: " <>)
+      . Base16.decode
+      . Char8.pack
+      $ raw
+  maybe (Left "Unable to parse sidechain public key") Right $ SECP.importPubKey decoded
+
 -- * Generating a private sidechain key
 
 {- | Generates a random sidechain private key.
@@ -166,8 +251,8 @@ instance FromJSON Bech32Recipient where
 
  TODO: might be a good idea to put this in a newtype wrapper...
 -}
-generateRandomSidechainPrivateKey :: IO BuiltinByteString
-generateRandomSidechainPrivateKey =
+generateRandomSecpPrivKey :: IO SECP.SecKey
+generateRandomSecpPrivKey =
   let go = do
         bs <- Random.getRandomBytes 32
         ret <- SECP.Internal.useByteString bs $ \(ptr, _len) ->
@@ -175,10 +260,10 @@ generateRandomSidechainPrivateKey =
         -- Returns 1 in the case that this is valid, see the FFI
         -- call
         -- [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)
-        if ret == 1
-          then return bs
-          else go
-   in fmap Builtins.toBuiltin go
+        case SECP.secKey bs of
+          Just bs' | ret == 1 -> return bs'
+          _ -> go
+   in go
 
 -- * Signing a message
 
@@ -240,6 +325,10 @@ showPubKey (PubKey (LedgerBytes pk)) = showBuiltinBS pk
 -- | Serialise sidechain public key
 showScPubKey :: SidechainPubKey -> String
 showScPubKey (SidechainPubKey pk) = showBuiltinBS pk
+
+-- | Serailises a 'SECP.SecKey' private key by hex encoding it
+showSecpPrivKey :: SECP.SecKey -> String
+showSecpPrivKey = showBS . SECP.getSecKey
 
 {- | Serialise a sidechain public key and signature into
  > PUBKEY:SIG

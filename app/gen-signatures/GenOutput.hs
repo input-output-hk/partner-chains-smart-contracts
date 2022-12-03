@@ -6,6 +6,9 @@
 -}
 module GenOutput (genCliCommand, merkleTreeCommand, sidechainKeyCommand) where
 
+import Control.Monad qualified as Monad
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
 import Data.List qualified as List
 import GetOpts (GenCliCommand (..), MerkleTreeCommand (..), SidechainKeyCommand (..))
 import Plutus.V2.Ledger.Api (
@@ -41,8 +44,14 @@ import TrustlessSidechain.OnChain.Types (
     uchmSidechainParams
   ),
  )
+import Utils (
+  SidechainCommittee (..),
+  SidechainCommitteeMember (..),
+ )
 import Utils qualified
 import Prelude
+
+-- * Main driver functions for generating output
 
 {- | Generates the corresponding CLI command for the purescript
  function.
@@ -92,7 +101,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   UpdateCommitteeHashMessage
                     { uchmSidechainParams = convertSCParams scParams
-                    , uchmNewCommitteePubKeys = List.sort $ map Utils.secpPubKeyToSidechainPubKey uchcNewCommitteePubKeys
+                    , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
                     , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
                     , uchmSidechainEpoch = uchcSidechainEpoch
                     }
@@ -110,7 +119,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   map
                     ( \pubKey ->
                         [ "--new-committee-pub-key"
-                        , Utils.showScPubKey $ Utils.secpPubKeyToSidechainPubKey pubKey
+                        , Utils.showScPubKey pubKey
                         ]
                     )
                     uchcNewCommitteePubKeys
@@ -180,6 +189,14 @@ merkleTreeCommand = \case
 -}
 sidechainKeyCommand :: SidechainKeyCommand -> IO String
 sidechainKeyCommand = \case
-  FreshSidechainPrivateKey -> Utils.showBuiltinBS <$> Utils.generateRandomSidechainPrivateKey
+  FreshSidechainPrivateKey -> Utils.showSecpPrivKey <$> Utils.generateRandomSecpPrivKey
   SidechainPrivateKeyToPublicKey {..} ->
     return $ Utils.showScPubKey $ Utils.toSidechainPubKey spktpkPrivateKey
+  FreshSidechainCommittee {..} -> do
+    committeePrvKeys <- Monad.replicateM fscCommitteeSize Utils.generateRandomSecpPrivKey
+    let committeePubKeys = map Utils.toSidechainPubKey committeePrvKeys
+        committee = SidechainCommittee $ zipWith (uncurry SidechainCommitteeMember) committeePrvKeys committeePubKeys
+    return $ ByteString.Lazy.Char8.unpack $ Aeson.encode committee
+
+-- probably should just use bytestrings or text for all output
+-- types intead of going through strings honestly.
