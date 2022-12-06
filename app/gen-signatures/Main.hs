@@ -10,6 +10,8 @@
 
       - 'GenOutput': provides functionality to generate the output displayed to
       the user
+
+ For discussion on how to use this, see @docs/GenSignatures.md@.
 -}
 module Main (main) where
 
