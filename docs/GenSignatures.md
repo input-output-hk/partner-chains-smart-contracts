@@ -200,6 +200,7 @@ $ MERKLE_TREE_1_1=$(!!)
 $ MERKLE_ROOT_1_1=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-hash --merkle-tree $MERKLE_TREE_1_1)
 ```
 Note we use `!!` to run the last command and store it to an environment variable. This merkle tree includes transactions to
+
 - Pay 69 FUEL to myself, and
 - Pay 420 FUEL to myself
 
@@ -213,8 +214,10 @@ $ MERKLE_TREE_1_2=$(!!)
 $ MERKLE_ROOT_1_2=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-hash --merkle-tree $MERKLE_TREE_1_2)
 ```
 which has transactions to
+
 - Pay 169 FUEL to myself, and
 - Pay 1420 FUEL to myself
+
 Note that the `previousMerkleRoot` field was changed from `null` to `MERKLE_ROOT_1_1` -- this is for technical reasons.
 
 2. Save a merkle root. We will use `trustless-sidechain-gen-signatures` to create the command to save the merkle root. Run the following command.
@@ -338,6 +341,7 @@ $ nix run .#ctl-main -- save-root \
 
 # 7 Claiming FUEL tokens
 We will demonstrate how to claim FUEL tokens. As an overview, here's what we will discuss
+
 - Finding out what the Currency Symbol of FUEL tokens are.
 - Claiming FUEL tokens.
 
