@@ -1,10 +1,5 @@
 % Compilation to svg
-% > latexmk ./StateMachineWorkflow.tex
-% > dvisvgm ./StateMachineWorkflow.dvi --stdout > ./StateMachineWorkflow.svg  # converts `dvi` to `svg`
-% > # And now, cleaning up the extra files..
-% > latexmk -c ./StateMachineWorkflow.tex && rm ./StateMachineWorkflow.dvi
-% or as one command
-% > latexmk ./StateMachineWorkflow.tex && dvisvgm ./StateMachineWorkflow.dvi --stdout > ./StateMachineWorkflow.svg && latexmk -c ./StateMachineWorkflow.tex && rm ./StateMachineWorkflow.dvi
+% > latexmk -pdf ./StateMachineWorkflow.tex && pdf2svg ./StateMachineWorkflow.pdf ./StateMachineWorkflow.svg && latexmk -c ./StateMachineWorkflow.tex && rm ./StateMachineWorkflow.pdf
 \documentclass{standalone}
 \usepackage{tikz}
 \usetikzlibrary{automata, positioning, arrows}
