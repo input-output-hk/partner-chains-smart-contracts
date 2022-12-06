@@ -575,9 +575,9 @@ nix run .#ctl-main -- register \
 --registration-utxo 9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0
 ```
 Some notes:
-    - `--spo-signing-key` is used to generate a key for Cardano. TODO: perhaps we should allow inputting a key.
-    - `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](#5-Initialising-the-sidechain), and looking at the outputted file.
-    - `--registration-utxo` was the UTxO that we found just above.
+- `--spo-signing-key` is used to generate a key for Cardano. TODO: perhaps we should allow inputting a key.
+- `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](#5-Initialising-the-sidechain), and looking at the outputted file.
+- `--registration-utxo` was the UTxO that we found just above.
 
 Let's do what it says.
 
