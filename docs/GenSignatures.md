@@ -15,7 +15,7 @@ We will discuss:
 In order to run the system, we require the following runtime dependencies.
 
 - `cardano-node`
-- `ogmios` provides a WebSocket interface to interact with the cardano-node
+- `ogmios` which provides a WebSocket interface to interact with the `cardano-node`
 - `ogmios-datum-cache` is used to query datums and confirm transactions[^1]
 - `postgres` is the database backing `ogmios-datum-cache`
 - `ctl-server` is used to apply arguments to Plutus scripts
@@ -23,7 +23,7 @@ In order to run the system, we require the following runtime dependencies.
 [^1]: The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
 
 We have provided a convenient way to launch the runtime dependencies in `docker` images for you.
-In a separate terminal window in the project root directory, execute the following command to launch the runtime dependences in `docker` images for the preview test net.
+In a separate terminal window in the project's root directory, execute the following command to launch the runtime dependences in `docker` images for the preview test net.
 ```
 $ nix run .#ctl-runtime-preview
 ```
@@ -54,7 +54,7 @@ We discuss the state transitions.
 
 - `register` (not included in the state machine) allows one to register as a committee candidate.
 
-- `init` initializes the sidechain. In particular this determines the `initial committee` (concatenated hash of public keys of the sidechain) stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initializes internal data structures used for the `claim` endpoint that will not be further discussed.
+- `init` initialises the sidechain. In particular this determines the `initial committee` stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initialises internal data structures used for the `claim` endpoint that will not be further discussed.
 
 - `committee-hash` allows the `current committee` to sign off a `new committee` to replace them.
 
@@ -93,10 +93,10 @@ b430e7900e12   ctl-server:iskx1y6l3nfab5bv6sdhl13csc756rax           "/nix/store
 and make note of the docker image `store_cardano_node_1`.
 
 # 5 Initialising the sidechain
-We describe initialization of the sidechain. As an overview, we will
+We describe initialisation of the sidechain. As an overview, we will
 - Generate an initial committee
 - Find a UTxO a distinguished UTxO to spend (which is used to ensure that this sidechain is unique)
-- Initializing the sidechain
+- Initialising the sidechain
 
 1. Generating the initial committee using the `trustless-sidechain-gen-signatures`. In the root of the project directory, run
 ```
@@ -125,9 +125,9 @@ Then, for convenience, set the environment variable `GENESIS_UTXO` to the UTxO y
 ```
 GENESIS_UTXO="211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0"
 ```
-where we note that we have `TxHash#TxIx`.
+where we note that we use the notation `TxHash#TxIx`.
 
-3. Initialising the sidechain. We will use `trustless-sidechain-gen-signatures` to help us generate the CLI command in order to initialize the committee.
+3. Initialising the sidechain. We will use `trustless-sidechain-gen-signatures` to help us generate the CLI command in order to initialise the committee.
 
 Execute the following command
 ```
@@ -199,7 +199,7 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
 $ MERKLE_TREE_1_1=$(!!)
 $ MERKLE_ROOT_1_1=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-hash --merkle-tree $MERKLE_TREE_1_1)
 ```
-Note that we "paste in" the value of `$PUBLIC_KEY` instead of using the environment variable to play nicely with bash. Moreover, we use `!!` to run the last command and store it to an environment variable. This merkle tree includes transactions to
+Note we use `!!` to run the last command and store it to an environment variable. This merkle tree includes transactions to
 - Pay 69 FUEL to myself, and
 - Pay 420 FUEL to myself
 
@@ -341,7 +341,7 @@ We will demonstrate how to claim FUEL tokens. As an overview, here's what we wil
 - Finding out what the Currency Symbol of FUEL tokens are.
 - Claiming FUEL tokens.
 
-1. Finding out what the Currency Symbol of FUEL tokens are. This will help us verify that we have actually received FUEL tokens in our wallet. Conveniently, `ctl-main` provides a command to gather all addresses related ot the sidechain for us as follows.
+1. Finding out what the Currency Symbol of FUEL tokens are. This will help us verify that we have actually received FUEL tokens in our wallet. Conveniently, `ctl-main` provides a command to gather all addresses related to the sidechain for us as follows.
 ```
 $ nix run .#ctl-main -- addresses \
 --payment-signing-key-file $SIGNING_KEY \
@@ -380,7 +380,7 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- combined-merkle-proof \
 $ COMBINED_MERKLE_PROOF_1_1_1=$(!!)
 ```
 
-Then, we can claim our FUEL as follows. But before doing this, let's peak at our wallet now:
+Then, we can claim our FUEL as follows. But before doing this, let's peek at our wallet now:
 ```
 $ docker exec \
     -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1 \
@@ -525,7 +525,7 @@ We describe how one may register a committee candidate. As an overview, we will
 - Find a UTxO that we may spend to register a committee candidate
 - Register the committee candidate
 
-Recall this may occur at any time and is not dependent on initialization happening prior to this contract.
+Recall this may occur at any time and is not dependent on initialisation happening prior to this contract.
 
 1. Find a UTxO that we may spend to register a committee candidate. Run the following command to query the cardano-node what UTxOs we may spend.
 ```
@@ -539,7 +539,7 @@ $ docker exec \
 b39b82f56be9f55af4d3b501ac084c2d2c5be3af8665f7a5bba53c63b0740021     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 f06b5829a9e02f341e3267fe10bc97a5b9df095713102e4276f957c863213dd1     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 ```
-In particular, we will consider the second transaction
+In particular, we will consider spending the second transaction.
 ```
 9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0
 ```
