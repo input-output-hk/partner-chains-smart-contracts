@@ -1,15 +1,15 @@
 # 1 Discussion on the internal testing tool `trustless-sidechain-gen-signatures`
-This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures` to assist in generating signatures. This demonstration will use the preview test net.
+This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures`, to assist in generating CLI commands / signatures.
 
 We will discuss:
-- [Starting the runtime dependencies](2-starting-the-runtime-dependencies)
-- [High level overview of the workflow](3-High-level-overview-of-the-workflow)
-- [More environment setup](4-More-environment-setup)
-- [Initialising the sidechain](5-Initialising-the-sidechain)
-- [Saving a merkle root](6-Saving-a-merkle-root)
-- [Claiming FUEL tokens](7-Claiming-FUEL-tokens)
-- [Updating the committee hash](8-Updating-the-committee-hash)
-- [Registering a committee candidate](9-Registering-a-committee-candidate)
+- [Starting the runtime dependencies](#2-starting-the-runtime-dependencies)
+- [High level overview of the workflow](#3-High-level-overview-of-the-workflow)
+- [More environment setup](#4-More-environment-setup)
+- [Initialising the sidechain](#5-Initialising-the-sidechain)
+- [Saving a merkle root](#6-Saving-a-merkle-root)
+- [Claiming FUEL tokens](#7-Claiming-FUEL-tokens)
+- [Updating the committee hash](#8-Updating-the-committee-hash)
+- [Registering a committee candidate](#9-Registering-a-committee-candidate)
 
 # 2 Starting the runtime dependencies
 In order to run the system, we require the following runtime dependencies.
@@ -80,7 +80,7 @@ Moreover, we will also assume that we have set the environment variable `SIGNING
 SIGNING_KEY=/home/jared/Documents/Work/cnode/address/test.skey
 ```
 
-Also, we will need to interact with the `cardano-node` in the `docker` image which was launched in [2](2-Starting the-runtime-dependencies). So, to identify the `docker` image, run
+Also, we will need to interact with the `cardano-node` in the `docker` image which was launched in [#2](#2-Starting the-runtime-dependencies). So, to identify the `docker` image, run
 ```
 $ docker ps
 CONTAINER ID   IMAGE                                                 COMMAND                  CREATED      STATUS          PORTS                                       NAMES
@@ -431,7 +431,7 @@ We will demonstrate how to update the committee hash. As an overview, we will di
 
 Recall that the current committee (as stored on chain) is in the file `./COMMITTEE1`.
 
-1. Generating a new committee. This is the same procedure as given in [#5](5-Initialising-the-sidechain). Recall the procedure was as follows.
+1. Generating a new committee. This is the same procedure as given in [#5](#5-Initialising-the-sidechain). Recall the procedure was as follows.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- fresh-sidechain-committee --size 10 > COMMITTEE2
 ```
@@ -572,7 +572,7 @@ nix run .#ctl-main -- register \
 ```
 Some notes:
     - `--spo-signing-key` is used to generate a key for Cardano. TODO: perhaps we should allow inputting a key.
-    - `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](5-Initialising-the-sidechain), and looking at the outputted file.
+    - `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](#5-Initialising-the-sidechain), and looking at the outputted file.
     - `--registration-utxo` was the UTxO that we found just above.
 
 Let's do what it says.
