@@ -1,5 +1,5 @@
-# 1 Discussion on the Internal Testing Tool `trustless-sidechain-gen-signatures`
-This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures` to assist in generating signatures. This demonstration will use the the preview test net.
+# 1 Discussion on the internal testing Tool `trustless-sidechain-gen-signatures`
+This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures` to assist in generating signatures. This demonstration will use the preview test net.
 
 We will discuss:
 - [Starting the runtime dependencies](2-starting-the-runtime-dependencies)
@@ -15,7 +15,7 @@ We will discuss:
 In order to run the system, we require the following runtime dependencies.
 
 - `cardano-node`
-- `ogmios` provides a WebSocket interface to interact with the caradno-node
+- `ogmios` provides a WebSocket interface to interact with the cardano-node
 - `ogmios-datum-cache` is used to query datums and confirm transactions[^1]
 - `postgres` is the database backing `ogmios-datum-cache`
 - `ctl-server` is used to apply arguments to Plutus scripts
@@ -45,7 +45,7 @@ We give a high level overview of the workflow. Consider the following state mach
 
 The notation needs some explanation[^3]. The arrows indicate the transition from one state to another.
 The event and preconditions causing the transition is shown above the horizontal line labeling the transition, and actions taken and side effects executed when the event occurs are shown below the line.
-We assume that there are 4 global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root a representation of the previous merkle root (if it exists), `onchain-epoch` an integer, and `onchain-merkleroots` a collection storing merkle roots supporting an insertion and membership test operation.
+We assume that there are 4 global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root` a representation of the previous merkle root (if it exists), `onchain-epoch` an integer, and `onchain-merkleroots` a collection storing merkle roots supporting an insertion and membership test operation.
 Moreover, we assume that there are some public functions `committee-hash-msg` and `save-root-msg` which are used to help generate signatures.
 
 [^3]: This notation is loosely based off of pp.218 of _Computer Networking: A Top-Down Approach (5th Edition)_ by James F. Kurose and Keith W. Ross.
@@ -54,13 +54,13 @@ We discuss the state transitions.
 
 - `register` (not included in the state machine) allows one to register as a committee candidate.
 
-- `init` initializes the sidechain. In particular this determines the `initial committee` (concatenated hash of public keys of the sidechain) stored onchain which has authority over what Merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initializes internal data structures used for the `claim` endpoint that will not be further discussed.
+- `init` initializes the sidechain. In particular this determines the `initial committee` (concatenated hash of public keys of the sidechain) stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initializes internal data structures used for the `claim` endpoint that will not be further discussed.
 
 - `committee-hash` allows the `current committee` to sign off a `new committee` to replace them.
 
-- `save-root` allows the `current committee` to sign a Merkle root of transactions from the sidechain which may be claimed with the `claim` command.
+- `save-root` allows the `current committee` to sign a merkle root of transactions from the sidechain which may be claimed with the `claim` command.
 
-- `claim` allows an individual who is the recipient of a transaction included in a Merkle root from `save-root` to claim their tokens.
+- `claim` allows an individual who is the recipient of a transaction included in a merkle root from `save-root` to claim their tokens.
 
 In the following sections, we will demonstrate how one may go through this workflow on the preview testnet.
 
@@ -199,11 +199,11 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
 $ MERKLE_TREE_1_1=$(!!)
 $ MERKLE_ROOT_1_1=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-hash --merkle-tree $MERKLE_TREE_1_1)
 ```
-Note that we "paste in" the value of `$PUBLIC_KEY` instead of using the environment variable to play nicely with bash. Moreover, we use `!!` to run the last command and store it to an environment variable. This Merkle tree includes transactions to
+Note that we "paste in" the value of `$PUBLIC_KEY` instead of using the environment variable to play nicely with bash. Moreover, we use `!!` to run the last command and store it to an environment variable. This merkle tree includes transactions to
 - Pay 69 FUEL to myself, and
 - Pay 420 FUEL to myself
 
-We can also save another Merkle root as follows.
+We can also save another merkle root as follows.
 
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
@@ -571,9 +571,9 @@ nix run .#ctl-main -- register \
 --registration-utxo 9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0
 ```
 Some notes:
-    - `--spo-signing-key` is used to generate a key for cardano. TODO: perhaps we should allow inputting a key.
+    - `--spo-signing-key` is used to generate a key for Cardano. TODO: perhaps we should allow inputting a key.
     - `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](5-Initialising-the-sidechain), and looking at the outputted file.
-    - `--registration-utxo` was the utxo that we found just above.
+    - `--registration-utxo` was the UTxO that we found just above.
 
 Let's do what it says.
 
