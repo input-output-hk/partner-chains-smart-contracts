@@ -80,7 +80,7 @@ Moreover, we will also assume that we have set the environment variable `SIGNING
 SIGNING_KEY=/home/jared/Documents/Work/cnode/address/test.skey
 ```
 
-Also, we will need to interact with the `cardano-node` in the `docker` image which was launched in [#2](#2-Starting the-runtime-dependencies). So, to identify the `docker` image, run
+Also, we will need to interact with the `cardano-node` in the `docker` image which was launched in [#2](#2-Starting-the-runtime-dependencies). So, to identify the `docker` image, run
 ```
 $ docker ps
 CONTAINER ID   IMAGE                                                 COMMAND                  CREATED      STATUS          PORTS                                       NAMES
