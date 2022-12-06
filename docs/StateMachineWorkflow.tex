@@ -2,7 +2,7 @@
 % > latexmk -pdf ./StateMachineWorkflow.tex && pdf2svg ./StateMachineWorkflow.pdf ./StateMachineWorkflow.svg && latexmk -c ./StateMachineWorkflow.tex && rm ./StateMachineWorkflow.pdf
 \documentclass{standalone}
 \usepackage{tikz}
-\usetikzlibrary{automata, positioning, arrows}
+\usetikzlibrary{automata, positioning, arrows, backgrounds}
 \tikzset{
     ->, % makes the edges directed
     >=stealth, % makes the arrow heads bold
@@ -10,12 +10,9 @@
      every state/.style={thick, fill=gray!10}, % sets the properties for each state node
     node distance=20cm, % specifies the minimum distance between two nodes
 }
-
-\special{background White} % give a white background (only worked for dvi --> svg which is no longer used)
-\pagecolor{white} % give a white background (only worked for dvi --> svg which is no longer used)
-
 \begin{document}
-    \begin{tikzpicture}[auto]
+    \begin{tikzpicture}[auto, background rectangle/.style={draw=white,fill=white}, show background rectangle]
+
         % Nodes
         \node[state, initial] (q1) {};
         \node[state, right of=q1] (q2) {};
