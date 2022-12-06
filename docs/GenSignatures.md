@@ -1,4 +1,4 @@
-# 1 Discussion on the internal testing Tool `trustless-sidechain-gen-signatures`
+# 1 Discussion on the internal testing tool `trustless-sidechain-gen-signatures`
 This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures` to assist in generating signatures. This demonstration will use the preview test net.
 
 We will discuss:
