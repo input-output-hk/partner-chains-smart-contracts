@@ -20,7 +20,7 @@ In order to run the system, we require the following runtime dependencies.
 - `postgres` is the database backing `ogmios-datum-cache`
 - `ctl-server` is used to apply arguments to Plutus scripts
 
-[^1:] The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
+[^1]: The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
 
 We have provided a convenient way to launch the runtime dependencies in `docker` images for you.
 In a separate terminal window in the project root directory, execute the following command to launch the runtime dependences in `docker` images for the preview test net.
@@ -45,10 +45,10 @@ We give a high level overview of the workflow. Consider the following state mach
 
 The notation needs some explanation[^3]. The arrows indicate the transition from one state to another.
 The event and preconditions causing the transition is shown above the horizontal line labeling the transition, and actions taken and side effects executed when the event occurs are shown below the line.
-We assume that there are 4 global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root a representation of the previous merkle root (if it exists), ``onchain-epoch` an integer, and `onchain-merkleroots` a collection storing merkle roots supporting an insertion and membership test operation.
+We assume that there are 4 global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root a representation of the previous merkle root (if it exists), `onchain-epoch` an integer, and `onchain-merkleroots` a collection storing merkle roots supporting an insertion and membership test operation.
 Moreover, we assume that there are some public functions `committee-hash-msg` and `save-root-msg` which are used to help generate signatures.
 
-[^3:] This notation is loosely based off of pp.218 of _Computer Networking: A Top-Down Approach (5th Edition)_ by James F. Kurose and Keith W. Ross.
+[^3]: This notation is loosely based off of pp.218 of _Computer Networking: A Top-Down Approach (5th Edition)_ by James F. Kurose and Keith W. Ross.
 
 We discuss the state transitions.
 
