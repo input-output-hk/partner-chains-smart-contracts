@@ -7,10 +7,10 @@
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
 
-    plutip.url = github:jaredponn/plutip/697dfd248b9c80098d0a0d4d0bad986902c93fbc;
+    plutip.url = github:mlabs-haskell/plutip/e7eda09acdc4776e9aecb947ce577182b77df571;
 
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
+      url = "github:Plutonomicon/cardano-transaction-lib/d2f87e306eac386c6b6165ced339d1f8802a897f";
       inputs = {
         plutip = plutip;
         ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
