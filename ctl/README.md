@@ -68,7 +68,7 @@ nix run .#ctl-main -- --help
 **Bundle to a JavaScript file and run using node:**
 
 ```shell
-nix-build src/ctl-bundle-cli.nix
+nix-build nix/ctl-bundle-cli.nix
 ```
 
 This will produce a package `ctl-scripts-<version>.tar` with the compiled `main.js` script that can be run using Node
