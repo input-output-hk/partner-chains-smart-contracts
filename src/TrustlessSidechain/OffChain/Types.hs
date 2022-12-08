@@ -30,6 +30,7 @@ makeLift ''GenesisHash
 
 $(deriveJSON defaultOptions ''GenesisHash)
 
+-- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
   deriving (IsString, Prelude.Show) via LedgerBytes
   deriving stock (Generic)

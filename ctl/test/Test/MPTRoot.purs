@@ -24,17 +24,17 @@ import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
 -- | 'saveRoot' is a wrapper around 'MPTRoot.saveRoot' to make writing test
--- cases a bit more terse (note that it makes all committee members sign the new root).
--- It returns the saved merkle root.
+-- | cases a bit more terse (note that it makes all committee members sign the new root).
+-- | It returns the saved merkle root.
 saveRoot ∷
   { sidechainParams ∷ SidechainParams
-  , -- | merkle tree entries used to build the new merkle root
+  , -- merkle tree entries used to build the new merkle root
     merkleTreeEntries ∷ Array MerkleTreeEntry
-  , -- | the current committee's (expected to be stored on chain) private keys
+  , -- the current committee's (expected to be stored on chain) private keys
     currentCommitteePrvKeys ∷ Array PrivateKey
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , -- the merkle root that was just saved
+    previousMerkleRoot ∷ Maybe ByteArray
   } →
-  -- | the merkle root that was just saved
   Contract () ByteArray
 saveRoot
   { sidechainParams

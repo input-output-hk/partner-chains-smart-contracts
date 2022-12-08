@@ -14,6 +14,7 @@ import Contract.Value as Value
 import FUELMintingPolicy as FUELMintingPolicy
 import MPTRoot as MPTRoot
 import SidechainParams (SidechainParams)
+import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
@@ -42,6 +43,9 @@ getSidechainAddresses scParams = do
   mptRootTokenMintingPolicyId ← do
     mp ← MPTRoot.getMptRootTokenMintingPolicy scParams
     getCurrencySymbolHex mp
+  committeeNftPolicyId ← do
+    { committeeHashPolicy } ← UpdateCommitteeHash.getCommitteeHashPolicy scParams
+    getCurrencySymbolHex committeeHashPolicy
   committeeCandidateValidatorAddr ← do
     validator ← CommitteCandidateValidator.getCommitteeCandidateValidator
       scParams
@@ -52,6 +56,7 @@ getSidechainAddresses scParams = do
     mintingPolicies =
       [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
       , "MPTRootTokenMintingPolicyId" /\ mptRootTokenMintingPolicyId
+      , "CommitteeNftPolicyId" /\ committeeNftPolicyId
       ]
   pure
     { addresses

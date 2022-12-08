@@ -31,10 +31,40 @@
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
-      runtimeConfig = {
+      vasilDevRuntimeConfig = {
         network = {
           name = "vasil-dev";
           magic = 9;
+        };
+      };
+
+      previewRuntimeConfig = {
+        # Conveniently, by default the ctl runtime configuration uses the
+        # preview network. See here:
+        # https://github.com/Plutonomicon/cardano-transaction-lib/blob/87233da45b7c433c243c539cb4d05258e551e9a1/nix/runtime.nix
+        network = {
+          name = "preview";
+          magic = 2;
+        };
+
+        # Need use a more recent node version -- iirc. there was a hard fork
+        # somewhat recently?
+        node = {
+          # the version of the node to use, corresponds to the image version tag,
+          # i.e. `"inputoutput/cardano-node:${tag}"`
+          tag = "1.35.4";
+        };
+
+        datumCache = {
+          # The `firstBlock` is essentially what ogmios-datum-cache starts
+          # "syncing" from, and the default doesn't exist apparently... so
+          # we give it a block which actually exists.
+          blockFetcher = {
+            firstBlock = {
+              slot = 3212169;
+              id = "199a5953f54a216532b396b112c7b8c561710e93a978383173dddadda3b9bc17";
+            };
+          };
         };
       };
 
@@ -223,7 +253,8 @@
 
       packages = perSystem
         (system: self.flake.${system}.packages // {
-          ctl-runtime = (nixpkgsFor system).buildCtlRuntime runtimeConfig;
+          ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
+          ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           ctl-main = ctlMainFor system;
           ctl-bundle-web = (psProjectFor system).bundlePursProject {
             main = "Main";
@@ -241,7 +272,8 @@
         });
 
       apps = perSystem (system: self.flake.${system}.apps // {
-        ctl-runtime = (nixpkgsFor system).launchCtlRuntime runtimeConfig;
+        ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
+        ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
         ctl-main = {
           type = "app";
           program = "${ctlMainFor system}/bin/ctl-main";

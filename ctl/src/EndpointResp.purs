@@ -84,12 +84,12 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         ]
     SaveRootResp { transactionId } →
       J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CommitteeHash"
+        [ "endpoint" /\ J.fromString "SaveRoot"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
     CommitteeHandoverResp { saveRootTransactionId, committeeHashTransactionId } →
       J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CommitteeHash"
+        [ "endpoint" /\ J.fromString "CommitteeHandover"
         , "saveRootTransactionId" /\ J.fromString
             (byteArrayToHex saveRootTransactionId)
         , "committeeHashTransactionId" /\ J.fromString
