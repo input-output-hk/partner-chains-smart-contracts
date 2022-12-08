@@ -133,6 +133,7 @@ executable trustless-sidechain-gen-signatures
     , bech32
     , bytestring
     , cardano-addresses
+    , cardano-binary
     , cardano-crypto-class
     , cryptonite
     , either

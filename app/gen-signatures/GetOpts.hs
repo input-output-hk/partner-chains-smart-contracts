@@ -15,6 +15,7 @@ module GetOpts (
 
 import Prelude
 
+import Cardano.Binary qualified as Binary
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
@@ -321,6 +322,28 @@ parseSpoPrivKey = eitherReader toSpoPrivKey
         . Base16.decode
         . Char8.pack
 
+{- | 'parseSpoPrivKey' parses the CLI flag value which is an SPO private key
+ encoded as cbor hex format.
+
+ This is compatible with @cardano-cli@'s output format. In particular, if you
+ generate generate a secret key / private key pair with
+ > cardano-cli address key-gen \
+ >  --verification-key-file payment.vkey \
+ >  --signing-key-file payment.skey
+ Then, the JSON field @cborHex@ of the JSON object in @payment.skey@ is what
+ this will parse.
+-}
+parseSpoPrivKeyCbor :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
+parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
+  where
+    toSpoPrivKeyCbor :: String -> Either String (SignKeyDSIGN Ed25519DSIGN)
+    toSpoPrivKeyCbor str = do
+      bin <-
+        mapLeft ("Invalid spo key hex: " <>) $
+          Base16.decode . Char8.pack $
+            str
+      mapLeft (mappend "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
+
 -- | Parse SECP256K1 private key
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
 parseSidechainPrivKey = eitherReader Utils.strToSecpPrivKey
@@ -555,12 +578,20 @@ registerCommand =
       do
         scParamsAndSigningKeyFunction <- genCliCommandHelperParser
         rcSpoPrivKey <-
-          option parseSpoPrivKey $
-            mconcat
-              [ long "spo-signing-key"
-              , metavar "SIGNING_KEY"
-              , help "SPO Cold signing key of the block producer candidate"
-              ]
+          do
+            option parseSpoPrivKey $
+              mconcat
+                [ long "spo-signing-key"
+                , metavar "SIGNING_KEY"
+                , help "SPO Cold signing key of the block producer candidate"
+                ]
+            OptParse.<|> do
+              option parseSpoPrivKeyCbor $
+                mconcat
+                  [ long "spo-signing-key-cbor"
+                  , metavar "SIGNING_KEY_CBOR"
+                  , help "hex encoded cbor SPO signing key"
+                  ]
 
         rcSidechainPrivKey <-
           option parseSidechainPrivKey $
