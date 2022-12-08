@@ -6,16 +6,9 @@
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
+    plutip.follows = "cardano-transaction-lib/plutip";
 
-    plutip.url = github:mlabs-haskell/plutip/e7eda09acdc4776e9aecb947ce577182b77df571;
-
-    cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/d2f87e306eac386c6b6165ced339d1f8802a897f";
-      inputs = {
-        plutip = plutip;
-        ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
-      };
-    };
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/a690f60497494ba5d8460261f959deba4f778eda";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
