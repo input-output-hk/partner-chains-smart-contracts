@@ -121,11 +121,21 @@ library
 executable trustless-sidechain-gen-signatures
   import:         common-lang
   main-is:        Main.hs
+  other-modules:
+    GenOutput
+    GetOpts
+    Utils
+
   build-depends:
+    , aeson
     , attoparsec
     , base16-bytestring
+    , bech32
     , bytestring
+    , cardano-addresses
+    , cardano-binary
     , cardano-crypto-class
+    , cryptonite
     , either
     , optparse-applicative
     , plutus-core
@@ -133,6 +143,7 @@ executable trustless-sidechain-gen-signatures
     , plutus-ledger-api
     , plutus-tx
     , secp256k1-haskell
+    , serialise
     , text
     , trustless-sidechain
 
