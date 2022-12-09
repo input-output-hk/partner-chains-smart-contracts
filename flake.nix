@@ -14,12 +14,6 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
-
-    # TODO: spago bundle-app is not working in a derivation with spago 0.20.9 (https://github.com/purescript/spago/issues/888)
-    easy-ps = {
-      url = "github:justinwoo/easy-purescript-nix/ddd2ded8d37ab5d3013f353ca3b6ee05eb23d5c0";
-      flake = false;
-    };
   };
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
@@ -227,7 +221,7 @@
           # ctl-bundle-cli = ctlBundleCliFor system;
           ctl-bundle-cli = import ./nix/ctl-bundle-cli.nix rec {
             pkgs = nixpkgsFor system;
-            easy-ps = import inputs.easy-ps { inherit pkgs; };
+            easy-ps = pkgs.easy-ps;
             purs = easy-ps.purs-0_14_5;
             nodejs = pkgs.nodejs-14_x;
           };

@@ -8,7 +8,10 @@ import Contract.Prelude
 
 import ConfigFile.Codecs (configCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Transaction (TransactionHash(..))
+import Contract.Transaction
+  ( TransactionHash(..)
+  , TransactionInput(TransactionInput)
+  )
 import Data.Argonaut.Core as J
 import Data.Argonaut.Parser (jsonParser)
 import Data.Codec.Argonaut as CA
@@ -18,7 +21,6 @@ import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readFile)
 import Node.Path (FilePath)
 import Options.Types (Config)
-import Types.Transaction (TransactionInput(TransactionInput))
 
 optExample ∷ Config
 optExample =

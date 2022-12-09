@@ -11,6 +11,7 @@ import Contract.Address
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
+  , liftContractE
   , liftContractM
   , liftedE
   , liftedM
@@ -42,8 +43,10 @@ import Contract.Transaction
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
   , outputDatumDatum
+  , plutusV2Script
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints as Constraints
@@ -58,7 +61,6 @@ import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
-import Types.Scripts (plutusV2Script)
 import Utils.Logging (class Display, mkReport)
 
 newtype RegisterParams = RegisterParams
@@ -77,10 +79,12 @@ newtype DeregisterParams = DeregisterParams
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
 getCommitteeCandidateValidator sp = do
-  ccvUnapplied ← (plutusV2Script >>> Validator) <$> textEnvelopeBytes
+  ccvUnapplied ← plutusV2Script <$> textEnvelopeBytes
     rawCommitteeCandidateValidator
     PlutusScriptV2
-  liftedE (applyArgs ccvUnapplied [ toData sp ])
+
+  applied ← applyArgs ccvUnapplied [ toData sp ]
+  Validator <$> liftContractE applied
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
@@ -171,8 +175,9 @@ register
           Constraints.DatumInline
           val
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg ("Submitted committeeCandidate register Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' $ msg "Register Tx submitted successfully!"
@@ -216,8 +221,9 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       <> mconcat (flip Constraints.mustSpendScriptOutput unitRedeemer <$> datums)
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' $ msg "Deregister submitted successfully!"

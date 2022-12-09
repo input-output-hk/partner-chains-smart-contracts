@@ -4,6 +4,7 @@ module Test.PoCReferenceScript (testScenario1, testScenario2) where
 import Contract.Prelude
 
 import Contract.Address as Address
+import Contract.Hashing as Hashing
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
@@ -15,26 +16,17 @@ import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction
-  ( Language(PlutusV2)
-  , ScriptRef(PlutusScriptRef)
-  )
+import Contract.Transaction (Language(PlutusV2), ScriptRef(PlutusScriptRef))
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( DatumPresence(DatumWitness)
-  , InputWithScriptRef
-      ( SpendInput
-      -- Note: we can alternatively use the script as a reference input with
-      -- the following constructor.
-      -- We're not testing this though...
-      -- , RefInput
-      )
+  , InputWithScriptRef(SpendInput)
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
+import Ctl.Internal.Hashing (scriptRefHash)
 import Data.Map as Map
-import Hashing as Hashing
 import RawScripts as RawScripts
 import Test.Utils as Test.Utils
 
@@ -98,10 +90,7 @@ testScenario1 = do
     referenceValidatorAddress = Address.scriptHashAddress referenceValidatorHash
 
     referenceScriptRef = PlutusScriptRef (unwrap referenceValidator) ∷ ScriptRef
-  referenceScriptHash ←
-    Monad.liftedM "error 'testScenario1': failed to get ScriptHash"
-      $ pure
-      $ Hashing.scriptRefHash referenceScriptRef
+    referenceScriptHash = scriptRefHash referenceScriptRef
 
   -- 2.
   void do
@@ -125,8 +114,10 @@ testScenario1 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+
+    bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -163,8 +154,9 @@ testScenario1 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -201,10 +193,7 @@ testScenario2 = do
     referenceValidatorAddress = Address.scriptHashAddress referenceValidatorHash
 
     referenceScriptRef = PlutusScriptRef (unwrap referenceValidator) ∷ ScriptRef
-  referenceScriptHash ←
-    Monad.liftedM "error 'testScenario2': failed to get ScriptHash"
-      $ pure
-      $ Hashing.scriptRefHash referenceScriptRef
+    referenceScriptHash = scriptRefHash referenceScriptRef
 
   -- END of duplicated code from 'testScenario1'
 
@@ -231,8 +220,9 @@ testScenario2 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -269,8 +259,9 @@ testScenario2 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId

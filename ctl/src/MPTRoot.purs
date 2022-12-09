@@ -23,7 +23,8 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints (TxConstraints)
@@ -169,9 +170,10 @@ saveRoot
 
   -- Submitting the transaction
   ---------------------------------------------------------
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
   logInfo' (msg "Save root Tx submitted successfully!")
