@@ -34,6 +34,7 @@ module Utils (
   showSecpPrivKey,
   showCombinedMerkleProof,
   toSpoPubKey,
+  vKeyToSpoPubKey,
   toSidechainPubKey,
   secpPubKeyToSidechainPubKey,
   generateRandomSecpPrivKey,
@@ -46,7 +47,7 @@ module Utils (
 import Prelude
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
-import Cardano.Crypto.DSIGN (Ed25519DSIGN)
+import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
   deriveVerKeyDSIGN,
@@ -378,11 +379,16 @@ showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinDat
 -- | Derive Ed25519DSIGN public key from the private key
 toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
 toSpoPubKey =
+  vKeyToSpoPubKey
+    . deriveVerKeyDSIGN
+
+-- | Converts Ed25519DSIGN public key to a PubKey.
+vKeyToSpoPubKey :: VerKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
+vKeyToSpoPubKey =
   Crypto.PubKey
     . LedgerBytes
     . Builtins.toBuiltin
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
-    . deriveVerKeyDSIGN
 
 -- | Derive SECP256K1 public key from the private key
 toSidechainPubKey :: SECP.SecKey -> SidechainPubKey
