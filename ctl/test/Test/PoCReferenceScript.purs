@@ -4,7 +4,6 @@ module Test.PoCReferenceScript (testScenario1, testScenario2) where
 import Contract.Prelude
 
 import Contract.Address as Address
-import Contract.Hashing as Hashing
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad

@@ -48,8 +48,7 @@ import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
-  ( Language(PlutusV2)
-  , TransactionInput
+  ( TransactionInput
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
   , plutusV2Script
