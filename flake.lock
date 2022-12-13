@@ -275,17 +275,17 @@
         "plutip": "plutip"
       },
       "locked": {
-        "lastModified": 1670526162,
-        "narHash": "sha256-h7tgtXDKWLZG6VhfzDI7P7YQ+f0CF90y773YkIbhFlU=",
+        "lastModified": 1670862205,
+        "narHash": "sha256-LLyPEtfZcfkMXzO5cBhT1HRi6/2991bsffJW7x1rVho=",
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "a690f60497494ba5d8460261f959deba4f778eda",
+        "rev": "9b2c298a3c8e544aec659715f95615d67dda0f43",
         "type": "github"
       },
       "original": {
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "a690f60497494ba5d8460261f959deba4f778eda",
+        "rev": "9b2c298a3c8e544aec659715f95615d67dda0f43",
         "type": "github"
       }
     },
@@ -1084,11 +1084,11 @@
         "unstable_nixpkgs": "unstable_nixpkgs"
       },
       "locked": {
-        "lastModified": 1660314631,
-        "narHash": "sha256-5GxToZTZIPQPBhqrJXU4tAdLIPeBHNiBQY2KTSGJfFg=",
+        "lastModified": 1663850553,
+        "narHash": "sha256-yYb9IhvJf2WH1Rv+VtGUeBABAOXn/KuiTJmdMNg9sCU=",
         "owner": "mlabs-haskell",
         "repo": "ogmios-datum-cache",
-        "rev": "880a69a03fbfd06a4990ba8873f06907d4cd16a7",
+        "rev": "ada4d2efdf7c4f308835099d0d30a91c1bd4a565",
         "type": "github"
       },
       "original": {
