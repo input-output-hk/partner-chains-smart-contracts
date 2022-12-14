@@ -7,7 +7,6 @@ import Contract.Prim.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Partial.Unsafe (unsafePartial)
