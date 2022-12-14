@@ -4,24 +4,19 @@ import Contract.Prelude
 
 import Contract.Address
   ( getNetworkId
-  , getWalletAddress
   , ownPaymentPubKeyHash
   , pubKeyHashAddress
   )
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Transaction (TransactionInput)
-import Contract.Utxos (utxosAt)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List.Lazy (List, replicateM)
-import Data.Map as Map
-import Data.Set as Set
 import FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
-  , passiveBridgeMintParams
+  , combinedMerkleProofToFuelParams
   , runFuelMP
   )
 import InitSidechain (initSidechain)
@@ -36,19 +31,19 @@ import Test.Utils (getOwnTransactionInput, toTxIn)
 import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
 import Utils.SerialiseData (serialiseData)
 
-mkScParams ∷ Maybe TransactionInput → SidechainParams
-mkScParams genesisMint = SidechainParams
+mkScParams ∷ SidechainParams
+mkScParams = SidechainParams
   { chainId: BigInt.fromInt 1
   , genesisHash: hexToByteArrayUnsafe "aabbcc"
   , genesisUtxo: toTxIn "aabbcc" 0
   , thresholdNumerator: BigInt.fromInt 2
   , thresholdDenominator: BigInt.fromInt 3
-  , genesisMint
   }
 
 mkCommittee ∷ Int → Contract () (List (Tuple PublicKey PrivateKey))
 mkCommittee n = replicateM n (Tuple <*> toPubKeyUnsafe <$> generatePrivKey)
 
+{-
 -- | Testing Passive bridge minting (genesis mint) and burning multiple times
 testScenarioPassiveSuccess ∷ Contract () Unit
 testScenarioPassiveSuccess = do
@@ -85,6 +80,7 @@ testScenarioPassiveFailure = do
     { amount: BigInt.fromInt 5, recipient }
   void $ runFuelMP scParams $ passiveBridgeMintParams scParams
     { amount: BigInt.fromInt 5, recipient }
+-}
 
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
@@ -99,7 +95,6 @@ testScenarioActiveSuccess = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
@@ -149,12 +144,98 @@ testScenarioActiveSuccess = do
         }
     )
 
+-- | `testScenarioActiveSuccess2` mints and burns a few times.. In particular, we:
+-- |    - mint 5
+-- |    - mint 7
+-- |    - burn 10
+-- |    - burn 2
+testScenarioActiveSuccess2 ∷ Contract () Unit
+testScenarioActiveSuccess2 = do
+  -- start of mostly duplicated code from `testScenarioActiveSuccess`
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  netId ← getNetworkId
+  genesisUtxo ← getOwnTransactionInput
+  let
+    keyCount = 25
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 1
+      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+      , initUtxo: genesisUtxo
+      , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
+      }
+  -- end of mostly duplicated code from `testScenarioActiveSuccess`
+
+  { sidechainParams } ← initSidechain initScParams
+
+  { combinedMerkleProofs } ← Test.MPTRoot.saveRoot
+    { sidechainParams
+    , merkleTreeEntries:
+        let
+          recipient = pubKeyHashAddress pkh Nothing
+          previousMerkleRoot = Nothing
+          entry0 =
+            MerkleTreeEntry
+              { index: BigInt.fromInt 0
+              , amount: BigInt.fromInt 5
+              , previousMerkleRoot
+              , recipient: unwrap
+                  (addressBytes (fromPlutusAddress netId recipient))
+              }
+          entry1 =
+            MerkleTreeEntry
+              { index: BigInt.fromInt 1
+              , amount: BigInt.fromInt 7
+              , previousMerkleRoot
+              , recipient: unwrap
+                  (addressBytes (fromPlutusAddress netId recipient))
+              }
+        in
+          [ entry0, entry1 ]
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    }
+
+  (combinedMerkleProof0 /\ combinedMerkleProof1) ←
+    liftContractM "bad test case for `testScenarioActiveSuccess2`"
+      $ case combinedMerkleProofs of
+          [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
+            $ combinedMerkleProof0
+            /\ combinedMerkleProof1
+          _ → Nothing
+
+  fp0 ←
+    liftContractM
+      "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+      $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+
+  fp1 ←
+    liftContractM
+      "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+      $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
+
+  void $ runFuelMP sidechainParams fp0
+  void $ runFuelMP sidechainParams fp1
+
+  void $ runFuelMP sidechainParams $ Burn
+    { amount: BigInt.fromInt 10, recipient: hexToByteArrayUnsafe "aabbcc" }
+
+  void $ runFuelMP sidechainParams $ Burn
+    { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" }
+
+  pure unit
+
 testScenarioActiveFailure ∷ Contract () Unit
 testScenarioActiveFailure = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   let
     recipient = pubKeyHashAddress pkh Nothing
-    scParams = mkScParams Nothing
+    scParams = mkScParams
   -- This is not how you create a working merkleproof that passes onchain validator.
   mp' ← liftedM "impossible" $ pure (serialiseData (toData (MerkleProof [])))
   mt ← liftedE $ pure (fromList (pure mp'))
@@ -170,3 +251,76 @@ testScenarioActiveFailure = do
     }
   void $ runFuelMP scParams $ Burn
     { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }
+
+-- | `testScenarioActiveFailure2` tries to mint something twice (which should
+-- | fail!)
+testScenarioActiveFailure2 ∷ Contract () Unit
+testScenarioActiveFailure2 = do
+  -- start of mostly duplicated code from `testScenarioActiveSuccess2`
+  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+  netId ← getNetworkId
+  genesisUtxo ← getOwnTransactionInput
+  let
+    keyCount = 25
+  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  let
+    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+    initScParams = InitSidechainParams
+      { initChainId: BigInt.fromInt 1
+      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+      , initUtxo: genesisUtxo
+      , initCommittee: initCommitteePubKeys
+      , initSidechainEpoch: zero
+      , initThresholdNumerator: BigInt.fromInt 2
+      , initThresholdDenominator: BigInt.fromInt 3
+      }
+
+  { sidechainParams } ← initSidechain initScParams
+
+  { combinedMerkleProofs } ← Test.MPTRoot.saveRoot
+    { sidechainParams
+    , merkleTreeEntries:
+        let
+          recipient = pubKeyHashAddress pkh Nothing
+          previousMerkleRoot = Nothing
+          entry0 =
+            MerkleTreeEntry
+              { index: BigInt.fromInt 0
+              , amount: BigInt.fromInt 5
+              , previousMerkleRoot
+              , recipient: unwrap
+                  (addressBytes (fromPlutusAddress netId recipient))
+              }
+          entry1 =
+            MerkleTreeEntry
+              { index: BigInt.fromInt 1
+              , amount: BigInt.fromInt 7
+              , previousMerkleRoot
+              , recipient: unwrap
+                  (addressBytes (fromPlutusAddress netId recipient))
+              }
+        in
+          [ entry0, entry1 ]
+    , currentCommitteePrvKeys: initCommitteePrvKeys
+    , previousMerkleRoot: Nothing
+    }
+  -- end of mostly duplicated code from `testScenarioActiveSuccess2`
+
+  (combinedMerkleProof0 /\ _combinedMerkleProof1) ←
+    liftContractM "bad test case for `testScenarioActiveSuccess2`"
+      $ case combinedMerkleProofs of
+          [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
+            $ combinedMerkleProof0
+            /\ combinedMerkleProof1
+          _ → Nothing
+
+  fp0 ←
+    liftContractM
+      "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+      $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+
+  -- the very bad double mint attempt...
+  void $ runFuelMP sidechainParams fp0
+  void $ runFuelMP sidechainParams fp0
+
+  pure unit

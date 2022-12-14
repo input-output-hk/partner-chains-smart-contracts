@@ -27,7 +27,6 @@ scParams ∷ SidechainParams
 scParams = SidechainParams
   { chainId: BigInt.fromInt 1
   , genesisHash: hexToByteArrayUnsafe "aabbcc"
-  , genesisMint: Nothing
   , genesisUtxo: toTxIn "aabbcc" 0
   , thresholdNumerator: BigInt.fromInt 2
   , thresholdDenominator: BigInt.fromInt 3

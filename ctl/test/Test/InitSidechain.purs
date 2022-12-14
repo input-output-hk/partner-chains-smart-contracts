@@ -57,7 +57,6 @@ testScenario1 = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee
       , initSidechainEpoch: zero
@@ -88,7 +87,6 @@ testScenario2 = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee
       , initSidechainEpoch: zero
@@ -127,7 +125,6 @@ testScenario3 alice bob = do
       initScParams = InitSidechainParams
         { initChainId: BigInt.fromInt 69
         , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-        , initMint: Nothing
         , initUtxo: genesisUtxo
         , initCommittee
         , initSidechainEpoch: zero

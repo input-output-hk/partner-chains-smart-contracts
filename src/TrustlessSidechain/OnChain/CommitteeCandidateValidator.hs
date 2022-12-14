@@ -25,7 +25,6 @@ import PlutusTx.Prelude hiding (Semigroup ((<>)))
 import TrustlessSidechain.OffChain.Types (
   RegisterParams (..),
   SidechainParams (..),
-  convertSCParams,
  )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (..),
@@ -78,7 +77,7 @@ mkSignature params@RegisterParams {sidechainParams, sidechainPubKey, inputUtxo} 
         Builtins.serialiseData $
           toBuiltinData $
             BlockProducerRegistrationMsg
-              (convertSCParams sidechainParams)
+              sidechainParams
               sidechainPubKey
               inputUtxo
       sig = Crypto.sign' msg mockSpoPrivKey

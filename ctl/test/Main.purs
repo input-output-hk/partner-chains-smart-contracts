@@ -53,10 +53,10 @@ main = do
         CommitteeCandidateValidator.testScenarioFailure1 # fails
         CommitteeCandidateValidator.testScenarioFailure2 alice bob # fails
 
-        FUELMintingPolicy.testScenarioPassiveSuccess
-        FUELMintingPolicy.testScenarioPassiveFailure # fails
         FUELMintingPolicy.testScenarioActiveSuccess
+        FUELMintingPolicy.testScenarioActiveSuccess2
         FUELMintingPolicy.testScenarioActiveFailure # fails
+        FUELMintingPolicy.testScenarioActiveFailure2 # fails
 
         UpdateCommitteeHash.testScenario1
         UpdateCommitteeHash.testScenario2

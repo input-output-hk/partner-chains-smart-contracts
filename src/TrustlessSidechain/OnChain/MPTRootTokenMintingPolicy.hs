@@ -32,7 +32,6 @@ import TrustlessSidechain.OffChain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  convertSCParams,
  )
 import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
@@ -174,7 +173,7 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { mrimSidechainParams = convertSCParams $ smrmSidechainParams smrm
+                { mrimSidechainParams = smrmSidechainParams smrm
                 , mrimMerkleRoot = merkleRoot
                 , mrimPreviousMerkleRoot = previousMerkleRoot
                 }

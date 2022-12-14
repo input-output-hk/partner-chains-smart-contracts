@@ -3,13 +3,11 @@ module Main (main) where
 import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
-import Contract.Address (getWalletAddress)
-import Contract.Monad (Contract, launchAff_, liftedM, runContract)
+import Contract.Monad (Contract, launchAff_, runContract)
 import Data.List as List
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn, Mint)
-  , passiveBridgeMintParams
   , runFuelMP
   )
 import GetSidechainAddresses as GetSidechainAddresses
@@ -29,16 +27,7 @@ main = do
   opts ← getOptions
 
   launchAff_ $ runContract opts.configParams do
-    ownAddr ← liftedM "Couldn't get own wallet address" getWalletAddress
-
     endpointResp ← case opts.endpoint of
-      MintAct { amount } →
-        runFuelMP opts.scParams
-          (passiveBridgeMintParams opts.scParams { amount, recipient: ownAddr })
-          <#> unwrap
-          >>> { transactionId: _ }
-          >>> MintActResp
-
       ClaimAct { amount, recipient, merkleProof, index, previousMerkleRoot } →
         runFuelMP sp
           ( Mint
@@ -141,7 +130,6 @@ main = do
             , initUtxo: sc.genesisUtxo
             -- v only difference between sidechain and initsidechain
             , initCommittee: List.toUnfoldable committeePubKeys
-            , initMint: sc.genesisMint
             , initSidechainEpoch
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator

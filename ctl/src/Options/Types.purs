@@ -51,8 +51,7 @@ type Config =
 
 -- | CLI arguments including required data to run each individual endpoint
 data Endpoint
-  = MintAct { amount ∷ BigInt }
-  | ClaimAct
+  = ClaimAct
       { amount ∷ BigInt
       , recipient ∷ Address
       , merkleProof ∷ MerkleProof

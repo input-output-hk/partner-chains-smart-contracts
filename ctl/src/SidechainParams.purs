@@ -18,7 +18,6 @@ import Utils.Codecs (byteArrayCodec, transactionInputCodec)
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
   , genesisHash ∷ ByteArray
-  , genesisMint ∷ Maybe TransactionInput
   , genesisUtxo ∷ TransactionInput
   ,
     -- 'thresholdNumerator' is the numerator of the ratio required for the
@@ -37,60 +36,6 @@ derive instance Newtype SidechainParams _
 instance ToData SidechainParams where
   toData
     ( SidechainParams
-        { chainId
-        , genesisHash
-        , genesisMint
-        , genesisUtxo
-        , thresholdNumerator
-        , thresholdDenominator
-        }
-    ) =
-    Constr zero
-      [ toData chainId
-      , toData genesisHash
-      , toData genesisMint
-      , toData genesisUtxo
-      , toData thresholdNumerator
-      , toData thresholdDenominator
-      ]
-
--- | `SidechainParams'` is the `SidechainParams` for the Active Bridge
--- | version... We use this to sign messages.
--- | See #266 for details.
-newtype SidechainParams' = SidechainParams'
-  { chainId ∷ BigInt
-  , genesisHash ∷ ByteArray
-  , genesisUtxo ∷ TransactionInput
-  , thresholdNumerator ∷ BigInt
-  , thresholdDenominator ∷ BigInt
-  }
-
--- | `convertSCParams` converts `SidechainParams` to the active bridge version.
--- | This matches the onchain function `convertSCParams` in
--- | `TrustlessSidechain/OffChain/Types.hs`
-convertSCParams ∷ SidechainParams → SidechainParams'
-convertSCParams
-  ( SidechainParams
-      { chainId
-      , genesisHash
-      , genesisMint: _genesisMint
-      , genesisUtxo
-      , thresholdNumerator
-      , thresholdDenominator
-      }
-  ) = SidechainParams'
-  { chainId
-  , genesisHash
-  , genesisUtxo
-  , thresholdNumerator
-  , thresholdDenominator
-  }
-
-derive instance Generic SidechainParams' _
-derive instance Newtype SidechainParams' _
-instance ToData SidechainParams' where
-  toData
-    ( SidechainParams'
         { chainId
         , genesisHash
         , genesisUtxo
@@ -120,7 +65,6 @@ newtype InitSidechainParams = InitSidechainParams
     initCommittee ∷ Array PubKey
   , -- 'initSidechainEpoch' is the initial sidechain epoch of the first committee
     initSidechainEpoch ∷ BigInt
-  , initMint ∷ Maybe TransactionInput
   , initThresholdNumerator ∷ BigInt
   , initThresholdDenominator ∷ BigInt
   }
@@ -134,7 +78,6 @@ instance ToData InitSidechainParams where
         , initGenesisHash
         , initUtxo
         , initCommittee
-        , initMint
         , initThresholdNumerator
         , initThresholdDenominator
         }
@@ -144,7 +87,6 @@ instance ToData InitSidechainParams where
       , toData initGenesisHash
       , toData initUtxo
       , toData initCommittee
-      , toData initMint
       , toData initThresholdNumerator
       , toData initThresholdDenominator
       ]
@@ -158,7 +100,6 @@ scParamsCodec =
     ( CAR.object "sidechainParameters"
         { chainId: chainIdCodec
         , genesisHash: byteArrayCodec
-        , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: transactionInputCodec
         , thresholdNumerator:
             CA.prismaticCodec "thresholdNumerator"

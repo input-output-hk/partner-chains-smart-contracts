@@ -89,13 +89,9 @@ options maybeConfig = info (helper <*> optSpec)
           ( info (withCommonOpts (pure GetAddrs))
               (progDesc "Get the script addresses for a given sidechain")
           )
-      , command "mint"
-          ( info (withCommonOpts mintSpec)
-              (progDesc "Mint a certain amount of FUEL tokens (Passive Bridge)")
-          )
       , command "claim"
           ( info (withCommonOpts claimSpec)
-              (progDesc "Claim a FUEL tokens from a proof (Active Bridge)")
+              (progDesc "Claim a FUEL tokens from a proof")
           )
       , command "burn"
           ( info (withCommonOpts burnSpec)
@@ -229,15 +225,6 @@ options maybeConfig = info (helper <*> optSpec)
           (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
       ]
 
-    genesisMint ← optional $ option transactionInput $ fold
-      [ short 'm'
-      , long "genesis-mint-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO to be spend with the genesis mint"
-      , maybe mempty value
-          (maybeConfig >>= _.sidechainParameters >>= _.genesisMint)
-      ]
-
     genesisUtxo ← option transactionInput $ fold
       [ short 'c'
       , long "genesis-committee-hash-utxo"
@@ -292,15 +279,11 @@ options maybeConfig = info (helper <*> optSpec)
     in
       SidechainParams
         { chainId: BigInt.fromInt chainId
-        , genesisMint
         , genesisHash
         , genesisUtxo
         , thresholdNumerator
         , thresholdDenominator
         }
-
-  mintSpec =
-    MintAct <<< { amount: _ } <$> parseAmount
 
   claimSpec = ado
     (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh

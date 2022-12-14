@@ -18,7 +18,6 @@ import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
 import Partial.Unsafe as Unsafe
 import SidechainParams (InitSidechainParams(..), SidechainParams)
-import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
 import Types (PubKey, Signature)
 import UpdateCommitteeHash
@@ -65,7 +64,7 @@ generateUchmSignatures
   committeeMessage ←
     UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
+          { sidechainParams: sidechainParams
           , newCommitteePubKeys
           , previousMerkleRoot
           , sidechainEpoch
@@ -152,7 +151,6 @@ testScenario1 = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
@@ -188,7 +186,6 @@ testScenario2 = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbccddeeffgghhiijjkkllmmnnoo"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initThresholdNumerator: BigInt.fromInt 1
@@ -239,7 +236,6 @@ testScenario3 = do
     initScParams = InitSidechainParams
       { initChainId: BigInt.fromInt 6
       , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: case Array.uncons initCommitteePubKeys of
           Nothing → mempty
@@ -318,7 +314,6 @@ testScenario4 = do
       { initChainId: BigInt.fromInt 78
       , initGenesisHash: hexToByteArrayUnsafe
           "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee:
           [ hexToByteArrayUnsafe

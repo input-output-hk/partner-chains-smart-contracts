@@ -13,7 +13,7 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisMint))
+import TrustlessSidechain.OffChain.Types (SidechainParams)
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
 
@@ -122,28 +122,9 @@ mkMintingPolicy fm mode ctx = case mode of
      in traceIfFalse
           "error 'FUELMintingPolicy' tx not signed by recipient"
           (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (mteRecipient mte)))
-          &&
-          -- TODO: remove the oneshot minting policy later... yeah..
-          --
-          -- Why do we even have it? Well because the IOG people like using it
-          -- to test for now, even though it's not what we will use later and
-          -- the distributed set replaces it.
-          ( case genesisMint $ fmSidechainParams fm of
-              Nothing ->
-                traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
-                  && traceIfFalse
-                    "error 'FUELMintingPolicy' merkle proof failed"
-                    (MerkleTree.memberMp cborMte mp merkleRoot)
-                  && traceIfFalse
-                    "error 'FUELMintingPolicy' not inserting into distributed set"
-                    (dsInserted == cborMteHashed)
-              Just gutxo ->
-                traceIfFalse "Oneshot Mintingpolicy utxo not present" $
-                  let -- One shot minting policy checks.
-                      hasUTxO :: TxOutRef -> Bool
-                      hasUTxO utxo = any (\i -> txInInfoOutRef i == utxo) $ txInfoInputs info
-                   in hasUTxO gutxo
-          )
+          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
+          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
   where
     -- Aliases:
     info = scriptContextTxInfo ctx

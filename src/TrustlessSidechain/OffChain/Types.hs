@@ -50,7 +50,6 @@ data InitSidechainParams = InitSidechainParams
     initUtxo :: TxOutRef
   , -- | 'initCommittee' is the initial committee of the sidechain
     initCommittee :: [PubKey]
-  , initMint :: Maybe TxOutRef
   , -- | See 'thresholdNumerator'
     initThresholdNumerator :: Integer
   , -- | See 'thresholdDenominator'
@@ -67,10 +66,6 @@ PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
-  , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
-    -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
-    -- will use the distributed set implementation.
-    genesisMint :: Maybe TxOutRef
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: TxOutRef
@@ -87,35 +82,6 @@ data SidechainParams = SidechainParams
 $(deriveJSON defaultOptions ''SidechainParams)
 PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
-
-{- | Parameters uniquely identifying a sidechain, used only in the block producer registration
- TODO: This type has to be removed, when we deprecate Passive Bridge functionality
--}
-data SidechainParams' = SidechainParams'
-  { chainId :: Integer
-  , genesisHash :: GenesisHash
-  , -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
-    -- will use the distributed set implementation.
-
-    -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
-    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: TxOutRef
-  , -- | 'thresholdNumerator' is the numerator for the ratio of the committee
-    -- needed to sign off committee handovers / merkle roots
-    thresholdNumerator :: Integer
-  , -- | 'thresholdDenominator' is the denominator for the ratio of the
-    -- committee needed to sign off committee handovers / merkle roots
-    thresholdDenominator :: Integer
-  }
-  deriving stock (Prelude.Show, Generic)
-
-PlutusTx.makeLift ''SidechainParams'
-PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
-
--- | Convert SidechainParams to the Active Bridge version
-convertSCParams :: SidechainParams -> SidechainParams'
-convertSCParams (SidechainParams i g _ u numerator denominator) =
-  SidechainParams' i g u numerator denominator
 
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams

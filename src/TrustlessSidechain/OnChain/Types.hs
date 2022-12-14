@@ -14,7 +14,7 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
-import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainParams', SidechainPubKey)
+import TrustlessSidechain.OffChain.Types (SidechainParams, SidechainPubKey)
 import Prelude qualified
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
@@ -40,7 +40,7 @@ makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
  >  blake2b(cbor(MerkleRootInsertionMessage))
 -}
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
-  { mrimSidechainParams :: SidechainParams'
+  { mrimSidechainParams :: SidechainParams
   , mrimMerkleRoot :: BuiltinByteString
   , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
   }
@@ -76,7 +76,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams'
+  { bprmSidechainParams :: SidechainParams
   , bprmSidechainPubKey :: SidechainPubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
@@ -157,7 +157,7 @@ PlutusTx.makeLift ''UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { uchmSidechainParams :: SidechainParams'
+  { uchmSidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
