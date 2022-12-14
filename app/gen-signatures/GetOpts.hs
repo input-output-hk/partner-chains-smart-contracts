@@ -505,16 +505,6 @@ sidechainParamsParser = do
         , help "Sidechain ID"
         ]
 
-  genesisMint <-
-    optional $
-      option parseTxOutRef $
-        mconcat
-          [ short 'm'
-          , long "genesis-mint-utxo"
-          , metavar "TX_ID#TX_IDX"
-          , help "Input UTxO to be spend with the genesis mint"
-          ]
-
   genesisHash <-
     option
       parseGenesisHash

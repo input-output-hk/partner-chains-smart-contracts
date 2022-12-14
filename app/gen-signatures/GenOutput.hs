@@ -17,7 +17,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (SidechainParams (..), convertSCParams)
+import TrustlessSidechain.OffChain.Types (SidechainParams (..))
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -75,7 +75,6 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           (not . null)
           [ ["--payment-signing-key-file", signingKeyFile]
           , ["--genesis-committee-hash-utxo", Utils.showTxOutRef genesisUtxo]
-          , maybe [] (\oref -> ["--genesis-mint-utxo", Utils.showTxOutRef oref]) genesisMint
           , ["--sidechain-id", show chainId]
           , ["--sidechain-genesis-hash", show genesisHash]
           , ["--threshold", Utils.showThreshold thresholdNumerator thresholdDenominator]
@@ -100,7 +99,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           RegistrationCommand {..} ->
             let msg =
                   BlockProducerRegistrationMsg
-                    { bprmSidechainParams = convertSCParams scParams
+                    { bprmSidechainParams = scParams
                     , bprmSidechainPubKey = Utils.toSidechainPubKey rcSidechainPrivKey
                     , bprmInputUtxo = rcRegistrationUtxo
                     }
@@ -115,7 +114,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
-                    { uchmSidechainParams = convertSCParams scParams
+                    { uchmSidechainParams = scParams
                     , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
                     , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
                     , uchmSidechainEpoch = uchcSidechainEpoch
@@ -147,7 +146,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           SaveRootCommand {..} ->
             let msg =
                   MerkleRootInsertionMessage
-                    { mrimSidechainParams = convertSCParams scParams
+                    { mrimSidechainParams = scParams
                     , mrimMerkleRoot = srcMerkleRoot
                     , mrimPreviousMerkleRoot = srcPreviousMerkleRoot
                     }
