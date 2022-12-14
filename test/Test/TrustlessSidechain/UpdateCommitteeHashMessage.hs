@@ -9,7 +9,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TrustlessSidechain.OffChain.Types (
   GenesisHash (GenesisHash),
-  SidechainParams' (SidechainParams'),
+  SidechainParams (SidechainParams),
   SidechainPubKey (SidechainPubKey),
  )
 import TrustlessSidechain.OnChain.Types (UpdateCommitteeHashMessage (UpdateCommitteeHashMessage))
@@ -29,7 +29,7 @@ unitTests =
         , SidechainPubKey (conv "038b098f1a3ccb005419df63dc1ce954a3f9071e2f41aefece0f86ee991285b498")
         , SidechainPubKey (conv "03f16df0d21e2a447d820999c6b65794820cd1920cafccc3a7b83956f6148441ed")
         ]
-      scParams = SidechainParams' 78 genesisHash genesisUtxo 2 3
+      scParams = SidechainParams 78 genesisHash genesisUtxo 2 3
       epoch = 123
       previousMRH = conv "abababababababababababababababababababababababababababababababab"
       withoutPreviousMRH = UpdateCommitteeHashMessage scParams pubKeys Nothing epoch
