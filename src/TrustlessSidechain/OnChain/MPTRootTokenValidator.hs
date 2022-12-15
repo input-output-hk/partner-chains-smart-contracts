@@ -9,7 +9,10 @@ module TrustlessSidechain.OnChain.MPTRootTokenValidator (
 
 import PlutusTx.Prelude
 
-import Ledger qualified -- dangerously contains lots of v1 stuff
+-- dangerously contains lots of v1 stuff
+
+import Ledger (Language (PlutusV2), Versioned (Versioned))
+import Ledger qualified
 import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Scripts (Validator)
 import Plutus.V2.Ledger.Api (
@@ -34,7 +37,10 @@ validator sc =
     )
 
 hash :: SidechainParams -> ValidatorHash
-hash = Scripts.validatorHash . Scripts.unsafeMkTypedValidator . validator
+hash scParams =
+  Scripts.validatorHash
+    . Scripts.unsafeMkTypedValidator
+    $ Ledger.Versioned (validator scParams) Ledger.PlutusV2
 
 address :: SidechainParams -> Address
 address = Ledger.scriptHashAddress . hash
@@ -43,5 +49,5 @@ address = Ledger.scriptHashAddress . hash
 mkValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidatorUntyped = mkMptRootTokenValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableValidator :: Ledger.Script
-serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+serialisableValidator :: Versioned Ledger.Script
+serialisableValidator = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])) PlutusV2

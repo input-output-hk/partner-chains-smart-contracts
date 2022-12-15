@@ -62,6 +62,7 @@ module TrustlessSidechain.OnChain.DistributedSet (
 import PlutusTx.Prelude
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
 import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
 import Plutus.Script.Utils.V2.Typed.Scripts (UntypedMintingPolicy, UntypedValidator, mkUntypedMintingPolicy, mkUntypedValidator)
@@ -573,9 +574,8 @@ mkInsertValidatorUntyped = mkUntypedValidator . mkInsertValidator . PlutusTx.uns
 {- | 'serialisableInsertValidator' is a serialisable version of the validator
  (this is needed for ctl)
 -}
-serialisableInsertValidator :: Script
-serialisableInsertValidator =
-  Api.fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
+serialisableInsertValidator :: Versioned Script
+serialisableInsertValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])) PlutusV2
 
 {- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
  needed for ctl)
@@ -586,9 +586,8 @@ mkDsConfValidatorUntyped = mkDsConfValidator . PlutusTx.unsafeFromBuiltinData
 {- | 'serialisableDsConfValidator' creates a serialisable version of the
  validator (this is needed for ctl)
 -}
-serialisableDsConfValidator :: Script
-serialisableDsConfValidator =
-  Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
+serialisableDsConfValidator :: Versioned Script
+serialisableDsConfValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])) PlutusV2
 
 {- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
  needed for ctl)
@@ -599,8 +598,8 @@ mkDsConfPolicyUntyped = mkUntypedMintingPolicy . mkDsConfPolicy . PlutusTx.unsaf
 {- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
  policy (this is needed for ctl)
 -}
-serialisableDsConfPolicy :: Script
-serialisableDsConfPolicy = Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
+serialisableDsConfPolicy :: Versioned Script
+serialisableDsConfPolicy = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])) PlutusV2
 
 {- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
  needed for ctl)
@@ -611,5 +610,5 @@ mkDsKeyPolicyUntyped = mkUntypedMintingPolicy . mkDsKeyPolicy . PlutusTx.unsafeF
 {- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
  policy (this is needed for ctl)
 -}
-serialisableDsKeyPolicy :: Script
-serialisableDsKeyPolicy = Api.fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])
+serialisableDsKeyPolicy :: Versioned Script
+serialisableDsKeyPolicy = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])) PlutusV2

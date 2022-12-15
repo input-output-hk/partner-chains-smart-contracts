@@ -31,7 +31,9 @@ import Contract.TextEnvelope
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , plutusV2Script
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints as Constraints
@@ -41,7 +43,6 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import RawScripts (rawPoCECDSA)
-import Types.Scripts (plutusV2Script)
 
 getValidator ∷ Contract () Validator
 getValidator =
@@ -77,8 +78,9 @@ prepTest = do
       Constraints.DatumInline
       val
   ubTx ← liftedE $ Lookups.mkUnbalancedTx lookups constraints
-  bsTx ← liftedE $ balanceAndSignTxE ubTx
-  txId ← submit bsTx
+  bsTx ← liftedE $ balanceTx ubTx
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ ("Submitted ECDSA test prep tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' "Transaction confirmed."
@@ -109,8 +111,9 @@ testVerification ecdsaRed = do
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = Constraints.mustSpendScriptOutput txIn red
   ubTx ← liftedE $ Lookups.mkUnbalancedTx lookups constraints
-  bsTx ← liftedE $ balanceAndSignTxE ubTx
-  txId ← submit bsTx
+  bsTx ← liftedE $ balanceTx ubTx
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ ("Submitted ECDSA test verification tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' "Transaction confirmed."

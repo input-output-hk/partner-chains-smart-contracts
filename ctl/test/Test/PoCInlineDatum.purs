@@ -69,8 +69,9 @@ testScenario1 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -98,8 +99,9 @@ testScenario1 = do
 
       unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
         constraints
-      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-      txId ← Transaction.submit balancedTx
+      bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+      signedTx ← Transaction.signTransaction bsTx
+      txId ← Transaction.submit signedTx
       Log.logInfo' $ "Transaction submitted: " <> show txId
       Transaction.awaitTxConfirmed txId
       Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -142,8 +144,9 @@ testScenario2 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -171,8 +174,9 @@ testScenario2 = do
 
       unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
         constraints
-      balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-      txId ← Transaction.submit balancedTx
+      balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+      signedTx ← Transaction.signTransaction balancedTx
+      txId ← Transaction.submit signedTx
       Log.logInfo' $ "Transaction submitted: " <> show txId
       Transaction.awaitTxConfirmed txId
       Log.logInfo' $ "Transaction confirmed: " <> show txId
