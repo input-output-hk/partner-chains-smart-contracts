@@ -179,7 +179,7 @@
         in
         pkgs.writeShellApplication {
           name = "ctl-main";
-          runtimeInputs = [ pkgs.nodejs-14_x ];
+          runtimeInputs = [ project.nodejs ];
           # Node's `process.argv` always contains the executable name as the
           # first argument, hence passing `ctl-main "$@"` rather than just
           # `"$@"`
@@ -188,50 +188,42 @@
             node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
           '';
         };
+
       ctlBundleCliFor = system:
         let
+          name = "trustless-sidechain-cli";
+          version = "0.1.0";
           src = ./ctl;
-          pkgs = nixpkgsFor system;
-          spagoPkgs = import "${src}/spago-packages.nix" { inherit pkgs; };
-          project = psProjectFor system;
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              cardano-transaction-lib.overlays.purescript
+            ];
+          };
+          project = pkgs.purescriptProject {
+            inherit src pkgs;
+            projectName = name;
+            withRuntime = false;
+          };
         in
         pkgs.stdenv.mkDerivation rec {
-          inherit src;
-
-          pname = "ctl-bundle-cli";
-          version = "0.1.0";
+          inherit name src version;
           buildInputs = [
-            pkgs.spago
-            pkgs.purescript
-            pkgs.nodejs
-            spagoPkgs.installSpagoStyle
-            spagoPkgs.buildSpagoStyle
-            spagoPkgs.buildFromNixStore
+            project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
           ];
+          runtimeInputs = [ project.nodejs ];
           unpackPhase = ''
-            cp $src/{packages,spago}.dhall .
-            cp -r ${project.compiled} .
-            mkdir node_modules
-            cp -r ${project.nodeModules} ./node_modules/
+            ln -s ${project.compiled}/* .
+            ln -s ${project.nodeModules} node_modules
           '';
           buildPhase = ''
-            spago bundle-app --no-build --no-install --global-cache skip
-            mv index.js main.js
+            purs bundle "output/*/*.js" -m Main --main Main -o main.js
           '';
-
           installPhase = ''
             mkdir -p $out
-            tar cvf $out/ctl-scripts-${version}.tar main.js node_modules
+            tar chf $out/${name}-${version}.tar main.js node_modules
           '';
         };
-      # { } ''
-      # mkdir $out
-      # cp -r ${project.compiled} .
-      # cp -r ${project.nodeModules} .
-      # spago bundle-app --no-build --no-install --global-cache skip
-      # mv index.js main.js
-      # tar cvf $out/ctl-scripts-${version}.tar main.js ${project.nodeModules}
-      # '';
     in
     {
       project = perSystem hsProjectFor;
@@ -249,13 +241,7 @@
             webpackConfig = "webpack.config.js";
             bundledModuleName = "output.js";
           };
-          # ctl-bundle-cli = ctlBundleCliFor system;
-          ctl-bundle-cli = import ./nix/ctl-bundle-cli.nix rec {
-            pkgs = nixpkgsFor system;
-            easy-ps = pkgs.easy-ps;
-            purs = easy-ps.purs-0_14_5;
-            nodejs = pkgs.nodejs-14_x;
-          };
+          ctl-bundle-cli = ctlBundleCliFor system;
         });
 
       apps = perSystem (system: self.flake.${system}.apps // {
