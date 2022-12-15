@@ -373,7 +373,7 @@ claimFUEL
       $ mkTokenName
       $ blake2b256Hash entryBytes
 
-    { index: mptUtxo } ←
+    { index: mptUtxo, value: mptTxOut } ←
       liftContractM
         (msg "Couldn't find the parent Merkle tree root hash of the transaction")
         =<< findMptRootTokenUtxoByRootHash sidechainParams rootHash
@@ -388,7 +388,7 @@ claimFUEL
     } ← liftedM (msg "Couldn't find distributed set nodes") $
       DistributedSet.findDsOutput ds cborMteHashedTn
 
-    { confRef } ← DistributedSet.findDsConfOutput ds
+    { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
@@ -437,6 +437,8 @@ claimFUEL
           Lookups.mintingPolicy fuelMP
             <> Lookups.mintingPolicy dsKeyPolicy
             <> Lookups.validator insertValidator
+            <> Lookups.unspentOutputs (Map.singleton mptUtxo mptTxOut)
+            <> Lookups.unspentOutputs (Map.singleton confRef confO)
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
       , constraints:

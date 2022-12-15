@@ -31,6 +31,7 @@ import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
+import Data.Map as Map
 import MPTRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -119,7 +120,7 @@ saveRoot
           UpdateCommitteeHash.initCommitteeHashMintTn
       , mptRootTokenCurrencySymbol: rootTokenCS
       }
-  { index: committeeHashTxIn, value: _committeeHashTxOut } ←
+  { index: committeeHashTxIn, value: committeeHashTxOut } ←
     liftedM (msg "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
@@ -167,6 +168,11 @@ saveRoot
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
+      <> Lookups.unspentOutputs
+        (Map.singleton committeeHashTxIn committeeHashTxOut)
+      <> case maybePreviousMerkleRootUtxo of
+        Nothing → mempty
+        Just { index, value } → Lookups.unspentOutputs (Map.singleton index value)
 
   -- Submitting the transaction
   ---------------------------------------------------------
