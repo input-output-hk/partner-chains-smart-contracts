@@ -235,12 +235,13 @@
           ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
           ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           ctl-main = ctlMainFor system;
-          ctl-bundle-web = (psProjectFor system).bundlePursProject {
-            main = "Main";
-            entrypoint = "index.js"; # must be same as listed in webpack config
-            webpackConfig = "webpack.config.js";
-            bundledModuleName = "output.js";
-          };
+          # TODO: Fix web bundling
+          # ctl-bundle-web = (psProjectFor system).bundlePursProject {
+          #   main = "Main";
+          #   entrypoint = "index.js"; # must be same as listed in webpack config
+          #   webpackConfig = "webpack.config.js";
+          #   bundledModuleName = "output.js";
+          # };
           ctl-bundle-cli = ctlBundleCliFor system;
         });
 
