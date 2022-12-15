@@ -31,56 +31,8 @@ import Test.Utils (getOwnTransactionInput, toTxIn)
 import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
 import Utils.SerialiseData (serialiseData)
 
-mkScParams ∷ SidechainParams
-mkScParams = SidechainParams
-  { chainId: BigInt.fromInt 1
-  , genesisHash: hexToByteArrayUnsafe "aabbcc"
-  , genesisUtxo: toTxIn "aabbcc" 0
-  , thresholdNumerator: BigInt.fromInt 2
-  , thresholdDenominator: BigInt.fromInt 3
-  }
-
 mkCommittee ∷ Int → Contract () (List (Tuple PublicKey PrivateKey))
 mkCommittee n = replicateM n (Tuple <*> toPubKeyUnsafe <$> generatePrivKey)
-
-{-
--- | Testing Passive bridge minting (genesis mint) and burning multiple times
-testScenarioPassiveSuccess ∷ Contract () Unit
-testScenarioPassiveSuccess = do
-  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  genesisMint ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  let
-    scParams = mkScParams (Just genesisMint)
-    recipient = pubKeyHashAddress pkh Nothing
-
-  void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient }
-  void $ runFuelMP scParams $ Burn
-    { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" }
-  void $ runFuelMP scParams $ Burn
-    { amount: BigInt.fromInt 3, recipient: hexToByteArrayUnsafe "aabbcc" }
-
--- | Testing multiple mints on passive bridge (should fail)
-testScenarioPassiveFailure ∷ Contract () Unit
-testScenarioPassiveFailure = do
-  pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← liftedM "cannot get UTxOs" (utxosAt ownAddr)
-  genesisMint ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  let
-    scParams = mkScParams (Just genesisMint)
-    recipient = pubKeyHashAddress pkh Nothing
-  void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient }
-  void $ runFuelMP scParams $ passiveBridgeMintParams scParams
-    { amount: BigInt.fromInt 5, recipient }
--}
 
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
@@ -235,7 +187,14 @@ testScenarioActiveFailure = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
   let
     recipient = pubKeyHashAddress pkh Nothing
-    scParams = mkScParams
+    scParams = SidechainParams
+      { chainId: BigInt.fromInt 1
+      , genesisHash: hexToByteArrayUnsafe "aabbcc"
+      , genesisUtxo: toTxIn "aabbcc" 0
+      , thresholdNumerator: BigInt.fromInt 2
+      , thresholdDenominator: BigInt.fromInt 3
+      }
+
   -- This is not how you create a working merkleproof that passes onchain validator.
   mp' ← liftedM "impossible" $ pure (serialiseData (toData (MerkleProof [])))
   mt ← liftedE $ pure (fromList (pure mp'))
