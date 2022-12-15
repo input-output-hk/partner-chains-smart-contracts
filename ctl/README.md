@@ -68,10 +68,10 @@ nix run .#ctl-main -- --help
 **Bundle to a JavaScript file and run using node:**
 
 ```shell
-nix-build src/ctl-bundle-cli.nix
+nix build .#ctl-bundle-cli
 ```
 
-This will produce a package `ctl-scripts-<version>.tar` with the compiled `main.js` script that can be run using Node
+This will produce a package `trustless-sidechain-cli-<version>.tar` with the compiled `main.js` script that can be run using Node
 and all necessary dependencies in `node_modules` directory.
 
 ```
