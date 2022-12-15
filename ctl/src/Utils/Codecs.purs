@@ -13,11 +13,11 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Contract.Transaction (TransactionHash(TransactionHash))
+import Ctl.Internal.Types.Transaction (TransactionInput(TransactionInput))
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import Types.Transaction (TransactionInput(TransactionInput))
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
 byteArrayCodec ∷ CA.JsonCodec ByteArray

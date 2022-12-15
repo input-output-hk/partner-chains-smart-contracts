@@ -8,7 +8,7 @@ import Codec.Serialise (serialise)
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
 import Data.Foldable (traverse_)
-import Ledger (Script, scriptHash)
+import Ledger (Script, Versioned, scriptHash)
 import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -23,7 +23,7 @@ import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitt
 import Prelude
 
 -- CTL uses the usual TextEnvelope format now.
-serialiseScript :: FilePath -> Script -> IO ()
+serialiseScript :: FilePath -> Versioned Script -> IO ()
 serialiseScript name script =
   let out = PlutusScriptSerialised @PlutusScriptV2 . toShort . toStrict $ serialise script
       file = "ctl/Scripts/" <> name <> ".plutus"

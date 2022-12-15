@@ -34,7 +34,8 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
@@ -420,9 +421,10 @@ initSidechainTokens isp = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
   logInfo' $ msg
@@ -450,9 +452,10 @@ initSidechainCommittee isp = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
   logInfo' $ msg
@@ -520,9 +523,10 @@ initSidechain isp = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
   logInfo' $ msg

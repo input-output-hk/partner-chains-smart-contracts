@@ -16,6 +16,7 @@ module TrustlessSidechain.OnChain.PoCSerialiseData (
   serialisablePoCSerialiseData,
 ) where
 
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
 import Plutus.V2.Ledger.Api (
@@ -45,5 +46,5 @@ mkPoCSerialiseDataUntyped = Validators.mkUntypedValidator mkPoCSerialiseData
 {- | 'serialisablePoCSerialiseData' is a serialisable untyped script of
  'mkPoCSerialiseData'
 -}
-serialisablePoCSerialiseData :: Script
-serialisablePoCSerialiseData = Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])
+serialisablePoCSerialiseData :: Versioned Script
+serialisablePoCSerialiseData = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])) PlutusV2
