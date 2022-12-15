@@ -275,17 +275,17 @@
         "plutip": "plutip"
       },
       "locked": {
-        "lastModified": 1670862205,
-        "narHash": "sha256-LLyPEtfZcfkMXzO5cBhT1HRi6/2991bsffJW7x1rVho=",
+        "lastModified": 1671112560,
+        "narHash": "sha256-gdXDdSeXayv1juElpBCDOK7fyus0GvvDJyHNDSOvXX8=",
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "9b2c298a3c8e544aec659715f95615d67dda0f43",
+        "rev": "e5ea971efe2c1816fd448b2244b7421ab435c66d",
         "type": "github"
       },
       "original": {
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "9b2c298a3c8e544aec659715f95615d67dda0f43",
+        "rev": "e5ea971efe2c1816fd448b2244b7421ab435c66d",
         "type": "github"
       }
     },
@@ -1163,17 +1163,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1670507505,
-        "narHash": "sha256-y/ZnGAVyV0dRYyLhyXDbfYZlsm8WRQbELIARniKb4u0=",
+        "lastModified": 1671024770,
+        "narHash": "sha256-IOH0eny/33gDe6JQUUnf/kL76eg1zrr9Tse/GGW6fPw=",
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "c5c1bd49852ff982d81a451f880eebe187ff7b9d",
+        "rev": "8d1795d9ac3f9c6f31381104b25c71576eeba009",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "plutip",
-        "rev": "c5c1bd49852ff982d81a451f880eebe187ff7b9d",
+        "rev": "8d1795d9ac3f9c6f31381104b25c71576eeba009",
         "type": "github"
       }
     },

@@ -8,7 +8,7 @@
     CHaP.follows = "cardano-transaction-lib/CHaP";
     plutip.follows = "cardano-transaction-lib/plutip";
 
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/9b2c298a3c8e544aec659715f95615d67dda0f43";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/e5ea971efe2c1816fd448b2244b7421ab435c66d";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
