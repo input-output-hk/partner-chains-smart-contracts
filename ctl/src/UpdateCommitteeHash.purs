@@ -189,8 +189,8 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         <> Lookups.validator updateValidator
         <> case maybePreviousMerkleRoot of
           Nothing → mempty
-          Just { index, value } → Lookups.unspentOutputs
-            (Map.singleton index value)
+          Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+            (Map.singleton txORef txOut)
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
       <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of

@@ -172,7 +172,8 @@ saveRoot
         (Map.singleton committeeHashTxIn committeeHashTxOut)
       <> case maybePreviousMerkleRootUtxo of
         Nothing → mempty
-        Just { index, value } → Lookups.unspentOutputs (Map.singleton index value)
+        Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+          (Map.singleton txORef txOut)
 
   -- Submitting the transaction
   ---------------------------------------------------------
