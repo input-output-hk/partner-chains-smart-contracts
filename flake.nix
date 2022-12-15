@@ -6,25 +6,12 @@
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
+    plutip.follows = "cardano-transaction-lib/plutip";
 
-    plutip.url = github:jaredponn/plutip/697dfd248b9c80098d0a0d4d0bad986902c93fbc;
-
-    cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/87233da45b7c433c243c539cb4d05258e551e9a1";
-      inputs = {
-        plutip = plutip;
-        ogmios-datum-cache.url = github:mlabs-haskell/ogmios-datum-cache/880a69a03fbfd06a4990ba8873f06907d4cd16a7;
-      };
-    };
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/e5ea971efe2c1816fd448b2244b7421ab435c66d";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    # TODO: spago bundle-app is not working in a derivation with spago 0.20.9 (https://github.com/purescript/spago/issues/888)
-    easy-ps = {
-      url = "github:justinwoo/easy-purescript-nix/ddd2ded8d37ab5d3013f353ca3b6ee05eb23d5c0";
       flake = false;
     };
   };
@@ -248,12 +235,13 @@
           ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
           ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           ctl-main = ctlMainFor system;
-          ctl-bundle-web = (psProjectFor system).bundlePursProject {
-            main = "Main";
-            entrypoint = "index.js"; # must be same as listed in webpack config
-            webpackConfig = "webpack.config.js";
-            bundledModuleName = "output.js";
-          };
+          # TODO: Fix web bundling
+          # ctl-bundle-web = (psProjectFor system).bundlePursProject {
+          #   main = "Main";
+          #   entrypoint = "index.js"; # must be same as listed in webpack config
+          #   webpackConfig = "webpack.config.js";
+          #   bundledModuleName = "output.js";
+          # };
           ctl-bundle-cli = ctlBundleCliFor system;
         });
 

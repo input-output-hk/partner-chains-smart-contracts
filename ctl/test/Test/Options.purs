@@ -4,10 +4,10 @@ module Test.Options (test) where
 
 import Contract.Prelude
 
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Effect.Class.Console as Console
 import Options as Options
 import Test.Utils (assertBy)
-import Types.ByteArray (hexToByteArrayUnsafe)
 
 -- | 'tests' is the collection of tests for this module
 test ∷ Effect Unit

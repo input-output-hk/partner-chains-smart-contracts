@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray)
+import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Codec.Argonaut as CA
@@ -12,7 +13,6 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Partial.Unsafe (unsafePartial)
 import Types (PubKey)
-import Types.Transaction (TransactionInput)
 import Utils.Codecs (byteArrayCodec, transactionInputCodec)
 
 newtype SidechainParams = SidechainParams
