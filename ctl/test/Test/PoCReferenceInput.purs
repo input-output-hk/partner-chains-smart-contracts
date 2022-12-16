@@ -11,18 +11,13 @@ import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (Validator)
+import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction
-  ( Language(PlutusV2)
-  )
+import Contract.Transaction (Language(PlutusV2), plutusV2Script)
 import Contract.Transaction as Transaction
-import Contract.TxConstraints
-  ( DatumPresence(DatumWitness)
-  , TxConstraints
-  )
+import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
@@ -60,12 +55,10 @@ testScenario1 = do
   referenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCReferenceInput
     PlutusScriptV2
-  let
-    referenceValidatorUnapplied =
-      wrap $ wrap $ referenceValidatorBytes /\ PlutusV2 ∷ Validator
-  referenceValidator ← Monad.liftedE $ Scripts.applyArgs
-    referenceValidatorUnapplied
+
+  applied ← Scripts.applyArgs (plutusV2Script referenceValidatorBytes)
     [ PlutusData.toData toReferenceValidatorAddress ]
+  referenceValidator ← Validator <$> Monad.liftContractE applied
   let
     referenceValidatorHash = Scripts.validatorHash referenceValidator
     referenceValidatorDat = Datum $ PlutusData.toData $ unit
@@ -92,8 +85,9 @@ testScenario1 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -125,8 +119,9 @@ testScenario1 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -163,12 +158,10 @@ testScenario2 = do
   referenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCReferenceInput
     PlutusScriptV2
-  let
-    referenceValidatorUnapplied =
-      wrap $ wrap $ referenceValidatorBytes /\ PlutusV2 ∷ Validator
-  referenceValidator ← Monad.liftedE $ Scripts.applyArgs
-    referenceValidatorUnapplied
+
+  applied ← Scripts.applyArgs (plutusV2Script referenceValidatorBytes)
     [ PlutusData.toData toReferenceValidatorAddress ]
+  referenceValidator ← Validator <$> Monad.liftContractE applied
   let
     referenceValidatorHash = Scripts.validatorHash referenceValidator
     referenceValidatorDat = Datum $ PlutusData.toData $ unit
@@ -195,8 +188,9 @@ testScenario2 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -233,8 +227,9 @@ testScenario2 = do
 
     unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId

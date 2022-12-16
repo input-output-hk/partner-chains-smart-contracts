@@ -43,21 +43,23 @@ import Utils.Utxos as Utils.Utxos
 -- | `SignedMerkleRootMint`.
 mptRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
 mptRootTokenMintingPolicy sp = do
-  mptRootMP ← (Transaction.plutusV2Script >>> MintingPolicy) <$>
+  mptRootMP ← Transaction.plutusV2Script <$>
     TextEnvelope.textEnvelopeBytes
       RawScripts.rawMPTRootTokenMintingPolicy
       PlutusScriptV2
-  Monad.liftedE (Scripts.applyArgs mptRootMP [ PlutusData.toData sp ])
+  applied ← Scripts.applyArgs mptRootMP [ PlutusData.toData sp ]
+  PlutusMintingPolicy <$> Monad.liftContractE applied
 
 -- | `mptRootTokenValidator` gets the validator corresponding to
 -- | 'RawScripts.rawMPTRootTokenValidator' paramaterized by `SidechainParams`.
 mptRootTokenValidator ∷ SidechainParams → Contract () Validator
 mptRootTokenValidator sp = do
-  mptRootVal ← (Transaction.plutusV2Script >>> Validator) <$>
+  mptRootVal ← Transaction.plutusV2Script <$>
     TextEnvelope.textEnvelopeBytes
       RawScripts.rawMPTRootTokenValidator
       PlutusScriptV2
-  Monad.liftedE (Scripts.applyArgs mptRootVal [ PlutusData.toData sp ])
+  applied ← Scripts.applyArgs mptRootVal [ PlutusData.toData sp ]
+  Validator <$> Monad.liftContractE applied
 
 -- | `findMptRootTokenUtxo merkleRoot smrm` locates a utxo which
 -- |

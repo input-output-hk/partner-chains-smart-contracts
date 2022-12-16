@@ -8,8 +8,8 @@ import Contract.Prelude
 import Contract.PlutusData (class ToData, PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
-import Serialization as Serialization
-import Serialization.PlutusData as SerializationPlutusData
+import Ctl.Internal.Serialization as Serialization
+import Ctl.Internal.Serialization.PlutusData as SerializationPlutusData
 import Untagged.Union as Union
 
 -- | `serialiseData` is the offchain version of the Builtin `serialiseData`.

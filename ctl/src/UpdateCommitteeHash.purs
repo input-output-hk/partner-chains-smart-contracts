@@ -9,7 +9,7 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
-import Contract.PlutusData (fromData, toData)
+import Contract.PlutusData (Datum(..), Redeemer(..), fromData, toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
@@ -18,7 +18,9 @@ import Contract.Transaction
   , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , outputDatumDatum
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..))
@@ -34,9 +36,6 @@ import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
 import SidechainParams as SidechainParams
 import Types (assetClass, assetClassValue)
-import Types.Datum (Datum(..))
-import Types.OutputDatum (outputDatumDatum)
-import Types.Redeemer (Redeemer(..))
 import UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -188,6 +187,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
             )
         )
         <> Lookups.validator updateValidator
+        <> case maybePreviousMerkleRoot of
+          Nothing → mempty
+          Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+            (Map.singleton txORef txOut)
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
       <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
@@ -195,9 +198,10 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
           previousMerkleRootORef
 
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
   logInfo' (msg "Update committee hash transaction submitted successfully")

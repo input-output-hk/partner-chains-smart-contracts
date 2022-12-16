@@ -55,19 +55,22 @@ import Utils.Utxos as Utils.Utxos
 
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do
-  policyUnapplied ← (Transaction.plutusV2Script >>> MintingPolicy) <$>
+  policyUnapplied ← Transaction.plutusV2Script <$>
     TextEnvelope.textEnvelopeBytes
       RawScripts.rawCommitteeHashPolicy
       PlutusScriptV2
-  Monad.liftedE (Scripts.applyArgs policyUnapplied [ PlutusData.toData sp ])
+
+  applied ← Scripts.applyArgs policyUnapplied [ PlutusData.toData sp ]
+  PlutusMintingPolicy <$> Monad.liftContractE applied
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
 updateCommitteeHashValidator sp = do
-  validatorUnapplied ← (Transaction.plutusV2Script >>> Validator) <$>
+  validatorUnapplied ← Transaction.plutusV2Script <$>
     TextEnvelope.textEnvelopeBytes
       RawScripts.rawCommitteeHashValidator
       PlutusScriptV2
-  Monad.liftedE (Scripts.applyArgs validatorUnapplied [ PlutusData.toData sp ])
+  applied ← Scripts.applyArgs validatorUnapplied [ PlutusData.toData sp ]
+  Validator <$> Monad.liftContractE applied
 
 -- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for

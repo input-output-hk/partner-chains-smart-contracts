@@ -23,13 +23,15 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
+import Data.Map as Map
 import MPTRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -118,7 +120,7 @@ saveRoot
           UpdateCommitteeHash.initCommitteeHashMintTn
       , mptRootTokenCurrencySymbol: rootTokenCS
       }
-  { index: committeeHashTxIn, value: _committeeHashTxOut } ←
+  { index: committeeHashTxIn, value: committeeHashTxOut } ←
     liftedM (msg "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
@@ -166,12 +168,19 @@ saveRoot
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
+      <> Lookups.unspentOutputs
+        (Map.singleton committeeHashTxIn committeeHashTxOut)
+      <> case maybePreviousMerkleRootUtxo of
+        Nothing → mempty
+        Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+          (Map.singleton txORef txOut)
 
   -- Submitting the transaction
   ---------------------------------------------------------
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' (msg ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
   logInfo' (msg "Save root Tx submitted successfully!")

@@ -16,6 +16,7 @@ module TrustlessSidechain.OnChain.PoCInlineDatum (
   serialisablePoCInlineDatumValidator,
 ) where
 
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
 import Plutus.V2.Ledger.Api (Datum (getDatum), Script)
@@ -58,5 +59,5 @@ mkPoCInlineDatumValidatorUntyped = Validators.mkUntypedValidator mkPoCInlineDatu
 {- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
  'mkPoCInlineDatumValidator'
 -}
-serialisablePoCInlineDatumValidator :: Script
-serialisablePoCInlineDatumValidator = Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])
+serialisablePoCInlineDatumValidator :: Versioned Script
+serialisablePoCInlineDatumValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2

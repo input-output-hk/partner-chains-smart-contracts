@@ -6,8 +6,7 @@ import Contract.Prelude
 
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
@@ -59,7 +58,7 @@ testScenario1 = do
   --  - Serialise it to cbor (this is ByteArray)
   --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
   validatorDat ← Datum <<< PlutusData.toData <$>
-    Monad.liftedM "Failed to serialise data to cbor"
+    liftedM "Failed to serialise data to cbor"
       (pure $ SerialiseData.serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
 
   -- 2.
@@ -73,10 +72,11 @@ testScenario1 = do
       lookups ∷ ScriptLookups Void
       lookups = mempty
 
-    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+    unbalancedTx ← liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -94,10 +94,11 @@ testScenario1 = do
       lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
         <> ScriptLookups.validator validator
 
-    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+    unbalancedTx ← liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    bsTx ← liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction bsTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -135,7 +136,7 @@ testScenario2 = do
   --  - Serialise it to cbor (this is ByteArray)
   --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
   validatorDat ← Datum <<< PlutusData.toData <$>
-    Monad.liftedM "Failed to serialise data to cbor"
+    liftedM "Failed to serialise data to cbor"
       (pure $ SerialiseData.serialiseData $ PlutusData.toData $ BigInt.fromInt 69)
 
   -- 2.
@@ -149,10 +150,11 @@ testScenario2 = do
       lookups ∷ ScriptLookups Void
       lookups = mempty
 
-    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+    unbalancedTx ← liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
@@ -171,10 +173,11 @@ testScenario2 = do
       lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
         <> ScriptLookups.validator validator
 
-    unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+    unbalancedTx ← liftedE $ ScriptLookups.mkUnbalancedTx lookups
       constraints
-    balancedTx ← Monad.liftedE $ Transaction.balanceAndSignTxE unbalancedTx
-    txId ← Transaction.submit balancedTx
+    balancedTx ← liftedE $ Transaction.balanceTx unbalancedTx
+    signedTx ← Transaction.signTransaction balancedTx
+    txId ← Transaction.submit signedTx
     Log.logInfo' $ "Transaction submitted: " <> show txId
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId

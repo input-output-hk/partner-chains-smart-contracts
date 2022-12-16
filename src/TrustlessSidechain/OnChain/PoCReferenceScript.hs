@@ -24,6 +24,7 @@ module TrustlessSidechain.OnChain.PoCReferenceScript (
   serialisablePoCReferenceScriptValidator,
 ) where
 
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
 import Plutus.V2.Ledger.Api (Script, ScriptHash)
@@ -52,8 +53,8 @@ mkPoCToReferenceScriptValidatorUntyped = Validators.mkUntypedValidator mkPoCToRe
 {- | 'serialisablePoCToReferenceScriptValidator' is a serialisable untyped script of
  'mkPoCToReferenceScriptValidator'
 -}
-serialisablePoCToReferenceScriptValidator :: Script
-serialisablePoCToReferenceScriptValidator = Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
+serialisablePoCToReferenceScriptValidator :: Versioned Script
+serialisablePoCToReferenceScriptValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])) PlutusV2
 
 -- * Reference
 
@@ -77,5 +78,5 @@ mkPoCReferenceScriptValidatorUntyped = Validators.mkUntypedValidator mkPoCRefere
 {- | 'serialisablePoCReferenceScriptValidator' is a serialisable untyped script of
  'mkPoCReferenceScriptValidator'
 -}
-serialisablePoCReferenceScriptValidator :: Script
-serialisablePoCReferenceScriptValidator = Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])
+serialisablePoCReferenceScriptValidator :: Versioned Script
+serialisablePoCReferenceScriptValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])) PlutusV2
