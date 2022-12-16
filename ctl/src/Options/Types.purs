@@ -10,13 +10,13 @@ import Contract.Prelude
 import Contract.Address (Address, NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
+import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import MerkleTree (MerkleProof)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
-import Types.ByteArray (ByteArray)
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =

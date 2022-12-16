@@ -22,6 +22,7 @@ import Contract.Transaction
   )
 import Contract.Utxos as Utxos
 import Control.Monad.Error.Class as MonadError
+import Ctl.Internal.Serialization.Hash as Hash
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -31,7 +32,6 @@ import Data.UInt as UInt
 import Effect.Class.Console as Console
 import Effect.Exception as Exception
 import Partial.Unsafe as Unsafe
-import Serialization.Hash as Hash
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =

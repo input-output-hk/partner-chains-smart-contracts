@@ -4,6 +4,8 @@ module Test.MerkleTree (test) where
 
 import Contract.Prelude
 
+import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray as ByteArray
 import Data.Maybe as Maybe
 import Effect.Class.Console as Console
 import MerkleTree
@@ -16,8 +18,6 @@ import MerkleTree
 import MerkleTree as MerkleTree
 import Partial.Unsafe as Unsafe
 import Test.Utils (assertBy)
-import Types.ByteArray (ByteArray, hexToByteArrayUnsafe)
-import Types.ByteArray as ByteArray
 
 -- | 'unsafeByteArrayFromAscii' is a partial function which wraps 'Types.ByteArray.byteArrayFromAscii'
 unsafeByteArrayFromAscii ∷ String → ByteArray

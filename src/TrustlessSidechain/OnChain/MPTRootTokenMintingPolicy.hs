@@ -5,6 +5,7 @@ module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
 
 import PlutusTx.Prelude
 
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
@@ -201,5 +202,5 @@ mintingPolicy param =
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . IsData.unsafeFromBuiltinData
 
-serialisableMintingPolicy :: Script
-serialisableMintingPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy :: Versioned Script
+serialisableMintingPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2

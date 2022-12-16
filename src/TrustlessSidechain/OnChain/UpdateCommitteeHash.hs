@@ -8,6 +8,7 @@ module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 import Cardano.Crypto.Wallet (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Crypto qualified as Crypto
 import Ledger.Value (AssetClass)
@@ -317,11 +318,11 @@ committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) in
 mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeHashPolicy :: Ledger.Script
-serialisableCommitteeHashPolicy = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])
+serialisableCommitteeHashPolicy :: Versioned Ledger.Script
+serialisableCommitteeHashPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])) PlutusV2
 
 mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeHashValidator :: Ledger.Script
-serialisableCommitteeHashValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])
+serialisableCommitteeHashValidator :: Versioned Ledger.Script
+serialisableCommitteeHashValidator = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])) PlutusV2

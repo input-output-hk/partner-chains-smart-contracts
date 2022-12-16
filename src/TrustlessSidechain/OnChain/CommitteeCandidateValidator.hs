@@ -11,6 +11,7 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Crypto (PubKey)
 import Ledger.Crypto qualified as Crypto
@@ -53,8 +54,8 @@ committeeCanditateValidator sidechainParams =
 committeeCandidateValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 committeeCandidateValidatorUntyped = ScriptUtils.mkUntypedValidator . mkCommitteeCandidateValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableValidator :: Ledger.Script
-serialisableValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
+serialisableValidator :: Versioned Ledger.Script
+serialisableValidator = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])) PlutusV2
 
 script :: SidechainParams -> Scripts.Script
 script = Scripts.unValidatorScript . committeeCanditateValidator

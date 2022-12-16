@@ -17,6 +17,7 @@ import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV2)
 import Codec.Serialise
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Scripts qualified as Scripts
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as TypedScripts
 import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as ScriptUtils
@@ -74,5 +75,5 @@ ecdsaVerifyAddress = scriptHashAddress ecdsaVerifyScriptHash
 untypedValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 untypedValidator = ScriptUtils.mkUntypedValidator mkValidator
 
-serialisableValidator :: Script
-serialisableValidator = fromCompiledCode $$(PlutusTx.compile [||untypedValidator||])
+serialisableValidator :: Versioned Script
+serialisableValidator = Versioned (fromCompiledCode $$(PlutusTx.compile [||untypedValidator||])) PlutusV2

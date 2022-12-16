@@ -10,6 +10,8 @@ import Contract.Address
 import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Ctl.Internal.Plutus.Conversion (fromPlutusAddress)
+import Ctl.Internal.Serialization.Address (addressBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List.Lazy (List, replicateM)
@@ -23,8 +25,6 @@ import InitSidechain (initSidechain)
 import MerkleTree (MerkleProof(..), fromList, lookupMp)
 import MerkleTree as MerkleTree
 import Partial.Unsafe (unsafePartial)
-import Plutus.Conversion.Address (fromPlutusAddress)
-import Serialization.Address (addressBytes)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
 import Test.Utils (getOwnTransactionInput, toTxIn)

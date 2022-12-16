@@ -25,37 +25,44 @@ module DistributedSet
 
 import Contract.Prelude
 
-import Cardano.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData (PlutusData(..))
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  , PlutusData(..)
+  , fromData
+  , toData
+  )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash)
+import Contract.Scripts
+  ( MintingPolicy(PlutusMintingPolicy)
+  , Validator(Validator)
+  , ValidatorHash
+  )
 import Contract.Scripts as Scripts
+import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
 import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
-  ( Language(PlutusV2)
-  , TransactionInput
+  ( TransactionInput
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
+  , plutusV2Script
   )
 import Contract.Utxos (utxosAt)
-import Contract.Value (CurrencySymbol, TokenName, getTokenName)
+import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
-import FromData (class FromData, fromData)
 import Partial.Unsafe as Unsafe
-import Plutus.Types.Value (getValue)
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams(..))
-import ToData (class ToData, toData)
 import Utils.Logging as Logging
 
 -- * Types
@@ -172,10 +179,10 @@ derive instance Newtype Node _
 -- Internally, this uses 'Contract.Scripts.applyArgs'.
 mkValidatorParams ∷ String → Array PlutusData → Contract () Validator
 mkValidatorParams hexScript params = do
-  validatorBytes ← TextEnvelope.textEnvelopeBytes hexScript
-    PlutusScriptV2
-  let validatorUnapplied = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
-  Monad.liftedE $ Scripts.applyArgs validatorUnapplied $ params
+  validatorBytes ← TextEnvelope.textEnvelopeBytes hexScript PlutusScriptV2
+
+  applied ← Scripts.applyArgs (plutusV2Script validatorBytes) params
+  Validator <$> Monad.liftContractE applied
 
 -- | @'mkMintingPolicyParams' hexScript params@ returns the 'MintingPolicy' of @hexScript@
 -- with the script applied to @params@. This is a convenient alias
@@ -186,8 +193,8 @@ mkValidatorParams hexScript params = do
 mkMintingPolicyParams ∷ String → Array PlutusData → Contract () MintingPolicy
 mkMintingPolicyParams hexScript params = do
   policyBytes ← TextEnvelope.textEnvelopeBytes hexScript PlutusScriptV2
-  let policyUnapplied = wrap $ wrap $ policyBytes /\ PlutusV2 ∷ MintingPolicy
-  Monad.liftedE $ Scripts.applyArgs policyUnapplied params
+  applied ← Scripts.applyArgs (plutusV2Script policyBytes) params
+  PlutusMintingPolicy <$> Monad.liftContractE applied
 
 -- | 'insertValidator' gets corresponding 'insertValidator' from the serialized
 -- on chain code.

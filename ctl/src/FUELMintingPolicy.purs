@@ -20,10 +20,11 @@ import Contract.Address
   , toPubKeyHash
   , toStakingCredential
   )
+import Contract.CborBytes (CborBytes(..))
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedE, liftedM)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -36,7 +37,7 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(..), applyArgs)
+import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
   ( TextEnvelopeType(PlutusScriptV2)
@@ -47,7 +48,9 @@ import Contract.Transaction
   , TransactionInput
   , TransactionOutputWithRefScript
   , awaitTxConfirmed
-  , balanceAndSignTxE
+  , balanceTx
+  , plutusV2Script
+  , signTransaction
   , submit
   )
 import Contract.TxConstraints
@@ -65,6 +68,8 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
+import Ctl.Internal.Serialization.Address (addressBytes, addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -73,12 +78,8 @@ import DistributedSet as DistributedSet
 import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
 import MPTRoot.Utils as MPTRoot
 import MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
-import Plutus.Conversion.Address (fromPlutusAddress, toPlutusAddress)
 import RawScripts (rawFUELMintingPolicy)
-import Serialization.Address (addressBytes, addressFromBytes)
 import SidechainParams (SidechainParams)
-import Types.CborBytes (CborBytes(..))
-import Types.Scripts (plutusV2Script)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
 import Utils.Logging as Logging
 import Utils.SerialiseData (serialiseData)
@@ -227,10 +228,12 @@ instance ToData FUELRedeemer where
 -- Applies SidechainParams to the minting policy
 fuelMintingPolicy ∷ FUELMint → Contract () MintingPolicy
 fuelMintingPolicy fm = do
-  fuelMPUnapplied ← (plutusV2Script >>> MintingPolicy) <$> textEnvelopeBytes
+  fuelMPUnapplied ← plutusV2Script <$> textEnvelopeBytes
     rawFUELMintingPolicy
     PlutusScriptV2
-  liftedE (applyArgs fuelMPUnapplied [ toData fm ])
+
+  applied ← Scripts.applyArgs fuelMPUnapplied [ toData fm ]
+  PlutusMintingPolicy <$> liftContractE applied
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
 -- | (as required by the onchain mintng policy) via the given sidechain params, and calls
@@ -271,8 +274,9 @@ runFuelMP sp fp = do
     Mint params → claimFUEL fuelMP params
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceAndSignTxE ubTx)
-  txId ← submit bsTx
+  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
   logInfo' $ msg ("Submitted Tx: " <> show txId)
   awaitTxConfirmed txId
   logInfo' $ msg "Tx submitted successfully!"
@@ -323,7 +327,7 @@ claimFUEL
       $ mkTokenName
       $ blake2b256Hash entryBytes
 
-    { index: mptUtxo } ←
+    { index: mptUtxo, value: mptTxOut } ←
       liftContractM
         (msg "Couldn't find the parent Merkle tree root hash of the transaction")
         =<< findMptRootTokenUtxoByRootHash sidechainParams rootHash
@@ -338,7 +342,7 @@ claimFUEL
     } ← liftedM (msg "Couldn't find distributed set nodes") $
       DistributedSet.findDsOutput ds cborMteHashedTn
 
-    { confRef } ← DistributedSet.findDsConfOutput ds
+    { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
@@ -387,6 +391,8 @@ claimFUEL
           Lookups.mintingPolicy fuelMP
             <> Lookups.mintingPolicy dsKeyPolicy
             <> Lookups.validator insertValidator
+            <> Lookups.unspentOutputs (Map.singleton mptUtxo mptTxOut)
+            <> Lookups.unspentOutputs (Map.singleton confRef confO)
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
 
       , constraints:

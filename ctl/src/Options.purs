@@ -11,6 +11,7 @@ import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
 import Contract.Address (Address)
+import Contract.CborBytes (CborBytes(..), cborBytesFromByteArray)
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -19,10 +20,17 @@ import Contract.Config
   , defaultServerConfig
   , testnetConfig
   )
+import Contract.PlutusData (fromData)
+import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Control.Alternative ((<|>))
 import Control.MonadZero (guard)
+import Ctl.Internal.Deserialization.FromBytes (fromBytes)
+import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
+import Ctl.Internal.Helpers (logWithLevel)
+import Ctl.Internal.Plutus.Conversion (toPlutusAddress)
+import Ctl.Internal.Serialization.Address (addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -30,12 +38,8 @@ import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
-import Deserialization.FromBytes (fromBytes)
-import Deserialization.PlutusData (convertPlutusData)
 import Effect.Exception (error)
 import FUELMintingPolicy (CombinedMerkleProof)
-import FromData (fromData)
-import Helpers (logWithLevel)
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -64,12 +68,8 @@ import Options.Applicative
   , value
   )
 import Options.Types (Config, Endpoint(..), Options)
-import Plutus.Conversion.Address (toPlutusAddress)
-import Serialization.Address (addressFromBytes)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
-import Types.ByteArray (ByteArray, hexToByteArray)
-import Types.CborBytes (CborBytes(..), cborBytesFromByteArray)
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -145,7 +145,7 @@ options maybeConfig = info (helper <*> optSpec)
           { logLevel = environment.logLevel
           , suppressLogs = not environment.isTTY
           , customLogger = Just
-              \m → fileLogger m *> logWithLevel environment.logLevel m
+              \_ m → fileLogger m *> logWithLevel environment.logLevel m
           , walletSpec = Just $ UseKeys
               (PrivatePaymentKeyFile pSkey)
               (PrivateStakeKeyFile <$> stSkey)

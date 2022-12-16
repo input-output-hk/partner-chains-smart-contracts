@@ -3,6 +3,7 @@
 
 module TrustlessSidechain.OnChain.FUELMintingPolicy where
 
+import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
 import Plutus.V2.Ledger.Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -147,8 +148,8 @@ mkMintingPolicy fm mode ctx = case mode of
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
 
-serialisableMintingPolicy :: Script
-serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy :: Versioned Script
+serialisableMintingPolicy = Versioned (fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
 
 {- | Deriving the public key hash from a bech32 binary
  -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019
