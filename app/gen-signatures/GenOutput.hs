@@ -112,6 +112,11 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                      , ["--sidechain-signature", Utils.showSig $ Utils.signWithSidechainKey rcSidechainPrivKey msg]
                      , ["--registration-utxo", Utils.showTxOutRef rcRegistrationUtxo]
                      ]
+          DeregistrationCommand {..} ->
+            ["nix run .#ctl-main -- deregister"] :
+            sidechainParamFlags
+              ++ [ ["--spo-public-key", Utils.showPubKey $ Utils.vKeyToSpoPubKey drSpoPubKey]
+                 ]
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
