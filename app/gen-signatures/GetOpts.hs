@@ -16,7 +16,7 @@ module GetOpts (
 import Prelude
 
 import Cardano.Binary qualified as Binary
-import Cardano.Crypto.DSIGN (Ed25519DSIGN)
+import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
   genKeyDSIGN,
@@ -148,7 +148,7 @@ data MerkleTreeCommand
 --  | 'GenCliCommand' is for commands which generate CLI commands for the
 --  purescript interface.
 data GenCliCommand
-  = -- | CLI arguments for registering and SPO
+  = -- | CLI arguments for registering an SPO
     RegistrationCommand
       { -- | SPO private key
         rcSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
@@ -156,6 +156,11 @@ data GenCliCommand
         rcSidechainPrivKey :: SECP.SecKey
       , -- | Utxo of admit candidate registration
         rcRegistrationUtxo :: TxOutRef
+      }
+  | -- | CLI arguments for deregistering an SPO
+    DeregistrationCommand
+      { -- | SPO public key
+        drSpoPubKey :: VerKeyDSIGN Ed25519DSIGN
       }
   | -- | CLI arguments for updating the committee
     UpdateCommitteeHashCommand
@@ -239,6 +244,7 @@ argParser =
         mconcat
           [ initSidechainCommand
           , registerCommand
+          , deregisterCommand
           , updateCommitteeHashCommand
           , saveRootCommand
           , -- generating merkle tree stuff
@@ -384,6 +390,28 @@ parseRootHash =
         . Base16.decode
         . Char8.pack
     )
+
+{- | 'parseSpoPubKey' parses the CLI flag value which is an SPO public key
+ encoded as hex cbor format.
+
+ This is compatible with @cardano-cli@'s output format. In particular, if you
+ generate generate a secret key / private key pair with
+ > cardano-cli address key-gen \
+ >  --verification-key-file payment.vkey \
+ >  --signing-key-file payment.skey
+ Then, the JSON field @cborHex@ of the JSON object in @payment.vkey@ is what
+ this will parse.
+-}
+parseSpoPubKeyCbor :: OptParse.ReadM (VerKeyDSIGN Ed25519DSIGN)
+parseSpoPubKeyCbor = eitherReader toSpoPubKeyCbor
+  where
+    toSpoPubKeyCbor :: String -> Either String (VerKeyDSIGN Ed25519DSIGN)
+    toSpoPubKeyCbor str = do
+      bin <-
+        mapLeft ("Invalid spo key hex: " <>) $
+          Base16.decode . Char8.pack $
+            str
+      mapLeft (mappend "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
 
 -- Commented out this code for legacy reasons. Originally, we parsed the
 -- roothash in its cbor representation, but really we want to actually just
@@ -600,6 +628,23 @@ registerCommand =
               ]
 
         pure $ pure (scParamsAndSigningKeyFunction $ RegistrationCommand {..})
+        <**> helper
+
+deregisterCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
+deregisterCommand =
+  command "deregister" $
+    flip info (progDesc "Thin wrapper around `deregister` for deregistering an spo") $
+      do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+        drSpoPubKey <-
+          option parseSpoPubKeyCbor $
+            mconcat
+              [ long "spo-pub-key-cbor"
+              , metavar "PUB_KEY_CBOR"
+              , help "Hex encoded cbor SPO public key"
+              ]
+
+        pure $ pure (scParamsAndSigningKeyFunction $ DeregistrationCommand {..})
         <**> helper
 
 {- | 'initSidechainCommand' parses the cli arguments for gathering the

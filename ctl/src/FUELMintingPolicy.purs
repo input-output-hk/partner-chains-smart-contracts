@@ -84,25 +84,8 @@ import UpdateCommitteeHash (getCommitteeHashPolicy)
 import Utils.Logging as Logging
 import Utils.SerialiseData (serialiseData)
 
--- | `FUELMint` is the data type to parameterize the minting policy. See
--- | `mkMintingPolicy` for details of why we need the datum in `FUELMint`.
--- | `mptRootTokenCurrencySymbol` is the `CurrencySymbol` of a token
--- | which contains a merkle root in the `TokenName`. See
--- | `TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy` for details.
--- | `sidechainParams` is the sidechain parameters.
--- | `dsKeyCurrencySymbol` is th currency symbol for the tokens which
--- | hold the key for the distributed set. In particular, this allows the
--- | FUEL minting policy to verify if a string has _just been inserted_ into
--- | the distributed set.
--- `mptRootTokenValidator` is the hash of the validator script
--- which _should_ have a token which has the merkle root in the token
--- name. See `TrustlessSidechain.OnChain.MPTRootTokenValidator` for
--- details.
--- > mptRootTokenValidator :: ValidatorHash
--- N.B. We don't need this! We're really only interested in the token,
--- and indeed; anyone can pay a token to this script so there really
--- isn't a reason to use this validator script as the "identifier" for
--- MPTRootTokens.
+-- | `FUELMint` is the data type to parameterize the minting policy.
+-- | Note: this matches the haskell onchain data type.
 newtype FUELMint = FUELMint
   { mptRootTokenCurrencySymbol ∷ CurrencySymbol
   , sidechainParams ∷ SidechainParams
@@ -123,12 +106,16 @@ instance ToData FUELMint where
       ]
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
--- | for the MPTRootToken.
--- | `index`: 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
--- | `amount`: 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
--- | `recipient`: arbitrary length bytestring that represents decoded bech32 cardano address. See
--- | [here](https://cips.cardano.org/cips/cip19/) for more details of bech32.
--- | `previousMerkleRoot`: if a previous merkle root exists, used to ensure uniqueness of entries.
+-- | for the MPTRootToken. It contains:
+-- | - `index`: 32 bit unsigned integer, used to provide uniqueness among
+-- | transactions within the tree
+-- | - `amount`: 256 bit unsigned integer that represents amount of tokens
+-- | being sent out of the bridge
+-- | - `recipient`: arbitrary length bytestring that represents decoded bech32
+-- | cardano address. See [here](https://cips.cardano.org/cips/cip19/) for more
+-- | details of bech32.
+-- | - `previousMerkleRoot`: if a previous merkle root exists, used to ensure
+-- | uniqueness of entries.
 newtype MerkleTreeEntry = MerkleTreeEntry
   { index ∷ BigInt
   , amount ∷ BigInt
@@ -225,7 +212,8 @@ instance ToData FUELRedeemer where
     , toData s2
     ]
 
--- Applies SidechainParams to the minting policy
+-- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
+-- | policy
 fuelMintingPolicy ∷ FUELMint → Contract () MintingPolicy
 fuelMintingPolicy fm = do
   fuelMPUnapplied ← plutusV2Script <$> textEnvelopeBytes
@@ -236,8 +224,9 @@ fuelMintingPolicy fm = do
   PlutusMintingPolicy <$> liftContractE applied
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
--- | (as required by the onchain mintng policy) via the given sidechain params, and calls
--- | `fuelMintingPolicy` to give us the minting policy
+-- | (as required by the onchain mintng policy) via the given
+-- | `SidechainParams`, and calls `fuelMintingPolicy` to give us the minting
+-- | policy
 getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
 getFuelMintingPolicy sidechainParams = do
   { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy
@@ -251,6 +240,7 @@ getFuelMintingPolicy sidechainParams = do
       , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
 
+-- | `FuelParams` is the data for the FUEL mint / burn endpoint.
 data FuelParams
   = Mint
       { amount ∷ BigInt
@@ -262,6 +252,7 @@ data FuelParams
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
+-- | `runFuelMP` executes the FUEL mint / burn endpoint.
 runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
   let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
@@ -283,7 +274,8 @@ runFuelMP sp fp = do
 
   pure txId
 
--- | Mint FUEL tokens using the Active Bridge configuration, verifying the Merkle proof
+-- | Mint FUEL tokens using the Active Bridge configuration, verifying the
+-- | Merkle proof
 claimFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt
@@ -411,6 +403,7 @@ claimFUEL
             <> mustAddDSNodeB
       }
 
+-- | `burnFUEL` burns the given FUEL amount.
 burnFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt, recipient ∷ ByteArray } →
@@ -427,6 +420,8 @@ burnFUEL fuelMP { amount, recipient } = do
     , constraints: Constraints.mustMintValueWithRedeemer redeemer value
     }
 
+-- | `findMptRootTokenUtxoByRootHash` attempts to find a UTxO with MptRootToken
+-- | as given by the `RootHash`
 -- TODO: refactor to utility module
 findMptRootTokenUtxoByRootHash ∷
   SidechainParams →

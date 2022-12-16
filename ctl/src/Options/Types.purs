@@ -79,7 +79,7 @@ data Endpoint
       , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
       }
   |
-    -- | 'CommitteeHandover' is a convenient alias for saving the root,
+    -- `CommitteeHandover` is a convenient alias for saving the root,
     -- followed by updating the committee hash.
     CommitteeHandover
       { merkleRoot ∷ ByteArray

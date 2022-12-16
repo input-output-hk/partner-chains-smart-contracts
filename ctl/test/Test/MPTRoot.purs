@@ -26,7 +26,7 @@ import Utils.Crypto (PrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
--- | 'saveRoot' is a wrapper around 'MPTRoot.saveRoot' to make writing test
+-- | `saveRoot` is a wrapper around `MPTRoot.saveRoot` to make writing test
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
 -- | It returns the saved merkle root.
 saveRoot ∷
@@ -102,13 +102,13 @@ saveRoot
     , combinedMerkleProofs
     }
 
--- | 'testScenario1' does
--- 1. Sets up the sidechain using thw 'InitSidechain.initSidechain' endpoint
---
--- 2. Creates a merkle root to sign
---
--- 3. Saves that merkle root with the current committee (everyone but one
--- person) using the 'MPTRoot.saveRoot' endpoint.
+-- | `testScenario1` does
+-- |    1. Sets up the sidechain using the `InitSidechain.initSidechain` endpoint
+-- |
+-- |    2. Creates a merkle root to sign
+-- |
+-- |    3. Saves that merkle root with the current committee (everyone but one
+-- |    person) using the `MPTRoot.saveRoot` endpoint.
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "MPTRoot testScenario1"
@@ -173,9 +173,11 @@ testScenario1 = do
   let
     -- We create signatures for every committee member BUT the first key...
     -- if you wanted to create keys for every committee member, we would write
-    -- > committeeSignatures = Array.zip
-    -- >     initCommitteePubKeys
-    -- >     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
+    -- ```
+    -- committeeSignatures = Array.zip
+    --     initCommitteePubKeys
+    --     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
+    -- ```
     committeeSignatures =
       case
         Array.uncons $ Array.zip
@@ -197,14 +199,14 @@ testScenario1 = do
 
   pure unit
 
--- | 'testScenario2' does the following
--- 1. initializes the sidechain
---
--- 2. saves a merkle root
---
--- 3. saves another merkle root (this references the last merkle root.
---
--- Note: the initialize sidechain part is duplicated code from above.
+-- | `testScenario2` does the following
+-- |    1. initializes the sidechain
+-- |
+-- |    2. saves a merkle root
+-- |
+-- |    3. saves another merkle root (this references the last merkle root).
+-- |
+-- | Note: the initialize sidechain part is duplicated code from above.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "MPTRoot testScenario2"

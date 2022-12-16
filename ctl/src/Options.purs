@@ -1,10 +1,7 @@
+-- | `Options` provides methods for getting / parsing CLI arguments.
 module Options
-  (
-    -- * CLI parsing
-    getOptions
-  ,
-    -- * Internal parsers
-    parsePubKeyAndSignature
+  ( getOptions
+  , parsePubKeyAndSignature
   ) where
 
 import Contract.Prelude
@@ -422,8 +419,8 @@ options maybeConfig = info (helper <*> optSpec)
             parseSidechainEpoch
       )
 
-  -- | 'parseMerkleRoot' parses the option of a new merkle root. This is used
-  -- in @saveRootSpec@ and @committeeHashSpec@
+  -- `parseMerkleRoot` parses the option of a new merkle root. This is used
+  -- in `saveRootSpec` and `committeeHashSpec`
   parseMerkleRoot ∷ Parser ByteArray
   parseMerkleRoot = option
     byteArray
@@ -434,7 +431,7 @@ options maybeConfig = info (helper <*> optSpec)
         ]
     )
 
-  -- | 'parseNewCommitteePubKeys' parses the new committee public keys.
+  -- `parseNewCommitteePubKeys` parses the new committee public keys.
   parseNewCommitteePubKeys ∷ Parser (List ByteArray)
   parseNewCommitteePubKeys =
     many
@@ -448,8 +445,8 @@ options maybeConfig = info (helper <*> optSpec)
           )
       )
 
-  -- | 'parsePreviousMerkleRoot' gives the options for parsing a merkle root (this is
-  -- used in both @saveRootSpec@ and @committeeHashSpec@).
+  -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
+  -- used in both `saveRootSpec` and `committeeHashSpec`).
   parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
   parsePreviousMerkleRoot =
     optional
@@ -474,9 +471,9 @@ options maybeConfig = info (helper <*> optSpec)
           ]
       )
 
-  -- | 'parseCommitteeSignatures' gives the options for parsing the current
-  -- committees' signatures. This is used in both @saveRootSpec@ and
-  -- @committeeHashSpec@.
+  -- `parseCommitteeSignatures` gives the options for parsing the current
+  -- committees' signatures. This is used in both `saveRootSpec` and
+  -- `committeeHashSpec`.
   parseCommitteeSignatures ∷
     String → String → Parser (List (PubKey /\ Maybe Signature))
   parseCommitteeSignatures longDesc helpDesc =
@@ -510,7 +507,8 @@ options maybeConfig = info (helper <*> optSpec)
     in
       Init { committeePubKeys, initSidechainEpoch }
 
--- | Reading configuration file from `./config.json`, and parsing CLI arguments. CLI argmuents override the config file.
+-- | Reads configuration file from `./config.json`, then parses CLI
+-- | arguments. CLI arguments override the config file.
 getOptions ∷ Effect Options
 getOptions = do
   config ← readAndParseJsonFrom "./config.json"
@@ -526,7 +524,7 @@ getOptions = do
 
 -- * Custom Parsers
 
--- | Parse a transaction input from a CLI format (e.g. aabbcc#0)
+-- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput
 transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
@@ -580,11 +578,13 @@ bigInt = maybeReader BigInt.fromString
 uint ∷ ReadM UInt
 uint = maybeReader UInt.fromString
 
--- | 'sidechainAddress' parses
---    >  sidechainAddress
---    >         -> 0x hexStr
---    >         -> hexStr
--- where @hexStr@ is a sequence of hex digits.
+-- | `sidechainAddress` parses
+-- | ```
+-- | sidechainAddress
+-- |        -> 0x hexStr
+-- |        -> hexStr
+-- | ```
+-- where `hexStr` is a sequence of hex digits.
 sidechainAddress ∷ ReadM ByteArray
 sidechainAddress = maybeReader $ \str →
   case split (Pattern "0x") str of
@@ -609,7 +609,7 @@ parseThresholdFraction str =
       pure { thresholdNumerator, thresholdDenominator }
     _ → Nothing
 
--- | 'committeeSignature' is a the CLI parser for 'parsePubKeyAndSignature'.
+-- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
 committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
 committeeSignature = maybeReader parsePubKeyAndSignature
 

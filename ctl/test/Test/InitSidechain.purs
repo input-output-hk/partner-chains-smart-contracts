@@ -42,13 +42,13 @@ generateInitCommittee committeeSize = do
     (\prvKey → Crypto.toPubKeyUnsafe prvKey /\ prvKey)
     committeePrvKeys
 
--- | 'testScenario1' just calls the init sidechain endpoint (which should
--- succeed!)
+-- | `testScenario1` just calls the init sidechain endpoint (which should
+-- | succeed!)
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "InitSidechain 'testScenario1'"
   genesisUtxo ← Test.Utils.getOwnTransactionInput
-  -- generate an initialize committee of @committeeSize@ committee members
+  -- generate an initialize committee of `committeeSize` committee members
   let committeeSize = 25
   committeePrvKeys ← sequence $ Array.replicate committeeSize
     Crypto.generatePrivKey
@@ -66,14 +66,14 @@ testScenario1 = do
 
   void $ InitSidechain.initSidechain initScParams
 
--- | 'testScenario2' initalizes the sidechain endpoint in two parts:
---
---      1. Calling 'InitSidechain.initSidechainTokens'
---
---      2. Calling 'InitSidechain.initCommittee'
---
--- Otherwise, this is mostly the same as 'testScenario1'
--- See issue #174.
+-- | `testScenario2` initalizes the sidechain endpoint in two parts:
+-- |
+-- |      1. Calling `InitSidechain.initSidechainTokens`
+-- |
+-- |      2. Calling `InitSidechain.initCommittee`
+-- |
+-- | Otherwise, this is mostly the same as `testScenario1`
+-- | See issue #174.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "InitSidechain 'testScenario2'"
@@ -98,12 +98,12 @@ testScenario2 = do
     _sc ← InitSidechain.initSidechainTokens initScParams
     InitSidechain.initSidechainCommittee initScParams
 
--- | 'testScenario3' is a bit more complicated (but this should fail!). It
--- takes two distinct wallets, say Alice and Bob, grabs a utxo from Alice as
--- the 'initUtxo' ('genesisUtxo'); then Bob tries to initialize the sidechain
--- with Alice's utxo.
--- In short, this verifies that to initialize the sidechain, we need to spend
--- the initUtxo
+-- | `testScenario3` is a bit more complicated (but this should fail!) than
+-- | `testScenario2`. It takes two distinct wallets, say Alice and Bob, grabs a
+-- | utxo from Alice as the `initUtxo` (`genesisUtxo`); then Bob tries to
+-- | initialize the sidechain with Alice's utxo.
+-- | In short, this verifies that to initialize the sidechain, we need to spend
+-- | the `initUtxo`
 testScenario3 ∷ KeyWallet → KeyWallet → Contract () Unit
 testScenario3 alice bob = do
   Log.logInfo' "InitSidechain 'testScenario3'"
@@ -116,7 +116,7 @@ testScenario3 alice bob = do
 
   result ← MonadError.try $ Wallet.withKeyWallet bob do
 
-    -- generate an initialize committee of @committeeSize@ committee members
+    -- generate an initialize committee of `committeeSize` committee members
     let committeeSize = 1000
     committeePrvKeys ← sequence $ Array.replicate committeeSize
       Crypto.generatePrivKey

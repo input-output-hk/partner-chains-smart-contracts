@@ -1,4 +1,4 @@
--- | 'MPTRoot' contains the endpoint functionality for the 'MPTRoot' endpoint
+-- | `MPTRoot` contains the endpoint functionality for the `MPTRoot` endpoint
 module MPTRoot
   ( module MPTRoot.Types
   , module MPTRoot.Utils
@@ -72,7 +72,7 @@ getMptRootTokenMintingPolicy sidechainParams = do
     , updateCommitteeHashCurrencySymbol
     }
 
--- | 'saveRoot' is the endpoint.
+-- | `saveRoot` is the endpoint.
 saveRoot ∷ SaveRootParams → Contract () TransactionHash
 saveRoot
   ( SaveRootParams
@@ -186,6 +186,6 @@ saveRoot
 
   pure txId
 
--- | 'report' is an internal function used for helping writing log messages.
+-- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
 report = Utils.Logging.mkReport <<< { mod: "MPTRoot", fun: _ }

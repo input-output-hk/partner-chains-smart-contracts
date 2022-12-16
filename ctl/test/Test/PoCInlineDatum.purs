@@ -33,16 +33,16 @@ import Data.Map as Map
 import RawScripts as RawScripts
 import Test.Utils as Test.Utils
 
--- | 'testScenario1' goes as follows:
---  1.
---      - Grabs the validator for 'RawScripts.rawPoCInlineDatum'
---  2.
---      - Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCInlineDatum' validator which holds the integer 69 as an
---      inline datum
---  3.
---      - Build / submit another transaction to consume the previous utxo and verify that
---      the inline datum really was 69
+-- | `testScenario1` goes as follows:
+-- |
+-- |    1. Grabs the validator for `RawScripts.rawPoCInlineDatum`
+-- |
+-- |    2. Build / submit the transaction to pay some ada to the
+-- |     `RawScripts.rawPoCInlineDatum` validator which holds the integer 69 as an
+-- |     inline datum
+-- |
+-- |    3. Build / submit another transaction to consume the previous utxo and verify that
+-- |     the inline datum really was 69
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "PoCInlineDatum: testScenario1"
@@ -108,16 +108,16 @@ testScenario1 = do
 
   pure unit
 
--- | 'testScenario2' goes as follows:
---  1.
---      Grabs the validator
---  2.
---      Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCInlineDatum' validator which holds the integer 69 as a
---       witness datum
---  3.
---      Build / submit another transaction to consume the previous utxo and verify this
---      transaction should fail because there is no inline datum.
+-- | `testScenario2` goes as follows:
+-- |
+-- | 1. Grabs the validator
+-- |
+-- | 2. Build / submit the transaction to pay some ada to the
+-- |     `RawScripts.rawPoCInlineDatum` validator which holds the integer 69 as a
+-- |      witness datum
+-- |
+-- | 3. Build / submit another transaction to consume the previous utxo and verify this
+-- |     transaction should fail because there is no inline datum.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "PoCInlineDatum: testScenario2"

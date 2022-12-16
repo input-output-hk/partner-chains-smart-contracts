@@ -1,18 +1,18 @@
--- | 'InitSidechain' implements the endpoint for intializing the sidechain.
--- There's two ways to initialize the sidechain.
---
---      1. In a single transaction with 'initSidechain' (the old way)
---
---      2. In two transactions. This is the new way which is to accomodate the
---      time difference between sidechain creation, and the first committee setup:
---
---          - Start with 'initSidechainTokens' (returns the sidechain
---          parameters), which will mint the genesis token for the committee hash
---          (and set up other required tokens for the distributed set)
---
---          - Then, call 'initSidechainCommittee' which will pay the genesis
---          token for the committee hash (assuming you have it in your wallet)
---          to the required committee hash validator (with the initial committee).
+-- | `InitSidechain` implements the endpoint for intializing the sidechain.
+-- | There's two ways to initialize the sidechain.
+-- |
+-- |      1. In a single transaction with `initSidechain` (the old way)
+-- |
+-- |      2. In two transactions. This is the new way which is to accomodate the
+-- |      time difference between sidechain creation, and the first committee setup:
+-- |
+-- |          - Start with `initSidechainTokens` (returns the sidechain
+-- |          parameters), which will mint the genesis token for the committee hash
+-- |          (and set up other required tokens for the distributed set)
+-- |
+-- |          - Then, call `initSidechainCommittee` which will pay the genesis
+-- |          token for the committee hash (assuming you have it in your wallet)
+-- |          to the required committee hash validator (with the initial committee).
 module InitSidechain
   ( initSidechain
   , initSidechainTokens
@@ -73,8 +73,8 @@ import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
--- | 'getCommitteeHashPolicy' grabs the committee hash policy and currency symbol
--- (potentially throwing an error in the case that it is not possible).
+-- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
+-- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
   InitSidechainParams →
   Contract ()
@@ -91,8 +91,8 @@ getCommitteeHashPolicy (InitSidechainParams isp) = do
     (Value.scriptCurrencySymbol committeeHashPolicy)
   pure { committeeHashPolicy, committeeHashCurrencySymbol }
 
--- | 'getMptRootTokenPolicy' grabs the mpt root token policy and currency
--- symbol (potentially throwing an error if this is not possible).
+-- | `getMptRootTokenPolicy` grabs the mpt root token policy and currency
+-- | symbol (potentially throwing an error if this is not possible).
 getMptRootTokenPolicy ∷
   InitSidechainParams →
   Contract
@@ -121,8 +121,8 @@ getMptRootTokenPolicy isp = do
 
   pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
 
--- | 'toSidechainParams' creates a 'SidechainParams' from an
--- 'InitSidechainParams' the canonical way.
+-- | `toSidechainParams` creates a `SidechainParams` from an
+-- | `InitSidechainParams` the canonical way.
 toSidechainParams ∷ InitSidechainParams → SidechainParams
 toSidechainParams (InitSidechainParams isp) = SidechainParams
   { chainId: isp.initChainId
@@ -132,9 +132,9 @@ toSidechainParams (InitSidechainParams isp) = SidechainParams
   , thresholdDenominator: isp.initThresholdDenominator
   }
 
--- | 'initCommitteeHashMintLookupsAndConstraints' creates lookups and
--- constraints to mint (but NOT pay to someone) the NFT which uniquely
--- identifies the utxo that holds the committee hash.
+-- | `initCommitteeHashMintLookupsAndConstraints` creates lookups and
+-- | constraints to mint (but NOT pay to someone) the NFT which uniquely
+-- | identifies the utxo that holds the committee hash.
 initCommitteeHashMintLookupsAndConstraints ∷
   InitSidechainParams →
   Contract
@@ -165,9 +165,9 @@ initCommitteeHashMintLookupsAndConstraints (InitSidechainParams isp) = do
 
   pure { lookups, constraints }
 
--- | 'initCommitteeHashLookupsAndConstraints' creates lookups and constraints
--- to pay the NFT (which uniquely identifies the committee hash utxo) to the
--- validator script for the update committee hash.
+-- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
+-- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
+-- | validator script for the update committee hash.
 initCommitteeHashLookupsAndConstraints ∷
   InitSidechainParams →
   Contract
@@ -232,22 +232,22 @@ initCommitteeHashLookupsAndConstraints (InitSidechainParams isp) = do
 
   pure { constraints, lookups }
 
--- | 'initDistributedSetLookupsAndContraints' creates the lookups and
--- constraints required when initalizing the distrubted set (this does NOT
--- submit any transaction). In particular, it includes lookups / constraints
--- to do the following:
---
---      - Mints the necessary tokens to run the distributed set i.e., it mints a
---      token to hold keys in the distributed set, and a distinguished NFT to
---      provide the configuration (the necessary state so that FUEL is minted
---      iff the corresponding state is inserted in the distributed set.) of the
---      distributed set.
---
---      - Pays the aforementioned tokens to their required validators.
---
--- Note: this does NOT include a lookup or constraint to spend the distinguished
--- 'initUtxo' in the 'InitSidechainParams', and this MUST be provided
--- seperately.
+-- | `initDistributedSetLookupsAndContraints` creates the lookups and
+-- | constraints required when initalizing the distributed set (this does NOT
+-- | submit any transaction). In particular, it includes lookups / constraints
+-- | to do the following:
+-- |
+-- |      - Mints the necessary tokens to run the distributed set i.e., it mints a
+-- |      token to hold keys in the distributed set, and a distinguished NFT to
+-- |      provide the configuration (the necessary state so that FUEL is minted
+-- |      iff the corresponding state is inserted in the distributed set.) of the
+-- |      distributed set.
+-- |
+-- |      - Pays the aforementioned tokens to their required validators.
+-- |
+-- | Note: this does NOT include a lookup or constraint to spend the distinguished
+-- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
+-- | seperately.
 initDistributedSetLookupsAndContraints ∷
   InitSidechainParams →
   Contract
@@ -363,27 +363,27 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
 
   pure { lookups, constraints }
 
--- | 'initSidechainTokens' partially intializes the side chain by submitting a
--- transaction which does the following:
---
---      - Minting the NFT to identify the committee hash (see
---      'initCommitteeHashMintLookupsAndConstraints')
---
---      - Minting the the keys token of the distributed set, and the NFT to
---      identify the configuration of the distributed set (see
---      'initDistributedSetLookupsAndContraints')
---
---      - Spending the distinguished 'InitSidechainParams.initUtxo'
---
--- Moreover, it returns the 'SidechainParams' of this sidechain.
---
--- To fully initialize the sidechain, this should be used with
--- 'initSidechainCommittee', and you should use this function _before_
--- 'initSidechainCommittee'.
---
--- Also, this should pay the committee hash NFT back to your own wallet (see
--- 'BalanceTx.BalanceTx.buildTransactionChangeOutput' where it claims that excess
--- value is returned back to the owner's address).
+-- | `initSidechainTokens` partially intializes the side chain by submitting a
+-- | transaction which does the following:
+-- |
+-- |      - Minting the NFT to identify the committee hash (see
+-- |      `initCommitteeHashMintLookupsAndConstraints`)
+-- |
+-- |      - Minting the the keys token of the distributed set, and the NFT to
+-- |      identify the configuration of the distributed set (see
+-- |      `initDistributedSetLookupsAndContraints`)
+-- |
+-- |      - Spending the distinguished `InitSidechainParams.initUtxo`
+-- |
+-- | Moreover, it returns the `SidechainParams` of this sidechain.
+-- |
+-- | To fully initialize the sidechain, this should be used with
+-- | `initSidechainCommittee`, and you should use this function _before_
+-- | `initSidechainCommittee`.
+-- |
+-- | Also, this should pay the committee hash NFT back to your own wallet (see
+-- | `BalanceTx.BalanceTx.buildTransactionChangeOutput` where it claims that excess
+-- | value is returned back to the owner's address).
 initSidechainTokens ∷ InitSidechainParams → Contract () SidechainParams
 initSidechainTokens isp = do
   -- Logging
@@ -431,12 +431,12 @@ initSidechainTokens isp = do
 
   pure $ toSidechainParams isp
 
--- | 'initSidechainCommittee' pays the NFT which identifies the committee hash
--- to the update committee hash validator script.
---
--- This is meant to be used _after_ 'initSidechainTokens'.
---
--- Note: you must have such an NFT in your wallet already.
+-- | `initSidechainCommittee` pays the NFT which identifies the committee hash
+-- | to the update committee hash validator script.
+-- |
+-- | This is meant to be used _after_ `initSidechainTokens`.
+-- |
+-- | Note: you must have such an NFT in your wallet already.
 initSidechainCommittee ∷ InitSidechainParams → Contract () Unit
 initSidechainCommittee isp = do
   -- Logging
@@ -462,19 +462,18 @@ initSidechainCommittee isp = do
 
   pure unit
 
-{- | 'initSidechain' creates the 'SidechainParams' executes
-'initSidechainTokens' and 'initSidechainCommittee' in one transaction. Briefly,
-this will do the following:
-
-    - Mints the committee hash NFT
-
-    - Pays the committee hash NFT to the update committee hash validator
-
-    - Mints various tokens for the distributed set (and pay to the required
-      validators)
-
-For details, see 'initSidechainTokens' and 'initSidechainCommittee'.
--}
+-- | `initSidechain` creates the `SidechainParams` and executes
+-- | `initSidechainTokens` and `initSidechainCommittee` in one transaction. Briefly,
+-- | this will do the following:
+-- |
+-- |     - Mints the committee hash NFT
+-- |
+-- |     - Pays the committee hash NFT to the update committee hash validator
+-- |
+-- |     - Mints various tokens for the distributed set (and pay to the required
+-- |       validators)
+-- |
+-- | For details, see `initSidechainTokens` and `initSidechainCommittee`.
 initSidechain ∷
   InitSidechainParams →
   Contract ()
@@ -484,7 +483,7 @@ initSidechain ∷
     }
 initSidechain isp = do
   -- Warning: this code is essentially duplicated code from
-  -- 'initSidechainTokens' and 'initSidechainCommittee'....
+  -- `initSidechainTokens` and `initSidechainCommittee`....
 
   -- Logging
   ----------------------------------------
@@ -543,6 +542,6 @@ initSidechain isp = do
     , sidechainAddresses
     }
 
--- | 'report' is an internal function used for helping writing log messages.
+-- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
 report = Utils.Logging.mkReport <<< { mod: "InitSidechain", fun: _ }
