@@ -12,7 +12,6 @@ in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/d
 
 # General Rules of Thumb
 * To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime` first.
-* To test things with plutip, make sure an instance of `plutip-server` is running. <!-- TODO: shouldn't this be automatic? -->
 * The Makefile is the central source of truth for how to deal with the environment.
 * Never invoke `npm install` without `--package-lock-only`.
 
@@ -20,7 +19,7 @@ in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/d
 * `make format` for formatting
 * `make test` for running tests
 * `make main.js` for compiling purescript main and running it as a standalone program
-<!-- TODO: deprecate webpack, change make dev to call spago repl and make build to call spago build -->
+<!-- TODO: deprecate webpack? change make dev to call spago repl and make build to call spago build -->
 * `make dev` will start webpack dev server at localhost:4008
 * `make build` will output webpack-bundled example module to dist
 * Note `BROWSER_RUNTIME` env variable should be set to 1 to build project properly for browser (for
