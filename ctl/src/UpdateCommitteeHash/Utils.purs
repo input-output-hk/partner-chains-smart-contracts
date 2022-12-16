@@ -1,15 +1,15 @@
--- | 'UpdateCommitteeHash.Utils' contains utility functions relating to the
--- update committee hash endpoint including:
---
---      - Creating the data for onchain validators / minting policies
---
---      - Mirroring functionality of onchain code
---
---      - Querying utxos regarding the update committee hash
---
--- Note: the reason for the existence of this module is because there are some
--- cyclic dependencies between 'MPTRoot' and 'UpdateCommitteeHash' without
--- this.
+-- | `UpdateCommitteeHash.Utils` contains utility functions relating to the
+-- | update committee hash endpoint including:
+-- |
+-- |      - Creating the data for onchain validators / minting policies
+-- |
+-- |      - Mirroring functionality of onchain code
+-- |
+-- |      - Querying utxos regarding the update committee hash
+-- |
+-- | Note: the reason for the existence of this module is because there are some
+-- | cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash` without
+-- | this.
 module UpdateCommitteeHash.Utils
   ( committeeHashPolicy
   , updateCommitteeHashValidator
@@ -69,18 +69,16 @@ updateCommitteeHashValidator sp = do
       PlutusScriptV2
   Monad.liftedE (Scripts.applyArgs validatorUnapplied [ PlutusData.toData sp ])
 
-{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
- the utxo which contains the committee hash. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
+-- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
+-- | the utxo which contains the committee hash. We use an empty bytestring for
+-- | this because the name really doesn't matter, so we mighaswell save a few
+-- | bytes by giving it the empty name.
 initCommitteeHashMintTn ∷ Value.TokenName
 initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
-{- | 'committeeHashCurSymbol' is the asset class. See 'initCommitteeHashMintTn'
- for details on the token name
--}
+-- | `committeeHashCurSymbol` is the asset class. See `initCommitteeHashMintTn`
+-- | for details on the token name
 {-# INLINEABLE committeeHashAssetClass #-}
 committeeHashAssetClass ∷ InitCommitteeHashMint → Contract () AssetClass
 committeeHashAssetClass ichm = do
@@ -90,22 +88,24 @@ committeeHashAssetClass ichm = do
 
   pure $ assetClass curSym initCommitteeHashMintTn
 
--- | 'aggregateKeys' aggregates a list of keys s.t. the resulting 'ByteArray'
--- may be stored in the 'UpdateCommitteeHashDatum' in an onchain compatible way.
---  For this to be truly compatible with the onchain function, you need to ensure
--- that the input list is sorted.
+-- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
+-- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
+-- | For this to be truly compatible with the onchain function, you need to ensure
+-- | that the input list is sorted.
 aggregateKeys ∷ Array ByteArray → ByteArray
 aggregateKeys = Hashing.blake2b256Hash <<< mconcat
 
--- | 'serialiseUchmHash' is an alias for (ignoring the 'Maybe')
--- > 'Contract.Hashing.blake2b256Hash' <<< 'Utils.SerialiseData.serialiseToData'
--- The result of this function is what is signed by the committee members.
+-- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
+-- | ```
+-- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
+-- | ```
+-- | The result of this function is what is signed by the committee members.
 serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe ByteArray
 serialiseUchmHash = (Hashing.blake2b256Hash <$> _) <<<
   Utils.SerialiseData.serialiseToData
 
--- | 'findUpdateCommitteeHashUtxo' returns the (unique) utxo which hold the token which
--- identifies the committee hash.
+-- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
+-- | identifies the committee hash.
 --
 -- Time complexity: bad, it looks at all utxos at the update committee hash
 -- validator, then linearly scans through each utxo to determine which has token

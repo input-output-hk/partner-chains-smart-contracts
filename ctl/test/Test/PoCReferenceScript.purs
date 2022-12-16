@@ -38,40 +38,40 @@ import Hashing as Hashing
 import RawScripts as RawScripts
 import Test.Utils as Test.Utils
 
-{- | 'testScenario1' runs the following contract (which should succeed):
-1. Grabs the validators for
-    - 'RawScripts.rawPoCToReferenceScript' which is a script which always succeeds.
-
-    - 'RawScripts.rawPoCReferenceScript' which is a script that succeeds iff
-      its redeemer (of type 'ScriptHash') matches the 'ScriptHash' of at least
-      one input.
-
-Note that we also create a 'ScriptRef' for 'RawScripts.rawPoCReferenceScript'
-which means that later we can create a transaction which uses
-'RawScripts.rawPoCReferenceScript' but doesn't include
-'RawScripts.rawPoCReferenceScript' in the witness set.
-We also compute the hash of the 'ScriptRef' for
-'RawScripts.rawPoCReferenceScript'.
-
-2. We pay some ada to two outputs
-
-    Output 1:
-         - has validator 'RawScripts.rawPoCToReferenceScript'
-         - includes the script 'RawScripts.rawPoCReferenceScript' on chain (the
-           script that we will reference later)
-
-    Output 2:
-        - has has validator 'RawScripts.rawPoCReferenceScript'
-
-3. We consume Output 1 and Output 2 by building a transaction as follows (this should succed)
-    - Spending Output 1
-    - Spending Output 2 with redeemer as the script hash of
-      'RawScripts.rawPoCReferenceScript' (i.e., itself)
-    - Include the validator 'RawScripts.rawPoCToReferenceScript' in the witness
-      set
-    - Do NOT Include the validator 'RawScripts.rawPoCReferenceScript' as this
-      is given from the reference script in Output 1.
--}
+-- | `testScenario1` runs the following contract (which should succeed):
+-- |
+-- | 1. Grabs the validators for
+-- |     - `RawScripts.rawPoCToReferenceScript` which is a script which always succeeds.
+-- |
+-- |     - `RawScripts.rawPoCReferenceScript` which is a script that succeeds iff
+-- |       its redeemer (of type `ScriptHash`) matches the `ScriptHash` of at least
+-- |       one input.
+-- |
+-- | Note that we also create a `ScriptRef` for `RawScripts.rawPoCReferenceScript`
+-- | which means that later we can create a transaction which uses
+-- | `RawScripts.rawPoCReferenceScript` but doesn't include
+-- | `RawScripts.rawPoCReferenceScript` in the witness set.
+-- | We also compute the hash of the `ScriptRef` for
+-- | `RawScripts.rawPoCReferenceScript`.
+-- |
+-- | 2. We pay some ada to two outputs
+-- |
+-- |     Output 1:
+-- |          - has validator `RawScripts.rawPoCToReferenceScript`
+-- |          - includes the script `RawScripts.rawPoCReferenceScript` on chain (the
+-- |            script that we will reference later)
+-- |
+-- |     Output 2:
+-- |         - has has validator `RawScripts.rawPoCReferenceScript`
+-- |
+-- | 3. We consume Output 1 and Output 2 by building a transaction as follows (this should succed)
+-- |     - Spending Output 1
+-- |     - Spending Output 2 with redeemer as the script hash of
+-- |       `RawScripts.rawPoCReferenceScript` (i.e., itself)
+-- |     - Include the validator `RawScripts.rawPoCToReferenceScript` in the witness
+-- |       set
+-- |     - Do NOT Include the validator `RawScripts.rawPoCReferenceScript` as this
+-- |       is given from the reference script in Output 1.
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "PoCReferenceScript: testScenario1"
@@ -171,13 +171,12 @@ testScenario1 = do
 
   pure unit
 
-{- | 'testScenario2' is the same as 'testScenario1', but changes 2. to not
-include the script on chain, and hence 3. should fail.
--}
+-- | `testScenario2` is the same as `testScenario1`, but changes 2. to not
+-- | include the script on chain, and hence 3. should fail.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "PoCReferenceScript: testScenario2"
-  -- START of duplicated code from 'testScenario1'
+  -- START of duplicated code from `testScenario1`
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCToReferenceScript
@@ -206,7 +205,7 @@ testScenario2 = do
       $ pure
       $ Hashing.scriptRefHash referenceScriptRef
 
-  -- END of duplicated code from 'testScenario1'
+  -- END of duplicated code from `testScenario1`
 
   -- 2.
   void do

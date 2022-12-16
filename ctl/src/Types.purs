@@ -1,5 +1,5 @@
--- | 'Types' includes some uility types (and functions); and types of certain
--- endpoints.
+-- | `Types` includes some uility types (and functions); and types of certain
+-- | endpoints.
 module Types
   ( PubKey
   , Signature
@@ -22,7 +22,7 @@ type PubKey = ByteArray
 type Signature = Ed25519Signature
 type Ed25519Signature = ByteArray
 
--- * Utility types and functions for working with 'CurrencySymbol's and 'TokenName's
+-- * Utility types and functions for working with `CurrencySymbol`s and `TokenName`s
 type AssetClass = CurrencySymbol /\ TokenName
 
 assetClass ∷ CurrencySymbol → TokenName → AssetClass

@@ -40,8 +40,8 @@ toTxIn txId txIdx =
     , index: UInt.fromInt txIdx
     }
 
--- |  @'getUniqueUtxoAt' addr@ gets the first utxo at the given address, and throws an
--- error if there is NOT exactly one utxo at this address.
+-- | `getUniqueUtxoAt addr` gets the first utxo at the given address, and throws an
+-- | error if there is NOT exactly one utxo at this address.
 getUniqueUtxoAt ∷
   Address → Contract () (Tuple TransactionInput TransactionOutputWithRefScript)
 getUniqueUtxoAt addr = do
@@ -58,17 +58,20 @@ getUniqueUtxoAt addr = do
       | otherwise → err
     Nothing → err
 
--- | Coerces a 'PaymentPubKeyHash' to a 'ByteArray'. This is useful when making
--- the recipient for the 'MerkleTreeEntry'.
+-- | Coerces a `PaymentPubKeyHash` to a `ByteArray`. This is useful when making
+-- | the recipient for the `MerkleTreeEntry`.
+-- | TODO: the "useful" part is a bit outdated -- recipients in
+-- | `MerkleTreeEntry` should actually be bech32 encoded addresses intead of
+-- | just the raw pubkey hash
 paymentPubKeyHashToByteArray ∷ PaymentPubKeyHash → ByteArray
 paymentPubKeyHashToByteArray =
   unwrap <<< Hash.ed25519KeyHashToBytes <<< unwrap <<< unwrap
 
--- | 'getOwnTransactionInput' gets a single aribtrary 'TransactionInput' from
--- the current key wallet.
--- This throws an error if such a utxo does not exist.
--- This is useful for initializing the sidechain because we need to mint an NFT
--- for e.g. the committee, and various other scripts
+-- | `getOwnTransactionInput` gets a single aribtrary `TransactionInput` from
+-- | the current key wallet.
+-- | This throws an error if such a utxo does not exist.
+-- | This is useful for e.g. initializing the sidechain because we need to mint
+-- | an NFT for the initial committee
 getOwnTransactionInput ∷ Contract () TransactionInput
 getOwnTransactionInput = do
   ownUtxos ← Monad.liftedM "Failed to query wallet utxos" Utxos.getWalletUtxos
@@ -76,15 +79,17 @@ getOwnTransactionInput = do
     $ Set.findMin
     $ Map.keys ownUtxos
 
--- | @'fails' contract@ executes @contract@, and
---
---  - If @contract@ throws an exception, then the program continues as usual
---
---  - If @contract@ doesn't thrown an exception, then we throw an exception.
---
--- This is used to run tests on programs that _should_ fail e.g. to test if
--- @myTest@ fails, we should write
--- > Test.Utils.fails myTest
+-- | `fails contract` executes `contract`, and
+-- |
+-- |  - If `contract` throws an exception, then the program continues as usual
+-- |
+-- |  - If `contract` doesn't thrown an exception, then we throw an exception.
+-- |
+-- | This is used to run tests on programs that _should_ fail e.g. to test if
+-- | `myTest` fails, we should write
+-- | ```
+-- | Test.Utils.fails myTest
+-- | ```
 fails ∷ Contract () Unit → Contract () Unit
 fails contract = do
   result ← MonadError.try contract
@@ -94,8 +99,8 @@ fails contract = do
     Left e →
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
 
--- | @'assertBy' eqBy expected actual@ does nothing if @eqBy expected actual ==
--- true@, and logs and throws an exception otherwise.
+-- | `assertBy eqBy expected actual` does nothing if `eqBy expected actual == true`,
+-- | and logs and throws an exception otherwise.
 assertBy ∷ ∀ a. Show a ⇒ (a → a → Boolean) → a → a → Effect Unit
 assertBy eqBy expected actual =
   if eqBy expected actual then pure unit

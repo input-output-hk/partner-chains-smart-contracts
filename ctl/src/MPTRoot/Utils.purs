@@ -1,13 +1,13 @@
--- | 'MPTRoot.Utils' contains utility functions relating to the
--- update committee hash endpoint including:
---
---      - Creating the data for onchain validators / minting policies
---
---      - Querying utxos regarding the update committee hash
---
--- Note: the reason for the existence of this module is because there are some
--- cyclic dependencies between 'MPTRoot' and 'UpdateCommitteeHash' without
--- this.
+-- | `MPTRoot.Utils` contains utility functions relating to the
+-- | MPT root endpoint including:
+-- |
+-- |      - Creating the data for onchain validators / minting policies
+-- |
+-- |      - Querying utxos regarding the MPT root
+-- |
+-- | Note: the reason for the existence of this module is because there are some
+-- | cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash` without
+-- | this.
 module MPTRoot.Utils
   ( mptRootTokenMintingPolicy
   , mptRootTokenValidator
@@ -38,9 +38,9 @@ import SidechainParams (SidechainParams)
 import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
 
--- | 'mptRootTokenMintingPolicy' gets the minting policy corresponding to
--- 'RawScripts.rawMPTRootTokenMintingPolicy' paramaterized by the given
--- 'SignedMerkleRootMint'.
+-- | `mptRootTokenMintingPolicy` gets the minting policy corresponding to
+-- | `RawScripts.rawMPTRootTokenMintingPolicy` paramaterized by the given
+-- | `SignedMerkleRootMint`.
 mptRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
 mptRootTokenMintingPolicy sp = do
   mptRootMP ← (Transaction.plutusV2Script >>> MintingPolicy) <$>
@@ -49,8 +49,8 @@ mptRootTokenMintingPolicy sp = do
       PlutusScriptV2
   Monad.liftedE (Scripts.applyArgs mptRootMP [ PlutusData.toData sp ])
 
--- | 'mptRootTokenValidator' gets the validator corresponding to
--- 'RawScripts.rawMPTRootTokenValidator' paramaterized by 'SidechainParams'.
+-- | `mptRootTokenValidator` gets the validator corresponding to
+-- | 'RawScripts.rawMPTRootTokenValidator' paramaterized by `SidechainParams`.
 mptRootTokenValidator ∷ SidechainParams → Contract () Validator
 mptRootTokenValidator sp = do
   mptRootVal ← (Transaction.plutusV2Script >>> Validator) <$>
@@ -59,16 +59,16 @@ mptRootTokenValidator sp = do
       PlutusScriptV2
   Monad.liftedE (Scripts.applyArgs mptRootVal [ PlutusData.toData sp ])
 
--- | @'findMptRootTokenUtxo' merkleRoot smrm@ locates a utxo which
---
---      1. is sitting at the @'mptRootTokenValidator' smrm.sidechainParams@
---      utxo
---
---      2. contains a token with 'CurrencySymbol' @'mptRootTokenMintingPolicy' smrm@
---      and 'TokenName' as @merkleRoot@.
---
--- Note: in the case that there is more than such utxo, this returns the first
--- such utxo it finds that satisifies the aforementioned properties.
+-- | `findMptRootTokenUtxo merkleRoot smrm` locates a utxo which
+-- |
+-- |    1. is sitting at the some utxo with validator address
+-- |    `mptRootTokenValidator smrm.sidechainParams`
+-- |
+-- |    2. contains a token with `CurrencySymbol` `mptRootTokenMintingPolicy smrm`
+-- |    and `TokenName` as `merkleRoot`.
+-- |
+-- | Note: in the case that there is more than such utxo, this returns the first
+-- | such utxo it finds that satisifies the aforementioned properties.
 findMptRootTokenUtxo ∷
   TokenName →
   SignedMerkleRootMint →
@@ -94,13 +94,13 @@ findMptRootTokenUtxo merkleRoot smrm = do
     -- amount
     Value.valueOf value currencySymbol merkleRoot /= zero
 
--- | @'findPreviousMptRootTokenUtxo' maybeLastMerkleRoot smrm@ returns 'Nothing' in
--- the case that 'maybeLastMerkleRoot' is 'Nothing', and 'Just' the result of
--- @'findMptRootTokenUtxo' lastMerkleRoot smrm@ provided that @Just lastMerkleRoot = maybeLastMerkleRoot@
--- and there are no other errors.
--- Note: the 'Maybe' return type does NOT denote the absense or existence of
--- finding the utxo... rather it reflects the 'Maybe' in the last merkle root
--- of whether it exists or not.
+-- | `findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm` returns `Nothing` in
+-- | the case that `maybeLastMerkleRoot` is `Nothing`, and `Just` the result of
+-- | `findMptRootTokenUtxo lastMerkleRoot smrm` provided that `Just lastMerkleRoot = maybeLastMerkleRoot`
+-- | and there are no other errors.
+-- | Note: the `Maybe` return type does NOT denote the absense or existence of
+-- | finding the utxo... rather it reflects the `Maybe` in the last merkle root
+-- | of whether it exists or not.
 findPreviousMptRootTokenUtxo ∷
   Maybe ByteArray →
   SignedMerkleRootMint →
@@ -120,7 +120,7 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
           $ lkup
       pure $ Just lkup'
 
--- | 'serialiseMrimHash' is an alias for (ignoring the 'Maybe')
+-- | `serialiseMrimHash` is an alias for (ignoring the `Maybe`)
 -- | ```purescript
 -- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
 -- | ```

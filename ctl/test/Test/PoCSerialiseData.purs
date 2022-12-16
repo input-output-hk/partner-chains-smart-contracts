@@ -1,5 +1,5 @@
--- | Some proof of concept tests for using the onchain builtin 'serialiseData'
--- function.
+-- | Some proof of concept tests for using the onchain builtin `serialiseData`
+-- | function.
 module Test.PoCSerialiseData (testScenario1, testScenario2) where
 
 import Contract.Prelude
@@ -32,14 +32,15 @@ import RawScripts as RawScripts
 import Test.Utils as Test.Utils
 import Utils.SerialiseData as SerialiseData
 
--- | 'testScenario1' should succeed. It does the following.
---  1.
---      - Grabs the validator for 'RawScripts.rawPoCSerialiseData'
---  2.
---      - Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCSerialiseData' validator which holds the cbor serialized
---      integer 69 as a datum.
---  3. Spend the transaction created in 2., with redeemer the builtin data of 69.
+-- | `testScenario1` should succeed. It does the following.
+-- |
+-- |    1. Grabs the validator for `RawScripts.rawPoCSerialiseData`
+-- |
+-- |    2. Build / submit the transaction to pay some ada to the
+-- |     `RawScripts.rawPoCSerialiseData` validator which holds the cbor serialized
+-- |     integer 69 as a datum.
+-- |
+-- |    3. Spend the transaction created in 2., with redeemer the builtin data of 69.
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "PoCSerialiseData: testScenario1"
@@ -103,18 +104,19 @@ testScenario1 = do
 
   pure unit
 
--- | 'testScenario2' should fail. It is essentially identical to
--- 'testScenario1', except for step 3. In full, it does the following
---  1.
---      - Grabs the validator for 'RawScripts.rawPoCSerialiseData'
---  2.
---      - Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCSerialiseData' validator which holds the cbor serialized
---      integer 69 as a datum.
---  3.
---      Spend the transaction created in 2., with redeemer the builtin data of
---      70 (but this will fail because 70 is very clearly not 69).
--- Note: This function is almost entirely duplicated code from 'testScenario1'
+-- | `testScenario2` should fail. It is essentially identical to
+-- | `testScenario1`, except for step 3. In full, it does the following
+-- |
+-- |  1. Grabs the validator for `RawScripts.rawPoCSerialiseData`
+-- |
+-- |  2. Build / submit the transaction to pay some ada to the
+-- |      `RawScripts.rawPoCSerialiseData` validator which holds the cbor serialized
+-- |      integer 69 as a datum.
+-- |
+-- |  3. Spend the transaction created in 2., with redeemer the builtin data of
+-- |      70 (but this will fail because 70 is very clearly not 69).
+-- |
+-- | Note: This function is almost entirely duplicated code from 'testScenario1'
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "PoCSerialiseData: testScenario2"
@@ -159,7 +161,7 @@ testScenario2 = do
   Test.Utils.fails do
     (txIn /\ txOut) ← Test.Utils.getUniqueUtxoAt validatorAddress
     let
-      -- The only distinct line from 'testScenario1'.
+      -- The only distinct line from `testScenario1`.
       validatorRedeemer = Redeemer $ PlutusData.toData $ BigInt.fromInt 70
 
       constraints ∷ TxConstraints Void Void

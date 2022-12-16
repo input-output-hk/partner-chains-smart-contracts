@@ -1,5 +1,5 @@
 -- | This module implements the required offchain functionality of the
--- distributed set.
+-- | distributed set.
 module DistributedSet
   ( Ds(Ds)
   , DsDatum(DsDatum)
@@ -59,43 +59,44 @@ import ToData (class ToData, toData)
 import Utils.Logging as Logging
 
 -- * Types
--- $types
 -- For more information, see the on-chain Haskell file.
 
--- | 'Ds' is the type which parameterizes the validator script for insertion in
--- the distributed set.
+-- | `Ds` is the type which parameterizes the validator script for insertion in
+-- | the distributed set.
 newtype Ds = Ds { dsConf ∷ CurrencySymbol }
 
--- | 'DsDatum' is the datum for the validator script for insertion in the
--- distributed set.
+-- | `DsDatum` is the datum for the validator script for insertion in the
+-- | distributed set.
 newtype DsDatum = DsDatum { dsNext ∷ ByteArray }
 
--- | 'DsConfDatum' is the datum for the validator script which holds the
--- configuration of the distributed set on chain i.e., this datum holds the
--- necessary 'CurrencySymbol' for the functionality of the distributed set.
+-- | `DsConfDatum` is the datum for the validator script which holds the
+-- | configuration of the distributed set on chain i.e., this datum holds the
+-- | necessary `CurrencySymbol`s for the functionality of the distributed set.
 newtype DsConfDatum = DsConfDatum
   { dscKeyPolicy ∷ CurrencySymbol
   , dscFUELPolicy ∷ CurrencySymbol
   }
 
--- | 'DsConfMint' is the type which paramaterizes the minting policy of the NFT
--- which initializes the distribted set (i.e., the parameter for the configuration of the distributed set).
+-- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
+-- | which initializes the distributed set (i.e., the parameter for the
+-- | minting policy that is the configuration of the distributed set).
 newtype DsConfMint = DsConfMint { dscmTxOutRef ∷ TransactionInput }
 
--- | 'DsKeyMint' is the type which paramterizes the minting policy of the
--- tokens which are keys in the distributed set.
+-- | `DsKeyMint` is the type which paramterizes the minting policy of the
+-- | tokens which are keys in the distributed set.
 newtype DsKeyMint = DsKeyMint
   { dskmValidatorHash ∷ ValidatorHash
   , dskmConfCurrencySymbol ∷ CurrencySymbol
   }
 
--- | 'Node' is an internal type to realize the nodes in the distributed set.
+-- | `Node` is an internal type to represent the nodes in the distributed set.
 newtype Node = Node
   { nKey ∷ ByteArray
   , nNext ∷ ByteArray
   }
 
--- | 'mkNode' is a wrapper to create a Node from a prefix and the datum.
+-- | `mkNode` is a wrapper to create a Node from a string (a key) and the
+-- | datum.
 {-# INLINEABLE mkNode #-}
 mkNode ∷ ByteArray → DsDatum → Node
 mkNode str (DsDatum d) =
@@ -104,30 +105,31 @@ mkNode str (DsDatum d) =
     , nNext: d.dsNext
     }
 
--- | Converts a 'Node' to the correpsonding 'DsDatum'
+-- | Converts a `Node` to the correpsonding `DsDatum`
 nodeToDatum ∷ Node → DsDatum
 nodeToDatum (Node node) =
   DsDatum { dsNext: node.nNext }
 
-{- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
- length "array" of how many new nodes (this is always 2, see 'lengthIb') are
- generated after inserting into a node.
--}
+-- | `Ib` is the insertion buffer (abbr. Ib) is a fixed length array of how
+-- | many new nodes (this is always 2, see `lengthIb`) are generated after
+-- | inserting into a node.
 newtype Ib a = Ib { unIb ∷ Tuple a a }
 
--- | 'rootNode' is the initial node used when initializing the distributed set.
--- It contains the min bound / max bound of the strings contained in the
--- distributed set.
+-- | `rootNode` is the initial node used when initializing the distributed set.
+-- | It contains a min bound / max bound of the strings contained in the
+-- | distributed set.
 rootNode ∷ Node
 rootNode = Node
   { nKey: ByteArray.byteArrayFromIntArrayUnsafe []
   , nNext: ByteArray.byteArrayFromIntArrayUnsafe (Array.replicate 33 255)
-  -- Recall that blake2b_256 hashes are @256 bits = 32 bytes@ long (8bits / byte),
+  -- Recall that blake2b_256 hashes are `256 bits = 32 bytes` long (8bits / byte),
   -- so an upper bound (ordering lexicographically -- the natural choice)
   -- is a list of just value 255 of length 33.
   -- TODO: actually, funny enough, we could choose the string
-  -- > [255, ... 255] ++ [0]
-  -- where the @[255, ... 255]@ is of length 32.
+  -- ```
+  -- [255, ... 255] ++ [0]
+  -- ```
+  -- where the `[255, ... 255]` is of length 32.
   -- This might be a bit more clean actually, since this really is
   -- supremum of the hashes as opposed to just an upper bound...
   -- BIG TODO: MAYBE WE CHANGE THIS LATER, AS IN I WOULD REALLY LIKE TO
@@ -136,12 +138,15 @@ rootNode = Node
   -- And similarly, I suppose we could choose the infimum for the lower
   -- bound (this would be a minor essentially neglible performance
   -- penalty though) i.e, use the string
-  -- > [0,..,0]
-  -- where [0,..,0] is of length 31.
+  -- ```
+  -- [0,..,0]
+  -- ```
+  -- where `[0,..,0]` is of length 31.
   }
 
--- | 'dsConfTokenName' is the TokenName for the token of the configuration.
--- This corresponds to the Haskell function.
+-- | `dsConfTokenName` is the `TokenName` for the token of the configuration.
+-- | This doesn't matter, so we set it to be the empty string.
+-- | Note: this corresponds to the Haskell function.
 dsConfTokenName ∷ TokenName
 dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
   mempty
@@ -164,12 +169,12 @@ derive instance Newtype Node _
 
 -- * Validator / minting policies
 
--- | @'mkValidatorParams' hexScript params@ returns the 'Validator' of @hexScript@
--- with the script applied to @params@. This is a convenient alias
--- to help create the distributed set validators.
+-- | `mkValidatorParams hexScript params` returns the `Validator` of `hexScript`
+-- | with the script applied to `params`. This is a convenient alias
+-- | to help create the distributed set validators.
 --
--- TODO: not too sure what this does in the case when @params@ is empty list?
--- Internally, this uses 'Contract.Scripts.applyArgs'.
+-- TODO: not too sure what this does in the case when `params` is empty list?
+-- Internally, this uses `Contract.Scripts.applyArgs`.
 mkValidatorParams ∷ String → Array PlutusData → Contract () Validator
 mkValidatorParams hexScript params = do
   validatorBytes ← TextEnvelope.textEnvelopeBytes hexScript
@@ -177,45 +182,45 @@ mkValidatorParams hexScript params = do
   let validatorUnapplied = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
   Monad.liftedE $ Scripts.applyArgs validatorUnapplied $ params
 
--- | @'mkMintingPolicyParams' hexScript params@ returns the 'MintingPolicy' of @hexScript@
--- with the script applied to @params@. This is a convenient alias
--- to help create the distributed set minting policies.
+-- | `mkMintingPolicyParams hexScript params` returns the `MintingPolicy` of `hexScript`
+-- | with the script applied to `params`. This is a convenient alias
+-- | to help create the distributed set minting policies.
 --
--- TODO: not too sure what this does in the case when @params@ is empty list?
--- Internally, this uses 'Contract.Scripts.applyArgs'.
+-- TODO: not too sure what this does in the case when `params` is empty list?
+-- Internally, this uses `Contract.Scripts.applyArgs`.
 mkMintingPolicyParams ∷ String → Array PlutusData → Contract () MintingPolicy
 mkMintingPolicyParams hexScript params = do
   policyBytes ← TextEnvelope.textEnvelopeBytes hexScript PlutusScriptV2
   let policyUnapplied = wrap $ wrap $ policyBytes /\ PlutusV2 ∷ MintingPolicy
   Monad.liftedE $ Scripts.applyArgs policyUnapplied params
 
--- | 'insertValidator' gets corresponding 'insertValidator' from the serialized
--- on chain code.
+-- | `insertValidator` gets corresponding `insertValidator` from the serialized
+-- | on chain code.
 insertValidator ∷ Ds → Contract () Validator
 insertValidator ds = mkValidatorParams RawScripts.rawInsertValidator $ map
   toData
   [ ds ]
 
--- | 'dsConfValidator' gets corresponding 'dsConfValidator' from the serialized
--- on chain code.
+-- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
+-- | on chain code.
 dsConfValidator ∷ Ds → Contract () Validator
 dsConfValidator ds = mkValidatorParams RawScripts.rawDsConfValidator $ map
   toData
   [ ds ]
 
--- | 'dsConfPolicy' gets corresponding 'dsConfPolicy' from the serialized
--- on chain code.
+-- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
+-- | on chain code.
 dsConfPolicy ∷ DsConfMint → Contract () MintingPolicy
 dsConfPolicy dsm = mkMintingPolicyParams RawScripts.rawDsConfPolicy $ map toData
   [ dsm ]
 
--- | 'dsKeyPolicy' gets corresponding 'dsKeyPolicy' from the serialized
--- on chain code.
+-- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
+-- | on chain code.
 dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyParams RawScripts.rawDsKeyPolicy $ map toData
   [ dskm ]
 
--- | The address for the distributed set.
+-- | The address for the insert validator of the distributed set.
 insertAddress ∷ NetworkId → Ds → Contract () Address
 insertAddress netId ds = do
   v ← insertValidator ds
@@ -281,15 +286,14 @@ dsToDsKeyMint ds = do
     , dskmConfCurrencySymbol: (unwrap ds).dsConf
     }
 
-{- | `'insertNode' str node` inserts returns the new nodes which should be
- created (in place of the old @node@) provided that @str@ can actually be
- inserted here. See Note [How This All Works].
-
- Note that the first projection of 'Ib' will always be the node which should
- replace @node@, which also should be the node which is strictly less than
- @str@. This property is helpful in 'mkInsertValidator' when verifying that the
- nodes generated are as they should be.
--}
+-- | `insertNode str node` inserts returns the new nodes which should be
+-- | created (in place of the old `node`) provided that `str` can actually be
+-- | inserted here (i.e., `str` must be strictly between `nKey` and `nNext` of `node`).
+-- |
+-- | Note: the first projection of `Ib` will always be the node which should
+-- | replace `node`, which also should be the node which is strictly less than
+-- | `str`.
+-- | Note: this copies the onchain Haskell function.
 {-# INLINEABLE insertNode #-}
 insertNode ∷ ByteArray → Node → Maybe (Ib Node)
 insertNode str (Node node)
@@ -303,8 +307,7 @@ insertNode str (Node node)
           }
   | otherwise = Nothing
 
--- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
--- (potentially throwing an error in the case that it is not possible).
+-- | `getDs` grabs the `Ds` type given `SidechainParams`
 getDs ∷ SidechainParams → Contract () Ds
 getDs (SidechainParams sp) = do
   let
@@ -319,8 +322,8 @@ getDs (SidechainParams sp) = do
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds { dsConf: dsConfPolicyCurrencySymbol }
 
--- | 'getDsKeyPolicy' grabs the committee hash policy and currency symbol
--- (potentially throwing an error in the case that it is not possible).
+-- | `getDsKeyPolicy` grabs the key policy and currency symbol
+-- | (potentially throwing an error in the case that it is not possible).
 getDsKeyPolicy ∷
   SidechainParams →
   Contract ()
@@ -348,9 +351,8 @@ getDsKeyPolicy (SidechainParams sp) = do
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
 
-{- | 'findDsConfOutput' finds the utxo which holds the configuration of the
- distributed set.
--}
+-- | `findDsConfOutput` finds the (unique) utxo (as identified by an NFT) which
+-- | holds the configuration of the distributed set.
 findDsConfOutput ∷
   Ds →
   Contract ()
@@ -392,16 +394,18 @@ findDsConfOutput ds = do
     , confDat
     }
 
-{- | 'findDsOutput' finds the transaction which we must insert to
- (if it exists) for the distributed set. It returns
- the 'TransactionInput' of the output to spend, the transaction output information, the datum
- at that utxo to spend, and the 'TokenName' of the key of the utxo we want to
- spend; and finally the new nodes to insert (after replacing the given node)
-
- N.B. this is linear in the size of the distributed set... one should maintain
- an efficient offchain index of the utxos, and set up the appropriate actions
- when the list gets updated by someone else.
--}
+-- | `findDsOutput` finds the transaction which we must insert to
+-- | (if it exists) for the distributed set. It returns:
+-- |
+-- |    - the `TransactionInput` of the output to spend;
+-- |    - the transaction output information;
+-- |    - the datum at that utxo to spend;
+-- |    - the `TokenName` of the key of the utxo we want to spend; and
+-- |    - the new nodes to insert (after replacing the given node)
+-- |
+-- | Note: this is linear in the size of the distributed set... one should maintain
+-- | an efficient offchain index of the utxos, and set up the appropriate actions
+-- | when the list gets updated by someone else.
 findDsOutput ∷
   Ds →
   TokenName →

@@ -30,17 +30,17 @@ import Data.Map as Map
 import RawScripts as RawScripts
 import Test.Utils as Test.Utils
 
--- | 'testScenario1' (which should succeed) goes as follows:
---  1.
---      Grabs the validators
---  2.
---      Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCToReferenceInput' validator which holds the integer 69 as an
---      inline datum, and 'RawScripts.rawPoCReferenceInput'
---  3.
---      Build / submit another transaction such that the 'RawScripts.rawPoCReferenceInput'
---      references the 'RawScripts.rawPoCToReferenceInput' script and verifies that the
---      (witness) datum really is 69
+-- | `testScenario1` (which should succeed) goes as follows:
+-- |
+-- | 1. Grabs the validators
+-- |
+-- | 2. Build / submit the transaction to pay some ada to the
+-- |     `RawScripts.rawPoCToReferenceInput` validator which holds the integer 69 as an
+-- |     inline datum, and `RawScripts.rawPoCReferenceInput`
+-- | 3.
+-- |     Build / submit another transaction such that the `RawScripts.rawPoCReferenceInput`
+-- |     references the `RawScripts.rawPoCToReferenceInput` script and verifies that the
+-- |     (witness) datum really is 69
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "PoCReferenceInput: testScenario1"
@@ -133,21 +133,21 @@ testScenario1 = do
 
   pure unit
 
--- | 'testScenario2' (which should fail) goes as follows:
---  1.
---      Grabs the validators
---  2.
---      Build / submit the transaction to pay some ada to the
---      'RawScripts.rawPoCToReferenceInput' validator which holds the integer 69 as an
---      inline datum, and 'RawScripts.rawPoCReferenceInput'
---  3.
---      Build / submit another transaction such that the 'RawScripts.rawPoCReferenceInput'
---      CONSUMES the 'RawScripts.rawPoCToReferenceInput' script and verifies that the
---      (witness) datum really is 69. This should fail!
+-- | `testScenario2` (which should fail) goes as follows:
+-- |
+-- |    1. Grabs the validators
+-- |
+-- |    2. Build / submit the transaction to pay some ada to the
+-- |    `RawScripts.rawPoCToReferenceInput` validator which holds the
+-- |    integer 69 as an inline datum, and `RawScripts.rawPoCReferenceInput`
+-- |
+-- |    3. Build / submit another transaction such that the
+-- |    `RawScripts.rawPoCReferenceInput` CONSUMES the `RawScripts.rawPoCToReferenceInput`
+-- |    script and verifies that the (witness) datum really is 69. This should fail!
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "PoCReferenceInput: testScenario2"
-  -- START of duplicated code from 'testScenario1'.
+  -- START of duplicated code from `testScenario1`.
   -- 1.
   toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
     RawScripts.rawPoCToReferenceInput
@@ -201,7 +201,7 @@ testScenario2 = do
     Transaction.awaitTxConfirmed txId
     Log.logInfo' $ "Transaction confirmed: " <> show txId
 
-  -- END of duplicated code from 'testScenario1'.
+  -- END of duplicated code from `testScenario1`.
 
   -- 3.
   Test.Utils.fails do

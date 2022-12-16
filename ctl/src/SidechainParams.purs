@@ -21,14 +21,14 @@ newtype SidechainParams = SidechainParams
   , genesisMint ∷ Maybe TransactionInput
   , genesisUtxo ∷ TransactionInput
   ,
-    -- 'thresholdNumerator' is the numerator of the ratio required for the
-    -- committee to verify that committee has signed something (e.g. updating the
-    -- committee hash, or saving a new merkle root).
+    -- `thresholdNumerator` is the numerator of the ratio required for the
+    -- committee to verify that committee has signed something (e.g. when
+    -- updating the committee hash, or saving a new merkle root).
     thresholdNumerator ∷ BigInt
   ,
-    -- 'thresholdDenominator' is the denominator of the ratio required for the
-    -- committee to verify that committee has signed something (e.g. updating the
-    -- committee hash, or saving a new merkle root).
+    -- `thresholdDenominator` is the denominator of the ratio required for the
+    -- committee to verify that committee has signed something (e.g. when
+    -- updating the committee hash, or saving a new merkle root).
     thresholdDenominator ∷ BigInt
   }
 
@@ -113,12 +113,12 @@ instance Show SidechainParams where
 newtype InitSidechainParams = InitSidechainParams
   { initChainId ∷ BigInt
   , initGenesisHash ∷ ByteArray
-  , -- | 'initUtxo ' is a 'TxOutRef' used for creating 'AssetClass's for the
-    -- internal function of the side chain (e.g. InitCommitteeHashMint TODO: hyperlink this documentation)
+  , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
+    -- internal function of the side chain
     initUtxo ∷ TransactionInput
-  , -- | 'initCommittee' is the initial committee of the sidechain
+  , -- `initCommittee` is the initial committee of the sidechain
     initCommittee ∷ Array PubKey
-  , -- 'initSidechainEpoch' is the initial sidechain epoch of the first committee
+  , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
     initSidechainEpoch ∷ BigInt
   , initMint ∷ Maybe TransactionInput
   , initThresholdNumerator ∷ BigInt

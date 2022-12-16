@@ -1,8 +1,8 @@
--- | 'MPTRoot.Types' contains types relating to the 'MPTRoot' endpoint.
---
--- Note: the reason for the existence of this module is because there are some
--- cyclic dependencies between 'MPTRoot' and 'UpdateCommitteeHash' without
--- this.
+-- | `MPTRoot.Types` contains types relating to the `MPTRoot` endpoint.
+-- |
+-- |  Note: the reason for the existence of this module is because without this
+-- | module, there are some cyclic dependencies between `MPTRoot` and
+-- | `UpdateCommitteeHash`.
 module MPTRoot.Types
   ( SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
@@ -22,15 +22,16 @@ import Contract.Value (CurrencySymbol)
 import SidechainParams (SidechainParams, SidechainParams')
 import Types (PubKey, Signature)
 
--- | 'SignedMerkleRoot' is the redeemer for the minting policy.
+-- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot
   { -- The new merkle root to insert.
     merkleRoot ∷ ByteArray
-  , -- Either 'Just' the last merkle root (in the case it exists), or 'Nothing'
+  , -- Either `Just` the last merkle root (in the case it exists), or `Nothing`
     -- if there is no such last merkle root (i.e., in the first transaction).
     previousMerkleRoot ∷ Maybe ByteArray
-  , -- Ordered as their corresponding keys (also the same length as
-    -- 'committeePubKeys')
+  , -- Ordered as their corresponding public keys. In the case that not all the
+    -- committees' public keys signed the message, the length of this list will be
+    -- less than the committee public keys.
     signatures ∷ Array Signature
   , -- Sorted public keys of all committee members
     committeePubKeys ∷ Array PubKey
@@ -49,12 +50,12 @@ instance ToData SignedMerkleRoot where
       , toData committeePubKeys
       ]
 
--- | 'SignedMerkleRootMint' parameterizes the onchain minting policy.
+-- | `SignedMerkleRootMint` parameterizes the onchain minting policy.
 newtype SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'sidechainParams' includes the 'SidechainParams'
+  { -- | `sidechainParams` includes the `SidechainParams`
     sidechainParams ∷ SidechainParams
-  , -- | 'updateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- (uniquely) identifies the utxo for which the 'UpdateCommitteeHashDatum'
+  , -- | `updateCommitteeHashCurrencySymbol` is the `CurrencySymbol` which
+    -- (uniquely) identifies the utxo for which the `UpdateCommitteeHashDatum`
     -- resides.
     updateCommitteeHashCurrencySymbol ∷ CurrencySymbol
   }
@@ -69,8 +70,8 @@ instance ToData SignedMerkleRootMint where
       , toData updateCommitteeHashCurrencySymbol
       ]
 
--- | 'SaveRootParams' is the offchain parameter for MPTRoot ('MPTRoot.saveRoot')
--- endpoint.
+-- | `SaveRootParams` is the offchain parameter for MPTRoot (`MPTRoot.saveRoot`)
+-- | endpoint.
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
   , merkleRoot ∷ ByteArray
@@ -79,10 +80,12 @@ newtype SaveRootParams = SaveRootParams
     committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
   }
 
--- | 'MerkleRootInsertionMessage' is a data type for which committee members
--- create signatures for (this corresponds to how signatures are verified onchain)
--- >  blake2b(cbor(MerkleRootInsertionMessage))
--- See 'MPTRoot.Utils.serialiseMrimHash'.
+-- | `MerkleRootInsertionMessage` is a data type for which committee members
+-- | create signatures for (this corresponds to how signatures are verified onchain)
+-- | ```
+-- |  blake2b(cbor(MerkleRootInsertionMessage))
+-- | ```
+-- | See `MPTRoot.Utils.serialiseMrimHash`.
 newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams ∷ SidechainParams'
   , merkleRoot ∷ ByteArray

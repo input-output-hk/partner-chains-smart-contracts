@@ -1,5 +1,5 @@
--- | 'Test.MerkleRootChaining' includes tests which demonstrate the merkle root
--- chaining with both updating the committee hash and creating new merkle roots.
+-- | `Test.MerkleRootChaining` includes tests which demonstrate the merkle root
+-- | chaining with both updating the committee hash and creating new merkle roots.
 module Test.MerkleRootChaining where
 
 import Contract.Prelude
@@ -25,17 +25,17 @@ import UpdateCommitteeHash
 import UpdateCommitteeHash as UpdateCommitteeHash
 import Utils.Crypto as Utils.Crypto
 
--- | 'testScenario1' demonstrates (should succeed)
---  1. Initializing the sidechain with a committee.
---  2. Saving a merkle root
---  3. Update the committee hash
---  4. Update the committee hash
---  5. Saving a merkle root
---  6. Saving another merkle root
---  7. Updating the committee hash again
--- Note how this demonstrates "working" behavior for arbitrarily many (well,
--- 0-2) "saving merkle root" actions between the "update committee hash"
--- actions
+-- | `testScenario1` demonstrates (should succeed)
+-- |    1. Initializing the sidechain with a committee.
+-- |    2. Saving a merkle root
+-- |    3. Update the committee hash
+-- |    4. Update the committee hash
+-- |    5. Saving a merkle root
+-- |    6. Saving another merkle root
+-- |    7. Updating the committee hash again
+-- | Note how this demonstrates "working" behavior for arbitrarily many (well,
+-- | 0-2) "saving merkle root" actions between the update committee hash
+-- | actions
 testScenario1 ∷ Contract () Unit
 testScenario1 = do
   Log.logInfo' "Testing 'Test.MerkleRootChaining.testScenario1'"
@@ -171,11 +171,11 @@ testScenario1 = do
 
   pure unit
 
--- | 'testScenario2' demonstrates (should fail)
---  1. Initializing the sidechain with a committee.
---  2. Saving a merkle root
---  3. Attempt (but fail) to update the committee hash with the merkle root
---  as 'Nothing'
+-- | `testScenario2` demonstrates (should fail)
+-- |    1. Initializing the sidechain with a committee.
+-- |    2. Saving a merkle root
+-- |    3. Attempt (but fail) to update the committee hash with the merkle root
+-- |    as `Nothing`
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   Log.logInfo' "Testing 'Test.MerkleRootChaining.testScenario2'"
@@ -245,7 +245,7 @@ testScenario2 = do
           ,
             -- Note: since we can trust the committee will sign the "correct" root,
             -- we necessarily know that the message that they sign should be
-            -- the previousMerkleRoot which is @merkleRoot2@ in this case.
+            -- the previousMerkleRoot which is `merkleRoot2` in this case.
             previousMerkleRoot: Just merkleRoot2
           , sidechainEpoch: BigInt.fromInt 1
           }
