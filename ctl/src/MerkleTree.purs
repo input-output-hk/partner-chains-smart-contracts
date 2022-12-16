@@ -33,7 +33,6 @@ import Data.String.Common as String
 import Data.Unfoldable as Unfoldable
 
 -- * Merkle tree data types
--- $types
 -- Each of these types should correspond the the on chain types.
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
@@ -96,7 +95,7 @@ instance Show MerkleProof where
 instance Show RootHash where
   show = genericShow
 
--- Note ['ToData' / 'FromData' Instances of the Merkle Tree]
+-- Note [`ToData` / `FromData` Instances of the Merkle Tree]
 -- All of these instances should correspond to `/src/TrustlessSidechain/MerkleTree.hs`
 derive newtype instance ToData RootHash
 derive newtype instance FromData RootHash
@@ -146,15 +145,15 @@ instance FromData MerkleTree where
 
 -- * Internal helper functions
 
--- | @'mergeRootHashes' l r@ computes @'hash' (1 : l ++ r)@
+-- | `mergeRootHashes l r` computes `hash (1 : l ++ r)`
 mergeRootHashes ∷ RootHash → RootHash → RootHash
 mergeRootHashes l r = hashInternalNode (((<>) `Function.on` unRootHash) l r)
 
--- | @'hashInternalNode' b@ computes @'hash' (1 : b)@
+-- | `hashInternalNode b` computes `hash (1 : b)`
 hashInternalNode ∷ ByteArray → RootHash
 hashInternalNode = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 1 ] <> _)
 
--- | @'hashLeaf' b@ computes @'hash' (0 : b)@
+-- | `hashLeaf b` computes `hash (0 : b)`
 hashLeaf ∷ ByteArray → RootHash
 hashLeaf = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 0 ] <> _)
 
@@ -162,7 +161,7 @@ hashLeaf = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 0 ] <> _)
 hash ∷ ByteArray → RootHash
 hash = RootHash <<< Hashing.blake2b256Hash
 
--- | 'listToArray' converts a 'List' to an 'Array'
+-- | `listToArray` converts a `List` to an `Array`
 listToArray ∷ ∀ a. List a → Array a
 listToArray =
   let
@@ -173,20 +172,20 @@ listToArray =
 
 -- * Merkle tree functionality
 
--- | 'rootHash' gets the root hash of the given merkle tree.
+-- | `rootHash` gets the root hash of the given merkle tree.
 rootHash ∷ MerkleTree → RootHash
 rootHash (Bin roothash _ _) = roothash
 rootHash (Tip roothash) = roothash
 
--- | 'unRootHash' is an alias for 'unwrap' i.e., it coerces the newtype wrapper
--- 'RootHash'
+-- | `unRootHash` is an alias for `unwrap` i.e., it coerces the newtype wrapper
+-- | `RootHash`
 unRootHash ∷ RootHash → ByteArray
 unRootHash = unwrap
 
--- | 'fromList' computes a merkle tree from the given list, and errors in the
--- case when the given list is empty.
---
--- See the @src/TrustlessSidechain/MerkleTree.hs@ for more details.
+-- |`'fromList` computes a merkle tree from the given list, and errors in the
+-- | case when the given list is empty.
+-- |
+-- | See the `/src/TrustlessSidechain/MerkleTree.hs` for more details.
 fromList ∷ List ByteArray → Either String MerkleTree
 fromList Nil = Left "MerkleTree.fromList: empty list"
 fromList ls =
@@ -206,17 +205,18 @@ fromList ls =
   in
     Right $ mergeAll $ (Tip <<< hashLeaf) <$> ls
 
--- | 'fromArray' is 'fromList' except it accepts an 'Array' instead of a 'List'
+-- | `fromArray` is `fromList` with the only difference that it accepts an
+-- | `Array` instead of a `List`
 fromArray ∷ Array ByteArray → Either String MerkleTree
 fromArray = fromList <<< foldr (:) Nil
 
--- | @'memberMp' bt mp rh@ computes @'rootMp' bt mp == rh@ i.e., verifies that
--- the corresponding root of @bt@ and @mp@ is the given root hash.
+-- | `memberMp bt mp rh` computes `rootMp bt mp == rh` i.e., verifies that
+-- | the corresponding root of `bt` and `mp` is the given root hash.
 memberMp ∷ ByteArray → MerkleProof → RootHash → Boolean
 memberMp bt mp rh = rootMp bt mp == rh
 
--- | @'lookupMp' bt mt@ computes the merkle proof for @bt@ assuming that @bt@
--- is a leaf for the merkle tree @mt@.
+-- | `lookupMp bt mt` computes the merkle proof for `bt` assuming that `bt`
+-- | is a leaf for the merkle tree `mt`.
 lookupMp ∷ ByteArray → MerkleTree → Maybe MerkleProof
 lookupMp bt =
   let
@@ -236,13 +236,10 @@ lookupMp bt =
   in
     ((MerkleProof <<< listToArray) <$> _) <<< go Nil
 
--- | @'rootMp' bt mp@ computes the root hash of @bt@ assuming that @mp@ is
--- its corresponding merkle proof.
---
--- See the @src/TrustlessSidechain/MerkleTree.hs@ for more details.
---
--- TODO: this function isn't in this branch actually, so remember to test this
--- later..
+-- | `rootMp bt mp` computes the root hash of `bt` assuming that `mp` is
+-- | its corresponding merkle proof.
+-- |
+-- | See the `/src/TrustlessSidechain/MerkleTree.hs` for more details.
 rootMp ∷ ByteArray → MerkleProof → RootHash
 rootMp bt mp =
   let

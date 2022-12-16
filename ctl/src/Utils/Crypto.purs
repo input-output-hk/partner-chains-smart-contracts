@@ -55,13 +55,13 @@ generatePrivKey =
 multiSign ∷ Array PrivateKey → Message → Array Signature
 multiSign xkeys msg = map (sign msg) xkeys
 
--- | 'normalizeCommitteePubKeysAndSignatures' takes a list of public keys and their
+-- | `normalizeCommitteePubKeysAndSignatures` takes a list of public keys and their
 -- | associated signatures, sorts by the natural lexicographical ordering of the
 -- | public keys, then unzips the resulting array, removing all signatures that
--- | are 'Nothing'.
+-- | are `Nothing`.
 -- |
 -- | This useful since the onchain multisign method (see in the Haskell module
--- | 'TrustlessSidechain.OnChain.Utils') requires that the keys are sorted (this
+-- | `TrustlessSidechain.OnChain.Utils`) requires that the keys are sorted (this
 -- | makes testing if the list is nubbed easy), and the signatures are associated
 -- | with the public keys
 normalizeCommitteePubKeysAndSignatures ∷
@@ -69,16 +69,16 @@ normalizeCommitteePubKeysAndSignatures ∷
 normalizeCommitteePubKeysAndSignatures =
   map Array.catMaybes <<< Array.unzip <<< Array.sortBy (Ord.compare `on` fst)
 
--- | > @'verifyMultiSignature' thresholdNumerator thresholdDenominator pubKeys msg signatures@
+-- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
 -- | returns true iff
 -- |
--- |      - @pubKeys@ is sorted lexicographically and are distinct
+-- |      - `pubKeys` is sorted lexicographically and are distinct
 -- |
--- |      - @signatures@ are the corresponding signatures @pubKeys@ of @msg@
--- |      as a subsequence of @pubKeys@ (i.e., ordered the same way as @pubKeys@).
+-- |      - `signatures` are the corresponding signatures `pubKeys` of `msg`
+-- |      as a subsequence of `pubKeys` (i.e., ordered the same way as `pubKeys`).
 -- |
--- |      - strictly more than @thresholdNumerator/thresholdDenominator@
--- |      @pubKeys@ have signed @msg@
+-- |      - strictly more than `thresholdNumerator/thresholdDenominator`
+-- |      `pubKeys` have signed `msg`
 -- |
 -- | Note: this loosely replicates the behavior of the corresponding on chain
 -- | function, but should be significantly more efficient (since we use the
@@ -115,10 +115,10 @@ verifyMultiSignature
 
                 else
                   -- otherwise, they don't match so since
-                  -- @sigs@ is essentially a subsequence of
-                  -- @pubs@, we move only @pubs@ forward
+                  -- `sigs` is essentially a subsequence of
+                  -- `pubs`, we move only `pubs` forward
                   -- since a later key should match with
-                  -- @sig@.
+                  -- `sig`.
                   go signed pubs' sigs
   in
     isSorted pubKeys && go zero pubKeys signatures

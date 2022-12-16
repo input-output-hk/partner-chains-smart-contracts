@@ -77,9 +77,9 @@ generateUchmSignatures
 
   pure committeeSignatures
 
--- | 'updateCommitteeHash' is a convenient wrapper around
--- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests.
--- Note that this makes the entire current committee sign the message.
+-- | `updateCommitteeHash` is a convenient wrapper around
+-- | `UpdateCommitteeHash.updateCommitteeHash` for writing tests.
+-- | Note that this makes the entire current committee sign the message.
 updateCommitteeHash ∷
   { sidechainParams ∷ SidechainParams
   ,
@@ -95,12 +95,12 @@ updateCommitteeHash ∷
   Contract () Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
 
--- | @'updateCommitteeHashWith' params f@ is a convenient wrapper around
--- 'UpdateCommitteeHash.updateCommitteeHash' for writing tests which modify the
--- inputted 'UpdateCommitteeHashParams' with the given function @f@.
---
--- In particular, the function @f@ can be used to change the signatures
--- provided by the committee.
+-- | `updateCommitteeHashWith params f` is a convenient wrapper around
+-- | `UpdateCommitteeHash.updateCommitteeHash` for writing tests which modify the
+-- | inputted 'UpdateCommitteeHashParams' with the given function `f`.
+-- |
+-- | In particular, the function `f` can be used to change the signatures
+-- | provided by the committee.
 updateCommitteeHashWith ∷
   { sidechainParams ∷ SidechainParams
   ,
@@ -171,9 +171,9 @@ testScenario1 = do
     , sidechainEpoch: BigInt.fromInt 1
     }
 
--- | 'testScenario2' updates the committee hash with a threshold ratio of 1/1,
--- but should fail because there isn't enough committee members signing the update
--- off.
+-- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
+-- | but should fail because there isn't enough committee members signing the update
+-- | off.
 testScenario2 ∷ Contract () Unit
 testScenario2 = do
   logInfo' "UpdateCommitteeHash 'testScenario2'"
@@ -223,7 +223,7 @@ testScenario2 = do
                     )
               }
 
--- | 'testScenario3' initialises the committee with an out of order committee
+-- | `testScenario3` initialises the committee with an out of order committee
 -- | (by moving the smallest committee member to the end), and updates the committee
 -- | hash when the signatures / new committee are given out of order (in
 -- |reverse order actually); and updates it again
@@ -288,7 +288,7 @@ testScenario3 = do
     , sidechainEpoch: BigInt.fromInt 2
     }
 
--- | 'testScenario4' is given in #277
+-- | `testScenario4` is given in #277
 testScenario4 ∷ Contract () Unit
 testScenario4 = do
   logInfo' "UpdateCommitteeHash 'testScenario3'"

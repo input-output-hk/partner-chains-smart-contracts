@@ -1,9 +1,8 @@
--- | 'UpdateCommitteeHash.Types' contains the types relating to the update
--- committee hash endpoint.
---
--- Note: the reason for the existence of this module is because there are some
--- cyclic dependencies between 'MPTRoot' and 'UpdateCommitteeHash' without
--- this.
+-- | `UpdateCommitteeHash.Types` contains the types relating to the update
+-- | committee hash endpoint.
+-- |
+-- | Note: the reason for the existence of this module is because without this
+-- | there are some cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash`
 module UpdateCommitteeHash.Types
   ( UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -29,8 +28,8 @@ import Data.BigInt (BigInt)
 import SidechainParams (SidechainParams, SidechainParams')
 import Types (AssetClass, PubKey, Signature)
 
--- | 'UpdateCommitteeHashDatum' is the datum for the update committee has
--- validator
+-- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
+-- | validator
 newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash ∷ ByteArray
   , sidechainEpoch ∷ BigInt
@@ -53,10 +52,8 @@ instance FromData UpdateCommitteeHashDatum where
           )
   fromData _ = Nothing
 
--- | 'UpdateCommitteeHash' paramaterizes the the validator for the update
--- committee hash policy.
--- plutus script is parameterised on AssetClass, which CTL doesn't have
--- the toData instance uses the underlying tuple so we do the same
+-- | `UpdateCommitteeHash` paramaterizes the the validator for the update
+-- | committee hash policy.
 newtype UpdateCommitteeHash = UpdateCommitteeHash
   { sidechainParams ∷ SidechainParams
   , uchAssetClass ∷ AssetClass
@@ -75,8 +72,8 @@ instance ToData UpdateCommitteeHash where
     , toData mptRootTokenCurrencySymbol
     ]
 
--- | 'InitCommitteeHashMint' parameterizes the minting policy which identifies
--- the utxo with the update committee hash validator script.
+-- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
+-- | the utxo with the update committee hash validator script.
 newtype InitCommitteeHashMint = InitCommitteeHashMint
   { icTxOutRef ∷ TransactionInput }
 
@@ -86,8 +83,8 @@ instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
 
--- | 'UpdateCommitteeHashRedeemer' is the redeemer for the update committee
--- hash validator.
+-- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee
+-- | hash validator.
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array Signature
   , committeePubKeys ∷ Array PubKey
@@ -111,8 +108,8 @@ instance ToData UpdateCommitteeHashRedeemer where
     , toData previousMerkleRoot
     ]
 
--- | 'UpdateCommitteeHashParams' is the offchain parameter for the update
--- committee hash endpoint.
+-- | `UpdateCommitteeHashParams` is the offchain parameter for the update
+-- | committee hash endpoint.
 newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array PubKey
@@ -124,13 +121,13 @@ newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
 derive newtype instance Show UpdateCommitteeHashParams
 derive instance Newtype UpdateCommitteeHashParams _
 
--- | 'UpdateCommitteeHashMessage' corresponds to the on chain type which is
--- signed by the committee (technically, if @uchm@ is an
--- 'UpdateCommitteeHashMessage', then the committee signs
--- @blake2b256Hash(serialiseToData (toBuiltinData uchm))@)
+-- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
+-- | signed by the committee (technically, if `uchm` is an
+-- | `UpdateCommitteeHashMessage`, then the committee signs
+-- | `blake2b256Hash(serialiseToData (toBuiltinData uchm))`)
 newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   { sidechainParams ∷ SidechainParams'
-  , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
+  , -- `newCommitteePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
     newCommitteePubKeys ∷ Array PubKey
