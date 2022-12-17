@@ -1,73 +1,208 @@
 module Utils.Crypto
-  ( Message
-  , PrivateKey
-  , PublicKey
-  , Signature
+  ( SidechainMessage
+  , sidechainMessage
+  , byteArrayToSidechainMessageUnsafe
+  , SidechainPrivateKey
+  , byteArrayToSidechainPublicKeyUnsafe
+  , SidechainPublicKey
+  , SidechainSignature
   , toPubKeyUnsafe
   , generatePrivKey
   , generateRandomPrivateKey
   , multiSign
   , sign
   , verifyEcdsaSecp256k1Signature
+  , sidechainPublicKey
   , normalizeCommitteePubKeysAndSignatures
+  , unzipCommitteePubKeysAndSignatures
   , verifyMultiSignature
+  , getSidechainPublicKeyByteArray
+  , getSidechainPrivateKeyByteArray
+  , byteArrayToSidechainPrivateKeyUnsafe
+  , sidechainPrivateKey
+  , getSidechainMessageByteArray
+  , byteArrayToSidechainSignatureUnsafe
+  , sidechainSignature
   ) where
 
 import Contract.Prelude
 
 import Contract.Monad (Contract)
+import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray)
+import Contract.Prim.ByteArray as ByteArray
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Function (on)
 import Data.Ord as Ord
-import Types (PubKey)
 
--- | Invariant: ∀ x : PublicKey. length x = 33
+-- | Invariant: ∀ x : SidechainPublicKey. length x = 33
 -- | Format: Compressed & Serialized as per secp256k1 implementation
--- make sure to check the leading byte for valid key format
-type PublicKey = ByteArray
+-- | make sure to check the leading byte for valid key format
+newtype SidechainPublicKey = SidechainPublicKey ByteArray
 
--- | Invariant: ∀ x : PrivateKey. length x = 32
+-- | Smart constructor for `SidechainPublicKey` to ensure it is a valid
+-- | compressed (33 bytes) secp256k1 public key.
+sidechainPublicKey ∷ ByteArray → Maybe SidechainPublicKey
+sidechainPublicKey bs
+  | ByteArray.byteLength bs == 33
+      && pubKeyVerify bs = Just $ SidechainPublicKey bs
+  | otherwise = Nothing
+
+-- | `getSidechainPublicKeyByteArray` grabs the underlying `ByteArray` of the
+-- | `SidechainPublicKey`
+getSidechainPublicKeyByteArray ∷ SidechainPublicKey → ByteArray
+getSidechainPublicKeyByteArray (SidechainPublicKey byteArray) = byteArray
+
+-- | `byteArrayToSidechainPublicKeyUnsafe` constructs a sidechain public key without
+-- | verifying any of the invariants.
+byteArrayToSidechainPublicKeyUnsafe ∷ ByteArray → SidechainPublicKey
+byteArrayToSidechainPublicKeyUnsafe = SidechainPublicKey
+
+derive newtype instance ordSidechainPublicKey ∷ Ord SidechainPublicKey
+derive newtype instance eqSidechainPublicKey ∷ Eq SidechainPublicKey
+derive newtype instance toDataSidechainPublicKey ∷ ToData SidechainPublicKey
+derive newtype instance fromDataSidechainPublicKey ∷ FromData SidechainPublicKey
+instance Show SidechainPublicKey where
+  show (SidechainPublicKey byteArray) = "(byteArrayToSidechainPublicKeyUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- | Invariant: ∀ x : SidechainPrivateKey. length x = 32, and is non zero and
+-- | less then the secp256k1 curve order. See 1. for details.
 -- | Format: raw bytes
-type PrivateKey = ByteArray
+-- |
+-- | References.
+-- |    1. https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
+newtype SidechainPrivateKey = SidechainPrivateKey ByteArray
 
--- | Invariant: ∀ x : Message. length x = 32
+derive newtype instance ordSidechainPrivateKey ∷ Ord SidechainPrivateKey
+derive newtype instance eqSidechainPrivateKey ∷ Eq SidechainPrivateKey
+derive newtype instance toDataSidechainPrivateKey ∷ ToData SidechainPrivateKey
+derive newtype instance fromDataSidechainPrivateKey ∷
+  FromData SidechainPrivateKey
+
+instance Show SidechainPrivateKey where
+  show (SidechainPrivateKey byteArray) = "(byteArrayToSidechainPrivateKeyUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- | `sidechainPrivateKey` is a smart constructor for `SidechainPrivateKey` to
+-- | check the required invariants.
+sidechainPrivateKey ∷ ByteArray → Maybe SidechainPrivateKey
+sidechainPrivateKey byteArray
+  | ByteArray.byteLength byteArray == 32
+      && secKeyVerify byteArray = Just $ SidechainPrivateKey byteArray
+  | otherwise = Nothing
+
+-- | `byteArrayToSidechainPrivateKeyUnsafe` constructs a sidechain public key without
+-- | verifying any of the invariants.
+byteArrayToSidechainPrivateKeyUnsafe ∷ ByteArray → SidechainPrivateKey
+byteArrayToSidechainPrivateKeyUnsafe = SidechainPrivateKey
+
+-- | `getSidechainPrivateKeyByteArray` grabs the underlying `ByteArray` of the
+-- | `SidechainPrivateKey`
+getSidechainPrivateKeyByteArray ∷ SidechainPrivateKey → ByteArray
+getSidechainPrivateKeyByteArray (SidechainPrivateKey byteArray) = byteArray
+
+-- | Invariant: ∀ x : SidechainMessage. length x = 32
 -- | Format: raw bytes
-type Message = ByteArray
+newtype SidechainMessage = SidechainMessage ByteArray
 
--- | Invariant: ∀ x : Signature. length x = 64
-type Signature = ByteArray
+-- | `sidechainMessage` is a smart constructor for `SidechainMessage` which verifies the
+-- | invariants
+sidechainMessage ∷ ByteArray → Maybe SidechainMessage
+sidechainMessage byteArray
+  | ByteArray.byteLength byteArray == 32 = Just $ SidechainMessage byteArray
+  | otherwise = Nothing
+
+-- | `byteArrayToSidechainMessageUnsafe` constructs a `SidechainMessage`
+-- | without verifying any of the invariants
+byteArrayToSidechainMessageUnsafe ∷ ByteArray → SidechainMessage
+byteArrayToSidechainMessageUnsafe = SidechainMessage
+
+-- | `getSidechainMessageByteArray` grabs the underlying `ByteArray` of the
+-- | `SidechainMessage`
+getSidechainMessageByteArray ∷ SidechainMessage → ByteArray
+getSidechainMessageByteArray (SidechainMessage byteArray) = byteArray
+
+derive newtype instance ordSidechainMessage ∷ Ord SidechainMessage
+derive newtype instance eqSidechainMessage ∷ Eq SidechainMessage
+derive newtype instance toDataSidechainMessage ∷ ToData SidechainMessage
+derive newtype instance fromDataSidechainMessage ∷ FromData SidechainMessage
+instance Show SidechainMessage where
+  show (SidechainMessage byteArray) = "(byteArrayToSidechainMessageUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- | Invariant: ∀ x : SidechainSignature. length x = 64
+newtype SidechainSignature = SidechainSignature ByteArray
+
+-- | `sidechainSignature` is a smart constructor for `SidechainSignature` to
+-- | verify the invariants.
+sidechainSignature ∷ ByteArray → Maybe SidechainSignature
+sidechainSignature byteArray
+  | ByteArray.byteLength byteArray == 64 = Just $ SidechainSignature byteArray
+  | otherwise = Nothing
+
+derive newtype instance ordSidechainSignature ∷ Ord SidechainSignature
+derive newtype instance eqSidechainSignature ∷ Eq SidechainSignature
+derive newtype instance toDataSidechainSignature ∷ ToData SidechainSignature
+derive newtype instance fromDataSidechainSignature ∷ FromData SidechainSignature
+instance Show SidechainSignature where
+  show (SidechainSignature byteArray) = "(byteArrayToSidechainSignatureUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- | `byteArrayToSidechainSignatureUnsafe` constructs a sidechain public key without
+-- | verifying any of the invariants.
+byteArrayToSidechainSignatureUnsafe ∷ ByteArray → SidechainSignature
+byteArrayToSidechainSignatureUnsafe = SidechainSignature
 
 -- TODO: newtype checks the type aliases above
 
-foreign import generateRandomPrivateKey ∷ Effect PrivateKey
-foreign import toPubKeyUnsafe ∷ PrivateKey → PublicKey
-foreign import sign ∷ Message → PrivateKey → Signature
-foreign import verifyEcdsaSecp256k1Signature ∷
-  PublicKey → Message → Signature → Boolean
+foreign import generateRandomPrivateKey ∷ Effect SidechainPrivateKey
+foreign import toPubKeyUnsafe ∷ SidechainPrivateKey → SidechainPublicKey
+foreign import pubKeyVerify ∷ ByteArray → Boolean
+foreign import secKeyVerify ∷ ByteArray → Boolean
+foreign import sign ∷
+  SidechainMessage → SidechainPrivateKey → SidechainSignature
 
-generatePrivKey ∷ Contract () PrivateKey
+foreign import verifyEcdsaSecp256k1Signature ∷
+  SidechainPublicKey → SidechainMessage → SidechainSignature → Boolean
+
+generatePrivKey ∷ Contract () SidechainPrivateKey
 generatePrivKey =
   liftEffect generateRandomPrivateKey
 
-multiSign ∷ Array PrivateKey → Message → Array Signature
+multiSign ∷
+  Array SidechainPrivateKey → SidechainMessage → Array SidechainSignature
 multiSign xkeys msg = map (sign msg) xkeys
 
 -- | `normalizeCommitteePubKeysAndSignatures` takes a list of public keys and their
--- | associated signatures, sorts by the natural lexicographical ordering of the
--- | public keys, then unzips the resulting array, removing all signatures that
--- | are `Nothing`.
+-- | associated signatures and sorts by the natural lexicographical ordering of the
+-- | `SidechainPublicKey`s
 -- |
 -- | This useful since the onchain multisign method (see in the Haskell module
 -- | `TrustlessSidechain.OnChain.Utils`) requires that the keys are sorted (this
 -- | makes testing if the list is nubbed easy), and the signatures are associated
 -- | with the public keys
 normalizeCommitteePubKeysAndSignatures ∷
-  Array (PubKey /\ Maybe Signature) → Tuple (Array PubKey) (Array Signature)
-normalizeCommitteePubKeysAndSignatures =
-  map Array.catMaybes <<< Array.unzip <<< Array.sortBy (Ord.compare `on` fst)
+  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
+  Array (SidechainPublicKey /\ Maybe SidechainSignature)
+normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
+
+-- | `unzipCommitteePubKeysAndSignatures` unzips public keys and associated
+-- | signatures, and removes all the `Nothing` signatures.
+-- |
+-- | Preconditions to be compatible with the onchain Haskell multisign method:
+-- |    - The input array should be sorted lexicographically by
+-- |    `SidechainPublicKey` by `normalizeCommitteePubKeysAndSignatures`
+unzipCommitteePubKeysAndSignatures ∷
+  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
+  Tuple (Array SidechainPublicKey) (Array SidechainSignature)
+unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
 -- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
 -- | returns true iff
@@ -85,7 +220,12 @@ normalizeCommitteePubKeysAndSignatures =
 -- | assumption that the signatures are essentially a subsequence of the public
 -- | keys); and is generalized to allow arbitrary thresholds to be given.
 verifyMultiSignature ∷
-  BigInt → BigInt → Array PubKey → ByteArray → Array Signature → Boolean
+  BigInt →
+  BigInt →
+  Array SidechainPublicKey →
+  SidechainMessage →
+  Array SidechainSignature →
+  Boolean
 verifyMultiSignature
   thresholdNumerator
   thresholdDenominator
@@ -93,7 +233,7 @@ verifyMultiSignature
   msg
   signatures =
   let
-    go ∷ BigInt → Array PubKey → Array Signature → Boolean
+    go ∷ BigInt → Array SidechainPublicKey → Array SidechainSignature → Boolean
     go signed pubs sigs =
       let
         ok = signed >

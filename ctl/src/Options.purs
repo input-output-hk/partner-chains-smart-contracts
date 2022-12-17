@@ -66,7 +66,8 @@ import Options.Applicative
   )
 import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
-import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import Utils.Crypto as Utils.Crypto
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -449,11 +450,11 @@ options maybeConfig = info (helper <*> optSpec)
     )
 
   -- `parseNewCommitteePubKeys` parses the new committee public keys.
-  parseNewCommitteePubKeys ∷ Parser (List ByteArray)
+  parseNewCommitteePubKeys ∷ Parser (List SidechainPublicKey)
   parseNewCommitteePubKeys =
     many
       ( option
-          byteArray
+          sidechainPublicKey
           ( fold
               [ long "new-committee-pub-key"
               , metavar "PUBLIC_KEY"
@@ -492,7 +493,9 @@ options maybeConfig = info (helper <*> optSpec)
   -- committees' signatures. This is used in both `saveRootSpec` and
   -- `committeeHashSpec`.
   parseCommitteeSignatures ∷
-    String → String → Parser (List (PubKey /\ Maybe Signature))
+    String →
+    String →
+    Parser (List (SidechainPublicKey /\ Maybe SidechainSignature))
   parseCommitteeSignatures longDesc helpDesc =
     many
       ( option
@@ -515,7 +518,7 @@ options maybeConfig = info (helper <*> optSpec)
       )
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
-    committeePubKeys ← many $ option byteArray $ fold
+    committeePubKeys ← many $ option sidechainPublicKey $ fold
       [ long "committee-pub-key"
       , metavar "PUBLIC_KEY"
       , help "Public key for a committee member at sidechain initialisation"
@@ -581,6 +584,13 @@ combinedMerkleProofParserWithPkh = do
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
 
+-- | Parses a SidechainPublicKey from hexadecimal representation.
+-- | See `SidechainPublicKey` for the invariants.
+sidechainPublicKey ∷ ReadM SidechainPublicKey
+sidechainPublicKey = maybeReader
+  $ Utils.Crypto.sidechainPublicKey
+  <=< hexToByteArray
+
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise
 -- we should simplify the code and fall back to ByteArray.
@@ -627,7 +637,7 @@ parseThresholdFraction str =
     _ → Nothing
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
-committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
+committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
@@ -635,13 +645,17 @@ committeeSignature = maybeReader parsePubKeyAndSignature
 -- `aa` denotes a pubkey without a signature
 -- `aa:bb` denotes a pubkey and a signature
 -- anything else is likely an error, and should be treated as malformed input
-parsePubKeyAndSignature ∷ String → Maybe (ByteArray /\ Maybe ByteArray)
+parsePubKeyAndSignature ∷
+  String → Maybe (SidechainPublicKey /\ Maybe SidechainSignature)
 parsePubKeyAndSignature str =
   case split (Pattern ":") str of
-    [ l, r ] | l /= "" → ado
-      l' ← hexToByteArray l
-      r' ← hexToByteArray r
-      in l' /\ (r' <$ guard (r /= ""))
-    [ l ] →
-      (_ /\ Nothing) <$> hexToByteArray l
+    [ l, r ] | l /= "" → do
+      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      if r == "" then pure $ l' /\ Nothing
+      else do
+        r' ← Utils.Crypto.sidechainSignature <=< hexToByteArray $ r
+        pure $ l' /\ Just r'
+    [ l ] → ado
+      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      in l' /\ Nothing
     _ → Nothing

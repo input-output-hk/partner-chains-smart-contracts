@@ -33,7 +33,12 @@ import Partial.Unsafe (unsafePartial)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
 import Test.Utils (getOwnTransactionInput, toTxIn)
-import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
+import Utils.Crypto
+  ( SidechainPrivateKey
+  , SidechainPublicKey
+  , generatePrivKey
+  , toPubKeyUnsafe
+  )
 import Utils.SerialiseData (serialiseData)
 
 mkScParams ∷ Maybe TransactionInput → SidechainParams
@@ -46,8 +51,11 @@ mkScParams genesisMint = SidechainParams
   , genesisMint
   }
 
-mkCommittee ∷ Int → Contract () (List (Tuple PublicKey PrivateKey))
-mkCommittee n = replicateM n (Tuple <*> toPubKeyUnsafe <$> generatePrivKey)
+mkCommittee ∷
+  Int → Contract () (List (Tuple SidechainPublicKey SidechainPrivateKey))
+mkCommittee n = replicateM n ado
+  prvKey ← generatePrivKey
+  in (toPubKeyUnsafe prvKey) /\ prvKey
 
 -- | Testing Passive bridge minting (genesis mint) and burning multiple times
 testScenarioPassiveSuccess ∷ Contract () Unit
