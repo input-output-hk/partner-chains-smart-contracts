@@ -1,5 +1,5 @@
 -- | Provides some integration unit tests with the on chain implementation of
--- the merkle tree.
+-- | the merkle tree.
 module Test.MerkleTree (test) where
 
 import Contract.Prelude
@@ -19,28 +19,30 @@ import MerkleTree as MerkleTree
 import Partial.Unsafe as Unsafe
 import Test.Utils (assertBy)
 
--- | 'unsafeByteArrayFromAscii' is a partial function which wraps 'Types.ByteArray.byteArrayFromAscii'
+-- | `unsafeByteArrayFromAscii` is a partial function which wraps `Types.ByteArray.byteArrayFromAscii`
 unsafeByteArrayFromAscii ∷ String → ByteArray
 unsafeByteArrayFromAscii = Unsafe.unsafePartial
   (Maybe.fromJust <<< ByteArray.byteArrayFromAscii)
 
--- | 'eqUpToLeft' returns 'true' if either: both arguments are 'Right' and the
--- arguments are equal; or both arguments are 'Left' (note the arguments to left
--- don't have to be equal).
+-- | `eqUpToLeft` returns `true` if either: both arguments are `Right` and the
+-- | arguments are equal; or both arguments are `Left` (note the arguments to left
+-- | don't have to be equal).
 eqUpToLeft ∷ ∀ a b. Eq b ⇒ Either a b → Either a b → Boolean
 eqUpToLeft (Right a0) (Right a1) = a0 == a1
 eqUpToLeft (Left _) (Left _) = true
 eqUpToLeft _ _ = false
 
 -- | These tests are integration tests which are unit testing to see if the
--- outputs from the Haskell implementation are the same as the values we are
--- creating on the purescript end.
--- This mainly verifies that we are serializing / deserializing things properly
--- on the purescript side.
+-- | outputs from the Haskell implementation are the same as the values we are
+-- | creating on the purescript end.
+-- | This mainly verifies that we are serializing / deserializing things properly
+-- | on the purescript side.
 test ∷ Effect Unit
 test = do
   -- Testing if
-  -- > fromList ["maltese", "yorkie", "pomeranian"]
+  -- ```
+  -- fromList ["maltese", "yorkie", "pomeranian"]
+  -- ```
   -- produces the same tree.
   void do
     let
@@ -87,7 +89,9 @@ test = do
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
-  -- > fromList []
+  -- ```
+  -- fromList []
+  -- ```
   -- both return error
   void do
     let
@@ -96,9 +100,11 @@ test = do
     assertBy eqUpToLeft expected actual
 
   -- Testing if
-  -- > let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
-  -- > in memberMp "maltese" merkleTree
-  -- produce the same @'Maybe' 'MerkleProof'@.
+  -- ```
+  -- let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
+  -- in memberMp "maltese" merkleTree
+  -- ```
+  -- produce the same `Maybe MerkleProof`.
   void do
     let
       expected =
@@ -136,9 +142,11 @@ test = do
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
-  -- > let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
-  -- > in memberMp "pug" merkleTree
-  -- produce the same @'Maybe' 'MerkleProof'@.
+  -- ```
+  -- let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
+  -- in memberMp "pug" merkleTree
+  -- ```
+  -- produce the same `Maybe MerkleProof`.
   void do
     let
       expected = Nothing
@@ -152,9 +160,11 @@ test = do
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
-  -- > let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
-  -- >     Just merkleProof = lookupMp "maltese" merkleTree
-  -- > in memberMp "maltese" merkleProof (rootHash merkleTree)
+  -- ```
+  -- let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
+  --     Just merkleProof = lookupMp "maltese" merkleTree
+  -- in memberMp "maltese" merkleProof (rootHash merkleTree)
+  -- ```
   -- are both true.
   void do
     let
@@ -176,9 +186,11 @@ test = do
     assertBy eqUpToLeft (Right expected) actual
 
   -- Testing if
-  -- > let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
-  -- >     Just merkleProof = lookupMp "maltese" merkleTree
-  -- > in memberMp "pug" merkleProof (rootHash merkleTree)
+  -- ```
+  -- let merkleTree = fromList ["maltese", "yorkie", "pomeranian"]
+  --     Just merkleProof = lookupMp "maltese" merkleTree
+  -- in memberMp "pug" merkleProof (rootHash merkleTree)
+  -- ```
   -- are both False.
   void do
     let

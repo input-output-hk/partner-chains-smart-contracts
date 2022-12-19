@@ -27,7 +27,7 @@ byteArrayCodec = CA.prismaticCodec "ByteArray"
   CA.string
 
 -- | JSON codec converiting between a Plutus transaction input and the conventional
--- CLI format (TX_ID#TX_IDX)
+-- | CLI format (TX_ID#TX_IDX)
 transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec =
   CA.prismaticCodec "TransactionInput" toF fromF CA.string

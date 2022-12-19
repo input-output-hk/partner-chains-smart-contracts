@@ -1,5 +1,5 @@
 -- | The module `GetSidechainAddresses` provides a way to get an array of strings
--- | identifying its associated hexencoded validator and currency symbol.
+-- | identifying its associated hex encoded validator and currency symbol.
 module GetSidechainAddresses (SidechainAddresses, getSidechainAddresses) where
 
 import Contract.Prelude
@@ -29,7 +29,7 @@ type SidechainAddresses =
   }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainParams` which contains
+-- | the given `SidechainParams` which contains:
 -- |    - addresses:
 -- |        - the validator address of the committee candidate validator
 -- |    - minting policies:
@@ -74,7 +74,7 @@ getAddr v = do
   serialised ← Address.addressToBech32 addr
   pure serialised
 
--- | `getCurrencySymbolHex` converts a mintingpolicy to its hex encoded
+-- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
 getCurrencySymbolHex ∷ MintingPolicy → Contract () String
 getCurrencySymbolHex mp = do
@@ -83,6 +83,6 @@ getCurrencySymbolHex mp = do
     Value.scriptCurrencySymbol mp
   pure $ ByteArray.byteArrayToHex $ Value.getCurrencySymbol cs
 
--- | 'report' is an internal function used for helping writing log messages.
+-- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
 report = Utils.Logging.mkReport <<< { mod: "GetSidechainAddresses", fun: _ }
