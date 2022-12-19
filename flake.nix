@@ -214,7 +214,7 @@
           runtimeInputs = [ project.nodejs ];
           unpackPhase = ''
             ln -s ${project.compiled}/* .
-            ln -s ${project.nodeModules} node_modules
+            ln -s ${project.nodeModules}/lib/node_modules node_modules
           '';
           buildPhase = ''
             purs bundle "output/*/*.js" -m Main --main Main -o main.js
