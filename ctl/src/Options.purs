@@ -270,7 +270,7 @@ options maybeConfig = info (helper <*> optSpec)
                 ]
             )
         thresholdNumeratorDenominatorOption = ado
-          thresholdNumerator ← option bigInt $ fold
+          thresholdNumerator ← option numerator $ fold
             [ long "threshold-numerator"
             , metavar "INT"
             , help "The numerator for the ratio of the threshold"
@@ -280,7 +280,7 @@ options maybeConfig = info (helper <*> optSpec)
                         _.threshold
                     )
             ]
-          thresholdDenominator ← option bigInt $ fold
+          thresholdDenominator ← option denominator $ fold
             [ long "threshold-denominator"
             , metavar "INT"
             , help "The denominator for the ratio of the threshold"
@@ -609,6 +609,26 @@ cbor = cborBytesFromByteArray <$> byteArray
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
+
+-- | Parse a numerator in the threshold.
+numerator ∷ ReadM BigInt
+numerator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "numerator must be non-negative"
+      Nothing → Left "failed to parse int numerator"
+  )
+
+-- | Parse a denominator in the threshold.
+denominator ∷ ReadM BigInt
+denominator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i > zero → pure i
+        | otherwise → Left "denominator must be positive"
+      Nothing → Left "failed to parse int denominator"
+  )
 
 -- | Parse UInt
 uint ∷ ReadM UInt
