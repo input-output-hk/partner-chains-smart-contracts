@@ -63,9 +63,9 @@ data Endpoint
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
-      , sidechainPubKey ∷ PubKey
+      , sidechainPubKey ∷ SidechainPublicKey
       , spoSig ∷ Signature
-      , sidechainSig ∷ Signature
+      , sidechainSig ∷ SidechainSignature
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
