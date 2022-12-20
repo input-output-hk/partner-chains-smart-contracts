@@ -91,7 +91,7 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
   , bprSidechainPubKey ∷ SidechainPublicKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ SidechainSignature -- Signature of the SPO
+  , bprSidechainSignature ∷ SidechainSignature -- Signature of the sidechain candidate
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }
