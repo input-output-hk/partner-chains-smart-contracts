@@ -3,8 +3,7 @@ module Test.FUELMintingPolicy where
 import Contract.Prelude
 
 import Contract.Address
-  ( getNetworkId
-  , getWalletAddress
+  ( getWalletAddress
   , ownPaymentPubKeyHash
   , pubKeyHashAddress
   )
@@ -13,8 +12,6 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionInput)
 import Contract.Utxos (utxosAt)
-import Ctl.Internal.Plutus.Conversion (fromPlutusAddress)
-import Ctl.Internal.Serialization.Address (addressBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List.Lazy (List, replicateM)
@@ -97,7 +94,7 @@ testScenarioPassiveFailure = do
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  netId ← getNetworkId
+  ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
   genesisUtxo ← getOwnTransactionInput
   let
     keyCount = 25
@@ -126,7 +123,7 @@ testScenarioActiveSuccess = do
         { index
         , amount
         , previousMerkleRoot
-        , recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
+        , recipient: ownRecipient
         }
 
     ownEntryBytes = unsafePartial

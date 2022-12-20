@@ -7,7 +7,11 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Control.Monad as Monad
 import Effect.Class.Console as Console
-import FUELMintingPolicy (CombinedMerkleProof(..), MerkleTreeEntry(..))
+import FUELMintingPolicy
+  ( CombinedMerkleProof(..)
+  , MerkleTreeEntry(..)
+  , byteArrayToBech32BytesUnsafe
+  )
 import MerkleTree (MerkleProof(..), RootHash(..), Side(..), Up(..))
 import Test.Utils as Test.Utils
 import Utils.SerialiseData as Utils.SerialiseData
@@ -28,8 +32,9 @@ test = do
           { transaction: MerkleTreeEntry
               { index: Test.Utils.unsafeBigIntFromString "-8858258933817599851"
               , amount: Test.Utils.unsafeBigIntFromString "8887194232705394223"
-              , recipient: ByteArray.hexToByteArrayUnsafe
-                  "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+              , recipient: byteArrayToBech32BytesUnsafe $
+                  ByteArray.hexToByteArrayUnsafe
+                    "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
               , previousMerkleRoot: Just
                   ( ByteArray.hexToByteArrayUnsafe
                       "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
@@ -153,7 +158,7 @@ test = do
           { transaction: MerkleTreeEntry
               { index: Test.Utils.unsafeBigIntFromString "12542"
               , amount: Test.Utils.unsafeBigIntFromString "539422"
-              , recipient:
+              , recipient: byteArrayToBech32BytesUnsafe $
                   ByteArray.hexToByteArrayUnsafe
                     "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
               , previousMerkleRoot:

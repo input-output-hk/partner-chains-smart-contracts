@@ -1,14 +1,24 @@
-module Test.MPTRoot (testScenario1, testScenario2, saveRoot) where
+module Test.MPTRoot
+  ( testScenario1
+  , testScenario2
+  , saveRoot
+  , paymentPubKeyHashToBech32Bytes
+  ) where
 
 import Contract.Prelude
 
+import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt as BigInt
-import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
+import FUELMintingPolicy
+  ( Bech32Bytes
+  , MerkleTreeEntry(MerkleTreeEntry)
+  , bech32BytesFromAddress
+  )
 import InitSidechain as InitSidechain
 import MPTRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
@@ -22,6 +32,14 @@ import Test.Utils as Test.Utils
 import Utils.Crypto (SidechainPrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
+
+-- | `paymentPubKeyHashToBech32Bytes` converts a `PaymentPubKeyHash`
+-- | to the `Bech32Bytes` required for the `recipient` field of
+-- | `FUELMintingPolicy.MerkleTreeEntry`.
+-- | Note this assumes no staking public key hash to simplify writing tests.
+paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → Contract () Bech32Bytes
+paymentPubKeyHashToBech32Bytes pubKeyHash =
+  bech32BytesFromAddress $ Address.pubKeyHashAddress pubKeyHash Nothing
 
 -- | `saveRoot` is a wrapper around `MPTRoot.saveRoot` to make writing test
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
@@ -119,6 +137,7 @@ testScenario1 = do
     "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
     Address.ownPaymentPubKeyHash
 
+  ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
   serialisedEntries ←
     liftContractM "error 'testScenario1': bad serialisation of merkle root" $
       traverse SerialiseData.serialiseToData
@@ -126,8 +145,7 @@ testScenario1 = do
             { index: BigInt.fromInt 0
             , amount: BigInt.fromInt 69
             , previousMerkleRoot: Nothing
-            , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                ownPaymentPubKeyHash
+            , recipient: ownRecipient
             }
         ]
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
@@ -218,6 +236,8 @@ testScenario2 = do
     "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
     Address.ownPaymentPubKeyHash
 
+  ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+
   merkleRoot1 ←
     saveRoot
       { sidechainParams
@@ -226,8 +246,7 @@ testScenario2 = do
               { index: BigInt.fromInt 0
               , amount: BigInt.fromInt 69
               , previousMerkleRoot: Nothing
-              , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                  ownPaymentPubKeyHash
+              , recipient: ownRecipient
               }
           ]
       , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -241,15 +260,13 @@ testScenario2 = do
               { index: BigInt.fromInt 0
               , amount: BigInt.fromInt 69
               , previousMerkleRoot: Just merkleRoot1
-              , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                  ownPaymentPubKeyHash
+              , recipient: ownRecipient
               }
           , MerkleTreeEntry
               { index: BigInt.fromInt 1
               , amount: BigInt.fromInt 69
               , previousMerkleRoot: Just merkleRoot1
-              , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                  ownPaymentPubKeyHash
+              , recipient: ownRecipient
               }
           ]
       , currentCommitteePrvKeys: initCommitteePrvKeys
