@@ -39,6 +39,8 @@ import FUELMintingPolicy
   , addressFromCborBytes
   , getBech32BytesByteArray
   )
+import MerkleTree (RootHash)
+import MerkleTree as MerkleTree
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -441,9 +443,9 @@ options maybeConfig = info (helper <*> optSpec)
 
   -- `parseMerkleRoot` parses the option of a new merkle root. This is used
   -- in `saveRootSpec` and `committeeHashSpec`
-  parseMerkleRoot ∷ Parser ByteArray
+  parseMerkleRoot ∷ Parser RootHash
   parseMerkleRoot = option
-    byteArray
+    rootHash
     ( fold
         [ long "merkle-root"
         , metavar "MERKLE_ROOT"
@@ -467,11 +469,11 @@ options maybeConfig = info (helper <*> optSpec)
 
   -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
   -- used in both `saveRootSpec` and `committeeHashSpec`).
-  parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
+  parsePreviousMerkleRoot ∷ Parser (Maybe RootHash)
   parsePreviousMerkleRoot =
     optional
       ( option
-          (byteArray)
+          rootHash
           ( fold
               [ long "previous-merkle-root"
               , metavar "MERKLE_ROOT"
@@ -609,6 +611,10 @@ bigInt = maybeReader BigInt.fromString
 -- | Parse UInt
 uint ∷ ReadM UInt
 uint = maybeReader UInt.fromString
+
+-- | Parses the raw bytes of a `RootHash`
+rootHash ∷ ReadM RootHash
+rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray)
 
 -- | `sidechainAddress` parses
 -- | ```

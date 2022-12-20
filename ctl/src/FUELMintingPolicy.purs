@@ -171,7 +171,7 @@ newtype MerkleTreeEntry = MerkleTreeEntry
   { index ∷ BigInt
   , amount ∷ BigInt
   , recipient ∷ Bech32Bytes
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   }
 
 instance FromData MerkleTreeEntry where
@@ -277,7 +277,7 @@ data FuelParams
       , merkleProof ∷ MerkleProof
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe ByteArray
+      , previousMerkleRoot ∷ Maybe RootHash
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -319,7 +319,7 @@ mintFUEL ∷
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
@@ -381,7 +381,7 @@ claimFUEL ∷
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }

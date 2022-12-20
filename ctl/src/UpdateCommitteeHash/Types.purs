@@ -25,6 +25,7 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
+import MerkleTree (RootHash)
 import SidechainParams (SidechainParams, SidechainParams')
 import Types (AssetClass)
 import Utils.Crypto (SidechainPublicKey, SidechainSignature)
@@ -90,7 +91,7 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array SidechainSignature
   , committeePubKeys ∷ Array SidechainPublicKey
   , newCommitteePubKeys ∷ Array SidechainPublicKey
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   }
 
 derive instance Generic UpdateCommitteeHashRedeemer _
@@ -115,7 +116,7 @@ newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array SidechainPublicKey
   , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }
 
@@ -132,7 +133,7 @@ newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
     newCommitteePubKeys ∷ Array SidechainPublicKey
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   }
 

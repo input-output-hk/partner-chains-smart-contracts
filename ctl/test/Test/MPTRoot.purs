@@ -11,7 +11,7 @@ import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
-import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import FUELMintingPolicy
@@ -25,6 +25,7 @@ import MPTRoot
   , SaveRootParams(SaveRootParams)
   )
 import MPTRoot as MPTRoot
+import MerkleTree (RootHash)
 import MerkleTree as MerkleTree
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
@@ -51,9 +52,9 @@ saveRoot ∷
   , -- the current committee's (expected to be stored on chain) private keys
     currentCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the merkle root that was just saved
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   } →
-  Contract () ByteArray
+  Contract () RootHash
 saveRoot
   { sidechainParams
   , merkleTreeEntries
@@ -66,7 +67,7 @@ saveRoot
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
   let
-    merkleRoot = MerkleTree.unRootHash $ MerkleTree.rootHash merkleTree
+    merkleRoot = MerkleTree.rootHash merkleTree
 
   merkleRootInsertionMessage ←
     liftContractM
@@ -151,7 +152,7 @@ testScenario1 = do
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
   let
-    merkleRoot = MerkleTree.unRootHash $ MerkleTree.rootHash merkleTree
+    merkleRoot = MerkleTree.rootHash merkleTree
 
   merkleRootInsertionMessage ←
     liftContractM

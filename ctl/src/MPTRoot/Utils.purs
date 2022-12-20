@@ -24,7 +24,6 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
@@ -38,6 +37,8 @@ import MPTRoot.Types
   , SaveRootParams(..)
   , SignedMerkleRootMint
   )
+import MerkleTree (RootHash)
+import MerkleTree as MerkleTree
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams)
 import Utils.Crypto (SidechainMessage)
@@ -122,7 +123,7 @@ findMptRootTokenUtxo merkleRoot smrm = do
 -- | finding the utxo... rather it reflects the `Maybe` in the last merkle root
 -- | of whether it exists or not.
 findPreviousMptRootTokenUtxo ∷
-  Maybe ByteArray →
+  Maybe RootHash →
   SignedMerkleRootMint →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
@@ -132,7 +133,7 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
     Just lastMerkleRoot' → do
       lastMerkleRootTokenName ← Monad.liftContractM
         "error 'saveRoot': invalid lastMerkleRoot token name"
-        (Value.mkTokenName lastMerkleRoot')
+        (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
       lkup ← findMptRootTokenUtxo lastMerkleRootTokenName smrm
       lkup' ←
         Monad.liftContractM

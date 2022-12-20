@@ -13,7 +13,7 @@ import Contract.Transaction (TransactionInput)
 import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
-import MerkleTree (MerkleProof)
+import MerkleTree (MerkleProof, RootHash)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
@@ -58,7 +58,7 @@ data Endpoint
       , recipient ∷ Address
       , merkleProof ∷ MerkleProof
       , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe ByteArray
+      , previousMerkleRoot ∷ Maybe RootHash
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
@@ -73,12 +73,12 @@ data Endpoint
       { newCommitteePubKeys ∷ List SidechainPublicKey
       , committeeSignatures ∷
           List (SidechainPublicKey /\ Maybe SidechainSignature)
-      , previousMerkleRoot ∷ Maybe ByteArray
+      , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
-      { merkleRoot ∷ ByteArray
-      , previousMerkleRoot ∷ Maybe ByteArray
+      { merkleRoot ∷ RootHash
+      , previousMerkleRoot ∷ Maybe RootHash
       , committeeSignatures ∷
           List (SidechainPublicKey /\ Maybe SidechainSignature)
       }
@@ -86,8 +86,8 @@ data Endpoint
     -- `CommitteeHandover` is a convenient alias for saving the root,
     -- followed by updating the committee hash.
     CommitteeHandover
-      { merkleRoot ∷ ByteArray
-      , previousMerkleRoot ∷ Maybe ByteArray
+      { merkleRoot ∷ RootHash
+      , previousMerkleRoot ∷ Maybe RootHash
       , newCommitteePubKeys ∷ List SidechainPublicKey
       , newCommitteeSignatures ∷
           List (SidechainPublicKey /\ Maybe SidechainSignature)
