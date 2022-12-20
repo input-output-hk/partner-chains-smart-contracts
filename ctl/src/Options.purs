@@ -29,11 +29,11 @@ import Ctl.Internal.Helpers (logWithLevel)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.EuclideanRing as EuclideanRing
 import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
-import Data.EuclideanRing as EuclideanRing
 import Effect.Exception (error)
 import FUELMintingPolicy
   ( CombinedMerkleProof
@@ -48,6 +48,7 @@ import Options.Applicative
   , ReadM
   , action
   , command
+  , eitherReader
   , execParser
   , flag
   , fullDesc
@@ -60,7 +61,6 @@ import Options.Applicative
   , long
   , many
   , maybeReader
-  , eitherReader
   , metavar
   , option
   , progDesc
@@ -643,22 +643,28 @@ thresholdFraction = eitherReader parseThresholdFraction
 -- |        - Num >= 0, Denom > 0
 -- |        - Num and Denom are coprime
 parseThresholdFraction ∷
-  String → Either String { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
+  String →
+  Either String { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
 parseThresholdFraction str =
-    case split (Pattern "/") str of
-        [ n, d ] | n /= "" && d /= "" → do
-          let fromString' = maybe (Left "failed to parse Int from String") pure <<< BigInt.fromString
-          thresholdNumerator ← fromString' n
-          thresholdDenominator ← fromString' d
-          if
-            -- not totally too sure if purescript short circuits, so write out
-            -- the if statements explicitly..
-            (if thresholdNumerator >= zero && thresholdDenominator > zero
-                then thresholdDenominator >= thresholdNumerator && EuclideanRing.gcd thresholdDenominator thresholdNumerator == one
-                else false)
-            then pure { thresholdNumerator, thresholdDenominator }
-            else Left "'n/m' must be coprime, in the interval [0,1], and both non-negative."
-        _ → Left "failed to parse ratio 'n/m'"
+  case split (Pattern "/") str of
+    [ n, d ] | n /= "" && d /= "" → do
+      let
+        fromString' = maybe (Left "failed to parse Int from String") pure <<<
+          BigInt.fromString
+      thresholdNumerator ← fromString' n
+      thresholdDenominator ← fromString' d
+      if
+        -- not totally too sure if purescript short circuits, so write out
+        -- the if statements explicitly..
+        ( if thresholdNumerator >= zero && thresholdDenominator > zero then
+            thresholdDenominator >= thresholdNumerator
+              && EuclideanRing.gcd thresholdDenominator thresholdNumerator
+              == one
+          else false
+        ) then pure { thresholdNumerator, thresholdDenominator }
+      else Left
+        "'n/m' must be coprime, in the interval [0,1], and both non-negative."
+    _ → Left "failed to parse ratio 'n/m'"
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
 committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
