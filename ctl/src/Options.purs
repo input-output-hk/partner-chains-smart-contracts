@@ -343,7 +343,7 @@ options maybeConfig = info (helper <*> optSpec)
 
   regSpec = ado
     spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
+    sidechainPubKey ← option sidechainPublicKey $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
       , help "Sidechain public key value"
@@ -353,7 +353,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "SIGNATURE"
       , help "SPO signature"
       ]
-    sidechainSig ← option byteArray $ fold
+    sidechainSig ← option sidechainSignature $ fold
       [ long "sidechain-signature"
       , metavar "SIGNATURE"
       , help "Sidechain signature"
@@ -597,6 +597,13 @@ byteArray = maybeReader hexToByteArray
 sidechainPublicKey ∷ ReadM SidechainPublicKey
 sidechainPublicKey = maybeReader
   $ Utils.Crypto.sidechainPublicKey
+  <=< hexToByteArray
+
+-- | Parses a SidechainSignature from hexadecimal representation.
+-- | See `SidechainSignature` for the invariants.
+sidechainSignature ∷ ReadM SidechainSignature
+sidechainSignature = maybeReader
+  $ Utils.Crypto.sidechainSignature
   <=< hexToByteArray
 
 -- | Parse only CBOR encoded hexadecimal
