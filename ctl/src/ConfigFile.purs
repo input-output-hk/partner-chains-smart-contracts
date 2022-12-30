@@ -1,12 +1,13 @@
 module ConfigFile
-  ( readJson
-  , optExample
+  ( decodeCommittee
   , decodeConfig
+  , optExample
+  , readJson
   ) where
 
 import Contract.Prelude
 
-import ConfigFile.Codecs (configCodec)
+import ConfigFile.Codecs (committeeCodec, configCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(..)
@@ -20,7 +21,7 @@ import Node.Buffer.Class as Buff
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readFile)
 import Node.Path (FilePath)
-import Options.Types (Config)
+import Options.Types (Committee, Config)
 
 optExample ∷ Config
 optExample =
@@ -44,6 +45,9 @@ optExample =
 
 decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config
 decodeConfig = CA.decode configCodec
+
+decodeCommittee ∷ J.Json → Either CA.JsonDecodeError Committee
+decodeCommittee = CA.decode committeeCodec
 
 readJson ∷ FilePath → Effect (Either String J.Json)
 readJson path = do

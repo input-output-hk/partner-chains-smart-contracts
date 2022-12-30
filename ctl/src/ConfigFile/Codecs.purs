@@ -1,14 +1,18 @@
-module ConfigFile.Codecs (configCodec) where
+module ConfigFile.Codecs
+  ( committeeCodec
+  , configCodec
+  ) where
 
 import Contract.Prelude
 
 import Contract.Address (NetworkId(..))
 import Contract.Config (ServerConfig)
 import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Common as CAM
 import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.UInt as UInt
-import Options.Types (Config)
+import Options.Types (Committee, Config)
 import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
 
 configCodec ∷ CA.JsonCodec Config
@@ -39,6 +43,19 @@ configCodec =
         , network: CAC.maybe networkIdCodec
         }
     )
+
+-- [ {"public-key":"deadbeef", "signature":null}, ... ]
+-- gen-signatures should produce this
+committeeCodec ∷ CA.JsonCodec Committee
+committeeCodec = CAM.list memberCodec
+  where
+  memberRecord = CAR.object "member"
+    { "public-key": byteArrayCodec
+    , "signature": CAC.maybe byteArrayCodec
+    }
+  memberCodec = CA.prismaticCodec "member" dec enc memberRecord
+  dec { "public-key": p, signature } = Just (p /\ signature)
+  enc (p /\ signature) = { "public-key": p, signature }
 
 serverConfigCodec ∷ CA.JsonCodec ServerConfig
 serverConfigCodec = CAR.object "serverConfig"

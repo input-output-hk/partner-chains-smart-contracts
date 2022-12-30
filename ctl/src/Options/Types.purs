@@ -1,5 +1,6 @@
 module Options.Types
-  ( Config(..)
+  ( Committee
+  , Config(..)
   , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
@@ -106,3 +107,5 @@ type RuntimeConfig =
   , ctlServer ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }
+
+type Committee = List (ByteArray /\ Maybe ByteArray)
