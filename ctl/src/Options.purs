@@ -66,12 +66,11 @@ import Options.Applicative
   )
 import Options.Types (Committee, Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
-import Types (PubKey, Signature)
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
 options ∷ Maybe Config → Committee → ParserInfo Options
-options maybeConfig _committee = info (helper <*> optSpec)
+options maybeConfig committee = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
@@ -374,152 +373,110 @@ options maybeConfig _committee = info (helper <*> optSpec)
     , help "SPO cold verification key value"
     ]
 
+  fallback ∷ ∀ a. List a → List a → List a
+  fallback xs ys = if null ys then xs else ys
+
   committeeHashSpec ∷ Parser Endpoint
   committeeHashSpec =
-    CommitteeHash <$>
-      ( { newCommitteePubKeys: _
-        , committeeSignatures: _
-        , previousMerkleRoot: _
-        , sidechainEpoch: _
-        }
-          <$>
-            parseNewCommitteePubKeys
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-signature"
-              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseSidechainEpoch
-      )
+    { newCommitteePubKeys: _
+    , committeeSignatures: _
+    , previousMerkleRoot: _
+    , sidechainEpoch: _
+    }
+      <$> parseNewCommitteePubKeys
+      <*> map (fallback committee)
+        ( parseCommitteeSignatures
+            "committee-pub-key-and-signature"
+            "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+        )
+      <*> parsePreviousMerkleRoot
+      <*> parseSidechainEpoch
+      <#> CommitteeHash
 
   saveRootSpec ∷ Parser Endpoint
   saveRootSpec =
-    SaveRoot <$>
-      ( { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
-          <$>
-            parseMerkleRoot
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-signature"
-              "Public key and (optionally) the signature of the new merkle root seperated by a colon"
-      )
+    { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
+      <$> parseMerkleRoot
+      <*> parsePreviousMerkleRoot
+      <*> map (fallback committee)
+        ( parseCommitteeSignatures
+            "committee-pub-key-and-signature"
+            "Public key and (optionally) the signature of the new merkle root seperated by a colon"
+        )
+      <#> SaveRoot
 
   committeeHandoverSpec ∷ Parser Endpoint
   committeeHandoverSpec =
-    CommitteeHandover <$>
-      ( { merkleRoot: _
-        , previousMerkleRoot: _
-        , newCommitteePubKeys: _
-        , newCommitteeSignatures: _
-        , newMerkleRootSignatures: _
-        , sidechainEpoch: _
-        }
-          <$>
-            parseMerkleRoot
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseNewCommitteePubKeys
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-new-committee-signature"
-              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-new-merkle-root-signature"
-              "Public key and (optionally) the signature of the merkle root seperated by a colon"
-          <*>
-            parseSidechainEpoch
-      )
-
-  -- `parseMerkleRoot` parses the option of a new merkle root. This is used
-  -- in `saveRootSpec` and `committeeHashSpec`
-  parseMerkleRoot ∷ Parser ByteArray
-  parseMerkleRoot = option
-    byteArray
-    ( fold
-        [ long "merkle-root"
-        , metavar "MERKLE_ROOT"
-        , help "Merkle root signed by the committee"
-        ]
-    )
+    { merkleRoot: _
+    , previousMerkleRoot: _
+    , newCommitteePubKeys: _
+    , newCommitteeSignatures: _
+    , newMerkleRootSignatures: _
+    , sidechainEpoch: _
+    }
+      <$> parseMerkleRoot
+      <*> parsePreviousMerkleRoot
+      <*> parseNewCommitteePubKeys
+      <*> parseCommitteeSignatures
+        "committee-pub-key-and-new-committee-signature"
+        "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+      <*> parseCommitteeSignatures
+        "committee-pub-key-and-new-merkle-root-signature"
+        "Public key and (optionally) the signature of the merkle root seperated by a colon"
+      <*> parseSidechainEpoch
+      <#> CommitteeHandover
 
   -- `parseNewCommitteePubKeys` parses the new committee public keys.
   parseNewCommitteePubKeys ∷ Parser (List ByteArray)
-  parseNewCommitteePubKeys =
-    many
-      ( option
-          byteArray
-          ( fold
-              [ long "new-committee-pub-key"
-              , metavar "PUBLIC_KEY"
-              , help "Public key of a new committee member"
-              ]
-          )
-      )
-
-  -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
-  -- used in both `saveRootSpec` and `committeeHashSpec`).
-  parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
-  parsePreviousMerkleRoot =
-    optional
-      ( option
-          (byteArray)
-          ( fold
-              [ long "previous-merkle-root"
-              , metavar "MERKLE_ROOT"
-              , help "Hex encoded previous merkle root if it exists"
-              ]
-          )
-      )
-
-  parseSidechainEpoch ∷ Parser BigInt
-  parseSidechainEpoch =
-    option
-      bigInt
-      ( fold
-          [ long "sidechain-epoch"
-          , metavar "INT"
-          , help "Sidechain epoch"
-          ]
-      )
+  parseNewCommitteePubKeys = many $ option byteArray $ fold
+    [ long "new-committee-pub-key"
+    , metavar "PUBLIC_KEY"
+    , help "Public key of a new committee member"
+    ]
 
   -- `parseCommitteeSignatures` gives the options for parsing the current
   -- committees' signatures. This is used in both `saveRootSpec` and
   -- `committeeHashSpec`.
-  parseCommitteeSignatures ∷
-    String → String → Parser (List (PubKey /\ Maybe Signature))
-  parseCommitteeSignatures longDesc helpDesc =
-    many
-      ( option
-          committeeSignature
-          ( fold
-              [ long longDesc
-              , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-              , help helpDesc
-              ]
-          )
-      {-
-      ( fold
-          [ long "committee-pub-key-and-signature"
-          , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-          , help
-              "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
-          ]
-      )
-      -}
-      )
+  parseCommitteeSignatures ∷ String → String → Parser Committee
+  parseCommitteeSignatures ldesc hdesc = many $ option committeeSignature $ fold
+    [ long ldesc
+    , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+    , help hdesc
+    ]
+
+  -- `parseMerkleRoot` parses the option of a new merkle root. This is used
+  -- in `saveRootSpec` and `committeeHashSpec`
+  parseMerkleRoot ∷ Parser ByteArray
+  parseMerkleRoot = option byteArray $ fold
+    [ long "merkle-root"
+    , metavar "MERKLE_ROOT"
+    , help "Merkle root signed by the committee"
+    ]
+
+  -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
+  -- used in both `saveRootSpec` and `committeeHashSpec`).
+  parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
+  parsePreviousMerkleRoot = optional $ option byteArray $ fold
+    [ long "previous-merkle-root"
+    , metavar "MERKLE_ROOT"
+    , help "Hex encoded previous merkle root if it exists"
+    ]
+
+  parseSidechainEpoch ∷ Parser BigInt
+  parseSidechainEpoch = option bigInt $ fold
+    [ long "sidechain-epoch"
+    , metavar "INT"
+    , help "Sidechain epoch"
+    ]
+
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
-    committeePubKeys ← many $ option byteArray $ fold
-      [ long "committee-pub-key"
-      , metavar "PUBLIC_KEY"
-      , help "Public key for a committee member at sidechain initialisation"
-      ]
+    committeePubKeys ←
+      map (fallback (map fst committee)) $ many $ option byteArray $ fold
+        [ long "committee-pub-key"
+        , metavar "PUBLIC_KEY"
+        , help "Public key for a committee member at sidechain initialisation"
+        ]
     initSidechainEpoch ← parseSidechainEpoch
     in
       Init { committeePubKeys, initSidechainEpoch }
