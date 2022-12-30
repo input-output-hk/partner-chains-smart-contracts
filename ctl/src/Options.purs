@@ -6,7 +6,7 @@ module Options
 
 import Contract.Prelude
 
-import ConfigFile (decodeConfig, readJson)
+import ConfigFile (decodeCommittee, decodeConfig, readJson)
 import Contract.Address (Address)
 import Contract.CborBytes (CborBytes(..), cborBytesFromByteArray)
 import Contract.Config
@@ -31,7 +31,7 @@ import Ctl.Internal.Serialization.Address (addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.List (List)
+import Data.List (List(..))
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -64,14 +64,14 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Options)
+import Options.Types (Committee, Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
 import Types (PubKey, Signature)
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
-options ∷ Maybe Config → ParserInfo Options
-options maybeConfig = info (helper <*> optSpec)
+options ∷ Maybe Config → Committee → ParserInfo Options
+options maybeConfig _committee = info (helper <*> optSpec)
   ( fullDesc <> header
       "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
@@ -524,20 +524,20 @@ options maybeConfig = info (helper <*> optSpec)
     in
       Init { committeePubKeys, initSidechainEpoch }
 
--- | Reads configuration file from `./config.json`, then parses CLI
--- | arguments. CLI arguments override the config file.
+-- | Reads configuration file from `./config.json`, then
+-- | reads committee file from `./committee.json`, then
+-- | parses CLI arguments. CLI arguments override the config files.
 getOptions ∷ Effect Options
 getOptions = do
-  config ← readAndParseJsonFrom "./config.json"
-  execParser (options config)
+  config ← decodeWith decodeConfig "./config.json"
+  committee ← decodeWith decodeCommittee "./committee.json"
+  execParser (options config (fromMaybe Nil committee))
 
   where
-  readAndParseJsonFrom loc = do
-    json' ← hush <$> readJson loc
-    traverse decodeConfigUnsafe json'
-
-  decodeConfigUnsafe json =
-    liftEither $ lmap (error <<< show) $ decodeConfig json
+  decodeWith ∷ ∀ e a. Show e ⇒ (_ → Either e a) → _ → Effect (Maybe a)
+  decodeWith decode file = do
+    maybeJson ← map hush (readJson file)
+    traverse (decode >>> lmap (show >>> error) >>> liftEither) maybeJson
 
 -- * Custom Parsers
 
