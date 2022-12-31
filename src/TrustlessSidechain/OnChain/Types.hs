@@ -21,26 +21,7 @@ import Schema (
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
-  deriving (IsString, Prelude.Show) via LedgerBytes
-  deriving stock (Generic)
-  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
-  deriving anyclass (NFData, ToSchema)
-
-makeLift ''GenesisHash
-
-$(deriveJSON defaultOptions ''GenesisHash)
-
--- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
-newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
-  deriving (IsString, Prelude.Show) via LedgerBytes
-  deriving stock (Generic)
-  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
-  deriving anyclass (NFData, ToSchema)
-
-makeLift ''SidechainPubKey
-
-$(deriveJSON defaultOptions ''SidechainPubKey)
+-- * Sidechain Parametrization and general data
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
@@ -63,7 +44,15 @@ data SidechainParams = SidechainParams
   deriving stock (Prelude.Show, Generic)
   deriving anyclass (ToSchema)
 
+newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+$(deriveJSON defaultOptions ''GenesisHash)
 $(deriveJSON defaultOptions ''SidechainParams)
+PlutusTx.makeLift ''GenesisHash
 PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
@@ -96,6 +85,19 @@ convertSCParams :: SidechainParams -> SidechainParams'
 convertSCParams (SidechainParams i g _ u numerator denominator) =
   SidechainParams' i g u numerator denominator
 
+-- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
+newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
+  deriving (IsString, Prelude.Show) via LedgerBytes
+  deriving stock (Generic)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
+  deriving anyclass (NFData, ToSchema)
+
+makeLift ''SidechainPubKey
+
+$(deriveJSON defaultOptions ''SidechainPubKey)
+
+-- * Committee Candidate Validator data
+
 -- | Endpoint parameters for committee candidate registration
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
@@ -119,6 +121,36 @@ data DeregisterParams = DeregisterParams
   deriving anyclass (ToSchema)
 
 $(deriveJSON defaultOptions ''DeregisterParams)
+
+data BlockProducerRegistration = BlockProducerRegistration
+  { -- | SPO cold verification key hash
+    bprSpoPubKey :: PubKey -- own cold verification key hash
+  , -- | public key in the sidechain's desired format
+    bprSidechainPubKey :: SidechainPubKey
+  , -- | Signature of the SPO
+    bprSpoSignature :: Signature
+  , -- | Signature of the SPO
+    bprSidechainSignature :: Signature
+  , -- | A UTxO that must be spent by the transaction
+    bprInputUtxo :: TxOutRef
+  , -- | Owner public key hash
+    bprOwnPkh :: PubKeyHash
+  }
+  deriving stock (Prelude.Show)
+
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
+
+data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
+  { bprmSidechainParams :: SidechainParams'
+  , bprmSidechainPubKey :: SidechainPubKey
+  , -- | A UTxO that must be spent by the transaction
+    bprmInputUtxo :: TxOutRef
+  }
+  deriving stock (Prelude.Show)
+
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
+
+-- * MPT Root Token data
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
  for the MPTRootToken.
@@ -150,6 +182,34 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
+-- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
+data SignedMerkleRoot = SignedMerkleRoot
+  { -- | New merkle root to insert.
+    merkleRoot :: BuiltinByteString
+  , -- | Previous merkle root (if it exists)
+    previousMerkleRoot :: Maybe BuiltinByteString
+  , -- | Current committee signatures ordered as their corresponding keys
+    signatures :: [BuiltinByteString]
+  , -- | Lexicographically sorted public keys of all committee members
+    committeePubKeys :: [SidechainPubKey]
+  }
+
+PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
+
+{- | 'CombinedMerkleProof' is a product type to include both the
+ 'MerkleTreeEntry' and the 'MerkleProof'.
+
+ This exists as for testing in #249.
+-}
+data CombinedMerkleProof = CombinedMerkleProof
+  { cmpTransaction :: MerkleTreeEntry
+  , cmpMerkleProof :: MerkleProof
+  }
+
+PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
+
+-- * FUEL Minting Policy data
+
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
   = MainToSide BuiltinByteString -- Recipient's sidechain address
@@ -166,33 +226,7 @@ data FUELRedeemer
 
 PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 
-data BlockProducerRegistration = BlockProducerRegistration
-  { -- | SPO cold verification key hash
-    bprSpoPubKey :: PubKey -- own cold verification key hash
-  , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: SidechainPubKey
-  , -- | Signature of the SPO
-    bprSpoSignature :: Signature
-  , -- | Signature of the SPO
-    bprSidechainSignature :: Signature
-  , -- | A UTxO that must be spent by the transaction
-    bprInputUtxo :: TxOutRef
-  , -- | Owner public key hash
-    bprOwnPkh :: PubKeyHash
-  }
-  deriving stock (Prelude.Show)
-
-PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
-
-data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams'
-  , bprmSidechainPubKey :: SidechainPubKey
-  , -- | A UTxO that must be spent by the transaction
-    bprmInputUtxo :: TxOutRef
-  }
-  deriving stock (Prelude.Show)
-
-PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
+-- * Update Committee Hash data
 
 {- | Datum for the committee hash. This /committee hash/ is used to verify
  signatures for sidechain to mainchain transfers. This is a hash of
@@ -253,29 +287,3 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   }
 PlutusTx.makeLift ''UpdateCommitteeHashMessage
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
-
--- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
-data SignedMerkleRoot = SignedMerkleRoot
-  { -- | New merkle root to insert.
-    merkleRoot :: BuiltinByteString
-  , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
-  , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [BuiltinByteString]
-  , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
-  }
-
-PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
-
-{- | 'CombinedMerkleProof' is a product type to include both the
- 'MerkleTreeEntry' and the 'MerkleProof'.
-
- This exists as for testing in #249.
--}
-data CombinedMerkleProof = CombinedMerkleProof
-  { cmpTransaction :: MerkleTreeEntry
-  , cmpMerkleProof :: MerkleProof
-  }
-
-PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
