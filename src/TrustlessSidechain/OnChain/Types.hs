@@ -9,10 +9,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.String (IsString)
 import GHC.Generics (Generic)
-import Ledger (PaymentPubKeyHash)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
-import Ledger.Typed.Scripts (ValidatorTypes (..))
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName)
+import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData, makeIsDataIndexed, makeLift)
@@ -43,28 +41,6 @@ newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteStri
 makeLift ''SidechainPubKey
 
 $(deriveJSON defaultOptions ''SidechainPubKey)
-
--- | Parameters to initialize a sidechain
-data InitSidechainParams = InitSidechainParams
-  { initChainId :: Integer
-  , initGenesisHash :: GenesisHash
-  , -- | 'initUtxo ' is a 'TxOutRef' used for creating 'AssetClass's for the
-    -- internal function of the side chain (e.g. InitCommitteeHashMint TODO: hyperlink this documentation)
-    initUtxo :: TxOutRef
-  , -- | 'initCommittee' is the initial committee of the sidechain
-    initCommittee :: [PubKey]
-  , initMint :: Maybe TxOutRef
-  , -- | See 'thresholdNumerator'
-    initThresholdNumerator :: Integer
-  , -- | See 'thresholdDenominator'
-    initThresholdDenominator :: Integer
-  }
-  deriving stock (Prelude.Show, Generic)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''InitSidechainParams)
-PlutusTx.makeLift ''InitSidechainParams
-PlutusTx.makeIsDataIndexed ''InitSidechainParams [('InitSidechainParams, 0)]
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
@@ -144,77 +120,6 @@ data DeregisterParams = DeregisterParams
 
 $(deriveJSON defaultOptions ''DeregisterParams)
 
-data BurnParams = BurnParams
-  { -- | Burnt amount in FUEL (Negative)
-    amount :: Integer
-  , -- | SideChain address
-    recipient :: BuiltinByteString
-  , -- | passed for parametrization
-    sidechainParams :: SidechainParams
-  }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''BurnParams)
-
-data MintParams = MintParams
-  { -- | Minted amount in FUEL (this should be positive)
-    amount :: Integer
-  , -- | MainChain address
-    recipient :: PaymentPubKeyHash
-  , -- | the merkle proof to prove to the mainchain that the given unhandled transaction from the sidechain actually happened on the sidechain
-    merkleProof :: MerkleProof
-  , --  | passed for parametrization.
-    -- TODO: in the spec, we don't do this -- we just pass the chainId. Not sure if this is what we want?
-    sidechainParams :: SidechainParams
-  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'index' is here
-    index :: Integer
-  , -- | See 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for why 'sidechainEpoch' is here
-    sidechainEpoch :: Integer
-  , -- | See
-    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.MerkleTreeEntry' for
-    -- why 'entryHash' is here. This is TODO and will be removed later
-    entryHash :: BuiltinByteString
-  }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''MintParams)
-
-{- | Endpoint parameters for committee candidate hash updating
-
- TODO: it might not be a bad idea to factor out the 'signature' and
- 'committeePubKeys' field shared by 'UpdateCommitteeHashParams' and
- 'SaveRootParams' in a different data type. I'd imagine there will be lots of
- duplicated code when it comes to verifying that the committee has approved
- of these transactions either way.
--}
-data UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { -- | See 'SidechainParams'.
-    sidechainParams :: SidechainParams
-  , -- | The public keys of the new committee.
-    newCommitteePubKeys :: [PubKey]
-  , -- | The signature for the new committee hash.
-    committeeSignatures :: [BuiltinByteString]
-  , -- | Public keys of the current committee members.
-    committeePubKeys :: [PubKey]
-  }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''UpdateCommitteeHashParams)
-
-data SaveRootParams = SaveRootParams
-  { sidechainParams :: SidechainParams
-  , merkleRoot :: BuiltinByteString
-  , signatures :: [BuiltinByteString]
-  , lastMerkleRoot :: Maybe BuiltinByteString
-  , committeePubKeys :: [PubKey] -- Public keys of all committee members
-  }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-$(deriveJSON defaultOptions ''SaveRootParams)
-
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
  for the MPTRootToken.
 -}
@@ -255,6 +160,12 @@ data FUELRedeemer
     -- 'MerkleProof')
     SideToMain MerkleTreeEntry MerkleProof
 
+-- Recipient address is in FUELRedeemer just for reference on the mainchain,
+-- it's actually useful (and verified) on the sidechain, so it needs to be
+-- recorded in the mainchain.
+
+PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
+
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
@@ -282,20 +193,6 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   deriving stock (Prelude.Show)
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
-
-data CommitteeCandidateRegistry
-instance ValidatorTypes CommitteeCandidateRegistry where
-  type RedeemerType CommitteeCandidateRegistry = ()
-  type DatumType CommitteeCandidateRegistry = BlockProducerRegistration
-
--- Recipient address is in FUELRedeemer just for reference on the mainchain,
--- it's actually useful (and verified) on the sidechain, so it needs to be
--- recorded in the mainchain.
-
-PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
-
-instance ValidatorTypes FUELRedeemer where
-  type RedeemerType FUELRedeemer = FUELRedeemer
 
 {- | Datum for the committee hash. This /committee hash/ is used to verify
  signatures for sidechain to mainchain transfers. This is a hash of
@@ -329,15 +226,6 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
 
-{- | 'UpdatingCommitteeHash' is the type to associate the 'DatumType' and
- 'RedeemerType' to the acutal types used at run time.
--}
-data UpdatingCommitteeHash
-
-instance ValidatorTypes UpdatingCommitteeHash where
-  type DatumType UpdatingCommitteeHash = UpdateCommitteeHashDatum
-  type RedeemerType UpdatingCommitteeHash = UpdateCommitteeHashRedeemer
-
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
   { cSidechainParams :: SidechainParams
@@ -366,18 +254,6 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
 PlutusTx.makeLift ''UpdateCommitteeHashMessage
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
--- | 'GenesisMintCommitteeHash' is used as the parameter for the minting policy
-data GenesisMintCommitteeHash = GenesisMintCommitteeHash
-  { -- | 'gcToken' is the token name of the NFT to start the committee hash
-    gcToken :: TokenName
-  , -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    gcTxOutRef :: TxOutRef
-  }
-  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
-
-PlutusTx.makeLift ''GenesisMintCommitteeHash
-
 -- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
   { -- | New merkle root to insert.
@@ -391,9 +267,6 @@ data SignedMerkleRoot = SignedMerkleRoot
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
-
-instance ValidatorTypes SignedMerkleRoot where
-  type RedeemerType SignedMerkleRoot = SignedMerkleRoot
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
