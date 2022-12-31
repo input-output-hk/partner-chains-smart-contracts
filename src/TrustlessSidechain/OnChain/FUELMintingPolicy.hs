@@ -16,40 +16,11 @@ import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.OnChain.Types (
+  FUELMint (fmDsKeyCurrencySymbol, fmMptRootTokenCurrencySymbol, fmSidechainParams),
   FUELRedeemer (MainToSide, SideToMain),
   MerkleTreeEntry (mteAmount, mteRecipient),
   SidechainParams (genesisMint),
  )
-
-{- | 'FUELMint' is the data type to parameterize the minting policy. See
- 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
--}
-data FUELMint = FUELMint
-  { -- 'fmMptRootTokenValidator' is the hash of the validator script
-    -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.OnChain.MPTRootTokenValidator' for
-    -- details.
-    -- > fmMptRootTokenValidator :: ValidatorHash
-    -- N.B. We don't need this! We're really only interested in the token,
-    -- and indeed; anyone can pay a token to this script so there really
-    -- isn't a reason to use this validator script as the "identifier" for
-    -- MPTRootTokens.
-
-    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
-    -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy' for details.
-    fmMptRootTokenCurrencySymbol :: CurrencySymbol
-  , -- | 'fmSidechainParams' is the sidechain parameters
-    fmSidechainParams :: SidechainParams
-  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
-    -- hold the key for the distributed set. In particular, this allows the
-    -- FUEL minting policy to verify if a string has /just been inserted/ into
-    -- the distributed set.
-    fmDsKeyCurrencySymbol :: CurrencySymbol
-  }
-
-PlutusTx.makeLift ''FUELMint
-PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).

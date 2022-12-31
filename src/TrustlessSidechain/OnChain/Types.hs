@@ -196,6 +196,19 @@ data SignedMerkleRoot = SignedMerkleRoot
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
+-- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
+data SignedMerkleRootMint = SignedMerkleRootMint
+  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
+    smrmSidechainParams :: SidechainParams
+  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
+    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
+    -- resides.
+    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
+  }
+
+PlutusTx.makeLift ''SignedMerkleRootMint
+PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
+
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
 
@@ -225,6 +238,36 @@ data FUELRedeemer
 -- recorded in the mainchain.
 
 PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
+
+{- | 'FUELMint' is the data type to parameterize the minting policy. See
+ 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
+-}
+data FUELMint = FUELMint
+  { -- 'fmMptRootTokenValidator' is the hash of the validator script
+    -- which /should/ have a token which has the merkle root in the token
+    -- name. See 'TrustlessSidechain.OnChain.MPTRootTokenValidator' for
+    -- details.
+    -- > fmMptRootTokenValidator :: ValidatorHash
+    -- N.B. We don't need this! We're really only interested in the token,
+    -- and indeed; anyone can pay a token to this script so there really
+    -- isn't a reason to use this validator script as the "identifier" for
+    -- MPTRootTokens.
+
+    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
+    -- which contains a merkle root in the 'TokenName'. See
+    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy' for details.
+    fmMptRootTokenCurrencySymbol :: CurrencySymbol
+  , -- | 'fmSidechainParams' is the sidechain parameters
+    fmSidechainParams :: SidechainParams
+  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
+    -- hold the key for the distributed set. In particular, this allows the
+    -- FUEL minting policy to verify if a string has /just been inserted/ into
+    -- the distributed set.
+    fmDsKeyCurrencySymbol :: CurrencySymbol
+  }
+
+PlutusTx.makeLift ''FUELMint
+PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
 
 -- * Update Committee Hash data
 

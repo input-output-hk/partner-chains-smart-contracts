@@ -12,7 +12,6 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
-  CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
@@ -23,23 +22,21 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (applyCode, compile, liftCode)
-import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OnChain.Types (
   MerkleRootInsertionMessage (..),
   MerkleTreeEntry,
   SidechainParams (
-    genesisUtxo,
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (..),
+  SignedMerkleRootMint (smrmSidechainParams, smrmUpdateCommitteeHashCurrencySymbol),
   UpdateCommitteeHashDatum (committeeHash),
   convertSCParams,
  )
-import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
 
@@ -54,34 +51,6 @@ serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
 {-# INLINEABLE serialiseMrimHash #-}
 serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
 serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
-
--- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
-data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
-    -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
-  }
-
-PlutusTx.makeLift ''SignedMerkleRootMint
-PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
-
-{- | 'signedMerkleRootMint' is a smart constructor to create the 'SignedMerkleRootMint'.
-
- TODO: Not totally too sure why we need the sidechain params here in the
- parameter, but it was like that before, so we'll leave it there. As an
- optimization, we could get rid of the sidechain params.
--}
-signedMerkleRootMint :: SidechainParams -> SignedMerkleRootMint
-signedMerkleRootMint sc =
-  SignedMerkleRootMint
-    { smrmSidechainParams = sc
-    , smrmUpdateCommitteeHashCurrencySymbol =
-        UpdateCommitteeHash.committeeHashCurSymbol
-          InitCommitteeHashMint {icTxOutRef = genesisUtxo sc}
-    }
 
 {- | 'mkMintingPolicy' verifies the following
 
