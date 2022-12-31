@@ -85,7 +85,6 @@ library
   import:          common-lang
   exposed-modules:
     TrustlessSidechain.MerkleTree
-    TrustlessSidechain.OffChain.Types
     TrustlessSidechain.OnChain.CommitteeCandidateValidator
     TrustlessSidechain.OnChain.DistributedSet
     TrustlessSidechain.OnChain.FUELMintingPolicy

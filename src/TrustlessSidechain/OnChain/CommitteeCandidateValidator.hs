@@ -23,14 +23,12 @@ import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedB
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OffChain.Types (
-  RegisterParams (..),
-  SidechainParams (..),
-  convertSCParams,
- )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistration (..),
   BlockProducerRegistrationMsg (..),
+  RegisterParams (..),
+  SidechainParams (..),
+  convertSCParams,
  )
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}

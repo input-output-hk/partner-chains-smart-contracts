@@ -26,16 +26,19 @@ import PlutusTx (applyCode, compile, liftCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OffChain.Types (
+import TrustlessSidechain.OnChain.Types (
+  MerkleRootInsertionMessage (..),
+  MerkleTreeEntry,
   SidechainParams (
     genesisUtxo,
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
+  SignedMerkleRoot (..),
+  UpdateCommitteeHashDatum (committeeHash),
   convertSCParams,
  )
-import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)

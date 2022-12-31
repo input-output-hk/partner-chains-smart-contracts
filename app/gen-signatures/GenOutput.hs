@@ -17,7 +17,6 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (SidechainParams (..), convertSCParams)
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -36,6 +35,7 @@ import TrustlessSidechain.OnChain.Types (
     mrimPreviousMerkleRoot,
     mrimSidechainParams
   ),
+  SidechainParams (..),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     uchmNewCommitteePubKeys,
@@ -43,6 +43,7 @@ import TrustlessSidechain.OnChain.Types (
     uchmSidechainEpoch,
     uchmSidechainParams
   ),
+  convertSCParams,
  )
 import Utils (
   SidechainCommittee (..),

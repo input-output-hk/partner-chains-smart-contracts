@@ -14,9 +14,12 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisMint))
 import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
+import TrustlessSidechain.OnChain.Types (
+  FUELRedeemer (MainToSide, SideToMain),
+  MerkleTreeEntry (mteAmount, mteRecipient),
+  SidechainParams (genesisMint),
+ )
 
 {- | 'FUELMint' is the data type to parameterize the minting policy. See
  'mkMintingPolicy' for details of why we need the datum in 'FUELMint'

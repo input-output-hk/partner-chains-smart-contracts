@@ -83,12 +83,10 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
-import TrustlessSidechain.OffChain.Types (
-  SidechainPubKey (SidechainPubKey),
- )
 import TrustlessSidechain.OnChain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
+  SidechainPubKey (SidechainPubKey),
  )
 
 -- * Bech32 addresses

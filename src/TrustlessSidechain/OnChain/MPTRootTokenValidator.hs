@@ -22,7 +22,7 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx (applyCode, compile, liftCode, unsafeFromBuiltinData)
 import PlutusTx.Trace qualified as Trace
-import TrustlessSidechain.OffChain.Types (SidechainParams)
+import TrustlessSidechain.OnChain.Types (SidechainParams)
 
 -- | 'mkMptRootTokenValidator' always fails.
 {-# INLINEABLE mkMptRootTokenValidator #-}

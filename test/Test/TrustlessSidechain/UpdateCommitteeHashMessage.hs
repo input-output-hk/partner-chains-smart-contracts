@@ -7,12 +7,12 @@ import PlutusTx.Builtins (blake2b_256)
 import PlutusTx.Prelude
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import TrustlessSidechain.OffChain.Types (
+import TrustlessSidechain.OnChain.Types (
   GenesisHash (GenesisHash),
   SidechainParams' (SidechainParams'),
   SidechainPubKey (SidechainPubKey),
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
  )
-import TrustlessSidechain.OnChain.Types (UpdateCommitteeHashMessage (UpdateCommitteeHashMessage))
 import TrustlessSidechain.OnChain.UpdateCommitteeHash (serialiseUchm)
 
 test :: TestTree
