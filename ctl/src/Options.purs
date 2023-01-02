@@ -8,7 +8,7 @@ import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
 import Contract.Address (Address)
-import Contract.CborBytes (CborBytes(..), cborBytesFromByteArray)
+import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -26,8 +26,6 @@ import Control.MonadZero (guard)
 import Ctl.Internal.Deserialization.FromBytes (fromBytes)
 import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
 import Ctl.Internal.Helpers (logWithLevel)
-import Ctl.Internal.Plutus.Conversion (toPlutusAddress)
-import Ctl.Internal.Serialization.Address (addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -36,7 +34,11 @@ import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
-import FUELMintingPolicy (CombinedMerkleProof)
+import FUELMintingPolicy
+  ( CombinedMerkleProof
+  , addressFromCborBytes
+  , getBech32BytesByteArray
+  )
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -571,12 +573,15 @@ combinedMerkleProofParserWithPkh ∷
   ReadM (CombinedMerkleProof /\ Address)
 combinedMerkleProofParserWithPkh = do
   cmp ← combinedMerkleProofParser
-  -- Getting the parsed recipient from the combined proof and deserialising to an address
-  let recipient = (unwrap (unwrap cmp).transaction).recipient
+  -- Getting the parsed recipient from the combined proof and deserialising to
+  -- an address
+  let
+    recipient = getBech32BytesByteArray $
+      (unwrap (unwrap cmp).transaction).recipient
   addr ← maybe
     (readerError "Couldn't convert recipient bech32 to Plutus address")
     pure
-    (toPlutusAddress =<< addressFromBytes (CborBytes recipient))
+    (addressFromCborBytes (cborBytesFromByteArray recipient))
 
   pure (cmp /\ addr)
 
