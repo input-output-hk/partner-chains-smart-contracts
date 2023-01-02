@@ -22,13 +22,13 @@ import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Control.Alternative ((<|>))
-import Control.MonadZero (guard)
 import Ctl.Internal.Deserialization.FromBytes (fromBytes)
 import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
 import Ctl.Internal.Helpers (logWithLevel)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.EuclideanRing as EuclideanRing
 import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
@@ -47,6 +47,7 @@ import Options.Applicative
   , ReadM
   , action
   , command
+  , eitherReader
   , execParser
   , flag
   , fullDesc
@@ -268,7 +269,7 @@ options maybeConfig = info (helper <*> optSpec)
                 ]
             )
         thresholdNumeratorDenominatorOption = ado
-          thresholdNumerator ← option bigInt $ fold
+          thresholdNumerator ← option numerator $ fold
             [ long "threshold-numerator"
             , metavar "INT"
             , help "The numerator for the ratio of the threshold"
@@ -278,7 +279,7 @@ options maybeConfig = info (helper <*> optSpec)
                         _.threshold
                     )
             ]
-          thresholdDenominator ← option bigInt $ fold
+          thresholdDenominator ← option denominator $ fold
             [ long "threshold-denominator"
             , metavar "INT"
             , help "The denominator for the ratio of the threshold"
@@ -342,7 +343,7 @@ options maybeConfig = info (helper <*> optSpec)
 
   regSpec = ado
     spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
+    sidechainPubKey ← option sidechainPublicKey $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
       , help "Sidechain public key value"
@@ -352,7 +353,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "SIGNATURE"
       , help "SPO signature"
       ]
-    sidechainSig ← option byteArray $ fold
+    sidechainSig ← option sidechainSignature $ fold
       [ long "sidechain-signature"
       , metavar "SIGNATURE"
       , help "Sidechain signature"
@@ -598,6 +599,13 @@ sidechainPublicKey = maybeReader
   $ Utils.Crypto.sidechainPublicKey
   <=< hexToByteArray
 
+-- | Parses a SidechainSignature from hexadecimal representation.
+-- | See `SidechainSignature` for the invariants.
+sidechainSignature ∷ ReadM SidechainSignature
+sidechainSignature = maybeReader
+  $ Utils.Crypto.sidechainSignature
+  <=< hexToByteArray
+
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise
 -- we should simplify the code and fall back to ByteArray.
@@ -607,6 +615,26 @@ cbor = cborBytesFromByteArray <$> byteArray
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
+
+-- | Parse a numerator in the threshold.
+numerator ∷ ReadM BigInt
+numerator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "numerator must be non-negative"
+      Nothing → Left "failed to parse int numerator"
+  )
+
+-- | Parse a denominator in the threshold.
+denominator ∷ ReadM BigInt
+denominator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i > zero → pure i
+        | otherwise → Left "denominator must be positive"
+      Nothing → Left "failed to parse int denominator"
+  )
 
 -- | Parse UInt
 uint ∷ ReadM UInt
@@ -633,19 +661,36 @@ sidechainAddress = maybeReader $ \str →
 -- | `thresholdFraction` is the CLI parser for `parseThresholdFraction`.
 thresholdFraction ∷
   ReadM { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
-thresholdFraction = maybeReader parseThresholdFraction
+thresholdFraction = eitherReader parseThresholdFraction
 
--- | `parseThresholdFraction` parses the threshold represented as `Num/Denom`.
+-- | `parseThresholdFraction` parses the threshold represented as `Num/Denom`
+-- | and verifies that
+-- |        - Num <= Denom
+-- |        - Num >= 0, Denom > 0
+-- |        - Num and Denom are coprime
 parseThresholdFraction ∷
-  String → Maybe { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
+  String →
+  Either String { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
 parseThresholdFraction str =
   case split (Pattern "/") str of
     [ n, d ] | n /= "" && d /= "" → do
-      thresholdNumerator ← BigInt.fromString n
-      thresholdDenominator ← BigInt.fromString d
-      guard $ thresholdNumerator > zero && thresholdDenominator > zero
-      pure { thresholdNumerator, thresholdDenominator }
-    _ → Nothing
+      let
+        fromString' = maybe (Left "failed to parse Int from String") pure <<<
+          BigInt.fromString
+      thresholdNumerator ← fromString' n
+      thresholdDenominator ← fromString' d
+      if
+        -- not totally too sure if purescript short circuits, so write out
+        -- the if statements explicitly..
+        ( if thresholdNumerator >= zero && thresholdDenominator > zero then
+            thresholdDenominator >= thresholdNumerator
+              && EuclideanRing.gcd thresholdDenominator thresholdNumerator
+              == one
+          else false
+        ) then pure { thresholdNumerator, thresholdDenominator }
+      else Left
+        "'n/m' must be coprime, in the interval [0,1], and both non-negative."
+    _ → Left "failed to parse ratio 'n/m'"
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
 committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
