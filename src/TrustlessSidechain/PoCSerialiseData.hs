@@ -10,7 +10,7 @@
  Since this is just used as a proof of concept on the ctl side, we have no
  offchain Haskell equivalent
 -}
-module TrustlessSidechain.OnChain.PoCSerialiseData (
+module TrustlessSidechain.PoCSerialiseData (
   mkPoCSerialiseData,
   mkPoCSerialiseDataUntyped,
   serialisablePoCSerialiseData,

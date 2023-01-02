@@ -83,12 +83,10 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
-import TrustlessSidechain.OffChain.Types (
-  SidechainPubKey (SidechainPubKey),
- )
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
+  SidechainPubKey (SidechainPubKey),
  )
 
 -- * Bech32 addresses
@@ -125,7 +123,7 @@ bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
  See Discussion on prefixes in Cardano [2]
 
  This exists so we can parse
- JSON of 'TrustlessSidechain.OnChain.Types.MerkleTreeEntry'...
+ JSON of 'TrustlessSidechain.Types.MerkleTreeEntry'...
 -}
 newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
   deriving (Show, Eq)
@@ -163,7 +161,6 @@ data SidechainCommitteeMember = SidechainCommitteeMember
   { scmPrivateKey :: SECP.SecKey
   , scmPublicKey :: SidechainPubKey
   }
-  deriving (Show, Eq)
 
 {- | 'SidechainCommittee' is a newtype wrapper around a lsit of
  @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
@@ -172,7 +169,6 @@ data SidechainCommitteeMember = SidechainCommitteeMember
 -}
 newtype SidechainCommittee = SidechainCommittee
   {unSidechainCommittee :: [SidechainCommitteeMember]}
-  deriving stock (Show, Eq)
   deriving newtype (FromJSON, ToJSON)
 
 instance FromJSON SidechainCommitteeMember where

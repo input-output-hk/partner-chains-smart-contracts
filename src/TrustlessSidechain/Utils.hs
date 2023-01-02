@@ -3,7 +3,7 @@
 -- Also, This will be faster if the pubkeys and signatures are in the same order
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.OnChain.Utils (verifyMulti, verifyMultisig) where
+module TrustlessSidechain.Utils (verifyMulti, verifyMultisig) where
 
 import PlutusTx.Prelude
 
