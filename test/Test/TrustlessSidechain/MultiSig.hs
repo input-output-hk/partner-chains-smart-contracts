@@ -4,7 +4,7 @@ import Data.ByteString (ByteString)
 import PlutusTx.Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
-import TrustlessSidechain.OnChain.Utils qualified as U
+import TrustlessSidechain.Utils qualified as U
 import Prelude qualified
 
 test :: TestTree
