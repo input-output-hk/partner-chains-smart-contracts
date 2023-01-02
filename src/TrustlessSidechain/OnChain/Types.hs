@@ -4,20 +4,12 @@
 
 module TrustlessSidechain.OnChain.Types where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.String (IsString)
-import GHC.Generics (Generic)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import Plutus.V2.Ledger.Tx (TxOutRef)
-import PlutusTx (FromData, ToData, UnsafeFromData, makeIsDataIndexed, makeLift)
+import PlutusTx (FromData, ToData, UnsafeFromData)
+import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import Schema (
-  ToSchema,
- )
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
@@ -41,19 +33,10 @@ data SidechainParams = SidechainParams
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
   }
-  deriving stock (Prelude.Show, Generic)
-  deriving anyclass (ToSchema)
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
-  deriving (IsString, Prelude.Show) via LedgerBytes
-  deriving stock (Generic)
-  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
-  deriving anyclass (NFData, ToSchema)
+  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData)
 
-$(deriveJSON defaultOptions ''GenesisHash)
-$(deriveJSON defaultOptions ''SidechainParams)
-PlutusTx.makeLift ''GenesisHash
-PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 {- | Parameters uniquely identifying a sidechain, used only in the block producer registration
@@ -75,9 +58,7 @@ data SidechainParams' = SidechainParams'
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
   }
-  deriving stock (Prelude.Show, Generic)
 
-PlutusTx.makeLift ''SidechainParams'
 PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
 
 -- | Convert SidechainParams to the Active Bridge version
@@ -87,14 +68,7 @@ convertSCParams (SidechainParams i g _ u numerator denominator) =
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
-  deriving (IsString, Prelude.Show) via LedgerBytes
-  deriving stock (Generic)
-  deriving newtype (Prelude.Eq, Prelude.Ord, Eq, Ord, ToData, FromData, UnsafeFromData)
-  deriving anyclass (NFData, ToSchema)
-
-makeLift ''SidechainPubKey
-
-$(deriveJSON defaultOptions ''SidechainPubKey)
+  deriving newtype (Prelude.Eq, Prelude.Ord, ToData, FromData, UnsafeFromData)
 
 -- * Committee Candidate Validator data
 
@@ -107,20 +81,12 @@ data RegisterParams = RegisterParams
   , sidechainSig :: Signature
   , inputUtxo :: TxOutRef
   }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''RegisterParams)
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
   { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
   }
-  deriving stock (Generic, Prelude.Show)
-  deriving anyclass (ToSchema)
-
-$(deriveJSON defaultOptions ''DeregisterParams)
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
@@ -136,8 +102,6 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | Owner public key hash
     bprOwnPkh :: PubKeyHash
   }
-  deriving stock (Prelude.Show)
-
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
@@ -146,7 +110,6 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }
-  deriving stock (Prelude.Show)
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
@@ -168,7 +131,7 @@ data MerkleTreeEntry = MerkleTreeEntry
     mtePreviousMerkleRoot :: Maybe BuiltinByteString
   }
 
-makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
+PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
 {- | 'MerkleRootInsertionMessage' is a data type for which committee members
  create signatures for
@@ -180,7 +143,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
   }
 
-makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
+PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
 -- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
@@ -206,7 +169,6 @@ data SignedMerkleRootMint = SignedMerkleRootMint
     smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
   }
 
-PlutusTx.makeLift ''SignedMerkleRootMint
 PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
 
 {- | 'CombinedMerkleProof' is a product type to include both the
@@ -266,7 +228,6 @@ data FUELMint = FUELMint
     fmDsKeyCurrencySymbol :: CurrencySymbol
   }
 
-PlutusTx.makeLift ''FUELMint
 PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
 
 -- * Update Committee Hash data
@@ -279,11 +240,6 @@ data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   { committeeHash :: BuiltinByteString
   , sidechainEpoch :: Integer
   }
-
-instance Eq UpdateCommitteeHashDatum where
-  {-# INLINEABLE (==) #-}
-  UpdateCommitteeHashDatum cmtHsh epoch == UpdateCommitteeHashDatum cmtHsh' epoch' =
-    cmtHsh == cmtHsh' && epoch == epoch'
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
@@ -313,10 +269,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
     -- root token. This is needed for verifying that the previous merkle root is verified.
     cMptRootTokenCurrencySymbol :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
-PlutusTx.makeLift ''UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
@@ -328,5 +281,5 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
   , uchmSidechainEpoch :: Integer
   }
-PlutusTx.makeLift ''UpdateCommitteeHashMessage
+
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]

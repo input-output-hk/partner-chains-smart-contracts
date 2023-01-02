@@ -9,7 +9,6 @@ import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
@@ -21,7 +20,7 @@ import Plutus.V2.Ledger.Api (
   TxOut (txOutDatum, txOutValue),
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusTx (applyCode, compile, liftCode)
+import PlutusTx (compile)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.OnChain.Types (
@@ -162,14 +161,6 @@ mkMintingPolicy
         -- minting a token, and we pattern match to guarantee that there is
         -- only one token being minted namely this token.
         _ -> False
-
--- | 'mintingPolicy' is the minting policy for the signed merkle root tokens
-mintingPolicy :: SignedMerkleRootMint -> MintingPolicy
-mintingPolicy param =
-  Ledger.mkMintingPolicyScript
-    ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
-  where
-    wrap = ScriptUtils.mkUntypedMintingPolicy
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

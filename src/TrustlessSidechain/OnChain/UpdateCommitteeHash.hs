@@ -5,20 +5,14 @@
 
 module TrustlessSidechain.OnChain.UpdateCommitteeHash where
 
-import Cardano.Crypto.Wallet (XPrv)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
-import Ledger.Crypto qualified as Crypto
-import Ledger.Value (AssetClass)
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
-  CurrencySymbol,
   Datum (getDatum),
-  MintingPolicy,
   TokenName (TokenName),
   Value (getValue),
  )
@@ -82,17 +76,6 @@ aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 {-# INLINEABLE aggregateCheck #-}
 aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
-
-{- | 'multiSign'' is a wrapper for how multiple private keys can sign a message.
-Warning: there should be a non-empty number of private keys.
-We put this function here (even though it isn't used in the on chain code)
-because it corresponds to the 'verifyMultiSignature'
-TODO: For now, to simplify things we just make the first person sign the message.
-TODO: do a proper multisign later.
--}
-multiSign :: BuiltinByteString -> [XPrv] -> BuiltinByteString
-multiSign msg (prvKey : _) = Crypto.getSignature (Crypto.sign' msg prvKey)
-multiSign _ _ = traceError "Empty multisign"
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
   1. The native token is in both the input and output.
@@ -292,26 +275,6 @@ mkCommitteeHashPolicy ichm _red ctx =
     checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
       Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
       _ -> False
-
--- | 'committeeHashPolicy' is the minting policy
-{-# INLINEABLE committeeHashPolicy #-}
-committeeHashPolicy :: InitCommitteeHashMint -> MintingPolicy
-committeeHashPolicy gch =
-  Ledger.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy||])
-      `PlutusTx.applyCode` PlutusTx.liftCode gch
-
--- | 'committeeHashCurSymbol' is the currency symbol
-{-# INLINEABLE committeeHashCurSymbol #-}
-committeeHashCurSymbol :: InitCommitteeHashMint -> CurrencySymbol
-committeeHashCurSymbol ichm = scriptCurrencySymbol $ committeeHashPolicy ichm
-
-{- | 'committeeHashAssetClass' is the asset class. See 'initCommitteeHashMintTn'
- for details on the token name
--}
-{-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass :: InitCommitteeHashMint -> AssetClass
-committeeHashAssetClass ichm = Value.assetClass (committeeHashCurSymbol ichm) initCommitteeHashMintTn
 
 -- CTL hack
 mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

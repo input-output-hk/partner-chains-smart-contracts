@@ -161,7 +161,6 @@ data SidechainCommitteeMember = SidechainCommitteeMember
   { scmPrivateKey :: SECP.SecKey
   , scmPublicKey :: SidechainPubKey
   }
-  deriving (Show, Eq)
 
 {- | 'SidechainCommittee' is a newtype wrapper around a lsit of
  @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
@@ -170,7 +169,6 @@ data SidechainCommitteeMember = SidechainCommitteeMember
 -}
 newtype SidechainCommittee = SidechainCommittee
   {unSidechainCommittee :: [SidechainCommitteeMember]}
-  deriving stock (Show, Eq)
   deriving newtype (FromJSON, ToJSON)
 
 instance FromJSON SidechainCommitteeMember where
