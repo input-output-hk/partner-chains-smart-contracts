@@ -11,11 +11,12 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
+import MerkleTree (RootHash)
 import Partial.Unsafe as Unsafe
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
@@ -48,7 +49,7 @@ generateUchmSignatures ∷
   , -- The new committee
     newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
@@ -96,7 +97,7 @@ updateCommitteeHash ∷
   , -- The new committee
     newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
@@ -117,7 +118,7 @@ updateCommitteeHashWith ∷
   , -- The new committee
     newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →

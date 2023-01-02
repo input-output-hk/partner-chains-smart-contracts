@@ -49,6 +49,7 @@ import MPTRoot.Utils
   , normalizeSaveRootParams
   , serialiseMrimHash
   )
+import MerkleTree as MerkleTree
 import SidechainParams (SidechainParams)
 import SidechainParams as SidechainParams
 import UpdateCommitteeHash
@@ -113,11 +114,13 @@ runSaveRoot
   merkleRootTokenName ←
     liftContractM
       (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
-      $ Value.mkTokenName merkleRoot
+      $ Value.mkTokenName
+      $ MerkleTree.unRootHash merkleRoot
 
   -- Grab the transaction holding the last merkle root
   ---------------------------------------------------------
-  maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo previousMerkleRoot
+  maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo
+    previousMerkleRoot
     smrm
 
   -- Grab the utxo with the current committee hash / verifying that this
