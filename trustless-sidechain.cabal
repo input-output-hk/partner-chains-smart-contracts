@@ -84,21 +84,20 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
+    TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.DistributedSet
+    TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.MerkleTree
-    TrustlessSidechain.OffChain.Types
-    TrustlessSidechain.OnChain.CommitteeCandidateValidator
-    TrustlessSidechain.OnChain.DistributedSet
-    TrustlessSidechain.OnChain.FUELMintingPolicy
-    TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy
-    TrustlessSidechain.OnChain.MPTRootTokenValidator
-    TrustlessSidechain.OnChain.PoCECDSA
-    TrustlessSidechain.OnChain.PoCInlineDatum
-    TrustlessSidechain.OnChain.PoCReferenceInput
-    TrustlessSidechain.OnChain.PoCReferenceScript
-    TrustlessSidechain.OnChain.PoCSerialiseData
-    TrustlessSidechain.OnChain.Types
-    TrustlessSidechain.OnChain.UpdateCommitteeHash
-    TrustlessSidechain.OnChain.Utils
+    TrustlessSidechain.MPTRootTokenMintingPolicy
+    TrustlessSidechain.MPTRootTokenValidator
+    TrustlessSidechain.PoCECDSA
+    TrustlessSidechain.PoCInlineDatum
+    TrustlessSidechain.PoCReferenceInput
+    TrustlessSidechain.PoCReferenceScript
+    TrustlessSidechain.PoCSerialiseData
+    TrustlessSidechain.Types
+    TrustlessSidechain.UpdateCommitteeHash
+    TrustlessSidechain.Utils
 
   build-depends:
     , aeson                ^>=1.5.0.0
