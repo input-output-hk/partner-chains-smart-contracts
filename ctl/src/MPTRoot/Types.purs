@@ -20,7 +20,7 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Value (CurrencySymbol)
 import SidechainParams (SidechainParams, SidechainParams')
-import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot
@@ -32,9 +32,9 @@ data SignedMerkleRoot = SignedMerkleRoot
   , -- Ordered as their corresponding public keys. In the case that not all the
     -- committees' public keys signed the message, the length of this list will be
     -- less than the committee public keys.
-    signatures ∷ Array Signature
+    signatures ∷ Array SidechainSignature
   , -- Sorted public keys of all committee members
-    committeePubKeys ∷ Array PubKey
+    committeePubKeys ∷ Array SidechainPublicKey
   }
 
 derive instance Generic SignedMerkleRoot _
@@ -77,7 +77,7 @@ newtype SaveRootParams = SaveRootParams
   , merkleRoot ∷ ByteArray
   , previousMerkleRoot ∷ Maybe ByteArray
   , -- Public keys of all committee members and their corresponding signatures.
-    committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
+    committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
   }
 
 -- | `MerkleRootInsertionMessage` is a data type for which committee members

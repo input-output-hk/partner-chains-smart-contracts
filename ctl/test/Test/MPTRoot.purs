@@ -19,7 +19,7 @@ import MerkleTree as MerkleTree
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
-import Utils.Crypto (PrivateKey)
+import Utils.Crypto (SidechainPrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
@@ -31,7 +31,7 @@ saveRoot ∷
   , -- merkle tree entries used to build the new merkle root
     merkleTreeEntries ∷ Array MerkleTreeEntry
   , -- the current committee's (expected to be stored on chain) private keys
-    currentCommitteePrvKeys ∷ Array PrivateKey
+    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe ByteArray
   } →

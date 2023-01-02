@@ -14,6 +14,7 @@ module MPTRoot.Utils
   , findMptRootTokenUtxo
   , findPreviousMptRootTokenUtxo
   , serialiseMrimHash
+  , normalizeSaveRootParams
   ) where
 
 import Contract.Prelude
@@ -32,11 +33,28 @@ import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MPTRoot.Types (MerkleRootInsertionMessage, SignedMerkleRootMint)
+import MPTRoot.Types
+  ( MerkleRootInsertionMessage
+  , SaveRootParams(..)
+  , SignedMerkleRootMint
+  )
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams)
+import Utils.Crypto (SidechainMessage)
+import Utils.Crypto as Utils.Crypto
 import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
+
+-- | `normalizeSaveRootParams` modifies the following fields in
+-- | `SaveRootParams` fields to satisfy the following properties
+-- |    - `committeeSignatures` is sorted (lexicographically) by the
+-- |    `SidechainPublicKey`.
+normalizeSaveRootParams ∷ SaveRootParams → SaveRootParams
+normalizeSaveRootParams (SaveRootParams p) =
+  SaveRootParams p
+    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
+        p.committeeSignatures
+    }
 
 -- | `mptRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMPTRootTokenMintingPolicy` paramaterized by the given
@@ -126,6 +144,7 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
 -- | ```purescript
 -- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
 -- | ```
-serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe ByteArray
-serialiseMrimHash = (Hashing.blake2b256Hash <$> _) <<<
-  Utils.SerialiseData.serialiseToData
+serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe SidechainMessage
+serialiseMrimHash =
+  Utils.Crypto.sidechainMessage <=<
+    ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)

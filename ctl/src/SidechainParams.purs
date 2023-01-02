@@ -12,8 +12,8 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Partial.Unsafe (unsafePartial)
-import Types (PubKey)
 import Utils.Codecs (byteArrayCodec, transactionInputCodec)
+import Utils.Crypto (SidechainPublicKey)
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
@@ -117,7 +117,7 @@ newtype InitSidechainParams = InitSidechainParams
     -- internal function of the side chain
     initUtxo ∷ TransactionInput
   , -- `initCommittee` is the initial committee of the sidechain
-    initCommittee ∷ Array PubKey
+    initCommittee ∷ Array SidechainPublicKey
   , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
     initSidechainEpoch ∷ BigInt
   , initMint ∷ Maybe TransactionInput
