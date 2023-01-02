@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.FUELMintingPolicy where
+module TrustlessSidechain.FUELMintingPolicy where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
@@ -12,10 +12,10 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
+import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   FUELMint (fmDsKeyCurrencySymbol, fmMptRootTokenCurrencySymbol, fmSidechainParams),
   FUELRedeemer (MainToSide, SideToMain),
   MerkleTreeEntry (mteAmount, mteRecipient),
@@ -82,7 +82,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- can be rewritten as
                 -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
                 -- where from
-                -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
+                -- 'TrustlessSidechain.MPTRootTokenMintingPolicy.mkMintingPolicy'
                 -- we can be certain there is only ONE distinct TokenName for
                 -- each 'CurrencySymbol'
                 --

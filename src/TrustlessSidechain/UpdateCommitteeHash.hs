@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module TrustlessSidechain.OnChain.UpdateCommitteeHash where
+module TrustlessSidechain.UpdateCommitteeHash where
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
@@ -30,7 +30,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
@@ -42,7 +42,7 @@ import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
   convertSCParams,
  )
-import TrustlessSidechain.OnChain.Utils (verifyMultisig)
+import TrustlessSidechain.Utils (verifyMultisig)
 import Prelude qualified
 
 -- * Updating the committee hash

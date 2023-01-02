@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module TrustlessSidechain.OnChain.CommitteeCandidateValidator where
+module TrustlessSidechain.CommitteeCandidateValidator where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
@@ -11,7 +11,7 @@ import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as ScriptUtils
 import Plutus.V2.Ledger.Contexts (ScriptContext (scriptContextTxInfo), txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   BlockProducerRegistration (..),
   SidechainParams (..),
  )

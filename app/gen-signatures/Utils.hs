@@ -83,7 +83,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
   SidechainPubKey (SidechainPubKey),
@@ -123,7 +123,7 @@ bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
  See Discussion on prefixes in Cardano [2]
 
  This exists so we can parse
- JSON of 'TrustlessSidechain.OnChain.Types.MerkleTreeEntry'...
+ JSON of 'TrustlessSidechain.Types.MerkleTreeEntry'...
 -}
 newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
   deriving (Show, Eq)

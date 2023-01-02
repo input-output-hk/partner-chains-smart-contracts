@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.MPTRootTokenValidator (
+module TrustlessSidechain.MPTRootTokenValidator (
   serialisableValidator,
 ) where
 
@@ -12,7 +12,7 @@ import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import PlutusTx (compile, unsafeFromBuiltinData)
 import PlutusTx.Trace qualified as Trace
-import TrustlessSidechain.OnChain.Types (SidechainParams)
+import TrustlessSidechain.Types (SidechainParams)
 
 -- | 'mkMptRootTokenValidator' always fails.
 {-# INLINEABLE mkMptRootTokenValidator #-}

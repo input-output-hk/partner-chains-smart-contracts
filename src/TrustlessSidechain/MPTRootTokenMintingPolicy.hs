@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
+module TrustlessSidechain.MPTRootTokenMintingPolicy where
 
 import PlutusTx.Prelude
 
@@ -23,7 +23,7 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OnChain.Types (
+import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (..),
   MerkleTreeEntry,
   SidechainParams (
@@ -36,8 +36,8 @@ import TrustlessSidechain.OnChain.Types (
   UpdateCommitteeHashDatum (committeeHash),
   convertSCParams,
  )
-import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
+import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.Utils qualified as Utils (verifyMultisig)
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -63,7 +63,7 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
       committee members, and the list of public keys are unique
 
       3. the concatenated and hashed value of the public keys correspond to the
-      one saved on-chain in 'TrustlessSidechain.OnChain.UpdatingCommitteeHash'
+      one saved on-chain in 'TrustlessSidechain.UpdatingCommitteeHash'
 
       4. Exactly one token is minted
 
@@ -104,7 +104,7 @@ mkMintingPolicy
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
-                  -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash'
+                  -- 'TrustlessSidechain.UpdateCommitteeHash'
                   OutputDatum d <- txOutDatum o =
                 IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
@@ -114,7 +114,7 @@ mkMintingPolicy
       threshold :: Integer
       threshold =
         -- See Note [Threshold of Strictly More than Threshold Majority] in
-        -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash' (this is mostly
+        -- 'TrustlessSidechain.UpdateCommitteeHash' (this is mostly
         -- duplicated from there)
         ( length committeePubKeys
             `Builtins.multiplyInteger` thresholdNumerator sc

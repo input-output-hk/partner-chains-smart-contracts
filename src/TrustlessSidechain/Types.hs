@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module TrustlessSidechain.OnChain.Types where
+module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
@@ -207,7 +207,7 @@ PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 data FUELMint = FUELMint
   { -- 'fmMptRootTokenValidator' is the hash of the validator script
     -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.OnChain.MPTRootTokenValidator' for
+    -- name. See 'TrustlessSidechain.MPTRootTokenValidator' for
     -- details.
     -- > fmMptRootTokenValidator :: ValidatorHash
     -- N.B. We don't need this! We're really only interested in the token,
@@ -217,7 +217,7 @@ data FUELMint = FUELMint
 
     -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
     -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy' for details.
+    -- 'TrustlessSidechain.MPTRootTokenMintingPolicy' for details.
     fmMptRootTokenCurrencySymbol :: CurrencySymbol
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams

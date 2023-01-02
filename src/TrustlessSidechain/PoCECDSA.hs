@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module TrustlessSidechain.OnChain.PoCECDSA (
+module TrustlessSidechain.PoCECDSA (
   ECDSARed (..),
   serialisableValidator,
 ) where

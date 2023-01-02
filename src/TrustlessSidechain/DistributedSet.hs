@@ -8,7 +8,7 @@
  We call this a *distributed set* since the set structure is distributed over
  many utxos in the block chain.
 -}
-module TrustlessSidechain.OnChain.DistributedSet (
+module TrustlessSidechain.DistributedSet (
   -- * Data types
   Ds (Ds, dsConf),
   DsDatum (DsDatum, dsNext),
