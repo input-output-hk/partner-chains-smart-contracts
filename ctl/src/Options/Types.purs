@@ -114,4 +114,4 @@ type RuntimeConfig =
   , network ∷ Maybe NetworkId
   }
 
-type Committee = List (ByteArray /\ Maybe ByteArray)
+type Committee = List (SidechainPublicKey /\ Maybe SidechainSignature)

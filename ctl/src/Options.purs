@@ -436,8 +436,8 @@ options maybeConfig committee = info (helper <*> optSpec)
       <#> CommitteeHandover
 
   -- `parseNewCommitteePubKeys` parses the new committee public keys.
-  parseNewCommitteePubKeys ∷ Parser (List ByteArray)
-  parseNewCommitteePubKeys = many $ option byteArray $ fold
+  parseNewCommitteePubKeys ∷ Parser (List SidechainPublicKey)
+  parseNewCommitteePubKeys = many $ option sidechainPublicKey $ fold
     [ long "new-committee-pub-key"
     , metavar "PUBLIC_KEY"
     , help "Public key of a new committee member"
@@ -498,11 +498,12 @@ options maybeConfig committee = info (helper <*> optSpec)
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
     committeePubKeys ←
-      map (fallback (map fst committee)) $ many $ option sidechainPublicKey $ fold
-        [ long "committee-pub-key"
-        , metavar "PUBLIC_KEY"
-        , help "Public key for a committee member at sidechain initialisation"
-        ]
+      map (fallback (map fst committee)) $ many $ option sidechainPublicKey
+        $ fold
+            [ long "committee-pub-key"
+            , metavar "PUBLIC_KEY"
+            , help "Public key for a committee member at sidechain initialisation"
+            ]
     initSidechainEpoch ← parseSidechainEpoch
     in
       Init { committeePubKeys, initSidechainEpoch }

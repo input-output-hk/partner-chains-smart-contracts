@@ -14,6 +14,13 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.UInt as UInt
 import Options.Types (Committee, Config)
 import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
+import Utils.Crypto
+  ( SidechainPublicKey
+  , SidechainSignature
+  , getSidechainPublicKeyByteArray
+  , getSidechainSignatureByteArray
+  )
+import Utils.Crypto as Utils.Crypto
 
 configCodec ∷ CA.JsonCodec Config
 configCodec =
@@ -50,12 +57,26 @@ committeeCodec ∷ CA.JsonCodec Committee
 committeeCodec = CAM.list memberCodec
   where
   memberRecord = CAR.object "member"
-    { "public-key": byteArrayCodec
-    , "signature": CAC.maybe byteArrayCodec
+    { "public-key": sidechainPubKeyCodec
+    , "signature": CAC.maybe sidechainSignatureCodec
     }
   memberCodec = CA.prismaticCodec "member" dec enc memberRecord
   dec { "public-key": p, signature } = Just (p /\ signature)
   enc (p /\ signature) = { "public-key": p, signature }
+
+sidechainPubKeyCodec ∷ CA.JsonCodec SidechainPublicKey
+sidechainPubKeyCodec = CA.prismaticCodec "SidechainPublicKey" dec enc
+  byteArrayCodec
+  where
+  dec = Utils.Crypto.sidechainPublicKey
+  enc = getSidechainPublicKeyByteArray
+
+sidechainSignatureCodec ∷ CA.JsonCodec SidechainSignature
+sidechainSignatureCodec = CA.prismaticCodec "SidechainSignature" dec enc
+  byteArrayCodec
+  where
+  dec = Utils.Crypto.sidechainSignature
+  enc = getSidechainSignatureByteArray
 
 serverConfigCodec ∷ CA.JsonCodec ServerConfig
 serverConfigCodec = CAR.object "serverConfig"
