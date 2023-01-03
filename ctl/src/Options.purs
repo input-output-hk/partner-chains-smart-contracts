@@ -30,7 +30,6 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.EuclideanRing as EuclideanRing
 import Data.List (List(..))
-import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -72,7 +71,6 @@ import Options.Applicative
   )
 import Options.Types (Committee, Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
-import Types (PubKey, Signature)
 import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import Utils.Crypto as Utils.Crypto
 import Utils.Logging (environment, fileLogger)
