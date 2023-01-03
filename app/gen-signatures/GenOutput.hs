@@ -43,7 +43,6 @@ import TrustlessSidechain.Types (
     uchmSidechainEpoch,
     uchmSidechainParams
   ),
-  convertSCParams,
  )
 import Utils (
   SidechainCommittee (..),
