@@ -8,7 +8,7 @@
  We call this a *distributed set* since the set structure is distributed over
  many utxos in the block chain.
 -}
-module TrustlessSidechain.OnChain.DistributedSet (
+module TrustlessSidechain.DistributedSet (
   -- * Data types
   Ds (Ds, dsConf),
   DsDatum (DsDatum, dsNext),
@@ -34,19 +34,10 @@ module TrustlessSidechain.OnChain.DistributedSet (
   insertNode,
 
   -- * Validators / minting policies
-  insertValidator,
-  insertValidatorHash,
-  insertAddress,
   mkDsConfValidator,
-  dsConfValidator,
   mkDsConfPolicy,
   dsConfTokenName,
-  dsConfPolicy,
-  dsConfCurrencySymbol,
   mkDsKeyPolicy,
-  dsKeyPolicy,
-  dsKeyCurrencySymbol,
-  dsConfValidatorHash,
 
   -- * CTL serialisable validators / policies
   mkInsertValidatorUntyped,
@@ -64,15 +55,11 @@ import PlutusTx.Prelude
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
-import Plutus.Script.Utils.V2.Scripts (scriptCurrencySymbol, validatorHash)
 import Plutus.Script.Utils.V2.Typed.Scripts (UntypedMintingPolicy, UntypedValidator, mkUntypedMintingPolicy, mkUntypedValidator)
 import Plutus.V2.Ledger.Api (
-  Address (Address),
-  Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
   Map,
-  MintingPolicy,
   OutputDatum (..),
   Script,
   ScriptContext (scriptContextTxInfo),
@@ -81,11 +68,8 @@ import Plutus.V2.Ledger.Api (
   TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
-  Validator,
   ValidatorHash,
   Value (getValue),
-  mkMintingPolicyScript,
-  mkValidatorScript,
  )
 import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -94,10 +78,6 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import Prelude qualified
-
--- copied directly from Ledger.Address, which for some reason no longer exports it
-scriptAddress :: Validator -> Address
-scriptAddress validator = Address (ScriptCredential (validatorHash validator)) Nothing
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
  for the distributed set. (See Note [How This All Works]. Moreover, this
@@ -396,25 +376,6 @@ mkInsertValidator ds _dat _red ctx =
     getTxOutNodeInfo :: TxOut -> Node
     getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum info o
 
-{- | The typed validator script for the distributed set.
-typedInsertValidator :: Ds -> TypedValidator Ds
--}
-insertValidator :: Ds -> Validator
-insertValidator ds =
-  let wrap = mkUntypedValidator . mkInsertValidator
-   in mkValidatorScript
-        ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
-
---($$(PlutusTx.compile [||\d -> mkUntypedValidator (mkInsertValidator d)||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
-
--- | The validator hash for the distributed set.
-insertValidatorHash :: Ds -> ValidatorHash
-insertValidatorHash = validatorHash . insertValidator
-
--- | The address for the distributed set.
-insertAddress :: Ds -> Address
-insertAddress = scriptAddress . insertValidator
-
 {- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
  at. This will always error.
 -}
@@ -424,18 +385,6 @@ mkDsConfValidator _ds _dat _red _ctx = ()
 -- TODO: when we get reference inputs, we need to change the above line
 -- of code to the following line of code
 -- > mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
-
--- | The regular validator script for the conf. of the distributed set.
-dsConfValidator :: Ds -> Validator
-dsConfValidator ds =
-  mkValidatorScript ($$(PlutusTx.compile [||mkDsConfValidator||]) `PlutusTx.applyCode` PlutusTx.liftCode ds)
-
-{- | The validator hash for the conf. of the distributed set.
-
- TODO: do this properly by fetching the right package...
--}
-dsConfValidatorHash :: Ds -> ValidatorHash
-dsConfValidatorHash = validatorHash . dsConfValidator
 
 {- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
  the various minting policies that the distributed set depends on
@@ -471,16 +420,6 @@ mkDsConfPolicy dsc _red ctx =
 -}
 dsConfTokenName :: TokenName
 dsConfTokenName = TokenName emptyByteString
-
--- | 'dsConfPolicy' is the minting policy for distributed set
-dsConfPolicy :: DsConfMint -> MintingPolicy
-dsConfPolicy dscm =
-  mkMintingPolicyScript
-    ($$(PlutusTx.compile [||mkUntypedMintingPolicy . mkDsConfPolicy||]) `PlutusTx.applyCode` PlutusTx.liftCode dscm)
-
--- | 'dsConfCurrencySymbol' is the currency symbol for the distributed set
-dsConfCurrencySymbol :: DsConfMint -> CurrencySymbol
-dsConfCurrencySymbol = scriptCurrencySymbol . dsConfPolicy
 
 -- | 'mkDsKeyPolicy'.  See Note [How This All Works].
 mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool
@@ -539,18 +478,6 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     mintedTns = case AssocMap.lookup ownCS $ getValue (txInfoMint info) of
       Just mp | vs <- AssocMap.toList mp, all ((== 1) . snd) vs -> map fst vs
       _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
-
--- | 'dsKeyPolicy' is the minting policy for the prefixes of nodes
-dsKeyPolicy :: DsKeyMint -> MintingPolicy
-dsKeyPolicy dskm =
-  let wrap = mkUntypedMintingPolicy . mkDsKeyPolicy
-   in mkMintingPolicyScript ($$(PlutusTx.compile [||wrap||]) `PlutusTx.applyCode` PlutusTx.liftCode dskm)
-
-{- | 'dsKeyCurrencySymbol' is the currency symbol for prefixes of nodes in the
- distributed set
--}
-dsKeyCurrencySymbol :: DsKeyMint -> CurrencySymbol
-dsKeyCurrencySymbol = scriptCurrencySymbol . dsKeyPolicy
 
 {- Note [Alternative Ways of Doing This]
  We actually did try some other ways of doing it, but none of them worked.  For

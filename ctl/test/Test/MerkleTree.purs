@@ -11,9 +11,9 @@ import Effect.Class.Console as Console
 import MerkleTree
   ( MerkleProof(MerkleProof)
   , MerkleTree(Bin, Tip)
-  , RootHash(RootHash)
   , Side(L, R)
   , Up(Up)
+  , byteArrayToRootHashUnsafe
   )
 import MerkleTree as MerkleTree
 import Partial.Unsafe as Unsafe
@@ -48,33 +48,33 @@ test = do
     let
       expected =
         Bin
-          ( RootHash
+          ( byteArrayToRootHashUnsafe
               ( hexToByteArrayUnsafe
                   "f5259910f2ce05d66ec99cd1ff8a0ef983fb8a6123cf118e18f21e346d141cc7"
               )
           )
           ( Tip
-              ( RootHash
+              ( byteArrayToRootHashUnsafe
                   ( hexToByteArrayUnsafe
                       "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
                   )
               )
           )
           ( Bin
-              ( RootHash
+              ( byteArrayToRootHashUnsafe
                   ( hexToByteArrayUnsafe
                       "4887abf7a75e4c9e4a4abf38378d992b629c16e69d233b21702be642920fa4a2"
                   )
               )
               ( Tip
-                  ( RootHash
+                  ( byteArrayToRootHashUnsafe
                       ( hexToByteArrayUnsafe
                           "9e9979ffe1ec57d45fdafe56c8741f1093688f2a8639f0f682400709416a9f40"
                       )
                   )
               )
               ( Tip
-                  ( RootHash
+                  ( byteArrayToRootHashUnsafe
                       ( hexToByteArrayUnsafe
                           "f10e71fd4b801fe5989221bc5698ea2848bcdd9b271d3c37490109783a14c052"
                       )
@@ -113,7 +113,7 @@ test = do
               [ ( Up
                     { siblingSide: R
                     , sibling:
-                        ( RootHash
+                        ( byteArrayToRootHashUnsafe
                             ( hexToByteArrayUnsafe
                                 "f10e71fd4b801fe5989221bc5698ea2848bcdd9b271d3c37490109783a14c052"
                             )
@@ -123,7 +123,7 @@ test = do
               , ( Up
                     { siblingSide: L
                     , sibling:
-                        ( RootHash
+                        ( byteArrayToRootHashUnsafe
                             ( hexToByteArrayUnsafe
                                 "a8ae306d7dddba230de2a8844d36d4ed5efcf9f4d32b01dd96f8e800a564ef31"
                             )

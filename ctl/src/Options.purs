@@ -8,7 +8,7 @@ import Contract.Prelude
 
 import ConfigFile (decodeConfig, readJson)
 import Contract.Address (Address)
-import Contract.CborBytes (CborBytes(..), cborBytesFromByteArray)
+import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
@@ -22,27 +22,32 @@ import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
 import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
 import Control.Alternative ((<|>))
-import Control.MonadZero (guard)
 import Ctl.Internal.Deserialization.FromBytes (fromBytes)
 import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
 import Ctl.Internal.Helpers (logWithLevel)
-import Ctl.Internal.Plutus.Conversion (toPlutusAddress)
-import Ctl.Internal.Serialization.Address (addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.EuclideanRing as EuclideanRing
 import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Effect.Exception (error)
-import FUELMintingPolicy (CombinedMerkleProof)
+import FUELMintingPolicy
+  ( CombinedMerkleProof
+  , addressFromCborBytes
+  , getBech32BytesByteArray
+  )
+import MerkleTree (RootHash)
+import MerkleTree as MerkleTree
 import Options.Applicative
   ( Parser
   , ParserInfo
   , ReadM
   , action
   , command
+  , eitherReader
   , execParser
   , flag
   , fullDesc
@@ -66,7 +71,8 @@ import Options.Applicative
   )
 import Options.Types (Config, Endpoint(..), Options)
 import SidechainParams (SidechainParams(..))
-import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import Utils.Crypto as Utils.Crypto
 import Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for ctl-main
@@ -250,7 +256,7 @@ options maybeConfig = info (helper <*> optSpec)
                 ]
             )
         thresholdNumeratorDenominatorOption = ado
-          thresholdNumerator ← option bigInt $ fold
+          thresholdNumerator ← option numerator $ fold
             [ long "threshold-numerator"
             , metavar "INT"
             , help "The numerator for the ratio of the threshold"
@@ -260,7 +266,7 @@ options maybeConfig = info (helper <*> optSpec)
                         _.threshold
                     )
             ]
-          thresholdDenominator ← option bigInt $ fold
+          thresholdDenominator ← option denominator $ fold
             [ long "threshold-denominator"
             , metavar "INT"
             , help "The denominator for the ratio of the threshold"
@@ -320,7 +326,7 @@ options maybeConfig = info (helper <*> optSpec)
 
   regSpec = ado
     spoPubKey ← parseSpoPubKey
-    sidechainPubKey ← option byteArray $ fold
+    sidechainPubKey ← option sidechainPublicKey $ fold
       [ long "sidechain-public-key"
       , metavar "PUBLIC_KEY"
       , help "Sidechain public key value"
@@ -330,7 +336,7 @@ options maybeConfig = info (helper <*> optSpec)
       , metavar "SIGNATURE"
       , help "SPO signature"
       ]
-    sidechainSig ← option byteArray $ fold
+    sidechainSig ← option sidechainSignature $ fold
       [ long "sidechain-signature"
       , metavar "SIGNATURE"
       , help "Sidechain signature"
@@ -421,9 +427,9 @@ options maybeConfig = info (helper <*> optSpec)
 
   -- `parseMerkleRoot` parses the option of a new merkle root. This is used
   -- in `saveRootSpec` and `committeeHashSpec`
-  parseMerkleRoot ∷ Parser ByteArray
+  parseMerkleRoot ∷ Parser RootHash
   parseMerkleRoot = option
-    byteArray
+    rootHash
     ( fold
         [ long "merkle-root"
         , metavar "MERKLE_ROOT"
@@ -432,11 +438,11 @@ options maybeConfig = info (helper <*> optSpec)
     )
 
   -- `parseNewCommitteePubKeys` parses the new committee public keys.
-  parseNewCommitteePubKeys ∷ Parser (List ByteArray)
+  parseNewCommitteePubKeys ∷ Parser (List SidechainPublicKey)
   parseNewCommitteePubKeys =
     many
       ( option
-          byteArray
+          sidechainPublicKey
           ( fold
               [ long "new-committee-pub-key"
               , metavar "PUBLIC_KEY"
@@ -447,11 +453,11 @@ options maybeConfig = info (helper <*> optSpec)
 
   -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
   -- used in both `saveRootSpec` and `committeeHashSpec`).
-  parsePreviousMerkleRoot ∷ Parser (Maybe ByteArray)
+  parsePreviousMerkleRoot ∷ Parser (Maybe RootHash)
   parsePreviousMerkleRoot =
     optional
       ( option
-          (byteArray)
+          rootHash
           ( fold
               [ long "previous-merkle-root"
               , metavar "MERKLE_ROOT"
@@ -475,7 +481,9 @@ options maybeConfig = info (helper <*> optSpec)
   -- committees' signatures. This is used in both `saveRootSpec` and
   -- `committeeHashSpec`.
   parseCommitteeSignatures ∷
-    String → String → Parser (List (PubKey /\ Maybe Signature))
+    String →
+    String →
+    Parser (List (SidechainPublicKey /\ Maybe SidechainSignature))
   parseCommitteeSignatures longDesc helpDesc =
     many
       ( option
@@ -498,7 +506,7 @@ options maybeConfig = info (helper <*> optSpec)
       )
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
-    committeePubKeys ← many $ option byteArray $ fold
+    committeePubKeys ← many $ option sidechainPublicKey $ fold
       [ long "committee-pub-key"
       , metavar "PUBLIC_KEY"
       , help "Public key for a committee member at sidechain initialisation"
@@ -551,18 +559,35 @@ combinedMerkleProofParserWithPkh ∷
   ReadM (CombinedMerkleProof /\ Address)
 combinedMerkleProofParserWithPkh = do
   cmp ← combinedMerkleProofParser
-  -- Getting the parsed recipient from the combined proof and deserialising to an address
-  let recipient = (unwrap (unwrap cmp).transaction).recipient
+  -- Getting the parsed recipient from the combined proof and deserialising to
+  -- an address
+  let
+    recipient = getBech32BytesByteArray $
+      (unwrap (unwrap cmp).transaction).recipient
   addr ← maybe
     (readerError "Couldn't convert recipient bech32 to Plutus address")
     pure
-    (toPlutusAddress =<< addressFromBytes (CborBytes recipient))
+    (addressFromCborBytes (cborBytesFromByteArray recipient))
 
   pure (cmp /\ addr)
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
+
+-- | Parses a SidechainPublicKey from hexadecimal representation.
+-- | See `SidechainPublicKey` for the invariants.
+sidechainPublicKey ∷ ReadM SidechainPublicKey
+sidechainPublicKey = maybeReader
+  $ Utils.Crypto.sidechainPublicKey
+  <=< hexToByteArray
+
+-- | Parses a SidechainSignature from hexadecimal representation.
+-- | See `SidechainSignature` for the invariants.
+sidechainSignature ∷ ReadM SidechainSignature
+sidechainSignature = maybeReader
+  $ Utils.Crypto.sidechainSignature
+  <=< hexToByteArray
 
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise
@@ -574,9 +599,33 @@ cbor = cborBytesFromByteArray <$> byteArray
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
 
+-- | Parse a numerator in the threshold.
+numerator ∷ ReadM BigInt
+numerator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "numerator must be non-negative"
+      Nothing → Left "failed to parse int numerator"
+  )
+
+-- | Parse a denominator in the threshold.
+denominator ∷ ReadM BigInt
+denominator = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i > zero → pure i
+        | otherwise → Left "denominator must be positive"
+      Nothing → Left "failed to parse int denominator"
+  )
+
 -- | Parse UInt
 uint ∷ ReadM UInt
 uint = maybeReader UInt.fromString
+
+-- | Parses the raw bytes of a `RootHash`
+rootHash ∷ ReadM RootHash
+rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray)
 
 -- | `sidechainAddress` parses
 -- | ```
@@ -595,22 +644,39 @@ sidechainAddress = maybeReader $ \str →
 -- | `thresholdFraction` is the CLI parser for `parseThresholdFraction`.
 thresholdFraction ∷
   ReadM { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
-thresholdFraction = maybeReader parseThresholdFraction
+thresholdFraction = eitherReader parseThresholdFraction
 
--- | `parseThresholdFraction` parses the threshold represented as `Num/Denom`.
+-- | `parseThresholdFraction` parses the threshold represented as `Num/Denom`
+-- | and verifies that
+-- |        - Num <= Denom
+-- |        - Num >= 0, Denom > 0
+-- |        - Num and Denom are coprime
 parseThresholdFraction ∷
-  String → Maybe { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
+  String →
+  Either String { thresholdNumerator ∷ BigInt, thresholdDenominator ∷ BigInt }
 parseThresholdFraction str =
   case split (Pattern "/") str of
     [ n, d ] | n /= "" && d /= "" → do
-      thresholdNumerator ← BigInt.fromString n
-      thresholdDenominator ← BigInt.fromString d
-      guard $ thresholdNumerator > zero && thresholdDenominator > zero
-      pure { thresholdNumerator, thresholdDenominator }
-    _ → Nothing
+      let
+        fromString' = maybe (Left "failed to parse Int from String") pure <<<
+          BigInt.fromString
+      thresholdNumerator ← fromString' n
+      thresholdDenominator ← fromString' d
+      if
+        -- not totally too sure if purescript short circuits, so write out
+        -- the if statements explicitly..
+        ( if thresholdNumerator >= zero && thresholdDenominator > zero then
+            thresholdDenominator >= thresholdNumerator
+              && EuclideanRing.gcd thresholdDenominator thresholdNumerator
+              == one
+          else false
+        ) then pure { thresholdNumerator, thresholdDenominator }
+      else Left
+        "'n/m' must be coprime, in the interval [0,1], and both non-negative."
+    _ → Left "failed to parse ratio 'n/m'"
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
-committeeSignature ∷ ReadM (ByteArray /\ Maybe ByteArray)
+committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
@@ -618,13 +684,17 @@ committeeSignature = maybeReader parsePubKeyAndSignature
 -- `aa` denotes a pubkey without a signature
 -- `aa:bb` denotes a pubkey and a signature
 -- anything else is likely an error, and should be treated as malformed input
-parsePubKeyAndSignature ∷ String → Maybe (ByteArray /\ Maybe ByteArray)
+parsePubKeyAndSignature ∷
+  String → Maybe (SidechainPublicKey /\ Maybe SidechainSignature)
 parsePubKeyAndSignature str =
   case split (Pattern ":") str of
-    [ l, r ] | l /= "" → ado
-      l' ← hexToByteArray l
-      r' ← hexToByteArray r
-      in l' /\ (r' <$ guard (r /= ""))
-    [ l ] →
-      (_ /\ Nothing) <$> hexToByteArray l
+    [ l, r ] | l /= "" → do
+      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      if r == "" then pure $ l' /\ Nothing
+      else do
+        r' ← Utils.Crypto.sidechainSignature <=< hexToByteArray $ r
+        pure $ l' /\ Just r'
+    [ l ] → ado
+      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      in l' /\ Nothing
     _ → Nothing

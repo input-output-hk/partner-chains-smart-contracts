@@ -25,8 +25,10 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
+import MerkleTree (RootHash)
 import SidechainParams (SidechainParams)
-import Types (AssetClass, PubKey, Signature)
+import Types (AssetClass)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
 -- | validator
@@ -86,10 +88,10 @@ instance ToData InitCommitteeHashMint where
 -- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee
 -- | hash validator.
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array Signature
-  , committeePubKeys ∷ Array PubKey
-  , newCommitteePubKeys ∷ Array PubKey
-  , previousMerkleRoot ∷ Maybe ByteArray
+  { committeeSignatures ∷ Array SidechainSignature
+  , committeePubKeys ∷ Array SidechainPublicKey
+  , newCommitteePubKeys ∷ Array SidechainPublicKey
+  , previousMerkleRoot ∷ Maybe RootHash
   }
 
 derive instance Generic UpdateCommitteeHashRedeemer _
@@ -112,9 +114,9 @@ instance ToData UpdateCommitteeHashRedeemer where
 -- | committee hash endpoint.
 newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array PubKey
-  , committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , newCommitteePubKeys ∷ Array SidechainPublicKey
+  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }
 
@@ -130,8 +132,8 @@ newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   , -- `newCommitteePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    newCommitteePubKeys ∷ Array PubKey
-  , previousMerkleRoot ∷ Maybe ByteArray
+    newCommitteePubKeys ∷ Array SidechainPublicKey
+  , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   }
 

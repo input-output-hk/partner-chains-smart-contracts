@@ -23,7 +23,7 @@ import Effect.Exception as Exception
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(..))
 import Test.Utils as Test.Utils
-import Utils.Crypto (PrivateKey, PublicKey)
+import Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
 import Utils.Crypto as Crypto
 
 -- | `generateInitCommittee` generates an intial committee of the given size as
@@ -34,7 +34,7 @@ import Utils.Crypto as Crypto
 -- This may be helpful when attempting to use the CLI interface to generate
 -- test cases manually.
 generateInitCommittee ∷
-  Int → Effect (Array (PublicKey /\ PrivateKey))
+  Int → Effect (Array (SidechainPublicKey /\ SidechainPrivateKey))
 generateInitCommittee committeeSize = do
   committeePrvKeys ← sequence $ Array.replicate committeeSize
     Crypto.generateRandomPrivateKey

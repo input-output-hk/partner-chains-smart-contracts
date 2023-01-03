@@ -61,14 +61,15 @@ import Data.Map as Map
 import RawScripts (rawCommitteeCandidateValidator)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import Utils.Logging (class Display, mkReport)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
   , spoPubKey ∷ PubKey
-  , sidechainPubKey ∷ PubKey
+  , sidechainPubKey ∷ SidechainPublicKey
   , spoSig ∷ Signature
-  , sidechainSig ∷ Signature
+  , sidechainSig ∷ SidechainSignature
   , inputUtxo ∷ TransactionInput
   }
 
@@ -82,15 +83,14 @@ getCommitteeCandidateValidator sp = do
   ccvUnapplied ← plutusV2Script <$> textEnvelopeBytes
     rawCommitteeCandidateValidator
     PlutusScriptV2
-
   applied ← applyArgs ccvUnapplied [ toData sp ]
   Validator <$> liftContractE applied
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
-  , bprSidechainPubKey ∷ PubKey -- public key in the sidechain's desired format
+  , bprSidechainPubKey ∷ SidechainPublicKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ Signature -- Signature of the SPO
+  , bprSidechainSignature ∷ SidechainSignature -- Signature of the sidechain candidate
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }
@@ -131,7 +131,7 @@ instance FromData BlockProducerRegistration where
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
-  , bprmSidechainPubKey ∷ String
+  , bprmSidechainPubKey ∷ SidechainPublicKey
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 

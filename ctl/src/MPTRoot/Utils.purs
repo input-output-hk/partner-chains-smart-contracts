@@ -14,6 +14,7 @@ module MPTRoot.Utils
   , findMptRootTokenUtxo
   , findPreviousMptRootTokenUtxo
   , serialiseMrimHash
+  , normalizeSaveRootParams
   ) where
 
 import Contract.Prelude
@@ -23,7 +24,6 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
@@ -32,11 +32,30 @@ import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MPTRoot.Types (MerkleRootInsertionMessage, SignedMerkleRootMint)
+import MPTRoot.Types
+  ( MerkleRootInsertionMessage
+  , SaveRootParams(..)
+  , SignedMerkleRootMint
+  )
+import MerkleTree (RootHash)
+import MerkleTree as MerkleTree
 import RawScripts as RawScripts
 import SidechainParams (SidechainParams)
+import Utils.Crypto (SidechainMessage)
+import Utils.Crypto as Utils.Crypto
 import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
+
+-- | `normalizeSaveRootParams` modifies the following fields in
+-- | `SaveRootParams` fields to satisfy the following properties
+-- |    - `committeeSignatures` is sorted (lexicographically) by the
+-- |    `SidechainPublicKey`.
+normalizeSaveRootParams ∷ SaveRootParams → SaveRootParams
+normalizeSaveRootParams (SaveRootParams p) =
+  SaveRootParams p
+    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
+        p.committeeSignatures
+    }
 
 -- | `mptRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMPTRootTokenMintingPolicy` paramaterized by the given
@@ -104,7 +123,7 @@ findMptRootTokenUtxo merkleRoot smrm = do
 -- | finding the utxo... rather it reflects the `Maybe` in the last merkle root
 -- | of whether it exists or not.
 findPreviousMptRootTokenUtxo ∷
-  Maybe ByteArray →
+  Maybe RootHash →
   SignedMerkleRootMint →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
@@ -114,7 +133,7 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
     Just lastMerkleRoot' → do
       lastMerkleRootTokenName ← Monad.liftContractM
         "error 'saveRoot': invalid lastMerkleRoot token name"
-        (Value.mkTokenName lastMerkleRoot')
+        (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
       lkup ← findMptRootTokenUtxo lastMerkleRootTokenName smrm
       lkup' ←
         Monad.liftContractM
@@ -126,6 +145,7 @@ findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
 -- | ```purescript
 -- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
 -- | ```
-serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe ByteArray
-serialiseMrimHash = (Hashing.blake2b256Hash <$> _) <<<
-  Utils.SerialiseData.serialiseToData
+serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe SidechainMessage
+serialiseMrimHash =
+  Utils.Crypto.sidechainMessage <=<
+    ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)

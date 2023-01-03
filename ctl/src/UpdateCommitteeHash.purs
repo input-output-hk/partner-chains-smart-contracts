@@ -27,7 +27,6 @@ import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -49,6 +48,7 @@ import UpdateCommitteeHash.Utils
   , committeeHashPolicy
   , findUpdateCommitteeHashUtxo
   , initCommitteeHashMintTn
+  , normalizeCommitteeHashParams
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
@@ -60,16 +60,32 @@ import Utils.Logging as Utils.Logging
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
 updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
-updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
+updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
+
+-- | `runUpdateCommitteeHash` is the main worker function of the
+-- | `updateCommitteeHash` endpoint.
+-- | Preconditions:
+-- |    - `UpdateCommitteeHashParams` has been normalized via
+-- |    `UpdateCommitteeHash.Utils.normalizeCommitteeHashParams`
+runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
+runUpdateCommitteeHash
+  ( UpdateCommitteeHashParams
+      { sidechainParams
+      , newCommitteePubKeys
+      , committeeSignatures
+      , previousMerkleRoot
+      , sidechainEpoch
+      }
+  ) = do
   let -- `msg` is used to help generate log messages
-    msg = report "updateCommitteeHash"
+    msg = report "runUpdateCommitteeHash"
 
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
   pol ← committeeHashPolicy
     ( InitCommitteeHashMint
-        { icTxOutRef: (\(SidechainParams x) → x.genesisUtxo) uchp.sidechainParams
+        { icTxOutRef: (\(SidechainParams x) → x.genesisUtxo) sidechainParams
         }
     )
 
@@ -82,7 +98,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     smrm = SignedMerkleRootMint
-      { sidechainParams: uchp.sidechainParams
+      { sidechainParams: sidechainParams
       , updateCommitteeHashCurrencySymbol: cs
       }
   mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
@@ -94,33 +110,32 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -- Building the new committee hash / verifying that the new committee was
   -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
-  when (null uchp.committeeSignatures)
+  when (null committeeSignatures)
     (throwContractError $ msg "Empty Committee")
 
   let
-    newCommitteeSorted = Array.sort uchp.newCommitteePubKeys
-    newCommitteeHash = aggregateKeys newCommitteeSorted
+    newCommitteeHash = aggregateKeys newCommitteePubKeys
 
-    curCommitteePubKeys /\ committeeSignatures =
-      Utils.Crypto.normalizeCommitteePubKeysAndSignatures uchp.committeeSignatures
+    curCommitteePubKeys /\ curCommitteeSignatures =
+      Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
     curCommitteeHash = aggregateKeys curCommitteePubKeys
 
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
     $ serialiseUchmHash
     $ UpdateCommitteeHashMessage
-        { sidechainParams: uchp.sidechainParams
-        , newCommitteePubKeys: newCommitteeSorted
-        , previousMerkleRoot: uchp.previousMerkleRoot
-        , sidechainEpoch: uchp.sidechainEpoch
+        { sidechainParams: sidechainParams
+        , newCommitteePubKeys: newCommitteePubKeys
+        , previousMerkleRoot: previousMerkleRoot
+        , sidechainEpoch: sidechainEpoch
         }
 
   unless
     ( Utils.Crypto.verifyMultiSignature
-        ((unwrap uchp.sidechainParams).thresholdNumerator)
-        ((unwrap uchp.sidechainParams).thresholdDenominator)
+        ((unwrap sidechainParams).thresholdNumerator)
+        ((unwrap sidechainParams).thresholdDenominator)
         curCommitteePubKeys
         uchmsg
-        committeeSignatures
+        curCommitteeSignatures
     )
     ( throwContractError $ msg
         "Invalid committee signatures for UpdateCommitteeHashMessage"
@@ -130,7 +145,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   let
     uch = UpdateCommitteeHash
-      { sidechainParams: uchp.sidechainParams
+      { sidechainParams
       , uchAssetClass: assetClass cs tn
       , mptRootTokenCurrencySymbol
       }
@@ -141,7 +156,9 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -------------------------------------------------------------
   lkup ← findUpdateCommitteeHashUtxo uch
   { index: oref
-  , value: (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+  , value:
+      committeeHashTxOut@
+        (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
     liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
 
@@ -157,7 +174,7 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
   maybePreviousMerkleRoot ← MPTRoot.Utils.findPreviousMptRootTokenUtxo
-    uchp.previousMerkleRoot
+    previousMerkleRoot
     smrm
 
   -- Building / submitting the transaction.
@@ -165,26 +182,22 @@ updateCommitteeHash (UpdateCommitteeHashParams uchp) = do
   let
     newDatum = Datum $ toData
       ( UpdateCommitteeHashDatum
-          { committeeHash: newCommitteeHash, sidechainEpoch: uchp.sidechainEpoch }
+          { committeeHash: newCommitteeHash, sidechainEpoch }
       )
     value = assetClassValue (unwrap uch).uchAssetClass one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
-          { committeeSignatures
+          { committeeSignatures: curCommitteeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCommitteePubKeys: newCommitteeSorted
-          , previousMerkleRoot: uchp.previousMerkleRoot
+          , newCommitteePubKeys
+          , previousMerkleRoot
           }
       )
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs
-        ( Map.singleton oref
-            ( TransactionOutputWithRefScript
-                { output: TransactionOutput tOut, scriptRef: Nothing }
-            )
-        )
+        (Map.singleton oref committeeHashTxOut)
         <> Lookups.validator updateValidator
         <> case maybePreviousMerkleRoot of
           Nothing → mempty

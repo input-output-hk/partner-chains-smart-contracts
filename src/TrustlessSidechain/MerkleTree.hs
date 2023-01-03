@@ -41,7 +41,6 @@ module TrustlessSidechain.MerkleTree (
   RootHash (RootHash, unRootHash),
   MerkleProof (MerkleProof, unMerkleProof),
   MerkleTree,
-  emptyMp,
 
   -- * Building the Merkle Tree
   fromList,
@@ -253,10 +252,6 @@ pureScriptShowMerkleProof (MerkleProof proof) =
     ]
 
 deriveJSON defaultOptions ''MerkleProof
-
--- | 'emptyMp' is an empty 'MerkleProof'.
-emptyMp :: MerkleProof
-emptyMp = MerkleProof {unMerkleProof = []}
 
 -- | 'hash' is an internal function which is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}

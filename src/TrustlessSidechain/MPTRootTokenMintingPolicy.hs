@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy where
+module TrustlessSidechain.MPTRootTokenMintingPolicy where
 
 import PlutusTx.Prelude
 
@@ -9,10 +9,8 @@ import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Scripts (MintingPolicy)
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
-  CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
@@ -22,22 +20,23 @@ import Plutus.V2.Ledger.Api (
   TxOut (txOutDatum, txOutValue),
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusTx (applyCode, compile, liftCode)
-import PlutusTx qualified
+import PlutusTx (compile)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.OffChain.Types (
+import TrustlessSidechain.Types (
+  MerkleRootInsertionMessage (..),
+  MerkleTreeEntry,
   SidechainParams (
-    genesisUtxo,
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
+  SignedMerkleRoot (..),
+  SignedMerkleRootMint (smrmSidechainParams, smrmUpdateCommitteeHashCurrencySymbol),
+  UpdateCommitteeHashDatum (committeeHash),
  )
-import TrustlessSidechain.OnChain.Types (MerkleRootInsertionMessage (..), MerkleTreeEntry, SignedMerkleRoot (..), UpdateCommitteeHashDatum (committeeHash))
-import TrustlessSidechain.OnChain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint, icTxOutRef))
-import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.OnChain.Utils qualified as Utils (verifyMultisig)
+import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.Utils qualified as Utils (verifyMultisig)
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -51,34 +50,6 @@ serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
 serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
 serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
--- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
-data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
-    -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
-  }
-
-PlutusTx.makeLift ''SignedMerkleRootMint
-PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
-
-{- | 'signedMerkleRootMint' is a smart constructor to create the 'SignedMerkleRootMint'.
-
- TODO: Not totally too sure why we need the sidechain params here in the
- parameter, but it was like that before, so we'll leave it there. As an
- optimization, we could get rid of the sidechain params.
--}
-signedMerkleRootMint :: SidechainParams -> SignedMerkleRootMint
-signedMerkleRootMint sc =
-  SignedMerkleRootMint
-    { smrmSidechainParams = sc
-    , smrmUpdateCommitteeHashCurrencySymbol =
-        UpdateCommitteeHash.committeeHashCurSymbol
-          InitCommitteeHashMint {icTxOutRef = genesisUtxo sc}
-    }
-
 {- | 'mkMintingPolicy' verifies the following
 
       1. UTXO with the last Merkle root is referenced in the transaction.
@@ -91,7 +62,7 @@ signedMerkleRootMint sc =
       committee members, and the list of public keys are unique
 
       3. the concatenated and hashed value of the public keys correspond to the
-      one saved on-chain in 'TrustlessSidechain.OnChain.UpdatingCommitteeHash'
+      one saved on-chain in 'TrustlessSidechain.UpdatingCommitteeHash'
 
       4. Exactly one token is minted
 
@@ -132,7 +103,7 @@ mkMintingPolicy
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
-                  -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash'
+                  -- 'TrustlessSidechain.UpdateCommitteeHash'
                   OutputDatum d <- txOutDatum o =
                 IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
@@ -142,7 +113,7 @@ mkMintingPolicy
       threshold :: Integer
       threshold =
         -- See Note [Threshold of Strictly More than Threshold Majority] in
-        -- 'TrustlessSidechain.OnChain.UpdateCommitteeHash' (this is mostly
+        -- 'TrustlessSidechain.UpdateCommitteeHash' (this is mostly
         -- duplicated from there)
         ( length committeePubKeys
             `Builtins.multiplyInteger` thresholdNumerator sc
@@ -189,14 +160,6 @@ mkMintingPolicy
         -- minting a token, and we pattern match to guarantee that there is
         -- only one token being minted namely this token.
         _ -> False
-
--- | 'mintingPolicy' is the minting policy for the signed merkle root tokens
-mintingPolicy :: SignedMerkleRootMint -> MintingPolicy
-mintingPolicy param =
-  Ledger.mkMintingPolicyScript
-    ($$(compile [||wrap . mkMintingPolicy||]) `applyCode` liftCode param)
-  where
-    wrap = ScriptUtils.mkUntypedMintingPolicy
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

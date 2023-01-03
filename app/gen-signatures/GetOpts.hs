@@ -68,13 +68,11 @@ import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
-import TrustlessSidechain.OffChain.Types (
+import TrustlessSidechain.Types (
   GenesisHash (GenesisHash),
+  MerkleTreeEntry (..),
   SidechainParams (..),
   SidechainPubKey,
- )
-import TrustlessSidechain.OnChain.Types (
-  MerkleTreeEntry (..),
  )
 import Utils (
   Bech32Recipient (bech32RecipientBytes),

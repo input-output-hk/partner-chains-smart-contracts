@@ -4,7 +4,9 @@ module MerkleTree
   , MerkleTree(Bin, Tip)
   , Up(Up)
   , MerkleProof(MerkleProof)
-  , RootHash(RootHash)
+  , RootHash
+  , rootHashFromByteArray
+  , byteArrayToRootHashUnsafe
 
   , fromList
   , lookupMp
@@ -36,7 +38,24 @@ import Data.Unfoldable as Unfoldable
 -- Each of these types should correspond the the on chain types.
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
+-- | Invariants:
+-- |    - the underlying `ByteArray` should be the image of `blake2b256Hash`
 newtype RootHash = RootHash ByteArray
+
+-- | `byteArrayToRootHashUnsafe` constructs a `RootHash` from a given
+-- | `ByteArray` without checking any invariants.
+byteArrayToRootHashUnsafe ∷ ByteArray → RootHash
+byteArrayToRootHashUnsafe = RootHash
+
+-- | `rootHashFromByteArray` acts as a smart constructor for `RootHash`
+-- | to wrap the provided `ByteArray` with the newtype constructor `RootHash`.
+-- | This only verifies that the `ByteArray` is `256 bits * byte / 8 bit =
+-- | 32 bytes` long since it is infeasible to verify that the given `ByteArray`
+-- | is the image of a preimage resistant hash function
+rootHashFromByteArray ∷ ByteArray → Maybe RootHash
+rootHashFromByteArray byteArray
+  | ByteArray.byteLength byteArray == 32 = Just $ RootHash byteArray
+  | otherwise = Nothing
 
 -- | See `src/TrustlessSidechain/MerkleTree.hs`
 data Side
@@ -58,8 +77,6 @@ instance Show MerkleTree where
   show (Bin h l r) = String.joinWith " " [ "Bin", show h, show l, show r ]
   show (Tip h) = String.joinWith " " [ "Tip", show h ]
 
-derive instance Generic RootHash _
-derive instance Newtype RootHash _
 derive instance Eq RootHash
 derive instance Ord RootHash
 
@@ -93,7 +110,9 @@ instance Show MerkleProof where
   show = genericShow
 
 instance Show RootHash where
-  show = genericShow
+  show (RootHash byteArray) = "(" <> "byteArrayToRootHashUnsafe "
+    <> show byteArray
+    <> ")"
 
 -- Note [`ToData` / `FromData` Instances of the Merkle Tree]
 -- All of these instances should correspond to `/src/TrustlessSidechain/MerkleTree.hs`
@@ -177,10 +196,9 @@ rootHash ∷ MerkleTree → RootHash
 rootHash (Bin roothash _ _) = roothash
 rootHash (Tip roothash) = roothash
 
--- | `unRootHash` is an alias for `unwrap` i.e., it coerces the newtype wrapper
--- | `RootHash`
+-- | `unRootHash` returns the underlying `ByteArray` of the `RootHash`
 unRootHash ∷ RootHash → ByteArray
-unRootHash = unwrap
+unRootHash (RootHash byteArray) = byteArray
 
 -- |`'fromList` computes a merkle tree from the given list, and errors in the
 -- | case when the given list is empty.

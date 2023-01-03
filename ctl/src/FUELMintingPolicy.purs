@@ -6,6 +6,11 @@ module FUELMintingPolicy
   , fuelMintingPolicy
   , getFuelMintingPolicy
   , runFuelMP
+  , Bech32Bytes
+  , getBech32BytesByteArray
+  , byteArrayToBech32BytesUnsafe
+  , addressFromCborBytes
+  , bech32BytesFromAddress
   , combinedMerkleProofToFuelParams
   ) where
 
@@ -20,7 +25,7 @@ import Contract.Address
   , toPubKeyHash
   , toStakingCredential
   )
-import Contract.CborBytes (CborBytes(..))
+import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
@@ -105,6 +110,51 @@ instance ToData FUELMint where
       , toData dsKeyCurrencySymbol
       ]
 
+-- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
+-- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
+-- | which should be a decoded bech32 cardano address.
+-- | See [here](https://cips.cardano.org/cips/cip19/) for details.
+newtype Bech32Bytes = Bech32Bytes ByteArray
+
+-- | `getBech32BytesByteArray` gets the underlying `ByteArray` of `Bech32Bytes`
+getBech32BytesByteArray ∷ Bech32Bytes → ByteArray
+getBech32BytesByteArray (Bech32Bytes byteArray) = byteArray
+
+derive newtype instance ordBech32Bytes ∷ Ord Bech32Bytes
+derive newtype instance eqBech32Bytes ∷ Eq Bech32Bytes
+derive newtype instance toDataBech32Bytes ∷ ToData Bech32Bytes
+derive newtype instance fromDataBech32Bytes ∷ FromData Bech32Bytes
+
+instance Show Bech32Bytes where
+  show (Bech32Bytes byteArray) = "(byteArrayToBech32BytesUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- | `byteArrayToBech32BytesUnsafe` converts a `ByteArray` to `Bech32Bytes`
+-- | without checking the data format.
+byteArrayToBech32BytesUnsafe ∷ ByteArray → Bech32Bytes
+byteArrayToBech32BytesUnsafe = Bech32Bytes
+
+-- | `bech32BytesFromAddress` serialises an `Address` to `Bech32Bytes` using
+-- | the network id in the `Contract`
+bech32BytesFromAddress ∷ ∀ r. Address → Contract r Bech32Bytes
+bech32BytesFromAddress address =
+  ( \netId → byteArrayToBech32BytesUnsafe $ unwrap $ addressBytes $
+      fromPlutusAddress netId address
+  )
+    <$> getNetworkId
+
+-- | `addressFromCborBytes` is a convenient wrapper to convert cbor bytes
+-- | into an `Address.`
+-- | It is useful to use this with `Contract.CborBytes.cborBytesFromByteArray`
+-- | to create an address from a `ByteArray` i.e.,
+-- | ```
+-- | addressFromCborBytes <<< Contract.CborBytes.cborBytesFromByteArray
+-- | ```
+-- | Then, you can use `bech32BytesFromAddress` to get the `recipient`.
+addressFromCborBytes ∷ CborBytes → Maybe Address
+addressFromCborBytes = toPlutusAddress <=< addressFromBytes
+
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MPTRootToken. It contains:
 -- | - `index`: 32 bit unsigned integer, used to provide uniqueness among
@@ -119,8 +169,8 @@ instance ToData FUELMint where
 newtype MerkleTreeEntry = MerkleTreeEntry
   { index ∷ BigInt
   , amount ∷ BigInt
-  , recipient ∷ ByteArray
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , recipient ∷ Bech32Bytes
+  , previousMerkleRoot ∷ Maybe RootHash
   }
 
 instance FromData MerkleTreeEntry where
@@ -168,15 +218,19 @@ combinedMerkleProofToFuelParams
   let
     transaction' = unwrap transaction
   in
-    addressFromBytes (CborBytes transaction'.recipient) >>= toPlutusAddress >>=
-      \recipient → pure $ Mint
-        { amount: transaction'.amount
-        , recipient
-        , merkleProof
-        , sidechainParams
-        , index: transaction'.index
-        , previousMerkleRoot: transaction'.previousMerkleRoot
-        }
+
+    addressFromBytes
+      (cborBytesFromByteArray $ getBech32BytesByteArray $ transaction'.recipient)
+      >>= toPlutusAddress
+      >>=
+        \recipient → pure $ Mint
+          { amount: transaction'.amount
+          , recipient
+          , merkleProof
+          , sidechainParams
+          , index: transaction'.index
+          , previousMerkleRoot: transaction'.previousMerkleRoot
+          }
 
 instance Show CombinedMerkleProof where
   show = genericShow
@@ -248,7 +302,7 @@ data FuelParams
       , merkleProof ∷ MerkleProof
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe ByteArray
+      , previousMerkleRoot ∷ Maybe RootHash
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -283,7 +337,7 @@ claimFUEL ∷
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , previousMerkleRoot ∷ Maybe RootHash
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
@@ -293,19 +347,19 @@ claimFUEL
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-    netId ← getNetworkId
 
     cs /\ tn ← getFuelAssetClass fuelMP
 
     ds ← DistributedSet.getDs sidechainParams
 
+    bech32BytesRecipient ← bech32BytesFromAddress recipient
     let
       merkleTreeEntry =
         MerkleTreeEntry
           { index
           , amount
           , previousMerkleRoot
-          , recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
+          , recipient: bech32BytesRecipient
           }
 
     entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")

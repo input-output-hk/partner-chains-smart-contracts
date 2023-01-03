@@ -17,24 +17,24 @@ import Contract.PlutusData
   , PlutusData(..)
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Value (CurrencySymbol)
+import MerkleTree (RootHash)
 import SidechainParams (SidechainParams)
-import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot
   { -- The new merkle root to insert.
-    merkleRoot ∷ ByteArray
+    merkleRoot ∷ RootHash
   , -- Either `Just` the last merkle root (in the case it exists), or `Nothing`
     -- if there is no such last merkle root (i.e., in the first transaction).
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- Ordered as their corresponding public keys. In the case that not all the
     -- committees' public keys signed the message, the length of this list will be
     -- less than the committee public keys.
-    signatures ∷ Array Signature
+    signatures ∷ Array SidechainSignature
   , -- Sorted public keys of all committee members
-    committeePubKeys ∷ Array PubKey
+    committeePubKeys ∷ Array SidechainPublicKey
   }
 
 derive instance Generic SignedMerkleRoot _
@@ -74,10 +74,10 @@ instance ToData SignedMerkleRootMint where
 -- | endpoint.
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ ByteArray
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , merkleRoot ∷ RootHash
+  , previousMerkleRoot ∷ Maybe RootHash
   , -- Public keys of all committee members and their corresponding signatures.
-    committeeSignatures ∷ Array (PubKey /\ Maybe Signature)
+    committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
   }
 
 -- | `MerkleRootInsertionMessage` is a data type for which committee members
@@ -88,8 +88,8 @@ newtype SaveRootParams = SaveRootParams
 -- | See `MPTRoot.Utils.serialiseMrimHash`.
 newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams ∷ SidechainParams
-  , merkleRoot ∷ ByteArray
-  , previousMerkleRoot ∷ Maybe ByteArray
+  , merkleRoot ∷ RootHash
+  , previousMerkleRoot ∷ Maybe RootHash
   }
 
 derive instance Generic MerkleRootInsertionMessage _
