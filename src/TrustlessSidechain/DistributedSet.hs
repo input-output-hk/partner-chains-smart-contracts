@@ -13,7 +13,6 @@ module TrustlessSidechain.DistributedSet (
   Ds (Ds, dsConf),
   DsDatum (DsDatum, dsNext),
   Node (Node, nKey, nNext),
-  DsConf,
   DsConfDatum (DsConfDatum, dscKeyPolicy, dscFUELPolicy),
   DsConfMint (
     DsConfMint,
@@ -90,17 +89,14 @@ newtype Ds = Ds
     dsConf :: CurrencySymbol
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-
---instance ValidatorTypes Ds where
---  type DatumType Ds = DsDatum
---  type RedeemerType Ds = ()
+  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-  deriving newtype (Eq)
+  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
@@ -115,15 +111,6 @@ instance Eq Node where
   {-# INLINEABLE (==) #-}
   a == b = nKey a == nKey b && nNext a == nNext b
 
-{- | 'DsConf' is used for the 'DatumType' and 'RedeemerType' for the utxo which
- holds the 'DsConfDatum'
--}
-data DsConf
-
---instance ValidatorTypes DsConf where
---  type DatumType DsConf = DsConfDatum
---  type RedeemerType DsConf = ()
-
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
 -}
@@ -133,6 +120,7 @@ data DsConfDatum = DsConfDatum
   }
 
 instance Eq DsConfDatum where
+  {-# INLINEABLE (==) #-}
   a == b = dscKeyPolicy a == dscKeyPolicy b && dscFUELPolicy a == dscFUELPolicy b
 
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
@@ -141,7 +129,7 @@ instance Eq DsConfDatum where
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
-  deriving newtype (Eq)
+  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 instance Prelude.Foldable Ib where
   foldMap f (Ib (a, b)) = f a Prelude.<> f b
@@ -150,6 +138,7 @@ instance Prelude.Foldable Ib where
  set. See 'mkDsConfPolicy' for more details.
 -}
 newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
+  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 {- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
  'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
@@ -198,12 +187,11 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
-makeIsDataIndexed ''Ds [('Ds, 0)]
 deriveJSON defaultOptions ''Ds
 PlutusTx.makeLift ''Ds
 
-makeIsDataIndexed ''DsDatum [('DsDatum, 0)]
 deriveJSON defaultOptions ''DsDatum
+PlutusTx.makeLift ''DsDatum
 
 makeIsDataIndexed ''Node [('Node, 0)]
 deriveJSON defaultOptions ''Node
@@ -212,11 +200,9 @@ makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
 deriveJSON defaultOptions ''DsKeyMint
 PlutusTx.makeLift ''DsKeyMint
 
-makeIsDataIndexed ''DsConfMint [('DsConfMint, 0)]
 deriveJSON defaultOptions ''DsConfMint
 PlutusTx.makeLift ''DsConfMint
 
-makeIsDataIndexed ''Ib [('Ib, 0)]
 deriveJSON defaultOptions ''Ib
 PlutusTx.makeLift ''Ib
 
