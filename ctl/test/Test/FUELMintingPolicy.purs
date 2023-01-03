@@ -3,8 +3,7 @@ module Test.FUELMintingPolicy where
 import Contract.Prelude
 
 import Contract.Address
-  ( getNetworkId
-  , getWalletAddress
+  ( getWalletAddress
   , ownPaymentPubKeyHash
   , pubKeyHashAddress
   )
@@ -13,8 +12,6 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionInput)
 import Contract.Utxos (utxosAt)
-import Ctl.Internal.Plutus.Conversion (fromPlutusAddress)
-import Ctl.Internal.Serialization.Address (addressBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List.Lazy (List, replicateM)
@@ -33,7 +30,12 @@ import Partial.Unsafe (unsafePartial)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
 import Test.Utils (getOwnTransactionInput, toTxIn)
-import Utils.Crypto (PrivateKey, PublicKey, generatePrivKey, toPubKeyUnsafe)
+import Utils.Crypto
+  ( SidechainPrivateKey
+  , SidechainPublicKey
+  , generatePrivKey
+  , toPubKeyUnsafe
+  )
 import Utils.SerialiseData (serialiseData)
 
 mkScParams ∷ Maybe TransactionInput → SidechainParams
@@ -46,8 +48,11 @@ mkScParams genesisMint = SidechainParams
   , genesisMint
   }
 
-mkCommittee ∷ Int → Contract () (List (Tuple PublicKey PrivateKey))
-mkCommittee n = replicateM n (Tuple <*> toPubKeyUnsafe <$> generatePrivKey)
+mkCommittee ∷
+  Int → Contract () (List (Tuple SidechainPublicKey SidechainPrivateKey))
+mkCommittee n = replicateM n ado
+  prvKey ← generatePrivKey
+  in (toPubKeyUnsafe prvKey) /\ prvKey
 
 -- | Testing Passive bridge minting (genesis mint) and burning multiple times
 testScenarioPassiveSuccess ∷ Contract () Unit
@@ -89,7 +94,7 @@ testScenarioPassiveFailure = do
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-  netId ← getNetworkId
+  ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
   genesisUtxo ← getOwnTransactionInput
   let
     keyCount = 25
@@ -118,7 +123,7 @@ testScenarioActiveSuccess = do
         { index
         , amount
         , previousMerkleRoot
-        , recipient: unwrap (addressBytes (fromPlutusAddress netId recipient))
+        , recipient: ownRecipient
         }
 
     ownEntryBytes = unsafePartial

@@ -8,24 +8,24 @@ import Codec.Serialise (serialise)
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
 import Data.Foldable (traverse_)
-import Ledger (Script, Versioned, scriptHash)
-import TrustlessSidechain.OnChain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.OnChain.DistributedSet qualified as DistributedSet
-import TrustlessSidechain.OnChain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.MPTRootTokenValidator qualified as MPTRootTokenValidator
-import TrustlessSidechain.OnChain.PoCECDSA qualified as PoCECDSA
-import TrustlessSidechain.OnChain.PoCInlineDatum qualified as PoCInlineDatum
-import TrustlessSidechain.OnChain.PoCReferenceInput qualified as PoCReferenceInput
-import TrustlessSidechain.OnChain.PoCReferenceScript qualified as PoCReferenceScript
-import TrustlessSidechain.OnChain.PoCSerialiseData qualified as PoCSerialiseData
-import TrustlessSidechain.OnChain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import Ledger (Script, Versioned (unversioned), scriptHash)
+import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.DistributedSet qualified as DistributedSet
+import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
+import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
+import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
+import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
+import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
+import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Prelude
 
 -- CTL uses the usual TextEnvelope format now.
 serialiseScript :: FilePath -> Versioned Script -> IO ()
 serialiseScript name script =
-  let out = PlutusScriptSerialised @PlutusScriptV2 . toShort . toStrict $ serialise script
+  let out = PlutusScriptSerialised @PlutusScriptV2 . toShort . toStrict . serialise $ unversioned script
       file = "ctl/Scripts/" <> name <> ".plutus"
    in do
         putStrLn $ "serialising " <> name <> ",\thash = " <> show (scriptHash script)

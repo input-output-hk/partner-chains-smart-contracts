@@ -8,6 +8,7 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Effect.Class.Console as Console
 import Options as Options
 import Test.Utils (assertBy)
+import Utils.Crypto as Utils.Crypto
 
 -- | `tests` is the collection of tests for this module
 test ∷ Effect Unit
@@ -23,22 +24,31 @@ testParsePubKeyAndSignature = do
     go s = Options.parsePubKeyAndSignature s
       <#> \(pubKey /\ signature) → { pubKey, signature }
 
+    dummyHexPubKey =
+      "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    dummyPubKey = Utils.Crypto.byteArrayToSidechainPublicKeyUnsafe
+      $ hexToByteArrayUnsafe dummyHexPubKey
+
+    dummyHexSignature =
+      "1f9721994b4699c5f84d041d6a7ac5e52989568ba5b3203a2d4e6732e0a42c5a4f7f94f1a31b97f450025447ff5d2d3be2550cf3f1c779609b16000771f6b4de"
+    dummySignature = Utils.Crypto.byteArrayToSidechainSignatureUnsafe
+      $ hexToByteArrayUnsafe dummyHexSignature
   assertBy eq
-    (Just { pubKey: hexToByteArrayUnsafe "aa", signature: Nothing })
-    (go "aa")
+    (Just { pubKey: dummyPubKey, signature: Nothing })
+    (go dummyHexPubKey)
 
   assertBy eq
-    (Just { pubKey: hexToByteArrayUnsafe "bb", signature: Nothing })
-    (go "bb:")
+    (Just { pubKey: dummyPubKey, signature: Nothing })
+    (go $ dummyHexPubKey <> ":")
 
   assertBy eq
     ( Just
-        { pubKey: hexToByteArrayUnsafe "bb"
-        , signature: Just (hexToByteArrayUnsafe "cc")
+        { pubKey: dummyPubKey
+        , signature: Just dummySignature
         }
     )
-    (go "bb:cc")
+    (go $ dummyHexPubKey <> ":" <> dummyHexSignature)
 
   assertBy eq
     Nothing
-    (go "bb:bb:bb")
+    (go $ dummyHexPubKey <> ":" <> dummyHexSignature <> ":" <> dummyHexSignature)

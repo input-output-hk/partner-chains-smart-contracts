@@ -15,7 +15,7 @@ import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.HUnit qualified as HUnit
 import TrustlessSidechain.MerkleTree (MerkleProof (..), RootHash (..), Side (..), Up (..))
-import TrustlessSidechain.OnChain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..))
+import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..))
 import Prelude qualified
 
 -- | 'unsafeFromHex' unsafely converts hex to the byte representation

@@ -11,22 +11,31 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
-import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import InitSidechain (initSidechain)
+import MerkleTree (RootHash)
 import Partial.Unsafe as Unsafe
 import SidechainParams (InitSidechainParams(..), SidechainParams)
 import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
-import Types (PubKey, Signature)
 import UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto (PrivateKey, generatePrivKey, multiSign, toPubKeyUnsafe)
+import Utils.Crypto
+  ( SidechainPrivateKey
+  , SidechainPublicKey
+  , SidechainSignature
+  , byteArrayToSidechainPrivateKeyUnsafe
+  , byteArrayToSidechainPublicKeyUnsafe
+  , generatePrivKey
+  , multiSign
+  , toPubKeyUnsafe
+  )
 
 -- | `generateUchmSignatures` generates the public keys and corresponding
 -- | signatures of the current committee for the new committee given.
@@ -36,15 +45,15 @@ generateUchmSignatures ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array PrivateKey
+    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array PrivateKey
+    newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple PubKey Signature))
+  Maybe (Array (Tuple SidechainPublicKey SidechainSignature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys
@@ -84,11 +93,11 @@ updateCommitteeHash ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array PrivateKey
+    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array PrivateKey
+    newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
@@ -105,11 +114,11 @@ updateCommitteeHashWith ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array PrivateKey
+    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array PrivateKey
+    newCommitteePrvKeys ∷ Array SidechainPrivateKey
   , -- the last merkle root
-    previousMerkleRoot ∷ Maybe ByteArray
+    previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
@@ -297,19 +306,19 @@ testScenario4 = do
   -- the committees as given in the test case
   let
     initCommitteePrvKeys =
-      [ hexToByteArrayUnsafe
+      [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "3e77009e691a2c38c53d5c0608af90af5c793efaa6cfe9e8670b141ed0376911"
-      , hexToByteArrayUnsafe
+      , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "d9465fedde9190b2760bb37ac2b89cf97d7121a98807f8849532e58750d23725"
-      , hexToByteArrayUnsafe
+      , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "3563a2e4d2b373b4b8ea0397b7437e7386d3d39216a77fa3ceb8f64a43d98f56"
       ]
     nextCommitteePrvKeys =
-      [ hexToByteArrayUnsafe
+      [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "1b7267b5d84a108d67bd8cdc95750d135c1a1fb6482531ddfa0923c043b308f1"
-      , hexToByteArrayUnsafe
+      , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "173d5d8cd43bd6119c633e654d00bebc2165e6875190b132dc93d5ee1b7d2448"
-      , hexToByteArrayUnsafe
+      , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
           "34edb67b9f73389280214dae93e62074a9fcfd1eefadd4406cd7d27fd64b46a8"
       ]
 
@@ -321,11 +330,11 @@ testScenario4 = do
       , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee:
-          [ hexToByteArrayUnsafe
+          [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
               "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
-          , hexToByteArrayUnsafe
+          , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
               "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
-          , hexToByteArrayUnsafe
+          , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
               "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
           ]
       , initSidechainEpoch: one
@@ -345,11 +354,11 @@ testScenario4 = do
     \uchp →
       pure $ wrap $ (unwrap uchp)
         { newCommitteePubKeys =
-            [ hexToByteArrayUnsafe
+            [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                 "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
-            , hexToByteArrayUnsafe
+            , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                 "02cb793bcfcab7f17453f4c5e0e07a2818c6df4d7995aa1b7a0f0b219c6cfe0e20"
-            , hexToByteArrayUnsafe
+            , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                 "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
             ]
         -- the signatures from the issue arne't quite right (since it

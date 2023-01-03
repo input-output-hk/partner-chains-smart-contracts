@@ -42,6 +42,7 @@ testScenario1 = do
   ownPaymentPubKeyHash ← Monad.liftedM
     "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
     Address.ownPaymentPubKeyHash
+  ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
   -- 1. Initializing the sidechain
   -------------------------------
@@ -75,8 +76,7 @@ testScenario1 = do
             { index: BigInt.fromInt 0
             , amount: BigInt.fromInt 69
             , previousMerkleRoot: Nothing
-            , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                ownPaymentPubKeyHash
+            , recipient: ownRecipient
             }
         ]
     , currentCommitteePrvKeys: committee1PrvKeys
@@ -124,8 +124,7 @@ testScenario1 = do
             , amount: BigInt.fromInt 69
             , -- Note: this is the same merkle root as used in 4.
               previousMerkleRoot: Just merkleRoot2
-            , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                ownPaymentPubKeyHash
+            , recipient: ownRecipient
             }
         ]
     , -- Note: the current committee is from 4.
@@ -145,8 +144,7 @@ testScenario1 = do
             , amount: BigInt.fromInt 69
             , -- Note: this is the same merkle root as used in 5.
               previousMerkleRoot: Just merkleRoot5
-            , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                ownPaymentPubKeyHash
+            , recipient: ownRecipient
             }
         ]
     , -- Note: the current committee is from 4.
@@ -182,6 +180,7 @@ testScenario2 = do
   ownPaymentPubKeyHash ← Monad.liftedM
     "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
     Address.ownPaymentPubKeyHash
+  ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
   -- 1. Initializing the sidechain
   -------------------------------
@@ -216,8 +215,7 @@ testScenario2 = do
             { index: BigInt.fromInt 0
             , amount: BigInt.fromInt 69
             , previousMerkleRoot: Nothing
-            , recipient: Test.Utils.paymentPubKeyHashToByteArray
-                ownPaymentPubKeyHash
+            , recipient: ownRecipient
             }
         ]
     , currentCommitteePrvKeys: committee1PrvKeys
