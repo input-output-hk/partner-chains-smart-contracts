@@ -11,7 +11,6 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Array as Array
 import Data.BigInt as BigInt
-import Data.List.Lazy (List, replicateM)
 import FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
@@ -26,19 +25,12 @@ import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
 import Test.Utils (getOwnTransactionInput, toTxIn)
 import Utils.Crypto
-  ( SidechainPrivateKey
-  , SidechainPublicKey
-  , generatePrivKey
+  ( generatePrivKey
   , toPubKeyUnsafe
   )
 import Utils.SerialiseData (serialiseData)
 
-mkCommittee ∷
-  Int → Contract () (List (Tuple SidechainPublicKey SidechainPrivateKey))
-mkCommittee n = replicateM n ado
-  prvKey ← generatePrivKey
-  in (toPubKeyUnsafe prvKey) /\ prvKey
-
+-- | `testScenarioActiveSuccess` tets minting some tokens
 testScenarioActiveSuccess ∷ Contract () Unit
 testScenarioActiveSuccess = do
   pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
