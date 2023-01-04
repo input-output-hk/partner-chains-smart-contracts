@@ -74,47 +74,45 @@
       hsProjectFor = system:
         let
           pkgs = nixpkgsFor system;
-          project = pkgs.haskell-nix.cabalProject {
-            src = ./.;
-            inputMap = {
-              "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
-            };
-            compiler-nix-name = "ghc8107";
-            modules = plutip.haskellModules;
-            shell = {
-              withHoogle = true;
-              exactDeps = true;
-              nativeBuildInputs = with pkgs; [
-                # Shell utils
-                bashInteractive
-                git
-                cabal-install
-
-                # Lint / Format
-                fd
-                hlint
-                haskellPackages.apply-refact
-                haskellPackages.cabal-fmt
-                haskellPackages.fourmolu
-                nixpkgs-fmt
-              ];
-              additional = ps: [
-                ps.cardano-crypto-class
-                ps.plutus-tx-plugin
-                ps.plutus-script-utils
-                ps.plutus-ledger
-                ps.playground-common
-              ];
-              shellHook = ''
-                [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
-                     git config core.hooksPath hooks
-                }
-              '';
-              tools.haskell-language-server = { };
-            };
-          };
         in
-        project;
+        pkgs.haskell-nix.cabalProject {
+          src = ./.;
+          inputMap = {
+            "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+          };
+          compiler-nix-name = "ghc8107";
+          modules = plutip.haskellModules;
+          shell = {
+            exactDeps = true;
+            nativeBuildInputs = with pkgs; [
+              # Shell utils
+              bashInteractive
+              git
+              cabal-install
+
+              # Lint / Format
+              fd
+              hlint
+              haskellPackages.apply-refact
+              haskellPackages.cabal-fmt
+              haskellPackages.fourmolu
+              nixpkgs-fmt
+            ];
+            additional = ps: with ps; [
+              cardano-crypto-class
+              plutus-tx-plugin
+              plutus-script-utils
+              plutus-ledger
+              playground-common
+            ];
+            shellHook = ''
+              [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
+                   git config core.hooksPath hooks
+              }
+            '';
+            tools.haskell-language-server = { };
+          };
+        };
 
       psProjectFor = system:
         let

@@ -28,3 +28,25 @@ exports.generateRandomPrivateKey = () => {
 // - https://github.com/input-output-hk/cardano-base/pull/289
 exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
   secp.publicKeyCreate(ecdsa_priv_key, /*compressed =*/ true);
+
+// This verifies if we have a valid public key (for both compresed [33 byte] or
+// uncompressed [65 bytes]):
+// Tracing through the implementation:
+//   - The C function call is here in the js wrapper:
+//   https://github.com/cryptocoinjs/secp256k1-node/blob/master/src/secp256k1.cc#L129
+//   - The implementation is here:
+//   https://github.com/bitcoin-core/secp256k1/blob/5c789dcd7318649c43d89361eaaa07c3bd1c9c57/src/secp256k1.c#L248
+//   - And most of the heavy checks happen in this function: https://github.com/bitcoin-core/secp256k1/blob/9a5a87e0f1276e0284446af1172056ea4693737f/src/eckey_impl.h#L17
+exports.pubKeyVerify = (publicKey) =>
+  secp.publicKeyVerify(publicKey);
+
+
+// This verifies that the given secret key (as an integer) is non zero and
+// lower than the secp256k1 curve's order..
+// Tracing through the implementation:
+//  - The C function call is here in the js wrapper:
+//  https://github.com/cryptocoinjs/secp256k1-node/blob/master/src/secp256k1.cc#L101
+//  - Which calls the well documented C function:
+//  https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
+exports.secKeyVerify = (secretKey) =>
+  secp.privateKeyVerify(secretKey);

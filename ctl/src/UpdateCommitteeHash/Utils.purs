@@ -18,6 +18,7 @@ module UpdateCommitteeHash.Utils
   , aggregateKeys
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
+  , normalizeCommitteeHashParams
   ) where
 
 import Contract.Prelude
@@ -42,6 +43,7 @@ import Contract.Transaction
   )
 import Contract.Transaction as Transaction
 import Contract.Value as Value
+import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
 import RawScripts as RawScripts
 import Types (AssetClass, assetClass)
@@ -49,7 +51,10 @@ import UpdateCommitteeHash.Types
   ( InitCommitteeHashMint
   , UpdateCommitteeHash
   , UpdateCommitteeHashMessage
+  , UpdateCommitteeHashParams(..)
   )
+import Utils.Crypto (SidechainMessage, SidechainPublicKey)
+import Utils.Crypto as Utils.Crypto
 import Utils.SerialiseData as Utils.SerialiseData
 import Utils.Utxos as Utils.Utxos
 
@@ -71,6 +76,21 @@ updateCommitteeHashValidator sp = do
       PlutusScriptV2
   applied ← Scripts.applyArgs validatorUnapplied [ PlutusData.toData sp ]
   Validator <$> Monad.liftContractE applied
+
+-- | `normalizeCommitteeHashParams` modifies the following fields in
+-- | `UpdateCommitteeHashParams` fields to satisfy the following properties
+-- |    - `newCommitteePubKeys` is sorted (lexicographically), and
+-- |    - `committeeSignatures` is sorted (lexicographically) by the
+-- |    `SidechainPublicKey`.
+normalizeCommitteeHashParams ∷
+  UpdateCommitteeHashParams → UpdateCommitteeHashParams
+normalizeCommitteeHashParams (UpdateCommitteeHashParams p) =
+  UpdateCommitteeHashParams
+    p
+      { newCommitteePubKeys = Array.sort p.newCommitteePubKeys
+      , committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
+          p.committeeSignatures
+      }
 
 -- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
@@ -95,17 +115,18 @@ committeeHashAssetClass ichm = do
 -- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
 -- | For this to be truly compatible with the onchain function, you need to ensure
 -- | that the input list is sorted.
-aggregateKeys ∷ Array ByteArray → ByteArray
-aggregateKeys = Hashing.blake2b256Hash <<< mconcat
+aggregateKeys ∷ Array SidechainPublicKey → ByteArray
+aggregateKeys = Hashing.blake2b256Hash <<< foldMap
+  Utils.Crypto.getSidechainPublicKeyByteArray
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```
 -- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
-serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe ByteArray
-serialiseUchmHash = (Hashing.blake2b256Hash <$> _) <<<
-  Utils.SerialiseData.serialiseToData
+serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe SidechainMessage
+serialiseUchmHash = Utils.Crypto.sidechainMessage <=<
+  ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)
 
 -- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
 -- | identifies the committee hash.

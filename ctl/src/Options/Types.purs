@@ -13,10 +13,11 @@ import Contract.Transaction (TransactionInput)
 import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
-import MerkleTree (MerkleProof)
+import MerkleTree (MerkleProof, RootHash)
 import Node.Path (FilePath)
 import SidechainParams (SidechainParams)
 import Types (PubKey, Signature)
+import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
@@ -57,41 +58,46 @@ data Endpoint
       , recipient ∷ Address
       , merkleProof ∷ MerkleProof
       , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe ByteArray
+      , previousMerkleRoot ∷ Maybe RootHash
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
-      , sidechainPubKey ∷ PubKey
+      , sidechainPubKey ∷ SidechainPublicKey
       , spoSig ∷ Signature
-      , sidechainSig ∷ Signature
+      , sidechainSig ∷ SidechainSignature
       , inputUtxo ∷ TransactionInput
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
-      { newCommitteePubKeys ∷ List PubKey
-      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
-      , previousMerkleRoot ∷ Maybe ByteArray
+      { newCommitteePubKeys ∷ List SidechainPublicKey
+      , committeeSignatures ∷
+          List (SidechainPublicKey /\ Maybe SidechainSignature)
+      , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
-      { merkleRoot ∷ ByteArray
-      , previousMerkleRoot ∷ Maybe ByteArray
-      , committeeSignatures ∷ List (PubKey /\ Maybe Signature)
+      { merkleRoot ∷ RootHash
+      , previousMerkleRoot ∷ Maybe RootHash
+      , committeeSignatures ∷
+          List (SidechainPublicKey /\ Maybe SidechainSignature)
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
     -- followed by updating the committee hash.
     CommitteeHandover
-      { merkleRoot ∷ ByteArray
-      , previousMerkleRoot ∷ Maybe ByteArray
-      , newCommitteePubKeys ∷ List PubKey
-      , newCommitteeSignatures ∷ List (PubKey /\ Maybe Signature)
-      , newMerkleRootSignatures ∷ List (PubKey /\ Maybe Signature)
+      { merkleRoot ∷ RootHash
+      , previousMerkleRoot ∷ Maybe RootHash
+      , newCommitteePubKeys ∷ List SidechainPublicKey
+      , newCommitteeSignatures ∷
+          List (SidechainPublicKey /\ Maybe SidechainSignature)
+      , newMerkleRootSignatures ∷
+          List (SidechainPublicKey /\ Maybe SidechainSignature)
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
-  | Init { committeePubKeys ∷ List ByteArray, initSidechainEpoch ∷ BigInt }
+  | Init
+      { committeePubKeys ∷ List SidechainPublicKey, initSidechainEpoch ∷ BigInt }
 
 derive instance Generic Endpoint _
 

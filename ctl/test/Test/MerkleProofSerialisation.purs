@@ -7,8 +7,12 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Control.Monad as Monad
 import Effect.Class.Console as Console
-import FUELMintingPolicy (CombinedMerkleProof(..), MerkleTreeEntry(..))
-import MerkleTree (MerkleProof(..), RootHash(..), Side(..), Up(..))
+import FUELMintingPolicy
+  ( CombinedMerkleProof(..)
+  , MerkleTreeEntry(..)
+  , byteArrayToBech32BytesUnsafe
+  )
+import MerkleTree (MerkleProof(..), Side(..), Up(..), byteArrayToRootHashUnsafe)
 import Test.Utils as Test.Utils
 import Utils.SerialiseData as Utils.SerialiseData
 
@@ -28,48 +32,56 @@ test = do
           { transaction: MerkleTreeEntry
               { index: Test.Utils.unsafeBigIntFromString "-8858258933817599851"
               , amount: Test.Utils.unsafeBigIntFromString "8887194232705394223"
-              , recipient: ByteArray.hexToByteArrayUnsafe
-                  "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+              , recipient: byteArrayToBech32BytesUnsafe $
+                  ByteArray.hexToByteArrayUnsafe
+                    "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
               , previousMerkleRoot: Just
-                  ( ByteArray.hexToByteArrayUnsafe
+                  ( byteArrayToRootHashUnsafe $ ByteArray.hexToByteArrayUnsafe
                       "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
                   )
               }
           , merkleProof: MerkleProof
               [ Up
                   { siblingSide: L
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash $ ByteArray.hexToByteArrayUnsafe
-                      "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
+                  , sibling: byteArrayToRootHashUnsafe $
+                      ByteArray.hexToByteArrayUnsafe
+                        "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
                   }
               ]
           }
@@ -153,20 +165,22 @@ test = do
           { transaction: MerkleTreeEntry
               { index: Test.Utils.unsafeBigIntFromString "12542"
               , amount: Test.Utils.unsafeBigIntFromString "539422"
-              , recipient:
+              , recipient: byteArrayToBech32BytesUnsafe $
                   ByteArray.hexToByteArrayUnsafe
                     "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
               , previousMerkleRoot:
                   Just
-                    ( ByteArray.hexToByteArrayUnsafe
-                        ( "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
-                        )
-                    )
+                    $ byteArrayToRootHashUnsafe
+                    $
+                      ( ByteArray.hexToByteArrayUnsafe
+                          ( "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+                          )
+                      )
               }
           , merkleProof: MerkleProof
               [ Up
                   { siblingSide: L
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
                           )
@@ -174,7 +188,7 @@ test = do
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
                           )
@@ -182,7 +196,7 @@ test = do
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
                           )
@@ -190,7 +204,7 @@ test = do
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
                           )
@@ -198,7 +212,7 @@ test = do
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
                           )
@@ -206,7 +220,7 @@ test = do
                   }
               , Up
                   { siblingSide: R
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
                           )
@@ -214,7 +228,7 @@ test = do
                   }
               , Up
                   { siblingSide: L
-                  , sibling: RootHash
+                  , sibling: byteArrayToRootHashUnsafe
                       ( ByteArray.hexToByteArrayUnsafe
                           ( "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
                           )

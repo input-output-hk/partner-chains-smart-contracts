@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.OnChain.FUELMintingPolicy where
+module TrustlessSidechain.FUELMintingPolicy where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
@@ -12,41 +12,15 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
+import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain.Types (SidechainParams (genesisMint))
-import TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.OnChain.Types (FUELRedeemer (MainToSide, SideToMain), MerkleTreeEntry (mteAmount, mteRecipient))
-
-{- | 'FUELMint' is the data type to parameterize the minting policy. See
- 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
--}
-data FUELMint = FUELMint
-  { -- 'fmMptRootTokenValidator' is the hash of the validator script
-    -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.OnChain.MPTRootTokenValidator' for
-    -- details.
-    -- > fmMptRootTokenValidator :: ValidatorHash
-    -- N.B. We don't need this! We're really only interested in the token,
-    -- and indeed; anyone can pay a token to this script so there really
-    -- isn't a reason to use this validator script as the "identifier" for
-    -- MPTRootTokens.
-
-    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
-    -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy' for details.
-    fmMptRootTokenCurrencySymbol :: CurrencySymbol
-  , -- | 'fmSidechainParams' is the sidechain parameters
-    fmSidechainParams :: SidechainParams
-  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
-    -- hold the key for the distributed set. In particular, this allows the
-    -- FUEL minting policy to verify if a string has /just been inserted/ into
-    -- the distributed set.
-    fmDsKeyCurrencySymbol :: CurrencySymbol
-  }
-
-PlutusTx.makeLift ''FUELMint
-PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
+import TrustlessSidechain.Types (
+  FUELMint (fmDsKeyCurrencySymbol, fmMptRootTokenCurrencySymbol, fmSidechainParams),
+  FUELRedeemer (MainToSide, SideToMain),
+  MerkleTreeEntry (mteAmount, mteRecipient),
+  SidechainParams (genesisMint),
+ )
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
@@ -108,7 +82,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- can be rewritten as
                 -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
                 -- where from
-                -- 'TrustlessSidechain.OnChain.MPTRootTokenMintingPolicy.mkMintingPolicy'
+                -- 'TrustlessSidechain.MPTRootTokenMintingPolicy.mkMintingPolicy'
                 -- we can be certain there is only ONE distinct TokenName for
                 -- each 'CurrencySymbol'
                 --
