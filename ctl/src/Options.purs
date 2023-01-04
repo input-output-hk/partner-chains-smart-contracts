@@ -386,7 +386,7 @@ options maybeConfig committee = info (helper <*> optSpec)
   committeeHashSpec ∷ Parser Endpoint
   committeeHashSpec = ado
     newCommitteePubKeys ← parseNewCommitteePubKeys
-    committeeSignatures ← map (fallback committee)
+    committeeSignatures ← fallback committee <$>
       ( parseCommitteeSignatures
           "committee-pub-key-and-signature"
           "Public key and (optionally) the signature of the new committee hash seperated by a colon"
@@ -405,7 +405,7 @@ options maybeConfig committee = info (helper <*> optSpec)
   saveRootSpec = ado
     merkleRoot ← parseMerkleRoot
     previousMerkleRoot ← parsePreviousMerkleRoot
-    committeeSignatures ← map (fallback committee)
+    committeeSignatures ← fallback committee <$>
       ( parseCommitteeSignatures
           "committee-pub-key-and-signature"
           "Public key and (optionally) the signature of the new merkle root seperated by a colon"
@@ -496,14 +496,17 @@ options maybeConfig committee = info (helper <*> optSpec)
 
   -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
   initSpec = ado
-    committeePubKeys ←
-      map (fallback (map fst committee)) $ many $ option sidechainPublicKey
-        ( fold
-            [ long "committee-pub-key"
-            , metavar "PUBLIC_KEY"
-            , help "Public key for a committee member at sidechain initialisation"
-            ]
-        )
+    committeePubKeys ← fallback (map fst committee) <$> many
+      ( option
+          sidechainPublicKey
+          ( fold
+              [ long "committee-pub-key"
+              , metavar "PUBLIC_KEY"
+              , help
+                  "Public key for a committee member at sidechain initialisation"
+              ]
+          )
+      )
     initSidechainEpoch ← parseSidechainEpoch
     in
       Init { committeePubKeys, initSidechainEpoch }
