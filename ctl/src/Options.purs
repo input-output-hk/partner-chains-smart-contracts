@@ -29,7 +29,7 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.EuclideanRing as EuclideanRing
-import Data.List (List(..))
+import Data.List (List(Nil))
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -384,54 +384,55 @@ options maybeConfig committee = info (helper <*> optSpec)
   fallback xs ys = if null ys then xs else ys
 
   committeeHashSpec ∷ Parser Endpoint
-  committeeHashSpec =
-    { newCommitteePubKeys: _
-    , committeeSignatures: _
-    , previousMerkleRoot: _
-    , sidechainEpoch: _
-    }
-      <$> parseNewCommitteePubKeys
-      <*> map (fallback committee)
-        ( parseCommitteeSignatures
-            "committee-pub-key-and-signature"
-            "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-        )
-      <*> parsePreviousMerkleRoot
-      <*> parseSidechainEpoch
-      <#> CommitteeHash
+  committeeHashSpec = ado
+    newCommitteePubKeys ← parseNewCommitteePubKeys
+    committeeSignatures ← map (fallback committee)
+      ( parseCommitteeSignatures
+          "committee-pub-key-and-signature"
+          "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+      )
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    sidechainEpoch ← parseSidechainEpoch
+    in
+      CommitteeHash
+        { newCommitteePubKeys
+        , committeeSignatures
+        , previousMerkleRoot
+        , sidechainEpoch
+        }
 
   saveRootSpec ∷ Parser Endpoint
-  saveRootSpec =
-    { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
-      <$> parseMerkleRoot
-      <*> parsePreviousMerkleRoot
-      <*> map (fallback committee)
-        ( parseCommitteeSignatures
-            "committee-pub-key-and-signature"
-            "Public key and (optionally) the signature of the new merkle root seperated by a colon"
-        )
-      <#> SaveRoot
+  saveRootSpec = ado
+    merkleRoot ← parseMerkleRoot
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    committeeSignatures ← map (fallback committee)
+      ( parseCommitteeSignatures
+          "committee-pub-key-and-signature"
+          "Public key and (optionally) the signature of the new merkle root seperated by a colon"
+      )
+    in SaveRoot { merkleRoot, previousMerkleRoot, committeeSignatures }
 
   committeeHandoverSpec ∷ Parser Endpoint
-  committeeHandoverSpec =
-    { merkleRoot: _
-    , previousMerkleRoot: _
-    , newCommitteePubKeys: _
-    , newCommitteeSignatures: _
-    , newMerkleRootSignatures: _
-    , sidechainEpoch: _
-    }
-      <$> parseMerkleRoot
-      <*> parsePreviousMerkleRoot
-      <*> parseNewCommitteePubKeys
-      <*> parseCommitteeSignatures
-        "committee-pub-key-and-new-committee-signature"
-        "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-      <*> parseCommitteeSignatures
-        "committee-pub-key-and-new-merkle-root-signature"
-        "Public key and (optionally) the signature of the merkle root seperated by a colon"
-      <*> parseSidechainEpoch
-      <#> CommitteeHandover
+  committeeHandoverSpec = ado
+    merkleRoot ← parseMerkleRoot
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    newCommitteePubKeys ← parseNewCommitteePubKeys
+    newCommitteeSignatures ← parseCommitteeSignatures
+      "committee-pub-key-and-new-committee-signature"
+      "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+    newMerkleRootSignatures ← parseCommitteeSignatures
+      "committee-pub-key-and-new-merkle-root-signature"
+      "Public key and (optionally) the signature of the merkle root seperated by a colon"
+    sidechainEpoch ← parseSidechainEpoch
+    in
+      CommitteeHandover
+        { merkleRoot
+        , previousMerkleRoot
+        , newCommitteePubKeys
+        , newCommitteeSignatures
+        , newMerkleRootSignatures
+        , sidechainEpoch
+        }
 
   -- `parseNewCommitteePubKeys` parses the new committee public keys.
   parseNewCommitteePubKeys ∷ Parser (List SidechainPublicKey)
@@ -497,11 +498,12 @@ options maybeConfig committee = info (helper <*> optSpec)
   initSpec = ado
     committeePubKeys ←
       map (fallback (map fst committee)) $ many $ option sidechainPublicKey
-        $ fold
+        ( fold
             [ long "committee-pub-key"
             , metavar "PUBLIC_KEY"
             , help "Public key for a committee member at sidechain initialisation"
             ]
+        )
     initSidechainEpoch ← parseSidechainEpoch
     in
       Init { committeePubKeys, initSidechainEpoch }
