@@ -1,4 +1,4 @@
-# Update strategy
+# Update strategy - PROPOSAL
 
 In this specification we describe the mechanisms of the Cardano mainchain part of the trustless
 sidechain protocol update. To allow the protocol to evolve with time, we need to migrate from old
@@ -10,11 +10,10 @@ source of truth, to find the validators and minting policies for the protocol.
 ## 1. Assumptions
 
 - The governance strategy required to approve the protocol update is out of scope of this specification
--
 
 ## 2.Strategies
 
-We considered two strategies, we call them full migration and versioned update:
+We considered the following strategies, but these can also be used in combination:
 
 - _migration strategy_: at any given point in time, there's only one valid version of a
   validator or minting policy. On an update event, all assets have to be migrated to the new
@@ -25,11 +24,22 @@ We considered two strategies, we call them full migration and versioned update:
   strategy it is important to allow full migration, in case a version has to be abandoned due to
   a security issue. The update method must be flexible enough to allow addition and removal of
   certain validators/minting policies.
+- _transaction token pattern_: we could introduce a light-weight validator/minting policy in place
+  of our current minting policies and validators, and move all actual logic to
+  [Transaction Token Minting Policies (TxTMP)](https://plutonomicon.github.io/plutonomicon/transaction-token-pattern).
+  The validators and minting policies could then use an oracle to reference the current version(s)
+  of a TxTMP that is accepted, and would only verify that the referenced token is minted.
+  The benefits of this approach are:
+
+  - our validator addresses and currency policies would be constant over versions
+  - decoupled token minting and burning logic (a token minted with V1 logic can be burnt with V2, etc.)
+
+  The drawback is that this would slightly raise the fees due to the cost of an extra token minted for each transaction.
 
 These strategies can be used in combination for optimal migration cost/complexity. In case of our
-sidechain protocol, the following validators and minting policies will
+sidechain protocol, I propose the following strategies for our validators and minting policies:
 
-- `FUELMintingPolicy`: versioned update
+- `FUELMintingPolicy`: versioned update (TODO: or TxTMP)
 - `MPTRootTokenMintingPolicy`: versioned update
 - `CommitteeCandidateValidator`: migration -
 - `MPTRootTokenValidator`: versioned update
@@ -85,8 +95,7 @@ This token will prove that the `VersionOracle` datum was approved by the committ
 
 **Minting**:
 
-- `versionHash` is signed by the committee (using the same multi-signature scheme
-  as the sidechain certificate)
+- `versionHash` is signed by the governance mechanism
 - `versionHash` is stored as the tokenName of the token. (This will make it sure that the version
   datum isn't altered after minting)
 
@@ -123,8 +132,8 @@ The following tokens would have to be migrated (burnt and reminted) in this scen
 
 Note that distributed set tokens and UTxOs are not mentioned, as they must be reminted with FUEL token.
 
-TODO
-We could have two strategies:
+TODO We have the following options to consider:
 
+- we could use the TxTMP pattern to avoid the need of migrating tokens.
 - allowing the new version of a minting policy to mint n amount of tokens in exchange for the old token.
--
+- handling token migrations with the Bridge, issuing new certificates when an old token is burned
