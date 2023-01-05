@@ -1,5 +1,7 @@
 module Options.Types
-  ( Committee
+  ( CommitteeSignaturesInput(..)
+  , CommitteeInput(..)
+  , CommitteeSignatures
   , Config(..)
   , Endpoint(..)
   , Options(..)
@@ -71,17 +73,16 @@ data Endpoint
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
-      { newCommitteePubKeys ∷ List SidechainPublicKey
-      , committeeSignatures ∷
-          List (SidechainPublicKey /\ Maybe SidechainSignature)
+      -- { newCommitteePubKeys ∷ List SidechainPublicKey
+      { newCommitteePubKeysInput ∷ CommitteeInput
+      , committeeSignaturesInput ∷ CommitteeSignaturesInput
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , committeeSignatures ∷
-          List (SidechainPublicKey /\ Maybe SidechainSignature)
+      , committeeSignaturesInput ∷ CommitteeSignaturesInput
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -89,20 +90,58 @@ data Endpoint
     CommitteeHandover
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , newCommitteePubKeys ∷ List SidechainPublicKey
-      , newCommitteeSignatures ∷
-          List (SidechainPublicKey /\ Maybe SidechainSignature)
-      , newMerkleRootSignatures ∷
-          List (SidechainPublicKey /\ Maybe SidechainSignature)
+      -- , newCommitteePubKeys ∷ List SidechainPublicKey
+      , newCommitteePubKeysInput ∷ CommitteeInput
+      , newCommitteeSignaturesInput ∷
+          CommitteeSignaturesInput
+      , newMerkleRootSignaturesInput ∷
+          CommitteeSignaturesInput
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
   | Init
-      { committeePubKeys ∷ List SidechainPublicKey, initSidechainEpoch ∷ BigInt }
+      -- { committeePubKeys ∷ List SidechainPublicKey, initSidechainEpoch ∷ BigInt }
+      { committeePubKeysInput ∷ CommitteeInput, initSidechainEpoch ∷ BigInt }
 
 derive instance Generic Endpoint _
 
 instance Show Endpoint where
+  show = genericShow
+
+-- | `CommitteeSignatures` is the committee members' public keys with associated
+-- | signatures (if such a signature exists)
+type CommitteeSignatures = List (SidechainPublicKey /\ Maybe SidechainSignature)
+
+-- | `CommitteeSignaturesInput` represents that we either may allow a
+-- | committees' signatures as input via
+-- |
+-- |    - A list of `SidechainPublicKey` and its associated
+-- |    `SidechainSignature` (if such a signature is provided); or
+-- |
+-- |    - A FilePath of a JSON file with the aforementioned data
+-- |    encoded as in `ConfigFile.decodeCommitteeSignatures`
+data CommitteeSignaturesInput
+  = CommitteeSignatures CommitteeSignatures
+  | CommitteeSignaturesFilePath FilePath
+
+derive instance Generic CommitteeSignaturesInput _
+
+instance Show CommitteeSignaturesInput where
+  show = genericShow
+
+-- | `CommitteeInput` represents that we may either allow a committee as input
+-- | via
+-- |
+-- |    - A list of `SidechainPublicKey`; or
+-- |
+-- |    - A filePath of a JSON file with the aforementioned data encoded as in `ConfigFile.decodeCommittee`
+data CommitteeInput
+  = Committee (List SidechainPublicKey)
+  | CommitteeFilePath FilePath
+
+derive instance Generic CommitteeInput _
+
+instance Show CommitteeInput where
   show = genericShow
 
 -- | Network configuration of the runtime dependencies
@@ -113,5 +152,3 @@ type RuntimeConfig =
   , ctlServer ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }
-
-type Committee = List (SidechainPublicKey /\ Maybe SidechainSignature)
