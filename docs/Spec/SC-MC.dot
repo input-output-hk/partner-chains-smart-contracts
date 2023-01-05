@@ -1,4 +1,4 @@
-strict digraph { 
+strict digraph {
   node [shape=record]
 
   merkleRoot [
@@ -7,7 +7,7 @@ strict digraph {
       Signature of committee\l
     "]
 
-  burnTx [label = 
+  burnTx [label =
     "Mint Tx |
       redeemer: Merkle proof\l
       tx body: minted tokens\l
