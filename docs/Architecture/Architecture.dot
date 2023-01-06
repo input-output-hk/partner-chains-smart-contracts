@@ -1,0 +1,64 @@
+graph {
+  node [shape=diamond style=filled]
+  splines=false
+
+  subgraph cluster_interface {
+    label="User interface"
+    labeljust=l
+
+    subgraph cluster_terminal {
+      label="Terminal"
+      labeljust=l
+
+      cli [label="Trustless-sidechain CLI\n(using our SDK as a library)"]
+    }
+
+    subgraph cluster_browser {
+      label="Browser"
+      labeljust=l
+
+      wallet [label="Browser based wallet"]
+
+      browsersdk [label="Trustless-sidechain JavaScript SDK\n(using CTL as a library)"]
+    }
+
+  }
+
+  sdk [
+    shape=rect
+    style=dashed
+    label="Common SDK toolkit\n(off-chain and on-chain code, our SDK as a library)"
+  ]
+
+  subgraph cluster_services {
+    label="Services"
+    labeljust=l
+
+    Ogmios;
+    Kupo
+    "ctl-server"
+  }
+
+  subgraph cluster_blockchain {
+    label="Blockchain"
+    labeljust=l
+
+    cnode [label="Cardano Node (blockchain)"]
+  }
+
+  cli -- sdk [style=dashed]
+  browsersdk -- sdk [style=dashed]
+
+  cli -- Ogmios [label=HTTP]
+  cli -- Kupo [label=HTTP]
+  cli -- "ctl-server" [label=HTTP]
+
+  wallet -- browsersdk
+  browsersdk -- Ogmios [label=HTTP]
+  browsersdk -- Kupo [label=HTTP]
+  browsersdk -- "ctl-server" [label=HTTP]
+
+
+  Ogmios -- cnode [label=socket]
+  Kupo -- cnode [label=socket]
+}

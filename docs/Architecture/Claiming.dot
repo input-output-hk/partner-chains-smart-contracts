@@ -1,0 +1,45 @@
+digraph {
+  rankdir=LR
+  node [shape=rect style=filled]
+
+  subgraph cluster_sidechain {
+    label="Sidechain network"
+
+    sWallet [label="User wallet"]
+
+    lock [label="Lock FUEL tokens"]
+  }
+
+  subgraph cluster_bridge {
+    label="Bridge"
+
+    createMT [label="Create a merkle tree of\nn transactions, store\nthe Merkle root on-chain"]
+    certificate [label="Create certificate\nsigned by the committee"]
+  }
+
+  subgraph cluster_cardano {
+    label="Cardano network"
+    subgraph cluster_onchain {
+      label="On-chain data"
+
+      committee [label="Committee hash"]
+      claimedTokens [label="Set of claimed tokens"]
+      merkleRoot [label="Merkle root"]
+    }
+
+    fuelMp [label="FUEL token minting policy"]
+
+    cWallet [label="User wallet"]
+
+  }
+
+  sWallet -> lock
+  lock -> createMT
+  lock -> certificate
+
+  certificate -> fuelMp -> cWallet
+  merkleRoot -> fuelMp
+  committee -> fuelMp
+  claimedTokens -> fuelMp -> claimedTokens
+  createMT -> merkleRoot
+}

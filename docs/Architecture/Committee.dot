@@ -1,0 +1,33 @@
+digraph {
+  node [shape=rect style=filled]
+
+  subgraph cluster_cardano {
+    label="Cardano network"
+
+    spoWallet [label="SPO wallet"]
+    committeeCandidates [label="Committee Candidates"]
+
+    committeeHash1 [label="Committee hash of\nsidechain epoch n-1"]
+    committeeHash2 [label="Committee hash of\nsidechain epoch n"]
+  }
+
+  subgraph cluster_bridge {
+    label="Bridge"
+
+    verifySPO [label="Candidate verified"]
+    mkCommittee [label="List of next committee\nmembers signed by the current\ncommittee, and sent to mainchain"]
+
+  }
+
+  subgraph cluster_sidechain {
+    label="Sidechain network"
+  }
+
+  spoWallet -> committeeCandidates [label="Registration"]
+  committeeCandidates -> spoWallet [label="Deregistration" labeljust=r]
+
+  committeeCandidates -> verifySPO -> mkCommittee
+
+  committeeHash1 -> committeeHash2
+  mkCommittee -> committeeHash2
+}
