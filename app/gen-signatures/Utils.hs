@@ -32,6 +32,7 @@ module Utils (
   showMerkleTree,
   showMerkleProof,
   showSecpPrivKey,
+  showGenesisHash,
   showCombinedMerkleProof,
   toSpoPubKey,
   vKeyToSpoPubKey,
@@ -86,6 +87,7 @@ import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
+  GenesisHash (getGenesisHash),
   SidechainPubKey (SidechainPubKey),
  )
 
@@ -306,6 +308,10 @@ showTxOutRef (TxOutRef (TxId txId) txIdx) =
 showBS :: ByteString -> String
 showBS =
   Char8.unpack . Base16.encode
+
+-- | Serialise a ByteString into hex string
+showGenesisHash :: GenesisHash -> String
+showGenesisHash = showBuiltinBS . getGenesisHash
 
 -- | Serialise a BuiltinByteString into hex string
 showBuiltinBS :: BuiltinByteString -> String

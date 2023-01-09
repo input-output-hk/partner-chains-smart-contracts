@@ -40,7 +40,6 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
-  convertSCParams,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
 import Prelude qualified
@@ -187,7 +186,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     signedByCurrentCommittee =
       let message =
             UpdateCommitteeHashMessage
-              { uchmSidechainParams = convertSCParams sc
+              { uchmSidechainParams = sc
               , uchmNewCommitteePubKeys = newCommitteePubKeys red
               , uchmPreviousMerkleRoot = previousMerkleRoot red
               , uchmSidechainEpoch = sidechainEpoch outputDatum

@@ -26,9 +26,6 @@ data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
     -- ^ 'GenesisHash' is a type alias for ByteString
-  , genesisMint :: Maybe TxOutRef
-    -- ^ 'genesisMint' is an arbitrary 'TxOutRef' used in the Passive Bridge setup, where
-    -- FUEL minting can only happen once. This parameter will be removed in the final product.
   , genesisUtxo :: TxOutRef
     -- ^ 'genesisUtxo' is an arbitrary 'TxOutRef' used to identify internal
     -- 'AssetClass's (e.g. see [6.](#6-update-committee-hash)) of the
@@ -60,8 +57,6 @@ data InitSidechainParams = InitSidechainParams
     -- ^ 'initCommittee' is the initial committee of the sidechain
   , initSidechainEpoch :: Integer
     -- ^ 'initSidechainEpoch' is the initial sidechain epoch of the sidechain
-  , initMint :: Maybe TxOutRef
-    -- ^ 'initMint' is used in the Passive Bridge only, and will be removed in the final product
   }
 ```
 

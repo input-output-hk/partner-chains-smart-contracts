@@ -8,6 +8,7 @@
   , "codec-argonaut"
   , "console"
   , "control"
+  , "effect"
   , "exceptions"
   , "foldable-traversable"
   , "foreign-object"

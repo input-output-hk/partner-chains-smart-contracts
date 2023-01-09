@@ -83,7 +83,6 @@ getCommitteeCandidateValidator sp = do
   ccvUnapplied ← plutusV2Script <$> textEnvelopeBytes
     rawCommitteeCandidateValidator
     PlutusScriptV2
-
   applied ← applyArgs ccvUnapplied [ toData sp ]
   Validator <$> liftContractE applied
 

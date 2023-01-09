@@ -5,13 +5,13 @@ module FUELMintingPolicy
   , MerkleTreeEntry(..)
   , fuelMintingPolicy
   , getFuelMintingPolicy
-  , passiveBridgeMintParams
   , runFuelMP
   , Bech32Bytes
   , getBech32BytesByteArray
   , byteArrayToBech32BytesUnsafe
   , addressFromCborBytes
   , bech32BytesFromAddress
+  , combinedMerkleProofToFuelParams
   ) where
 
 import Contract.Prelude
@@ -25,7 +25,7 @@ import Contract.Address
   , toPubKeyHash
   , toStakingCredential
   )
-import Contract.CborBytes (CborBytes)
+import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
@@ -51,7 +51,7 @@ import Contract.TextEnvelope
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript
   , awaitTxConfirmed
   , balanceTx
   , plutusV2Script
@@ -65,7 +65,6 @@ import Contract.TxConstraints
   , singleton
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (getUtxo)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -83,7 +82,7 @@ import Data.Map as Map
 import DistributedSet as DistributedSet
 import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
 import MPTRoot.Utils as MPTRoot
-import MerkleTree (MerkleProof(..), RootHash, rootMp, unRootHash)
+import MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
@@ -207,6 +206,32 @@ newtype CombinedMerkleProof = CombinedMerkleProof
   , merkleProof ∷ MerkleProof
   }
 
+-- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
+-- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.
+-- | This is a modestly convenient wrapper to help call the `runFuelMP `
+-- | endpoint.
+combinedMerkleProofToFuelParams ∷
+  SidechainParams → CombinedMerkleProof → Maybe FuelParams
+combinedMerkleProofToFuelParams
+  sidechainParams
+  (CombinedMerkleProof { transaction, merkleProof }) =
+  let
+    transaction' = unwrap transaction
+  in
+
+    addressFromBytes
+      (cborBytesFromByteArray $ getBech32BytesByteArray $ transaction'.recipient)
+      >>= toPlutusAddress
+      >>=
+        \recipient → pure $ Mint
+          { amount: transaction'.amount
+          , recipient
+          , merkleProof
+          , sidechainParams
+          , index: transaction'.index
+          , previousMerkleRoot: transaction'.previousMerkleRoot
+          }
+
 instance Show CombinedMerkleProof where
   show = genericShow
 
@@ -291,12 +316,7 @@ runFuelMP sp fp = do
   { lookups, constraints } ← case fp of
     Burn params →
       burnFUEL fuelMP params
-    Mint params →
-      case (unwrap sp).genesisMint of
-        Just genesisMintUtxo →
-          mintFUEL fuelMP genesisMintUtxo params
-        Nothing →
-          claimFUEL fuelMP params
+    Mint params → claimFUEL fuelMP params
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
@@ -307,70 +327,6 @@ runFuelMP sp fp = do
   logInfo' $ msg "Tx submitted successfully!"
 
   pure txId
-
--- | Mint FUEL tokens using the Passive Bridge configuration, consuming the genesis utxo
--- | This minting strategy allows only one mint per sidechain, and will be deprecated once the
--- | active bridge claim script is stablisied
-mintFUEL ∷
-  MintingPolicy →
-  TransactionInput →
-  { amount ∷ BigInt
-  , recipient ∷ Address
-  , merkleProof ∷ MerkleProof
-  , sidechainParams ∷ SidechainParams
-  , index ∷ BigInt
-  , previousMerkleRoot ∷ Maybe RootHash
-  } →
-  Contract ()
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-mintFUEL
-  fuelMP
-  genesisMintUtxo
-  { amount
-  , recipient
-  , merkleProof
-  , index
-  , previousMerkleRoot
-  } =
-  do
-    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
-    ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-
-    recipientPkh ←
-      liftContractM (msg "Couldn't derive payment public key hash from address")
-        $ PaymentPubKeyHash
-        <$> toPubKeyHash recipient
-
-    let recipientSt = toStakePubKeyHash recipient
-
-    -- Find the passive bridge genesis mint utxo
-    txOut ← liftedM (msg "Cannot find genesis mint UTxO") $ getUtxo
-      genesisMintUtxo
-    let
-      inputUtxo = Map.singleton genesisMintUtxo $ TransactionOutputWithRefScript
-        { output: txOut, scriptRef: Nothing }
-
-    cs /\ tn ← getFuelAssetClass fuelMP
-
-    bech32BytesRecipient ← bech32BytesFromAddress recipient
-    let
-      value = Value.singleton cs tn amount
-      redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
-      merkleTreeEntry = MerkleTreeEntry
-        { recipient: bech32BytesRecipient
-        , previousMerkleRoot
-        , amount
-        , index
-        }
-
-    pure
-      { lookups: Lookups.mintingPolicy fuelMP
-          <> Lookups.unspentOutputs inputUtxo
-      , constraints: Constraints.mustMintValueWithRedeemer redeemer value
-          <> mustPayToPubKeyAddress recipientPkh recipientSt value
-          <> Constraints.mustBeSignedBy ownPkh
-          <> Constraints.mustSpendPubKeyOutput genesisMintUtxo
-      }
 
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
@@ -516,21 +472,6 @@ burnFUEL fuelMP { amount, recipient } = do
   pure
     { lookups: Lookups.mintingPolicy fuelMP
     , constraints: Constraints.mustMintValueWithRedeemer redeemer value
-    }
-
--- | Mocking unused data for Passive Bridge minting, where we use genesis minting
-passiveBridgeMintParams ∷
-  SidechainParams →
-  { amount ∷ BigInt, recipient ∷ Address } →
-  FuelParams
-passiveBridgeMintParams sidechainParams { amount, recipient } =
-  Mint
-    { amount
-    , recipient
-    , sidechainParams
-    , merkleProof: MerkleProof []
-    , index: BigInt.fromInt 0
-    , previousMerkleRoot: Nothing
     }
 
 -- | `findMptRootTokenUtxoByRootHash` attempts to find a UTxO with MptRootToken

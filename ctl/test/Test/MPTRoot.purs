@@ -16,6 +16,7 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import FUELMintingPolicy
   ( Bech32Bytes
+  , CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
   , bech32BytesFromAddress
   )
@@ -25,10 +26,9 @@ import MPTRoot
   , SaveRootParams(SaveRootParams)
   )
 import MPTRoot as MPTRoot
-import MerkleTree (RootHash)
+import MerkleTree (MerkleTree, RootHash)
 import MerkleTree as MerkleTree
 import SidechainParams (InitSidechainParams(..), SidechainParams)
-import SidechainParams as SidechainParams
 import Test.Utils as Test.Utils
 import Utils.Crypto (SidechainPrivateKey)
 import Utils.Crypto as Crypto
@@ -54,7 +54,15 @@ saveRoot ∷
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe RootHash
   } →
-  Contract () RootHash
+  Contract ()
+    { -- merkle root that was just saved
+      merkleRoot ∷ RootHash
+    , -- merkle tree corresponding to the merkle root
+      merkleTree ∷ MerkleTree
+    , -- merkle entries and their corresponding merkle proofs
+      combinedMerkleProofs ∷
+        Array CombinedMerkleProof
+    }
 saveRoot
   { sidechainParams
   , merkleTreeEntries
@@ -62,19 +70,31 @@ saveRoot
   , previousMerkleRoot
   } = do
   serialisedEntries ←
-    liftContractM "error 'testScenario': bad serialisation of merkle root" $
+    liftContractM
+      "error 'Test.MPTRoot.saveRoot': bad serialisation of merkle root" $
       traverse SerialiseData.serialiseToData merkleTreeEntries
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
   let
     merkleRoot = MerkleTree.rootHash merkleTree
 
+  -- TODO: this has bad time complexity -- in the order of n^2.
+  combinedMerkleProofs ←
+    liftContractM "error 'Test.MPTRoot.saveRoot': Impossible merkle proof"
+      $ flip traverse merkleTreeEntries
+      $ \entry → do
+          serialisedEntry ← SerialiseData.serialiseToData entry
+          merkleProof ← MerkleTree.lookupMp serialisedEntry merkleTree
+          pure $ CombinedMerkleProof
+            { transaction: entry
+            , merkleProof
+            }
   merkleRootInsertionMessage ←
     liftContractM
       "error 'Test.MPTRoot.testScenario': failed to create merkle root insertion message"
       $ MPTRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
+          { sidechainParams: sidechainParams
           , merkleRoot
           , previousMerkleRoot
           }
@@ -92,7 +112,11 @@ saveRoot
     , previousMerkleRoot
     , committeeSignatures
     }
-  pure merkleRoot
+  pure
+    { merkleRoot
+    , merkleTree
+    , combinedMerkleProofs
+    }
 
 -- | `testScenario1` does
 -- |    1. Sets up the sidechain using the `InitSidechain.initSidechain` endpoint
@@ -122,7 +146,6 @@ testScenario1 = do
     initSidechainParams = InitSidechainParams
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
@@ -159,7 +182,7 @@ testScenario1 = do
       "error 'Test.MPTRoot.testScenario1': failed to create merkle root insertion message"
       $ MPTRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
+          { sidechainParams: sidechainParams
           , merkleRoot
           , previousMerkleRoot: Nothing
           }
@@ -221,7 +244,6 @@ testScenario2 = do
     initSidechainParams = InitSidechainParams
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: initCommitteePubKeys
       , initSidechainEpoch: zero
@@ -239,7 +261,7 @@ testScenario2 = do
 
   ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
-  merkleRoot1 ←
+  { merkleRoot: merkleRoot1 } ←
     saveRoot
       { sidechainParams
       , merkleTreeEntries:

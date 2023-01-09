@@ -48,10 +48,10 @@ The arguments for each service are using the following scheme:
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
 
 ```
-nix run .#ctl-main -- mint --amount 100 --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+nix run .#ctl-main -- burn --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
 
-For more information about the arguments, please refer to `nix run .#ctl-main -- mint --help`
+For more information about the arguments, please refer to `nix run .#ctl-main -- burn --help`
 
 To use a configuration file instead, see [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
 
@@ -80,12 +80,9 @@ node main.js --help
 
 ### 3.1. Using the CLI commands
 
-Below are some examples for running the Passive Bridge endpoints.
 Notes:
 
-- `genesis-committee-hash-utxo` is not used in the Passive Bridge, but it is pinned to the sidechain parameters, so we have to add an arbitrary utxo here. It can be the same as the mint utxo
-
-- `genesis-mint-utxo` is not a required argument. If omitted from the sidechain parameters, we can mint multiple times
+- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we have to add an arbitrary utxo here.
 
 - prior to running the contracts - it may be desirable to have available your signing key in the environment. Example:
 
@@ -98,8 +95,9 @@ Available commands:
 ```
   init                     Initialise sidechain
   addresses                Get the script addresses for a given sidechain
-  mint                     Mint a certain amount of FUEL tokens
+  claim                    Claim a certain amount of FUEL tokens
   burn                     Burn a certain amount of FUEL tokens
+  committee-hash           Update the committee hash
   register                 Register a committee candidate
   deregister               Deregister a committee member
 ```
@@ -130,23 +128,21 @@ Script addresses depend on the sidechain parameters, so we get different address
 nix run .#ctl-main -- addresses \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
   --sidechain-genesis-hash 112233
 ```
 
-#### 3.1.3. Mint FUEL tokens
+#### 3.1.3. Claim FUEL tokens
 
 ```
-nix run .#ctl-main -- mint \
+nix run .#ctl-main -- claim \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
-  --amount 5
+  --combined-proof aabb
 ```
 
 #### 3.1.4. Burn user owned FUEL tokens
@@ -155,7 +151,6 @@ nix run .#ctl-main -- mint \
 nix run .#ctl-main -- burn \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -170,7 +165,6 @@ In order to generate the signatures, you can use the signature generator tool:
 ```
 cabal run trustless-sidechain-gen-signatures -- \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -185,7 +179,6 @@ And use it's output for the registration:
 nix run .#ctl-main -- register \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -202,7 +195,6 @@ nix run .#ctl-main -- register \
 nix run .#ctl-main -- deregister \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -215,7 +207,6 @@ nix run .#ctl-main -- deregister \
 nix run .#ctl-main -- committee-hash \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -237,7 +228,6 @@ nix run .#ctl-main -- committee-hash \
 nix run .#ctl-main -- save-root \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --sidechain-id 1 \
@@ -255,7 +245,6 @@ nix run .#ctl-main -- save-root \
 nix run .#ctl-main -- committee-handover \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --genesis-mint-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
@@ -282,7 +271,6 @@ You can also provide a configuration in `$CWD/config.json` in the following form
   "sidechainParameters": {
     "chainId": 123,
     "genesisHash": "11223344aabbcc",
-    "genesisMint": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#0",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
     "threshold": { "numerator": 2, "denominator": 3 }
   },
@@ -295,7 +283,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
 and now you can call the CLI without these values:
 
 ```
-nix run .#ctl-main -- mint --amount 5
+nix run .#ctl-main -- burn --amount 5 --recipient aabb
 ```
 
 You can find a sample configuration file in `ctl/config.example.json`.
