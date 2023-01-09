@@ -76,7 +76,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           [ ["--payment-signing-key-file", signingKeyFile]
           , ["--genesis-committee-hash-utxo", Utils.showTxOutRef genesisUtxo]
           , ["--sidechain-id", show chainId]
-          , ["--sidechain-genesis-hash", show genesisHash]
+          , ["--sidechain-genesis-hash", Utils.showGenesisHash genesisHash]
           , ["--threshold", Utils.showThreshold thresholdNumerator thresholdDenominator]
           ]
    in List.intercalate " \\\n" $

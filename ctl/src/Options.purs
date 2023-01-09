@@ -29,7 +29,6 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.EuclideanRing as EuclideanRing
-import Data.List (List)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -69,7 +68,13 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Types (Config, Endpoint(..), Options)
+import Options.Types
+  ( CommitteeInput(..)
+  , CommitteeSignaturesInput(..)
+  , Config
+  , Endpoint(..)
+  , Options
+  )
 import SidechainParams (SidechainParams(..))
 import Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import Utils.Crypto as Utils.Crypto
@@ -364,66 +369,132 @@ options maybeConfig = info (helper <*> optSpec)
     ]
 
   committeeHashSpec ∷ Parser Endpoint
-  committeeHashSpec =
-    CommitteeHash <$>
-      ( { newCommitteePubKeys: _
-        , committeeSignatures: _
-        , previousMerkleRoot: _
-        , sidechainEpoch: _
-        }
-          <$>
-            parseNewCommitteePubKeys
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-signature"
-              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseSidechainEpoch
+  committeeHashSpec = ado
+    newCommitteePubKeysInput ← parseNewCommitteePubKeys
+    committeeSignaturesInput ←
+      ( parseCommitteeSignatures
+          "committee-pub-key-and-signature"
+          "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+          "committee-pub-key-and-signature-file-path"
+          "Filepath of a JSON file containing public keys and associated\
+          \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
       )
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    sidechainEpoch ← parseSidechainEpoch
+    in
+      CommitteeHash
+        { newCommitteePubKeysInput
+        , committeeSignaturesInput
+        , previousMerkleRoot
+        , sidechainEpoch
+        }
 
   saveRootSpec ∷ Parser Endpoint
-  saveRootSpec =
-    SaveRoot <$>
-      ( { merkleRoot: _, previousMerkleRoot: _, committeeSignatures: _ }
-          <$>
-            parseMerkleRoot
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-signature"
-              "Public key and (optionally) the signature of the new merkle root seperated by a colon"
-      )
+  saveRootSpec = ado
+    merkleRoot ← parseMerkleRoot
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    committeeSignaturesInput ←
+      parseCommitteeSignatures
+        "committee-pub-key-and-signature"
+        "Public key and (optionally) the signature of the new merkle root seperated by a colon"
+        "committee-pub-key-and-signature-file-path"
+        "Filepath of a JSON file containing public keys and associated\
+        \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
+    in SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput }
 
   committeeHandoverSpec ∷ Parser Endpoint
-  committeeHandoverSpec =
-    CommitteeHandover <$>
-      ( { merkleRoot: _
-        , previousMerkleRoot: _
-        , newCommitteePubKeys: _
-        , newCommitteeSignatures: _
-        , newMerkleRootSignatures: _
-        , sidechainEpoch: _
+  committeeHandoverSpec = ado
+    merkleRoot ← parseMerkleRoot
+    previousMerkleRoot ← parsePreviousMerkleRoot
+    newCommitteePubKeysInput ← parseNewCommitteePubKeys
+    newCommitteeSignaturesInput ← parseCommitteeSignatures
+      "committee-pub-key-and-new-committee-signature"
+      "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+      "committee-pub-key-and-new-committee-file-path"
+      "Filepath of a JSON file containing public keys and associated\
+      \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
+    newMerkleRootSignaturesInput ← parseCommitteeSignatures
+      "committee-pub-key-and-new-merkle-root-signature"
+      "Public key and (optionally) the signature of the merkle root seperated by a colon"
+      "committee-pub-key-and-new-merkle-root-file-path"
+      "Filepath of a JSON file containing public keys and associated\
+      \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
+    sidechainEpoch ← parseSidechainEpoch
+    in
+      CommitteeHandover
+        { merkleRoot
+        , previousMerkleRoot
+        , newCommitteePubKeysInput
+        , newCommitteeSignaturesInput
+        , newMerkleRootSignaturesInput
+        , sidechainEpoch
         }
-          <$>
-            parseMerkleRoot
-          <*>
-            parsePreviousMerkleRoot
-          <*>
-            parseNewCommitteePubKeys
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-new-committee-signature"
-              "Public key and (optionally) the signature of the new committee hash seperated by a colon"
-          <*>
-            parseCommitteeSignatures
-              "committee-pub-key-and-new-merkle-root-signature"
-              "Public key and (optionally) the signature of the merkle root seperated by a colon"
-          <*>
-            parseSidechainEpoch
+
+  -- `parseCommittee` parses the committee public keys and takes the long
+  -- flag / help message as parameters
+  parseCommittee ∷ String → String → String → String → Parser CommitteeInput
+  parseCommittee longflag hdesc filelongflag filehdesc =
+    map Committee
+      ( many
+          ( option sidechainPublicKey
+              ( fold
+                  [ long longflag
+                  , metavar "PUBLIC_KEY"
+                  , help hdesc
+                  ]
+              )
+          )
       )
+      <|>
+        map CommitteeFilePath
+          ( option
+              str
+              ( fold
+                  [ long filelongflag
+                  , metavar "FILEPATH"
+                  , help filehdesc
+                  ]
+              )
+          )
+
+  -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
+  parseNewCommitteePubKeys ∷ Parser CommitteeInput
+  parseNewCommitteePubKeys =
+    parseCommittee
+      "new-committee-pub-key"
+      "Public key of a new committee member"
+      "new-committee-pub-key-file-path"
+      "Filepath of a JSON file containing public keys of the new committee\
+      \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+
+  -- `parseCommitteeSignatures` gives the options for parsing the current
+  -- committees' signatures. This is used in both `saveRootSpec` and
+  -- `committeeHashSpec`.
+  parseCommitteeSignatures ∷
+    String → String → String → String → Parser CommitteeSignaturesInput
+  parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
+    map CommitteeSignatures
+      ( many
+          ( option committeeSignature
+              ( fold
+                  [ long longflag
+                  , metavar "PUBLIC_KEY[:[SIGNATURE]]"
+                  , help hdesc
+                  ]
+              )
+          )
+      )
+      <|>
+        map CommitteeSignaturesFilePath
+          ( option
+              str
+              ( fold
+                  [ long filelongflag
+                  , metavar "FILEPATH"
+                  , help filehdesc
+                  ]
+              )
+          )
 
   -- `parseMerkleRoot` parses the option of a new merkle root. This is used
   -- in `saveRootSpec` and `committeeHashSpec`
@@ -436,20 +507,6 @@ options maybeConfig = info (helper <*> optSpec)
         , help "Merkle root signed by the committee"
         ]
     )
-
-  -- `parseNewCommitteePubKeys` parses the new committee public keys.
-  parseNewCommitteePubKeys ∷ Parser (List SidechainPublicKey)
-  parseNewCommitteePubKeys =
-    many
-      ( option
-          sidechainPublicKey
-          ( fold
-              [ long "new-committee-pub-key"
-              , metavar "PUBLIC_KEY"
-              , help "Public key of a new committee member"
-              ]
-          )
-      )
 
   -- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
   -- used in both `saveRootSpec` and `committeeHashSpec`).
@@ -477,58 +534,32 @@ options maybeConfig = info (helper <*> optSpec)
           ]
       )
 
-  -- `parseCommitteeSignatures` gives the options for parsing the current
-  -- committees' signatures. This is used in both `saveRootSpec` and
-  -- `committeeHashSpec`.
-  parseCommitteeSignatures ∷
-    String →
-    String →
-    Parser (List (SidechainPublicKey /\ Maybe SidechainSignature))
-  parseCommitteeSignatures longDesc helpDesc =
-    many
-      ( option
-          committeeSignature
-          ( fold
-              [ long longDesc
-              , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-              , help helpDesc
-              ]
-          )
-      {-
-      ( fold
-          [ long "committee-pub-key-and-signature"
-          , metavar "PUBLIC_KEY[:[SIGNATURE]]"
-          , help
-              "Public key and (optionally) the signature of a committee member seperated by a colon ':'"
-          ]
-      )
-      -}
-      )
-  -- InitSidechainParams are SidechainParams + initCommittee : Array PubKey
+  -- InitSidechainParams are SidechainParams + initCommittee : Array SidechainPublicKey
   initSpec = ado
-    committeePubKeys ← many $ option sidechainPublicKey $ fold
-      [ long "committee-pub-key"
-      , metavar "PUBLIC_KEY"
-      , help "Public key for a committee member at sidechain initialisation"
-      ]
+    committeePubKeysInput ← parseCommittee
+      "committee-pub-key"
+      "Public key for a committee member at sidechain initialisation"
+      "committee-pub-key-file-path"
+      "Filepath of a JSON file containing public keys of the new committee\
+      \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+
     initSidechainEpoch ← parseSidechainEpoch
     in
-      Init { committeePubKeys, initSidechainEpoch }
+      Init { committeePubKeysInput, initSidechainEpoch }
 
--- | Reads configuration file from `./config.json`, then parses CLI
--- | arguments. CLI arguments override the config file.
+-- | Reads configuration file from `./config.json`, then
+-- | reads committee file from `./committee.json`, then
+-- | parses CLI arguments. CLI arguments override the config files.
 getOptions ∷ Effect Options
 getOptions = do
-  config ← readAndParseJsonFrom "./config.json"
+  config ← decodeWith decodeConfig "./config.json"
   execParser (options config)
 
   where
-  readAndParseJsonFrom loc = do
-    json' ← hush <$> readJson loc
-    traverse decodeConfigUnsafe json'
-
-  decodeConfigUnsafe json =
-    liftEither $ lmap (error <<< show) $ decodeConfig json
+  decodeWith ∷ ∀ e a. Show e ⇒ (_ → Either e a) → _ → Effect (Maybe a)
+  decodeWith decode file = do
+    maybeJson ← map hush (readJson file)
+    traverse (decode >>> lmap (show >>> error) >>> liftEither) maybeJson
 
 -- * Custom Parsers
 

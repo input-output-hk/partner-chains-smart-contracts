@@ -3,8 +3,10 @@ module Main (main) where
 import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
+import ConfigFile as ConfigFile
 import Contract.Monad (Contract, launchAff_, runContract)
 import Data.List as List
+import Effect.Class (liftEffect)
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import FUELMintingPolicy
   ( FuelParams(Burn, Mint)
@@ -89,11 +91,15 @@ main = do
         pure $ GetAddrsResp { sidechainAddresses }
 
       CommitteeHash
-        { newCommitteePubKeys
-        , committeeSignatures
+        { newCommitteePubKeysInput
+        , committeeSignaturesInput
         , previousMerkleRoot
         , sidechainEpoch
-        } →
+        } → do
+        committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+          committeeSignaturesInput
+        newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+          newCommitteePubKeysInput
         let
           params = UpdateCommitteeHashParams
             { sidechainParams: opts.scParams
@@ -102,13 +108,14 @@ main = do
             , previousMerkleRoot
             , sidechainEpoch
             }
-        in
-          UpdateCommitteeHash.updateCommitteeHash params
-            <#> unwrap
-            >>> { transactionId: _ }
-            >>> CommitteeHashResp
+        UpdateCommitteeHash.updateCommitteeHash params
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> CommitteeHashResp
 
-      SaveRoot { merkleRoot, previousMerkleRoot, committeeSignatures } →
+      SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput } → do
+        committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+          committeeSignaturesInput
         let
           params = SaveRootParams
             { sidechainParams: opts.scParams
@@ -116,12 +123,13 @@ main = do
             , previousMerkleRoot
             , committeeSignatures: List.toUnfoldable committeeSignatures
             }
-        in
-          MPTRoot.saveRoot params
-            <#> unwrap
-            >>> { transactionId: _ }
-            >>> SaveRootResp
-      Init { committeePubKeys, initSidechainEpoch } → do
+        MPTRoot.saveRoot params
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> SaveRootResp
+      Init { committeePubKeysInput, initSidechainEpoch } → do
+        committeePubKeys ← liftEffect $ ConfigFile.getCommittee
+          committeePubKeysInput
         let
           sc = unwrap opts.scParams
           isc = wrap
@@ -145,11 +153,17 @@ main = do
       CommitteeHandover
         { merkleRoot
         , previousMerkleRoot
-        , newCommitteePubKeys
-        , newCommitteeSignatures
-        , newMerkleRootSignatures
+        , newCommitteePubKeysInput
+        , newCommitteeSignaturesInput
+        , newMerkleRootSignaturesInput
         , sidechainEpoch
         } → do
+        newCommitteeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+          newCommitteeSignaturesInput
+        newMerkleRootSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+          newMerkleRootSignaturesInput
+        newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+          newCommitteePubKeysInput
         let
           saveRootParams = SaveRootParams
             { sidechainParams: opts.scParams

@@ -271,8 +271,7 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
   -- Initializing the distributed set
   -----------------------------------
   -- Configuration policy of the distributed set
-  dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint
-    { dscmTxOutRef: isp.initUtxo }
+  dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
       (msg "Failed to get dsConfPolicy CurrencySymbol")
@@ -280,7 +279,7 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
 
   -- Validator for insertion of the distributed set / the associated datum and
   -- tokens that should be paid to this validator.
-  let ds = Ds { dsConf: dsConfPolicyCurrencySymbol }
+  let ds = Ds dsConfPolicyCurrencySymbol
   insertValidator ← DistributedSet.insertValidator ds
   let
     insertValidatorHash = Scripts.validatorHash insertValidator
@@ -307,8 +306,7 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
     insertValidatorDatum = Datum
       $ PlutusData.toData
       $ DsDatum
-          { dsNext: (unwrap DistributedSet.rootNode).nNext
-          }
+          (unwrap DistributedSet.rootNode).nNext
 
   -- FUEL minting policy
   fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
