@@ -37,7 +37,6 @@ type Config =
       Maybe
         { chainId ∷ Maybe Int
         , genesisHash ∷ Maybe ByteArray
-        , genesisMint ∷ Maybe TransactionInput
         , genesisUtxo ∷ Maybe TransactionInput
         , threshold ∷
             Maybe

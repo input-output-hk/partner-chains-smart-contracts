@@ -39,7 +39,6 @@ optExample =
   { sidechainParameters: Just
       { chainId: Just 1
       , genesisHash: Just $ hexToByteArrayUnsafe "genesisHash"
-      , genesisMint: Nothing
       , genesisUtxo: Just $ TransactionInput
           { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
           , index: UInt.fromInt 2
