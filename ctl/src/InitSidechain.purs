@@ -128,7 +128,6 @@ toSidechainParams (InitSidechainParams isp) = SidechainParams
   { chainId: isp.initChainId
   , genesisHash: isp.initGenesisHash
   , genesisUtxo: isp.initUtxo
-  , genesisMint: isp.initMint
   , thresholdNumerator: isp.initThresholdNumerator
   , thresholdDenominator: isp.initThresholdDenominator
   }

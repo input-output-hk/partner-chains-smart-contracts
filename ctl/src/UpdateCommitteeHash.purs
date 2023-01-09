@@ -33,7 +33,6 @@ import Data.Maybe (Maybe(..))
 import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot.Utils as MPTRoot.Utils
 import SidechainParams (SidechainParams(..))
-import SidechainParams as SidechainParams
 import Types (assetClass, assetClassValue)
 import UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
@@ -124,7 +123,7 @@ runUpdateCommitteeHash
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
     $ serialiseUchmHash
     $ UpdateCommitteeHashMessage
-        { sidechainParams: SidechainParams.convertSCParams sidechainParams
+        { sidechainParams: sidechainParams
         , newCommitteePubKeys: newCommitteePubKeys
         , previousMerkleRoot: previousMerkleRoot
         , sidechainEpoch: sidechainEpoch

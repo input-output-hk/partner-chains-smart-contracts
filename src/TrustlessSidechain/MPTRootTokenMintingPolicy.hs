@@ -34,7 +34,6 @@ import TrustlessSidechain.Types (
   SignedMerkleRoot (..),
   SignedMerkleRootMint (smrmSidechainParams, smrmUpdateCommitteeHashCurrencySymbol),
   UpdateCommitteeHashDatum (committeeHash),
-  convertSCParams,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils (verifyMultisig)
@@ -146,7 +145,7 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { mrimSidechainParams = convertSCParams $ smrmSidechainParams smrm
+                { mrimSidechainParams = smrmSidechainParams smrm
                 , mrimMerkleRoot = merkleRoot
                 , mrimPreviousMerkleRoot = previousMerkleRoot
                 }

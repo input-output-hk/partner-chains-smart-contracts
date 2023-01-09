@@ -39,7 +39,6 @@ configCodec =
     ( CAR.object "sidechainParameters"
         { chainId: CAC.maybe CA.int
         , genesisHash: CAC.maybe byteArrayCodec
-        , genesisMint: CAC.maybe transactionInputCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
         }

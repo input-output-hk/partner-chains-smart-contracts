@@ -14,7 +14,6 @@ import Data.BigInt as BigInt
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import SidechainParams (InitSidechainParams(InitSidechainParams))
-import SidechainParams as SidechainParams
 import Test.MPTRoot as Test.MPTRoot
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils as Test.Utils
@@ -58,7 +57,6 @@ testScenario1 = do
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
       , initSidechainEpoch: zero
@@ -69,7 +67,7 @@ testScenario1 = do
   -- 2. Saving a merkle root.
   -------------------------------
   Log.logInfo' "'Test.MerkleRootChaining.testScenario1': 2. saving a merkle root"
-  merkleRoot2 ← Test.MPTRoot.saveRoot
+  { merkleRoot: merkleRoot2 } ← Test.MPTRoot.saveRoot
     { sidechainParams
     , merkleTreeEntries:
         [ MerkleTreeEntry
@@ -116,7 +114,7 @@ testScenario1 = do
   -------------------------------
   Log.logInfo'
     "'Test.MerkleRootChaining.testScenario1': 5. saving the merkle root"
-  merkleRoot5 ← Test.MPTRoot.saveRoot
+  { merkleRoot: merkleRoot5 } ← Test.MPTRoot.saveRoot
     { sidechainParams
     , merkleTreeEntries:
         [ MerkleTreeEntry
@@ -136,7 +134,7 @@ testScenario1 = do
   -------------------------------
   Log.logInfo'
     "'Test.MerkleRootChaining.testScenario1': 6. saving the merkle root"
-  merkleRoot6 ← Test.MPTRoot.saveRoot
+  { merkleRoot: merkleRoot6 } ← Test.MPTRoot.saveRoot
     { sidechainParams
     , merkleTreeEntries:
         [ MerkleTreeEntry
@@ -196,7 +194,6 @@ testScenario2 = do
     InitSidechainParams
       { initChainId: BigInt.fromInt 69_420
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-      , initMint: Nothing
       , initUtxo: genesisUtxo
       , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
       , initSidechainEpoch: zero
@@ -208,7 +205,7 @@ testScenario2 = do
   -------------------------------
   Log.logInfo'
     "'Test.MerkleRootChaining.testScenario2': 2. saving the merkle root"
-  merkleRoot2 ← Test.MPTRoot.saveRoot
+  { merkleRoot: merkleRoot2 } ← Test.MPTRoot.saveRoot
     { sidechainParams
     , merkleTreeEntries:
         [ MerkleTreeEntry
@@ -238,7 +235,7 @@ testScenario2 = do
       "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
       $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
+          { sidechainParams: sidechainParams
           , newCommitteePubKeys: committee3PubKeys
           ,
             -- Note: since we can trust the committee will sign the "correct" root,
