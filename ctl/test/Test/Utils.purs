@@ -2,6 +2,7 @@ module Test.Utils
   ( toTxIn
   , getUniqueUtxoAt
   , paymentPubKeyHashToByteArray
+  , assertMaxFee
   , getOwnTransactionInput
   , fails
   , assertBy
@@ -12,13 +13,15 @@ import Contract.Prelude
 
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftedM, throwContractError)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( TransactionHash(..)
+  ( Transaction(..)
+  , TransactionHash(..)
   , TransactionInput(..)
   , TransactionOutputWithRefScript
+  , getTxByHash
   )
 import Contract.Utxos as Utxos
 import Control.Monad.Error.Class as MonadError
@@ -116,3 +119,15 @@ assertBy eqBy expected actual =
 unsafeBigIntFromString ∷ String → BigInt
 unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
   (BigInt.fromString str)
+
+assertMaxFee ∷ ∀ (r ∷ Row Type). BigInt → TransactionHash → Contract () Unit
+assertMaxFee maxFee txId = do
+  Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
+  let fee = (unwrap (unwrap tx.body).fee)
+  when (fee > maxFee) $ throwContractError
+    ( "Expected transaction fee to be less than "
+        <> BigInt.toString maxFee
+        <> " lovelaces, but it was "
+        <> BigInt.toString fee
+        <> " lovelaces."
+    )
