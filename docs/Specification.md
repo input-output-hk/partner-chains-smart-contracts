@@ -1,4 +1,4 @@
-# Trustless sidechain
+# Trustless sidechain - main chain contract specification
 
 This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, but this might not be available in time for Cardano, so we decided to implement the contract in two phases:
 
@@ -80,7 +80,7 @@ data BurnParams = BurnParams
   }
 ```
 
-![MC to SC](MC-SC.svg)
+![MC to SC](Spec/MC-SC.svg)
 
 <figcaption align = "center"><i>Mainchain to Sidechain transaction (burning FUEL tokens)</i></figcaption><br />
 
@@ -135,7 +135,7 @@ Validator script verifies the following:
 
 - UTxOs containing an `MPTRootToken` cannot be unlocked from the script address
 
-![MPTRootToken minting](MPTRoot.svg)
+![MPTRootToken minting](Spec/MPTRoot.svg)
 
 <figcaption align = "center"><i>Merkle root token minting</i></figcaption><br />
 
@@ -194,7 +194,7 @@ Minting policy verifies the following:
 
 where the `claimTransactionHash` is a `blake2(cbor(MerkleTreeEntry))`, uniquely identifying a cross chain transaction by pointing to a Merkle tree and the index of the transaction in the tree
 
-![SC to MC](SC-MC.svg)
+![SC to MC](Spec/SC-MC.svg)
 
 <figcaption align = "center"><i>Sidechain to Mainchain transaction (claiming tokens)</i></figcaption><br />
 
@@ -289,7 +289,7 @@ committeePubKeysHash = blake2b(concat(committeePubKeys))
 keyN - 33 bytes compressed ecdsa public key of a committee member
 ```
 
-![Public key update](pubkeyupdate.svg)
+![Public key update](Spec/pubkeyupdate.svg)
 
 <figcaption align = "center"><i>Committee handover (updating committee hash)</i></figcaption><br />
 
@@ -330,7 +330,7 @@ signature = ecdsa.sign(data: blake2b(cbor(UpdateCommitteeMessage)), key: committ
 
 As described in [6. Committee handover](#6-committee-handover), we have to maintain the correct order of Merkle root insertions and committee hash updates. We introduce a new Merkle root chain, where each Merkle root has a reference to its predecessor (if one exists), furthermore all committee hash updates reference the last Merkle root inserted (if one exists).
 
-![Merkle root chaining](MRChain-simple.svg)
+![Merkle root chaining](Spec/MRChain-simple.svg)
 
 <figcaption align = "center"><i>Merkle root chaining (SC ep = sidechain epoch)</i></figcaption><br />
 
@@ -338,12 +338,12 @@ As seen in the graph above, the first Merkle root has no reference, which is com
 
 In case a sidechain epoch passed without any cross-chain transactions, no Merkle root is inserted, resulting in two committee hash updates referencing the same Merkle root.
 
-![Merkle root chaining - epoch without Merkle root](MRChain-empty.svg)
+![Merkle root chaining - epoch without Merkle root](Spec/MRChain-empty.svg)
 
 <figcaption align = "center"><i>Merkle root chaining - epoch without Merkle root (SC ep = sidechain epoch)</i></figcaption><br />
 
 In the future, we want to support multiple Merkle roots per sidechain epoch, so the result could look like the following:
 
-![Merkle root chaining - multipe Merkle roots per epoch](MRChain-multi.svg)
+![Merkle root chaining - multipe Merkle roots per epoch](Spec/MRChain-multi.svg)
 
 <figcaption align = "center"><i>Merkle root chaining - multiple Merkle roots per epoch (SC ep = sidechain epoch)</i></figcaption><br />

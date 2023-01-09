@@ -1,0 +1,30 @@
+digraph {
+  rankdir=LR
+  node [shape=rect style=filled]
+
+  subgraph cluster_cardano {
+    label="Cardano network"
+
+    fuelMp [label="FUEL token minting policy"]
+
+    cWallet [label="User wallet"]
+
+  }
+
+  subgraph cluster_bridge {
+    label="Bridge"
+
+    observeBurn [label="Bridge observes the\nburn action on the mainchain"]
+  }
+
+  subgraph cluster_sidechain {
+    label="Sidechain network"
+
+    sWallet [label="User wallet"]
+
+    unlock [label="Unlock FUEL tokens"]
+  }
+
+  cWallet -> fuelMp -> observeBurn -> unlock -> sWallet
+
+}
