@@ -78,7 +78,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           , ["--genesis-committee-hash-utxo", Utils.showTxOutRef genesisUtxo]
           , maybe [] (\oref -> ["--genesis-mint-utxo", Utils.showTxOutRef oref]) genesisMint
           , ["--sidechain-id", show chainId]
-          , ["--sidechain-genesis-hash", show genesisHash]
+          , ["--sidechain-genesis-hash", Utils.showGenesisHash genesisHash]
           , ["--threshold", Utils.showThreshold thresholdNumerator thresholdDenominator]
           ]
    in List.intercalate " \\\n" $

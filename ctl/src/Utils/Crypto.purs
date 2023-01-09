@@ -18,6 +18,7 @@ module Utils.Crypto
   , verifyMultiSignature
   , getSidechainPublicKeyByteArray
   , getSidechainPrivateKeyByteArray
+  , getSidechainSignatureByteArray
   , byteArrayToSidechainPrivateKeyUnsafe
   , sidechainPrivateKey
   , getSidechainMessageByteArray
@@ -145,6 +146,11 @@ sidechainSignature ∷ ByteArray → Maybe SidechainSignature
 sidechainSignature byteArray
   | ByteArray.byteLength byteArray == 64 = Just $ SidechainSignature byteArray
   | otherwise = Nothing
+
+-- | `getSidechainSignatureArray` grabs the underlying `ByteArray` of the
+-- | `SidechainSignature`
+getSidechainSignatureByteArray ∷ SidechainSignature → ByteArray
+getSidechainSignatureByteArray (SidechainSignature byteArray) = byteArray
 
 derive newtype instance ordSidechainSignature ∷ Ord SidechainSignature
 derive newtype instance eqSidechainSignature ∷ Eq SidechainSignature
