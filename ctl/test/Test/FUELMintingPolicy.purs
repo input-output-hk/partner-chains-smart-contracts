@@ -2,11 +2,13 @@ module Test.FUELMintingPolicy where
 
 import Contract.Prelude
 
-import Contract.Address
-  ( ownPaymentPubKeyHash
-  , pubKeyHashAddress
+import Contract.Address (ownPaymentPubKeyHash, pubKeyHashAddress)
+import Contract.Monad
+  ( Contract
+  , liftContractM
+  , liftedE
+  , liftedM
   )
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Array as Array
@@ -23,11 +25,8 @@ import MerkleTree as MerkleTree
 import Partial.Unsafe (unsafePartial)
 import SidechainParams (InitSidechainParams(..), SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
-import Test.Utils (getOwnTransactionInput, toTxIn)
-import Utils.Crypto
-  ( generatePrivKey
-  , toPubKeyUnsafe
-  )
+import Test.Utils (assertMaxFee, getOwnTransactionInput, toTxIn)
+import Utils.Crypto (generatePrivKey, toPubKeyUnsafe)
 import Utils.SerialiseData (serialiseData)
 
 -- | `testScenarioActiveSuccess` tets minting some tokens
@@ -165,14 +164,16 @@ testScenarioActiveSuccess2 = do
       "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
       $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
 
-  void $ runFuelMP sidechainParams fp0
-  void $ runFuelMP sidechainParams fp1
+  assertMaxFee (BigInt.fromInt 1_700_000) =<< runFuelMP sidechainParams fp0
+  assertMaxFee (BigInt.fromInt 1_700_000) =<< runFuelMP sidechainParams fp1
 
-  void $ runFuelMP sidechainParams $ Burn
-    { amount: BigInt.fromInt 10, recipient: hexToByteArrayUnsafe "aabbcc" }
+  assertMaxFee (BigInt.fromInt 600_000) =<< runFuelMP sidechainParams
+    ( Burn
+        { amount: BigInt.fromInt 10, recipient: hexToByteArrayUnsafe "aabbcc" }
+    )
 
-  void $ runFuelMP sidechainParams $ Burn
-    { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" }
+  assertMaxFee (BigInt.fromInt 600_000) =<< runFuelMP sidechainParams
+    (Burn { amount: BigInt.fromInt 2, recipient: hexToByteArrayUnsafe "aabbcc" })
 
   pure unit
 
