@@ -1,5 +1,6 @@
 module Test.CommitteeCandidateValidator
-  ( testScenarioFailure1
+  ( tests
+  , testScenarioFailure1
   , testScenarioFailure2
   , testScenarioSuccess
   ) where
@@ -16,12 +17,15 @@ import Contract.Address (getWalletAddress)
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Utxos (utxosAt)
-import Contract.Wallet (KeyWallet, withKeyWallet)
+import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
+import Mote.Monad as Mote.Monad
 import SidechainParams (SidechainParams(..))
-import Test.Utils (toTxIn)
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
+import Test.Utils (fails, toTxIn)
 import Utils.Crypto as Utils.Crypto
 
 scParams ∷ SidechainParams
@@ -38,6 +42,13 @@ scParams = SidechainParams
 mockSpoPubKey ∷ ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
   "40802011e4fa2af0ec57dbf341cac38b344fe0867bfc67d38988dd1006d3eb9e"
+
+-- | `tests` wraps up all the committee candidate validator tests conveniently
+tests ∷ PlutipTest
+tests = Mote.Monad.group "`CommitteeCandidateValidator` tests" $ do
+  testScenarioSuccess
+  testScenarioFailure1
+  testScenarioFailure2
 
 runRegister ∷ Contract () Unit
 runRegister = do
@@ -67,17 +78,33 @@ runDeregister =
     { sidechainParams: scParams, spoPubKey: mockSpoPubKey }
 
 -- Register then Deregister
-testScenarioSuccess ∷ Contract () Unit
-testScenarioSuccess = do
-  runRegister
-  runDeregister
+testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess = Mote.Monad.test "register followed by deregister"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+  $ \alice → Wallet.withKeyWallet alice do
+      runRegister
+      runDeregister
 
 -- Deregister without prior registeration (i.e. no registration utxo present)
-testScenarioFailure1 ∷ Contract () Unit
-testScenarioFailure1 = runDeregister
+testScenarioFailure1 ∷ PlutipTest
+testScenarioFailure1 = Mote.Monad.test "deregister in isolation (should fail)"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+  $ \alice → Wallet.withKeyWallet alice do
+      runDeregister # fails
 
 -- alice registers, bob deregisters. not allowed & should fail
-testScenarioFailure2 ∷ KeyWallet → KeyWallet → Contract () Unit
-testScenarioFailure2 alice bob = do
-  withKeyWallet alice runRegister
-  withKeyWallet bob runDeregister
+testScenarioFailure2 ∷ PlutipTest
+testScenarioFailure2 =
+  Mote.Monad.test
+    "register followed by a deregister from a distinct wallet (should fail)"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ] /\
+            [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        )
+    $ \(alice /\ bob) →
+        do
+          Wallet.withKeyWallet alice runRegister
+          Wallet.withKeyWallet bob runDeregister
+          # fails

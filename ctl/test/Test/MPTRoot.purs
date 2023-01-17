@@ -3,6 +3,7 @@ module Test.MPTRoot
   , testScenario2
   , saveRoot
   , paymentPubKeyHashToBech32Bytes
+  , tests
   ) where
 
 import Contract.Prelude
@@ -12,6 +13,7 @@ import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import FUELMintingPolicy
@@ -28,11 +30,20 @@ import MPTRoot
 import MPTRoot as MPTRoot
 import MerkleTree (MerkleTree, RootHash)
 import MerkleTree as MerkleTree
+import Mote.Monad as Mote.Monad
 import SidechainParams (InitSidechainParams(..), SidechainParams)
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
 import Utils.Crypto (SidechainPrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
+
+-- | `tests` aggregates all MPTRoot tests in a convenient single function
+tests ∷ PlutipTest
+tests = Mote.Monad.group "`MPTRoot` tests" $ do
+  testScenario1
+  testScenario2
 
 -- | `paymentPubKeyHashToBech32Bytes` converts a `PaymentPubKeyHash`
 -- | to the `Bech32Bytes` required for the `recipient` field of
@@ -125,95 +136,98 @@ saveRoot
 -- |
 -- |    3. Saves that merkle root with the current committee (everyone but one
 -- |    person) using the `MPTRoot.saveRoot` endpoint.
-testScenario1 ∷ Contract () Unit
-testScenario1 = do
-  Log.logInfo' "MPTRoot testScenario1"
+testScenario1 ∷ PlutipTest
+testScenario1 = Mote.Monad.test "saving a merkle root"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+  $ \alice → Wallet.withKeyWallet alice do
+      Log.logInfo' "MPTRoot testScenario1"
 
-  -- 1. Setting up the sidechain
-  ---------------------------
-  let
-    committeeSize = 25
-  -- It fails with ~50 (nondeterministically) with budget overspent
-  -- I would really like to get this up to 101 as with the update
-  -- committee hash endpoint! Some room for optimization is certainly
-  -- a possibility..
-  genesisUtxo ← Test.Utils.getOwnTransactionInput
+      -- 1. Setting up the sidechain
+      ---------------------------
+      let
+        committeeSize = 25
+      -- It fails with ~50 (nondeterministically) with budget overspent
+      -- I would really like to get this up to 101 as with the update
+      -- committee hash endpoint! Some room for optimization is certainly
+      -- a possibility..
+      genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-  initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
-    Crypto.generatePrivKey
-  let
-    initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-    initSidechainParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 69
-      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initUtxo: genesisUtxo
-      , initCommittee: initCommitteePubKeys
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      }
-
-  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
-
-  -- Building / saving the root that pays lots of FUEL to this wallet :)
-  ----------------------------------------------------------------------
-  ownPaymentPubKeyHash ← liftedM
-    "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-    Address.ownPaymentPubKeyHash
-
-  ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
-  serialisedEntries ←
-    liftContractM "error 'testScenario1': bad serialisation of merkle root" $
-      traverse SerialiseData.serialiseToData
-        [ MerkleTreeEntry
-            { index: BigInt.fromInt 0
-            , amount: BigInt.fromInt 69
-            , previousMerkleRoot: Nothing
-            , recipient: ownRecipient
-            }
-        ]
-  merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
-
-  let
-    merkleRoot = MerkleTree.rootHash merkleTree
-
-  merkleRootInsertionMessage ←
-    liftContractM
-      "error 'Test.MPTRoot.testScenario1': failed to create merkle root insertion message"
-      $ MPTRoot.serialiseMrimHash
-      $ MerkleRootInsertionMessage
-          { sidechainParams: sidechainParams
-          , merkleRoot
-          , previousMerkleRoot: Nothing
+      initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
+        Crypto.generatePrivKey
+      let
+        initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+        initSidechainParams = InitSidechainParams
+          { initChainId: BigInt.fromInt 69
+          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+          , initUtxo: genesisUtxo
+          , initCommittee: initCommitteePubKeys
+          , initSidechainEpoch: zero
+          , initThresholdNumerator: BigInt.fromInt 2
+          , initThresholdDenominator: BigInt.fromInt 3
           }
-  let
-    -- We create signatures for every committee member BUT the first key...
-    -- if you wanted to create keys for every committee member, we would write
-    -- ```
-    -- committeeSignatures = Array.zip
-    --     initCommitteePubKeys
-    --     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
-    -- ```
-    committeeSignatures =
-      case
-        Array.uncons $ Array.zip
-          initCommitteePubKeys
-          ( Just <$> Crypto.multiSign initCommitteePrvKeys
-              merkleRootInsertionMessage
-          )
-        of
-        Just { head, tail } →
-          Array.cons ((fst head) /\ Nothing) tail
-        _ → [] -- should never happen
 
-  void $ MPTRoot.saveRoot $ SaveRootParams
-    { sidechainParams
-    , merkleRoot
-    , previousMerkleRoot: Nothing
-    , committeeSignatures
-    }
+      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
-  pure unit
+      -- Building / saving the root that pays lots of FUEL to this wallet :)
+      ----------------------------------------------------------------------
+      ownPaymentPubKeyHash ← liftedM
+        "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
+        Address.ownPaymentPubKeyHash
+
+      ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      serialisedEntries ←
+        liftContractM "error 'testScenario1': bad serialisation of merkle root" $
+          traverse SerialiseData.serialiseToData
+            [ MerkleTreeEntry
+                { index: BigInt.fromInt 0
+                , amount: BigInt.fromInt 69
+                , previousMerkleRoot: Nothing
+                , recipient: ownRecipient
+                }
+            ]
+      merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
+
+      let
+        merkleRoot = MerkleTree.rootHash merkleTree
+
+      merkleRootInsertionMessage ←
+        liftContractM
+          "error 'Test.MPTRoot.testScenario1': failed to create merkle root insertion message"
+          $ MPTRoot.serialiseMrimHash
+          $ MerkleRootInsertionMessage
+              { sidechainParams: sidechainParams
+              , merkleRoot
+              , previousMerkleRoot: Nothing
+              }
+      let
+        -- We create signatures for every committee member BUT the first key...
+        -- if you wanted to create keys for every committee member, we would write
+        -- ```
+        -- committeeSignatures = Array.zip
+        --     initCommitteePubKeys
+        --     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
+        -- ```
+        committeeSignatures =
+          case
+            Array.uncons $ Array.zip
+              initCommitteePubKeys
+              ( Just <$> Crypto.multiSign initCommitteePrvKeys
+                  merkleRootInsertionMessage
+              )
+            of
+            Just { head, tail } →
+              Array.cons ((fst head) /\ Nothing) tail
+            _ → [] -- should never happen
+
+      void $ MPTRoot.saveRoot $ SaveRootParams
+        { sidechainParams
+        , merkleRoot
+        , previousMerkleRoot: Nothing
+        , committeeSignatures
+        }
+
+      pure unit
 
 -- | `testScenario2` does the following
 -- |    1. initializes the sidechain
@@ -223,76 +237,79 @@ testScenario1 = do
 -- |    3. saves another merkle root (this references the last merkle root).
 -- |
 -- | Note: the initialize sidechain part is duplicated code from above.
-testScenario2 ∷ Contract () Unit
-testScenario2 = do
-  Log.logInfo' "MPTRoot testScenario2"
+testScenario2 ∷ PlutipTest
+testScenario2 = Mote.Monad.test "saving two merkle roots"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+  $ \alice → Wallet.withKeyWallet alice do
+      Log.logInfo' "MPTRoot testScenario2"
 
-  -- 1. Setting up the sidechain
-  ---------------------------
-  let
-    committeeSize = 25
-  -- It fails with ~50 (nondeterministically) with budget overspent
-  -- I would really like to get this up to 101 as with the update
-  -- committee hash endpoint! Some room for optimization is certainly
-  -- a possibility..
-  genesisUtxo ← Test.Utils.getOwnTransactionInput
+      -- 1. Setting up the sidechain
+      ---------------------------
+      let
+        committeeSize = 25
+      -- It fails with ~50 (nondeterministically) with budget overspent
+      -- I would really like to get this up to 101 as with the update
+      -- committee hash endpoint! Some room for optimization is certainly
+      -- a possibility..
+      genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-  initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
-    Crypto.generatePrivKey
-  let
-    initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-    initSidechainParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 69
-      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initUtxo: genesisUtxo
-      , initCommittee: initCommitteePubKeys
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      }
+      initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
+        Crypto.generatePrivKey
+      let
+        initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+        initSidechainParams = InitSidechainParams
+          { initChainId: BigInt.fromInt 69
+          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+          , initUtxo: genesisUtxo
+          , initCommittee: initCommitteePubKeys
+          , initSidechainEpoch: zero
+          , initThresholdNumerator: BigInt.fromInt 2
+          , initThresholdDenominator: BigInt.fromInt 3
+          }
 
-  { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
 
-  -- Building / saving the root that pays lots of FUEL to this wallet :)
-  ----------------------------------------------------------------------
-  ownPaymentPubKeyHash ← liftedM
-    "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-    Address.ownPaymentPubKeyHash
+      -- Building / saving the root that pays lots of FUEL to this wallet :)
+      ----------------------------------------------------------------------
+      ownPaymentPubKeyHash ← liftedM
+        "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
+        Address.ownPaymentPubKeyHash
 
-  ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
-  { merkleRoot: merkleRoot1 } ←
-    saveRoot
-      { sidechainParams
-      , merkleTreeEntries:
-          [ MerkleTreeEntry
-              { index: BigInt.fromInt 0
-              , amount: BigInt.fromInt 69
-              , previousMerkleRoot: Nothing
-              , recipient: ownRecipient
-              }
-          ]
-      , currentCommitteePrvKeys: initCommitteePrvKeys
-      , previousMerkleRoot: Nothing
-      }
-  _ ←
-    saveRoot
-      { sidechainParams
-      , merkleTreeEntries:
-          [ MerkleTreeEntry
-              { index: BigInt.fromInt 0
-              , amount: BigInt.fromInt 69
-              , previousMerkleRoot: Just merkleRoot1
-              , recipient: ownRecipient
-              }
-          , MerkleTreeEntry
-              { index: BigInt.fromInt 1
-              , amount: BigInt.fromInt 69
-              , previousMerkleRoot: Just merkleRoot1
-              , recipient: ownRecipient
-              }
-          ]
-      , currentCommitteePrvKeys: initCommitteePrvKeys
-      , previousMerkleRoot: Nothing
-      }
-  pure unit
+      { merkleRoot: merkleRoot1 } ←
+        saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , previousMerkleRoot: Nothing
+                  , recipient: ownRecipient
+                  }
+              ]
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          }
+      _ ←
+        saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , previousMerkleRoot: Just merkleRoot1
+                  , recipient: ownRecipient
+                  }
+              , MerkleTreeEntry
+                  { index: BigInt.fromInt 1
+                  , amount: BigInt.fromInt 69
+                  , previousMerkleRoot: Just merkleRoot1
+                  , recipient: ownRecipient
+                  }
+              ]
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          }
+      pure unit

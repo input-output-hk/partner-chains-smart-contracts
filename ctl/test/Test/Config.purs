@@ -37,6 +37,6 @@ config =
       , dbname: "ctl"
       }
   , customLogger: Nothing
-  , suppressLogs: false
+  , suppressLogs: true
   , hooks: mempty
   }

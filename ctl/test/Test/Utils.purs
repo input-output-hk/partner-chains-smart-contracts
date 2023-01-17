@@ -5,8 +5,8 @@ module Test.Utils
   , assertMaxFee
   , getOwnTransactionInput
   , fails
-  , assertBy
   , unsafeBigIntFromString
+  , interpretConstVoidTest
   ) where
 
 import Contract.Prelude
@@ -28,13 +28,18 @@ import Control.Monad.Error.Class as MonadError
 import Ctl.Internal.Serialization.Hash as Hash
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Const (Const)
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Data.Set as Set
 import Data.UInt as UInt
-import Effect.Class.Console as Console
 import Effect.Exception as Exception
+import Mote.Monad (Mote)
+import Mote.Monad as Mote.Monad
+import Mote.Plan as Mote.Plan
 import Partial.Unsafe as Unsafe
+import Test.Unit (Test, TestSuite)
+import Test.Unit as Test.Unit
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
@@ -102,24 +107,25 @@ fails contract = do
     Left e →
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
 
--- | `assertBy eqBy expected actual` does nothing if `eqBy expected actual == true`,
--- | and logs and throws an exception otherwise.
-assertBy ∷ ∀ a. Show a ⇒ (a → a → Boolean) → a → a → Effect Unit
-assertBy eqBy expected actual =
-  if eqBy expected actual then pure unit
-  else do
-    Console.warn "Assertion failed!"
-    Console.warn "Expected:"
-    Console.warnShow expected
-    Console.warn "But got:"
-    Console.warnShow actual
-    Exception.throwException (Exception.error "Test case failed!")
-
 -- | Unsafely converts a String to a BigInt
 unsafeBigIntFromString ∷ String → BigInt
 unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
   (BigInt.fromString str)
 
+-- | `interpretConstVoidTest` interprets a standard collection of `Mote (Const Void) Test Unit`
+-- | and converts this to a `TestSuite`. Following this function with `Test.Unit.Main.runTest`
+-- | will run the tests.
+interpretConstVoidTest ∷ Mote (Const Void) Test Unit → TestSuite
+interpretConstVoidTest = go <<< Mote.Monad.plan
+  where
+  go = Mote.Plan.foldPlan
+    (\{ label, value } → Test.Unit.test label value)
+    (\label → Test.Unit.testSkip label (pure unit))
+    (\{ label, value } → Test.Unit.suite label (go value))
+    sequence_
+
+-- | Verifies that the fees of a certain transaction does
+-- | not exceed a given amount, it throws an effor otherwise
 assertMaxFee ∷ ∀ (r ∷ Row Type). BigInt → TransactionHash → Contract () Unit
 assertMaxFee maxFee txId = do
   Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
