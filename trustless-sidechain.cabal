@@ -90,6 +90,7 @@ library
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.MPTRootTokenMintingPolicy
     TrustlessSidechain.MPTRootTokenValidator
+    TrustlessSidechain.OffChain
     TrustlessSidechain.PoCECDSA
     TrustlessSidechain.PoCInlineDatum
     TrustlessSidechain.PoCReferenceInput
@@ -100,12 +101,18 @@ library
     TrustlessSidechain.Utils
 
   build-depends:
-    , aeson                ^>=1.5.0.0
+    , aeson                 ^>=1.5.0.0
     , base16-bytestring
-    , bytestring           ^>=0.10.12.0
+    , bech32
+    , bytestring            ^>=0.10.12.0
+    , cardano-addresses
     , cardano-api
+    , cardano-binary
     , cardano-crypto
+    , cardano-crypto-class
+    , cryptonite
     , deepseq
+    , either
     , playground-common
     , plutus-core
     , plutus-ledger
@@ -113,8 +120,11 @@ library
     , plutus-script-utils
     , plutus-tx
     , plutus-tx-plugin
+    , secp256k1-haskell
     , serialise
+    , text
 
+  -- Needed for the `TrustlessSidechain.OffChain` module
   hs-source-dirs:  src
 
 executable trustless-sidechain-gen-signatures
@@ -123,7 +133,6 @@ executable trustless-sidechain-gen-signatures
   other-modules:
     GenOutput
     GetOpts
-    Utils
 
   build-depends:
     , aeson

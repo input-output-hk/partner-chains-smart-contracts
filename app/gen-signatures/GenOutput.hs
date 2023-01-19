@@ -17,6 +17,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
+import TrustlessSidechain.OffChain as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -44,11 +45,6 @@ import TrustlessSidechain.Types (
     uchmSidechainParams
   ),
  )
-import Utils (
-  SidechainCommittee (..),
-  SidechainCommitteeMember (..),
- )
-import Utils qualified
 import Prelude
 
 -- * Main driver functions for generating output
@@ -74,10 +70,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
         filter
           (not . null)
           [ ["--payment-signing-key-file", signingKeyFile]
-          , ["--genesis-committee-hash-utxo", Utils.showTxOutRef genesisUtxo]
+          , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
           , ["--sidechain-id", show chainId]
-          , ["--sidechain-genesis-hash", Utils.showGenesisHash genesisHash]
-          , ["--threshold", Utils.showThreshold thresholdNumerator thresholdDenominator]
+          , ["--sidechain-genesis-hash", OffChain.showGenesisHash genesisHash]
+          , ["--threshold", OffChain.showThreshold thresholdNumerator thresholdDenominator]
           ]
    in List.intercalate " \\\n" $
         map List.unwords $ case cliCommand of
@@ -88,7 +84,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   map
                     ( \pubKey ->
                         [ "--committee-pub-key"
-                        , Utils.showScPubKey pubKey
+                        , OffChain.showScPubKey pubKey
                         ]
                     )
                     iscInitCommitteePubKeys
@@ -100,21 +96,21 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   BlockProducerRegistrationMsg
                     { bprmSidechainParams = scParams
-                    , bprmSidechainPubKey = Utils.toSidechainPubKey rcSidechainPrivKey
+                    , bprmSidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
                     , bprmInputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#ctl-main -- register"] :
                 sidechainParamFlags
-                  ++ [ ["--spo-public-key", Utils.showPubKey $ Utils.toSpoPubKey rcSpoPrivKey]
-                     , ["--sidechain-public-key", Utils.showScPubKey $ Utils.toSidechainPubKey rcSidechainPrivKey]
-                     , ["--spo-signature", Utils.showSig $ Utils.signWithSPOKey rcSpoPrivKey msg]
-                     , ["--sidechain-signature", Utils.showSig $ Utils.signWithSidechainKey rcSidechainPrivKey msg]
-                     , ["--registration-utxo", Utils.showTxOutRef rcRegistrationUtxo]
+                  ++ [ ["--spo-public-key", OffChain.showPubKey $ OffChain.toSpoPubKey rcSpoPrivKey]
+                     , ["--sidechain-public-key", OffChain.showScPubKey $ OffChain.toSidechainPubKey rcSidechainPrivKey]
+                     , ["--spo-signature", OffChain.showSig $ OffChain.signWithSPOKey rcSpoPrivKey msg]
+                     , ["--sidechain-signature", OffChain.showSig $ OffChain.signWithSidechainKey rcSidechainPrivKey msg]
+                     , ["--registration-utxo", OffChain.showTxOutRef rcRegistrationUtxo]
                      ]
           DeregistrationCommand {..} ->
             ["nix run .#ctl-main -- deregister"] :
             sidechainParamFlags
-              ++ [ ["--spo-public-key", Utils.showPubKey $ Utils.vKeyToSpoPubKey drSpoPubKey]
+              ++ [ ["--spo-public-key", OffChain.showPubKey $ OffChain.vKeyToSpoPubKey drSpoPubKey]
                  ]
           UpdateCommitteeHashCommand {..} ->
             let msg =
@@ -128,9 +124,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   map
                     ( \sidechainPrvKey ->
                         [ "--committee-pub-key-and-signature"
-                        , Utils.showScPubKeyAndSig
-                            (Utils.toSidechainPubKey sidechainPrvKey)
-                            (Utils.signWithSidechainKey sidechainPrvKey msg)
+                        , OffChain.showScPubKeyAndSig
+                            (OffChain.toSidechainPubKey sidechainPrvKey)
+                            (OffChain.signWithSidechainKey sidechainPrvKey msg)
                         ]
                     )
                     uchcCurrentCommitteePrivKeys
@@ -138,7 +134,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   map
                     ( \pubKey ->
                         [ "--new-committee-pub-key"
-                        , Utils.showScPubKey pubKey
+                        , OffChain.showScPubKey pubKey
                         ]
                     )
                     uchcNewCommitteePubKeys
@@ -147,7 +143,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   ++ currentCommitteePubKeysAndSigsFlags
                   ++ newCommitteeFlags
                   ++ [["--sidechain-epoch", show uchcSidechainEpoch]]
-                  ++ maybe [] (\bs -> [["--previous-merkle-root", Utils.showBuiltinBS bs]]) uchcPreviousMerkleRoot
+                  ++ maybe [] (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS bs]]) uchcPreviousMerkleRoot
           SaveRootCommand {..} ->
             let msg =
                   MerkleRootInsertionMessage
@@ -159,17 +155,17 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   map
                     ( \sidechainPrvKey ->
                         [ "--committee-pub-key-and-signature"
-                        , Utils.showScPubKeyAndSig
-                            (Utils.toSidechainPubKey sidechainPrvKey)
-                            (Utils.signWithSidechainKey sidechainPrvKey msg)
+                        , OffChain.showScPubKeyAndSig
+                            (OffChain.toSidechainPubKey sidechainPrvKey)
+                            (OffChain.signWithSidechainKey sidechainPrvKey msg)
                         ]
                     )
                     srcCurrentCommitteePrivKeys
              in ["nix run .#ctl-main -- save-root"] :
                 sidechainParamFlags
                   ++ currentCommitteePubKeysAndSigsFlags
-                  ++ [["--merkle-root", Utils.showBuiltinBS srcMerkleRoot]]
-                  ++ maybe [] (\bs -> [["--previous-merkle-root", Utils.showBuiltinBS bs]]) srcPreviousMerkleRoot
+                  ++ [["--merkle-root", OffChain.showBuiltinBS srcMerkleRoot]]
+                  ++ maybe [] (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS bs]]) srcPreviousMerkleRoot
 
 {- | 'merkleTreeCommand' creates output for the merkle tree commands.
 
@@ -181,20 +177,20 @@ merkleTreeCommand = \case
   MerkleTreeEntriesCommand {..} ->
     if null mtecEntries
       then ioError $ userError "Invalid empty list merkle tree entries"
-      else pure $ Utils.showMerkleTree $ MerkleTree.fromList $ map (Builtins.serialiseData . toBuiltinData) mtecEntries
+      else pure $ OffChain.showMerkleTree $ MerkleTree.fromList $ map (Builtins.serialiseData . toBuiltinData) mtecEntries
   RootHashCommand {..} ->
-    pure $ Utils.showBuiltinBS $ unRootHash $ MerkleTree.rootHash rhcMerkleTree
+    pure $ OffChain.showBuiltinBS $ unRootHash $ MerkleTree.rootHash rhcMerkleTree
   MerkleProofCommand {..} ->
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData mpcMerkleTreeEntry)) mpcMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
-      Just mp -> pure $ Utils.showMerkleProof mp
+      Just mp -> pure $ OffChain.showMerkleProof mp
   CombinedMerkleProofCommand {..} ->
     -- Mostly duplicated from the 'MerkleProofCommand' case
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData cmpMerkleTreeEntry)) cmpMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
       Just mp ->
         pure $
-          Utils.showCombinedMerkleProof
+          OffChain.showCombinedMerkleProof
             CombinedMerkleProof
               { cmpTransaction = cmpMerkleTreeEntry
               , cmpMerkleProof = mp
@@ -208,12 +204,12 @@ merkleTreeCommand = \case
 -}
 sidechainKeyCommand :: SidechainKeyCommand -> IO String
 sidechainKeyCommand = \case
-  FreshSidechainPrivateKey -> Utils.showSecpPrivKey <$> Utils.generateRandomSecpPrivKey
+  FreshSidechainPrivateKey -> OffChain.showSecpPrivKey <$> OffChain.generateRandomSecpPrivKey
   SidechainPrivateKeyToPublicKey {..} ->
-    return $ Utils.showScPubKey $ Utils.toSidechainPubKey spktpkPrivateKey
+    return $ OffChain.showScPubKey $ OffChain.toSidechainPubKey spktpkPrivateKey
   FreshSidechainCommittee {..} -> do
-    committeePrvKeys <- Monad.replicateM fscCommitteeSize Utils.generateRandomSecpPrivKey
-    let committeePubKeys = map Utils.toSidechainPubKey committeePrvKeys
+    committeePrvKeys <- Monad.replicateM fscCommitteeSize OffChain.generateRandomSecpPrivKey
+    let committeePubKeys = map OffChain.toSidechainPubKey committeePrvKeys
         committee = SidechainCommittee $ zipWith SidechainCommitteeMember committeePrvKeys committeePubKeys
     return $ ByteString.Lazy.Char8.unpack $ Aeson.encode committee
 
