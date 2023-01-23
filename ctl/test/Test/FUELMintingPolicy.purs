@@ -34,15 +34,15 @@ import Utils.SerialiseData (serialiseData)
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
 tests ∷ PlutipTest
-tests = Mote.Monad.group "`FUELMintingPolicy` tests" $ do
-  testScenarioActiveSuccess
-  testScenarioActiveSuccess2
-  testScenarioActiveFailure
-  testScenarioActiveFailure2
+tests = Mote.Monad.group "Claiming and burning FUEL tokens" $ do
+  testScenarioSuccess
+  testScenarioSuccess2
+  testScenarioFailure
+  testScenarioFailure2
 
--- | `testScenarioActiveSuccess` tests minting some tokens
-testScenarioActiveSuccess ∷ PlutipTest
-testScenarioActiveSuccess = Mote.Monad.test "minting FUEL"
+-- | `testScenarioSuccess` tests minting some tokens
+testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
@@ -106,19 +106,19 @@ testScenarioActiveSuccess = Mote.Monad.test "minting FUEL"
             }
         )
 
--- | `testScenarioActiveSuccess2` mints and burns a few times.. In particular, we:
+-- | `testScenarioSuccess2` mints and burns a few times.. In particular, we:
 -- |    - mint 5
 -- |    - mint 7
 -- |    - burn 10
 -- |    - burn 2
-testScenarioActiveSuccess2 ∷ PlutipTest
-testScenarioActiveSuccess2 =
+testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 =
   Mote.Monad.test
-    "minting 5 FUEL, minting 7 FUEL, burning 10 FUEL, burning 2 FUEL"
+    "Multiple claim and burn steps (minting 5 FUEL, minting 7 FUEL, burning 10 FUEL, burning 2 FUEL)"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
     $ \alice → Wallet.withKeyWallet alice do
-        -- start of mostly duplicated code from `testScenarioActiveSuccess`
+        -- start of mostly duplicated code from `testScenarioSuccess`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
         ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
@@ -136,7 +136,7 @@ testScenarioActiveSuccess2 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             }
-        -- end of mostly duplicated code from `testScenarioActiveSuccess`
+        -- end of mostly duplicated code from `testScenarioSuccess`
 
         { sidechainParams } ← initSidechain initScParams
 
@@ -166,7 +166,7 @@ testScenarioActiveSuccess2 =
           }
 
         (combinedMerkleProof0 /\ combinedMerkleProof1) ←
-          liftContractM "bad test case for `testScenarioActiveSuccess2`"
+          liftContractM "bad test case for `testScenarioSuccess2`"
             $ case combinedMerkleProofs of
                 [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
                   $ combinedMerkleProof0
@@ -175,12 +175,12 @@ testScenarioActiveSuccess2 =
 
         fp0 ←
           liftContractM
-            "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
             $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
 
         fp1 ←
           liftContractM
-            "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
             $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
 
         assertMaxFee (BigInt.fromInt 1_350_000) =<< runFuelMP sidechainParams fp0
@@ -202,9 +202,9 @@ testScenarioActiveSuccess2 =
 
         pure unit
 
-testScenarioActiveFailure ∷ PlutipTest
-testScenarioActiveFailure =
-  Mote.Monad.test "mint with invalid merkle proof (should fail)"
+testScenarioFailure ∷ PlutipTest
+testScenarioFailure =
+  Mote.Monad.test "Attempt to claim with invalid merkle proof (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
     $ \alice →
@@ -238,15 +238,15 @@ testScenarioActiveFailure =
             { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }
           # fails
 
--- | `testScenarioActiveFailure2` tries to mint something twice (which should
+-- | `testScenarioFailure2` tries to mint something twice (which should
 -- | fail!)
-testScenarioActiveFailure2 ∷ PlutipTest
-testScenarioActiveFailure2 = Mote.Monad.test "double mint (should fail)"
+testScenarioFailure2 ∷ PlutipTest
+testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice →
       Wallet.withKeyWallet alice do
-        -- start of mostly duplicated code from `testScenarioActiveSuccess2`
+        -- start of mostly duplicated code from `testScenarioSuccess2`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
         ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
@@ -291,10 +291,10 @@ testScenarioActiveFailure2 = Mote.Monad.test "double mint (should fail)"
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , previousMerkleRoot: Nothing
           }
-        -- end of mostly duplicated code from `testScenarioActiveSuccess2`
+        -- end of mostly duplicated code from `testScenarioSuccess2`
 
         (combinedMerkleProof0 /\ _combinedMerkleProof1) ←
-          liftContractM "bad test case for `testScenarioActiveSuccess2`"
+          liftContractM "bad test case for `testScenarioSuccess2`"
             $ case combinedMerkleProofs of
                 [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
                   $ combinedMerkleProof0
@@ -303,7 +303,7 @@ testScenarioActiveFailure2 = Mote.Monad.test "double mint (should fail)"
 
         fp0 ←
           liftContractM
-            "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
+            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
             $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
 
         -- the very bad double mint attempt...
