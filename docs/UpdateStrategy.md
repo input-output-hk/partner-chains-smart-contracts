@@ -124,25 +124,6 @@ Invalidating a version will require us to
 - burn the `VersionOraclePolicy` token
 - remove the UTxO from the `VersionOracleValidator` (strictly speaking this is not necessary, but it will
   make the protocol simpler).
-- migrate all tokens and datums from the old version (see [3.3. Migrating old tokens](#33-migrating-old-tokens))
 
 The validator only allows spending any UTxOs, if the `VersionOracleValidator` token was burnt,
 which in turn has to verify the signature of a special message.
-
-### 3.3. Migrating old tokens
-
-In case we are invalidating a version, we should provide a way to migrate old assets to their new
-counterparts.
-
-The following tokens would have to be migrated (burnt and reminted) in this scenario:
-
-- `FUELMintingPolicy`
-- `MPTRootTokenMintingPolicy`
-
-Note that distributed set tokens and UTxOs are not mentioned, as they must be reminted with FUEL token.
-
-TODO We have the following options to consider:
-
-- we could use the TxTMP pattern to avoid the need of migrating tokens.
-- allowing the new version of a minting policy to mint n amount of tokens in exchange for the old token.
-- handling token migrations with the Bridge, issuing new certificates when an old token is burned
