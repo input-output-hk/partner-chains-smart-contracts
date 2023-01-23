@@ -1,4 +1,4 @@
-strict digraph { 
+strict digraph {
   node [shape=record]
 
 //  atmsVKey [
@@ -13,7 +13,7 @@ strict digraph {
     label = "UTxO with datum | Merkle root"
     ]
 
-  mintToken [label = 
+  mintToken [label =
     "Mint MPTRootToken |
       redeemer: SignedMerkleRoot \l
       tx body: minted tokens\l

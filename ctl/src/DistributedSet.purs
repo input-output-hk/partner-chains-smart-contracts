@@ -2,8 +2,11 @@
 -- | distributed set.
 module DistributedSet
   ( Ds(Ds)
+  , dsConf
   , DsDatum(DsDatum)
+  , dsNext
   , DsConfDatum(DsConfDatum)
+  , dscmTxOutRef
   , DsConfMint(DsConfMint)
   , DsKeyMint(DsKeyMint)
   , Node(Node)
@@ -70,11 +73,19 @@ import Utils.Logging as Logging
 
 -- | `Ds` is the type which parameterizes the validator script for insertion in
 -- | the distributed set.
-newtype Ds = Ds { dsConf ∷ CurrencySymbol }
+newtype Ds = Ds CurrencySymbol
+
+-- | `dsConf` accesses the underlying `ByteArray` of `Ds`
+dsConf ∷ Ds → CurrencySymbol
+dsConf (Ds currencySymbol) = currencySymbol
 
 -- | `DsDatum` is the datum for the validator script for insertion in the
 -- | distributed set.
-newtype DsDatum = DsDatum { dsNext ∷ ByteArray }
+newtype DsDatum = DsDatum ByteArray
+
+-- | `dsNext` accesses the underlying `ByteArray` of `DsDatum`
+dsNext ∷ DsDatum → ByteArray
+dsNext (DsDatum byteArray) = byteArray
 
 -- | `DsConfDatum` is the datum for the validator script which holds the
 -- | configuration of the distributed set on chain i.e., this datum holds the
@@ -87,7 +98,11 @@ newtype DsConfDatum = DsConfDatum
 -- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
 -- | which initializes the distributed set (i.e., the parameter for the
 -- | minting policy that is the configuration of the distributed set).
-newtype DsConfMint = DsConfMint { dscmTxOutRef ∷ TransactionInput }
+newtype DsConfMint = DsConfMint TransactionInput
+
+-- | `dscmTxOutRef` accesses the underlying `TransactionInput` of `DsConfMint`
+dscmTxOutRef ∷ DsConfMint → TransactionInput
+dscmTxOutRef (DsConfMint transactionInput) = transactionInput
 
 -- | `DsKeyMint` is the type which paramterizes the minting policy of the
 -- | tokens which are keys in the distributed set.
@@ -106,16 +121,16 @@ newtype Node = Node
 -- | datum.
 {-# INLINEABLE mkNode #-}
 mkNode ∷ ByteArray → DsDatum → Node
-mkNode str (DsDatum d) =
+mkNode str d =
   Node
     { nKey: str
-    , nNext: d.dsNext
+    , nNext: dsNext d
     }
 
 -- | Converts a `Node` to the correpsonding `DsDatum`
 nodeToDatum ∷ Node → DsDatum
 nodeToDatum (Node node) =
-  DsDatum { dsNext: node.nNext }
+  DsDatum node.nNext
 
 -- | `Ib` is the insertion buffer (abbr. Ib) is a fixed length array of how
 -- | many new nodes (this is always 2, see `lengthIb`) are generated after
@@ -237,38 +252,11 @@ insertAddress netId ds = do
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
 
-instance FromData Ds where
-  fromData (Constr n [ a ]) | n == zero = Ds <<< { dsConf: _ } <$> fromData a
-  fromData _ = Nothing
+derive newtype instance ToData Ds
+derive newtype instance FromData Ds
 
-instance ToData Ds where
-  toData (Ds { dsConf }) = Constr zero [ toData dsConf ]
-
-instance FromData DsDatum where
-  fromData (Constr n [ a ]) | n == zero = DsDatum <<< { dsNext: _ } <$> fromData
-    a
-  fromData _ = Nothing
-
-instance ToData DsDatum where
-  toData (DsDatum { dsNext }) = Constr zero [ toData dsNext ]
-
-instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == zero =
-    DsConfDatum <$>
-      ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
-  fromData _ = Nothing
-
-instance ToData DsConfDatum where
-  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
-    [ toData dscKeyPolicy, toData dscFUELPolicy ]
-
-instance FromData DsConfMint where
-  fromData (Constr n [ a ])
-    | n == zero = DsConfMint <<< { dscmTxOutRef: _ } <$> fromData a
-  fromData _ = Nothing
-
-instance ToData DsConfMint where
-  toData (DsConfMint { dscmTxOutRef }) = Constr zero [ toData dscmTxOutRef ]
+derive newtype instance ToData DsDatum
+derive newtype instance FromData DsDatum
 
 instance FromData DsKeyMint where
   fromData (Constr n [ a, b ])
@@ -282,6 +270,19 @@ instance ToData DsKeyMint where
   toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
     [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
 
+instance FromData DsConfDatum where
+  fromData (Constr n [ a, b ]) | n == zero =
+    DsConfDatum <$>
+      ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
+  fromData _ = Nothing
+
+instance ToData DsConfDatum where
+  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
+    [ toData dscKeyPolicy, toData dscFUELPolicy ]
+
+derive newtype instance ToData DsConfMint
+derive newtype instance FromData DsConfMint
+
 dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
@@ -290,7 +291,7 @@ dsToDsKeyMint ds = do
 
   pure $ DsKeyMint
     { dskmValidatorHash: insertValidatorHash
-    , dskmConfCurrencySymbol: (unwrap ds).dsConf
+    , dskmConfCurrencySymbol: dsConf ds
     }
 
 -- | `insertNode str node` inserts returns the new nodes which should be
@@ -321,13 +322,12 @@ getDs (SidechainParams sp) = do
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDs" }
 
-  dsConfPolicy' ← dsConfPolicy $ DsConfMint
-    { dscmTxOutRef: sp.genesisUtxo }
+  dsConfPolicy' ← dsConfPolicy $ DsConfMint sp.genesisUtxo
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
       (msg "Failed to get dsConfPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol dsConfPolicy'
-  pure $ Ds { dsConf: dsConfPolicyCurrencySymbol }
+  pure $ Ds dsConfPolicyCurrencySymbol
 
 -- | `getDsKeyPolicy` grabs the key policy and currency symbol
 -- | (potentially throwing an error in the case that it is not possible).
@@ -347,7 +347,7 @@ getDsKeyPolicy (SidechainParams sp) = do
     insertValidatorHash = Scripts.validatorHash insertValidator'
     dskm = DsKeyMint
       { dskmValidatorHash: insertValidatorHash
-      , dskmConfCurrencySymbol: (unwrap ds).dsConf
+      , dskmConfCurrencySymbol: dsConf ds
       }
   policy ← dsKeyPolicy dskm
 
@@ -385,7 +385,7 @@ findDsConfOutput ds = do
       (msg "Distributed Set config utxo does not contain oneshot token")
       $ Array.find
           ( \(_ /\ TransactionOutputWithRefScript o) → not $ null
-              $ AssocMap.lookup (unwrap ds).dsConf
+              $ AssocMap.lookup (dsConf ds)
               $ getValue
                   (unwrap o.output).amount
           )

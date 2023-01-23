@@ -1,4 +1,4 @@
-module Test.PoCECDSA where
+module Test.PoCECDSA (testScenario) where
 
 import Contract.Prelude
 
@@ -39,10 +39,14 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
+import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
+import Mote.Monad as Mote.Monad
 import RawScripts (rawPoCECDSA)
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
 
 getValidator ∷ Contract () Validator
 getValidator =
@@ -121,17 +125,20 @@ testVerification ecdsaRed = do
   pure txId
 
 -- | Testing ECDSA verification function on-chain
-testScenario ∷ Contract () Unit
-testScenario = do
-  txId ← prepTest
-  awaitTxConfirmed txId
-  void $ testVerification $
-    -- | TODO: Find the correct format
-    ECDSARed
-      { msg: hexToByteArrayUnsafe
-          "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
-      , sig: hexToByteArrayUnsafe
-          "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
-      , pk: hexToByteArrayUnsafe
-          "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
-      }
+testScenario ∷ PlutipTest
+testScenario = Mote.Monad.test "PoCECDSA: testScenario"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+  $ \alice → Wallet.withKeyWallet alice do
+      txId ← prepTest
+      awaitTxConfirmed txId
+      void $ testVerification $
+        -- | TODO: Find the correct format
+        ECDSARed
+          { msg: hexToByteArrayUnsafe
+              "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
+          , sig: hexToByteArrayUnsafe
+              "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295"
+          , pk: hexToByteArrayUnsafe
+              "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
+          }

@@ -19,10 +19,6 @@ import Prelude qualified
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
-  , -- | Any random UTxO to prevent subsequent minting for the oneshot minting policy.
-    -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
-    -- will use the distributed set implementation.
-    genesisMint :: Maybe TxOutRef
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: TxOutRef
@@ -38,33 +34,6 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
   deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData)
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
-
-{- | Parameters uniquely identifying a sidechain, used only in the block producer registration
- TODO: This type has to be removed, when we deprecate Passive Bridge functionality
--}
-data SidechainParams' = SidechainParams'
-  { chainId :: Integer
-  , genesisHash :: GenesisHash
-  , -- @Just utxo@ denotes that we will use the oneshot minting policy, and @Nothing@
-    -- will use the distributed set implementation.
-
-    -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
-    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: TxOutRef
-  , -- | 'thresholdNumerator' is the numerator for the ratio of the committee
-    -- needed to sign off committee handovers / merkle roots
-    thresholdNumerator :: Integer
-  , -- | 'thresholdDenominator' is the denominator for the ratio of the
-    -- committee needed to sign off committee handovers / merkle roots
-    thresholdDenominator :: Integer
-  }
-
-PlutusTx.makeIsDataIndexed ''SidechainParams' [('SidechainParams', 0)]
-
--- | Convert SidechainParams to the Active Bridge version
-convertSCParams :: SidechainParams -> SidechainParams'
-convertSCParams (SidechainParams i g _ u numerator denominator) =
-  SidechainParams' i g u numerator denominator
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
@@ -105,7 +74,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams'
+  { bprmSidechainParams :: SidechainParams
   , bprmSidechainPubKey :: SidechainPubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
@@ -138,7 +107,7 @@ PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
  >  blake2b(cbor(MerkleRootInsertionMessage))
 -}
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
-  { mrimSidechainParams :: SidechainParams'
+  { mrimSidechainParams :: SidechainParams
   , mrimMerkleRoot :: BuiltinByteString
   , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
   }
@@ -273,7 +242,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { uchmSidechainParams :: SidechainParams'
+  { uchmSidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us

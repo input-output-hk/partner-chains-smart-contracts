@@ -51,7 +51,6 @@ import MPTRoot.Utils
   )
 import MerkleTree as MerkleTree
 import SidechainParams (SidechainParams)
-import SidechainParams as SidechainParams
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -149,7 +148,7 @@ runSaveRoot
     mrimHash ← liftContractM (msg "Failed to create MerkleRootInsertionMessage")
       $ serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams: SidechainParams.convertSCParams sidechainParams
+          { sidechainParams
           , merkleRoot
           , previousMerkleRoot
           }

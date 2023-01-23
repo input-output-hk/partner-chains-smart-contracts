@@ -1,4 +1,4 @@
-strict digraph { 
+strict digraph {
   node [shape=record]
 
   burnTx [label =

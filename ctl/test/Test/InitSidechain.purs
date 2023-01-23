@@ -1,5 +1,6 @@
 module Test.InitSidechain
   ( generateInitCommittee
+  , tests
   , testScenario1
   , testScenario2
   , testScenario3
@@ -8,11 +9,9 @@ module Test.InitSidechain
 import Contract.Prelude
 
 import Contract.Log as Log
-import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Utxos as Utxos
-import Contract.Wallet (KeyWallet)
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
@@ -21,10 +20,20 @@ import Data.Map as Map
 import Data.Set as Set
 import Effect.Exception as Exception
 import InitSidechain as InitSidechain
+import Mote.Monad as Mote.Monad
 import SidechainParams (InitSidechainParams(..))
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
 import Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
 import Utils.Crypto as Crypto
+
+-- | `tests` aggregates all the tests together in one convenient funciton
+tests ∷ PlutipTest
+tests = Mote.Monad.group "`initSidechain` tests" $ do
+  testScenario1
+  testScenario2
+  testScenario3
 
 -- | `generateInitCommittee` generates an intial committee of the given size as
 -- | an array of tuple associating public key to private key.
@@ -44,28 +53,31 @@ generateInitCommittee committeeSize = do
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
-testScenario1 ∷ Contract () Unit
-testScenario1 = do
-  Log.logInfo' "InitSidechain 'testScenario1'"
-  genesisUtxo ← Test.Utils.getOwnTransactionInput
-  -- generate an initialize committee of `committeeSize` committee members
-  let committeeSize = 25
-  committeePrvKeys ← sequence $ Array.replicate committeeSize
-    Crypto.generatePrivKey
-  let
-    initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-    initScParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 69
-      , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-      , initMint: Nothing
-      , initUtxo: genesisUtxo
-      , initCommittee
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      }
+testScenario1 ∷ PlutipTest
+testScenario1 = Mote.Monad.test "Calling `initSidechain`"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+  $ \alice →
+      Wallet.withKeyWallet alice do
+        Log.logInfo' "InitSidechain 'testScenario1'"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+        -- generate an initialize committee of `committeeSize` committee members
+        let committeeSize = 25
+        committeePrvKeys ← sequence $ Array.replicate committeeSize
+          Crypto.generatePrivKey
+        let
+          initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+            , initUtxo: genesisUtxo
+            , initCommittee
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            }
 
-  void $ InitSidechain.initSidechain initScParams
+        void $ InitSidechain.initSidechain initScParams
 
 -- | `testScenario2` initalizes the sidechain endpoint in two parts:
 -- |
@@ -75,30 +87,34 @@ testScenario1 = do
 -- |
 -- | Otherwise, this is mostly the same as `testScenario1`
 -- | See issue #174.
-testScenario2 ∷ Contract () Unit
-testScenario2 = do
-  Log.logInfo' "InitSidechain 'testScenario2'"
-  genesisUtxo ← Test.Utils.getOwnTransactionInput
-  -- generate an initialize committee of @committeeSize@ committee members
-  let committeeSize = 25
-  committeePrvKeys ← sequence $ Array.replicate committeeSize
-    Crypto.generatePrivKey
-  let
-    initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-    initScParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 69
-      , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-      , initMint: Nothing
-      , initUtxo: genesisUtxo
-      , initCommittee
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      }
+testScenario2 ∷ PlutipTest
+testScenario2 =
+  Mote.Monad.test "Calling `initSidechain` as the two step process"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+    $ \alice →
+        Wallet.withKeyWallet alice do
+          Log.logInfo' "InitSidechain 'testScenario2'"
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          -- generate an initialize committee of @committeeSize@ committee members
+          let committeeSize = 25
+          committeePrvKeys ← sequence $ Array.replicate committeeSize
+            Crypto.generatePrivKey
+          let
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initCommittee
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              }
 
-  void do
-    _sc ← InitSidechain.initSidechainTokens initScParams
-    InitSidechain.initSidechainCommittee initScParams
+          void do
+            _sc ← InitSidechain.initSidechainTokens initScParams
+            InitSidechain.initSidechainCommittee initScParams
 
 -- | `testScenario3` is a bit more complicated (but this should fail!) than
 -- | `testScenario2`. It takes two distinct wallets, say Alice and Bob, grabs a
@@ -106,38 +122,41 @@ testScenario2 = do
 -- | initialize the sidechain with Alice's utxo.
 -- | In short, this verifies that to initialize the sidechain, we need to spend
 -- | the `initUtxo`
-testScenario3 ∷ KeyWallet → KeyWallet → Contract () Unit
-testScenario3 alice bob = do
-  Log.logInfo' "InitSidechain 'testScenario3'"
-  aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
-    "Failed to query wallet utxos"
-    Utxos.getWalletUtxos
-  genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
-    $ Set.findMin
-    $ Map.keys aliceUtxos
+testScenario3 ∷ PlutipTest
+testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
+  $ Test.PlutipTest.mkPlutipConfigTest
+      ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ] /\
+          [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+      )
+  $ \(alice /\ bob) → do
+      aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
+        "Failed to query wallet utxos"
+        Utxos.getWalletUtxos
 
-  result ← MonadError.try $ Wallet.withKeyWallet bob do
+      genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
+        $ Set.findMin
+        $ Map.keys aliceUtxos
 
-    -- generate an initialize committee of `committeeSize` committee members
-    let committeeSize = 1000
-    committeePrvKeys ← sequence $ Array.replicate committeeSize
-      Crypto.generatePrivKey
-    let
-      initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-      initScParams = InitSidechainParams
-        { initChainId: BigInt.fromInt 69
-        , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-        , initMint: Nothing
-        , initUtxo: genesisUtxo
-        , initCommittee
-        , initSidechainEpoch: zero
-        , initThresholdNumerator: BigInt.fromInt 2
-        , initThresholdDenominator: BigInt.fromInt 3
-        }
+      result ← MonadError.try $ Wallet.withKeyWallet bob do
+        -- generate an initialize committee of `committeeSize` committee members
+        let committeeSize = 1000
+        committeePrvKeys ← sequence $ Array.replicate committeeSize
+          Crypto.generatePrivKey
+        let
+          initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+            , initUtxo: genesisUtxo
+            , initCommittee
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            }
 
-    void $ InitSidechain.initSidechain initScParams
-  case result of
-    Right _ →
-      Monad.throwContractError $ Exception.error
-        "Contract should have failed but it didn't."
-    Left _err → pure unit
+        void $ InitSidechain.initSidechain initScParams
+      case result of
+        Right _ →
+          Monad.throwContractError $ Exception.error
+            "Contract should have failed but it didn't."
+        Left _err → pure unit
