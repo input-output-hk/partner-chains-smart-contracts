@@ -183,17 +183,17 @@ testScenarioActiveSuccess2 =
             "`Test.FUELMintingPolicy.testScenarioActiveSuccess2` failed converting to FUELParams"
             $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
 
-        assertMaxFee (BigInt.fromInt 1_700_000) =<< runFuelMP sidechainParams fp0
-        assertMaxFee (BigInt.fromInt 1_700_000) =<< runFuelMP sidechainParams fp1
+        assertMaxFee (BigInt.fromInt 1_350_000) =<< runFuelMP sidechainParams fp0
+        assertMaxFee (BigInt.fromInt 1_350_000) =<< runFuelMP sidechainParams fp1
 
-        assertMaxFee (BigInt.fromInt 600_000) =<< runFuelMP sidechainParams
+        assertMaxFee (BigInt.fromInt 500_000) =<< runFuelMP sidechainParams
           ( Burn
               { amount: BigInt.fromInt 10
               , recipient: hexToByteArrayUnsafe "aabbcc"
               }
           )
 
-        assertMaxFee (BigInt.fromInt 600_000) =<< runFuelMP sidechainParams
+        assertMaxFee (BigInt.fromInt 500_000) =<< runFuelMP sidechainParams
           ( Burn
               { amount: BigInt.fromInt 2
               , recipient: hexToByteArrayUnsafe "aabbcc"
