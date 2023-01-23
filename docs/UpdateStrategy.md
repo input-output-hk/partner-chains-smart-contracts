@@ -11,7 +11,7 @@ source of truth, to find the validators and minting policies for the protocol.
 
 - The governance strategy required to approve the protocol update is out of scope of this specification
 
-## 2.Strategies
+## 2. Strategies
 
 We considered the following strategies, but these can also be used in combination:
 
@@ -24,6 +24,13 @@ We considered the following strategies, but these can also be used in combinatio
   strategy it is important to allow full migration, in case a version has to be abandoned due to
   a security issue. The update method must be flexible enough to allow addition and removal of
   certain validators/minting policies.
+  For versioned validators, the version used must be specified by the datum or redeemer of the
+  transaction.
+- _partial versioned update_: this is in-between migration and the versioned solution, where the
+  UTxOs in the old validator are considered valid after the update, but new insertions are not
+  allowed. For partially verioned validators, always the latest version is used by default.
+  In practice these validators are set up the same way as the ones with migration strategy, but
+  without having the old tokens and datums migrated to the new version of the validator.
 - _transaction token pattern_: we could introduce a light-weight validator/minting policy in place
   of our current minting policies and validators, and move all actual logic to
   [Transaction Token Minting Policies (TxTMP)](https://plutonomicon.github.io/plutonomicon/transaction-token-pattern).
@@ -36,19 +43,21 @@ We considered the following strategies, but these can also be used in combinatio
 
   The drawback is that this would slightly raise the fees due to the cost of an extra token minted for each transaction.
 
-These strategies can be used in combination for optimal migration cost/complexity. In case of our
-sidechain protocol, I propose the following strategies for our validators and minting policies:
+These strategies can be used in combination for optimal migration cost/complexity.
+We also have to decide for each validator, wheter
 
-- `FUELMintingPolicy`: versioned update (TODO: or TxTMP)
-- `MPTRootTokenMintingPolicy`: versioned update
-- `CommitteeCandidateValidator`: migration -
-- `MPTRootTokenValidator`: versioned update
-- `CommitteeHashValidator`: partial versioned update - new insertion is not allowed after the update
-- `CommitteeHashPolicy`: partial versioned update - new mint is not allowed after the update
-- `DsConfValidator`: partial versioned update -
-- `DsConfPolicy`: partial versioned update
-- `DsInsertValidator`: partial versioned update
-- `DsKeyPolicy`: partial versioned update
+In case of our sidechain protocol, I propose the following strategies for our validators and minting policies:
+
+- `FUELMintingPolicy`: Transaction Token Pattern
+- `CommitteeCandidateValidator`: migration
+- `MPTRootTokenMintingPolicy`: partial versioned update
+- `MPTRootTokenValidator`: partial versioned update
+- `CommitteeHashPolicy`: partial versioned update
+- `CommitteeHashValidator`: partial versioned update
+- `DsConfValidator`: it's role is taken over by `VersionOracleValidator`
+- `DsConfPolicy`: it's role is taken over by `VersionOraclePolicy`
+- `DsInsertValidator`: versioned update
+- `DsKeyPolicy`: versioned update
 
 ## 3. Implementation:
 
@@ -66,9 +75,9 @@ protocol version in their signed message and only allow minting with the actual 
 
 ### 3.1. VersionOracleValidator
 
-For each version of the protocol, a separate UTxO with the following datum will be created at the
-`VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the UTxO to prove
-its validity.
+For each validator or minting policy, a separate UTxO with the following datum will
+be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the
+UTxO to prove its validity. This design allows multiple versions of the same validator.
 
 **Datum:**
 
@@ -76,10 +85,10 @@ its validity.
 data VersionOracle = VersionOracle
   { version :: Int
   -- ^ `version` of the protocol
-  , validators :: Map String ValidatorHash
-  -- ^ `validators` is a mapping from validator name to validator hash
-  , mintingPolicies :: Map String MintingPolicy
-  -- ^ `mintingPolicies` is a mapping from minting policy name to validator hash
+  , scriptId :: Int
+  -- ^ `scriptId` is the unique identifier of the validator
+  , scriptHash :: ScriptHash
+  -- ^ `validators` is the validator hash of the validator/minting policy
 }
 ```
 
