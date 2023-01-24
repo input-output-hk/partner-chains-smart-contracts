@@ -21,7 +21,6 @@ tests =
     "TrustlessSidechain"
     [ MerkleTree.test
     , MultiSig.test
-    , MultiSig.test
     , MerkleProofSerialisation.testSide
     , MerkleProofSerialisation.testRootHash
     , MerkleProofSerialisation.testUp

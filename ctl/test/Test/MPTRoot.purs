@@ -41,7 +41,7 @@ import Utils.SerialiseData as SerialiseData
 
 -- | `tests` aggregates all MPTRoot tests in a convenient single function
 tests ∷ PlutipTest
-tests = Mote.Monad.group "`MPTRoot` tests" $ do
+tests = Mote.Monad.group "Merkle root insertion" $ do
   testScenario1
   testScenario2
 
@@ -137,7 +137,7 @@ saveRoot
 -- |    3. Saves that merkle root with the current committee (everyone but one
 -- |    person) using the `MPTRoot.saveRoot` endpoint.
 testScenario1 ∷ PlutipTest
-testScenario1 = Mote.Monad.test "saving a merkle root"
+testScenario1 = Mote.Monad.test "Saving a Merkle root"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
@@ -238,7 +238,7 @@ testScenario1 = Mote.Monad.test "saving a merkle root"
 -- |
 -- | Note: the initialize sidechain part is duplicated code from above.
 testScenario2 ∷ PlutipTest
-testScenario2 = Mote.Monad.test "saving two merkle roots"
+testScenario2 = Mote.Monad.test "Saving two merkle roots"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
