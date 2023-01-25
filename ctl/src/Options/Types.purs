@@ -71,7 +71,6 @@ data Endpoint
       }
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
-      -- { newCommitteePubKeys ∷ List SidechainPublicKey
       { newCommitteePubKeysInput ∷ CommitteeInput
       , committeeSignaturesInput ∷ CommitteeSignaturesInput
       , previousMerkleRoot ∷ Maybe RootHash
@@ -88,7 +87,6 @@ data Endpoint
     CommitteeHandover
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      -- , newCommitteePubKeys ∷ List SidechainPublicKey
       , newCommitteePubKeysInput ∷ CommitteeInput
       , newCommitteeSignaturesInput ∷
           CommitteeSignaturesInput
@@ -97,9 +95,12 @@ data Endpoint
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
+  | InitTokens { initSidechainEpoch ∷ BigInt }
   | Init
-      -- { committeePubKeys ∷ List SidechainPublicKey, initSidechainEpoch ∷ BigInt }
-      { committeePubKeysInput ∷ CommitteeInput, initSidechainEpoch ∷ BigInt }
+      { committeePubKeysInput ∷ CommitteeInput
+      , initSidechainEpoch ∷ BigInt
+      , useInitTokens ∷ Boolean
+      }
 
 derive instance Generic Endpoint _
 

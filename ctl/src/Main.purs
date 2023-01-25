@@ -8,12 +8,13 @@ import Contract.Monad (Contract, launchAff_, runContract)
 import Data.List as List
 import Effect.Class (liftEffect)
 import EndpointResp (EndpointResp(..), stringifyEndpointResp)
-import FUELMintingPolicy
-  ( FuelParams(Burn, Mint)
-  , runFuelMP
-  )
+import FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
 import GetSidechainAddresses as GetSidechainAddresses
-import InitSidechain (initSidechain)
+import InitSidechain
+  ( initSidechain
+  , initSidechainCommittee
+  , initSidechainTokens
+  )
 import MPTRoot (SaveRootParams(SaveRootParams))
 import MPTRoot as MPTRoot
 import Options (getOptions)
@@ -127,7 +128,30 @@ main = do
           <#> unwrap
           >>> { transactionId: _ }
           >>> SaveRootResp
-      Init { committeePubKeysInput, initSidechainEpoch } → do
+
+      InitTokens { initSidechainEpoch } → do
+        let
+          sc = unwrap opts.scParams
+          isc = wrap
+            { initChainId: sc.chainId
+            , initGenesisHash: sc.genesisHash
+            , initUtxo: sc.genesisUtxo
+            -- v only difference between sidechain and initsidechain
+            , initCommittee: []
+            , initSidechainEpoch
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
+            }
+        { transactionId, sidechainParams, sidechainAddresses } ←
+          initSidechainTokens isc
+
+        pure $ InitResp -- TODO
+          { transactionId: unwrap transactionId
+          , sidechainParams
+          , sidechainAddresses
+          }
+
+      Init { committeePubKeysInput, initSidechainEpoch, useInitTokens } → do
         committeePubKeys ← liftEffect $ ConfigFile.getCommittee
           committeePubKeysInput
         let
@@ -142,7 +166,10 @@ main = do
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator
             }
-        { transactionId, sidechainParams, sidechainAddresses } ← initSidechain isc
+
+        { transactionId, sidechainParams, sidechainAddresses } ←
+          if useInitTokens then initSidechainCommittee isc
+          else initSidechain isc
 
         pure $ InitResp
           { transactionId: unwrap transactionId

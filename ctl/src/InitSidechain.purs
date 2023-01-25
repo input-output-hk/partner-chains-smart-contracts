@@ -382,7 +382,13 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
 -- | Also, this should pay the committee hash NFT back to your own wallet (see
 -- | `BalanceTx.BalanceTx.buildTransactionChangeOutput` where it claims that excess
 -- | value is returned back to the owner's address).
-initSidechainTokens ∷ InitSidechainParams → Contract () SidechainParams
+initSidechainTokens ∷
+  InitSidechainParams →
+  Contract ()
+    { transactionId ∷ TransactionHash
+    , sidechainParams ∷ SidechainParams
+    , sidechainAddresses ∷ SidechainAddresses
+    }
 initSidechainTokens isp = do
   -- Logging
   ----------------------------------------
@@ -427,7 +433,14 @@ initSidechainTokens isp = do
   logInfo' $ msg
     "Initialise sidechain tokens transaction submitted successfully."
 
-  pure $ toSidechainParams isp
+  let sidechainParams = toSidechainParams isp
+  sidechainAddresses ←
+    GetSidechainAddresses.getSidechainAddresses sidechainParams
+  pure
+    { transactionId: txId
+    , sidechainParams
+    , sidechainAddresses
+    }
 
 -- | `initSidechainCommittee` pays the NFT which identifies the committee hash
 -- | to the update committee hash validator script.
@@ -435,7 +448,13 @@ initSidechainTokens isp = do
 -- | This is meant to be used _after_ `initSidechainTokens`.
 -- |
 -- | Note: you must have such an NFT in your wallet already.
-initSidechainCommittee ∷ InitSidechainParams → Contract () Unit
+initSidechainCommittee ∷
+  InitSidechainParams →
+  Contract ()
+    { transactionId ∷ TransactionHash
+    , sidechainParams ∷ SidechainParams
+    , sidechainAddresses ∷ SidechainAddresses
+    }
 initSidechainCommittee isp = do
   -- Logging
   ----------------------------------------
@@ -455,10 +474,18 @@ initSidechainCommittee isp = do
   txId ← submit signedTx
   logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
-  logInfo' $ msg
-    "Initialise sidechain tokens transaction submitted successfully."
 
-  pure unit
+  -- logInfo' $ msg
+  --   "Initialise sidechain tokens transaction submitted successfully."
+
+  let sidechainParams = toSidechainParams isp
+  sidechainAddresses ←
+    GetSidechainAddresses.getSidechainAddresses sidechainParams
+  pure
+    { transactionId: txId
+    , sidechainParams
+    , sidechainAddresses
+    }
 
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `initSidechainCommittee` in one transaction. Briefly,
@@ -532,8 +559,8 @@ initSidechain isp = do
   -- minting policies as in issue #224
   -----------------------------------------
   let sidechainParams = toSidechainParams isp
-  sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
-    sidechainParams
+  sidechainAddresses ←
+    GetSidechainAddresses.getSidechainAddresses sidechainParams
   pure
     { transactionId: txId
     , sidechainParams
