@@ -32,6 +32,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
@@ -64,7 +65,12 @@ import Utils.Logging as Utils.Logging
 -- | `getMptRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters, and calls
 -- | `mptRootTokenValidator`
-getMptRootTokenMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getMptRootTokenMintingPolicy ∷
+  SidechainParams →
+  Contract ()
+    { mptRootTokenMintingPolicy ∷ MintingPolicy
+    , mptRootTokenCurrencySymbol ∷ CurrencySymbol
+    }
 getMptRootTokenMintingPolicy sidechainParams = do
   let msg = report "getMptRootTokenMintingPolicy"
   updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
@@ -73,10 +79,14 @@ getMptRootTokenMintingPolicy sidechainParams = do
     liftContractM
       (msg "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
-  mptRootTokenMintingPolicy $ SignedMerkleRootMint
+  policy ← mptRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
     , updateCommitteeHashCurrencySymbol
     }
+  mptRootTokenCurrencySymbol ←
+    liftContractM (msg "Cannot get currency symbol") $
+      Value.scriptCurrencySymbol policy
+  pure $ { mptRootTokenMintingPolicy: policy, mptRootTokenCurrencySymbol }
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷ SaveRootParams → Contract () TransactionHash

@@ -25,7 +25,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
+import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
@@ -83,23 +83,16 @@ runUpdateCommitteeHash
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
-  pol ← committeeHashPolicy
-    ( InitCommitteeHashMint
-        { icTxOutRef: (\(SidechainParams x) → x.genesisUtxo) sidechainParams
-        }
-    )
-
-  cs ← liftContractM (msg "Failed to get updateCommitteeHash minting policy")
-    $ Value.scriptCurrencySymbol pol
-
-  let tn = initCommitteeHashMintTn
+  { committeeHashCurrencySymbol
+  , committeeHashTokenName
+  } ← getCommitteeHashPolicy sidechainParams
 
   -- Getting the minting policy for the mpt root token
   -------------------------------------------------------------
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: cs
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       }
   mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
   mptRootTokenCurrencySymbol ←
@@ -146,7 +139,8 @@ runUpdateCommitteeHash
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: assetClass cs tn
+      , uchAssetClass: assetClass committeeHashCurrencySymbol
+          committeeHashTokenName
       , mptRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -224,13 +218,14 @@ runUpdateCommitteeHash
 report ∷ String → ∀ e. Display e ⇒ e → String
 report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
 
--- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
+-- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
   SidechainParams →
   Contract ()
     { committeeHashPolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
+    , committeeHashTokenName ∷ TokenName
     }
 getCommitteeHashPolicy (SidechainParams sp) = do
   let
@@ -241,4 +236,6 @@ getCommitteeHashPolicy (SidechainParams sp) = do
   committeeHashCurrencySymbol ← liftContractM
     (msg "Failed to get updateCommitteeHash CurrencySymbol")
     (Value.scriptCurrencySymbol committeeHashPolicy)
-  pure { committeeHashPolicy, committeeHashCurrencySymbol }
+  let committeeHashTokenName = initCommitteeHashMintTn
+  pure
+    { committeeHashPolicy, committeeHashCurrencySymbol, committeeHashTokenName }
