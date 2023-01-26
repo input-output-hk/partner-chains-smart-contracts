@@ -15,6 +15,8 @@
 -- |          to the required committee hash validator (with the initial committee).
 module InitSidechain
   ( initSidechain
+  , InitSidechainParams(InitSidechainParams)
+  , InitSidechainParams'
   , initSidechainTokens
   , initSidechainCommittee
   ) where
@@ -24,14 +26,16 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(..))
+import Contract.PlutusData (class ToData, Datum(..), PlutusData(Constr), toData)
 import Contract.PlutusData as PlutusData
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
   , balanceTx
@@ -45,6 +49,7 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
 import Data.Bifunctor (lmap)
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import DistributedSet
   ( Ds(Ds)
@@ -60,71 +65,77 @@ import GetSidechainAddresses (SidechainAddresses)
 import GetSidechainAddresses as GetSidechainAddresses
 import MPTRoot (SignedMerkleRootMint(SignedMerkleRootMint))
 import MPTRoot as MPTRoot
-import SidechainParams
-  ( InitSidechainParams(InitSidechainParams)
-  , SidechainParams(SidechainParams)
-  )
+import SidechainParams (SidechainParams(SidechainParams))
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
   , UpdateCommitteeHash(..)
   , UpdateCommitteeHashDatum(..)
   )
 import UpdateCommitteeHash as UpdateCommitteeHash
+import Utils.Crypto (SidechainPublicKey)
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
--- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
--- | (potentially throwing an error in the case that it is not possible).
-getCommitteeHashPolicy ∷
-  InitSidechainParams →
-  Contract ()
-    { committeeHashPolicy ∷ MintingPolicy
-    , committeeHashCurrencySymbol ∷ CurrencySymbol
-    }
-getCommitteeHashPolicy (InitSidechainParams isp) = do
-  let
-    msg = report "getCommitteeHashPolicy"
-  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
-    InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
-  committeeHashCurrencySymbol ← Monad.liftContractM
-    (msg "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeHashPolicy)
-  pure { committeeHashPolicy, committeeHashCurrencySymbol }
+-- | Parameters for the first step (see description above) of the initialisation procedure
+-- | Using a open row type, to allow composing the two contracts
+type InitTokensParams r =
+  { initChainId ∷ BigInt
+  , initGenesisHash ∷ ByteArray
+  , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
+    -- internal function of the side chain
+    initUtxo ∷ TransactionInput
+  , initThresholdNumerator ∷ BigInt
+  , initThresholdDenominator ∷ BigInt
+  | r
+  }
 
--- | `getMptRootTokenPolicy` grabs the mpt root token policy and currency
--- | symbol (potentially throwing an error if this is not possible).
-getMptRootTokenPolicy ∷
-  InitSidechainParams →
-  Contract
-    ()
-    { mptRootTokenMintingPolicy ∷ MintingPolicy
-    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
-    }
-getMptRootTokenPolicy isp = do
-  let
-    sc = toSidechainParams isp
-    msg = report "getMptRootTokenPolicy"
+-- | Parameters to initialize a sidechain
+newtype InitSidechainParams = InitSidechainParams InitSidechainParams'
 
-  -- some awkwardness that we need the committee hash policy first.
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
+instance Show InitSidechainParams where
+  show = genericShow
 
-  -- Then, we get the mpt root token minting policy..
-  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
-    SignedMerkleRootMint
-      { sidechainParams: sc
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      }
-  mptRootTokenMintingPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (msg "Failed to get dsKeyPolicy CurrencySymbol")
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+derive instance Generic InitSidechainParams _
+derive instance Newtype InitSidechainParams _
+instance ToData InitSidechainParams where
+  toData
+    ( InitSidechainParams
+        { initChainId
+        , initGenesisHash
+        , initUtxo
+        , initCommittee
+        , initThresholdNumerator
+        , initThresholdDenominator
+        }
+    ) =
+    Constr zero
+      [ toData initChainId
+      , toData initGenesisHash
+      , toData initUtxo
+      , toData initCommittee
+      , toData initThresholdNumerator
+      , toData initThresholdDenominator
+      ]
 
-  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
+-- | Parameters for the second step (see description above) of the initialisation procedure
+type InitSidechainParams' =
+  { initChainId ∷ BigInt
+  , initGenesisHash ∷ ByteArray
+  , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
+    -- internal function of the side chain
+    initUtxo ∷ TransactionInput
+  , -- `initCommittee` is the initial committee of the sidechain
+    initCommittee ∷ Array SidechainPublicKey
+  , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
+    initSidechainEpoch ∷ BigInt
+  , initThresholdNumerator ∷ BigInt
+  , initThresholdDenominator ∷ BigInt
+  }
 
 -- | `toSidechainParams` creates a `SidechainParams` from an
 -- | `InitSidechainParams` the canonical way.
-toSidechainParams ∷ InitSidechainParams → SidechainParams
-toSidechainParams (InitSidechainParams isp) = SidechainParams
+toSidechainParams ∷ ∀ r. InitTokensParams r → SidechainParams
+toSidechainParams isp = SidechainParams
   { chainId: isp.initChainId
   , genesisHash: isp.initGenesisHash
   , genesisUtxo: isp.initUtxo
@@ -136,17 +147,18 @@ toSidechainParams (InitSidechainParams isp) = SidechainParams
 -- | constraints to mint (but NOT pay to someone) the NFT which uniquely
 -- | identifies the utxo that holds the committee hash.
 initCommitteeHashMintLookupsAndConstraints ∷
-  InitSidechainParams →
+  ∀ r.
+  InitTokensParams r →
   Contract
     ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initCommitteeHashMintLookupsAndConstraints (InitSidechainParams isp) = do
+initCommitteeHashMintLookupsAndConstraints isp = do
   -- Get committee hash / associated values
   -----------------------------------
-  { committeeHashPolicy, committeeHashCurrencySymbol } ← getCommitteeHashPolicy $
-    wrap isp
+  { committeeHashPolicy, committeeHashCurrencySymbol } ←
+    getCommitteeHashPolicy isp
   let
     committeeHashValue =
       Value.singleton
@@ -169,24 +181,24 @@ initCommitteeHashMintLookupsAndConstraints (InitSidechainParams isp) = do
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
 -- | validator script for the update committee hash.
 initCommitteeHashLookupsAndConstraints ∷
-  InitSidechainParams →
+  InitSidechainParams' →
   Contract
     ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initCommitteeHashLookupsAndConstraints (InitSidechainParams isp) = do
+initCommitteeHashLookupsAndConstraints isp = do
   -- Sidechain parameters
   -----------------------------------
-  let sc = toSidechainParams $ wrap isp
+  let sc = toSidechainParams isp
 
   -- Getting the update committee hash policy
   -----------------------------------
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy $ wrap isp
+  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
 
   -- Getting the mpt root token minting policy
   -----------------------------------
-  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy $ wrap isp
+  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy isp
 
   -- Setting up the update committee hash validator
   -----------------------------------
@@ -249,24 +261,25 @@ initCommitteeHashLookupsAndConstraints (InitSidechainParams isp) = do
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
 initDistributedSetLookupsAndContraints ∷
-  InitSidechainParams →
+  ∀ r.
+  InitTokensParams r →
   Contract
     ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
+initDistributedSetLookupsAndContraints isp = do
   let
     msg = report "initDistributedSetLookupsAndContraints"
 
   -- Sidechain parameters
   -----------------------------------
   let
-    sc = toSidechainParams $ wrap isp
+    sc = toSidechainParams isp
 
   -- Getting the mpt root token minting policy / currency symbol
   -----------------------------------
-  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy $ wrap isp
+  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy isp
 
   -- Initializing the distributed set
   -----------------------------------
@@ -383,7 +396,8 @@ initDistributedSetLookupsAndContraints (InitSidechainParams isp) = do
 -- | `BalanceTx.BalanceTx.buildTransactionChangeOutput` where it claims that excess
 -- | value is returned back to the owner's address).
 initSidechainTokens ∷
-  InitSidechainParams →
+  ∀ r.
+  InitTokensParams r →
   Contract ()
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
@@ -398,7 +412,7 @@ initSidechainTokens isp = do
   -- Querying the dstinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
-    txIn = (unwrap isp).initUtxo
+    txIn = isp.initUtxo
 
   txOut ← liftedM (msg "Cannot find genesis UTxO") $ getUtxo
     txIn
@@ -410,16 +424,18 @@ initSidechainTokens isp = do
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
-        <> \_ → pure
-          -- distinguished input to spend from 'InitSidechainParams.initUtxo'
-          { constraints: Constraints.mustSpendPubKeyOutput txIn
-          , lookups: Lookups.unspentOutputs
-              ( Map.singleton txIn
-                  ( TransactionOutputWithRefScript
-                      { output: txOut, scriptRef: Nothing }
+        <> const
+          ( pure
+              -- distinguished input to spend from 'InitSidechainParams.initUtxo'
+              { constraints: Constraints.mustSpendPubKeyOutput txIn
+              , lookups: Lookups.unspentOutputs
+                  ( Map.singleton txIn
+                      ( TransactionOutputWithRefScript
+                          { output: txOut, scriptRef: Nothing }
+                      )
                   )
-              )
-          }
+              }
+          )
     ) isp
 
   -- Building / submitting / awaiting the transaction.
@@ -449,7 +465,7 @@ initSidechainTokens isp = do
 -- |
 -- | Note: you must have such an NFT in your wallet already.
 initSidechainCommittee ∷
-  InitSidechainParams →
+  InitSidechainParams' →
   Contract ()
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
@@ -506,7 +522,7 @@ initSidechain ∷
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-initSidechain isp = do
+initSidechain (InitSidechainParams isp) = do
   -- Warning: this code is essentially duplicated code from
   -- `initSidechainTokens` and `initSidechainCommittee`....
 
@@ -518,7 +534,7 @@ initSidechain isp = do
   -- Querying the dstinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
-    txIn = (unwrap isp).initUtxo
+    txIn = isp.initUtxo
 
   txOut ← liftedM (msg "Cannot find genesis UTxO") $ getUtxo
     txIn
@@ -566,6 +582,56 @@ initSidechain isp = do
     , sidechainParams
     , sidechainAddresses
     }
+
+-- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
+-- | (potentially throwing an error in the case that it is not possible).
+getCommitteeHashPolicy ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract ()
+    { committeeHashPolicy ∷ MintingPolicy
+    , committeeHashCurrencySymbol ∷ CurrencySymbol
+    }
+getCommitteeHashPolicy isp = do
+  let
+    msg = report "getCommitteeHashPolicy"
+  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
+    InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
+  committeeHashCurrencySymbol ← Monad.liftContractM
+    (msg "Failed to get updateCommitteeHash CurrencySymbol")
+    (Value.scriptCurrencySymbol committeeHashPolicy)
+  pure { committeeHashPolicy, committeeHashCurrencySymbol }
+
+-- | `getMptRootTokenPolicy` grabs the mpt root token policy and currency
+-- | symbol (potentially throwing an error if this is not possible).
+getMptRootTokenPolicy ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract
+    ()
+    { mptRootTokenMintingPolicy ∷ MintingPolicy
+    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
+    }
+getMptRootTokenPolicy isp = do
+  let
+    sc = toSidechainParams isp
+    msg = report "getMptRootTokenPolicy"
+
+  -- some awkwardness that we need the committee hash policy first.
+  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
+
+  -- Then, we get the mpt root token minting policy..
+  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
+    SignedMerkleRootMint
+      { sidechainParams: sc
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      }
+  mptRootTokenMintingPolicyCurrencySymbol ←
+    Monad.liftContractM
+      (msg "Failed to get dsKeyPolicy CurrencySymbol")
+      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+
+  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

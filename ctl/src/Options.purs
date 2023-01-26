@@ -90,7 +90,7 @@ options maybeConfig = info (helper <*> optSpec)
   optSpec =
     hsubparser $ fold
       [ command "init-tokens-mint"
-          ( info (withCommonOpts initTokensSpec)
+          ( info (withCommonOpts (pure InitTokens))
               (progDesc "Pre-mint tokens without actually initialising sidechain")
           )
       , command "init"
@@ -537,12 +537,6 @@ options maybeConfig = info (helper <*> optSpec)
           , help "Sidechain epoch"
           ]
       )
-
-  -- InitSidechainParams are SidechainParams + initCommittee : Array SidechainPublicKey
-  initTokensSpec = ado
-    initSidechainEpoch ← parseSidechainEpoch
-    in
-      InitTokens { initSidechainEpoch }
 
   -- InitSidechainParams are SidechainParams + initCommittee : Array SidechainPublicKey
   initSpec = ado

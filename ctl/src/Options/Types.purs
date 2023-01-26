@@ -95,7 +95,7 @@ data Endpoint
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
-  | InitTokens { initSidechainEpoch ∷ BigInt }
+  | InitTokens
   | Init
       { committeePubKeysInput ∷ CommitteeInput
       , initSidechainEpoch ∷ BigInt

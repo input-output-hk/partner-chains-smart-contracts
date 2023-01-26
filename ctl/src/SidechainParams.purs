@@ -12,7 +12,6 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Partial.Unsafe (unsafePartial)
 import Utils.Codecs (byteArrayCodec, transactionInputCodec)
-import Utils.Crypto (SidechainPublicKey)
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
@@ -51,46 +50,6 @@ instance ToData SidechainParams where
       ]
 
 instance Show SidechainParams where
-  show = genericShow
-
--- | Parameters to initialize a sidechain
-newtype InitSidechainParams = InitSidechainParams
-  { initChainId ∷ BigInt
-  , initGenesisHash ∷ ByteArray
-  , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
-    -- internal function of the side chain
-    initUtxo ∷ TransactionInput
-  , -- `initCommittee` is the initial committee of the sidechain
-    initCommittee ∷ Array SidechainPublicKey
-  , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
-    initSidechainEpoch ∷ BigInt
-  , initThresholdNumerator ∷ BigInt
-  , initThresholdDenominator ∷ BigInt
-  }
-
-derive instance Generic InitSidechainParams _
-derive instance Newtype InitSidechainParams _
-instance ToData InitSidechainParams where
-  toData
-    ( InitSidechainParams
-        { initChainId
-        , initGenesisHash
-        , initUtxo
-        , initCommittee
-        , initThresholdNumerator
-        , initThresholdDenominator
-        }
-    ) =
-    Constr zero
-      [ toData initChainId
-      , toData initGenesisHash
-      , toData initUtxo
-      , toData initCommittee
-      , toData initThresholdNumerator
-      , toData initThresholdDenominator
-      ]
-
-instance Show InitSidechainParams where
   show = genericShow
 
 scParamsCodec ∷ CA.JsonCodec SidechainParams

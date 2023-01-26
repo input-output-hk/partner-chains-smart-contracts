@@ -129,16 +129,14 @@ main = do
           >>> { transactionId: _ }
           >>> SaveRootResp
 
-      InitTokens { initSidechainEpoch } → do
+      InitTokens → do
         let
           sc = unwrap opts.scParams
-          isc = wrap
+          isc =
             { initChainId: sc.chainId
             , initGenesisHash: sc.genesisHash
             , initUtxo: sc.genesisUtxo
             -- v only difference between sidechain and initsidechain
-            , initCommittee: []
-            , initSidechainEpoch
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator
             }
@@ -156,7 +154,7 @@ main = do
           committeePubKeysInput
         let
           sc = unwrap opts.scParams
-          isc = wrap
+          isc =
             { initChainId: sc.chainId
             , initGenesisHash: sc.genesisHash
             , initUtxo: sc.genesisUtxo
@@ -169,7 +167,7 @@ main = do
 
         { transactionId, sidechainParams, sidechainAddresses } ←
           if useInitTokens then initSidechainCommittee isc
-          else initSidechain isc
+          else initSidechain (wrap isc)
 
         pure $ InitResp
           { transactionId: unwrap transactionId
