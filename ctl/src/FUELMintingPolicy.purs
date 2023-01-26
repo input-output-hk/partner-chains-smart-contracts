@@ -81,11 +81,12 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import DistributedSet as DistributedSet
 import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
-import MPTRoot.Utils as MPTRoot
+import MPTRoot as MPTRoot
 import MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
 import UpdateCommitteeHash (getCommitteeHashPolicy)
+import Utils.Logging (class Display)
 import Utils.Logging as Logging
 import Utils.SerialiseData (serialiseData)
 
@@ -281,18 +282,31 @@ fuelMintingPolicy fm = do
 -- | (as required by the onchain mintng policy) via the given
 -- | `SidechainParams`, and calls `fuelMintingPolicy` to give us the minting
 -- | policy
-getFuelMintingPolicy ∷ SidechainParams → Contract () MintingPolicy
+getFuelMintingPolicy ∷
+  SidechainParams →
+  Contract ()
+    { fuelMintingPolicy ∷ MintingPolicy
+    , fuelMintingPolicyCurrencySymbol ∷ CurrencySymbol
+    }
 getFuelMintingPolicy sidechainParams = do
-  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy
+  let msg = report "getFuelMintingPolicy"
+  { mptRootTokenCurrencySymbol } ← MPTRoot.getMptRootTokenMintingPolicy
     sidechainParams
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
 
-  fuelMintingPolicy $
+  policy ← fuelMintingPolicy $
     FUELMint
       { sidechainParams
-      , mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
+      , mptRootTokenCurrencySymbol
       , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
+  fuelMintingPolicyCurrencySymbol ←
+    liftContractM (msg "Cannot get currency symbol") $
+      Value.scriptCurrencySymbol policy
+  pure
+    { fuelMintingPolicy: policy
+    , fuelMintingPolicyCurrencySymbol
+    }
 
 -- | `FuelParams` is the data for the FUEL mint / burn endpoint.
 data FuelParams
@@ -311,7 +325,7 @@ runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
 runFuelMP sp fp = do
   let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
 
-  fuelMP ← getFuelMintingPolicy sp
+  { fuelMintingPolicy: fuelMP } ← getFuelMintingPolicy sp
 
   { lookups, constraints } ← case fp of
     Burn params →
@@ -501,36 +515,6 @@ findMptRootTokenUtxoByRootHash sidechainParams rootHash = do
       $ unRootHash rootHash
   findMptRootTokenUtxo merkleRootTokenName smrm
 
--- | 'getMptRootTokenPolicy' grabs the mpt root token policy and currency
--- | symbol (potentially throwing an error if this is not possible).
--- TODO: refactor to utility module
-getMptRootTokenPolicy ∷
-  SidechainParams →
-  Contract
-    ()
-    { mptRootTokenMintingPolicy ∷ MintingPolicy
-    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
-    }
-getMptRootTokenPolicy sidechainParams = do
-  let
-    msg = Logging.mkReport
-      { mod: "FUELMintingPolicy", fun: "getMptRootTokenPolicy" }
-
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
-
-  -- Then, we get the mpt root token minting policy..
-  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
-    SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      }
-  mptRootTokenMintingPolicyCurrencySymbol ←
-    liftContractM
-      (msg "Failed to get mptRootToken CurrencySymbol")
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
-
-  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
-
 -- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
 toStakePubKeyHash addr =
@@ -553,3 +537,7 @@ getFuelAssetClass fuelMP = do
     (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
 
   pure (cs /\ tn)
+
+-- | `report` is an internal function used for helping writing log messages.
+report ∷ String → ∀ e. Display e ⇒ e → String
+report = Logging.mkReport <<< { mod: "FUELMintingPolicy", fun: _ }
