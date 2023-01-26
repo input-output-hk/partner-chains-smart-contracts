@@ -137,8 +137,7 @@ nix run .#ctl-main -- init-tokens-mint \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
-  --sidechain-genesis-hash 112233 \
-  --sidechain-epoch 0
+  --sidechain-genesis-hash 112233
 ```
 
 And when ready, continue with setting up the first committee with the `init` command with the
