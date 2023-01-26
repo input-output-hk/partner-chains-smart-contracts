@@ -44,8 +44,9 @@ type SidechainAddresses =
 getSidechainAddresses ∷ SidechainParams → Contract () SidechainAddresses
 getSidechainAddresses scParams = do
   -- Minting policies
-  fuelMintingPolicy ← FUELMintingPolicy.getFuelMintingPolicy scParams
-  fuelMintingPolicyId ← getCurrencySymbolHex fuelMintingPolicy
+  { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
+    scParams
+  let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
 
   { mptRootTokenCurrencySymbol } ←
     MPTRoot.getMptRootTokenMintingPolicy scParams
