@@ -1,6 +1,6 @@
 -- | `Test.Options` includes some rather straightforward unit tests to give
 -- | some examples of what we are parsing in the CLI
-module Test.Options (tests, interpretOptionsTest) where
+module Test.Options.Parsers (tests, interpretOptionsTest) where
 
 import Contract.Prelude
 
@@ -8,7 +8,7 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
-import Options as Options
+import Options.Parsers as Options.Parsers
 import Test.Unit (Test, TestSuite)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils as Test.Utils
@@ -31,7 +31,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
   "Parsing public key and signature"
   do
     let
-      go s = Options.parsePubKeyAndSignature s
+      go s = Options.Parsers.parsePubKeyAndSignature s
         <#> \(pubKey /\ signature) → { pubKey, signature }
 
       dummyHexPubKey =
