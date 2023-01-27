@@ -106,9 +106,9 @@ Available commands:
 
 #### 3.1.1. Initialising the sidechain
 
-Before we can start claiming tokens, we must set our initial committee, and initialise the sidechain. Only after this step will we be able to obtain the validator addresses.
+Before we can start claiming tokens, we must initialise the sidechain by: initialising the sidechain's tokens, and setting our initial committee. Only after these steps will we be able to obtain the validator addresses.
 
-At this step, the genesis committee hash utxo will be spent.
+To initialise the sidechain, we can run the following command which will spend the genesis committee hash utxo.
 
 ```
 nix run .#ctl-main -- init \
