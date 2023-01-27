@@ -21,7 +21,6 @@ import Data.Set as Set
 import Effect.Exception as Exception
 import InitSidechain as InitSidechain
 import Mote.Monad as Mote.Monad
-import SidechainParams (InitSidechainParams(..))
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
@@ -67,7 +66,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
           Crypto.generatePrivKey
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-          initScParams = InitSidechainParams
+          initScParams = InitSidechain.InitSidechainParams
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
@@ -102,7 +101,7 @@ testScenario2 =
             Crypto.generatePrivKey
           let
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initScParams = InitSidechainParams
+            initScParams =
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
@@ -144,7 +143,7 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
           Crypto.generatePrivKey
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-          initScParams = InitSidechainParams
+          initScParams = InitSidechain.InitSidechainParams
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo

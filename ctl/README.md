@@ -93,6 +93,8 @@ export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
 Available commands:
 
 ```
+  init-tokens-mint         Pre-mint tokens without actually initialising
+                           sidechain
   init                     Initialise sidechain
   addresses                Get the script addresses for a given sidechain
   claim                    Claim a certain amount of FUEL tokens
@@ -102,11 +104,11 @@ Available commands:
   deregister               Deregister a committee member
 ```
 
-#### 3.1.1. Initialising the sidechain (Active Bridge only)
+#### 3.1.1. Initialising the sidechain
 
-Before we can start claiming tokens, we must set our initial committee, and initialise the sidechain. Only after this step will we be able to obtain the validator addresses (in the future, there will be a way to obtain the sidechain parameters and validator addressses before setting the first committee).
+Before we can start claiming tokens, we must initialise the sidechain by: initialising the sidechain's tokens, and setting our initial committee. Only after these steps will we be able to obtain the validator addresses.
 
-At this step, the genesis committee hash utxo will be spent.
+To initialise the sidechain, we can run the following command which will spend the genesis committee hash utxo.
 
 ```
 nix run .#ctl-main -- init \
@@ -118,6 +120,40 @@ nix run .#ctl-main -- init \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
   --sidechain-epoch 0
+```
+
+Normally, the protocol has to wait until the committee has reached the desired number of members.
+To defend against accidentally consuming the `genesis-committee-hash-utxo`, it's possible, to split
+up the initialisation step into two separate commands:
+
+1. mint tokens identifying tokens used later in the protocol (spending the `genesis-committee-hash-utxo`)
+2. set up the first committee (only the owner of the above minted tokens can do this)
+
+To mint the initial tokens, use the following command:
+
+```
+nix run .#ctl-main -- init-tokens-mint \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --threshold 2/3 \
+  --sidechain-genesis-hash 112233
+```
+
+And when ready, continue with setting up the first committee with the `init` command with the
+`use-init-tokens` flag:
+
+```
+nix run .#ctl-main -- init \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --threshold 2/3 \
+  --sidechain-genesis-hash 112233 \
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --use-init-tokens
 ```
 
 #### 3.1.2. Get script addresses of a sidechain

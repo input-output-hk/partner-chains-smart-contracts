@@ -15,12 +15,12 @@ import FUELMintingPolicy
   , combinedMerkleProofToFuelParams
   , runFuelMP
   )
-import InitSidechain (initSidechain)
+import InitSidechain (InitSidechainParams(InitSidechainParams), initSidechain)
 import MerkleTree (MerkleProof(..), fromList, lookupMp)
 import MerkleTree as MerkleTree
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
-import SidechainParams (InitSidechainParams(..), SidechainParams(..))
+import SidechainParams (SidechainParams(..))
 import Test.MPTRoot as Test.MPTRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
