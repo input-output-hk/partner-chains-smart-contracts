@@ -28,7 +28,7 @@ interpretOptionsTest = Test.Utils.interpretConstVoidTest
 -- | for parsing a pub key and a signature.
 testParsePubKeyAndSignature ∷ OptionsTest
 testParsePubKeyAndSignature = Mote.Monad.group
-  "Testing parsing public key and signature"
+  "Parsing public key and signature"
   do
     let
       go s = Options.parsePubKeyAndSignature s
@@ -45,7 +45,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
         $ hexToByteArrayUnsafe dummyHexSignature
 
     -- Test case 1
-    Mote.Monad.test ("Testing parsing of: " <> dummyHexPubKey)
+    Mote.Monad.test ("Parsing of PUB_KEY ")
       $ go dummyHexPubKey `Test.Unit.Assert.shouldEqual` Just
           { pubKey: dummyPubKey, signature: Nothing }
 
@@ -54,7 +54,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
       let
         testCase = dummyHexPubKey <> ":"
       in
-        Mote.Monad.test ("Testing parsing of: " <> testCase)
+        Mote.Monad.test ("Parsing of PUB_KEY:")
           $ go testCase `Test.Unit.Assert.shouldEqual`
               (Just { pubKey: dummyPubKey, signature: Nothing })
 
@@ -63,7 +63,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
       let
         testCase = dummyHexPubKey <> ":" <> dummyHexSignature
       in
-        Mote.Monad.test ("Testing parsing of: " <> testCase)
+        Mote.Monad.test ("Parsing of PUB_KEY:SIGNATURE ")
           $ go testCase `Test.Unit.Assert.shouldEqual`
               (Just { pubKey: dummyPubKey, signature: Just dummySignature })
 
@@ -73,5 +73,6 @@ testParsePubKeyAndSignature = Mote.Monad.group
         testCase = dummyHexPubKey <> ":" <> dummyHexSignature <> ":" <>
           dummyHexSignature
       in
-        Mote.Monad.test ("Testing parsing of: " <> testCase)
+        Mote.Monad.test
+          ("Parsing of PUB_KEY:SIGNATURE:SIGNATURE (should fail)")
           $ go testCase `Test.Unit.Assert.shouldEqual` Nothing

@@ -180,3 +180,13 @@ source-repository-package
       libs/small-steps
       libs/small-steps-test
       libs/non-integral
+
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/plutonomy
+  tag: 14b9bd46084db1b785b3a99d55f7f10d38165ee8
+  --sha256: 16jp16arikhjdczk88a7pw1rkpwqqhkgvbykby834fc9mq24slf1
+
+-- Configure plutonomy to use the closest plutus version to ours
+-- In the future, we might need to change to +chap
+flags: +plutus-f680ac697

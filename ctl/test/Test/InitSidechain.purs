@@ -30,7 +30,7 @@ import Utils.Crypto as Crypto
 
 -- | `tests` aggregates all the tests together in one convenient funciton
 tests ∷ PlutipTest
-tests = Mote.Monad.group "`initSidechain` tests" $ do
+tests = Mote.Monad.group "Initialising the sidechain" $ do
   testScenario1
   testScenario2
   testScenario3
