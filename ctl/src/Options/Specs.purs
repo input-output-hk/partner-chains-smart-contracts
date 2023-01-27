@@ -78,7 +78,7 @@ optSpec maybeConfig =
   hsubparser $ fold
     [ command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig (pure InitTokens))
-            (progDesc "Pre-mint tokens without actually initialising sidechain")
+            (progDesc "Pre-mint tokens without setting the inital committee")
         )
     , command "init"
         ( info (withCommonOpts maybeConfig initSpec)
