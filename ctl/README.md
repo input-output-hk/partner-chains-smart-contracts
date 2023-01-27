@@ -126,7 +126,7 @@ Normally, the protocol has to wait until the committee has reached the desired n
 To defend against accidentally consuming the `genesis-committee-hash-utxo`, it's possible, to split
 up the initialisation step into two separate commands:
 
-1. mint tokens identifing tokens used later in the protocol (spending the `genesis-committee-hash-utxo`)
+1. mint tokens identifying tokens used later in the protocol (spending the `genesis-committee-hash-utxo`)
 2. set up the first committee (only the owner of the above minted tokens can do this)
 
 To mint the initial tokens, use the following command:
