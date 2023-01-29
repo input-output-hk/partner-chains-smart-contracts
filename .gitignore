@@ -51,3 +51,11 @@ config.json
 
 # Notes
 *.txt
+
+
+# Benchmark related external files
+*.svg
+*.db
+
+# Ctl related files
+*.json
