@@ -4,6 +4,7 @@
 
 module TrustlessSidechain.Types where
 
+import Data.String (IsString)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Tx (TxOutRef)
@@ -31,7 +32,7 @@ data SidechainParams = SidechainParams
   }
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
-  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData)
+  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData, IsString)
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 

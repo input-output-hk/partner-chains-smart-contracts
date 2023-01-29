@@ -10,6 +10,8 @@ import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (
   SignKeyDSIGN,
  )
+import Control.Monad qualified as Monad
+import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1 qualified as Secp256k1
 import Data.List qualified as List
 import Plutus.V2.Ledger.Api (
@@ -17,18 +19,9 @@ import Plutus.V2.Ledger.Api (
  )
 import TrustlessSidechain.MerkleTree (RootHash (..))
 import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (
-  BlockProducerRegistrationMsg (..),
-  CombinedMerkleProof (..),
-  MerkleRootInsertionMessage (..),
-  SidechainParams (..),
-  SidechainPubKey,
-  UpdateCommitteeHashMessage (..),
- )
+import TrustlessSidechain.Types (BlockProducerRegistrationMsg (..), CombinedMerkleProof (..), MerkleRootInsertionMessage (..), SidechainParams (..), SidechainPubKey, UpdateCommitteeHashMessage (..))
 
--- * Various product types to represent the parameters needed for the
-
--- corresponding ctl command
+-- * Various product types to represent the parameters needed for the corresponding ctl command
 
 --  | 'CtlRegistration' provides a wrapper type for the parameters required
 --  to register an spo
@@ -261,3 +254,9 @@ ctlClaimFlags CtlClaim {..} =
 -}
 
 -- * Some utility functions
+
+-- | 'generateFreshCommittee' generates a fresh sidechain committee of the given size
+generateFreshCommittee :: Int -> IO [(SECP.SecKey, SidechainPubKey)]
+generateFreshCommittee n = do
+  prvKeys <- Monad.replicateM n OffChain.generateRandomSecpPrivKey
+  return $ map (\prvKey -> (prvKey, OffChain.toSidechainPubKey prvKey)) prvKeys
