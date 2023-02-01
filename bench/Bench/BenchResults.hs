@@ -7,6 +7,7 @@
 -}
 module Bench.BenchResults where
 
+import Bench.Logger qualified as Logger
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
@@ -15,11 +16,13 @@ import Data.Coerce qualified as Coerce
 import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.IO qualified as Text.IO
 import Database.SQLite3 (Database, ParamIndex, Statement, StepResult (..))
 import Database.SQLite3 qualified as SQLite3
 import Database.SQLite3.Direct (Utf8 (..))
 import Database.SQLite3.Direct qualified as SQLite3.Direct
+import System.IO qualified as IO
 
 -- * High level API
 
@@ -27,7 +30,7 @@ import Database.SQLite3.Direct qualified as SQLite3.Direct
  the results of benchmarking. It includes:
 
       - 'brDatabase': a database holding all the benchmark data -- see
-      'createTablesQuery'.
+      'createObservationsTablesQuery'.
 -}
 newtype BenchResults = BenchResults
   { -- | the database connection holding all the data.
@@ -37,14 +40,28 @@ newtype BenchResults = BenchResults
 {- | @'openBenchResults' filePath@ initialises a 'BenchResults'. Namely, it:
 
       - creates an Sqlite3 database connection to the given @filePath@
-      according to the schema in 'createTablesQuery'
+      according to the schema in 'createObservationsTablesQuery'
 -}
 openBenchResults :: Text -> IO BenchResults
 openBenchResults filePath =
   SQLite3.open filePath
     >>= \db -> do
-      SQLite3.exec db createTablesQuery
+      SQLite3.exec db createObservationsTablesQuery
       pure $ BenchResults db
+
+{- | @'freshBenchResults' dir fileNameHint@ is 'openBenchResults' but initialises the database
+ with a fresh name in the given directory @dir@ with the given filename hint @hint@
+-}
+freshBenchResults :: FilePath -> Text -> IO BenchResults
+freshBenchResults dir fileNameHint = do
+  (path, handle) <- IO.openTempFile dir $ Text.unpack fileNameHint
+  Logger.logInfo $ "Creating benchmark results database at: " ++ path
+
+  -- just close the handle immediatly, since we're just using this for the
+  -- fresh name
+  IO.hClose handle
+
+  openBenchResults $ Text.pack path
 
 {- | 'closeBenchResults' does the necessary cleanup when closing the database
  connection.
@@ -56,7 +73,7 @@ closeBenchResults benchResult = SQLite3.close $ brDatabase benchResult
 type Description = Text
 
 -- | See 'Observation' for details
-type TrialIx = Int
+type TrialIx = Int64
 
 -- | See 'Observation' for details
 type Ms = Int64
@@ -64,7 +81,10 @@ type Ms = Int64
 -- | See 'Observation' for details
 type LovelaceFee = Int64
 
--- | 'Observation' is the data relating to a single benchmark.
+-- | See 'Observation' for details
+type ObservationIx = Int64
+
+-- | 'Observation' is all the data relating to a single benchmark.
 data Observation =
   -- note: internally SQLite doesn't have it's own unsigned int type.. TODO:
   -- we can add our own in and package it up ourselves. But, 'Int64' should
@@ -86,6 +106,10 @@ data Observation =
     -- @oTrialIx = 1@ for the first execution, and @oTrialIx = 2@ for
     -- the second execution.
     oTrialIx :: !TrialIx
+  , -- | 'oObservationIx' is an index to uniquely identify this observation
+    -- from other "same" benchmarks i.e., to uniquely identify same benchmarks
+    -- up to @oDescription@ an @oTrialIx@.
+    oObservationIx :: !ObservationIx
   , -- | 'oMs' is an 'Int64' denoting the milliseconds to run the
     -- benchmark
     oMs :: !Ms
@@ -93,27 +117,48 @@ data Observation =
     oLovelaceFee :: !LovelaceFee
   }
 
--- | Adds a benchmark observation to the system.
-addObservation :: Observation -> BenchResults -> IO ()
-addObservation observation benchResult =
-  withPreparedStatement addObservationQuery (brDatabase benchResult) $ \preparedStmt -> do
+{- | 'Trial' is a subset of the information given an 'Observation'. In
+ particular, it removes the @trialIx@ and @observationIx@.
+-}
+data Trial = Trial
+  { tDescription :: !Description
+  , tMs :: !Ms
+  , tLovelaceFee :: !LovelaceFee
+  }
+
+{- | 'AddObservationNoTrialIx' provides a Haskell datatype for the parameters
+ for 'addObservationNoTrialIx'. See 'Observation' for details on the fields.
+-}
+data AddObservationNoTrialIx = AddObservationNoTrialIx
+  { aontiDescription :: Description
+  , aontiObservationIx :: ObservationIx
+  , aontiMs :: Ms
+  , aontiLovelaceFee :: LovelaceFee
+  }
+
+{- | Adds a benchmark observation to the system without the trial ix (as this
+ is computed automatically in the database
+-}
+addObservationNoTrialIx :: AddObservationNoTrialIx -> BenchResults -> IO ()
+addObservationNoTrialIx params benchResult =
+  withPreparedStatement addObservationNoTrialIxQuery (brDatabase benchResult) $ \preparedStmt -> do
     let -- quick convenience function since we're working with the same prepared statement
         getParamIndex = bindParameterIndex preparedStmt
     Monad.void $ do
       ix <- getParamIndex ":description"
-      SQLite3.bindText preparedStmt ix (oDescription observation)
+      SQLite3.bindText preparedStmt ix $ aontiDescription params
 
     Monad.void $ do
-      ix <- getParamIndex ":trialIx"
-      SQLite3.bindInt preparedStmt ix (oTrialIx observation)
+      ix <- getParamIndex ":observationIx"
+      SQLite3.bindInt64 preparedStmt ix $ aontiObservationIx params
 
     Monad.void $ do
       ix <- getParamIndex ":ms"
-      SQLite3.bindInt64 preparedStmt ix (oMs observation)
+      SQLite3.bindInt64 preparedStmt ix $ aontiMs params
 
     Monad.void $ do
       ix <- getParamIndex ":lovelaceFee"
-      SQLite3.bindInt64 preparedStmt ix (oLovelaceFee observation)
+      SQLite3.bindInt64 preparedStmt ix $ aontiLovelaceFee params
 
     -- this is an update query, so it will run to completion in a single call.
     _stepResult <- SQLite3.step preparedStmt
@@ -147,7 +192,7 @@ withSelectAllDescriptions description benchResult f =
         Done -> pure Nothing
         Row -> do
           trialIx <- SQLite3.columnInt64 preparedStmt 0
-          -- observationIx <- SQLite3.columnInt64 preparedStmt 1
+          observationIx <- SQLite3.columnInt64 preparedStmt 1
           ms <- SQLite3.columnInt64 preparedStmt 2
           lovelaceFee <- SQLite3.columnInt64 preparedStmt 3
           return $
@@ -155,6 +200,7 @@ withSelectAllDescriptions description benchResult f =
               Observation
                 { oDescription = description
                 , oTrialIx = fromIntegral trialIx
+                , oObservationIx = observationIx
                 , oMs = ms
                 , oLovelaceFee = lovelaceFee
                 }
@@ -172,6 +218,18 @@ selectAllDescriptions description benchResults =
           Just o -> (o :) <$> (step >>= go)
      in step >>= go
 
+{- | 'selectFreshObservationIx' returns a fresh 'ObservationIx' used to running
+ another observation of a sequence of trials.
+-}
+selectFreshObservationIx :: BenchResults -> IO ObservationIx
+selectFreshObservationIx benchResult =
+  withPreparedStatement selectFreshObservationIxQuery (brDatabase benchResult) $
+    \preparedStmt -> do
+      -- aggegate functions reutrn a single value, so we just step the
+      -- prepared statement once.
+      _ <- SQLite3.step preparedStmt
+      SQLite3.columnInt64 preparedStmt 0 -- returns the fresh observation ix
+
 -- * Internal SQL queries
 
 {- $internalSQLQueries
@@ -179,9 +237,10 @@ selectAllDescriptions description benchResults =
  changed accordingly
 -}
 
-{- | 'createTablesQuery' is a database query to create a table for which the
+{- | 'createObservationsTablesQuery' is a database query to create a table for which the
  rows store the results of a single benchmark and its associated information.
- We call a single row in the table a *observation*.
+ We call a single row in the table a *observation*, and a the subset of columns
+ which contains only the @description@, @ms@, and @lovelaceFee@ is called a *trial*.
 
  The table we generate is as follows.
  @
@@ -224,8 +283,8 @@ selectAllDescriptions description benchResults =
   - we are running these "FUELMintingPolicy" tests twice (since @observationIx@
   goes from @1..2@)
 -}
-createTablesQuery :: Text
-createTablesQuery =
+createObservationsTablesQuery :: Text
+createObservationsTablesQuery =
   "CREATE TABLE IF NOT EXISTS\n\
   \observations\n\
   \   ( description TEXT\n\
@@ -236,18 +295,23 @@ createTablesQuery =
   \   , PRIMARY KEY(observationIx, trialIx, description)\n\
   \   );\n"
 
-{- | 'addObservationQuery' is a parameterized query which adds an observation.
- Note: it automatically maintains the @observationIx@ for us here.
+{- | 'selectFreshObservationIxQuery' returns a fresh 'observationIx' by taking the
+ max and incrementing by 1.
 -}
-addObservationQuery :: Text
-addObservationQuery =
-  -- "BEGIN EXCLUSIVE TRANSACTION;\n\
-  "INSERT INTO observations(description, trialIx, observationIx, ms, lovelaceFee)\n\
-  \SELECT :description, :trialIx, ifnull(max(observationIx),0)+1, :ms, :lovelaceFee\n\
-  \FROM observations\n\
-  \WHERE description=:description AND trialIx=:trialIx;\n"
+selectFreshObservationIxQuery :: Text
+selectFreshObservationIxQuery =
+  "SELECT ifnull(max(observationIx), 0) + 1\n\
+  \FROM observations;"
 
--- \COMMIT TRANSACTION;"
+{- | 'addObservationNoTrialIxQuery' is a parameterized query which adds an observation.
+ Note: it automatically maintains the @trialIx@ for us by finding the last trial (largest)
+-}
+addObservationNoTrialIxQuery :: Text
+addObservationNoTrialIxQuery =
+  "INSERT INTO observations(description, trialIx, observationIx, ms, lovelaceFee)\n\
+  \SELECT :description, ifnull(max(trialIx),0)+1, :observationIx, :ms, :lovelaceFee\n\
+  \FROM observations\n\
+  \WHERE description=:description AND observationIx=:observationIx;\n"
 
 --  | 'viewAllDescriptionQuery' fixes the @description@, and @SELECT@s all the
 --  trials corresponding to that description.
@@ -255,7 +319,8 @@ selectAllDescriptionsQuery :: Text
 selectAllDescriptionsQuery =
   "SELECT trialIx, observationIx, ms, lovelaceFee\n\
   \FROM observations\n\
-  \WHERE description = :description;"
+  \WHERE description = :description\n\
+  \ORDER BY observationIx ASC, trialIx ASC;"
 
 -- * Utilities / internals
 

@@ -21,6 +21,9 @@ import TrustlessSidechain.MerkleTree (RootHash (..))
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (BlockProducerRegistrationMsg (..), CombinedMerkleProof (..), MerkleRootInsertionMessage (..), SidechainParams (..), SidechainPubKey, UpdateCommitteeHashMessage (..))
 
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class qualified as IO.Class
+
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
 --  | 'CtlRegistration' provides a wrapper type for the parameters required
@@ -102,6 +105,13 @@ data CtlCommon = CtlCommon
   , -- | 'ccSidechainParams' are the sidechain parameters
     ccSidechainParams :: SidechainParams
   }
+
+{- | 'ctlCmd' is the default calling ctl command.
+ Note: this assumes that we have @./output/Main/index.js@ (i.e., the output
+ of @spago build@) existing.
+-}
+ctlCmd :: String
+ctlCmd = "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node -"
 
 {- | 'ctlCommonFlags' generates the CLI flags that corresponds to sidechain
  parameters
@@ -237,7 +247,7 @@ ctlClaimFlags CtlClaim {..} =
   map
     List.unwords
     [ ["claim"]
-    , ["--combined-merkle-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
+    , ["--combined-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
     ]
 
 {- | 'ctlBurnFlags' generates the CLI flags that corresponds to the
@@ -256,7 +266,7 @@ ctlClaimFlags CtlClaim {..} =
 -- * Some utility functions
 
 -- | 'generateFreshCommittee' generates a fresh sidechain committee of the given size
-generateFreshCommittee :: Int -> IO [(SECP.SecKey, SidechainPubKey)]
-generateFreshCommittee n = do
+generateFreshCommittee :: MonadIO m => Int -> m [(SECP.SecKey, SidechainPubKey)]
+generateFreshCommittee n = IO.Class.liftIO $ do
   prvKeys <- Monad.replicateM n OffChain.generateRandomSecpPrivKey
   return $ map (\prvKey -> (prvKey, OffChain.toSidechainPubKey prvKey)) prvKeys

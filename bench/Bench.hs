@@ -10,19 +10,18 @@ module Bench (
 
   -- * "Bench.BenchResults"
 
-  --
-
   -- | "Bench.BenchResults" stores the benchmark results
   module Bench.BenchResults,
 
   -- * "Bench.NodeQuery"
 
-  --
-
   -- | "Bench.NodeQuery" provides a way to query the node.
   module Bench.NodeQuery,
+  -- | "Bench.Logger" provides logging utilities
+  module Bench.Logger,
 ) where
 
 import Bench.BenchResults
+import Bench.Logger
 import Bench.Monad
 import Bench.NodeQuery
