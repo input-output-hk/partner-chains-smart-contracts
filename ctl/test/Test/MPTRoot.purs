@@ -31,7 +31,7 @@ import MPTRoot as MPTRoot
 import MerkleTree (MerkleTree, RootHash)
 import MerkleTree as MerkleTree
 import Mote.Monad as Mote.Monad
-import SidechainParams (InitSidechainParams(..), SidechainParams)
+import SidechainParams (SidechainParams)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
@@ -157,7 +157,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechainParams
+        initSidechainParams = InitSidechain.InitSidechainParams
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
@@ -258,7 +258,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechainParams
+        initSidechainParams = InitSidechain.InitSidechainParams
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo

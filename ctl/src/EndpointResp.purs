@@ -28,6 +28,11 @@ data EndpointResp
       { saveRootTransactionId ∷ ByteArray
       , committeeHashTransactionId ∷ ByteArray
       }
+  | InitTokensResp
+      { transactionId ∷ ByteArray
+      , sidechainParams ∷ SidechainParams
+      , sidechainAddresses ∷ SidechainAddresses
+      }
   | InitResp
       { transactionId ∷ ByteArray
       , sidechainParams ∷ SidechainParams
@@ -95,6 +100,21 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
         ]
+    InitTokensResp { transactionId, sidechainParams, sidechainAddresses } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "Init"
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
+          , "addresses" /\ J.fromObject
+              ( Object.fromFoldable
+                  (map (rmap J.fromString) sidechainAddresses.addresses)
+              )
+          , "mintingPolicies" /\ J.fromObject
+              ( Object.fromFoldable
+                  (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
+              )
+          ]
     InitResp { transactionId, sidechainParams, sidechainAddresses } →
       J.fromObject $
         Object.fromFoldable

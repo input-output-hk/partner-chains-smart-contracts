@@ -17,11 +17,11 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import InitSidechain (initSidechain)
+import InitSidechain (InitSidechainParams(..), initSidechain)
 import MerkleTree (RootHash)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
-import SidechainParams (InitSidechainParams(..), SidechainParams)
+import SidechainParams (SidechainParams)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
