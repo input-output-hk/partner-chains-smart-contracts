@@ -89,7 +89,11 @@ options maybeConfig = info (helper <*> optSpec)
   where
   optSpec =
     hsubparser $ fold
-      [ command "init"
+      [ command "init-tokens-mint"
+          ( info (withCommonOpts (pure InitTokens))
+              (progDesc "Pre-mint tokens without setting the initial committee")
+          )
+      , command "init"
           ( info (withCommonOpts initSpec)
               (progDesc "Initialise sidechain")
           )
@@ -544,8 +548,13 @@ options maybeConfig = info (helper <*> optSpec)
       \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
 
     initSidechainEpoch ← parseSidechainEpoch
+    useInitTokens ← flag false true $ fold
+      [ long "use-init-tokens"
+      , help "Use previously minted init tokens from the wallet"
+      ]
+
     in
-      Init { committeePubKeysInput, initSidechainEpoch }
+      Init { committeePubKeysInput, initSidechainEpoch, useInitTokens }
 
 -- | Reads configuration file from `./config.json`, then
 -- | reads committee file from `./committee.json`, then

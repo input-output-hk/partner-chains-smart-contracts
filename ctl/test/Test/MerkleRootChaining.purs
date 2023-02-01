@@ -14,7 +14,6 @@ import Data.BigInt as BigInt
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import Mote.Monad as Mote.Monad
-import SidechainParams (InitSidechainParams(InitSidechainParams))
 import Test.MPTRoot as Test.MPTRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -66,7 +65,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         Utils.Crypto.generatePrivKey
 
       { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechainParams
+        InitSidechain.InitSidechainParams
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
@@ -207,7 +206,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         Utils.Crypto.generatePrivKey
 
       { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechainParams
+        InitSidechain.InitSidechainParams
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
