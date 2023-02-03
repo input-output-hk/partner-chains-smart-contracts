@@ -6,7 +6,7 @@ module Cases.InitSidechain where
 import Bench (Bench, BenchConfig (..))
 import Bench qualified
 
-import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
+import Ctl (CtlCommon (..), CtlInitSidechain (..))
 import Ctl qualified
 
 import Control.Monad qualified as Monad
@@ -16,20 +16,12 @@ import Data.List qualified as List
 
 import Control.Monad.Reader qualified as Reader
 
-import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.MerkleTree qualified as MerkleTree
-import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..), SidechainParams (..))
-
-import Data.Text qualified as Text
-
-import Data.Foldable qualified as Foldable
-import Data.Maybe qualified as Maybe
+import TrustlessSidechain.Types (SidechainParams (..))
 
 initSidechainBench :: Bench ()
 initSidechainBench = do
   let -- total number of times we repeat the random experiment
-      numberOfObservations = 250
+      numberOfObservations = 1
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
@@ -42,41 +34,42 @@ initSidechainBench = do
   --  - init sidechain
   --  - then save root
   --  - then many many many fuel mints
-  Bench.runBenchSuiteN numberOfObservations $ do
-    txOutRef : _ <-
-      Bench.liftBenchSuite $ Bench.queryAddrUtxos addr
+  Bench.runBenchSuiteN numberOfObservations $
+    Monad.replicateM_ 250 $ do
+      txOutRef : _ <-
+        Bench.liftBenchSuite $ Bench.queryAddrUtxos addr
 
-    let -- Creates the command to call ctl with the given flags
-        ctlCommand flags =
-          let ctlCommon =
-                CtlCommon
-                  { ccSigningKeyFile = signingKeyFile
-                  , ccSidechainParams = sidechainParams
-                  }
-           in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
-                ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
+      let -- Creates the command to call ctl with the given flags
+          ctlCommand flags =
+            let ctlCommon =
+                  CtlCommon
+                    { ccSigningKeyFile = signingKeyFile
+                    , ccSidechainParams = sidechainParams
+                    }
+             in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
+                  ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
 
-        sidechainParams =
-          SidechainParams
-            { chainId = 69
-            , genesisHash = "aa"
-            , genesisUtxo = txOutRef
-            , thresholdNumerator = 2
-            , thresholdDenominator = 3
-            }
-
-    --  Building the initial committee:
-    initCommittee <- IO.Class.liftIO $ Ctl.generateFreshCommittee 10
-
-    -- Iniatialising the sidechain:
-    Monad.void $
-      Bench.bench "InitSidechain" $
-        ctlCommand $
-          Ctl.ctlInitSidechainFlags
-            CtlInitSidechain
-              { cisInitCommitteePubKeys = map snd initCommittee
-              , cisSidechainEpoch = 0
+          sidechainParams =
+            SidechainParams
+              { chainId = 69
+              , genesisHash = "aa"
+              , genesisUtxo = txOutRef
+              , thresholdNumerator = 2
+              , thresholdDenominator = 3
               }
+
+      --  Building the initial committee:
+      initCommittee <- IO.Class.liftIO $ Ctl.generateFreshCommittee 10
+
+      -- Iniatialising the sidechain:
+      Monad.void $
+        Bench.bench "InitSidechain" $
+          ctlCommand $
+            Ctl.ctlInitSidechainFlags
+              CtlInitSidechain
+                { cisInitCommitteePubKeys = map snd initCommittee
+                , cisSidechainEpoch = 0
+                }
 
   -- Finally, we plot all the data
   --------------------------------
