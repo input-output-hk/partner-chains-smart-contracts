@@ -6,14 +6,14 @@
     extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc=" ];
   };
 
-  inputs = rec {
+  inputs = {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
     plutip.follows = "cardano-transaction-lib/plutip";
 
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/7e54a52bb83926a5646fcdf863ec07bc6447edaa";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/05aa1728aab2e8afeb5dd67d9529577a5e8dc8cd";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
