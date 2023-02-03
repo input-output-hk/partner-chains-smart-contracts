@@ -11,7 +11,7 @@ import Test.MPTRoot as MPTRoot
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
-import Test.Options as Options
+import Test.Options.Parsers as Options.Parsers
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
@@ -39,7 +39,7 @@ main = do
         [ MerkleTree.interpretMerkleTreeTest MerkleTree.tests
         , MerkleProofSerialisation.interpretMerkleProofSerialisationTest
             MerkleProofSerialisation.tests
-        , Options.interpretOptionsTest Options.tests
+        , Options.Parsers.interpretOptionsTest Options.Parsers.tests
 
         -- Plutip tests
         ----------------

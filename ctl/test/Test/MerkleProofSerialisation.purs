@@ -33,8 +33,7 @@ interpretMerkleProofSerialisationTest = Test.Utils.interpretConstVoidTest
 
 -- | `tests` follows the integration tests described in #249. We have a test
 -- | cases for:
--- |    1. Testing if the plutus data representation, AND the hex encoded cbor
--- |    of the plutus data is as expected
+-- |    1. Testing if the plutus data representation, AND the hex encoded cbor of the plutus data is as expected
 -- |    2. Testing if hex encoded cbor is as expected.
 tests ∷ MerkleProofSerialisationTest
 tests = Mote.Monad.group "Merkle proof serialisation for #249" do
@@ -106,7 +105,7 @@ combinedMerkleProofTestCase =
 test1 ∷ MerkleProofSerialisationTest
 test1 =
   Mote.Monad.test
-    "Testing 1. Merkle Proof Serialization integration to plutus data..."
+    "Merkle Proof seralised to Plutus data matches expected value"
     $
       Test.Unit.Assert.assert "expected different plutus data"
     $
@@ -170,7 +169,7 @@ test1 =
 test2 ∷ MerkleProofSerialisationTest
 test2 =
   Mote.Monad.test
-    "Testing 1. Merkle Proof Serialization integration to cbor..."
+    "Merkle Proof serialised to CBOR matches expected value"
     $
       Test.Unit.Assert.assert "expected different cbor"
     $
@@ -187,7 +186,7 @@ test2 =
 test3 ∷ MerkleProofSerialisationTest
 test3 =
   Mote.Monad.test
-    "Testing 2. Merkle Proof Serialization integration cbor of plutus data..."
+    "Merkle Proof serialised to CBOR matches expected value"
     $
       Test.Unit.Assert.assert "expected different plutus data"
     $
