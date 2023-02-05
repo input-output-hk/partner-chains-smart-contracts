@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE RankNTypes #-}
 
 {- | "Bench.NodeQuery" provides utility functions for querying the cardano
  node / working with cardano stuff in general.
@@ -23,17 +24,18 @@ import Plutus.V2.Ledger.Api (
 import System.Process qualified as Process
 import TrustlessSidechain.OffChain qualified as OffChain
 
-{- | @'queryNodeUtxoAddress' testNetMagic address@ returns the keys from the
+{- | @'queryNodeUtxoAddress' cardanoCli testNetMagic address@ returns the keys
+ - from the
  JSON output from
  @
-  docker exec -t -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1  \
       cardano-cli query utxo
           --testnet-magic 2 \
           --address "addr_test1vq9m0ma46xzspaq2jwdefuurt2zm2ct9yj495t22578p6xc7kgt8y" \
           --out-file /dev/stdout
  @
 
- of course, @--testnet-magic@ and @--address@ are replaced by the parameters.
+ of course, @cardano-cli@, @--testnet-magic@ and @--address@ are replaced by
+ the parameters.
 
  Example output is as follows.
  @
@@ -66,17 +68,11 @@ import TrustlessSidechain.OffChain qualified as OffChain
  Purposely, this API is left rather empty since we don't really need anything
  fancy.
 -}
-queryNodeUtxoAddress :: Int -> String -> IO [TxOutRef]
-queryNodeUtxoAddress testnetMagic bech32Address = do
+queryNodeUtxoAddress :: String -> Int -> String -> IO [TxOutRef]
+queryNodeUtxoAddress cardanoCli testnetMagic bech32Address = do
   let cmd =
         List.unwords
-          [ "docker"
-          , "exec"
-          , "-t"
-          , "-e"
-          , "CARDANO_NODE_SOCKET_PATH='/ipc/node.socket'"
-          , "store_cardano-node_1"
-          , "cardano-cli"
+          [ cardanoCli
           , "query"
           , "utxo"
           , List.unwords ["--testnet-magic", show testnetMagic]

@@ -17,11 +17,20 @@ module Bench (
 
   -- | "Bench.NodeQuery" provides a way to query the node.
   module Bench.NodeQuery,
+
+  -- * "Bench.Logger"
+
   -- | "Bench.Logger" provides logging utilities
   module Bench.Logger,
+
+  -- * "Bench.OdcQuery"
+
+  -- | "Bench.OdcQuery" provides logging utilities
+  module Bench.OdcQuery,
 ) where
 
 import Bench.BenchResults
 import Bench.Logger
 import Bench.Monad
 import Bench.NodeQuery
+import Bench.OdcQuery

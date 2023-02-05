@@ -66,7 +66,7 @@ updateCommitteeHashBench = do
 
     -- Iniatialising the sidechain:
     Monad.void $
-      Bench.bench "InitSidechain" $
+      Bench.benchCtl "InitSidechain" $
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
@@ -81,7 +81,7 @@ updateCommitteeHashBench = do
 
     Monad.void $ do
       Foldable.for_ currentAndNextCommittees $ \(sidechainEpoch, currentCommittee, nextCommittee) -> do
-        Bench.bench "UpdateCommitteeHash" $
+        Bench.benchCtl "UpdateCommitteeHash" $
           ctlCommand $
             Ctl.ctlUpdateCommitteeHash
               sidechainParams
@@ -96,5 +96,6 @@ updateCommitteeHashBench = do
   --------------------------------
   -- (note the less indentation) We run:
   Bench.plotOffChainWithLinearRegression "UpdateCommitteeHashPlot.svg" "UpdateCommitteeHash"
+  Bench.plotOnChainWithLinearRegression "UpdateCommitteeHashLoveLacePlot.svg" "UpdateCommitteeHash"
 
   return ()

@@ -63,7 +63,7 @@ initSidechainBench = do
 
       -- Iniatialising the sidechain:
       Monad.void $
-        Bench.bench "InitSidechain" $
+        Bench.benchCtl "InitSidechain" $
           ctlCommand $
             Ctl.ctlInitSidechainFlags
               CtlInitSidechain
@@ -74,6 +74,7 @@ initSidechainBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "InitSidechain.svg" "InitSidechain"
+  Bench.plotOffChainWithLinearRegression "InitSidechainPlot.svg" "InitSidechain"
+  Bench.plotOffChainWithLinearRegression "InitSidechainLoveLacePlot.svg" "InitSidechain"
 
   return ()

@@ -86,6 +86,67 @@ timedCallCommand cmd = Exception.bracket
         ExitFailure k ->
           Exception.throwIO $ IO.Error.userError $ "`timedCallCommand` failed with exit code: " ++ show k
 
+{- |  same as @'timedReadCommand' cmd@ but instead of piping the @cmd@'s
+ @stdout@ to the current process's @stdout@, it returns it as a 'ByteString'
+ along with the time it took to execute.
+-}
+timedReadCommand :: String -> IO (ByteString, Int64)
+timedReadCommand cmd = Exception.bracket
+  -- Warning: mostly duplicated code from 'timedCallCommand'
+  Process.createPipe
+  (\(readHandle, writeHandle) -> IO.hClose readHandle *> IO.hClose writeHandle)
+  $ \(readHandle, writeHandle) -> do
+    writeFd <- Handle.FD.handleToFd writeHandle
+
+    -- get the current environment, so that we can add our one extra
+    -- environment variable to it (namely TIMEFORMAT)
+    env <- Environment.getEnvironment
+
+    -- the idea is that:
+    --  - the command we are interested in benchmarking's output is piped to @3@
+    --  - the time command's stderr is piped ot @writeFd@
+    --  - then, @3@ is brought back to stderr
+    let timedCmd :: String
+        timedCmd =
+          List.unwords
+            [ "{"
+            , "time"
+            , cmd
+            , "2>&3"
+            , ";"
+            , "}"
+            , "3>&2"
+            , "2>&" ++ show (FD.fdFD writeFd) -- this makes `time`'s output go to our pipe
+            ]
+
+        shellCmd =
+          (Process.shell timedCmd)
+            { Process.env = Just $ ("TIMEFORMAT", "%R") : env
+            , Process.std_out = Process.CreatePipe
+            }
+
+    Process.withCreateProcess shellCmd $
+      \_
+       {- this partial pattern is safe since we set `Process.stdout = Process.createPipe` above -}
+       ~(Just hstdout)
+       _
+       processHandle -> do
+          Process.waitForProcess processHandle >>= \case
+            ExitSuccess -> do
+              --  close the @writeHandle@ to ensure that it gets flushed.
+              --  Indeed, closing a handle twice is a no op
+              _ <- IO.hClose writeHandle
+
+              timeOutputRaw <- ByteString.hGetContents readHandle
+
+              stdout <- ByteString.hGetContents hstdout
+
+              case parseTimeOutput timeOutputRaw of
+                Nothing -> Exception.throwIO $ IO.Error.userError "internal error time output failed to parse"
+                Just timeOutput -> pure (stdout, timeOutput)
+            ExitFailure k ->
+              Exception.throwIO $ IO.Error.userError $ "`timedReadCommand` failed with exit code: " ++ show k
+
 -- 'parseTimeOutput' parses the output of the @time@ keyword in bash with
 -- environment variable @TIMEFORMAT@ as @%R@ i.e., a sequence of digits, a
 -- period, followed by 3 decimal points [we don't actually check this]

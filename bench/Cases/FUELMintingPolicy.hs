@@ -79,7 +79,7 @@ fuelMintingBench = do
     initCommittee <- IO.Class.liftIO $ Ctl.generateFreshCommittee 10
 
     Monad.void $
-      Bench.bench "InitSidechain" $
+      Bench.benchCtl "InitSidechain" $
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
@@ -123,7 +123,7 @@ fuelMintingBench = do
 
     -- Merkle root insertion
     Monad.void $
-      Bench.bench "SaveRoot" $
+      Bench.benchCtl "SaveRoot" $
         ctlCommand $
           Ctl.ctlSaveRootFlags
             sidechainParams
@@ -136,7 +136,7 @@ fuelMintingBench = do
     -- FUELMintingPolicy:
     Monad.void $ do
       Foldable.for_ combinedMerkleProofs $ \combinedMerkleProof -> do
-        Bench.bench "FUELMintingPolicy" $
+        Bench.benchCtl "FUELMintingPolicy" $
           ctlCommand $
             Ctl.ctlClaimFlags
               CtlClaim
@@ -146,6 +146,7 @@ fuelMintingBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "FUELMintingPolicyPlot.svg" "FUELMintingPolicy"
+  Bench.plotOffChainWithLinearRegression "FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
+  Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
 
   return ()

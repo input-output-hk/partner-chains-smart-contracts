@@ -6,10 +6,27 @@ module Main where
 import Bench (BenchConfig (..))
 import Bench qualified
 import Control.Monad qualified as Monad
+import Ctl qualified
 
 import Cases.FUELMintingPolicy qualified as FUELMintingPolicy
 import Cases.InitSidechain qualified as InitSidechain
 import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
+
+{- | 'cardanoCli' is a string for using @cardano-cli@ through the docker image
+ from @nix run .#ctl-runtime-preview@.
+-}
+cardanoCliCmd :: String
+cardanoCliCmd =
+  "docker exec -t -e CARDANO_NODE_SOCKET_PATH=\"/ipc/node.socket\" store_cardano-node_1  cardano-cli"
+
+{- | 'odcHost' is local host for ogmios-datum-cache i.e., when running @nix run
+ .#ctl-runtime-preview@, this is the host name for ogmios-datum-cache.
+-}
+odcHost :: String
+odcHost = "127.0.0.1"
+
+odcPort :: Int
+odcPort = 9999
 
 main :: IO ()
 main = do
@@ -24,32 +41,44 @@ main = do
   -- ```
   -- cabal bench
   -- ```
-  Monad.void $ do
-    db <- Bench.freshBenchResults "." "FUELMintingBenchmarks.db"
-    let cfg =
-          BenchConfig
-            { bcfgBenchResults = db
-            , bcfgSigningKeyFilePath = "./payment.skey"
-            , bcfgTestNetMagic = 2
-            }
-    Bench.runBench cfg FUELMintingPolicy.fuelMintingBench
+  Monad.void $
+    Bench.withOdcConnection odcHost odcPort $ \conn -> do
+      db <- Bench.freshBenchResults "." "FUELMintingBenchmarks.db"
+      let cfg =
+            BenchConfig
+              { bcfgBenchResults = db
+              , bcfgSigningKeyFilePath = "./payment.skey"
+              , bcfgTestNetMagic = 2
+              , bcfgCtlCmd = Ctl.ctlCmd
+              , bcfgOdcConnection = conn
+              , bcfgCardanoCliCmd = cardanoCliCmd
+              }
+      Bench.runBench cfg FUELMintingPolicy.fuelMintingBench
 
-  Monad.void $ do
-    db <- Bench.freshBenchResults "." "UpdateCommitteeHash.db"
-    let cfg =
-          BenchConfig
-            { bcfgBenchResults = db
-            , bcfgSigningKeyFilePath = "./payment.skey"
-            , bcfgTestNetMagic = 2
-            }
-    Bench.runBench cfg UpdateCommitteeHash.updateCommitteeHashBench
+  Monad.void $
+    Bench.withOdcConnection odcHost odcPort $ \conn -> do
+      db <- Bench.freshBenchResults "." "UpdateCommitteeHash.db"
+      let cfg =
+            BenchConfig
+              { bcfgBenchResults = db
+              , bcfgSigningKeyFilePath = "./payment.skey"
+              , bcfgTestNetMagic = 2
+              , bcfgCtlCmd = Ctl.ctlCmd
+              , bcfgOdcConnection = conn
+              , bcfgCardanoCliCmd = cardanoCliCmd
+              }
+      Bench.runBench cfg UpdateCommitteeHash.updateCommitteeHashBench
 
-  Monad.void $ do
-    db <- Bench.freshBenchResults "." "InitSidechain.db"
-    let cfg =
-          BenchConfig
-            { bcfgBenchResults = db
-            , bcfgSigningKeyFilePath = "./payment.skey"
-            , bcfgTestNetMagic = 2
-            }
-    Bench.runBench cfg InitSidechain.initSidechainBench
+  Monad.void $
+    Bench.withOdcConnection odcHost odcPort $ \conn -> do
+      db <- Bench.freshBenchResults "." "InitSidechain.db"
+      let cfg =
+            BenchConfig
+              { bcfgBenchResults = db
+              , bcfgSigningKeyFilePath = "./payment.skey"
+              , bcfgTestNetMagic = 2
+              , bcfgCtlCmd = Ctl.ctlCmd
+              , bcfgOdcConnection = conn
+              , bcfgCardanoCliCmd = cardanoCliCmd
+              }
+      Bench.runBench cfg InitSidechain.initSidechainBench
