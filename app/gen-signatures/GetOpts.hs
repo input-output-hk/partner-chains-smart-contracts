@@ -68,18 +68,18 @@ import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
+import TrustlessSidechain.OffChain (
+  Bech32Recipient (bech32RecipientBytes),
+  SidechainCommittee (SidechainCommittee),
+  SidechainCommitteeMember (..),
+ )
+import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   GenesisHash (GenesisHash),
   MerkleTreeEntry (..),
   SidechainParams (..),
   SidechainPubKey,
  )
-import Utils (
-  Bech32Recipient (bech32RecipientBytes),
-  SidechainCommittee (SidechainCommittee),
-  SidechainCommitteeMember (..),
- )
-import Utils qualified
 
 -- | 'getArgs' grabs the command line options ('Args').
 getOpts :: IO Args
@@ -350,13 +350,13 @@ parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
 
 -- | Parse SECP256K1 private key
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
-parseSidechainPrivKey = eitherReader Utils.strToSecpPrivKey
+parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
 
-{- | Parse SECP256K1 public key -- see 'Utils.strToSecpPubKey' for details
+{- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
  on the format
 -}
 parseSidechainPubKey :: OptParse.ReadM SidechainPubKey
-parseSidechainPubKey = eitherReader (fmap Utils.secpPubKeyToSidechainPubKey . Utils.strToSecpPubKey)
+parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
 -- | parses the previous merkle root as a hex encoded string
 parsePreviousMerkleRoot :: OptParse.ReadM BuiltinByteString

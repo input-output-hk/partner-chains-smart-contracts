@@ -1,22 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{- | 'Utils' includes utility functions for tasks like:
+{- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
+ functionality. In particular, we provide utilities for generating signatures
+ / related messages for the system. This is useful for testing the system
+ externally.
 
-      -  Working with bech32 recipients values
-
-      -  Conveient wrapper type for the sidechain committee public and private
-      key pairs
-
-      - Parsing hex encoded sidechain public keys and private keys.
-
-      -  signing messages
-
-      -  showing signatures
-
-      -  converting public keys to private keys
+ See: the executable `trustless-sidechain-gen-signatures`
 -}
-module Utils (
+module TrustlessSidechain.OffChain (
   Bech32Recipient (bech32RecipientBytes),
   signWithSPOKey,
   signWithSidechainKey,
@@ -43,9 +34,13 @@ module Utils (
   SidechainCommitteeMember (..),
   strToSecpPrivKey,
   strToSecpPubKey,
+  module TrustlessSidechain.Types,
 ) where
 
 import Prelude
+
+-- we import Prelude unqualified here because this module is
+-- used for Prelude projects that just generate data for the sidechain
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
