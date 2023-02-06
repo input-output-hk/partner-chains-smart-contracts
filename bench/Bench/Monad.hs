@@ -195,7 +195,7 @@ benchCtl description cmd = do
                         --  - Byron era tx fees are implict, and are given by
                         --  the difference between the sum of outputs and sum
                         --  of inputs.
-                        --  - later eras, store the  in the transaction explicitly
+                        --  - later eras, store the fee in the transaction explicitly
                         lovelaceFee = case fee of
                           Cardano.TxFeeImplicit _ ->
                             Exception.throw $
