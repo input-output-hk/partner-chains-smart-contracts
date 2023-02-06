@@ -25,7 +25,7 @@ module Bench (
 
   -- * "Bench.OdcQuery"
 
-  -- | "Bench.OdcQuery" provides logging utilities
+  -- | "Bench.OdcQuery" provides utilities for querying ogmios-datum-cache
   module Bench.OdcQuery,
 ) where
 
