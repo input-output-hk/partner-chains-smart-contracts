@@ -41,7 +41,6 @@ import Bench.Process qualified as Process
 
 -- base
 
-import Control.Applicative qualified as Applicative
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
@@ -431,32 +430,24 @@ queryAddrUtxos addressBech32 = do
 -}
 overrideBenchConfigPathFromEnv :: BenchConfigPaths -> IO BenchConfigPaths
 overrideBenchConfigPathFromEnv benchConfigPaths = do
-  -- note: clearly all of these pattern matches are safe because we add a
-  -- Just to the second argument of '<|>'
-  ~(Just benchResults) <-
-    fmap (Applicative.<|> Just (bcfgpBenchResults benchConfigPaths)) $
-      Environment.lookupEnv "BENCH_RESULTS"
-  ~(Just signingKeyFilePath) <-
-    fmap (Applicative.<|> Just (bcfgpSigningKeyFilePath benchConfigPaths)) $
-      Environment.lookupEnv "SIGNING_KEY"
-  ~(Just testnetMagic) <-
-    fmap ((Applicative.<|> Just (bcfgpTestNetMagic benchConfigPaths)) . fmap read) $
-      Environment.lookupEnv "TEST_NET_MAGIC"
-  ~(Just ctlCmd) <-
-    fmap (Applicative.<|> Just (bcfgpCtlCmd benchConfigPaths)) $
-      Environment.lookupEnv "CTL"
-  ~(Just odcHost) <-
-    fmap (Applicative.<|> Just (bcfgpOdcHost benchConfigPaths)) $
-      Environment.lookupEnv "OGMIOS_DATUM_CACHE_HOST"
-  ~(Just odcPort) <-
-    fmap ((Applicative.<|> Just (bcfgpOdcPort benchConfigPaths)) . fmap read) $
-      Environment.lookupEnv "OGMIOS_DATUM_CACHE_PORT"
-  ~(Just cardanoCliCmd) <-
-    fmap (Applicative.<|> Just (bcfgpCardanoCliCmd benchConfigPaths)) $
-      Environment.lookupEnv "CARDANO_CLI"
-  ~(Just outputDir) <-
-    fmap (Applicative.<|> Just (bcfgpOutputDir benchConfigPaths)) $
-      Environment.lookupEnv "BENCH_OUTPUT_DIRECTORY"
+  benchResults <-
+    Maybe.fromMaybe (bcfgpBenchResults benchConfigPaths) <$> Environment.lookupEnv "BENCH_RESULTS"
+  signingKeyFilePath <-
+    Maybe.fromMaybe (bcfgpSigningKeyFilePath benchConfigPaths) <$> Environment.lookupEnv "SIGNING_KEY"
+  testnetMagic <-
+    Maybe.maybe (bcfgpTestNetMagic benchConfigPaths) read
+      <$> Environment.lookupEnv "TESTNET_MAGIC"
+  ctlCmd <- Maybe.fromMaybe (bcfgpCtlCmd benchConfigPaths) <$> Environment.lookupEnv "CTL"
+  odcHost <- Maybe.fromMaybe (bcfgpOdcHost benchConfigPaths) <$> Environment.lookupEnv "OGMIOS_DATUM_CACHE_HOST"
+  odcPort <-
+    Maybe.maybe (bcfgpOdcPort benchConfigPaths) . read
+      <$> Environment.lookupEnv "OGMIOS_DATUM_CACHE_PORT"
+  cardanoCliCmd <-
+    Maybe.fromMaybe (bcfgpCardanoCliCmd benchConfigPaths)
+      <$> Environment.lookupEnv "CARDANO_CLI"
+  outputDir <-
+    Maybe.fromMaybe (bcfgpOutputDir benchConfigPaths)
+      <$> Environment.lookupEnv "BENCH_OUTPUT_DIRECTORY"
 
   return
     BenchConfigPaths
