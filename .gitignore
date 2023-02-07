@@ -53,8 +53,8 @@ config.json
 *.txt
 
 # Benchmark related external files
-*.svg
 *.db
+bench-output/
 
 # Ctl related files
 *.json
