@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- | "Bench.OdcQuery" provides wrapper functions for querying
- ogmios-datum-cache.
+ ogmios-datum-cache as a client.
 
  TODO: probably should put all of this on a separate thread which will manage
  the connection entirely and open a new connection if it gets closed
@@ -11,7 +11,20 @@
  See the documentation here
  <https://github.com/mlabs-haskell/ogmios-datum-cache>
 -}
-module Bench.OdcQuery where
+module Bench.OdcQuery (
+  -- * Creating a connection to ogmios-datum-cache
+  withOdcConnection,
+
+  -- * Querying ogmios-datum-cache for information
+  getBabbageTxByHash,
+  getRawTxByHash,
+
+  -- * Error types
+  OdcQueryError (..),
+
+  -- * Internal
+  getTxByHashRequest,
+) where
 
 -- base
 import Control.Exception (Exception)

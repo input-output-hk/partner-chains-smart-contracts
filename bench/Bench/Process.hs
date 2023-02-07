@@ -6,7 +6,13 @@
 {- | "Bench.Process" provides utility functions for calling a process and
  timing its output.
 -}
-module Bench.Process where
+module Bench.Process (
+  -- * Timing a process
+  timedCallCommand,
+
+  -- * Internal
+  parseTimeOutput,
+) where
 
 -- process
 import System.Process qualified as Process

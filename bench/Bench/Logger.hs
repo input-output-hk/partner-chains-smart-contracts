@@ -3,7 +3,7 @@
 {- | 'Bench.Logger' includes facilities for logging information. All "user
  info" is routed to stderr.
 -}
-module Bench.Logger where
+module Bench.Logger (logInfo) where
 
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Class qualified as IO.Class

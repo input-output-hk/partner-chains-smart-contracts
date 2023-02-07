@@ -1,36 +1,37 @@
--- | "Bench" rexports everything
+-- | "Bench" provides a convenient module to reexport the high level API
 module Bench (
-  -- * "Bench.Monad"
+  -- "Bench.Monad" reexports
+  Bench (..),
+  BenchSuite (..),
+  BenchConfig (..),
+  BenchConfigPaths (..),
+  liftBenchSuite,
+  benchCtl,
+  runBench,
+  runBenchWith,
+  runBenchSuiteN,
+  plotOffChainWithLinearRegression,
+  plotOnChainWithLinearRegression,
+  queryAddrUtxos,
+  overrideBenchConfigPathFromEnv,
 
-  --
-
-  -- | "Bench.Monad" provides the DSL for benchmarking CLI commands and the
-  -- necessary bookkeeping. This is the highlevel API that should be used.
-  module Bench.Monad,
-
-  -- * "Bench.BenchResults"
-
-  -- | "Bench.BenchResults" stores the benchmark results
-  module Bench.BenchResults,
-
-  -- * "Bench.NodeQuery"
-
-  -- | "Bench.NodeQuery" provides a way to query the node.
-  module Bench.NodeQuery,
-
-  -- * "Bench.Logger"
-
-  -- | "Bench.Logger" provides logging utilities
-  module Bench.Logger,
-
-  -- * "Bench.OdcQuery"
-
-  -- | "Bench.OdcQuery" provides utilities for querying ogmios-datum-cache
-  module Bench.OdcQuery,
+  -- * "Bench.BenchResults" reexports
+  BenchResults (..),
+  openBenchResults,
+  closeBenchResults,
+  freshBenchResults,
+  withFreshBenchResults,
+  Description,
+  IndependentVarIx,
+  Ms,
+  LovelaceFee,
+  TrialIx,
+  Trial,
+  addTrial,
+  withSelectAllDescriptions,
+  selectAllDescriptions,
+  selectFreshTrialIx,
 ) where
 
 import Bench.BenchResults
-import Bench.Logger
 import Bench.Monad
-import Bench.NodeQuery
-import Bench.OdcQuery

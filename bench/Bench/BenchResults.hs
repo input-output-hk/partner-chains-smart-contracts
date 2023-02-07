@@ -5,7 +5,37 @@
 {- | "Bench.BenchResults" is the module which includes a database connection (along
  with associated queries) for gathering benchmark results.
 -}
-module Bench.BenchResults where
+module Bench.BenchResults (
+  -- * Database connection
+  BenchResults (..),
+  openBenchResults,
+  closeBenchResults,
+  freshBenchResults,
+  withFreshBenchResults,
+
+  -- * Data types for results of queries
+  Description,
+  IndependentVarIx,
+  Ms,
+  LovelaceFee,
+  TrialIx,
+  Trial (..),
+
+  -- * High level interface to quering the database
+  addTrial,
+  withSelectAllDescriptions,
+  selectAllDescriptions,
+  selectFreshTrialIx,
+
+  -- * Internal SQL queries + debugging utilities
+  createTrialsTablesQuery,
+  selectFreshTrialIxQuery,
+  addTrialQuery,
+  selectAllDescriptionsQuery,
+  printQuery,
+  --  * Errors
+  BenchResultsError (..),
+) where
 
 import Bench.Logger qualified as Logger
 import Control.Exception (Exception)
@@ -299,9 +329,7 @@ selectFreshTrialIxQuery =
 addTrialQuery :: Text
 addTrialQuery =
   "INSERT INTO trials(description, independentVarIx, trialIx, ms, lovelaceFee)\n\
-  \SELECT :description, :independentVarIx, :trialIx, :ms, :lovelaceFee\n\
-  \FROM trials\n\
-  \WHERE description=:description AND trialIx=:trialIx;\n"
+  \SELECT :description, :independentVarIx, :trialIx, :ms, :lovelaceFee;"
 
 --  | 'viewAllDescriptionQuery' fixes the @description@, and @SELECT@s all the
 --  independentVars corresponding to that description.

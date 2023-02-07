@@ -7,7 +7,13 @@
  TODO: When our CTL dependency gets Kupo, it's probably better to ask Kupo
  for this information.
 -}
-module Bench.NodeQuery where
+module Bench.NodeQuery (
+  -- * Node querying functionality
+  queryNodeUtxoAddress,
+
+  -- * Errors
+  NodeQueryError (..),
+) where
 
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
