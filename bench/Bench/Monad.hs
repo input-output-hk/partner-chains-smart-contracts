@@ -8,7 +8,7 @@
 module Bench.Monad where
 
 -- this project
-import Bench.BenchResults (AddObservationNoTrialIx (..), BenchResults, Description, LovelaceFee, Observation (..), ObservationIx)
+import Bench.BenchResults (AddObservationNoIndependentVarIx (..), BenchResults, Description, LovelaceFee, Observation (..), ObservationIx)
 import Bench.BenchResults qualified as BenchResults
 import Bench.Logger qualified as Logger
 import Bench.NodeQuery qualified as NodeQuery
@@ -103,7 +103,7 @@ newtype Bench a = Bench {unBench :: ReaderT BenchConfig IO a}
     )
 
 {- | 'BenchSuite' is a thin wrapper around 'Bench' to create a suite of
- benchmarks i.e., iid trials of the benchmarks that gets run multiple times.
+ benchmarks i.e., iid independentVars of the benchmarks that gets run multiple times.
 
  See 'runBenchSuiteN' for how to use
 -}
@@ -125,7 +125,7 @@ liftBenchSuite b =
 runBench :: BenchConfig -> Bench () -> IO ()
 runBench benchConfig benchAction = Monad.void $ Reader.runReaderT (unBench benchAction) benchConfig
 
-{- | @'benchSuite' n benchSuite@ creates @n@ iid trials of the benchmarks in
+{- | @'benchSuite' n benchSuite@ creates @n@ iid independentVars of the benchmarks in
  @benchSuite@.
 -}
 runBenchSuiteN :: Int -> BenchSuite () -> Bench ()
@@ -213,8 +213,8 @@ benchCtl description cmd = do
 
     fee <- getFee
 
-    BenchResults.addObservationNoTrialIx
-      ( AddObservationNoTrialIx
+    BenchResults.addObservationNoIndependentVarIx
+      ( AddObservationNoIndependentVarIx
           { aontiDescription = description
           , aontiObservationIx = observationIx
           , aontiMs = ms
@@ -232,7 +232,7 @@ instance Exception GetTxFeeError
 {- | @'plotOffChainWithLinearRegression' filePath description@ plots the given description in an
  SVG file with
 
-      - X-axis as the trial number
+      - X-axis as the independentVar number
 
       - Y-axis as the time elapsed
       -
@@ -243,15 +243,15 @@ plotOffChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
     description
-    ("OffChain Performance of a Sequence of Trials of " ++ Text.unpack description)
-    "Trial number"
+    ("OffChain Performance of a sequence of calls of " ++ Text.unpack description)
+    "Nth execution"
     "Time (ms)"
     oMs
 
 {- | @'plotOnChainWithLinearRegression' filePath description@ plots the given description in an
  SVG file with
 
-      - X-axis as the trial number
+      - X-axis as the independentVar number
 
       - Y-axis as the onchain fees
       -
@@ -262,8 +262,8 @@ plotOnChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
     description
-    ("OnChain Performance of a Sequence of Trials of " ++ Text.unpack description)
-    "Trial number"
+    ("OnChain Performance of a Sequence of calls of " ++ Text.unpack description)
+    "Nth execution"
     "Lovelace"
     oLovelaceFee
 
@@ -291,10 +291,10 @@ plotXYWithLinearRegression
       -- that Haskell can't handle it anyways.
       observations <- IO.Class.liftIO $ BenchResults.selectAllDescriptions description benchResults
 
-      let -- toXY grabs the interesting part of the data: X: trial number, Y: time elapsed
+      let -- toXY grabs the interesting part of the data: X: independentVar number, Y: time elapsed
           toXY :: Observation -> (Double, Double)
           toXY observation =
-            let x = oTrialIx observation
+            let x = oIndependentVarIx observation
                 y = getY observation
              in (fromIntegral x, fromIntegral y)
 
@@ -303,7 +303,7 @@ plotXYWithLinearRegression
             map (\(~(o : os)) -> (oObservationIx o, map toXY $ o : os)) $
               List.groupBy ((==) `Function.on` oObservationIx) observations
 
-          maxTrialIx = maximum $ map fst dataSet
+          maxIndependentVarIx = maximum $ map fst dataSet
           dataSet = map toXY observations
           -- safe use of 'fromJust' from the documentation: it returns the
           -- coefficient + the y intercept and that's it.
@@ -343,7 +343,7 @@ plotXYWithLinearRegression
           Graphics.plot $
             Graphics.line
               linearRegressionMsg
-              [map (\x -> (x, coefficient * x + yintercept)) [0, 0.5 .. maxTrialIx]]
+              [map (\x -> (x, coefficient * x + yintercept)) [0, 0.5 .. maxIndependentVarIx]]
 
 -- | 'queryAddrUtxos' queries utxos from the configured signing key file.
 queryAddrUtxos :: String -> Bench [TxOutRef]
