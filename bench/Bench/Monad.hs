@@ -441,7 +441,7 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
       Environment.lookupEnv "SIGNING_KEY"
   ~(Just testnetMagic) <-
     fmap ((Applicative.<|> Just (bcfgpTestNetMagic benchConfigPaths)) . fmap read) $
-      Environment.lookupEnv "TEST_NET_MAGIC"
+      Environment.lookupEnv "TESTNET_MAGIC"
   ~(Just ctlCmd) <-
     fmap (Applicative.<|> Just (bcfgpCtlCmd benchConfigPaths)) $
       Environment.lookupEnv "CTL"
