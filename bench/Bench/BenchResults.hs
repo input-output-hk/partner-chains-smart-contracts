@@ -197,7 +197,7 @@ addTrial params benchResult =
 
  Warning:
   - The usual caveats of bracket style resource handlers apply i.e., one
-  should call the @step@ function outside of its closure.
+  should not call the @step@ function outside of its closure.
 -}
 withSelectAllDescriptions :: Description -> BenchResults -> (IO (Maybe Trial) -> IO a) -> IO a
 withSelectAllDescriptions description benchResult f =
@@ -247,7 +247,7 @@ selectFreshTrialIx :: BenchResults -> IO TrialIx
 selectFreshTrialIx benchResult =
   withPreparedStatement selectFreshTrialIxQuery (brDatabase benchResult) $
     \preparedStmt -> do
-      -- aggegate functions reutrn a single value, so we just step the
+      -- aggegate functions return a single value, so we just step the
       -- prepared statement once.
       _ <- SQLite3.step preparedStmt
       SQLite3.columnInt64 preparedStmt 0 -- returns the fresh trial ix
@@ -325,7 +325,7 @@ selectFreshTrialIxQuery =
   "SELECT ifnull(max(trialIx), 0) + 1\n\
   \FROM trials;"
 
--- | 'addTrialQuery' is a parameterized query which adds an trial.
+-- | 'addTrialQuery' is a parameterized query which adds a trial.
 addTrialQuery :: Text
 addTrialQuery =
   "INSERT INTO trials(description, independentVarIx, trialIx, ms, lovelaceFee)\n\
