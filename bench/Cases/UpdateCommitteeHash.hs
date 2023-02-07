@@ -96,7 +96,11 @@ updateCommitteeHashBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "bench-output/UpdateCommitteeHashPlot.svg" "UpdateCommitteeHash"
-  Bench.plotOnChainWithLinearRegression "bench-output/UpdateCommitteeHashLoveLacePlot.svg" "UpdateCommitteeHash"
+  Bench.plotOffChainWithLinearRegression
+    "UpdateCommitteeHashPlot.svg"
+    "UpdateCommitteeHash"
+  Bench.plotOnChainWithLinearRegression
+    "UpdateCommitteeHashLoveLacePlot.svg"
+    "UpdateCommitteeHash"
 
   return ()

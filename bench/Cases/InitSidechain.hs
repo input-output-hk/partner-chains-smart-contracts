@@ -75,7 +75,7 @@ initSidechainBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "bench-output/InitSidechainPlot.svg" "InitSidechain"
-  Bench.plotOffChainWithLinearRegression "bench-output/InitSidechainLoveLacePlot.svg" "InitSidechain"
+  Bench.plotOffChainWithLinearRegression "InitSidechainPlot.svg" "InitSidechain"
+  Bench.plotOffChainWithLinearRegression "InitSidechainLoveLacePlot.svg" "InitSidechain"
 
   return ()

@@ -146,7 +146,7 @@ fuelMintingBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "bench-output/FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
-  Bench.plotOnChainWithLinearRegression "bench-output/FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
+  Bench.plotOffChainWithLinearRegression "FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
+  Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
 
   return ()
