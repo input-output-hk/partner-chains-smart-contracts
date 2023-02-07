@@ -22,7 +22,7 @@ import TrustlessSidechain.Types (SidechainParams (..))
 updateCommitteeHashBench :: Bench ()
 updateCommitteeHashBench = do
   let -- total number of times we repeat the random experiment
-      numberOfObservations = 3
+      numberOfTrials = 3
       numberOfCommitteeHashUpdates = 250
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
@@ -36,7 +36,7 @@ updateCommitteeHashBench = do
   --  - init sidechain
   --  - then save root
   --  - then many many many fuel mints
-  Bench.runBenchSuiteN numberOfObservations $ do
+  Bench.runBenchSuiteN numberOfTrials $ do
     txOutRef : _ <-
       Bench.liftBenchSuite $ Bench.queryAddrUtxos addr
 
@@ -66,7 +66,7 @@ updateCommitteeHashBench = do
 
     -- Iniatialising the sidechain:
     Monad.void $
-      Bench.benchCtl "InitSidechain" $
+      Bench.benchCtl "InitSidechain" 1 $
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
@@ -80,17 +80,18 @@ updateCommitteeHashBench = do
     let currentAndNextCommittees = zip3 [1 ..] committees $ tail committees
 
     Monad.void $ do
-      Foldable.for_ currentAndNextCommittees $ \(sidechainEpoch, currentCommittee, nextCommittee) -> do
-        Bench.benchCtl "UpdateCommitteeHash" $
-          ctlCommand $
-            Ctl.ctlUpdateCommitteeHash
-              sidechainParams
-              CtlUpdateCommitteeHash
-                { cuchCurrentCommitteePrvKeys = map fst currentCommittee
-                , cuchNewCommitteePubKeys = map snd nextCommittee
-                , cuchSidechainEpoch = sidechainEpoch
-                , cuchPreviousMerkleRoot = Nothing
-                }
+      Foldable.for_ currentAndNextCommittees $ \(ix, currentCommittee, nextCommittee) ->
+        let sidechainEpoch = ix -- the index corresponds to the independent variable i.e,. the Nth execution of update committee hash
+         in Bench.benchCtl "UpdateCommitteeHash" (fromIntegral ix) $
+              ctlCommand $
+                Ctl.ctlUpdateCommitteeHash
+                  sidechainParams
+                  CtlUpdateCommitteeHash
+                    { cuchCurrentCommitteePrvKeys = map fst currentCommittee
+                    , cuchNewCommitteePubKeys = map snd nextCommittee
+                    , cuchSidechainEpoch = sidechainEpoch
+                    , cuchPreviousMerkleRoot = Nothing
+                    }
 
   -- Finally, we plot all the data
   --------------------------------

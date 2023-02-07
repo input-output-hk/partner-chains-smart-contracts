@@ -8,7 +8,7 @@
 module Bench.Monad where
 
 -- this project
-import Bench.BenchResults (AddObservationNoIndependentVarIx (..), BenchResults, Description, LovelaceFee, Observation (..), ObservationIx)
+import Bench.BenchResults (BenchResults, Description, IndependentVarIx, LovelaceFee, Trial (..), TrialIx)
 import Bench.BenchResults qualified as BenchResults
 import Bench.Logger qualified as Logger
 import Bench.NodeQuery qualified as NodeQuery
@@ -107,14 +107,14 @@ newtype Bench a = Bench {unBench :: ReaderT BenchConfig IO a}
 
  See 'runBenchSuiteN' for how to use
 -}
-newtype BenchSuite a = BenchSuite {unBenchSuite :: ReaderT ObservationIx Bench a}
+newtype BenchSuite a = BenchSuite {unBenchSuite :: ReaderT TrialIx Bench a}
   deriving newtype
     ( Functor
     , Applicative
     , Monad
     , MonadIO
     , MonadFail
-    , MonadReader ObservationIx
+    , MonadReader TrialIx
     )
 
 liftBenchSuite :: Bench a -> BenchSuite a
@@ -135,7 +135,7 @@ runBenchSuiteN n benchSuite =
         | otherwise = do
           Logger.logInfo $
             List.unwords
-              [ "Starting observation"
+              [ "Starting trial"
               , show k
               , "of"
               , show n
@@ -143,12 +143,12 @@ runBenchSuiteN n benchSuite =
 
           -- main work of the function
           benchResults <- Reader.asks bcfgBenchResults
-          freshObservationIx <- IO.Class.liftIO $ BenchResults.selectFreshObservationIx benchResults
-          Reader.runReaderT (unBenchSuite benchSuite) freshObservationIx
+          freshTrialIx <- IO.Class.liftIO $ BenchResults.selectFreshTrialIx benchResults
+          Reader.runReaderT (unBenchSuite benchSuite) freshTrialIx
 
           Logger.logInfo $
             List.unwords
-              [ "Finished observation"
+              [ "Finished trial"
               , show k
               , "of"
               , show n
@@ -159,11 +159,11 @@ runBenchSuiteN n benchSuite =
 {- | @'benchCtl' description cmd@ benchmarks @cmd@ with and records the
  necessary information corresponding to the given @description in the database.
  Moreover, it also records internally that this is the @k@th time we have
- executed this @description@ for the given observation.
+ executed this @description@ for the given trial.
 -}
-benchCtl :: Description -> String -> BenchSuite ()
-benchCtl description cmd = do
-  observationIx <- Reader.ask
+benchCtl :: Description -> IndependentVarIx -> String -> BenchSuite ()
+benchCtl description independentVarIx cmd = do
+  trialIx <- Reader.ask
   benchResults <- liftBenchSuite $ Reader.asks bcfgBenchResults
   odcConnection <- liftBenchSuite $ Reader.asks bcfgOdcConnection
 
@@ -213,12 +213,13 @@ benchCtl description cmd = do
 
     fee <- getFee
 
-    BenchResults.addObservationNoIndependentVarIx
-      ( AddObservationNoIndependentVarIx
-          { aontiDescription = description
-          , aontiObservationIx = observationIx
-          , aontiMs = ms
-          , aontiLovelaceFee = fee
+    BenchResults.addTrial
+      ( Trial
+          { tDescription = description
+          , tTrialIx = trialIx
+          , tMs = ms
+          , tLovelaceFee = fee
+          , tIndependentVarIx = independentVarIx
           }
       )
       benchResults
@@ -246,7 +247,7 @@ plotOffChainWithLinearRegression filePath description = do
     ("OffChain Performance of a sequence of calls of " ++ Text.unpack description)
     "Nth execution"
     "Time (ms)"
-    oMs
+    tMs
 
 {- | @'plotOnChainWithLinearRegression' filePath description@ plots the given description in an
  SVG file with
@@ -265,9 +266,9 @@ plotOnChainWithLinearRegression filePath description = do
     ("OnChain Performance of a Sequence of calls of " ++ Text.unpack description)
     "Nth execution"
     "Lovelace"
-    oLovelaceFee
+    tLovelaceFee
 
-plotXYWithLinearRegression :: FilePath -> Description -> String -> String -> String -> (Observation -> Int64) -> Bench ()
+plotXYWithLinearRegression :: FilePath -> Description -> String -> String -> String -> (Trial -> Int64) -> Bench ()
 plotXYWithLinearRegression
   filePath
   description
@@ -289,22 +290,22 @@ plotXYWithLinearRegression
       -- TODO: awful performance for everything -- really should be doing some of
       -- this database side, but it's fine our inputs shouldn't be getting so large
       -- that Haskell can't handle it anyways.
-      observations <- IO.Class.liftIO $ BenchResults.selectAllDescriptions description benchResults
+      trials <- IO.Class.liftIO $ BenchResults.selectAllDescriptions description benchResults
 
       let -- toXY grabs the interesting part of the data: X: independentVar number, Y: time elapsed
-          toXY :: Observation -> (Double, Double)
-          toXY observation =
-            let x = oIndependentVarIx observation
-                y = getY observation
+          toXY :: Trial -> (Double, Double)
+          toXY trial =
+            let x = tIndependentVarIx trial
+                y = getY trial
              in (fromIntegral x, fromIntegral y)
 
-          dataSetByObservationIx =
+          dataSetByTrialIx =
             -- pattern match is safe by defn. of 'Data.List.groupBy'
-            map (\(~(o : os)) -> (oObservationIx o, map toXY $ o : os)) $
-              List.groupBy ((==) `Function.on` oObservationIx) observations
+            map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
+              List.groupBy ((==) `Function.on` tTrialIx) trials
 
           maxIndependentVarIx = maximum $ map fst dataSet
-          dataSet = map toXY observations
+          dataSet = map toXY trials
           -- safe use of 'fromJust' from the documentation: it returns the
           -- coefficient + the y intercept and that's it.
           coefficient, yintercept, rSq :: Double
@@ -337,8 +338,8 @@ plotXYWithLinearRegression
           Graphics.layout_y_axis . Graphics.laxis_title Graphics..= yTitle
 
           -- Plotting the data
-          Foldable.for_ dataSetByObservationIx $ \(oIx, oDataSet) ->
-            Graphics.plot $ Graphics.points ("Observation " ++ show oIx) oDataSet
+          Foldable.for_ dataSetByTrialIx $ \(oIx, oDataSet) ->
+            Graphics.plot $ Graphics.points ("Trial " ++ show oIx) oDataSet
 
           Graphics.plot $
             Graphics.line

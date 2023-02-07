@@ -11,6 +11,7 @@ import Ctl qualified
 
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
+import Data.Foldable qualified as Foldable
 
 import Data.List qualified as List
 
@@ -21,7 +22,7 @@ import TrustlessSidechain.Types (SidechainParams (..))
 initSidechainBench :: Bench ()
 initSidechainBench = do
   let -- total number of times we repeat the random experiment
-      numberOfObservations = 1
+      numberOfTrials = 1
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
@@ -34,8 +35,8 @@ initSidechainBench = do
   --  - init sidechain
   --  - then save root
   --  - then many many many fuel mints
-  Bench.runBenchSuiteN numberOfObservations $
-    Monad.replicateM_ 250 $ do
+  Bench.runBenchSuiteN numberOfTrials $
+    Foldable.for_ [1 .. 250] $ \ix -> do
       txOutRef : _ <-
         Bench.liftBenchSuite $ Bench.queryAddrUtxos addr
 
@@ -63,7 +64,7 @@ initSidechainBench = do
 
       -- Iniatialising the sidechain:
       Monad.void $
-        Bench.benchCtl "InitSidechain" $
+        Bench.benchCtl "InitSidechain" ix $
           ctlCommand $
             Ctl.ctlInitSidechainFlags
               CtlInitSidechain

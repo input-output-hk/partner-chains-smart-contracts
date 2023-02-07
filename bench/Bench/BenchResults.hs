@@ -30,7 +30,7 @@ import System.IO qualified as IO
  the results of benchmarking. It includes:
 
       - 'brDatabase': a database holding all the benchmark data -- see
-      'createObservationsTablesQuery'.
+      'createTrialsTablesQuery'.
 -}
 newtype BenchResults = BenchResults
   { -- | the database connection holding all the data.
@@ -40,13 +40,13 @@ newtype BenchResults = BenchResults
 {- | @'openBenchResults' filePath@ initialises a 'BenchResults'. Namely, it:
 
       - creates an Sqlite3 database connection to the given @filePath@
-      according to the schema in 'createObservationsTablesQuery'
+      according to the schema in 'createTrialsTablesQuery'
 -}
 openBenchResults :: Text -> IO BenchResults
 openBenchResults filePath =
   SQLite3.open filePath
     >>= \db -> do
-      SQLite3.exec db createObservationsTablesQuery
+      SQLite3.exec db createTrialsTablesQuery
       pure $ BenchResults db
 
 {- | @'freshBenchResults' dir fileNameHint@ is 'openBenchResults' but initialises the database
@@ -69,23 +69,23 @@ freshBenchResults dir fileNameHint = do
 closeBenchResults :: BenchResults -> IO ()
 closeBenchResults benchResult = SQLite3.close $ brDatabase benchResult
 
--- | See 'Observation' for details
+-- | See 'Trial' for details
 type Description = Text
 
--- | See 'Observation' for details
+-- | See 'Trial' for details
 type IndependentVarIx = Int64
 
--- | See 'Observation' for details
+-- | See 'Trial' for details
 type Ms = Int64
 
--- | See 'Observation' for details
+-- | See 'Trial' for details
 type LovelaceFee = Int64
 
--- | See 'Observation' for details
-type ObservationIx = Int64
+-- | See 'Trial' for details
+type TrialIx = Int64
 
--- | 'Observation' is all the data relating to a single benchmark.
-data Observation =
+-- | 'Trial' is all the data relating to a single benchmark.
+data Trial =
   -- note: internally SQLite doesn't have it's own unsigned int type.. TODO:
   -- we can add our own in and package it up ourselves. But, 'Int64' should
   -- be large enough for our needs.
@@ -97,68 +97,51 @@ data Observation =
   -- lovelace which surely fits in 'Int64'.
   --
   -- Honestly, both fit in an 'Int32'; but let's just be safe.
-  Observation
-  { -- | 'oDescription' is a brief description of what the benchmark
+  Trial
+  { -- | 'tDescription' is a brief description of what the benchmark
     -- was e.g. "FUELMintingPolicy".
-    oDescription :: !Description
-  , -- | 'oIndependentVarIx' is an integer denoting the @i@th time we've run a
+    tDescription :: !Description
+  , -- | 'tIndependentVarIx' is an integer denoting the @i@th time we've run a
     -- benchmark. E.g., we can run "FUELMintingPolicy" in sequence twice, so we'd have
-    -- @oIndependentVarIx = 1@ for the first execution, and @oIndependentVarIx = 2@ for
+    -- @tIndependentVarIx = 1@ for the first execution, and @tIndependentVarIx = 2@ for
     -- the second execution.
-    oIndependentVarIx :: !IndependentVarIx
-  , -- | 'oObservationIx' is an index to uniquely identify this observation
+    tIndependentVarIx :: !IndependentVarIx
+  , -- | 'tTrialIx' is an index to uniquely identify this trial
     -- from other "same" benchmarks i.e., to uniquely identify same benchmarks
-    -- up to @oDescription@ an @oIndependentVarIx@.
-    oObservationIx :: !ObservationIx
-  , -- | 'oMs' is an 'Int64' denoting the milliseconds to run the
+    -- up to @tDescription@ an @tIndependentVarIx@.
+    tTrialIx :: !TrialIx
+  , -- | 'tMs' is an 'Int64' denoting the milliseconds to run the
     -- benchmark
-    oMs :: !Ms
-  , -- | 'oLovelaceFee' is the lovelace fee of the transaction
-    oLovelaceFee :: !LovelaceFee
+    tMs :: !Ms
+  , -- | 'tLovelaceFee' is the lovelace fee of the transaction
+    tLovelaceFee :: !LovelaceFee
   }
 
-{- | 'IndependentVar' is a subset of the information given an 'Observation'. In
- particular, it removes the @independentVarIx@ and @observationIx@.
--}
-data IndependentVar = IndependentVar
-  { tDescription :: !Description
-  , tMs :: !Ms
-  , tLovelaceFee :: !LovelaceFee
-  }
-
-{- | 'AddObservationNoIndependentVarIx' provides a Haskell datatype for the parameters
- for 'addObservationNoIndependentVarIx'. See 'Observation' for details on the fields.
--}
-data AddObservationNoIndependentVarIx = AddObservationNoIndependentVarIx
-  { aontiDescription :: Description
-  , aontiObservationIx :: ObservationIx
-  , aontiMs :: Ms
-  , aontiLovelaceFee :: LovelaceFee
-  }
-
-{- | Adds a benchmark observation to the system without the independentVar ix (as this
- is computed automatically in the database via an increment)
--}
-addObservationNoIndependentVarIx :: AddObservationNoIndependentVarIx -> BenchResults -> IO ()
-addObservationNoIndependentVarIx params benchResult =
-  withPreparedStatement addObservationNoIndependentVarIxQuery (brDatabase benchResult) $ \preparedStmt -> do
+-- | Adds a benchmark trial to the system.
+addTrial :: Trial -> BenchResults -> IO ()
+addTrial params benchResult =
+  withPreparedStatement addTrialQuery (brDatabase benchResult) $ \preparedStmt -> do
     let -- quick convenience function since we're working with the same prepared statement
         getParamIndex = bindParameterIndex preparedStmt
     Monad.void $ do
       ix <- getParamIndex ":description"
-      SQLite3.bindText preparedStmt ix $ aontiDescription params
+      SQLite3.bindText preparedStmt ix $ tDescription params
 
     Monad.void $ do
-      ix <- getParamIndex ":observationIx"
-      SQLite3.bindInt64 preparedStmt ix $ aontiObservationIx params
+      ix <- getParamIndex ":independentVarIx"
+      SQLite3.bindInt64 preparedStmt ix $ tIndependentVarIx params
+
+    Monad.void $ do
+      ix <- getParamIndex ":trialIx"
+      SQLite3.bindInt64 preparedStmt ix $ tTrialIx params
 
     Monad.void $ do
       ix <- getParamIndex ":ms"
-      SQLite3.bindInt64 preparedStmt ix $ aontiMs params
+      SQLite3.bindInt64 preparedStmt ix $ tMs params
 
     Monad.void $ do
       ix <- getParamIndex ":lovelaceFee"
-      SQLite3.bindInt64 preparedStmt ix $ aontiLovelaceFee params
+      SQLite3.bindInt64 preparedStmt ix $ tLovelaceFee params
 
     -- this is an update query, so it will run to completion in a single call.
     _stepResult <- SQLite3.step preparedStmt
@@ -166,18 +149,18 @@ addObservationNoIndependentVarIx params benchResult =
     return ()
 
 {- | @'withSelectAllDescriptions' desc database $ \step -> ...@ is a bracket style
- resource handler to select all rows in the table @observations@
+ resource handler to select all rows in the table @trials@
  corresponding to the given description where @step@ will give the next
- observation (if it exists).
+ trial (if it exists).
 
- Note: we drop the @observationIx@ since from the results (these should be
+ Note: we drop the @trialIx@ since from the results (these should be
  iid).
 
  Warning:
   - The usual caveats of bracket style resource handlers apply i.e., one
   should call the @step@ function outside of its closure.
 -}
-withSelectAllDescriptions :: Description -> BenchResults -> (IO (Maybe Observation) -> IO a) -> IO a
+withSelectAllDescriptions :: Description -> BenchResults -> (IO (Maybe Trial) -> IO a) -> IO a
 withSelectAllDescriptions description benchResult f =
   withPreparedStatement selectAllDescriptionsQuery (brDatabase benchResult) $ \preparedStmt -> do
     let -- quick convenience function since we're working with the same preparted statement
@@ -192,17 +175,17 @@ withSelectAllDescriptions description benchResult f =
         Done -> pure Nothing
         Row -> do
           independentVarIx <- SQLite3.columnInt64 preparedStmt 0
-          observationIx <- SQLite3.columnInt64 preparedStmt 1
+          trialIx <- SQLite3.columnInt64 preparedStmt 1
           ms <- SQLite3.columnInt64 preparedStmt 2
           lovelaceFee <- SQLite3.columnInt64 preparedStmt 3
           return $
             Just
-              Observation
-                { oDescription = description
-                , oIndependentVarIx = fromIntegral independentVarIx
-                , oObservationIx = observationIx
-                , oMs = ms
-                , oLovelaceFee = lovelaceFee
+              Trial
+                { tDescription = description
+                , tIndependentVarIx = fromIntegral independentVarIx
+                , tTrialIx = trialIx
+                , tMs = ms
+                , tLovelaceFee = lovelaceFee
                 }
 
 {- | 'selectAllDescriptions' loads all results in memory from
@@ -210,7 +193,7 @@ withSelectAllDescriptions description benchResult f =
 
  Warning: this most likely will have awful performance.
 -}
-selectAllDescriptions :: Description -> BenchResults -> IO [Observation]
+selectAllDescriptions :: Description -> BenchResults -> IO [Trial]
 selectAllDescriptions description benchResults =
   withSelectAllDescriptions description benchResults $ \step ->
     let go = \case
@@ -218,17 +201,17 @@ selectAllDescriptions description benchResults =
           Just o -> (o :) <$> (step >>= go)
      in step >>= go
 
-{- | 'selectFreshObservationIx' returns a fresh 'ObservationIx' used to running
- another observation of a sequence of independentVars.
+{- | 'selectFreshTrialIx' returns a fresh 'TrialIx' used to running
+ another trial of a sequence of independentVars.
 -}
-selectFreshObservationIx :: BenchResults -> IO ObservationIx
-selectFreshObservationIx benchResult =
-  withPreparedStatement selectFreshObservationIxQuery (brDatabase benchResult) $
+selectFreshTrialIx :: BenchResults -> IO TrialIx
+selectFreshTrialIx benchResult =
+  withPreparedStatement selectFreshTrialIxQuery (brDatabase benchResult) $
     \preparedStmt -> do
       -- aggegate functions reutrn a single value, so we just step the
       -- prepared statement once.
       _ <- SQLite3.step preparedStmt
-      SQLite3.columnInt64 preparedStmt 0 -- returns the fresh observation ix
+      SQLite3.columnInt64 preparedStmt 0 -- returns the fresh trial ix
 
 -- * Internal SQL queries
 
@@ -237,23 +220,23 @@ selectFreshObservationIx benchResult =
  changed accordingly
 -}
 
-{- | 'createObservationsTablesQuery' is a database query to create a table for which the
+{- | 'createTrialsTablesQuery' is a database query to create a table for which the
  rows store the results of a single benchmark and its associated information.
- We call a single row in the table a *observation*, and a the subset of columns
+ We call a single row in the table a *trial*, and a the subset of columns
  which contains only the @description@, @ms@, and @lovelaceFee@ is called a *independentVar*.
 
  The table we generate is as follows.
  @
-  description : Text  | independentVarIx : Integer  | observationIx : Integer  | ms : Integer | lovelaceFee : Integer
+  description : Text  | independentVarIx : Integer  | trialIx : Integer  | ms : Integer | lovelaceFee : Integer
   -------------------------------------------------------------------------------------------------------------------
  @
  where
 
-  - @observationIx@, @description@, and @independentVarIx@ are primary keys
+  - @trialIx@, @description@, and @independentVarIx@ are primary keys
 
-  - @observationIx@ is the @k@th execution of the entire benchmark suite
+  - @trialIx@ is the @k@th execution of the entire benchmark suite
   (since we run the benchmarks multiple times), where we note that
-  @ms@ is iid w.r.t @observationIx@.
+  @ms@ is iid w.r.t @trialIx@.
 
   - @description@ is a brief description of given benchmark
 
@@ -280,47 +263,45 @@ selectFreshObservationIx benchResult =
   - we are testing the "FUELMintingPolicy" 4 times (since @independentVarIx@ goes from
   @1..4@); and
 
-  - we are running these "FUELMintingPolicy" tests twice (since @observationIx@
+  - we are running these "FUELMintingPolicy" tests twice (since @trialIx@
   goes from @1..2@)
 -}
-createObservationsTablesQuery :: Text
-createObservationsTablesQuery =
+createTrialsTablesQuery :: Text
+createTrialsTablesQuery =
   "CREATE TABLE IF NOT EXISTS\n\
-  \observations\n\
+  \trials\n\
   \   ( description TEXT\n\
   \   , independentVarIx INTEGER NOT NULL\n\
-  \   , observationIx INTEGER NOT NULL\n\
+  \   , trialIx INTEGER NOT NULL\n\
   \   , ms INTEGER NOT NULL\n\
   \   , lovelaceFee INTEGER NOT NULL\n\
-  \   , PRIMARY KEY(observationIx, independentVarIx, description)\n\
+  \   , PRIMARY KEY(trialIx, independentVarIx, description)\n\
   \   );\n"
 
-{- | 'selectFreshObservationIxQuery' returns a fresh 'observationIx' by taking the
+{- | 'selectFreshTrialIxQuery' returns a fresh 'trialIx' by taking the
  max and incrementing by 1.
 -}
-selectFreshObservationIxQuery :: Text
-selectFreshObservationIxQuery =
-  "SELECT ifnull(max(observationIx), 0) + 1\n\
-  \FROM observations;"
+selectFreshTrialIxQuery :: Text
+selectFreshTrialIxQuery =
+  "SELECT ifnull(max(trialIx), 0) + 1\n\
+  \FROM trials;"
 
-{- | 'addObservationNoIndependentVarIxQuery' is a parameterized query which adds an observation.
- Note: it automatically maintains the @independentVarIx@ for us by finding the last trial (largest)
--}
-addObservationNoIndependentVarIxQuery :: Text
-addObservationNoIndependentVarIxQuery =
-  "INSERT INTO observations(description, independentVarIx, observationIx, ms, lovelaceFee)\n\
-  \SELECT :description, ifnull(max(independentVarIx),0)+1, :observationIx, :ms, :lovelaceFee\n\
-  \FROM observations\n\
-  \WHERE description=:description AND observationIx=:observationIx;\n"
+-- | 'addTrialQuery' is a parameterized query which adds an trial.
+addTrialQuery :: Text
+addTrialQuery =
+  "INSERT INTO trials(description, independentVarIx, trialIx, ms, lovelaceFee)\n\
+  \SELECT :description, :independentVarIx, :trialIx, :ms, :lovelaceFee\n\
+  \FROM trials\n\
+  \WHERE description=:description AND trialIx=:trialIx;\n"
 
 --  | 'viewAllDescriptionQuery' fixes the @description@, and @SELECT@s all the
 --  independentVars corresponding to that description.
 selectAllDescriptionsQuery :: Text
 selectAllDescriptionsQuery =
-  "SELECT independentVarIx, observationIx, ms, lovelaceFee\n\
-  \FROM observations\n\
+  "SELECT independentVarIx, trialIx, ms, lovelaceFee\n\
+  \FROM trials\n\
   \WHERE description = :description\n\
-  \ORDER BY observationIx ASC, independentVarIx ASC;"
+  \ORDER BY trialIx ASC, independentVarIx ASC;"
 
 -- * Utilities / internals
 

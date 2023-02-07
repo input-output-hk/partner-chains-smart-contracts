@@ -39,7 +39,7 @@ import Data.Map qualified as Map
 fuelMintingBench :: Bench ()
 fuelMintingBench = do
   let -- total number of times we repeat the random experiment
-      numberOfObservations = 3
+      numberOfTrials = 3
       numberOfFUELMints = 250
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
@@ -52,7 +52,7 @@ fuelMintingBench = do
   --  - init sidechain
   --  - then save root
   --  - then many many many fuel mints
-  Bench.runBenchSuiteN numberOfObservations $ do
+  Bench.runBenchSuiteN numberOfTrials $ do
     txOutRef : _ <-
       Bench.liftBenchSuite $ Bench.queryAddrUtxos addr
 
@@ -79,7 +79,7 @@ fuelMintingBench = do
     initCommittee <- IO.Class.liftIO $ Ctl.generateFreshCommittee 10
 
     Monad.void $
-      Bench.benchCtl "InitSidechain" $
+      Bench.benchCtl "InitSidechain" 1 $
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
@@ -123,7 +123,7 @@ fuelMintingBench = do
 
     -- Merkle root insertion
     Monad.void $
-      Bench.benchCtl "SaveRoot" $
+      Bench.benchCtl "SaveRoot" 1 $
         ctlCommand $
           Ctl.ctlSaveRootFlags
             sidechainParams
@@ -135,8 +135,8 @@ fuelMintingBench = do
 
     -- FUELMintingPolicy:
     Monad.void $ do
-      Foldable.for_ combinedMerkleProofs $ \combinedMerkleProof -> do
-        Bench.benchCtl "FUELMintingPolicy" $
+      Foldable.for_ (zip indicies combinedMerkleProofs) $ \(ix, combinedMerkleProof) -> do
+        Bench.benchCtl "FUELMintingPolicy" (fromIntegral ix) $
           ctlCommand $
             Ctl.ctlClaimFlags
               CtlClaim
