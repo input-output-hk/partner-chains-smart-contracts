@@ -437,10 +437,14 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
   testnetMagic <-
     Maybe.maybe (bcfgpTestNetMagic benchConfigPaths) read
       <$> Environment.lookupEnv "TESTNET_MAGIC"
-  ctlCmd <- Maybe.fromMaybe (bcfgpCtlCmd benchConfigPaths) <$> Environment.lookupEnv "CTL"
-  odcHost <- Maybe.fromMaybe (bcfgpOdcHost benchConfigPaths) <$> Environment.lookupEnv "OGMIOS_DATUM_CACHE_HOST"
+  ctlCmd <-
+    Maybe.fromMaybe (bcfgpCtlCmd benchConfigPaths)
+      <$> Environment.lookupEnv "CTL"
+  odcHost <-
+    Maybe.fromMaybe (bcfgpOdcHost benchConfigPaths)
+      <$> Environment.lookupEnv "OGMIOS_DATUM_CACHE_HOST"
   odcPort <-
-    Maybe.maybe (bcfgpOdcPort benchConfigPaths) . read
+    Maybe.maybe (bcfgpOdcPort benchConfigPaths) read
       <$> Environment.lookupEnv "OGMIOS_DATUM_CACHE_PORT"
   cardanoCliCmd <-
     Maybe.fromMaybe (bcfgpCardanoCliCmd benchConfigPaths)
