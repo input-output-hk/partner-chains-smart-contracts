@@ -106,13 +106,6 @@ data CtlCommon = CtlCommon
     ccSidechainParams :: SidechainParams
   }
 
-{- | 'ctlCmd' is the default calling ctl command.
- Note: this assumes that we have @./output/Main/index.js@ (i.e., the output
- of @spago build@) existing.
--}
-ctlCmd :: String
-ctlCmd = "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node -"
-
 {- | 'ctlCommonFlags' generates the CLI flags that corresponds to sidechain
  parameters
 -}

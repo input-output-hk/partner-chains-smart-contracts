@@ -39,7 +39,7 @@ import Data.Map qualified as Map
 fuelMintingBench :: Bench ()
 fuelMintingBench = do
   let -- total number of times we repeat the random experiment
-      numberOfTrials = 3
+      numberOfTrials = 2
       numberOfFUELMints = 250
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath

@@ -32,11 +32,8 @@ import Data.ByteString.Char8 qualified as ByteString.Char8
 import GHC.IO.FD qualified as FD
 import GHC.IO.Handle.FD qualified as Handle.FD
 
-{- | @'timedCallCommand' cmd cmdArgs@ calls @cmd@ with @cmdArgs@ seperated by
- spaces (so the usual bash quoting rules apply); and times this with the bash
- keyword time.
-
- We return the milliseconds of the execution time.
+{- | DEPRECATED / NO LONGER IN USE. Perhaps its useful to keep this here for
+ illustrative purposes; but 'timedReadCommand' superceeds this functionality.
 -}
 timedCallCommand :: String -> IO Int64
 timedCallCommand cmd = Exception.bracket
@@ -86,9 +83,22 @@ timedCallCommand cmd = Exception.bracket
         ExitFailure k ->
           Exception.throwIO $ IO.Error.userError $ "`timedCallCommand` failed with exit code: " ++ show k
 
-{- |  same as @'timedReadCommand' cmd@ but instead of piping the @cmd@'s
- @stdout@ to the current process's @stdout@, it returns it as a 'ByteString'
- along with the time it took to execute.
+{- | @'timedReadCommand' cmd cmdArgs@ calls @cmd@ with @cmdArgs@ seperated by
+ spaces (so the usual bash quoting rules apply); and times this with the bash
+ keyword time.
+
+ This returns the milliseconds of the time run, and the ran process's stdout
+
+ Note about how the timing is achieved. We sum up the
+
+    - user CPU time
+
+    - kernel CPU time
+
+ where we note that CTL is a node js application (that is single threaded), and
+ we know that CPU time doesn't include the time a process is blocking on
+ sockets, so this *should* really measure how long the application is taking
+ NOT including all the time spent waiting on awaiting txs confirmed.
 -}
 timedReadCommand :: String -> IO (ByteString, Int64)
 timedReadCommand cmd = Exception.bracket
@@ -121,7 +131,7 @@ timedReadCommand cmd = Exception.bracket
 
         shellCmd =
           (Process.shell timedCmd)
-            { Process.env = Just $ ("TIMEFORMAT", "%R") : env
+            { Process.env = Just $ ("TIMEFORMAT", "%R %S") : env
             , Process.std_out = Process.CreatePipe
             }
 
@@ -147,10 +157,16 @@ timedReadCommand cmd = Exception.bracket
             ExitFailure k ->
               Exception.throwIO $ IO.Error.userError $ "`timedReadCommand` failed with exit code: " ++ show k
 
--- 'parseTimeOutput' parses the output of the @time@ keyword in bash with
--- environment variable @TIMEFORMAT@ as @%R@ i.e., a sequence of digits, a
--- period, followed by 3 decimal points [we don't actually check this]
--- (whitespace may follow or preceed the digits)
+{- | 'parseTimeOutput' parses the output of the @time@ keyword in bash with
+ environment variable @TIMEFORMAT@ as @%R@ i.e.,
+ @
+ X.ddd X.ddd
+ @
+
+ where @X@ is a sequence of digits, and @d@ is a single digit.
+
+ Note: the exactly 3 digits condition isn't checked.
+-}
 parseTimeOutput :: ByteString -> Maybe Int64
 parseTimeOutput = go
   where
@@ -169,11 +185,18 @@ parseTimeOutput = go
           foldDigits (10 * acc + (fromIntegral (fromEnum b) - fromIntegral (fromEnum '0'))) bs
         | otherwise -> Just (acc, input)
 
-    go input = do
+    -- bit convoluted, probably should do this with a proper parsing library
+    -- / alex later
+    lexDigits :: ByteString -> Maybe (Int64, ByteString)
+    lexDigits input = do
       (acc, input') <- foldDigits 0 $ skipWs input
       (dot, input'') <- ByteString.Char8.uncons input'
       Monad.guard $ dot == '.'
       (acc', input''') <- foldDigits acc input''
-      Monad.guard $ ByteString.Char8.empty == skipWs input'''
-      Monad.guard $ ByteString.Char8.length input'' - ByteString.Char8.length input''' == 3
-      return acc'
+      return (acc', skipWs input''')
+
+    go input = do
+      (userCpuTime, input') <- lexDigits input
+      (kernelCpuTime, _input'') <- lexDigits input'
+
+      return $ userCpuTime + kernelCpuTime

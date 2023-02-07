@@ -49,6 +49,15 @@ openBenchResults filePath =
       SQLite3.exec db createTrialsTablesQuery
       pure $ BenchResults db
 
+{- | 'withFreshBenchResults' is a bracket style resource handler for
+ 'freshBenchResults'
+-}
+withFreshBenchResults :: FilePath -> Text -> (BenchResults -> IO a) -> IO a
+withFreshBenchResults dir fileNameHint =
+  Exception.bracket
+    (freshBenchResults dir fileNameHint)
+    closeBenchResults
+
 {- | @'freshBenchResults' dir fileNameHint@ is 'openBenchResults' but initialises the database
  with a fresh name in the given directory @dir@ with the given filename hint @hint@
 -}

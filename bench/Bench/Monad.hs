@@ -5,7 +5,31 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Bench.Monad where
+{- | "Bench.Monad" provides the main monad for benchmarking the system. In
+ particular, it provides:
+-}
+module Bench.Monad (
+  --  * Monads
+  Bench (..),
+  BenchSuite (..),
+  BenchConfig (..),
+  BenchConfigPaths (..),
+  liftBenchSuite,
+
+  -- * Benchmarking functions
+  benchCtl,
+  runBench,
+  runBenchWith,
+  runBenchSuiteN,
+  plotOffChainWithLinearRegression,
+  plotOnChainWithLinearRegression,
+
+  -- * Utilities for working the blockchain
+  queryAddrUtxos,
+
+  -- * Utilities for making a 'BenchConfig'.
+  overrideBenchConfigPathFromEnv,
+) where
 
 -- this project
 import Bench.BenchResults (BenchResults, Description, IndependentVarIx, LovelaceFee, Trial (..), TrialIx)
@@ -17,6 +41,7 @@ import Bench.Process qualified as Process
 
 -- base
 
+import Control.Applicative qualified as Applicative
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
@@ -25,6 +50,7 @@ import Data.Function qualified as Function
 import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
+import System.Environment qualified as Environment
 
 -- mtl / transformers
 
@@ -41,7 +67,6 @@ import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.Text qualified as Text
 
 -- cardano
-
 import Cardano.Api qualified as Cardano
 import Plutus.V2.Ledger.Api (
   TxOutRef,
@@ -55,6 +80,9 @@ import Network.WebSockets (Connection)
 import Data.Aeson (Value (..))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
+
+-- filepath
+import System.FilePath qualified as FilePath
 
 -- plotting
 -- N.B. we change the qualified name to make it more evident what we are
@@ -87,6 +115,22 @@ data BenchConfig = BenchConfig
     --  docker exec -t -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1
     --  @
     bcfgCardanoCliCmd :: String
+  , -- | 'bcfgOutputDir' is the output directory for files (namely, plots)
+    bcfgOutputDir :: FilePath
+  }
+
+{- | 'BenchConfigPaths' includes the paths to open / read for running creating
+ an instance of 'BenchConfig'
+-}
+data BenchConfigPaths = BenchConfigPaths
+  { bcfgpBenchResults :: FilePath
+  , bcfgpSigningKeyFilePath :: FilePath
+  , bcfgpTestNetMagic :: Int
+  , bcfgpCtlCmd :: String
+  , bcfgpOdcHost :: String
+  , bcfgpOdcPort :: Int
+  , bcfgpCardanoCliCmd :: String
+  , bcfgpOutputDir :: FilePath
   }
 
 {- | 'Bench' is the monad transformer stack which allows us to benchmark ctl
@@ -121,9 +165,34 @@ liftBenchSuite :: Bench a -> BenchSuite a
 liftBenchSuite b =
   BenchSuite $ Trans.lift b
 
--- | @'runBench'@ runs the 'Bench' monad with the given 'BenchConfig'
+{- | @'runBench'@ runs the 'Bench' monad with the given 'BenchConfig'.
+ 'runBenchWith' should be preferred.
+-}
 runBench :: BenchConfig -> Bench () -> IO ()
 runBench benchConfig benchAction = Monad.void $ Reader.runReaderT (unBench benchAction) benchConfig
+
+{- | 'runBenchWith' is 'runBench' but it will open all the database connections
+  sockets from the provided 'BenchConfigPaths'.
+-}
+runBenchWith :: BenchConfigPaths -> Bench () -> IO ()
+runBenchWith benchCfgPaths bench =
+  OdcQuery.withOdcConnection (bcfgpOdcHost benchCfgPaths) (bcfgpOdcPort benchCfgPaths) $ \conn ->
+    BenchResults.withFreshBenchResults
+      (bcfgpOutputDir benchCfgPaths)
+      (Text.pack $ bcfgpBenchResults benchCfgPaths)
+      $ \benchResults ->
+        runBench
+          ( BenchConfig
+              { bcfgBenchResults = benchResults
+              , bcfgSigningKeyFilePath = bcfgpSigningKeyFilePath benchCfgPaths
+              , bcfgTestNetMagic = bcfgpTestNetMagic benchCfgPaths
+              , bcfgCtlCmd = bcfgpCtlCmd benchCfgPaths
+              , bcfgOdcConnection = conn
+              , bcfgCardanoCliCmd = bcfgpCardanoCliCmd benchCfgPaths
+              , bcfgOutputDir = bcfgpOutputDir benchCfgPaths
+              }
+          )
+          bench
 
 {- | @'benchSuite' n benchSuite@ creates @n@ iid independentVars of the benchmarks in
  @benchSuite@.
@@ -330,8 +399,9 @@ plotXYWithLinearRegression
               ]
       Logger.logInfo linearRegressionMsg
 
+      outputDir <- Reader.asks bcfgOutputDir
       IO.Class.liftIO $
-        Graphics.Backend.toFile Graphics.def filePath $ do
+        Graphics.Backend.toFile Graphics.def (outputDir FilePath.</> filePath) $ do
           -- Titles for the axis
           Graphics.layout_title Graphics..= title
           Graphics.layout_x_axis . Graphics.laxis_title Graphics..= xTitle
@@ -354,3 +424,48 @@ queryAddrUtxos addressBech32 = do
   magic <- Reader.asks bcfgTestNetMagic
   cardanoCliCmd <- Reader.asks bcfgCardanoCliCmd
   IO.Class.liftIO $ NodeQuery.queryNodeUtxoAddress cardanoCliCmd magic addressBech32
+
+{- | 'overrideBenchConfigPathFromEnv' scans the environment variables, and if
+ the environment variable exists, replaces the given values with the
+ environment variable values.
+-}
+overrideBenchConfigPathFromEnv :: BenchConfigPaths -> IO BenchConfigPaths
+overrideBenchConfigPathFromEnv benchConfigPaths = do
+  -- note: clearly all of these pattern matches are safe because we add a
+  -- Just to the second argument of '<|>'
+  ~(Just benchResults) <-
+    fmap (Applicative.<|> Just (bcfgpBenchResults benchConfigPaths)) $
+      Environment.lookupEnv "BENCH_RESULTS"
+  ~(Just signingKeyFilePath) <-
+    fmap (Applicative.<|> Just (bcfgpSigningKeyFilePath benchConfigPaths)) $
+      Environment.lookupEnv "SIGNING_KEY"
+  ~(Just testnetMagic) <-
+    fmap ((Applicative.<|> Just (bcfgpTestNetMagic benchConfigPaths)) . fmap read) $
+      Environment.lookupEnv "TEST_NET_MAGIC"
+  ~(Just ctlCmd) <-
+    fmap (Applicative.<|> Just (bcfgpCtlCmd benchConfigPaths)) $
+      Environment.lookupEnv "CTL"
+  ~(Just odcHost) <-
+    fmap (Applicative.<|> Just (bcfgpOdcHost benchConfigPaths)) $
+      Environment.lookupEnv "OGMIOS_DATUM_CACHE_HOST"
+  ~(Just odcPort) <-
+    fmap ((Applicative.<|> Just (bcfgpOdcPort benchConfigPaths)) . fmap read) $
+      Environment.lookupEnv "OGMIOS_DATUM_CACHE_PORT"
+  ~(Just cardanoCliCmd) <-
+    fmap (Applicative.<|> Just (bcfgpCardanoCliCmd benchConfigPaths)) $
+      Environment.lookupEnv "CARDANO_CLI"
+  ~(Just outputDir) <-
+    fmap (Applicative.<|> Just (bcfgpOutputDir benchConfigPaths)) $
+      Environment.lookupEnv "BENCH_OUTPUT_DIRECTORY"
+
+  return
+    BenchConfigPaths
+      { bcfgpBenchResults = benchResults
+      , bcfgpSigningKeyFilePath = signingKeyFilePath
+      , bcfgpTestNetMagic = testnetMagic
+      , bcfgpCtlCmd = ctlCmd
+      , bcfgpOdcHost = odcHost
+      , bcfgpOdcPort = odcPort
+      , bcfgpCardanoCliCmd = cardanoCliCmd
+      , bcfgpOutputDir = outputDir
+      }

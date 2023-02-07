@@ -22,7 +22,7 @@ import TrustlessSidechain.Types (SidechainParams (..))
 updateCommitteeHashBench :: Bench ()
 updateCommitteeHashBench = do
   let -- total number of times we repeat the random experiment
-      numberOfTrials = 3
+      numberOfTrials = 2
       numberOfCommitteeHashUpdates = 250
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
