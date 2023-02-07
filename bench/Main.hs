@@ -25,9 +25,13 @@ cardanoCliCmd =
 odcHost :: String
 odcHost = "127.0.0.1"
 
+{- | 'odcPort' is port for ogmios-datum-cache i.e., when running @nix run
+ .#ctl-runtime-preview@, this is the port for ogmios-datum-cache.
+-}
 odcPort :: Int
 odcPort = 9999
 
+-- main function!
 main :: IO ()
 main = do
   -- Assumptions:

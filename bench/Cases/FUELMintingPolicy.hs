@@ -28,11 +28,11 @@ import Data.Maybe qualified as Maybe
 
 import Data.Map qualified as Map
 
-{- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmarkw which
+{- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which
 
       - initiliases the sidechain
 
-      - Saves a (large) merkle root
+      - Saves a rather large merkle root (250 transactions!)
 
       - claims everything in that merkle tree.
 -}
@@ -146,7 +146,7 @@ fuelMintingBench = do
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
-  Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
+  Bench.plotOffChainWithLinearRegression "bench-output/FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
+  Bench.plotOnChainWithLinearRegression "bench-output/FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
 
   return ()
