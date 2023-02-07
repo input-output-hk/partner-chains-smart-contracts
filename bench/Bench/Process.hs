@@ -8,7 +8,7 @@
 -}
 module Bench.Process (
   -- * Timing a process
-  timedCallCommand,
+  timedReadCommand,
 
   -- * Internal
   parseTimeOutput,
@@ -37,57 +37,6 @@ import Data.ByteString.Char8 qualified as ByteString.Char8
 -- ghc
 import GHC.IO.FD qualified as FD
 import GHC.IO.Handle.FD qualified as Handle.FD
-
-{- | DEPRECATED / NO LONGER IN USE. Perhaps its useful to keep this here for
- illustrative purposes; but 'timedReadCommand' superceeds this functionality.
--}
-timedCallCommand :: String -> IO Int64
-timedCallCommand cmd = Exception.bracket
-  Process.createPipe
-  (\(readHandle, writeHandle) -> IO.hClose readHandle *> IO.hClose writeHandle)
-  $ \(readHandle, writeHandle) -> do
-    writeFd <- Handle.FD.handleToFd writeHandle
-
-    -- get the current environment, so that we can add our one extra
-    -- environment variable to it (namely TIMEFORMAT)
-    env <- Environment.getEnvironment
-
-    -- the idea is that:
-    --  - the command we are interested in benchmarking's output is piped to @3@
-    --  - the time command's stderr is piped ot @writeFd@
-    --  - then, @3@ is brought back to stderr
-    let timedCmd :: String
-        timedCmd =
-          List.unwords
-            [ "{"
-            , "time"
-            , cmd
-            , "2>&3"
-            , ";"
-            , "}"
-            , "3>&2"
-            , "2>&" ++ show (FD.fdFD writeFd) -- this makes `time`'s output go to our pipe
-            ]
-
-        shellCmd =
-          (Process.shell timedCmd)
-            { Process.env = Just $ ("TIMEFORMAT", "%R") : env
-            }
-
-    Process.withCreateProcess shellCmd $ \_ _ _ processHandle -> do
-      Process.waitForProcess processHandle >>= \case
-        ExitSuccess -> do
-          --  close the @writeHandle@ to ensure that it gets flushed.
-          --  Indeed, closing a handle twice is a no op
-          _ <- IO.hClose writeHandle
-
-          timeOutputRaw <- ByteString.hGetContents readHandle
-
-          case parseTimeOutput timeOutputRaw of
-            Nothing -> Exception.throwIO $ IO.Error.userError "internal error time output failed to parse"
-            Just timeOutput -> return timeOutput
-        ExitFailure k ->
-          Exception.throwIO $ IO.Error.userError $ "`timedCallCommand` failed with exit code: " ++ show k
 
 {- | @'timedReadCommand' cmd cmdArgs@ calls @cmd@ with @cmdArgs@ seperated by
  spaces (so the usual bash quoting rules apply); and times this with the bash
