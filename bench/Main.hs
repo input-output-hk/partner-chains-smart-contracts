@@ -53,10 +53,9 @@ defaultBenchConfigPaths =
 -- main function!
 main :: IO ()
 main = do
-  -- potentially override defaults via environment variables
+  -- Potentially override defaults via environment variables
   cfg <- Bench.overrideBenchConfigPathFromEnv defaultBenchConfigPaths
-  -- Alternatively, one can cram the configuration in environment variables
-  -- which are preferred over the default values i.e.,
+
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "FUELMintingBenchmarks.db"})
