@@ -393,7 +393,7 @@ plotXYWithLinearRegression
               [ "Linear regression (y = mx + b) results:"
               , "m=" ++ show coefficient ++ ","
               , "b=" ++ show yintercept ++ ","
-              , "and fits with R^2 coefficient of determination (closer to 1 is better)"
+              , "with R^2="
               , show rSq
               ]
       Logger.logInfo linearRegressionMsg
