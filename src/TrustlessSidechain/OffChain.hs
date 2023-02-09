@@ -34,6 +34,8 @@ module TrustlessSidechain.OffChain (
   SidechainCommitteeMember (..),
   strToSecpPrivKey,
   strToSecpPubKey,
+  bech32RecipientFromText,
+  txOutRefFromText,
   module TrustlessSidechain.Types,
 ) where
 
@@ -58,7 +60,9 @@ import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types
+import Data.Attoparsec.Text qualified as Attoparsec.Text
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
@@ -66,6 +70,7 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
 import Data.List qualified as List
 import Data.Maybe (fromMaybe)
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Ledger (PubKey (PubKey), Signature (Signature))
 import Ledger.Crypto qualified as Crypto
@@ -125,17 +130,17 @@ bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
 newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
   deriving (Show, Eq)
 
-instance FromJSON Bech32Recipient where
-  parseJSON = Aeson.withText "bech32" $ \str -> case Bech32.decode str of
-    Left err -> Aeson.Types.parseFail $ "Failed decoding bech32: " ++ show err
+-- | 'bech32RecipientFromText' parses a Bech32Recipient from 'Text'.
+bech32RecipientFromText :: Text -> Either String Bech32Recipient
+bech32RecipientFromText str =
+  case Bech32.decode str of
+    Left err -> Left $ "Failed decoding bech32: " ++ show err
     Right (bech32HumanReadablePart, bech32DataPart)
       | isAddr -> case bech32DataPartBytes Bech32 {..} of
-        Just bs -> pure $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
-        Nothing ->
-          Aeson.Types.parseFail
-            "Failed decoding bytes in bech32 recipient"
+        Just bs -> Right $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
+        Nothing -> Left "Failed decoding bytes in bech32 recipient"
       | otherwise ->
-        Aeson.Types.parseFail $
+        Left $
           List.unwords
             [ "Expected human readable part to be either:"
             , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr
@@ -144,10 +149,14 @@ instance FromJSON Bech32Recipient where
             ]
       where
         surroundAndShowTextWithBackticks t = "`" ++ show t ++ "`"
-
         isAddr =
           bech32HumanReadablePart == Bech32.Prefixes.addr
             || bech32HumanReadablePart == Bech32.Prefixes.addr_test
+
+instance FromJSON Bech32Recipient where
+  parseJSON = Aeson.withText "bech32" $ \str -> case bech32RecipientFromText str of
+    Left err -> Aeson.Types.parseFail err
+    Right bech32 -> pure bech32
 
 -- * Convenient sidechain committee public / private key wrapper + utility
 
@@ -291,6 +300,25 @@ signWithSidechainKey skey msg =
         . SECP.getCompactSig
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
+
+-- * Parsing functions
+
+{- | 'txOutRefFromText' parses a 'TxOutRef' from 'Text'. E.g., it'll parse
+ something like:
+ @
+  c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
+ @
+-}
+txOutRefFromText :: Text -> Either String TxOutRef
+txOutRefFromText = Attoparsec.Text.parseOnly $ do
+  rawTxId <- Attoparsec.Text.takeWhile (/= '#')
+  txId <- case Aeson.Extras.tryDecode rawTxId of
+    Left err -> fail err
+    Right res -> return $ TxId $ Builtins.Internal.BuiltinByteString res
+
+  _ <- Attoparsec.Text.char '#'
+  txIx <- Attoparsec.Text.decimal
+  pure $ TxOutRef txId txIx
 
 -- * Show functions
 

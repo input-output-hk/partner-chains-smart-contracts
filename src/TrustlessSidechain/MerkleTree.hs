@@ -102,7 +102,7 @@ import Prelude qualified
 newtype RootHash = RootHash {unRootHash :: BuiltinByteString}
   deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
   deriving anyclass (Schema.ToSchema)
-  deriving newtype (FromData, ToData, UnsafeFromData)
+  deriving newtype (FromData, ToData, UnsafeFromData, Prelude.Ord)
 
 -- See #249 for the modified serialisation scheme
 
@@ -537,9 +537,13 @@ lookupsMp = ($ []) . go []
         length (lookupsMp (fromNonEmpty lst)) == n
 -}
 
--- | @'lookupsMpFromList'@ is @'lookupsMp' . 'fromList'@
-lookupsMpFromList :: [BuiltinByteString] -> [(RootHash, MerkleProof)]
-lookupsMpFromList = lookupsMp . fromList
+{- | @'lookupsMpFromList'@ is essentially @'lookupsMp' . 'fromList'@, but also
+ returns the entire merkletree in the first projection of the tuple.
+-}
+lookupsMpFromList :: [BuiltinByteString] -> (MerkleTree, [(RootHash, MerkleProof)])
+lookupsMpFromList inputs =
+  let merkleTree = fromList inputs
+   in (merkleTree, lookupsMp merkleTree)
 
 {- | /O(n)/ in the length of the 'MerkleProof' (which is /O(log n)/ of
  the size of the original list to create the 'MerkleTree' of the given

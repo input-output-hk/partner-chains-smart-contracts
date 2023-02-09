@@ -52,5 +52,12 @@ config.json
 # Notes
 *.txt
 
+# Benchmark related external files
+*.db
+bench-output/
+
+# Ctl related files
+*.json
+
 # Logs
 contractlog.json
