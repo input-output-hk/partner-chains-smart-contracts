@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 {- | "Bench.Monad" provides the main monad for benchmarking the system. In
  particular, it provides:
@@ -32,7 +33,15 @@ module Bench.Monad (
 ) where
 
 -- this project
-import Bench.BenchResults (BenchResults, Description, IndependentVarIx, LovelaceFee, Trial (..), TrialIx)
+import Bench.BenchResults (
+  BenchResults,
+  Description,
+  IndependentVarIx,
+  LovelaceFee,
+  Trial (..),
+  TrialIx,
+  TxHash,
+ )
 import Bench.BenchResults qualified as BenchResults
 import Bench.Logger qualified as Logger
 import Bench.NodeQuery qualified as NodeQuery
@@ -244,33 +253,34 @@ benchCtl description independentVarIx cmd = do
     --  - in stdout of ctl, we know it outputs a JSON object with field
     --  "transactionId" with the hash of the transaction
     --  - then, we beg ogmios datum cache for the corresponding transaction.
-    let getFee :: IO LovelaceFee
-        getFee =
+    let getFeeAndTxHash :: IO (LovelaceFee, TxHash)
+        getFeeAndTxHash =
           Aeson.eitherDecodeStrict stdout Function.& \case
             Right obj -> case Aeson.KeyMap.lookup "transactionId" obj of
               Just (String txHash) ->
-                OdcQuery.getBabbageTxByHash txHash odcConnection >>= \case
-                  Nothing ->
-                    Exception.throwIO $
-                      GetTxFeeError $
-                        "`benchCtl` cannot find transaction from given transaction hash: "
-                          ++ Text.unpack txHash
-                  Just tx -> do
-                    -- tedious unwrapping of types to get the fee
-                    let Cardano.TxBody txBodyContent = Cardano.getTxBody tx
-                        fee = Cardano.txFee txBodyContent
-                        -- According to the documentation in 'Cardano.Api.TxFeesExplicitInEra':
-                        --  - Byron era tx fees are implict, and are given by
-                        --  the difference between the sum of outputs and sum
-                        --  of inputs.
-                        --  - later eras, store the fee in the transaction explicitly
-                        lovelaceFee = case fee of
-                          Cardano.TxFeeImplicit _ ->
-                            Exception.throw $
-                              GetTxFeeError "TODO: unsupported tx fee calculation for Byron era transaction"
-                          Cardano.TxFeeExplicit _ (Cardano.Lovelace lovelace) -> lovelace
+                fmap (,txHash) $
+                  OdcQuery.getBabbageTxByHash txHash odcConnection >>= \case
+                    Nothing ->
+                      Exception.throwIO $
+                        GetTxFeeError $
+                          "`benchCtl` cannot find transaction from given transaction hash: "
+                            ++ Text.unpack txHash
+                    Just tx -> do
+                      -- tedious unwrapping of types to get the fee
+                      let Cardano.TxBody txBodyContent = Cardano.getTxBody tx
+                          fee = Cardano.txFee txBodyContent
+                          -- According to the documentation in 'Cardano.Api.TxFeesExplicitInEra':
+                          --  - Byron era tx fees are implict, and are given by
+                          --  the difference between the sum of outputs and sum
+                          --  of inputs.
+                          --  - later eras, store the fee in the transaction explicitly
+                          lovelaceFee = case fee of
+                            Cardano.TxFeeImplicit _ ->
+                              Exception.throw $
+                                GetTxFeeError "TODO: unsupported tx fee calculation for Byron era transaction"
+                            Cardano.TxFeeExplicit _ (Cardano.Lovelace lovelace) -> lovelace
 
-                    return $ fromInteger lovelaceFee
+                      return $ fromInteger lovelaceFee
               _ ->
                 Exception.throwIO $
                   GetTxFeeError $
@@ -279,7 +289,7 @@ benchCtl description independentVarIx cmd = do
               Exception.throwIO $
                 GetTxFeeError $ "`benchCtl` internal error stdout json parse from ctl: " ++ err
 
-    fee <- getFee
+    (fee, txHash) <- getFeeAndTxHash
 
     BenchResults.addTrial
       ( Trial
@@ -288,6 +298,7 @@ benchCtl description independentVarIx cmd = do
           , tMs = ms
           , tLovelaceFee = fee
           , tIndependentVarIx = independentVarIx
+          , tTxHash = txHash
           }
       )
       benchResults
