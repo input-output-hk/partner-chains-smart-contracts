@@ -12,6 +12,7 @@ module Bench (
   runBenchSuiteN,
   plotOffChainWithLinearRegression,
   plotOnChainWithLinearRegression,
+  plotXYWithLinearRegression,
   queryAddrUtxos,
   overrideBenchConfigPathFromEnv,
 
@@ -26,7 +27,7 @@ module Bench (
   Ms,
   LovelaceFee,
   TrialIx,
-  Trial,
+  Trial (..),
   addTrial,
   withSelectAllDescriptions,
   selectAllDescriptions,

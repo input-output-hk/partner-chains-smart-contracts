@@ -24,6 +24,7 @@ module Bench.Monad (
   runBenchSuiteN,
   plotOffChainWithLinearRegression,
   plotOnChainWithLinearRegression,
+  plotXYWithLinearRegression,
 
   -- * Utilities for working the blockchain
   queryAddrUtxos,

@@ -1,7 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cases.FUELMintingPolicy where
+module Cases.GrowingTreeClaim where
 
 import Bench (Bench, BenchConfig (..))
 import Bench qualified
@@ -16,58 +16,15 @@ import Data.List qualified as List
 
 import Control.Monad.Reader qualified as Reader
 
-import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..), SidechainParams (..))
+import TrustlessSidechain.Types (MerkleTreeEntry (..), SidechainParams (..))
 
 import Data.Text qualified as Text
 
 import Data.Foldable qualified as Foldable
-import Data.Maybe qualified as Maybe
 
-import Data.Map qualified as Map
-
-{- | Returns the corresponding merkle proofs for a merkle tree of the given
- size of the merkle tree entries.
-
- Note: the given MerkleTreeEntry's index is ignored.
--}
-replicateMerkleTree :: Integer -> MerkleTreeEntry -> (RootHash, [CombinedMerkleProof])
-replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combinedMerkleProofs)
-  where
-    -- some convoluted ways to get MerkleTreeEntry and its
-    -- corresponding proof relatively efficiently...
-    --
-    -- TODO: just deserialize the cbor instead of doing this weird
-    -- building index thing.. See `Codec.CBOR.Read` in the package
-    -- `cborg`
-    indicies = [1 .. n]
-    entries =
-      map
-        ( \ix ->
-            MerkleTreeEntry
-              { mteIndex = ix
-              , mteAmount = mteAmount merkleTreeEntry
-              , mteRecipient = mteRecipient merkleTreeEntry
-              , mtePreviousMerkleRoot = mtePreviousMerkleRoot merkleTreeEntry
-              }
-        )
-        indicies
-    cborEntries = map MPTRootTokenMintingPolicy.serialiseMte entries
-    cborToMte = Map.fromList $ zip (map MerkleTree.hashLeaf cborEntries) entries
-
-    (merkleTree, lookups) = MerkleTree.lookupsMpFromList cborEntries
-    combinedMerkleProofs =
-      map
-        ( \(cbor, proof) ->
-            CombinedMerkleProof
-              { cmpTransaction = Maybe.fromJust $ Map.lookup cbor cborToMte
-              , cmpMerkleProof = proof
-              }
-        )
-        lookups
+import Cases.FUELMintingPolicy qualified
 
 {- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which
 
@@ -77,12 +34,11 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
 
       - claims everything in that merkle tree.
 -}
-fuelMintingBench :: Bench ()
-fuelMintingBench = do
+growingTreeClaim :: Bench ()
+growingTreeClaim = do
   let -- total number of times we repeat the random experiment
       numberOfTrials = 2
-      numberOfFUELMints = 250
-
+      sizeOfTrees = 25 -- 2^sizeOfTrees is the largest size tree we take
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
   -- TODO: urgh, we really shouldn't do this so fix this later...
   addr <- IO.Class.liftIO $ readFile "payment.addr"
@@ -129,7 +85,8 @@ fuelMintingBench = do
               }
 
     -- Generating the merkle tree / merkle proofs
-    let ~(Right bech32Recipient) = fmap OffChain.bech32RecipientBytes $ OffChain.bech32RecipientFromText $ Text.pack addr
+    let Right bech32Recipient = fmap OffChain.bech32RecipientBytes $ OffChain.bech32RecipientFromText $ Text.pack addr
+
         entry =
           MerkleTreeEntry
             { mteIndex = 0
@@ -137,34 +94,70 @@ fuelMintingBench = do
             , mteRecipient = bech32Recipient
             , mtePreviousMerkleRoot = Nothing
             }
-        (rootHash, combinedMerkleProofs) = replicateMerkleTree numberOfFUELMints entry
+
+        merkleRootsAndCombinedProofs = List.take sizeOfTrees $
+          flip List.unfoldr (Nothing, 1 :: Integer) $ \(prevMerkleRoot, size) ->
+            let (newMerkleRoot, combinedMerkleProofs) =
+                  Cases.FUELMintingPolicy.replicateMerkleTree
+                    (2 ^ size)
+                    (entry {mtePreviousMerkleRoot = fmap MerkleTree.unRootHash prevMerkleRoot})
+             in Just
+                  ( (newMerkleRoot, combinedMerkleProofs)
+                  , (Just newMerkleRoot, size + 1)
+                  )
 
     -- Merkle root insertion
-    Monad.void $
-      Bench.benchCtl "SaveRoot" 1 $
-        ctlCommand $
-          Ctl.ctlSaveRootFlags
-            sidechainParams
-            CtlSaveRoot
-              { csrMerkleRoot = rootHash
-              , csrCurrentCommitteePrivKeys = map fst initCommittee
-              , csrPreviousMerkleRoot = Nothing
-              }
 
-    -- FUELMintingPolicy:
     Monad.void $ do
-      Foldable.for_ (zip [1 :: Integer ..] combinedMerkleProofs) $ \(ix, combinedMerkleProof) -> do
+      Foldable.for_ (zip (map (2 ^) [0 :: Integer ..]) merkleRootsAndCombinedProofs) $ \(ix, (rootHash, combinedMerkleProofs)) -> do
+        Bench.benchCtl "SaveRoot" (fromIntegral ix) $
+          ctlCommand $
+            Ctl.ctlSaveRootFlags
+              sidechainParams
+              CtlSaveRoot
+                { csrMerkleRoot = rootHash
+                , csrCurrentCommitteePrivKeys = map fst initCommittee
+                , csrPreviousMerkleRoot = Nothing
+                }
+
         Bench.benchCtl "FUELMintingPolicy" (fromIntegral ix) $
           ctlCommand $
             Ctl.ctlClaimFlags
               CtlClaim
-                { ccCombinedMerkleProof = combinedMerkleProof
+                { ccCombinedMerkleProof = List.head combinedMerkleProofs
                 }
 
   -- Finally, we plot all the data
   --------------------------------
   -- (note the less indentation) We run:
-  Bench.plotOffChainWithLinearRegression "FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
-  Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
+  Bench.plotXYWithLinearRegression
+    "GrowingTreeFUELMintingPolicyTimePlot.svg"
+    "FUELMintingPolicy"
+    "Offchain performance of FUELMintingPolicy with exponentially growing merkle roots"
+    "Merkle tree size"
+    "Time (ms)"
+    Bench.tMs
+  Bench.plotXYWithLinearRegression
+    "GrowingTreeFUELMintingPolicyLoveLace.svg"
+    "FUELMintingPolicy"
+    "Onchain performance of FUELMintingPolicy with exponentially growing merkle roots"
+    "Merkle tree size"
+    "Lovelace"
+    Bench.tLovelaceFee
+
+  Bench.plotXYWithLinearRegression
+    "GrowingTreeSaveRootTimePlot.svg"
+    "SaveRoot"
+    "Offchain performance of SaveRoot with exponentially growing merkle roots"
+    "Merkle tree size"
+    "Time (ms)"
+    Bench.tMs
+  Bench.plotXYWithLinearRegression
+    "GrowingTreeSaveRootLoveLace.svg"
+    "SaveRoot"
+    "Onchain performance of SaveRoot with exponentially growing merkle roots"
+    "Merkle tree size"
+    "Lovelace"
+    Bench.tLovelaceFee
 
   return ()
