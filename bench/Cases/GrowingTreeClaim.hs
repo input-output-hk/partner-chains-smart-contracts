@@ -38,7 +38,13 @@ growingTreeClaim :: Bench ()
 growingTreeClaim = do
   let -- total number of times we repeat the random experiment
       numberOfTrials = 2
-      sizeOfTrees = 25 -- 2^sizeOfTrees is the largest size tree we take
+      sizeOfTrees = 22
+  -- 2^sizeOfTrees is the largest size tree we take
+  -- Haskell seems to struggle with larger trees than 2^22.
+  -- alternatively, my computer doesn't have enough ram :^)
+  -- TODO: we can look at building merkle trees more efficiently...
+  -- we could write a lowlevel / precise tool that'll solve exactly this
+  -- problem.
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
   -- TODO: urgh, we really shouldn't do this so fix this later...
   addr <- IO.Class.liftIO $ readFile "payment.addr"
