@@ -37,10 +37,10 @@ import Cases.FUELMintingPolicy qualified
 growingTreeClaim :: Bench ()
 growingTreeClaim = do
   let -- total number of times we repeat the random experiment
-      numberOfTrials = 2
-      sizeOfTrees = 15
+      numberOfTrials = 3
+      sizeOfTrees = 18
   -- 2^sizeOfTrees is the largest size tree we take
-  -- Haskell seems to struggle with larger trees than 2^15.
+  -- Haskell seems to struggle with larger trees than this.
   -- alternatively, my computer doesn't have enough ram :^)
   -- TODO: we can look at building merkle trees more efficiently...
   -- we could write a lowlevel / precise tool that'll solve exactly this
