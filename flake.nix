@@ -81,7 +81,7 @@
           pkgs = nixpkgsFor system;
         in
         pkgs.haskell-nix.cabalProject {
-          src = ./.;
+          src = ./onchain;
           inputMap = {
             "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
           };
