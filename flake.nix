@@ -166,6 +166,7 @@
           export LC_ALL=C.UTF-8
           export LANG=C.UTF-8
           export IN_NIX_SHELL='pure'
+          cd ${self}/onchain/
           make format_check cabalfmt_check nixpkgsfmt_check lint
           cd ${self}/ctl
           make check-format
