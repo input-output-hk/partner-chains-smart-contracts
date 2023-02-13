@@ -1,4 +1,4 @@
-.PHONY: nix-cabal-repl
+.PHONY: nix-cabal-repl format_check format cabalfmt cabalfmt_check hoogle lint
 
 FOURMOLU_EXTENSIONS := \
 	-o -XTypeApplications \
@@ -26,6 +26,9 @@ format:
 format_check:
 	fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence \
 		$(shell fd -ehs -elhs)
+
+lint: requires_nix_shell
+	hlint --no-summary $(shell fd -ehs -elhs)
 
 # Starts a ghci repl inside the nix environment.
 nix-cabal-repl:

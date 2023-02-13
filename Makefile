@@ -44,6 +44,3 @@ lock: requires_nix_shell
 
 lock_check: requires_nix_shell
 	nix flake lock --no-update-lock-file
-
-lint: requires_nix_shell
-	hlint --no-summary $(shell fd -ehs -elhs)

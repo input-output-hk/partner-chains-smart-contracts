@@ -162,18 +162,23 @@
               ++ self.devShells.${system}.ps.buildInputs;
           } ''
 
-          cd ${self}
+          pushd ${self}
           export LC_CTYPE=C.UTF-8
           export LC_ALL=C.UTF-8
           export LANG=C.UTF-8
           export IN_NIX_SHELL='pure'
 
-          pushd ${self}/onchain/
-          make format_check cabalfmt_check nixpkgsfmt_check lint
+          make nixpkgsfmt_check lint
           popd
 
-          cd ${self}/ctl
+          pushd ${self}/onchain/
+          make format_check cabalfmt_check
+          popd
+
+          pushd ${self}/ctl
           make check-format
+          popd
+
           mkdir $out
         '';
 
