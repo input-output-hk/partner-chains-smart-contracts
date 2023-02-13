@@ -168,11 +168,11 @@
           export LANG=C.UTF-8
           export IN_NIX_SHELL='pure'
 
-          make nixpkgsfmt_check lint
+          make nixpkgsfmt_check
           popd
 
           pushd ${self}/onchain/
-          make format_check cabalfmt_check
+          make format_check cabalfmt_check lint
           popd
 
           pushd ${self}/ctl
