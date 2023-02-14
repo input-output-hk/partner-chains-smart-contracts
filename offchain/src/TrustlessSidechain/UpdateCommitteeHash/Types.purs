@@ -3,7 +3,7 @@
 -- |
 -- | Note: the reason for the existence of this module is because without this
 -- | there are some cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash`
-module UpdateCommitteeHash.Types
+module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , InitCommitteeHashMint(InitCommitteeHashMint)
@@ -25,10 +25,10 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
-import MerkleTree (RootHash)
-import SidechainParams (SidechainParams)
-import Types (AssetClass)
-import Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (AssetClass)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
 -- | validator

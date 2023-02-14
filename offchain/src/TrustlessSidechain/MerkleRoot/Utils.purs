@@ -8,7 +8,7 @@
 -- | Note: the reason for the existence of this module is because there are some
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
-module MerkleRoot.Utils
+module TrustlessSidechain.MerkleRoot.Utils
   ( merkleRootTokenMintingPolicy
   , merkleRootTokenValidator
   , findMerkleRootTokenUtxo
@@ -33,19 +33,19 @@ import Contract.TextEnvelope
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MerkleRoot.Types
+import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
   , SaveRootParams(..)
   , SignedMerkleRootMint
   )
-import MerkleTree (RootHash)
-import MerkleTree as MerkleTree
-import RawScripts as RawScripts
-import SidechainParams (SidechainParams)
-import Utils.Crypto (SidechainMessage)
-import Utils.Crypto as Utils.Crypto
-import Utils.SerialiseData as Utils.SerialiseData
-import Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Crypto (SidechainMessage)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
+import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 -- | `normalizeSaveRootParams` modifies the following fields in
 -- | `SaveRootParams` fields to satisfy the following properties

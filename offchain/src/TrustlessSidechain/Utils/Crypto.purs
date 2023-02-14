@@ -1,4 +1,4 @@
-module Utils.Crypto
+module TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
   , sidechainMessage
   , byteArrayToSidechainMessageUnsafe

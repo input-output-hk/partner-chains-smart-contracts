@@ -1,4 +1,4 @@
-module Utils.Codecs
+module TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
   , thresholdCodec

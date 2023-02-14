@@ -19,13 +19,13 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Effect.Exception as Exception
-import InitSidechain as InitSidechain
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
-import Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
-import Utils.Crypto as Crypto
+import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- | `tests` aggregates all the tests together in one convenient funciton
 tests ∷ PlutipTest

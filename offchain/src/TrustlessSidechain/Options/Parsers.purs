@@ -1,4 +1,4 @@
-module Options.Parsers
+module TrustlessSidechain.Options.Parsers
   ( parsePubKeyAndSignature
   , transactionInput
   , combinedMerkleProofParser
@@ -31,16 +31,16 @@ import Data.EuclideanRing as EuclideanRing
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
-import FUELMintingPolicy
+import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
+import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof
   , addressFromCborBytes
   , getBech32BytesByteArray
   )
-import MerkleTree (RootHash)
-import MerkleTree as MerkleTree
-import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
-import Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput

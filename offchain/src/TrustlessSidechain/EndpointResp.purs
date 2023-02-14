@@ -1,4 +1,4 @@
-module EndpointResp
+module TrustlessSidechain.EndpointResp
   ( EndpointResp(..)
   , encodeEndpointResp
   , stringifyEndpointResp
@@ -11,8 +11,8 @@ import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
-import GetSidechainAddresses (SidechainAddresses)
-import SidechainParams (SidechainParams, scParamsCodec)
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
+import TrustlessSidechain.SidechainParams (SidechainParams, scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp

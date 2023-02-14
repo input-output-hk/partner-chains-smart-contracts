@@ -3,7 +3,7 @@
 -- |  Note: the reason for the existence of this module is because without this
 -- | module, there are some cyclic dependencies between `MerkleRoot` and
 -- | `UpdateCommitteeHash`.
-module MerkleRoot.Types
+module TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   , SaveRootParams(SaveRootParams)
@@ -18,9 +18,9 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Value (CurrencySymbol)
-import MerkleTree (RootHash)
-import SidechainParams (SidechainParams)
-import Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot

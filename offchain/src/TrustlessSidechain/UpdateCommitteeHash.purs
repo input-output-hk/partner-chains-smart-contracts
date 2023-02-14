@@ -1,6 +1,6 @@
-module UpdateCommitteeHash
-  ( module UpdateCommitteeHash.Types
-  , module UpdateCommitteeHash.Utils
+module TrustlessSidechain.UpdateCommitteeHash
+  ( module TrustlessSidechain.UpdateCommitteeHash.Types
+  , module TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHash
   , getCommitteeHashPolicy
   ) where
@@ -30,11 +30,13 @@ import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import MerkleRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
-import MerkleRoot.Utils as MerkleRoot.Utils
-import SidechainParams (SidechainParams(..))
-import Types (assetClass, assetClassValue)
-import UpdateCommitteeHash.Types
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
@@ -42,7 +44,7 @@ import UpdateCommitteeHash.Types
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
-import UpdateCommitteeHash.Utils
+import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( aggregateKeys
   , committeeHashAssetClass
   , committeeHashPolicy
@@ -52,10 +54,10 @@ import UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
-import Utils.Crypto as Utils.Crypto
-import Utils.Logging (class Display)
-import Utils.Logging as Logging
-import Utils.Logging as Utils.Logging
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging (class Display)
+import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.

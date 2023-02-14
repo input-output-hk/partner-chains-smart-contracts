@@ -9,27 +9,30 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
-import FUELMintingPolicy
+import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
+import Test.MerkleRoot as Test.MerkleRoot
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
+import Test.Utils (assertMaxFee, fails, getOwnTransactionInput, toTxIn)
+import TrustlessSidechain.FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
   , combinedMerkleProofToFuelParams
   , runFuelMP
   )
-import InitSidechain (InitSidechainParams(InitSidechainParams), initSidechain)
-import MerkleTree (MerkleProof(..), fromList, lookupMp)
-import MerkleTree as MerkleTree
-import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
-import SidechainParams (SidechainParams(..))
-import Test.MerkleRoot as Test.MerkleRoot
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (assertMaxFee, fails, getOwnTransactionInput, toTxIn)
-import Utils.Crypto
+import TrustlessSidechain.InitSidechain
+  ( InitSidechainParams(InitSidechainParams)
+  , initSidechain
+  )
+import TrustlessSidechain.MerkleTree (MerkleProof(..), fromList, lookupMp)
+import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.Utils.Crypto
   ( generatePrivKey
   , toPubKeyUnsafe
   )
-import Utils.SerialiseData (serialiseData)
+import TrustlessSidechain.Utils.SerialiseData (serialiseData)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function

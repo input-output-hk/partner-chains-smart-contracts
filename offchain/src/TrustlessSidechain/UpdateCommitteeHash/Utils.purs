@@ -10,7 +10,7 @@
 -- | Note: the reason for the existence of this module is because there are some
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
-module UpdateCommitteeHash.Utils
+module TrustlessSidechain.UpdateCommitteeHash.Utils
   ( committeeHashPolicy
   , updateCommitteeHashValidator
   , initCommitteeHashMintTn
@@ -46,18 +46,18 @@ import Contract.Transaction
 import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
-import RawScripts as RawScripts
-import Types (AssetClass, assetClass)
-import UpdateCommitteeHash.Types
+import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Types (AssetClass, assetClass)
+import TrustlessSidechain.UpdateCommitteeHash.Types
   ( InitCommitteeHashMint
   , UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   , UpdateCommitteeHashParams(..)
   )
-import Utils.Crypto (SidechainMessage, SidechainPublicKey)
-import Utils.Crypto as Utils.Crypto
-import Utils.SerialiseData as Utils.SerialiseData
-import Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
+import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do

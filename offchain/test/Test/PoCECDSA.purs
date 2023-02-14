@@ -41,9 +41,9 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
-import RawScripts (rawPoCECDSA)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import TrustlessSidechain.RawScripts (rawPoCECDSA)
 
 getValidator ∷ Contract () Validator
 getValidator = do

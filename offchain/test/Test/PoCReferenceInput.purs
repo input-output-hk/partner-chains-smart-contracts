@@ -24,10 +24,10 @@ import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
-import RawScripts as RawScripts
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
+import TrustlessSidechain.RawScripts as RawScripts
 
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
 tests ∷ PlutipTest

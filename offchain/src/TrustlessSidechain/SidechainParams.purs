@@ -1,4 +1,4 @@
-module SidechainParams where
+module TrustlessSidechain.SidechainParams where
 
 import Contract.Prelude
 
@@ -11,7 +11,7 @@ import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Partial.Unsafe (unsafePartial)
-import Utils.Codecs (byteArrayCodec, transactionInputCodec)
+import TrustlessSidechain.Utils.Codecs (byteArrayCodec, transactionInputCodec)
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt

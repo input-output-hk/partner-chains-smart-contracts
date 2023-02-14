@@ -1,6 +1,9 @@
 -- | The module `GetSidechainAddresses` provides a way to get an array of strings
 -- | identifying its associated hex encoded validator and currency symbol.
-module GetSidechainAddresses (SidechainAddresses, getSidechainAddresses) where
+module TrustlessSidechain.GetSidechainAddresses
+  ( SidechainAddresses
+  , getSidechainAddresses
+  ) where
 
 import Contract.Prelude
 
@@ -12,17 +15,19 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import DistributedSet as DistributedSet
-import FUELMintingPolicy as FUELMintingPolicy
-import MerkleRoot as MerkleRoot
-import MerkleRoot.Utils (merkleRootTokenValidator)
-import SidechainParams (SidechainParams)
-import Types (assetClass)
-import UpdateCommitteeHash as UpdateCommitteeHash
-import UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
-import UpdateCommitteeHash.Utils (updateCommitteeHashValidator)
-import Utils.Logging (class Display)
-import Utils.Logging as Utils.Logging
+import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
+import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (assetClass)
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
+import TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( updateCommitteeHashValidator
+  )
+import TrustlessSidechain.Utils.Logging (class Display)
+import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a

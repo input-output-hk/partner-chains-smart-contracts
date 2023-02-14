@@ -1,6 +1,6 @@
 -- | This module implements the required offchain functionality of the
 -- | distributed set.
-module DistributedSet
+module TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , dsConf
   , DsDatum(DsDatum)
@@ -65,9 +65,9 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import RawScripts as RawScripts
-import SidechainParams (SidechainParams(..))
-import Utils.Logging as Logging
+import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.Utils.Logging as Logging
 
 -- * Types
 -- For more information, see the on-chain Haskell file.

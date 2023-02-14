@@ -8,11 +8,11 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
-import Options.Parsers as Options.Parsers
 import Test.Unit (Test, TestSuite)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils as Test.Utils
-import Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Options.Parsers as Options.Parsers
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 type OptionsTest = Mote (Const Void) Test Unit
 

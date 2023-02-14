@@ -11,20 +11,20 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
-import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
-import InitSidechain as InitSidechain
 import Mote.Monad as Mote.Monad
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils as Test.Utils
-import UpdateCommitteeHash
+import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
+import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
-import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `tests` aggregates all MerkleRootChaining tests together conveniently
 tests ∷ PlutipTest

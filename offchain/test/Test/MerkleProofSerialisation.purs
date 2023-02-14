@@ -10,18 +10,23 @@ import Contract.PlutusData (PlutusData(..))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Data.Const (Const)
-import FUELMintingPolicy
-  ( CombinedMerkleProof(..)
-  , MerkleTreeEntry(..)
-  , byteArrayToBech32BytesUnsafe
-  )
-import MerkleTree (MerkleProof(..), Side(..), Up(..), byteArrayToRootHashUnsafe)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Test.Unit (Test, TestSuite)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils as Test.Utils
-import Utils.SerialiseData as Utils.SerialiseData
+import TrustlessSidechain.FUELMintingPolicy
+  ( CombinedMerkleProof(..)
+  , MerkleTreeEntry(..)
+  , byteArrayToBech32BytesUnsafe
+  )
+import TrustlessSidechain.MerkleTree
+  ( MerkleProof(..)
+  , Side(..)
+  , Up(..)
+  , byteArrayToRootHashUnsafe
+  )
+import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 
 -- | `MerkleProofSerialisationTest` is a convenient type alias around `Mote`
 -- | wrapping `Test` with no bracketting for setup

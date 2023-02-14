@@ -1,7 +1,7 @@
 -- | `MerkleRoot` contains the endpoint functionality for the `MerkleRoot` endpoint
-module MerkleRoot
-  ( module MerkleRoot.Types
-  , module MerkleRoot.Utils
+module TrustlessSidechain.MerkleRoot
+  ( module TrustlessSidechain.MerkleRoot.Types
+  , module TrustlessSidechain.MerkleRoot.Utils
   , saveRoot
   , getMerkleRootTokenMintingPolicy
   ) where
@@ -36,13 +36,13 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
-import MerkleRoot.Types
+import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   , SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   )
-import MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
   , findPreviousMerkleRootTokenUtxo
   , merkleRootTokenMintingPolicy
@@ -50,17 +50,17 @@ import MerkleRoot.Utils
   , normalizeSaveRootParams
   , serialiseMrimHash
   )
-import MerkleTree as MerkleTree
-import SidechainParams (SidechainParams)
-import UpdateCommitteeHash
+import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
-import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto as Utils.Crypto
-import Utils.Logging (class Display)
-import Utils.Logging as Utils.Logging
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging (class Display)
+import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters, and calls

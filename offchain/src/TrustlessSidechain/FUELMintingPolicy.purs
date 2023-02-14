@@ -1,4 +1,4 @@
-module FUELMintingPolicy
+module TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(..)
   , FUELMint(..)
   , FuelParams(..)
@@ -76,16 +76,19 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import DistributedSet as DistributedSet
-import MerkleRoot (SignedMerkleRootMint(..), findMerkleRootTokenUtxo)
-import MerkleRoot as MerkleRoot
-import MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
-import RawScripts (rawFUELMintingPolicy)
-import SidechainParams (SidechainParams)
-import UpdateCommitteeHash (getCommitteeHashPolicy)
-import Utils.Logging (class Display)
-import Utils.Logging as Logging
-import Utils.SerialiseData (serialiseData)
+import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.MerkleRoot
+  ( SignedMerkleRootMint(..)
+  , findMerkleRootTokenUtxo
+  )
+import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
+import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash (getCommitteeHashPolicy)
+import TrustlessSidechain.Utils.Logging (class Display)
+import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.SerialiseData (serialiseData)
 
 -- | `FUELMint` is the data type to parameterize the minting policy.
 -- | Note: this matches the haskell onchain data type.

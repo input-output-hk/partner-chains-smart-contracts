@@ -1,5 +1,5 @@
 -- | Implements merkle tree functionality
-module MerkleTree
+module TrustlessSidechain.MerkleTree
   ( Side(L, R)
   , MerkleTree(Bin, Tip)
   , Up(Up)

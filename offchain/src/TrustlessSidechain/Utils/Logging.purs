@@ -1,4 +1,4 @@
-module Utils.Logging
+module TrustlessSidechain.Utils.Logging
   ( Environment
   , Location
   , class Display

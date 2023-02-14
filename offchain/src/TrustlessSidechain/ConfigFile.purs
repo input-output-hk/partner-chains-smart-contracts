@@ -1,4 +1,4 @@
-module ConfigFile
+module TrustlessSidechain.ConfigFile
   ( decodeCommitteeSignatures
   , decodeCommittee
   , decodeConfig
@@ -10,7 +10,6 @@ module ConfigFile
 
 import Contract.Prelude
 
-import ConfigFile.Codecs (committeeCodec, committeeSignaturesCodec, configCodec)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(..)
@@ -26,13 +25,18 @@ import Node.Buffer.Class as Buff
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readFile, readTextFile)
 import Node.Path (FilePath)
-import Options.Types
+import TrustlessSidechain.ConfigFile.Codecs
+  ( committeeCodec
+  , committeeSignaturesCodec
+  , configCodec
+  )
+import TrustlessSidechain.Options.Types
   ( CommitteeInput(..)
   , CommitteeSignatures
   , CommitteeSignaturesInput(..)
   , Config
   )
-import Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 
 optExample ∷ Config
 optExample =

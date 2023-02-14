@@ -16,28 +16,28 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
-import FUELMintingPolicy
+import Mote.Monad as Mote.Monad
+import Test.PlutipTest (PlutipTest)
+import Test.PlutipTest as Test.PlutipTest
+import Test.Utils as Test.Utils
+import TrustlessSidechain.FUELMintingPolicy
   ( Bech32Bytes
   , CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
   , bech32BytesFromAddress
   )
-import InitSidechain as InitSidechain
-import MerkleRoot
+import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.MerkleRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   )
-import MerkleRoot as MerkleRoot
-import MerkleTree (MerkleTree, RootHash)
-import MerkleTree as MerkleTree
-import Mote.Monad as Mote.Monad
-import SidechainParams (SidechainParams)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils as Test.Utils
-import Utils.Crypto (SidechainPrivateKey)
-import Utils.Crypto as Crypto
-import Utils.SerialiseData as SerialiseData
+import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
+import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey)
+import TrustlessSidechain.Utils.Crypto as Crypto
+import TrustlessSidechain.Utils.SerialiseData as SerialiseData
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
 tests ∷ PlutipTest

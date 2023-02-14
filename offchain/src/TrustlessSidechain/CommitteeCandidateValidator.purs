@@ -57,11 +57,11 @@ import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import RawScripts (rawCommitteeCandidateValidator)
-import SidechainParams (SidechainParams)
-import Types (PubKey, Signature)
-import Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import Utils.Logging (class Display, mkReport)
+import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Logging (class Display, mkReport)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams

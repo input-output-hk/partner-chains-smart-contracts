@@ -17,20 +17,20 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import InitSidechain (InitSidechainParams(..), initSidechain)
-import MerkleTree (RootHash)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
-import SidechainParams (SidechainParams)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
-import UpdateCommitteeHash
+import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
   )
-import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto
   ( SidechainPrivateKey
   , SidechainPublicKey
   , SidechainSignature

@@ -1,5 +1,5 @@
 -- | `Utils.Utxos` provides some utility functions for querying utxos.
-module Utils.Utxos where
+module TrustlessSidechain.Utils.Utxos where
 
 import Contract.Prelude
 

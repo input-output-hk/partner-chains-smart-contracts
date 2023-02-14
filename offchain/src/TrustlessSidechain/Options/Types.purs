@@ -1,4 +1,4 @@
-module Options.Types
+module TrustlessSidechain.Options.Types
   ( CommitteeSignaturesInput(..)
   , CommitteeInput(..)
   , CommitteeSignatures
@@ -16,11 +16,11 @@ import Contract.Transaction (TransactionInput)
 import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
-import MerkleTree (MerkleProof, RootHash)
 import Node.Path (FilePath)
-import SidechainParams (SidechainParams)
-import Types (PubKey, Signature)
-import Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | CLI arguments providing an interface to contract endpoints
 type Options =

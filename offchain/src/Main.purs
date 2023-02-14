@@ -3,30 +3,30 @@ module Main (main) where
 import Contract.Prelude
 
 import CommitteCandidateValidator as CommitteCandidateValidator
-import ConfigFile as ConfigFile
 import Contract.Monad (Contract, launchAff_, runContract)
 import Data.Bifunctor (lmap)
 import Data.List as List
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
-import EndpointResp (EndpointResp(..), stringifyEndpointResp)
-import FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
-import GetSidechainAddresses as GetSidechainAddresses
-import InitSidechain
+import Options.Applicative (execParser)
+import TrustlessSidechain.ConfigFile as ConfigFile
+import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
+import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
+import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
+import TrustlessSidechain.InitSidechain
   ( initSidechain
   , initSidechainCommittee
   , initSidechainTokens
   )
-import MerkleRoot (SaveRootParams(SaveRootParams))
-import MerkleRoot as MerkleRoot
-import Options.Applicative (execParser)
-import Options.Specs (options)
-import Options.Types (Endpoint(..), Options)
-import SidechainParams (SidechainParams)
-import UpdateCommitteeHash
+import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
+import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.Options.Specs (options)
+import TrustlessSidechain.Options.Types (Endpoint(..), Options)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
-import UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit

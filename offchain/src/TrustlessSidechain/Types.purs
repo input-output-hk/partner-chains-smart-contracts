@@ -1,6 +1,6 @@
 -- | `Types` includes some uility types (and functions); and types of certain
 -- | endpoints.
-module Types
+module TrustlessSidechain.Types
   ( PubKey
   , Signature
   , Ed25519Signature

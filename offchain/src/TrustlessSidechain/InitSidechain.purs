@@ -13,7 +13,7 @@
 -- |          - Then, call `initSidechainCommittee` which will pay the genesis
 -- |          token for the committee hash (assuming you have it in your wallet)
 -- |          to the required committee hash validator (with the initial committee).
-module InitSidechain
+module TrustlessSidechain.InitSidechain
   ( initSidechain
   , InitSidechainParams(InitSidechainParams)
   , InitSidechainParams'
@@ -51,30 +51,32 @@ import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
-import DistributedSet
+import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
   , DsConfMint(DsConfMint)
   , DsDatum(DsDatum)
   , DsKeyMint(DsKeyMint)
   )
-import DistributedSet as DistributedSet
-import FUELMintingPolicy (FUELMint(FUELMint))
-import FUELMintingPolicy as FUELMintingPolicy
-import GetSidechainAddresses (SidechainAddresses)
-import GetSidechainAddresses as GetSidechainAddresses
-import MerkleRoot (SignedMerkleRootMint(SignedMerkleRootMint))
-import MerkleRoot as MerkleRoot
-import SidechainParams (SidechainParams(SidechainParams))
-import UpdateCommitteeHash
+import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.FUELMintingPolicy (FUELMint(FUELMint))
+import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
+import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
+import TrustlessSidechain.MerkleRoot
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
   , UpdateCommitteeHash(..)
   , UpdateCommitteeHashDatum(..)
   )
-import UpdateCommitteeHash as UpdateCommitteeHash
-import Utils.Crypto (SidechainPublicKey)
-import Utils.Logging (class Display)
-import Utils.Logging as Utils.Logging
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Logging (class Display)
+import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts

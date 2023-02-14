@@ -22,11 +22,11 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
-import SidechainParams (SidechainParams(..))
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (fails, toTxIn)
-import Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 scParams ∷ SidechainParams
 scParams = SidechainParams

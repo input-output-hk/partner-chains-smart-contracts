@@ -1,7 +1,7 @@
 -- | This module includes functionality relating to serializing
 -- | `Contract.PlutusData` via cbor that is compatible with the onchain
 -- | Builtin serialiseData.
-module Utils.SerialiseData (serialiseData, serialiseToData) where
+module TrustlessSidechain.Utils.SerialiseData (serialiseData, serialiseToData) where
 
 import Contract.Prelude
 

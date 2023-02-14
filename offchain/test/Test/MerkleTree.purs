@@ -11,20 +11,20 @@ import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
 import Data.Const (Const)
 import Data.Maybe as Maybe
-import MerkleTree
-  ( MerkleProof(MerkleProof)
-  , MerkleTree(Bin, Tip)
-  , Side(L, R)
-  , Up(Up)
-  , byteArrayToRootHashUnsafe
-  )
-import MerkleTree as MerkleTree
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.Unit (Test, TestSuite)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils as Test.Utils
+import TrustlessSidechain.MerkleTree
+  ( MerkleProof(MerkleProof)
+  , MerkleTree(Bin, Tip)
+  , Side(L, R)
+  , Up(Up)
+  , byteArrayToRootHashUnsafe
+  )
+import TrustlessSidechain.MerkleTree as MerkleTree
 
 -- | `MerkleTreeTest` is a convenient type alias around `Mote`
 -- | wrapping `Test` with no bracketting for setup

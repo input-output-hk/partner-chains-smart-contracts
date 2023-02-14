@@ -1,4 +1,4 @@
-module Options.Specs (options) where
+module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
@@ -16,7 +16,6 @@ import Ctl.Internal.Helpers (logWithLevel)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.UInt as UInt
-import MerkleTree (RootHash)
 import Options.Applicative
   ( Parser
   , ParserInfo
@@ -40,7 +39,8 @@ import Options.Applicative
   , str
   , value
   )
-import Options.Parsers
+import TrustlessSidechain.MerkleTree (RootHash)
+import TrustlessSidechain.Options.Parsers
   ( bigInt
   , byteArray
   , combinedMerkleProofParserWithPkh
@@ -55,15 +55,15 @@ import Options.Parsers
   , transactionInput
   , uint
   )
-import Options.Types
+import TrustlessSidechain.Options.Types
   ( CommitteeInput(..)
   , CommitteeSignaturesInput(..)
   , Config
   , Endpoint(..)
   , Options
   )
-import SidechainParams (SidechainParams(..))
-import Utils.Logging (environment, fileLogger)
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
 options ∷ Maybe Config → ParserInfo Options

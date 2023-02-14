@@ -28,11 +28,11 @@ import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
-import RawScripts as RawScripts
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
-import Utils.SerialiseData as SerialiseData
+import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Utils.SerialiseData as SerialiseData
 
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSerialiseData tests" do

@@ -1,4 +1,4 @@
-module ConfigFile.Codecs
+module TrustlessSidechain.ConfigFile.Codecs
   ( committeeSignaturesCodec
   , committeeCodec
   , configCodec
@@ -14,15 +14,19 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
 import Data.UInt as UInt
-import Options.Types (CommitteeSignatures, Config)
-import Utils.Codecs (byteArrayCodec, thresholdCodec, transactionInputCodec)
-import Utils.Crypto
+import TrustlessSidechain.Options.Types (CommitteeSignatures, Config)
+import TrustlessSidechain.Utils.Codecs
+  ( byteArrayCodec
+  , thresholdCodec
+  , transactionInputCodec
+  )
+import TrustlessSidechain.Utils.Crypto
   ( SidechainPublicKey
   , SidechainSignature
   , getSidechainPublicKeyByteArray
   , getSidechainSignatureByteArray
   )
-import Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 configCodec ∷ CA.JsonCodec Config
 configCodec =
