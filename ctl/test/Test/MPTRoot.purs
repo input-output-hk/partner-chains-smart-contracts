@@ -1,4 +1,4 @@
-module Test.MPTRoot
+module Test.MerkleRoot
   ( testScenario1
   , testScenario2
   , saveRoot
@@ -23,11 +23,11 @@ import FUELMintingPolicy
   , bech32BytesFromAddress
   )
 import InitSidechain as InitSidechain
-import MPTRoot
+import MerkleRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   )
-import MPTRoot as MPTRoot
+import MerkleRoot as MerkleRoot
 import MerkleTree (MerkleTree, RootHash)
 import MerkleTree as MerkleTree
 import Mote.Monad as Mote.Monad
@@ -39,7 +39,7 @@ import Utils.Crypto (SidechainPrivateKey)
 import Utils.Crypto as Crypto
 import Utils.SerialiseData as SerialiseData
 
--- | `tests` aggregates all MPTRoot tests in a convenient single function
+-- | `tests` aggregates all MerkleRoot tests in a convenient single function
 tests ∷ PlutipTest
 tests = Mote.Monad.group "Merkle root insertion" $ do
   testScenario1
@@ -53,7 +53,7 @@ paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → Contract () Bech32Bytes
 paymentPubKeyHashToBech32Bytes pubKeyHash =
   bech32BytesFromAddress $ Address.pubKeyHashAddress pubKeyHash Nothing
 
--- | `saveRoot` is a wrapper around `MPTRoot.saveRoot` to make writing test
+-- | `saveRoot` is a wrapper around `MerkleRoot.saveRoot` to make writing test
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
 -- | It returns the saved merkle root.
 saveRoot ∷
@@ -82,7 +82,7 @@ saveRoot
   } = do
   serialisedEntries ←
     liftContractM
-      "error 'Test.MPTRoot.saveRoot': bad serialisation of merkle root" $
+      "error 'Test.MerkleRoot.saveRoot': bad serialisation of merkle root" $
       traverse SerialiseData.serialiseToData merkleTreeEntries
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
@@ -91,7 +91,7 @@ saveRoot
 
   -- TODO: this has bad time complexity -- in the order of n^2.
   combinedMerkleProofs ←
-    liftContractM "error 'Test.MPTRoot.saveRoot': Impossible merkle proof"
+    liftContractM "error 'Test.MerkleRoot.saveRoot': Impossible merkle proof"
       $ flip traverse merkleTreeEntries
       $ \entry → do
           serialisedEntry ← SerialiseData.serialiseToData entry
@@ -102,8 +102,8 @@ saveRoot
             }
   merkleRootInsertionMessage ←
     liftContractM
-      "error 'Test.MPTRoot.testScenario': failed to create merkle root insertion message"
-      $ MPTRoot.serialiseMrimHash
+      "error 'Test.MerkleRoot.testScenario': failed to create merkle root insertion message"
+      $ MerkleRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
           { sidechainParams: sidechainParams
           , merkleRoot
@@ -117,7 +117,7 @@ saveRoot
           merkleRootInsertionMessage
       )
 
-  void $ MPTRoot.saveRoot $ SaveRootParams
+  void $ MerkleRoot.saveRoot $ SaveRootParams
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
@@ -135,13 +135,13 @@ saveRoot
 -- |    2. Creates a merkle root to sign
 -- |
 -- |    3. Saves that merkle root with the current committee (everyone but one
--- |    person) using the `MPTRoot.saveRoot` endpoint.
+-- |    person) using the `MerkleRoot.saveRoot` endpoint.
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Saving a Merkle root"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      Log.logInfo' "MPTRoot testScenario1"
+      Log.logInfo' "MerkleRoot testScenario1"
 
       -- 1. Setting up the sidechain
       ---------------------------
@@ -193,8 +193,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
 
       merkleRootInsertionMessage ←
         liftContractM
-          "error 'Test.MPTRoot.testScenario1': failed to create merkle root insertion message"
-          $ MPTRoot.serialiseMrimHash
+          "error 'Test.MerkleRoot.testScenario1': failed to create merkle root insertion message"
+          $ MerkleRoot.serialiseMrimHash
           $ MerkleRootInsertionMessage
               { sidechainParams: sidechainParams
               , merkleRoot
@@ -220,7 +220,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
               Array.cons ((fst head) /\ Nothing) tail
             _ → [] -- should never happen
 
-      void $ MPTRoot.saveRoot $ SaveRootParams
+      void $ MerkleRoot.saveRoot $ SaveRootParams
         { sidechainParams
         , merkleRoot
         , previousMerkleRoot: Nothing
@@ -242,7 +242,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      Log.logInfo' "MPTRoot testScenario2"
+      Log.logInfo' "MerkleRoot testScenario2"
 
       -- 1. Setting up the sidechain
       ---------------------------

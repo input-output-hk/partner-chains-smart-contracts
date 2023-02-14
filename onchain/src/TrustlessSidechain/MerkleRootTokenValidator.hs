@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.MPTRootTokenValidator (
+module TrustlessSidechain.MerkleRootTokenValidator (
   serialisableValidator,
 ) where
 

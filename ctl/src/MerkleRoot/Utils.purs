@@ -1,18 +1,18 @@
--- | `MPTRoot.Utils` contains utility functions relating to the
--- | MPT root endpoint including:
+-- | `MerkleRoot.Utils` contains utility functions relating to the
+-- | Merkle root endpoint including:
 -- |
 -- |      - Creating the data for onchain validators / minting policies
 -- |
--- |      - Querying utxos regarding the MPT root
+-- |      - Querying utxos regarding the Merkle root
 -- |
 -- | Note: the reason for the existence of this module is because there are some
--- | cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash` without
+-- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
-module MPTRoot.Utils
-  ( mptRootTokenMintingPolicy
-  , mptRootTokenValidator
-  , findMptRootTokenUtxo
-  , findPreviousMptRootTokenUtxo
+module MerkleRoot.Utils
+  ( merkleRootTokenMintingPolicy
+  , merkleRootTokenValidator
+  , findMerkleRootTokenUtxo
+  , findPreviousMerkleRootTokenUtxo
   , serialiseMrimHash
   , normalizeSaveRootParams
   ) where
@@ -33,7 +33,7 @@ import Contract.TextEnvelope
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import MPTRoot.Types
+import MerkleRoot.Types
   ( MerkleRootInsertionMessage
   , SaveRootParams(..)
   , SignedMerkleRootMint
@@ -58,13 +58,13 @@ normalizeSaveRootParams (SaveRootParams p) =
         p.committeeSignatures
     }
 
--- | `mptRootTokenMintingPolicy` gets the minting policy corresponding to
--- | `RawScripts.rawMPTRootTokenMintingPolicy` paramaterized by the given
+-- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
+-- | `RawScripts.rawMerkleRootTokenMintingPolicy` paramaterized by the given
 -- | `SignedMerkleRootMint`.
-mptRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
-mptRootTokenMintingPolicy sp = do
+merkleRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
+merkleRootTokenMintingPolicy sp = do
   let
-    script = decodeTextEnvelope RawScripts.rawMPTRootTokenMintingPolicy
+    script = decodeTextEnvelope RawScripts.rawMerkleRootTokenMintingPolicy
       >>= plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
@@ -72,12 +72,12 @@ mptRootTokenMintingPolicy sp = do
     [ PlutusData.toData sp ]
   pure $ PlutusMintingPolicy applied
 
--- | `mptRootTokenValidator` gets the validator corresponding to
--- | 'RawScripts.rawMPTRootTokenValidator' paramaterized by `SidechainParams`.
-mptRootTokenValidator ∷ SidechainParams → Contract () Validator
-mptRootTokenValidator sp = do
+-- | `merkleRootTokenValidator` gets the validator corresponding to
+-- | 'RawScripts.rawMerkleRootTokenValidator' paramaterized by `SidechainParams`.
+merkleRootTokenValidator ∷ SidechainParams → Contract () Validator
+merkleRootTokenValidator sp = do
   let
-    script = decodeTextEnvelope RawScripts.rawMPTRootTokenValidator
+    script = decodeTextEnvelope RawScripts.rawMerkleRootTokenValidator
       >>= plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
@@ -85,34 +85,34 @@ mptRootTokenValidator sp = do
     [ PlutusData.toData sp ]
   pure $ Validator applied
 
--- | `findMptRootTokenUtxo merkleRoot smrm` locates a utxo which
+-- | `findMerkleRootTokenUtxo merkleRoot smrm` locates a utxo which
 -- |
 -- |    1. is sitting at the some utxo with validator address
--- |    `mptRootTokenValidator smrm.sidechainParams`
+-- |    `merkleRootTokenValidator smrm.sidechainParams`
 -- |
--- |    2. contains a token with `CurrencySymbol` `mptRootTokenMintingPolicy smrm`
+-- |    2. contains a token with `CurrencySymbol` `merkleRootTokenMintingPolicy smrm`
 -- |    and `TokenName` as `merkleRoot`.
 -- |
 -- | Note: in the case that there is more than such utxo, this returns the first
 -- | such utxo it finds that satisifies the aforementioned properties.
-findMptRootTokenUtxo ∷
+findMerkleRootTokenUtxo ∷
   TokenName →
   SignedMerkleRootMint →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findMptRootTokenUtxo merkleRoot smrm = do
+findMerkleRootTokenUtxo merkleRoot smrm = do
   netId ← Address.getNetworkId
-  validator ← mptRootTokenValidator (unwrap smrm).sidechainParams
+  validator ← merkleRootTokenValidator (unwrap smrm).sidechainParams
   let validatorHash = Scripts.validatorHash validator
 
   validatorAddress ← Monad.liftContractM
-    "error 'findMptRootTokenUtxo': failed to get validator address"
+    "error 'findMerkleRootTokenUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 
-  mintingPolicy ← mptRootTokenMintingPolicy smrm
+  mintingPolicy ← merkleRootTokenMintingPolicy smrm
   currencySymbol ←
     Monad.liftContractM
-      "error 'findMptRootTokenUtxo': failed to get currency symbol for minting policy"
+      "error 'findMerkleRootTokenUtxo': failed to get currency symbol for minting policy"
       $ Value.scriptCurrencySymbol mintingPolicy
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
@@ -120,29 +120,29 @@ findMptRootTokenUtxo merkleRoot smrm = do
     -- amount
     Value.valueOf value currencySymbol merkleRoot /= zero
 
--- | `findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm` returns `Nothing` in
+-- | `findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm` returns `Nothing` in
 -- | the case that `maybeLastMerkleRoot` is `Nothing`, and `Just` the result of
--- | `findMptRootTokenUtxo lastMerkleRoot smrm` provided that `Just lastMerkleRoot = maybeLastMerkleRoot`
+-- | `findMerkleRootTokenUtxo lastMerkleRoot smrm` provided that `Just lastMerkleRoot = maybeLastMerkleRoot`
 -- | and there are no other errors.
 -- | Note: the `Maybe` return type does NOT denote the absense or existence of
 -- | finding the utxo... rather it reflects the `Maybe` in the last merkle root
 -- | of whether it exists or not.
-findPreviousMptRootTokenUtxo ∷
+findPreviousMerkleRootTokenUtxo ∷
   Maybe RootHash →
   SignedMerkleRootMint →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findPreviousMptRootTokenUtxo maybeLastMerkleRoot smrm =
+findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm =
   case maybeLastMerkleRoot of
     Nothing → pure Nothing
     Just lastMerkleRoot' → do
       lastMerkleRootTokenName ← Monad.liftContractM
         "error 'saveRoot': invalid lastMerkleRoot token name"
         (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
-      lkup ← findMptRootTokenUtxo lastMerkleRootTokenName smrm
+      lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName smrm
       lkup' ←
         Monad.liftContractM
-          "error 'findPreviousMptRootTokenUtxo': failed to find last merkle root"
+          "error 'findPreviousMerkleRootTokenUtxo': failed to find last merkle root"
           $ lkup
       pure $ Just lkup'
 

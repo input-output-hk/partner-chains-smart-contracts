@@ -9,9 +9,9 @@ This specification details the main chain contract of a trustless sidechain syst
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
 - `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
-- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#31-merkle-root-insertion))
+- `MerkleRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#31-merkle-root-insertion))
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
-- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
+- `MerkleRootTokenValidator`: script address for storing `MerkleRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 - `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
 - `DsConfValidator`: validator holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
@@ -109,7 +109,7 @@ data SaveRootParams = SaveRootParams
   }
 ```
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
+Merkle roots are stored on-chain, using `MerkleRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MerkleRootTokenValidator` script address.
 
 **Redeemer:**
 
@@ -133,9 +133,9 @@ Minting policy verifies the following:
 
 Validator script verifies the following:
 
-- UTxOs containing an `MPTRootToken` cannot be unlocked from the script address
+- UTxOs containing an `MerkleRootToken` cannot be unlocked from the script address
 
-![MPTRootToken minting](Spec/MPTRoot.svg)
+![MerkleRootToken minting](Spec/MerkleRoot.svg)
 
 <figcaption align = "center"><i>Merkle root token minting</i></figcaption><br />
 
@@ -185,7 +185,7 @@ data MintParams = MintParams
 
 Minting policy verifies the following:
 
-- `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
+- `MerkleRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MerkleRootTokenValidator` script address
 - recipient, amount, index and previousMerkleRoot combined with merkleProof match against merkleRootHash
 - `claimTransactionHash` of the transaction is NOT included in the distributed set (more details about the distributed set can be found [here](./DistributedSet.md))
 - a new entry with the `claimTransactionHash` of the transaction is created in the distributed set

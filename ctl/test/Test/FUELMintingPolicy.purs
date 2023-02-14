@@ -21,7 +21,7 @@ import MerkleTree as MerkleTree
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import SidechainParams (SidechainParams(..))
-import Test.MPTRoot as Test.MPTRoot
+import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (assertMaxFee, fails, getOwnTransactionInput, toTxIn)
@@ -47,7 +47,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-      ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
+      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
       genesisUtxo ← getOwnTransactionInput
       let
         keyCount = 25
@@ -88,7 +88,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
 
         merkleProof = unsafePartial $ fromJust $ MerkleTree.lookupMp ownEntryBytes
           merkleTree
-      void $ Test.MPTRoot.saveRoot
+      void $ Test.MerkleRoot.saveRoot
         { sidechainParams
         , merkleTreeEntries: [ ownEntry ]
         , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -120,7 +120,7 @@ testScenarioSuccess2 =
     $ \alice → Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-        ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
+        ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -140,7 +140,7 @@ testScenarioSuccess2 =
 
         { sidechainParams } ← initSidechain initScParams
 
-        { combinedMerkleProofs } ← Test.MPTRoot.saveRoot
+        { combinedMerkleProofs } ← Test.MerkleRoot.saveRoot
           { sidechainParams
           , merkleTreeEntries:
               let
@@ -248,7 +248,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
       Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess2`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-        ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes pkh
+        ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -267,7 +267,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
 
         { sidechainParams } ← initSidechain initScParams
 
-        { combinedMerkleProofs } ← Test.MPTRoot.saveRoot
+        { combinedMerkleProofs } ← Test.MerkleRoot.saveRoot
           { sidechainParams
           , merkleTreeEntries:
               let

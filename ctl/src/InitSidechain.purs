@@ -63,8 +63,8 @@ import FUELMintingPolicy (FUELMint(FUELMint))
 import FUELMintingPolicy as FUELMintingPolicy
 import GetSidechainAddresses (SidechainAddresses)
 import GetSidechainAddresses as GetSidechainAddresses
-import MPTRoot (SignedMerkleRootMint(SignedMerkleRootMint))
-import MPTRoot as MPTRoot
+import MerkleRoot (SignedMerkleRootMint(SignedMerkleRootMint))
+import MerkleRoot as MerkleRoot
 import SidechainParams (SidechainParams(SidechainParams))
 import UpdateCommitteeHash
   ( InitCommitteeHashMint(..)
@@ -198,7 +198,7 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Getting the mpt root token minting policy
   -----------------------------------
-  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy isp
+  { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
 
   -- Setting up the update committee hash validator
   -----------------------------------
@@ -209,7 +209,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       { sidechainParams: sc
       , uchAssetClass: committeeHashCurrencySymbol /\
           UpdateCommitteeHash.initCommitteeHashMintTn
-      , mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
+      , merkleRootTokenCurrencySymbol: merkleRootTokenMintingPolicyCurrencySymbol
       }
     committeeHashDatum = Datum
       $ PlutusData.toData
@@ -279,7 +279,7 @@ initDistributedSetLookupsAndContraints isp = do
 
   -- Getting the mpt root token minting policy / currency symbol
   -----------------------------------
-  { mptRootTokenMintingPolicyCurrencySymbol } ← getMptRootTokenPolicy isp
+  { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
 
   -- Initializing the distributed set
   -----------------------------------
@@ -324,7 +324,8 @@ initDistributedSetLookupsAndContraints isp = do
   -- FUEL minting policy
   fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
     ( FUELMint
-        { mptRootTokenCurrencySymbol: mptRootTokenMintingPolicyCurrencySymbol
+        { merkleRootTokenCurrencySymbol:
+            merkleRootTokenMintingPolicyCurrencySymbol
         , sidechainParams: sc
         , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
         }
@@ -602,36 +603,37 @@ getCommitteeHashPolicy isp = do
     (Value.scriptCurrencySymbol committeeHashPolicy)
   pure { committeeHashPolicy, committeeHashCurrencySymbol }
 
--- | `getMptRootTokenPolicy` grabs the mpt root token policy and currency
+-- | `getMerkleRootTokenPolicy` grabs the mpt root token policy and currency
 -- | symbol (potentially throwing an error if this is not possible).
-getMptRootTokenPolicy ∷
+getMerkleRootTokenPolicy ∷
   ∀ r.
   InitTokensParams r →
   Contract
     ()
-    { mptRootTokenMintingPolicy ∷ MintingPolicy
-    , mptRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
+    { merkleRootTokenMintingPolicy ∷ MintingPolicy
+    , merkleRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
     }
-getMptRootTokenPolicy isp = do
+getMerkleRootTokenPolicy isp = do
   let
     sc = toSidechainParams isp
-    msg = report "getMptRootTokenPolicy"
+    msg = report "getMerkleRootTokenPolicy"
 
   -- some awkwardness that we need the committee hash policy first.
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
 
   -- Then, we get the mpt root token minting policy..
-  mptRootTokenMintingPolicy ← MPTRoot.mptRootTokenMintingPolicy $
+  merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
     SignedMerkleRootMint
       { sidechainParams: sc
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       }
-  mptRootTokenMintingPolicyCurrencySymbol ←
+  merkleRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM
       (msg "Failed to get dsKeyPolicy CurrencySymbol")
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
-  pure { mptRootTokenMintingPolicy, mptRootTokenMintingPolicyCurrencySymbol }
+  pure
+    { merkleRootTokenMintingPolicy, merkleRootTokenMintingPolicyCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

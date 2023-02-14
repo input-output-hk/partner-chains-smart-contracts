@@ -7,8 +7,8 @@ import Mote.Monad as Mote.Monad
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
-import Test.MPTRoot as MPTRoot
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
+import Test.MerkleRoot as MerkleRoot
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options.Parsers as Options.Parsers
@@ -47,7 +47,7 @@ main = do
         , Test.PlutipTest.interpretPlutipTest CommitteeCandidateValidator.tests
         , Test.PlutipTest.interpretPlutipTest FUELMintingPolicy.tests
         , Test.PlutipTest.interpretPlutipTest UpdateCommitteeHash.tests
-        , Test.PlutipTest.interpretPlutipTest MPTRoot.tests
+        , Test.PlutipTest.interpretPlutipTest MerkleRoot.tests
         , Test.PlutipTest.interpretPlutipTest MerkleRootChaining.tests
         -- Plutip POC tests
         ----------------

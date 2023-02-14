@@ -20,7 +20,7 @@
 <g id="node3" class="node">
 <title>mintToken</title>
 <polygon fill="none" stroke="black" points="65,-74.5 65,-112.5 384,-112.5 384,-74.5 65,-74.5"/>
-<text text-anchor="middle" x="133.5" y="-89.8" font-family="Times,serif" font-size="14.00">Mint MPTRootToken</text>
+<text text-anchor="middle" x="133.5" y="-89.8" font-family="Times,serif" font-size="14.00">Mint MerkleRootToken</text>
 <polyline fill="none" stroke="black" points="202,-74.5 202,-112.5"/>
 <text text-anchor="start" x="210" y="-97.3" font-family="Times,serif" font-size="14.00">redeemer: SignedMerkleRoot </text>
 <text text-anchor="start" x="210" y="-82.3" font-family="Times,serif" font-size="14.00"> tx body: minted tokens</text>
@@ -32,30 +32,30 @@
 <polygon fill="black" stroke="black" points="194.1,-122.1 199.93,-113.25 189.85,-116.54 194.1,-122.1"/>
 <text text-anchor="middle" x="202.5" y="-134.8" font-family="Times,serif" font-size="14.00">references</text>
 </g>
-<!-- lastMPTRoot -->
+<!-- lastMerkleRoot -->
 <g id="node2" class="node">
-<title>lastMPTRoot</title>
+<title>lastMerkleRoot</title>
 <polygon fill="none" stroke="black" points="239,-164.5 239,-200.5 438,-200.5 438,-164.5 239,-164.5"/>
 <text text-anchor="middle" x="297.5" y="-178.8" font-family="Times,serif" font-size="14.00">UTxO with datum</text>
 <polyline fill="none" stroke="black" points="356,-164.5 356,-200.5"/>
 <text text-anchor="middle" x="397" y="-178.8" font-family="Times,serif" font-size="14.00">Merkle root</text>
 </g>
-<!-- lastMPTRoot&#45;&gt;mintToken -->
+<!-- lastMerkleRoot&#45;&gt;mintToken -->
 <g id="edge2" class="edge">
-<title>lastMPTRoot&#45;&gt;mintToken</title>
+<title>lastMerkleRoot&#45;&gt;mintToken</title>
 <path fill="none" stroke="black" stroke-dasharray="5,2" d="M316.25,-164.52C299.32,-151.6 275.78,-133.63 256.78,-119.14"/>
 <polygon fill="black" stroke="black" points="259.15,-116.54 249.07,-113.25 254.9,-122.1 259.15,-116.54"/>
 <text text-anchor="middle" x="319.5" y="-134.8" font-family="Times,serif" font-size="14.00">references</text>
 </g>
-<!-- mptRootAddr -->
+<!-- merkleRootAddr -->
 <g id="node4" class="node">
-<title>mptRootAddr</title>
+<title>merkleRootAddr</title>
 <polygon fill="none" stroke="black" points="150.5,-0.5 150.5,-36.5 298.5,-36.5 298.5,-0.5 150.5,-0.5"/>
 <text text-anchor="middle" x="224.5" y="-14.8" font-family="Times,serif" font-size="14.00">MPT root script address</text>
 </g>
-<!-- mintToken&#45;&gt;mptRootAddr -->
+<!-- mintToken&#45;&gt;merkleRootAddr -->
 <g id="edge3" class="edge">
-<title>mintToken&#45;&gt;mptRootAddr</title>
+<title>mintToken&#45;&gt;merkleRootAddr</title>
 <path fill="none" stroke="black" d="M224.5,-74.83C224.5,-66.61 224.5,-56.65 224.5,-47.45"/>
 <polygon fill="black" stroke="black" points="228,-47.52 224.5,-37.52 221,-47.52 228,-47.52"/>
 </g>

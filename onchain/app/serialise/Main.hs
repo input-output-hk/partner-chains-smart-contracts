@@ -15,8 +15,8 @@ import System.FilePath qualified as FilePath
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
-import TrustlessSidechain.MPTRootTokenValidator qualified as MPTRootTokenValidator
+import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
+import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
@@ -112,8 +112,8 @@ main =
           map
             (Bifunctor.first (FilePath.<.> "plutus"))
             [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
-            , ("MPTRootTokenValidator", MPTRootTokenValidator.serialisableValidator)
-            , ("MPTRootTokenMintingPolicy", MPTRootTokenMintingPolicy.serialisableMintingPolicy)
+            , ("MerkleRootTokenValidator", MerkleRootTokenValidator.serialisableValidator)
+            , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
             , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
             , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
             , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)

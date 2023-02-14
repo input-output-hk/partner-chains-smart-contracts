@@ -87,9 +87,9 @@ library
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy
+    TrustlessSidechain.MerkleRootTokenMintingPolicy
+    TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
-    TrustlessSidechain.MPTRootTokenMintingPolicy
-    TrustlessSidechain.MPTRootTokenValidator
     TrustlessSidechain.OffChain
     TrustlessSidechain.PoCECDSA
     TrustlessSidechain.PoCInlineDatum

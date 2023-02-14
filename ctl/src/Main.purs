@@ -17,8 +17,8 @@ import InitSidechain
   , initSidechainCommittee
   , initSidechainTokens
   )
-import MPTRoot (SaveRootParams(SaveRootParams))
-import MPTRoot as MPTRoot
+import MerkleRoot (SaveRootParams(SaveRootParams))
+import MerkleRoot as MerkleRoot
 import Options.Applicative (execParser)
 import Options.Specs (options)
 import Options.Types (Endpoint(..), Options)
@@ -149,7 +149,7 @@ runEndpoint scParams =
           , previousMerkleRoot
           , committeeSignatures: List.toUnfoldable committeeSignatures
           }
-      MPTRoot.saveRoot params
+      MerkleRoot.saveRoot params
         <#> unwrap
         >>> { transactionId: _ }
         >>> SaveRootResp
@@ -229,7 +229,7 @@ runEndpoint scParams =
             previousMerkleRoot: Just merkleRoot
           , sidechainEpoch
           }
-      saveRootTransactionId ← unwrap <$> MPTRoot.saveRoot saveRootParams
+      saveRootTransactionId ← unwrap <$> MerkleRoot.saveRoot saveRootParams
       committeeHashTransactionId ← unwrap <$>
         UpdateCommitteeHash.updateCommitteeHash uchParams
       pure $ CommitteeHandoverResp

@@ -77,8 +77,8 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import DistributedSet as DistributedSet
-import MPTRoot (SignedMerkleRootMint(..), findMptRootTokenUtxo)
-import MPTRoot as MPTRoot
+import MerkleRoot (SignedMerkleRootMint(..), findMerkleRootTokenUtxo)
+import MerkleRoot as MerkleRoot
 import MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import RawScripts (rawFUELMintingPolicy)
 import SidechainParams (SidechainParams)
@@ -90,7 +90,7 @@ import Utils.SerialiseData (serialiseData)
 -- | `FUELMint` is the data type to parameterize the minting policy.
 -- | Note: this matches the haskell onchain data type.
 newtype FUELMint = FUELMint
-  { mptRootTokenCurrencySymbol ∷ CurrencySymbol
+  { merkleRootTokenCurrencySymbol ∷ CurrencySymbol
   , sidechainParams ∷ SidechainParams
   , dsKeyCurrencySymbol ∷ CurrencySymbol
   }
@@ -100,10 +100,10 @@ derive instance Newtype FUELMint _
 instance ToData FUELMint where
   toData
     ( FUELMint
-        { mptRootTokenCurrencySymbol, sidechainParams, dsKeyCurrencySymbol }
+        { merkleRootTokenCurrencySymbol, sidechainParams, dsKeyCurrencySymbol }
     ) =
     Constr zero
-      [ toData mptRootTokenCurrencySymbol
+      [ toData merkleRootTokenCurrencySymbol
       , toData sidechainParams
       , toData dsKeyCurrencySymbol
       ]
@@ -154,7 +154,7 @@ addressFromCborBytes ∷ CborBytes → Maybe Address
 addressFromCborBytes = toPlutusAddress <=< addressFromBytes
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
--- | for the MPTRootToken. It contains:
+-- | for the MerkleRootToken. It contains:
 -- | - `index`: 32 bit unsigned integer, used to provide uniqueness among
 -- | transactions within the tree
 -- | - `amount`: 256 bit unsigned integer that represents amount of tokens
@@ -288,14 +288,14 @@ getFuelMintingPolicy ∷
     }
 getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
-  { mptRootTokenCurrencySymbol } ← MPTRoot.getMptRootTokenMintingPolicy
+  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
 
   policy ← fuelMintingPolicy $
     FUELMint
       { sidechainParams
-      , mptRootTokenCurrencySymbol
+      , merkleRootTokenCurrencySymbol
       , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
   fuelMintingPolicyCurrencySymbol ←
@@ -388,7 +388,7 @@ claimFUEL
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
         (msg "Couldn't find the parent Merkle tree root hash of the transaction")
-        =<< findMptRootTokenUtxoByRootHash sidechainParams rootHash
+        =<< findMerkleRootTokenUtxoByRootHash sidechainParams rootHash
 
     { inUtxo:
         { nodeRef
@@ -486,32 +486,32 @@ burnFUEL fuelMP { amount, recipient } = do
     , constraints: Constraints.mustMintValueWithRedeemer redeemer value
     }
 
--- | `findMptRootTokenUtxoByRootHash` attempts to find a UTxO with MptRootToken
+-- | `findMerkleRootTokenUtxoByRootHash` attempts to find a UTxO with MerkleRootToken
 -- | as given by the `RootHash`
 -- TODO: refactor to utility module
-findMptRootTokenUtxoByRootHash ∷
+findMerkleRootTokenUtxoByRootHash ∷
   SidechainParams →
   RootHash →
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findMptRootTokenUtxoByRootHash sidechainParams rootHash = do
+findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
 
   -- Then, we get the mpt root token minting policy..
   let
 
     msg = Logging.mkReport
-      { mod: "FUELMintingPolicy", fun: "findMptRootTokenUtxoByRootHash" }
+      { mod: "FUELMintingPolicy", fun: "findMerkleRootTokenUtxoByRootHash" }
     smrm = SignedMerkleRootMint
       { sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       }
   merkleRootTokenName ←
     liftContractM
-      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
+      (msg "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
       $ Value.mkTokenName
       $ unRootHash rootHash
-  findMptRootTokenUtxo merkleRootTokenName smrm
+  findMerkleRootTokenUtxo merkleRootTokenName smrm
 
 -- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash

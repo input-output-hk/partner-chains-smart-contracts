@@ -8,7 +8,7 @@
 -- |      - Querying utxos regarding the update committee hash
 -- |
 -- | Note: the reason for the existence of this module is because there are some
--- | cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash` without
+-- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module UpdateCommitteeHash.Utils
   ( committeeHashPolicy

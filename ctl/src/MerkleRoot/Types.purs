@@ -1,9 +1,9 @@
--- | `MPTRoot.Types` contains types relating to the `MPTRoot` endpoint.
+-- | `MerkleRoot.Types` contains types relating to the `MerkleRoot` endpoint.
 -- |
 -- |  Note: the reason for the existence of this module is because without this
--- | module, there are some cyclic dependencies between `MPTRoot` and
+-- | module, there are some cyclic dependencies between `MerkleRoot` and
 -- | `UpdateCommitteeHash`.
-module MPTRoot.Types
+module MerkleRoot.Types
   ( SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   , SaveRootParams(SaveRootParams)
@@ -70,7 +70,7 @@ instance ToData SignedMerkleRootMint where
       , toData updateCommitteeHashCurrencySymbol
       ]
 
--- | `SaveRootParams` is the offchain parameter for MPTRoot (`MPTRoot.saveRoot`)
+-- | `SaveRootParams` is the offchain parameter for MerkleRoot (`MerkleRoot.saveRoot`)
 -- | endpoint.
 newtype SaveRootParams = SaveRootParams
   { sidechainParams ∷ SidechainParams
@@ -85,7 +85,7 @@ newtype SaveRootParams = SaveRootParams
 -- | ```
 -- |  blake2b(cbor(MerkleRootInsertionMessage))
 -- | ```
--- | See `MPTRoot.Utils.serialiseMrimHash`.
+-- | See `MerkleRoot.Utils.serialiseMrimHash`.
 newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams ∷ SidechainParams
   , merkleRoot ∷ RootHash

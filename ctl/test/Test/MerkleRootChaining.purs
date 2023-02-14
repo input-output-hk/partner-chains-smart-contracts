@@ -14,7 +14,7 @@ import Data.BigInt as BigInt
 import FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import InitSidechain as InitSidechain
 import Mote.Monad as Mote.Monad
-import Test.MPTRoot as Test.MPTRoot
+import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
@@ -51,7 +51,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       ownPaymentPubKeyHash ← Monad.liftedM
         "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
-      ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes
+      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
         ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
@@ -79,7 +79,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       -------------------------------
       Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 2. saving a merkle root"
-      { merkleRoot: merkleRoot2 } ← Test.MPTRoot.saveRoot
+      { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
         , merkleTreeEntries:
             [ MerkleTreeEntry
@@ -126,7 +126,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       -------------------------------
       Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 5. saving the merkle root"
-      { merkleRoot: merkleRoot5 } ← Test.MPTRoot.saveRoot
+      { merkleRoot: merkleRoot5 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
         , merkleTreeEntries:
             [ MerkleTreeEntry
@@ -146,7 +146,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       -------------------------------
       Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 6. saving the merkle root"
-      { merkleRoot: merkleRoot6 } ← Test.MPTRoot.saveRoot
+      { merkleRoot: merkleRoot6 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
         , merkleTreeEntries:
             [ MerkleTreeEntry
@@ -192,7 +192,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       ownPaymentPubKeyHash ← Monad.liftedM
         "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
-      ownRecipient ← Test.MPTRoot.paymentPubKeyHashToBech32Bytes
+      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
         ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
@@ -220,7 +220,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       -------------------------------
       Log.logInfo'
         "'Test.MerkleRootChaining.testScenario2': 2. saving the merkle root"
-      { merkleRoot: merkleRoot2 } ← Test.MPTRoot.saveRoot
+      { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
         , merkleTreeEntries:
             [ MerkleTreeEntry

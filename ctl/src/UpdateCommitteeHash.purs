@@ -30,8 +30,8 @@ import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import MPTRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
-import MPTRoot.Utils as MPTRoot.Utils
+import MerkleRoot.Types (SignedMerkleRootMint(SignedMerkleRootMint))
+import MerkleRoot.Utils as MerkleRoot.Utils
 import SidechainParams (SidechainParams(..))
 import Types (assetClass, assetClassValue)
 import UpdateCommitteeHash.Types
@@ -94,11 +94,12 @@ runUpdateCommitteeHash
       { sidechainParams: sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       }
-  mptRootTokenMintingPolicy ← MPTRoot.Utils.mptRootTokenMintingPolicy smrm
-  mptRootTokenCurrencySymbol ←
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
     liftContractM
-      (msg "Failed to get mptRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol mptRootTokenMintingPolicy
+      (msg "Failed to get merkleRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Building the new committee hash / verifying that the new committee was
   -- signed (doing this offchain makes error messages better)...
@@ -141,7 +142,7 @@ runUpdateCommitteeHash
       { sidechainParams
       , uchAssetClass: assetClass committeeHashCurrencySymbol
           committeeHashTokenName
-      , mptRootTokenCurrencySymbol
+      , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
   let valHash = Scripts.validatorHash updateValidator
@@ -167,7 +168,7 @@ runUpdateCommitteeHash
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
-  maybePreviousMerkleRoot ← MPTRoot.Utils.findPreviousMptRootTokenUtxo
+  maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
     previousMerkleRoot
     smrm
 

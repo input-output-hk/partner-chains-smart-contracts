@@ -1,9 +1,9 @@
--- | `MPTRoot` contains the endpoint functionality for the `MPTRoot` endpoint
-module MPTRoot
-  ( module MPTRoot.Types
-  , module MPTRoot.Utils
+-- | `MerkleRoot` contains the endpoint functionality for the `MerkleRoot` endpoint
+module MerkleRoot
+  ( module MerkleRoot.Types
+  , module MerkleRoot.Utils
   , saveRoot
-  , getMptRootTokenMintingPolicy
+  , getMerkleRootTokenMintingPolicy
   ) where
 
 import Contract.Prelude
@@ -36,17 +36,17 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
-import MPTRoot.Types
+import MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   , SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   )
-import MPTRoot.Utils
-  ( findMptRootTokenUtxo
-  , findPreviousMptRootTokenUtxo
-  , mptRootTokenMintingPolicy
-  , mptRootTokenValidator
+import MerkleRoot.Utils
+  ( findMerkleRootTokenUtxo
+  , findPreviousMerkleRootTokenUtxo
+  , merkleRootTokenMintingPolicy
+  , merkleRootTokenValidator
   , normalizeSaveRootParams
   , serialiseMrimHash
   )
@@ -62,31 +62,31 @@ import Utils.Crypto as Utils.Crypto
 import Utils.Logging (class Display)
 import Utils.Logging as Utils.Logging
 
--- | `getMptRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
+-- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters, and calls
--- | `mptRootTokenValidator`
-getMptRootTokenMintingPolicy ∷
+-- | `merkleRootTokenValidator`
+getMerkleRootTokenMintingPolicy ∷
   SidechainParams →
   Contract ()
-    { mptRootTokenMintingPolicy ∷ MintingPolicy
-    , mptRootTokenCurrencySymbol ∷ CurrencySymbol
+    { merkleRootTokenMintingPolicy ∷ MintingPolicy
+    , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
-getMptRootTokenMintingPolicy sidechainParams = do
-  let msg = report "getMptRootTokenMintingPolicy"
+getMerkleRootTokenMintingPolicy sidechainParams = do
+  let msg = report "getMerkleRootTokenMintingPolicy"
   updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
       (msg "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
-  policy ← mptRootTokenMintingPolicy $ SignedMerkleRootMint
+  policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
     , updateCommitteeHashCurrencySymbol
     }
-  mptRootTokenCurrencySymbol ←
+  merkleRootTokenCurrencySymbol ←
     liftContractM (msg "Cannot get currency symbol") $
       Value.scriptCurrencySymbol policy
-  pure $ { mptRootTokenMintingPolicy: policy, mptRootTokenCurrencySymbol }
+  pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷ SaveRootParams → Contract () TransactionHash
@@ -94,7 +94,7 @@ saveRoot = runSaveRoot <<< normalizeSaveRootParams
 
 -- | `runSaveRoot` is the main worker of the `saveRoot` endpoint.
 -- | Preconditions
--- |    - `SaveRootParams` must be normalized with `MPTRoot.Utils.normalizeSaveRootParams`
+-- |    - `SaveRootParams` must be normalized with `MerkleRoot.Utils.normalizeSaveRootParams`
 runSaveRoot ∷ SaveRootParams → Contract () TransactionHash
 runSaveRoot
   ( SaveRootParams
@@ -115,20 +115,21 @@ runSaveRoot
       { sidechainParams
       , updateCommitteeHashCurrencySymbol
       }
-  rootTokenMP ← mptRootTokenMintingPolicy smrm
+  rootTokenMP ← merkleRootTokenMintingPolicy smrm
   rootTokenCS ←
-    liftContractM (msg "Cannot get CurrencySymbol of mptRootTokenMintingPolicy")
+    liftContractM
+      (msg "Cannot get CurrencySymbol of merkleRootTokenMintingPolicy")
       $ Value.scriptCurrencySymbol rootTokenMP
-  rootTokenVal ← mptRootTokenValidator sidechainParams
+  rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
-      (msg "Invalid merkle root TokenName for mptRootTokenMintingPolicy")
+      (msg "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
       $ Value.mkTokenName
       $ MerkleTree.unRootHash merkleRoot
 
   -- Grab the transaction holding the last merkle root
   ---------------------------------------------------------
-  maybePreviousMerkleRootUtxo ← findPreviousMptRootTokenUtxo
+  maybePreviousMerkleRootUtxo ← findPreviousMerkleRootTokenUtxo
     previousMerkleRoot
     smrm
 
@@ -141,7 +142,7 @@ runSaveRoot
       { sidechainParams
       , uchAssetClass: updateCommitteeHashCurrencySymbol /\
           UpdateCommitteeHash.initCommitteeHashMintTn
-      , mptRootTokenCurrencySymbol: rootTokenCS
+      , merkleRootTokenCurrencySymbol: rootTokenCS
       }
   { index: committeeHashTxIn
   , value: committeeHashTxOut
@@ -233,4 +234,4 @@ runSaveRoot
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "MPTRoot", fun: _ }
+report = Utils.Logging.mkReport <<< { mod: "MerkleRoot", fun: _ }

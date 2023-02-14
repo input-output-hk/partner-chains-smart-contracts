@@ -14,8 +14,8 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import DistributedSet as DistributedSet
 import FUELMintingPolicy as FUELMintingPolicy
-import MPTRoot as MPTRoot
-import MPTRoot.Utils (mptRootTokenValidator)
+import MerkleRoot as MerkleRoot
+import MerkleRoot.Utils (merkleRootTokenValidator)
 import SidechainParams (SidechainParams)
 import Types (assetClass)
 import UpdateCommitteeHash as UpdateCommitteeHash
@@ -48,10 +48,11 @@ getSidechainAddresses scParams = do
     scParams
   let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
 
-  { mptRootTokenCurrencySymbol } ←
-    MPTRoot.getMptRootTokenMintingPolicy scParams
+  { merkleRootTokenCurrencySymbol } ←
+    MerkleRoot.getMerkleRootTokenMintingPolicy scParams
   let
-    mptRootTokenMintingPolicyId = currencySymbolToHex mptRootTokenCurrencySymbol
+    merkleRootTokenMintingPolicyId = currencySymbolToHex
+      merkleRootTokenCurrencySymbol
 
   { committeeHashCurrencySymbol, committeeHashTokenName } ←
     UpdateCommitteeHash.getCommitteeHashPolicy scParams
@@ -69,8 +70,8 @@ getSidechainAddresses scParams = do
     validator ← CommitteCandidateValidator.getCommitteeCandidateValidator
       scParams
     getAddr validator
-  mptRootTokenValidatorAddr ← do
-    validator ← mptRootTokenValidator scParams
+  merkleRootTokenValidatorAddr ← do
+    validator ← merkleRootTokenValidator scParams
     getAddr validator
 
   let
@@ -82,7 +83,7 @@ getSidechainAddresses scParams = do
         uch = UpdateCommitteeHash
           { sidechainParams: scParams
           , uchAssetClass: updateCommittHashParams
-          , mptRootTokenCurrencySymbol
+          , merkleRootTokenCurrencySymbol
           }
       validator ← updateCommitteeHashValidator uch
       getAddr validator
@@ -98,7 +99,7 @@ getSidechainAddresses scParams = do
   let
     mintingPolicies =
       [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
-      , "MPTRootTokenMintingPolicyId" /\ mptRootTokenMintingPolicyId
+      , "MerkleRootTokenMintingPolicyId" /\ merkleRootTokenMintingPolicyId
       , "CommitteeNftPolicyId" /\ committeeNftPolicyId
       , "DSKeyPolicy" /\ dsKeyPolicyPolicyId
       , "DSConfPolicy" /\ dsConfPolicyId
@@ -106,7 +107,7 @@ getSidechainAddresses scParams = do
 
     addresses =
       [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
-      , "MPTRootTokenValidator" /\ mptRootTokenValidatorAddr
+      , "MerkleRootTokenValidator" /\ merkleRootTokenValidatorAddr
       , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr

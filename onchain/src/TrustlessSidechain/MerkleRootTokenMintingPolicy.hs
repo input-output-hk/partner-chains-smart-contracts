@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.MPTRootTokenMintingPolicy where
+module TrustlessSidechain.MerkleRootTokenMintingPolicy where
 
 import PlutusTx.Prelude
 
@@ -80,10 +80,10 @@ mkMintingPolicy
     , previousMerkleRoot
     }
   ctx =
-    traceIfFalse "error 'MPTRootTokenMintingPolicy' previous merkle root not referenced" p1
-      && traceIfFalse "error 'MPTRootTokenMintingPolicy' verifyMultisig failed" p2
-      && traceIfFalse "error 'MPTRootTokenMintingPolicy' committee hash mismatch" p3
-      && traceIfFalse "error 'MPTRootTokenMintingPolicy' bad mint" p4
+    traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' verifyMultisig failed" p2
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' committee hash mismatch" p3
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p4
     where
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
@@ -107,7 +107,7 @@ mkMintingPolicy
                   OutputDatum d <- txOutDatum o =
                 IsData.unsafeFromBuiltinData $ getDatum d
               | otherwise = go ts
-            go [] = traceError "error 'MPTRootTokenMintingPolicy' no committee utxo given as reference input"
+            go [] = traceError "error 'MerkleRootTokenMintingPolicy' no committee utxo given as reference input"
          in go (txInfoReferenceInputs info)
 
       threshold :: Integer

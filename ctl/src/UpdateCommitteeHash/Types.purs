@@ -2,7 +2,7 @@
 -- | committee hash endpoint.
 -- |
 -- | Note: the reason for the existence of this module is because without this
--- | there are some cyclic dependencies between `MPTRoot` and `UpdateCommitteeHash`
+-- | there are some cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash`
 module UpdateCommitteeHash.Types
   ( UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -59,7 +59,7 @@ instance FromData UpdateCommitteeHashDatum where
 newtype UpdateCommitteeHash = UpdateCommitteeHash
   { sidechainParams ∷ SidechainParams
   , uchAssetClass ∷ AssetClass
-  , mptRootTokenCurrencySymbol ∷ CurrencySymbol
+  , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic UpdateCommitteeHash _
@@ -67,11 +67,11 @@ derive instance Newtype UpdateCommitteeHash _
 instance ToData UpdateCommitteeHash where
   toData
     ( UpdateCommitteeHash
-        { sidechainParams, uchAssetClass, mptRootTokenCurrencySymbol }
+        { sidechainParams, uchAssetClass, merkleRootTokenCurrencySymbol }
     ) = Constr zero
     [ toData sidechainParams
     , toData uchAssetClass
-    , toData mptRootTokenCurrencySymbol
+    , toData merkleRootTokenCurrencySymbol
     ]
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
