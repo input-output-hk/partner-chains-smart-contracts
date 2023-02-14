@@ -45,8 +45,8 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
-  ( TextEnvelopeType(PlutusScriptV2)
-  , textEnvelopeBytes
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
@@ -54,15 +54,12 @@ import Contract.Transaction
   , TransactionOutputWithRefScript
   , awaitTxConfirmed
   , balanceTx
-  , plutusV2Script
   , signTransaction
   , submit
   )
 import Contract.TxConstraints
   ( DatumPresence(..)
-  , TxConstraint(..)
   , TxConstraints
-  , singleton
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value
@@ -271,12 +268,13 @@ instance ToData FUELRedeemer where
 -- | policy
 fuelMintingPolicy ∷ FUELMint → Contract () MintingPolicy
 fuelMintingPolicy fm = do
-  fuelMPUnapplied ← plutusV2Script <$> textEnvelopeBytes
-    rawFUELMintingPolicy
-    PlutusScriptV2
+  let
+    script = decodeTextEnvelope rawFUELMintingPolicy >>=
+      plutusScriptV2FromEnvelope
 
-  applied ← Scripts.applyArgs fuelMPUnapplied [ toData fm ]
-  PlutusMintingPolicy <$> liftContractE applied
+  unapplied ← liftContractM "Decoding text envelope failed." script
+  applied ← liftContractE $ Scripts.applyArgs unapplied [ toData fm ]
+  pure $ PlutusMintingPolicy applied
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
 -- | (as required by the onchain mintng policy) via the given
@@ -458,7 +456,7 @@ claimFUEL
       , constraints:
           -- Minting the FUEL tokens
           Constraints.mustMintValueWithRedeemer redeemer value
-            <> mustPayToPubKeyAddress recipientPkh recipientSt value
+            <> mustPayToPubKeyAddress' recipientPkh recipientSt value
             <> Constraints.mustBeSignedBy ownPkh
 
             -- Referencing Merkle root
@@ -523,10 +521,11 @@ toStakePubKeyHash addr =
     _ → Nothing
 
 -- | Pay values to a public key address (with optional staking key)
-mustPayToPubKeyAddress ∷
+mustPayToPubKeyAddress' ∷
   PaymentPubKeyHash → Maybe StakePubKeyHash → Value → TxConstraints Void Void
-mustPayToPubKeyAddress pkh mStPkh =
-  singleton <<< MustPayToPubKeyAddress pkh mStPkh Nothing Nothing
+mustPayToPubKeyAddress' pkh = case _ of
+  Just skh → Constraints.mustPayToPubKeyAddress pkh skh
+  Nothing → Constraints.mustPayToPubKey pkh
 
 -- | Return the currency symbol and token name of the FUEL token
 getFuelAssetClass ∷ MintingPolicy → Contract () (CurrencySymbol /\ TokenName)

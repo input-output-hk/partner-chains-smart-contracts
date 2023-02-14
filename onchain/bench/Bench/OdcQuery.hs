@@ -126,7 +126,8 @@ getBabbageTxByHash txId conn =
 getRawTxByHash :: Text -> Connection -> IO (Maybe ByteString)
 getRawTxByHash txId conn =
   WebSockets.sendTextData conn (ByteString.Lazy.toStrict $ Aeson.encode $ getTxByHashRequest txId)
-    >> WebSockets.receiveData conn >>= \byteString -> case Aeson.eitherDecodeStrict byteString of
+    >> WebSockets.receiveData conn
+    >>= \byteString -> case Aeson.eitherDecodeStrict byteString of
       Right (Object json) ->
         let missingJsonField :: String -> IO a
             missingJsonField field =

@@ -53,7 +53,7 @@ tests = Mote.Monad.group "Committe candidate registration/deregistration" $ do
 runRegister ∷ Contract () Unit
 runRegister = do
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
-  ownUtxos ← liftedM "Cannot get UTxOs" (utxosAt ownAddr)
+  ownUtxos ← utxosAt ownAddr
   registrationUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin
     $ Map.keys ownUtxos

@@ -7,6 +7,7 @@ import Contract.Address
   , getNetworkId
   , getWalletAddress
   , ownPaymentPubKeyHash
+  , validatorHashEnterpriseAddress
   )
 import Contract.Log (logInfo')
 import Contract.Monad
@@ -31,11 +32,10 @@ import Contract.Scripts
   ( Validator(..)
   , applyArgs
   , validatorHash
-  , validatorHashEnterpriseAddress
   )
 import Contract.TextEnvelope
-  ( TextEnvelopeType(PlutusScriptV2)
-  , textEnvelopeBytes
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
@@ -45,7 +45,6 @@ import Contract.Transaction
   , awaitTxConfirmed
   , balanceTx
   , outputDatumDatum
-  , plutusV2Script
   , signTransaction
   , submit
   )
@@ -80,11 +79,13 @@ newtype DeregisterParams = DeregisterParams
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
 getCommitteeCandidateValidator sp = do
-  ccvUnapplied ← plutusV2Script <$> textEnvelopeBytes
-    rawCommitteeCandidateValidator
-    PlutusScriptV2
-  applied ← applyArgs ccvUnapplied [ toData sp ]
-  Validator <$> liftContractE applied
+  let
+    script = decodeTextEnvelope rawCommitteeCandidateValidator >>=
+      plutusScriptV2FromEnvelope
+
+  unapplied ← liftContractM "Decoding text envelope failed." script
+  applied ← liftContractE $ applyArgs unapplied [ toData sp ]
+  pure $ Validator applied
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
@@ -150,7 +151,7 @@ register
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
   ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
 
-  ownUtxos ← liftedM (msg "Cannot get own UTxOs") (utxosAt ownAddr)
+  ownUtxos ← utxosAt ownAddr
   validator ← getCommitteeCandidateValidator sidechainParams
   let
     valHash = validatorHash validator
@@ -195,8 +196,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let valHash = validatorHash validator
   valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
     (validatorHashEnterpriseAddress netId valHash)
-  ownUtxos ← liftedM (msg "Cannot get UTxOs") (utxosAt ownAddr)
-  valUtxos ← liftedM (msg "Cannot get val UTxOs") (utxosAt valAddr)
+  ownUtxos ← utxosAt ownAddr
+  valUtxos ← utxosAt valAddr
 
   ourDatums ← liftAff $ Map.toUnfoldable valUtxos # parTraverse
     \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →

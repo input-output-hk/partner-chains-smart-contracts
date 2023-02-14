@@ -2,13 +2,12 @@ module Test.PoCECDSA (testScenario) where
 
 import Contract.Prelude
 
-import Contract.Address (getNetworkId)
+import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractM
   , liftedE
-  , liftedM
   )
 import Contract.PlutusData
   ( class ToData
@@ -22,17 +21,15 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( Validator(..)
   , validatorHash
-  , validatorHashEnterpriseAddress
   )
 import Contract.TextEnvelope
-  ( TextEnvelopeType(PlutusScriptV2)
-  , textEnvelopeBytes
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
   , balanceTx
-  , plutusV2Script
   , signTransaction
   , submit
   )
@@ -49,10 +46,12 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 
 getValidator ∷ Contract () Validator
-getValidator =
-  (plutusV2Script >>> Validator) <$> textEnvelopeBytes
-    rawPoCECDSA
-    PlutusScriptV2
+getValidator = do
+  let
+    script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptV2FromEnvelope
+
+  unapplied ← liftContractM "Decoding text envelope failed." script
+  pure $ Validator unapplied
 
 newtype ECDSARed = ECDSARed
   { msg ∷ ByteArray
@@ -103,7 +102,7 @@ testVerification ecdsaRed = do
   valAddr ← liftContractM "cannot get validator address"
     (validatorHashEnterpriseAddress netId valHash)
 
-  scriptUtxos ← liftedM "Cannot get script utxos" (utxosAt valAddr)
+  scriptUtxos ← utxosAt valAddr
   txIn ← liftContractM "No UTxOs found at validator address"
     $ Set.findMin
     $ Map.keys scriptUtxos

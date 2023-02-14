@@ -131,8 +131,9 @@ ctlInitSidechainFlags CtlInitSidechain {..} =
       [ ["init"]
       , ["--sidechain-epoch", show cisSidechainEpoch]
       ]
-      $ flip map cisInitCommitteePubKeys $ \pubKey ->
-        ["--committee-pub-key", OffChain.showScPubKey pubKey]
+      $ flip map cisInitCommitteePubKeys $
+        \pubKey ->
+          ["--committee-pub-key", OffChain.showScPubKey pubKey]
 
 {- | 'ctlRegistrationFlags' generates the CLI flags that corresponds to register
  command

@@ -53,8 +53,7 @@ toTxIn txId txIdx =
 getUniqueUtxoAt ∷
   Address → Contract () (Tuple TransactionInput TransactionOutputWithRefScript)
 getUniqueUtxoAt addr = do
-  utxoMap ← Monad.liftedM "Failed to get utxos at script address" $
-    Utxos.utxosAt addr
+  utxoMap ← Utxos.utxosAt addr
   let
     err = Monad.throwContractError
       $ "Expected exactly one script address but got:"

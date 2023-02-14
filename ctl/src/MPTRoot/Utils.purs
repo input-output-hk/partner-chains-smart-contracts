@@ -26,10 +26,11 @@ import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
 import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
+  )
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
-import Contract.Transaction as Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import MPTRoot.Types
@@ -62,23 +63,27 @@ normalizeSaveRootParams (SaveRootParams p) =
 -- | `SignedMerkleRootMint`.
 mptRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
 mptRootTokenMintingPolicy sp = do
-  mptRootMP ← Transaction.plutusV2Script <$>
-    TextEnvelope.textEnvelopeBytes
-      RawScripts.rawMPTRootTokenMintingPolicy
-      PlutusScriptV2
-  applied ← Scripts.applyArgs mptRootMP [ PlutusData.toData sp ]
-  PlutusMintingPolicy <$> Monad.liftContractE applied
+  let
+    script = decodeTextEnvelope RawScripts.rawMPTRootTokenMintingPolicy
+      >>= plutusScriptV2FromEnvelope
+
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    [ PlutusData.toData sp ]
+  pure $ PlutusMintingPolicy applied
 
 -- | `mptRootTokenValidator` gets the validator corresponding to
 -- | 'RawScripts.rawMPTRootTokenValidator' paramaterized by `SidechainParams`.
 mptRootTokenValidator ∷ SidechainParams → Contract () Validator
 mptRootTokenValidator sp = do
-  mptRootVal ← Transaction.plutusV2Script <$>
-    TextEnvelope.textEnvelopeBytes
-      RawScripts.rawMPTRootTokenValidator
-      PlutusScriptV2
-  applied ← Scripts.applyArgs mptRootVal [ PlutusData.toData sp ]
-  Validator <$> Monad.liftContractE applied
+  let
+    script = decodeTextEnvelope RawScripts.rawMPTRootTokenValidator
+      >>= plutusScriptV2FromEnvelope
+
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    [ PlutusData.toData sp ]
+  pure $ Validator applied
 
 -- | `findMptRootTokenUtxo merkleRoot smrm` locates a utxo which
 -- |

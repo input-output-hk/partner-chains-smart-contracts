@@ -31,7 +31,7 @@ import Contract.Prelude
 import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
 import Contract.PlutusData
   ( class FromData
@@ -48,13 +48,14 @@ import Contract.Scripts
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
+  )
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
-  , plutusV2Script
   )
 import Contract.Utxos (utxosAt)
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
@@ -199,10 +200,13 @@ derive instance Newtype Node _
 -- Internally, this uses `Contract.Scripts.applyArgs`.
 mkValidatorParams ∷ String → Array PlutusData → Contract () Validator
 mkValidatorParams hexScript params = do
-  validatorBytes ← TextEnvelope.textEnvelopeBytes hexScript PlutusScriptV2
+  let
+    script = decodeTextEnvelope hexScript
+      >>= plutusScriptV2FromEnvelope
 
-  applied ← Scripts.applyArgs (plutusV2Script validatorBytes) params
-  Validator <$> Monad.liftContractE applied
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied params
+  pure $ Validator applied
 
 -- | `mkMintingPolicyParams hexScript params` returns the `MintingPolicy` of `hexScript`
 -- | with the script applied to `params`. This is a convenient alias
@@ -212,9 +216,13 @@ mkValidatorParams hexScript params = do
 -- Internally, this uses `Contract.Scripts.applyArgs`.
 mkMintingPolicyParams ∷ String → Array PlutusData → Contract () MintingPolicy
 mkMintingPolicyParams hexScript params = do
-  policyBytes ← TextEnvelope.textEnvelopeBytes hexScript PlutusScriptV2
-  applied ← Scripts.applyArgs (plutusV2Script policyBytes) params
-  PlutusMintingPolicy <$> Monad.liftContractE applied
+  let
+    script = decodeTextEnvelope hexScript
+      >>= plutusScriptV2FromEnvelope
+
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied params
+  pure $ PlutusMintingPolicy applied
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
@@ -377,8 +385,7 @@ findDsConfOutput ds = do
       "Couldn't derive distributed set configuration validator address"
       $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
 
-  utxos ← liftedM (msg "Cannot get Distributed Set configuration UTxOs")
-    (utxosAt scriptAddr)
+  utxos ← utxosAt scriptAddr
 
   out ←
     liftContractM
@@ -430,12 +437,10 @@ findDsOutput ∷
 findDsOutput ds tn = do
   netId ← getNetworkId
   scriptAddr ← insertAddress netId ds
-  utxos ← liftedM (msg "Cannot get Distributed Set UTxOs") (utxosAt scriptAddr)
+  utxos ← utxosAt scriptAddr
   go $ Map.toUnfoldable utxos
 
   where
-
-  msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
 
   go utxos' =
     case Array.uncons utxos' of

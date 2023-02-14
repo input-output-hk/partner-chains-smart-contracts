@@ -8,6 +8,7 @@
   , "codec-argonaut"
   , "const"
   , "control"
+  , "datetime"
   , "effect"
   , "exceptions"
   , "foldable-traversable"

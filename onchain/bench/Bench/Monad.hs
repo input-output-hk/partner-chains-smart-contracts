@@ -84,7 +84,7 @@ import Plutus.V2.Ledger.Api (
 -- web sockets
 import Network.WebSockets (Connection)
 
---aeson
+-- aeson
 
 import Data.Aeson (Value (..))
 import Data.Aeson qualified as Aeson
@@ -288,7 +288,8 @@ benchCtl description independentVarIx cmd = do
                     "`benchCtl` json missing `transactionId` field: " ++ ByteString.Char8.unpack stdout
             Left err ->
               Exception.throwIO $
-                GetTxFeeError $ "`benchCtl` internal error stdout json parse from ctl: " ++ err
+                GetTxFeeError $
+                  "`benchCtl` internal error stdout json parse from ctl: " ++ err
 
     (fee, txHash) <- getFeeAndTxHash
 

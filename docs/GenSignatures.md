@@ -18,7 +18,7 @@ In order to run the system, we require the following runtime dependencies.
 - `ogmios` which provides a WebSocket interface to interact with the `cardano-node`
 - `ogmios-datum-cache` is used to query datums and confirm transactions[^1]
 - `postgres` is the database backing `ogmios-datum-cache`
-- `ctl-server` is used to apply arguments to Plutus scripts
+- `kupo` is used to queries utxos, and other on-chain information
 
 [^1]: The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
 
@@ -31,8 +31,8 @@ $ nix run .#ctl-runtime-preview
 This will run
 - `cardano-node` on the preview test net
 - `ogmios` on port 1337
-- `ctl-server` on port 8081
 - `ogmios-datum-cache` on port 9999
+- `kupo` on port 1442
 
 An interested reader can find details in the [CTL project documentation](https://github.com/Plutonomicon/cardano-transaction-lib/blob/87233da45b7c433c243c539cb4d05258e551e9a1/doc/runtime.md).
 
@@ -88,7 +88,7 @@ CONTAINER ID   IMAGE                                                 COMMAND    
 f6cdfabd6b4e   ogmios:h2rh7q74qffjcs8i6n4bpc7v3pr8fmjy               "/nix/store/p7bpdnxq…"   4 days ago   Up 19 minutes   0.0.0.0:1337->1337/tcp, :::1337->1337/tcp   store_ogmios_1
 1c4b35d68669   inputoutput/cardano-node:1.35.4                       "entrypoint run --co…"   4 days ago   Up 19 minutes   0.0.0.0:3001->3001/tcp, :::3001->3001/tcp   store_cardano-node_1
 b9e50dde2aab   postgres:13                                           "docker-entrypoint.s…"   4 days ago   Up 19 minutes   0.0.0.0:5432->5432/tcp, :::5432->5432/tcp   store_postgres-preview_1
-b430e7900e12   ctl-server:iskx1y6l3nfab5bv6sdhl13csc756rax           "/nix/store/p7bpdnxq…"   4 days ago   Up 19 minutes   0.0.0.0:8081->8081/tcp, :::8081->8081/tcp   store_ctl-server_1
+b430e7900e12   kupo:iskx1y6l3nfab5bv6sdhl13csc756rax           "/nix/store/p7bpdnxq…"   4 days ago   Up 19 minutes   0.0.0.0:1442->1442/tcp, :::8081->8081/tcp   store_kupo_1
 ```
 and make note of the docker image `store_cardano_node_1`.
 

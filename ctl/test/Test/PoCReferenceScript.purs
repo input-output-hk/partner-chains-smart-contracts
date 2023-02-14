@@ -10,11 +10,13 @@ import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (Validator)
+import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction (Language(PlutusV2), ScriptRef(PlutusScriptRef))
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
+  )
+import Contract.Transaction (ScriptRef(PlutusScriptRef))
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( DatumPresence(DatumWitness)
@@ -78,27 +80,32 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
-      toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCToReferenceScript
-        PlutusScriptV2
       let
-        toReferenceValidator =
-          wrap $ wrap $ toReferenceValidatorBytes /\ PlutusV2 ∷ Validator
+        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript
+          >>= plutusScriptV2FromEnvelope
+
+      toReferenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+        toReferenceScript
+      let
+        toReferenceValidator = Validator toReferenceUnapplied
         toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
         toReferenceValidatorDat = Datum $ PlutusData.toData $ unit
         toReferenceValidatorAddress = Address.scriptHashAddress
           toReferenceValidatorHash
-
-      referenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCReferenceScript
-        PlutusScriptV2
+          Nothing
       let
-        referenceValidator =
-          wrap $ wrap $ referenceValidatorBytes /\ PlutusV2 ∷ Validator
+        referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceScript
+          >>= plutusScriptV2FromEnvelope
+
+      referenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+        referenceScript
+      let
+        referenceValidator = Validator referenceUnapplied
         referenceValidatorHash = Scripts.validatorHash referenceValidator
         referenceValidatorDat = Datum $ PlutusData.toData $ unit
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
+          Nothing
 
         referenceScriptRef =
           PlutusScriptRef (unwrap referenceValidator) ∷ ScriptRef
@@ -186,27 +193,33 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
   $ \alice → Wallet.withKeyWallet alice do
       -- START of duplicated code from `testScenario1`
       -- 1.
-      toReferenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCToReferenceScript
-        PlutusScriptV2
       let
-        toReferenceValidator =
-          wrap $ wrap $ toReferenceValidatorBytes /\ PlutusV2 ∷ Validator
+        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript
+          >>= plutusScriptV2FromEnvelope
+
+      toReferenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+        toReferenceScript
+      let
+        toReferenceValidator = Validator toReferenceUnapplied
         toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
         toReferenceValidatorDat = Datum $ PlutusData.toData $ unit
         toReferenceValidatorAddress = Address.scriptHashAddress
           toReferenceValidatorHash
+          Nothing
 
-      referenceValidatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCReferenceScript
-        PlutusScriptV2
       let
-        referenceValidator =
-          wrap $ wrap $ referenceValidatorBytes /\ PlutusV2 ∷ Validator
+        referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceScript
+          >>= plutusScriptV2FromEnvelope
+
+      referenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+        referenceScript
+      let
+        referenceValidator = Validator referenceUnapplied
         referenceValidatorHash = Scripts.validatorHash referenceValidator
         referenceValidatorDat = Datum $ PlutusData.toData $ unit
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
+          Nothing
 
         referenceScriptRef =
           PlutusScriptRef (unwrap referenceValidator) ∷ ScriptRef

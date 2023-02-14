@@ -6,17 +6,16 @@ import Contract.Prelude
 
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (liftedE, liftedM)
+import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (Validator)
+import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction
-  ( Language(PlutusV2)
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
@@ -55,13 +54,15 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
-      validatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCSerialiseData
-        PlutusScriptV2
       let
-        validator = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
+        script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
+          plutusScriptV2FromEnvelope
+
+      unapplied ← liftContractM "Decoding text envelope failed." script
+      let
+        validator = Validator unapplied
         validatorHash = Scripts.validatorHash validator
-        validatorAddress = Address.scriptHashAddress validatorHash
+        validatorAddress = Address.scriptHashAddress validatorHash Nothing
       -- Getting this validator's datum is a bit confusing..
       -- First, we have
       --  - The integer 69
@@ -137,13 +138,15 @@ testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
-      validatorBytes ← TextEnvelope.textEnvelopeBytes
-        RawScripts.rawPoCSerialiseData
-        PlutusScriptV2
       let
-        validator = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
+        script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
+          plutusScriptV2FromEnvelope
+
+      unapplied ← liftContractM "Decoding text envelope failed." script
+      let
+        validator = Validator unapplied
         validatorHash = Scripts.validatorHash validator
-        validatorAddress = Address.scriptHashAddress validatorHash
+        validatorAddress = Address.scriptHashAddress validatorHash Nothing
       -- Getting this validator's datum is a bit confusing..
       -- First, we have
       --  - The integer 69

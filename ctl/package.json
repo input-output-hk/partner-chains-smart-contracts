@@ -14,8 +14,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@emurgo/cardano-serialization-lib-browser": "11.0.5",
-    "@emurgo/cardano-serialization-lib-nodejs": "11.0.5",
+    "apply-args-browser": "0.0.1",
+    "apply-args-nodejs": "0.0.1",
+    "@emurgo/cardano-message-signing-browser": "1.0.1",
+    "@emurgo/cardano-message-signing-nodejs": "1.0.1",
+    "@emurgo/cardano-serialization-lib-browser": "^11.1.1-alpha.1",
+    "@emurgo/cardano-serialization-lib-nodejs": "11.1.1-alpha.1",
+    "base64-js": "^1.5.1",
+    "@noble/secp256k1": "^1.7.0",
     "big-integer": "1.6.51",
     "blakejs": "1.2.1",
     "bufferutil": "4.0.5",
@@ -23,11 +29,11 @@
     "node-polyfill-webpack-plugin": "1.1.4",
     "puppeteer-core": "^15.3.2",
     "reconnecting-websocket": "4.4.0",
-    "secp256k1": "^4.0.3",
     "uniqid": "5.4.0",
-    "utf-8-validate": "5.0.9",
+    "secp256k1": "^4.0.3",
     "ws": "8.4.0",
-    "xhr2": "0.2.1"
+    "xhr2": "0.2.1",
+    "@mlabs-haskell/json-bigint": " 1.0.0"
   },
   "bundleDependencies": true,
   "devDependencies": {
