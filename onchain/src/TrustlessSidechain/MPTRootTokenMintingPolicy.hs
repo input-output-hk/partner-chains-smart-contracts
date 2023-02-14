@@ -136,7 +136,8 @@ mkMintingPolicy
                   (txOutValue (txInInfoResolved txInInfo))
                   ownCurrencySymbol
                   (TokenName tn)
-                  > 0 || go rest
+                  > 0
+                  || go rest
               go [] = False
            in go (txInfoReferenceInputs info)
       p2 =

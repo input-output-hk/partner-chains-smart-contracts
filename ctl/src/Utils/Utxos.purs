@@ -5,7 +5,6 @@ import Contract.Prelude
 
 import Contract.Address (Address)
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Utxos as Utxos
 import Contract.Value (Value)
@@ -22,10 +21,7 @@ findUtxoByValueAt ∷
   Contract ()
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUtxoByValueAt addr p = do
-  scriptUtxos ←
-    Monad.liftedM
-      "error 'Utils.Utxos.findUtxoByValueAt': 'Contract.Utxos.utxosAt' failed"
-      $ Utxos.utxosAt addr
+  scriptUtxos ← Utxos.utxosAt addr
   let
     go _txIn txOut = p (unwrap (unwrap txOut).output).amount
   pure $ FoldableWithIndex.findWithIndex go scriptUtxos

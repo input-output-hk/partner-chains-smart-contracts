@@ -48,7 +48,7 @@ type Config =
     paymentSigningKeyFile ∷ Maybe FilePath
   , -- | Filepath of the stake signing key of the wallet owner
     stakeSigningKeyFile ∷ Maybe FilePath
-  , -- | Network configuration of the runtime dependencies (CTL-server, ogmios, ogmios-datum-cache)
+  , -- | Network configuration of the runtime dependencies (kupo, ogmios, ogmios-datum-cache)
     runtimeConfig ∷ Maybe RuntimeConfig
   }
 
@@ -148,6 +148,6 @@ instance Show CommitteeInput where
 type RuntimeConfig =
   { ogmios ∷ Maybe ServerConfig
   , ogmiosDatumCache ∷ Maybe ServerConfig
-  , ctlServer ∷ Maybe ServerConfig
+  , kupo ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }

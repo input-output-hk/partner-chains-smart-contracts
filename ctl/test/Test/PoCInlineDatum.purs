@@ -10,12 +10,11 @@ import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (Validator)
+import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
-import Contract.Transaction
-  ( Language(PlutusV2)
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
@@ -58,13 +57,16 @@ testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
-      validatorBytes ← TextEnvelope.textEnvelopeBytes RawScripts.rawPoCInlineDatum
-        PlutusScriptV2
       let
-        validator = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
+        script = decodeTextEnvelope RawScripts.rawPoCInlineDatum >>=
+          plutusScriptV2FromEnvelope
+
+      unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+      let
+        validator = Validator unapplied
         validatorHash = Scripts.validatorHash validator
         validatorDat = Datum $ PlutusData.toData $ BigInt.fromInt 69
-        validatorAddress = Address.scriptHashAddress validatorHash
+        validatorAddress = Address.scriptHashAddress validatorHash Nothing
 
       -- 2.
       void do
@@ -88,8 +90,7 @@ testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
 
       -- 3.
       void do
-        utxoMap ← Monad.liftedM "Failed to get utxos at script address" $
-          Utxos.utxosAt validatorAddress
+        utxoMap ← Utxos.utxosAt validatorAddress
 
         Applicative.when (length utxoMap /= 1)
           $ Monad.throwContractError
@@ -135,13 +136,16 @@ testScenario2 = Mote.Monad.test "PoCInlineDatum: testScenario2"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
-      validatorBytes ← TextEnvelope.textEnvelopeBytes RawScripts.rawPoCInlineDatum
-        PlutusScriptV2
       let
-        validator = wrap $ wrap $ validatorBytes /\ PlutusV2 ∷ Validator
+        script = decodeTextEnvelope RawScripts.rawPoCInlineDatum >>=
+          plutusScriptV2FromEnvelope
+
+      unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+      let
+        validator = Validator unapplied
         validatorHash = Scripts.validatorHash validator
         validatorDat = Datum $ PlutusData.toData $ BigInt.fromInt 69
-        validatorAddress = Address.scriptHashAddress validatorHash
+        validatorAddress = Address.scriptHashAddress validatorHash Nothing
 
       -- 2.
       void do
@@ -165,8 +169,7 @@ testScenario2 = Mote.Monad.test "PoCInlineDatum: testScenario2"
 
       -- 3.
       Test.Utils.fails do
-        utxoMap ← Monad.liftedM "Failed to get utxos at script address" $
-          Utxos.utxosAt validatorAddress
+        utxoMap ← Utxos.utxosAt validatorAddress
 
         Applicative.when (length utxoMap /= 1)
           $ Monad.throwContractError

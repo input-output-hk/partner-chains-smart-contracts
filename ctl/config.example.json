@@ -14,7 +14,7 @@
       "path": null
     },
     "ogmiosDatumCache": null,
-    "ctlServer": null
+    "kupo": null
   },
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
   "stakeSigningKeyFile": null

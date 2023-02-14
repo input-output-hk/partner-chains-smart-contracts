@@ -7,7 +7,6 @@ import Contract.Config
   , ServerConfig
   , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
-  , defaultServerConfig
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -16,6 +15,7 @@ import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.UInt as UInt
 import MerkleTree (RootHash)
 import Options.Applicative
   ( Parser
@@ -137,9 +137,10 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultDatumCacheWsConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
 
-  ctlServerConfig ← serverConfigSpec "ctl-server" $
-    fromMaybe defaultServerConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ctlServer)
+  kupoConfig ← serverConfigSpec "kupo" $
+    fromMaybe defaultKupoServerConfig
+      (maybeConfig >>= _.runtimeConfig >>= _.kupo)
+
   in
     { scParams
     , endpoint
@@ -151,10 +152,18 @@ withCommonOpts maybeConfig endpointParser = ado
         , walletSpec = Just $ UseKeys
             (PrivatePaymentKeyFile pSkey)
             (PrivateStakeKeyFile <$> stSkey)
-        , ctlServerConfig = Just ctlServerConfig
+        , kupoConfig = kupoConfig
         , datumCacheConfig = datumCacheConfig
         , ogmiosConfig = ogmiosConfig
         }
+    }
+  where
+  -- the default server config upstream is different than Kupo's defaults
+  defaultKupoServerConfig =
+    { port: UInt.fromInt 1442
+    , host: "localhost"
+    , secure: false
+    , path: Nothing
     }
 
 -- | Payment signing key file CLI parser

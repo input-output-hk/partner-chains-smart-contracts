@@ -35,13 +35,14 @@ import Contract.Scripts
   , Validator(..)
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (TextEnvelopeType(PlutusScriptV2))
-import Contract.TextEnvelope as TextEnvelope
+import Contract.TextEnvelope
+  ( decodeTextEnvelope
+  , plutusScriptV2FromEnvelope
+  )
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
   )
-import Contract.Transaction as Transaction
 import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
@@ -60,22 +61,25 @@ import Utils.Utxos as Utils.Utxos
 
 committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
 committeeHashPolicy sp = do
-  policyUnapplied ← Transaction.plutusV2Script <$>
-    TextEnvelope.textEnvelopeBytes
-      RawScripts.rawCommitteeHashPolicy
-      PlutusScriptV2
+  let
+    script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
+      >>= plutusScriptV2FromEnvelope
 
-  applied ← Scripts.applyArgs policyUnapplied [ PlutusData.toData sp ]
-  PlutusMintingPolicy <$> Monad.liftContractE applied
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    [ PlutusData.toData sp ]
+  pure $ PlutusMintingPolicy applied
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
 updateCommitteeHashValidator sp = do
-  validatorUnapplied ← Transaction.plutusV2Script <$>
-    TextEnvelope.textEnvelopeBytes
-      RawScripts.rawCommitteeHashValidator
-      PlutusScriptV2
-  applied ← Scripts.applyArgs validatorUnapplied [ PlutusData.toData sp ]
-  Validator <$> Monad.liftContractE applied
+  let
+    script = decodeTextEnvelope RawScripts.rawCommitteeHashValidator
+      >>= plutusScriptV2FromEnvelope
+
+  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    [ PlutusData.toData sp ]
+  pure $ Validator applied
 
 -- | `normalizeCommitteeHashParams` modifies the following fields in
 -- | `UpdateCommitteeHashParams` fields to satisfy the following properties
