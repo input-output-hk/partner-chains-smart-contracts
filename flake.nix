@@ -124,7 +124,7 @@
           projectName = "trustless-sidechain-ctl";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = ./ctl;
+            path = ./offchain;
             name = "${projectName}-src";
             # TODO: Add more filters
             filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
@@ -175,7 +175,7 @@
           make format_check cabalfmt_check lint
           popd
 
-          pushd ${self}/ctl
+          pushd ${self}/offchain
           make check-format
           popd
 
@@ -206,7 +206,7 @@
         let
           name = "trustless-sidechain-cli";
           version = "0.1.0";
-          src = ./ctl;
+          src = ./offchain;
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
