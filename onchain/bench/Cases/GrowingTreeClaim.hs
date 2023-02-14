@@ -5,26 +5,18 @@ module Cases.GrowingTreeClaim where
 
 import Bench (Bench, BenchConfig (..))
 import Bench qualified
-
-import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
-import Ctl qualified
-
+import Cases.FUELMintingPolicy qualified
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
-
-import Data.List qualified as List
-
 import Control.Monad.Reader qualified as Reader
-
+import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
+import Ctl qualified
+import Data.Foldable qualified as Foldable
+import Data.List qualified as List
+import Data.Text qualified as Text
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (MerkleTreeEntry (..), SidechainParams (..))
-
-import Data.Text qualified as Text
-
-import Data.Foldable qualified as Foldable
-
-import Cases.FUELMintingPolicy qualified
 
 {- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which
 
@@ -46,8 +38,7 @@ growingTreeClaim = do
   -- we could write a lowlevel / precise tool that'll solve exactly this
   -- problem.
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
-  -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ readFile "payment.addr"
+  addr <- Bench.readAddr
 
   -- Benchmark suite
   --------------------

@@ -14,6 +14,7 @@ module Bench (
   plotOnChainWithLinearRegression,
   plotXYWithLinearRegression,
   queryAddrUtxos,
+  readAddr,
   overrideBenchConfigPathFromEnv,
 
   -- * "Bench.BenchResults" reexports
