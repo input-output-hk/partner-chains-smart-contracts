@@ -8,6 +8,7 @@ import Bench qualified
 import Control.Monad qualified as Monad
 
 import Cases.FUELMintingPolicy qualified as FUELMintingPolicy
+import Cases.GrowingTreeClaim qualified as GrowingTreeClaim
 import Cases.InitSidechain qualified as InitSidechain
 import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
 
@@ -70,3 +71,8 @@ main = do
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "InitSidechain.db"})
       InitSidechain.initSidechainBench
+
+  Monad.void $
+    Bench.runBenchWith
+      (cfg {bcfgpBenchResults = "GrowingTree.db"})
+      GrowingTreeClaim.growingTreeClaim

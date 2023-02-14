@@ -221,6 +221,7 @@ benchmark bench-ctl
     Bench.OdcQuery
     Bench.Process
     Cases.FUELMintingPolicy
+    Cases.GrowingTreeClaim
     Cases.InitSidechain
     Cases.UpdateCommitteeHash
     Ctl
