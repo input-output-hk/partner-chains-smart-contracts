@@ -48,10 +48,10 @@ The arguments for each service are using the following scheme:
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
 
 ```
-nix run .#ctl-main -- burn --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+nix run .#sidechain-main-cli -- burn --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
 
-For more information about the arguments, please refer to `nix run .#ctl-main -- burn --help`
+For more information about the arguments, please refer to `nix run .#sidechain-main-cli -- burn --help`
 
 To use a configuration file instead, see [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
 
@@ -62,7 +62,7 @@ You can call the contract endpoints with the following CLI command (you need to 
 **Running with nix:**
 
 ```
-nix run .#ctl-main -- --help
+nix run .#sidechain-main-cli -- --help
 ```
 
 **Bundle to a JavaScript file and run using node:**
@@ -111,7 +111,7 @@ Before we can start claiming tokens, we must initialise the sidechain by: initia
 To initialise the sidechain, we can run the following command which will spend the genesis committee hash utxo.
 
 ```
-nix run .#ctl-main -- init \
+nix run .#sidechain-main-cli -- init \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -132,7 +132,7 @@ up the initialisation step into two separate commands:
 To mint the initial tokens, use the following command:
 
 ```
-nix run .#ctl-main -- init-tokens-mint \
+nix run .#sidechain-main-cli -- init-tokens-mint \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -144,7 +144,7 @@ And when ready, continue with setting up the first committee with the `init` com
 `use-init-tokens` flag:
 
 ```
-nix run .#ctl-main -- init \
+nix run .#sidechain-main-cli -- init \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -161,7 +161,7 @@ nix run .#ctl-main -- init \
 Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
 
 ```
-nix run .#ctl-main -- addresses \
+nix run .#sidechain-main-cli -- addresses \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -172,7 +172,7 @@ nix run .#ctl-main -- addresses \
 #### 3.1.3. Claim FUEL tokens
 
 ```
-nix run .#ctl-main -- claim \
+nix run .#sidechain-main-cli -- claim \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -184,7 +184,7 @@ nix run .#ctl-main -- claim \
 #### 3.1.4. Burn user owned FUEL tokens
 
 ```
-nix run .#ctl-main -- burn \
+nix run .#sidechain-main-cli -- burn \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -212,7 +212,7 @@ cabal run trustless-sidechain-gen-signatures -- \
 And use it's output for the registration:
 
 ```
-nix run .#ctl-main -- register \
+nix run .#sidechain-main-cli -- register \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -228,7 +228,7 @@ nix run .#ctl-main -- register \
 #### 3.1.6. Deregister committee candidate
 
 ```
-nix run .#ctl-main -- deregister \
+nix run .#sidechain-main-cli -- deregister \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -240,7 +240,7 @@ nix run .#ctl-main -- deregister \
 #### 3.1.5. Committee hash update
 
 ```
-nix run .#ctl-main -- committee-hash \
+nix run .#sidechain-main-cli -- committee-hash \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -261,7 +261,7 @@ nix run .#ctl-main -- committee-hash \
 #### 3.1.6. Save merkle root
 
 ```
-nix run .#ctl-main -- save-root \
+nix run .#sidechain-main-cli -- save-root \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-genesis-hash 112233 \
@@ -278,7 +278,7 @@ nix run .#ctl-main -- save-root \
 #### 3.1.7 Committee handover
 
 ```
-nix run .#ctl-main -- committee-handover \
+nix run .#sidechain-main-cli -- committee-handover \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -319,7 +319,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
 and now you can call the CLI without these values:
 
 ```
-nix run .#ctl-main -- burn --amount 5 --recipient aabb
+nix run .#sidechain-main-cli -- burn --amount 5 --recipient aabb
 ```
 
 You can find a sample configuration file in `ctl/config.example.json`.

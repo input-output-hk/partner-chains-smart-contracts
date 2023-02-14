@@ -65,11 +65,11 @@ import Options.Types
 import SidechainParams (SidechainParams(..))
 import Utils.Logging (environment, fileLogger)
 
--- | Argument option parser for ctl-main
+-- | Argument option parser for sidechain-main-cli
 options ∷ Maybe Config → ParserInfo Options
 options maybeConfig = info (helper <*> optSpec maybeConfig)
   ( fullDesc <> header
-      "ctl-main - CLI application to execute TrustlessSidechain Cardano endpoints"
+      "sidechain-main-cli - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
 
 -- | CLI parser of all commands
