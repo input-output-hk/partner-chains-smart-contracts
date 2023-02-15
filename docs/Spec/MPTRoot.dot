@@ -9,20 +9,20 @@ strict digraph {
     label = "UTxO with datum | committee hash"
     ]
 
-  lastMPTRoot [
+  lastMerkleRoot [
     label = "UTxO with datum | Merkle root"
     ]
 
   mintToken [label =
-    "Mint MPTRootToken |
+    "Mint MerkleRootToken |
       redeemer: SignedMerkleRoot \l
       tx body: minted tokens\l
     "]
 
-  mptRootAddr [label = "MPT root script address"]
+  merkleRootAddr [label = "MPT root script address"]
 
   atmsVKey -> mintToken [style = dashed, label = "references"]
-  lastMPTRoot -> mintToken [style = dashed, label = "references"]
-  mintToken -> mptRootAddr
+  lastMerkleRoot -> mintToken [style = dashed, label = "references"]
+  mintToken -> merkleRootAddr
 
 }

@@ -14,7 +14,7 @@
 <polygon fill="none" stroke="black" points="0,-95.5 0,-171.5 176,-171.5 176,-95.5 0,-95.5"/>
 <text text-anchor="middle" x="88" y="-156.3" font-family="Times,serif" font-size="14.00">Merkle root ins tx (SC ep. 1)</text>
 <polyline fill="none" stroke="black" points="0,-148.5 176,-148.5"/>
-<text text-anchor="start" x="8" y="-133.3" font-family="Times,serif" font-size="14.00">minted: MPTRootToken</text>
+<text text-anchor="start" x="8" y="-133.3" font-family="Times,serif" font-size="14.00">minted: MerkleRootToken</text>
 <text text-anchor="start" x="8" y="-118.3" font-family="Times,serif" font-size="14.00"> redeemer: none</text>
 <text text-anchor="start" x="8" y="-103.3" font-family="Times,serif" font-size="14.00"> refInput: none</text>
 </g>
@@ -41,7 +41,7 @@
 <polygon fill="none" stroke="black" points="228,-47.5 228,-123.5 404,-123.5 404,-47.5 228,-47.5"/>
 <text text-anchor="middle" x="316" y="-108.3" font-family="Times,serif" font-size="14.00">Merkle root ins tx (SC ep. 2)</text>
 <polyline fill="none" stroke="black" points="228,-100.5 404,-100.5"/>
-<text text-anchor="start" x="236" y="-85.3" font-family="Times,serif" font-size="14.00">minted: MPTRootToken</text>
+<text text-anchor="start" x="236" y="-85.3" font-family="Times,serif" font-size="14.00">minted: MerkleRootToken</text>
 <text text-anchor="start" x="236" y="-70.3" font-family="Times,serif" font-size="14.00"> redeemer: last roothash</text>
 <text text-anchor="start" x="236" y="-55.3" font-family="Times,serif" font-size="14.00"> refInput: last roothash utxo</text>
 </g>
@@ -75,7 +75,7 @@
 <polygon fill="none" stroke="black" points="456,-0.5 456,-76.5 632,-76.5 632,-0.5 456,-0.5"/>
 <text text-anchor="middle" x="544" y="-61.3" font-family="Times,serif" font-size="14.00">Merkle root ins tx (SC ep. 3)</text>
 <polyline fill="none" stroke="black" points="456,-53.5 632,-53.5"/>
-<text text-anchor="start" x="464" y="-38.3" font-family="Times,serif" font-size="14.00">minted: MPTRootToken</text>
+<text text-anchor="start" x="464" y="-38.3" font-family="Times,serif" font-size="14.00">minted: MerkleRootToken</text>
 <text text-anchor="start" x="464" y="-23.3" font-family="Times,serif" font-size="14.00"> redeemer: last roothash</text>
 <text text-anchor="start" x="464" y="-8.3" font-family="Times,serif" font-size="14.00"> refInput: last roothash utxo</text>
 </g>

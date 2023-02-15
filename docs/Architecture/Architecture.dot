@@ -35,8 +35,8 @@ graph {
     labeljust=l
 
     Ogmios;
-    Kupo
-    "ctl-server"
+    Kupo;
+    odc [label="ogmios-datum-cache"]
   }
 
   subgraph cluster_blockchain {
@@ -49,16 +49,16 @@ graph {
   cli -- sdk [style=dashed]
   browsersdk -- sdk [style=dashed]
 
-  cli -- Ogmios [label=HTTP]
+  cli -- Ogmios [label=WS]
   cli -- Kupo [label=HTTP]
-  cli -- "ctl-server" [label=HTTP]
+  cli -- odc [label=HTTP]
 
   wallet -- browsersdk
-  browsersdk -- Ogmios [label=HTTP]
+  browsersdk -- Ogmios [label=WS]
   browsersdk -- Kupo [label=HTTP]
-  browsersdk -- "ctl-server" [label=HTTP]
+  browsersdk -- odc [label=HTTP]
 
-
+  odc -- Ogmios [label=WS]
   Ogmios -- cnode [label=socket]
   Kupo -- cnode [label=socket]
 }
