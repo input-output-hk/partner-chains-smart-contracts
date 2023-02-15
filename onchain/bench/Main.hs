@@ -17,7 +17,7 @@ import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
     - `./payment.addr` is the address of your key (bech32 encoded -- needed
     for querying your utxos)
     - You have called `spago build` in `offchain/`
-    - You have a symlink `ln -s ./offchain/output/ output/`
+    - You have a symlink `ln -s ../offchain/output/ output/`
 
  Then, to use, run
  ```
@@ -29,6 +29,7 @@ defaultBenchConfigPaths =
   BenchConfigPaths
     { bcfgpBenchResults = "tmp.db"
     , bcfgpSigningKeyFilePath = "./payment.skey"
+    , bcfgpAddressFilePath = "./payment.addr"
     , bcfgpTestNetMagic = 2
     , -- The command to call ctl:
       -- Note: this assumes that we have @./output/Main/index.js@ (i.e., the output

@@ -5,29 +5,21 @@ module Cases.FUELMintingPolicy where
 
 import Bench (Bench, BenchConfig (..))
 import Bench qualified
-
-import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
-import Ctl qualified
-
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
-
-import Data.List qualified as List
-
 import Control.Monad.Reader qualified as Reader
-
+import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
+import Ctl qualified
+import Data.Foldable qualified as Foldable
+import Data.List qualified as List
+import Data.Map qualified as Map
+import Data.Maybe qualified as Maybe
+import Data.Text qualified as Text
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..), SidechainParams (..))
-
-import Data.Text qualified as Text
-
-import Data.Foldable qualified as Foldable
-import Data.Maybe qualified as Maybe
-
-import Data.Map qualified as Map
 
 {- | Returns the corresponding merkle proofs for a merkle tree of the given
  size of the merkle tree entries.
@@ -84,8 +76,7 @@ fuelMintingBench = do
       numberOfFUELMints = 250
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
-  -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ readFile "payment.addr"
+  addr <- Bench.readAddr
 
   -- Benchmark suite
   --------------------

@@ -28,6 +28,7 @@ module Bench.Monad (
 
   -- * Utilities for working the blockchain
   queryAddrUtxos,
+  readAddr,
 
   -- * Utilities for making a 'BenchConfig'.
   overrideBenchConfigPathFromEnv,
@@ -108,6 +109,9 @@ data BenchConfig = BenchConfig
     bcfgBenchResults :: BenchResults
   , -- | 'bcfgSigningKeyFilePath' is the filepath to the signing key
     bcfgSigningKeyFilePath :: FilePath
+  , -- | 'bcfgAddressFilePath' is the filepath to the address (bech32 human
+    -- readable) of the signing key in 'bcfgSigningKeyFilePath'
+    bcfgAddressFilePath :: FilePath
   , -- | 'bcfgTestNetMagic' is the test net magic that we are using.
     bcfgTestNetMagic :: Int
   , -- | 'bcfgCtlCmd' is the command to run ctl
@@ -134,6 +138,7 @@ data BenchConfig = BenchConfig
 data BenchConfigPaths = BenchConfigPaths
   { bcfgpBenchResults :: FilePath
   , bcfgpSigningKeyFilePath :: FilePath
+  , bcfgpAddressFilePath :: FilePath
   , bcfgpTestNetMagic :: Int
   , bcfgpCtlCmd :: String
   , bcfgpOdcHost :: String
@@ -194,6 +199,7 @@ runBenchWith benchCfgPaths bench =
           ( BenchConfig
               { bcfgBenchResults = benchResults
               , bcfgSigningKeyFilePath = bcfgpSigningKeyFilePath benchCfgPaths
+              , bcfgAddressFilePath = bcfgpAddressFilePath benchCfgPaths
               , bcfgTestNetMagic = bcfgpTestNetMagic benchCfgPaths
               , bcfgCtlCmd = bcfgpCtlCmd benchCfgPaths
               , bcfgOdcConnection = conn
@@ -437,6 +443,10 @@ queryAddrUtxos addressBech32 = do
   cardanoCliCmd <- Reader.asks bcfgCardanoCliCmd
   IO.Class.liftIO $ NodeQuery.queryNodeUtxoAddress cardanoCliCmd magic addressBech32
 
+-- | 'readAddr' reads the addresss given from the file 'bcfgAddressFilePath'
+readAddr :: Bench String
+readAddr = Reader.asks bcfgAddressFilePath >>= IO.Class.liftIO . readFile
+
 {- | 'overrideBenchConfigPathFromEnv' scans the environment variables, and if
  the environment variable exists, replaces the given values with the
  environment variable values.
@@ -447,6 +457,8 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
     Maybe.fromMaybe (bcfgpBenchResults benchConfigPaths) <$> Environment.lookupEnv "BENCH_RESULTS"
   signingKeyFilePath <-
     Maybe.fromMaybe (bcfgpSigningKeyFilePath benchConfigPaths) <$> Environment.lookupEnv "SIGNING_KEY"
+  addressFilePath <-
+    Maybe.fromMaybe (bcfgpAddressFilePath benchConfigPaths) <$> Environment.lookupEnv "ADDRESS"
   testnetMagic <-
     Maybe.maybe (bcfgpTestNetMagic benchConfigPaths) read
       <$> Environment.lookupEnv "TESTNET_MAGIC"
@@ -470,6 +482,7 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
     BenchConfigPaths
       { bcfgpBenchResults = benchResults
       , bcfgpSigningKeyFilePath = signingKeyFilePath
+      , bcfgpAddressFilePath = addressFilePath
       , bcfgpTestNetMagic = testnetMagic
       , bcfgpCtlCmd = ctlCmd
       , bcfgpOdcHost = odcHost

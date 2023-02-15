@@ -5,18 +5,13 @@ module Cases.UpdateCommitteeHash where
 
 import Bench (Bench, BenchConfig (..))
 import Bench qualified
-
-import Ctl (CtlCommon (..), CtlInitSidechain (..), CtlUpdateCommitteeHash (..))
-import Ctl qualified
-
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
-
+import Control.Monad.Reader qualified as Reader
+import Ctl (CtlCommon (..), CtlInitSidechain (..), CtlUpdateCommitteeHash (..))
+import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
-
-import Control.Monad.Reader qualified as Reader
-
 import TrustlessSidechain.Types (SidechainParams (..))
 
 updateCommitteeHashBench :: Bench ()
