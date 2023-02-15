@@ -141,8 +141,8 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- init \
   `# Init sidechain parameters` \
   --committee "./COMMITTEE1" \
   --sidechain-epoch 0
-Please call ctl-main with the following arguments:
-nix run .#ctl-main -- init \
+Please call sidechain-main-cli with the following arguments:
+nix run .#sidechain-main-cli -- init \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -161,9 +161,9 @@ nix run .#ctl-main -- init \
 --sidechain-epoch 0
 ```
 
-It will tell us the command to execute with `ctl-main` to submit the transaction. Let's do what it says and execute that.
+It will tell us the command to execute with `sidechain-main-cli` to submit the transaction. Let's do what it says and execute that.
 ```
-$ nix run .#ctl-main -- init \
+$ nix run .#sidechain-main-cli -- init \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -182,7 +182,7 @@ $ nix run .#ctl-main -- init \
 --sidechain-epoch 0
 [INFO] 2022-12-06T01:38:01.766Z InitSidechain.initSidechain: Submitted initialise sidechain tokens Tx: (TransactionHash (hexToByteArrayUnsafe "29de898e78ad97e64e9e6d04332bee424e3d910ab10303fd8c3008c2346c798b"))
 [INFO] 2022-12-06T01:38:50.220Z InitSidechain.initSidechain: Initialise sidechain tokens transaction submitted successfully.
-{"endpoint":"Init","transactionId":"29de898e78ad97e64e9e6d04332bee424e3d910ab10303fd8c3008c2346c798b","sidechainParams":{"chainId":69,"genesisHash":"112233","genesisUtxo":"211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0","thresholdDenominator":3,"thresholdNumerator":2},"addresses":{"CommitteCandidateValidator":"addr_test1wrrj2c8hy023zgz92hsufk6ea3jdycu3g0lxp7j83947wcc3spekz"},"mintingPolicies":{"FuelMintingPolicyId":"e1869d5ce721db9e6b9ae21678ea15bc2630640728f345a46832c9da","MPTRootTokenMintingPolicyId":"eea539a42de0f2916e6f0df8fbf8542a2f2e61ce9f42031609177c10"}}
+{"endpoint":"Init","transactionId":"29de898e78ad97e64e9e6d04332bee424e3d910ab10303fd8c3008c2346c798b","sidechainParams":{"chainId":69,"genesisHash":"112233","genesisUtxo":"211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0","thresholdDenominator":3,"thresholdNumerator":2},"addresses":{"CommitteCandidateValidator":"addr_test1wrrj2c8hy023zgz92hsufk6ea3jdycu3g0lxp7j83947wcc3spekz"},"mintingPolicies":{"FuelMintingPolicyId":"e1869d5ce721db9e6b9ae21678ea15bc2630640728f345a46832c9da","MerkleRootTokenMintingPolicyId":"eea539a42de0f2916e6f0df8fbf8542a2f2e61ce9f42031609177c10"}}
 ```
 Hopefully, it will succeed -- meaning that we have initialised the sidechain. Note that it also outputs various addresses / minting policies related to the sidechain in JSON format. We can ignore this for now.
 
@@ -234,8 +234,8 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- save-root \
   `# Parameters for the save-root` \
   --merkle-root $MERKLE_ROOT_1_1
   #  --previous-merkle-root
-Please call ctl-main with the following arguments:
-nix run .#ctl-main -- save-root \
+Please call sidechain-main-cli with the following arguments:
+nix run .#sidechain-main-cli -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -253,9 +253,9 @@ nix run .#ctl-main -- save-root \
 --committee-pub-key-and-signature 020c79d665e45ae0c9c7e7c192d47b7953679bc5a95f52e2052fb59d23e60005f6:3fe4a2a859ce2a8247ae0da03b4ef0bcffe012880b8d08635a9a825edd036c405ac2d08348a3872c001750f4385b7e174269eff7497de05be2667787605c80af \
 --merkle-root eed04d5f8c29240d92325f887a9d53883dfea50d364ae1633c651533b87a896f
 ```
-It'll tell us how to call `ctl-main`. Let's do as it says
+It'll tell us how to call `sidechain-main-cli`. Let's do as it says
 ```
-$ nix run .#ctl-main -- save-root \
+$ nix run .#sidechain-main-cli -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -272,8 +272,8 @@ $ nix run .#ctl-main -- save-root \
 --committee-pub-key-and-signature 03c0c88203266adad23ba31b41283bd56121468421b1c8160f3eead01b9b087da2:304ebd77521a851832c7b6de7bf556cca3a2a6cf2816451b0389d6a0cf6b5d111dfbe3f1d7983816da6d5726275251d491035e3940bec12fea661dced92f87fa \
 --committee-pub-key-and-signature 020c79d665e45ae0c9c7e7c192d47b7953679bc5a95f52e2052fb59d23e60005f6:3fe4a2a859ce2a8247ae0da03b4ef0bcffe012880b8d08635a9a825edd036c405ac2d08348a3872c001750f4385b7e174269eff7497de05be2667787605c80af \
 --merkle-root eed04d5f8c29240d92325f887a9d53883dfea50d364ae1633c651533b87a896f
-[INFO] 2022-12-06T02:46:26.165Z MPTRoot.saveRoot: Submitted save root Tx: (TransactionHash (hexToByteArrayUnsafe "54200455ada3ed561d01b07c3cb3572b360202b4d07b2484b74ae0e8245d9cba"))
-[INFO] 2022-12-06T02:46:46.366Z MPTRoot.saveRoot: Save root Tx submitted successfully!
+[INFO] 2022-12-06T02:46:26.165Z MerkleRoot.saveRoot: Submitted save root Tx: (TransactionHash (hexToByteArrayUnsafe "54200455ada3ed561d01b07c3cb3572b360202b4d07b2484b74ae0e8245d9cba"))
+[INFO] 2022-12-06T02:46:46.366Z MerkleRoot.saveRoot: Save root Tx submitted successfully!
 {"endpoint":"SaveRoot","transactionId":"54200455ada3ed561d01b07c3cb3572b360202b4d07b2484b74ae0e8245d9cba"}
 ```
 
@@ -291,8 +291,8 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- save-root \
   `# Parameters for the save-root` \
   --merkle-root $MERKLE_ROOT_1_2 \
   --previous-merkle-root $MERKLE_ROOT_1_1
-Please call ctl-main with the following arguments:
-nix run .#ctl-main -- save-root \
+Please call sidechain-main-cli with the following arguments:
+nix run .#sidechain-main-cli -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -313,9 +313,9 @@ nix run .#ctl-main -- save-root \
 ```
 Note that we include the flag `--previous-merkle-root` with `$MERKLE_ROOT_1_1`.
 
-Then, let's do what it says and call `ctl-main` as given.
+Then, let's do what it says and call `sidechain-main-cli` as given.
 ```
-$ nix run .#ctl-main -- save-root \
+$ nix run .#sidechain-main-cli -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -334,8 +334,8 @@ $ nix run .#ctl-main -- save-root \
 --merkle-root fa43e2b2d66e4c4db3be723eb5a4e1ba718aca4a375139600b6f53de258e2bb3 \
 --previous-merkle-root eed04d5f8c29240d92325f887a9d53883dfea50d364ae1633c651533b87a896f
 
-[INFO] 2022-12-06T02:50:30.992Z MPTRoot.saveRoot: Submitted save root Tx: (TransactionHash (hexToByteArrayUnsafe "66d92213b22174c5fedbb99c5140ac9c836f5b887189b0bd6367483c053607ee"))
-[INFO] 2022-12-06T02:52:03.898Z MPTRoot.saveRoot: Save root Tx submitted successfully!
+[INFO] 2022-12-06T02:50:30.992Z MerkleRoot.saveRoot: Submitted save root Tx: (TransactionHash (hexToByteArrayUnsafe "66d92213b22174c5fedbb99c5140ac9c836f5b887189b0bd6367483c053607ee"))
+[INFO] 2022-12-06T02:52:03.898Z MerkleRoot.saveRoot: Save root Tx submitted successfully!
 {"endpoint":"SaveRoot","transactionId":"66d92213b22174c5fedbb99c5140ac9c836f5b887189b0bd6367483c053607ee"}
 ```
 
@@ -345,9 +345,9 @@ We will demonstrate how to claim FUEL tokens. As an overview, here's what we wil
 - Finding out what the Currency Symbol of FUEL tokens are.
 - Claiming FUEL tokens.
 
-1. Finding out what the Currency Symbol of FUEL tokens are. This will help us verify that we have actually received FUEL tokens in our wallet. Conveniently, `ctl-main` provides a command to gather all addresses related to the sidechain for us as follows.
+1. Finding out what the Currency Symbol of FUEL tokens are. This will help us verify that we have actually received FUEL tokens in our wallet. Conveniently, `sidechain-main-cli` provides a command to gather all addresses related to the sidechain for us as follows.
 ```
-$ nix run .#ctl-main -- addresses \
+$ nix run .#sidechain-main-cli -- addresses \
 --payment-signing-key-file $SIGNING_KEY \
 --genesis-committee-hash-utxo $GENESIS_UTXO \
 --sidechain-id 69 \
@@ -360,7 +360,7 @@ $ nix run .#ctl-main -- addresses \
   },
   "mintingPolicies": {
     "FuelMintingPolicyId": "e1869d5ce721db9e6b9ae21678ea15bc2630640728f345a46832c9da",
-    "MPTRootTokenMintingPolicyId": "eea539a42de0f2916e6f0df8fbf8542a2f2e61ce9f42031609177c10"
+    "MerkleRootTokenMintingPolicyId": "eea539a42de0f2916e6f0df8fbf8542a2f2e61ce9f42031609177c10"
   }
 }
 
@@ -400,7 +400,7 @@ and it's easy to see that we have no FUEL tokens.
 
 Now, we claim our FUEL as follows.
 ```
-$ nix run .#ctl-main -- claim \
+$ nix run .#sidechain-main-cli -- claim \
   `# Sidechain parameters` \
   --payment-signing-key-file "$SIGNING_KEY" \
   --genesis-committee-hash-utxo "$GENESIS_UTXO" \
@@ -441,7 +441,7 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- fresh-sidechain-committee 
 ```
 where we note that we save this new committee to the file `COMMITTEE2`.
 
-2. Updating the committee hash. We will use `trustless-sidechain-gen-signatures` to generate the `ctl-main` command. Run the following command
+2. Updating the committee hash. We will use `trustless-sidechain-gen-signatures` to generate the `sidechain-main-cli` command. Run the following command
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- committee-hash \
   `# Sidechain parameters` \
@@ -455,8 +455,8 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- committee-hash \
   --new-committee "./COMMITTEE2" \
   --sidechain-epoch 1 \
   --previous-merkle-root "$MERKLE_ROOT_1_2"
-Please call ctl-main with the following arguments:
-nix run .#ctl-main -- committee-hash \
+Please call sidechain-main-cli with the following arguments:
+nix run .#sidechain-main-cli -- committee-hash \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -489,7 +489,7 @@ Note that the `--sidechain-epoch` is `1` which is greater than `0` (the current 
 
 Let's do what it says and execute that command.
 ```
-$ nix run .#ctl-main -- committee-hash \
+$ nix run .#sidechain-main-cli -- committee-hash \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -561,8 +561,8 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- register \
   --spo-signing-key "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
   --sidechain-signing-key "483517da9669cf716a03878bc858fe4d57d9a99ab49c8708753bf449e77de1c5" \
   --registration-utxo "9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0"
-Please call ctl-main with the following arguments:
-nix run .#ctl-main -- register \
+Please call sidechain-main-cli with the following arguments:
+nix run .#sidechain-main-cli -- register \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \
@@ -582,7 +582,7 @@ Some notes:
 Let's do what it says.
 
 ```
-$ nix run .#ctl-main -- register \
+$ nix run .#sidechain-main-cli -- register \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
 --genesis-committee-hash-utxo 211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0 \
 --sidechain-id 69 \

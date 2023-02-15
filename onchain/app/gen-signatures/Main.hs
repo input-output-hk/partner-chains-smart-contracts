@@ -25,7 +25,7 @@ main :: IO ()
 main =
   GetOpts.getOpts >>= \Args {..} -> case aCommand of
     GenCliCommand {..} -> do
-      putStrLn "Please call ctl-main with the following arguments:"
+      putStrLn "Please call sidechain-main-cli with the following arguments:"
       putStrLn $
         GenOutput.genCliCommand
           gccSigningKeyFile

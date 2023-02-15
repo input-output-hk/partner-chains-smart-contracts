@@ -16,8 +16,8 @@ import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
     - `./payment.skey` is your secret key
     - `./payment.addr` is the address of your key (bech32 encoded -- needed
     for querying your utxos)
-    - You have called `spago build` in `ctl/`
-    - You have a symlink `ln -s ../ctl/output/ output/`
+    - You have called `spago build` in `offchain/`
+    - You have a symlink `ln -s ../offchain/output/ output/`
 
  Then, to use, run
  ```

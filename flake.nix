@@ -124,7 +124,7 @@
           projectName = "trustless-sidechain-ctl";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = ./ctl;
+            path = ./offchain;
             name = "${projectName}-src";
             # TODO: Add more filters
             filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
@@ -175,7 +175,7 @@
           make format_check cabalfmt_check lint
           popd
 
-          pushd ${self}/ctl
+          pushd ${self}/offchain
           make check-format
           popd
 
@@ -191,14 +191,14 @@
           project = psProjectFor system;
         in
         pkgs.writeShellApplication {
-          name = "ctl-main";
+          name = "sidechain-main-cli";
           runtimeInputs = [ project.nodejs ];
           # Node's `process.argv` always contains the executable name as the
-          # first argument, hence passing `ctl-main "$@"` rather than just
+          # first argument, hence passing `sidechain-main-cli "$@"` rather than just
           # `"$@"`
           text = ''
             export NODE_PATH="${project.nodeModules}/lib/node_modules"
-            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
+            node -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
           '';
         };
 
@@ -206,7 +206,7 @@
         let
           name = "trustless-sidechain-cli";
           version = "0.1.0";
-          src = ./ctl;
+          src = ./offchain;
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
@@ -247,7 +247,7 @@
         (system: self.flake.${system}.packages // {
           ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
           ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
-          ctl-main = ctlMainFor system;
+          sidechain-main-cli = ctlMainFor system;
           # TODO: Fix web bundling
           # ctl-bundle-web = (psProjectFor system).bundlePursProject {
           #   main = "Main";
@@ -261,9 +261,9 @@
       apps = perSystem (system: self.flake.${system}.apps // {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
         ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
-        ctl-main = {
+        sidechain-main-cli = {
           type = "app";
-          program = "${ctlMainFor system}/bin/ctl-main";
+          program = "${ctlMainFor system}/bin/sidechain-main-cli";
         };
       });
 

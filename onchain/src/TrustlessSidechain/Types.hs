@@ -83,10 +83,10 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
--- * MPT Root Token data
+-- * Merkle Root Token data
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
- for the MPTRootToken.
+ for the MerkleRootToken.
 -}
 data MerkleTreeEntry = MerkleTreeEntry
   { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
@@ -115,7 +115,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
--- | 'SignedMerkleRoot' is the redeemer for the MPT root token minting policy
+-- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
   { -- | New merkle root to insert.
     merkleRoot :: BuiltinByteString
@@ -177,17 +177,17 @@ PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
 data FUELMint = FUELMint
   { -- 'fmMptRootTokenValidator' is the hash of the validator script
     -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.MPTRootTokenValidator' for
+    -- name. See 'TrustlessSidechain.MerkleRootTokenValidator' for
     -- details.
     -- > fmMptRootTokenValidator :: ValidatorHash
     -- N.B. We don't need this! We're really only interested in the token,
     -- and indeed; anyone can pay a token to this script so there really
     -- isn't a reason to use this validator script as the "identifier" for
-    -- MPTRootTokens.
+    -- MerkleRootTokens.
 
     -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
     -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.MPTRootTokenMintingPolicy' for details.
+    -- 'TrustlessSidechain.MerkleRootTokenMintingPolicy' for details.
     fmMptRootTokenCurrencySymbol :: CurrencySymbol
   , -- | 'fmSidechainParams' is the sidechain parameters
     fmSidechainParams :: SidechainParams

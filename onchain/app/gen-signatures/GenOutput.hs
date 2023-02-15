@@ -88,7 +88,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         ]
                     )
                     iscInitCommitteePubKeys
-             in ["nix run .#ctl-main -- init"] :
+             in ["nix run .#sidechain-main-cli -- init"] :
                 sidechainParamFlags
                   ++ committeeFlags
                   ++ [["--sidechain-epoch", show iscSidechainEpoch]]
@@ -99,7 +99,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                     , bprmSidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
                     , bprmInputUtxo = rcRegistrationUtxo
                     }
-             in ["nix run .#ctl-main -- register"] :
+             in ["nix run .#sidechain-main-cli -- register"] :
                 sidechainParamFlags
                   ++ [ ["--spo-public-key", OffChain.showPubKey $ OffChain.toSpoPubKey rcSpoPrivKey]
                      , ["--sidechain-public-key", OffChain.showScPubKey $ OffChain.toSidechainPubKey rcSidechainPrivKey]
@@ -108,7 +108,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                      , ["--registration-utxo", OffChain.showTxOutRef rcRegistrationUtxo]
                      ]
           DeregistrationCommand {..} ->
-            ["nix run .#ctl-main -- deregister"] :
+            ["nix run .#sidechain-main-cli -- deregister"] :
             sidechainParamFlags
               ++ [ ["--spo-public-key", OffChain.showPubKey $ OffChain.vKeyToSpoPubKey drSpoPubKey]
                  ]
@@ -138,7 +138,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         ]
                     )
                     uchcNewCommitteePubKeys
-             in ["nix run .#ctl-main -- committee-hash"] :
+             in ["nix run .#sidechain-main-cli -- committee-hash"] :
                 sidechainParamFlags
                   ++ currentCommitteePubKeysAndSigsFlags
                   ++ newCommitteeFlags
@@ -161,7 +161,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         ]
                     )
                     srcCurrentCommitteePrivKeys
-             in ["nix run .#ctl-main -- save-root"] :
+             in ["nix run .#sidechain-main-cli -- save-root"] :
                 sidechainParamFlags
                   ++ currentCommitteePubKeysAndSigsFlags
                   ++ [["--merkle-root", OffChain.showBuiltinBS srcMerkleRoot]]

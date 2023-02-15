@@ -15,7 +15,7 @@ import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text qualified as Text
-import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
@@ -47,7 +47,7 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
               }
         )
         indicies
-    cborEntries = map MPTRootTokenMintingPolicy.serialiseMte entries
+    cborEntries = map MerkleRootTokenMintingPolicy.serialiseMte entries
     cborToMte = Map.fromList $ zip (map MerkleTree.hashLeaf cborEntries) entries
 
     (merkleTree, lookups) = MerkleTree.lookupsMpFromList cborEntries

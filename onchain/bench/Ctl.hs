@@ -91,7 +91,7 @@ newtype CtlClaim = CtlClaim
  @
  Data.List.intercalate " "
   $ concat
-      [ [ "nix run .#ctl-main --" ]
+      [ [ "nix run .#sidechain-main-cli --" ]
       , ctlInitSidechainFlags (CtlInitSidechain{ {\- initalize this.. -\} })
       , ctlCommonFlags (CtlCommon{ {\- initalize this.. -\} })
       ]

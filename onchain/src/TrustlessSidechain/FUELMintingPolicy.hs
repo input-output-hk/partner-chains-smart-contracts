@@ -12,7 +12,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
-import TrustlessSidechain.MPTRootTokenMintingPolicy qualified as MPTRootTokenMintingPolicy
+import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.Types (
@@ -30,15 +30,15 @@ fuelTokenName = TokenName "FUEL"
 
 {- | 'mkMintingPolicy' verifies the following
 
-  1. MPTRootToken with the name of the Merkle root of the transaction
-  calculated from the proof) can be found in the MPTRootTokenValidator.
+  1. MerkleRootToken with the name of the Merkle root of the transaction
+  calculated from the proof) can be found in the MerkleRootTokenValidator.
 
   N.B. this performs this verification on the FIRST merkle root of the
-  MPTRootToken it finds in the inputs. So, to ensure "predictable" behaviour
+  MerkleRootToken it finds in the inputs. So, to ensure "predictable" behaviour
   [order of inputs in a transaction is not defined, but as of August 10, 2022
   there is a [CIP](https://github.com/cardano-foundation/CIPs/pull/231) to
   allow us to define it], the transaction should be constructed s.t. there is
-  exactly only one input with an MPTRootToken.
+  exactly only one input with an MerkleRootToken.
 
   2. chainId matches the minting policy id
 
@@ -59,7 +59,7 @@ mkMintingPolicy fm mode ctx = case mode of
     traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
-        cborMte = MPTRootTokenMintingPolicy.serialiseMte mte
+        cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte
 
         cborMteHashed = Builtins.blake2b_256 cborMte --  TODO: actually hash this later.
         dsInserted :: BuiltinByteString
@@ -74,14 +74,14 @@ mkMintingPolicy fm mode ctx = case mode of
           let go :: [TxInInfo] -> TokenName
               go (t : ts)
                 | o <- txInInfoResolved t
-                  , Just tns <- AssocMap.lookup mptRootTnCurrencySymbol $ getValue $ txOutValue o
+                  , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
                   , [(tn, _amt)] <- AssocMap.toList tns =
                   tn
                 -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
                 -- can be rewritten as
                 -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
                 -- where from
-                -- 'TrustlessSidechain.MPTRootTokenMintingPolicy.mkMintingPolicy'
+                -- 'TrustlessSidechain.MerkleRootTokenMintingPolicy.mkMintingPolicy'
                 -- we can be certain there is only ONE distinct TokenName for
                 -- each 'CurrencySymbol'
                 --
@@ -103,7 +103,7 @@ mkMintingPolicy fm mode ctx = case mode of
     -- Aliases:
     info = scriptContextTxInfo ctx
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
-    mptRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
+    merkleRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
     dsKeyCurrencySymbol = fmDsKeyCurrencySymbol fm
     minted = txInfoMint info
 
