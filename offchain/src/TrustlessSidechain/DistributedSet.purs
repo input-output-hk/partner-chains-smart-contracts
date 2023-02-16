@@ -43,12 +43,11 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , Validator(Validator)
+  ( MintingPolicy
+  , Validator
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(..)
