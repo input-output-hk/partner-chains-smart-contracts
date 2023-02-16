@@ -62,10 +62,8 @@ aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
 aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 
 {- Note [Aggregate Keys Append Scheme]
- In early versions, we used a "simple append scheme" i.e., we implemented this function with
-  > aggregateKeys = Builtins.blake2b_256 . mconcat . map (Bytes.getLedgerBytes . Crypto.getPubKey)
-  but this didn't work in the Plutip integration tests (budget exceeded errors), so we jumped straight
-  to the merkle root solution instead.
+ Potential optimizations: instead of doing the concatenated hash, we could
+ instead compute a merkle root.
  -}
 
 {- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
