@@ -48,10 +48,7 @@ import Contract.Scripts
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript(..)
@@ -68,6 +65,10 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  , mkValidatorWithParams
+  )
 
 -- * Types
 -- For more information, see the on-chain Haskell file.
@@ -192,62 +193,32 @@ derive instance Newtype Node _
 
 -- * Validator / minting policies
 
--- | `mkValidatorParams hexScript params` returns the `Validator` of `hexScript`
--- | with the script applied to `params`. This is a convenient alias
--- | to help create the distributed set validators.
---
--- TODO: not too sure what this does in the case when `params` is empty list?
--- Internally, this uses `Contract.Scripts.applyArgs`.
-mkValidatorParams ∷ String → Array PlutusData → Contract () Validator
-mkValidatorParams hexScript params = do
-  let
-    script = decodeTextEnvelope hexScript
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied params
-  pure $ Validator applied
-
--- | `mkMintingPolicyParams hexScript params` returns the `MintingPolicy` of `hexScript`
--- | with the script applied to `params`. This is a convenient alias
--- | to help create the distributed set minting policies.
---
--- TODO: not too sure what this does in the case when `params` is empty list?
--- Internally, this uses `Contract.Scripts.applyArgs`.
-mkMintingPolicyParams ∷ String → Array PlutusData → Contract () MintingPolicy
-mkMintingPolicyParams hexScript params = do
-  let
-    script = decodeTextEnvelope hexScript
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied params
-  pure $ PlutusMintingPolicy applied
-
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
 insertValidator ∷ Ds → Contract () Validator
-insertValidator ds = mkValidatorParams RawScripts.rawInsertValidator $ map
+insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
 dsConfValidator ∷ Ds → Contract () Validator
-dsConfValidator ds = mkValidatorParams RawScripts.rawDsConfValidator $ map
+dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
 dsConfPolicy ∷ DsConfMint → Contract () MintingPolicy
-dsConfPolicy dsm = mkMintingPolicyParams RawScripts.rawDsConfPolicy $ map toData
+dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
+  toData
   [ dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
 dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
-dsKeyPolicy dskm = mkMintingPolicyParams RawScripts.rawDsKeyPolicy $ map toData
+dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
+  toData
   [ dskm ]
 
 -- | The address for the insert validator of the distributed set.
