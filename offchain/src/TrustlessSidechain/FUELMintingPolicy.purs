@@ -500,7 +500,7 @@ findMerkleRootTokenUtxoByRootHash ∷
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
 
-  -- Then, we get the mpt root token minting policy..
+  -- Then, we get the merkle root token minting policy..
   let
 
     msg = Logging.mkReport

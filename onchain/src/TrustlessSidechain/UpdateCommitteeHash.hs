@@ -205,7 +205,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- guarantees come from).
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
-      -- mpt root token.
+      -- merkle root tokens.
       case previousMerkleRoot red of
         Nothing -> True
         Just tn ->

@@ -198,7 +198,7 @@ initCommitteeHashLookupsAndConstraints isp = do
   -----------------------------------
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
 
-  -- Getting the mpt root token minting policy
+  -- Getting the merkle root token minting policy
   -----------------------------------
   { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
 
@@ -279,7 +279,7 @@ initDistributedSetLookupsAndContraints isp = do
   let
     sc = toSidechainParams isp
 
-  -- Getting the mpt root token minting policy / currency symbol
+  -- Getting the merkle root token minting policy / currency symbol
   -----------------------------------
   { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
 
@@ -605,7 +605,7 @@ getCommitteeHashPolicy isp = do
     (Value.scriptCurrencySymbol committeeHashPolicy)
   pure { committeeHashPolicy, committeeHashCurrencySymbol }
 
--- | `getMerkleRootTokenPolicy` grabs the mpt root token policy and currency
+-- | `getMerkleRootTokenPolicy` grabs the merkle root token policy and currency
 -- | symbol (potentially throwing an error if this is not possible).
 getMerkleRootTokenPolicy ∷
   ∀ r.
@@ -623,7 +623,7 @@ getMerkleRootTokenPolicy isp = do
   -- some awkwardness that we need the committee hash policy first.
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
 
-  -- Then, we get the mpt root token minting policy..
+  -- Then, we get the merkle root token minting policy..
   merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
     SignedMerkleRootMint
       { sidechainParams: sc

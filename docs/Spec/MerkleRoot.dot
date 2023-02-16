@@ -19,7 +19,7 @@ strict digraph {
       tx body: minted tokens\l
     "]
 
-  merkleRootAddr [label = "MPT root script address"]
+  merkleRootAddr [label = "Merkle root script address"]
 
   atmsVKey -> mintToken [style = dashed, label = "references"]
   lastMerkleRoot -> mintToken [style = dashed, label = "references"]
