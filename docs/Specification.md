@@ -30,6 +30,12 @@ data SidechainParams = SidechainParams
     -- ^ 'genesisUtxo' is an arbitrary 'TxOutRef' used to identify internal
     -- 'AssetClass's (e.g. see [6.](#6-update-committee-hash)) of the
     -- sidechain
+  , thresholdNumerator :: Integer
+    -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+  , thresholdDenominator :: Integer
+    -- ^ 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
   }
 ```
 
@@ -57,6 +63,12 @@ data InitSidechainParams = InitSidechainParams
     -- ^ 'initCommittee' is the initial committee of the sidechain
   , initSidechainEpoch :: Integer
     -- ^ 'initSidechainEpoch' is the initial sidechain epoch of the sidechain
+  , thresholdNumerator :: Integer
+    -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+  , thresholdDenominator :: Integer
+    -- ^ 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
   }
 ```
 
