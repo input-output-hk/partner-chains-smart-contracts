@@ -235,7 +235,7 @@ data UpdateCommitteeHash = UpdateCommitteeHash
   , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     cToken :: AssetClass
-  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding mpt
+  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
     -- root token. This is needed for verifying that the previous merkle root is verified.
     cMptRootTokenCurrencySymbol :: CurrencySymbol
   }

@@ -45,7 +45,7 @@ type SidechainAddresses =
 -- |        - the validator address of the committee candidate validator
 -- |    - minting policies:
 -- |        - the currency symbol of the fuel minting policy
--- |        - the currency symbol of the mpt root token minting policy
+-- |        - the currency symbol of the merkle root token minting policy
 getSidechainAddresses ∷ SidechainParams → Contract () SidechainAddresses
 getSidechainAddresses scParams = do
   -- Minting policies

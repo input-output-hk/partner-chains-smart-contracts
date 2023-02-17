@@ -54,15 +54,11 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
 
       1. UTXO with the last Merkle root is referenced in the transaction.
 
-      Note: actually, this condition is just done offchain because we can trust
-      the bridge is going to do the right thing when referencing the
-      transaction.
-
       2.  the signature can be verified with the submitted public key hashes of
       committee members, and the list of public keys are unique
 
       3. the concatenated and hashed value of the public keys correspond to the
-      one saved on-chain in 'TrustlessSidechain.UpdatingCommitteeHash'
+      one saved on-chain in 'TrustlessSidechain.UpdateCommitteeHash'
 
       4. Exactly one token is minted
 
