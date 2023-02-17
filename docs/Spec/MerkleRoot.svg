@@ -51,7 +51,7 @@
 <g id="node4" class="node">
 <title>merkleRootAddr</title>
 <polygon fill="none" stroke="black" points="150.5,-0.5 150.5,-36.5 298.5,-36.5 298.5,-0.5 150.5,-0.5"/>
-<text text-anchor="middle" x="224.5" y="-14.8" font-family="Times,serif" font-size="14.00">MPT root script address</text>
+<text text-anchor="middle" x="224.5" y="-14.8" font-family="Times,serif" font-size="14.00">Merkle root script address</text>
 </g>
 <!-- mintToken&#45;&gt;merkleRootAddr -->
 <g id="edge3" class="edge">
