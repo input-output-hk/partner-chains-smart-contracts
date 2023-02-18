@@ -21,6 +21,7 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.MerkleTree (RootHash)
@@ -153,8 +154,8 @@ updateCommitteeHashWith params f = void do
   UpdateCommitteeHash.updateCommitteeHash uchp'
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
-tests ∷ PlutipTest
-tests = Mote.Monad.group "Committee handover (committe hash update)" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "Committee handover (committe hash update)" $ do
   testScenario1
   testScenario2
   testScenario3

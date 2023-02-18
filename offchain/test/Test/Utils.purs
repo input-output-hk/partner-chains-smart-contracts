@@ -7,6 +7,11 @@ module Test.Utils
   , fails
   , unsafeBigIntFromString
   , interpretConstVoidTest
+  , interpretWrappedTest
+  , pureGroup
+  , plutipGroup
+  , WithTestRunner(..)
+  , WrappedTests
   ) where
 
 import Contract.Prelude
@@ -38,6 +43,7 @@ import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
 import Partial.Unsafe as Unsafe
+import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
 
@@ -136,3 +142,39 @@ assertMaxFee maxFee txId = do
         <> BigInt.toString fee
         <> " lovelaces."
     )
+
+-- | Test wrapper, to distinguish between different test interpreters
+data WithTestRunner
+  = WithPlutipRunner (Mote (Const Void) PlutipConfigTest Unit)
+  | PureRunner (Mote (Const Void) Test Unit)
+
+-- | A type synonim for wrapped tests
+type WrappedTests = Mote (Const Void) WithTestRunner Unit
+
+-- | Interpreting wrapped tests with their respective interpreters
+interpretWrappedTest ∷ WrappedTests → TestSuite
+interpretWrappedTest = go <<< Mote.Monad.plan
+  where
+  go =
+    Mote.Plan.foldPlan
+      ( \{ label, value } → Test.Unit.suite label $
+          case value of
+            WithPlutipRunner testCase → interpretPlutipTest testCase
+            PureRunner testCase → interpretConstVoidTest testCase
+
+      )
+      (\label → Test.Unit.testSkip label (pure unit))
+      (\{ label, value } → Test.Unit.suite label (go value))
+      sequence_
+
+-- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
+-- | Tests in this group will be executed by Plutip
+plutipGroup ∷ String → Mote (Const Void) PlutipConfigTest Unit → WrappedTests
+plutipGroup label tests =
+  Mote.Monad.test label $ WithPlutipRunner tests
+
+-- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
+-- | Tests in this group will be executed purely
+pureGroup ∷ String → Mote (Const Void) Test Unit → WrappedTests
+pureGroup label tests =
+  Mote.Monad.test label $ PureRunner tests

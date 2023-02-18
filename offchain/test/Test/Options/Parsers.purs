@@ -1,6 +1,6 @@
 -- | `Test.Options` includes some rather straightforward unit tests to give
 -- | some examples of what we are parsing in the CLI
-module Test.Options.Parsers (tests, interpretOptionsTest) where
+module Test.Options.Parsers (tests) where
 
 import Contract.Prelude
 
@@ -8,21 +8,17 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
-import Test.Unit (Test, TestSuite)
+import Test.Unit (Test)
 import Test.Unit.Assert as Test.Unit.Assert
-import Test.Utils as Test.Utils
+import Test.Utils (WrappedTests, pureGroup)
 import TrustlessSidechain.Options.Parsers as Options.Parsers
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 type OptionsTest = Mote (Const Void) Test Unit
 
-tests ∷ OptionsTest
-tests = Mote.Monad.group "Options parsing tests" do
+tests ∷ WrappedTests
+tests = pureGroup "Options parsing tests" do
   testParsePubKeyAndSignature
-
--- | `interpretOptionsTest` wraps `Test.Utils.interpretConstVoidTest`
-interpretOptionsTest ∷ OptionsTest → TestSuite
-interpretOptionsTest = Test.Utils.interpretConstVoidTest
 
 -- | `testParsePubKeyAndSignature` has a few unit tests for what we may parse
 -- | for parsing a pub key and a signature.

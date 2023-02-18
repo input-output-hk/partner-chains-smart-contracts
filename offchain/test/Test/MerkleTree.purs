@@ -1,9 +1,6 @@
 -- | Provides some integration unit tests with the on chain implementation of
 -- | the merkle tree.
-module Test.MerkleTree
-  ( interpretMerkleTreeTest
-  , tests
-  ) where
+module Test.MerkleTree (tests) where
 
 import Contract.Prelude
 
@@ -14,9 +11,9 @@ import Data.Maybe as Maybe
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
-import Test.Unit (Test, TestSuite)
+import Test.Unit (Test)
 import Test.Unit.Assert as Test.Unit.Assert
-import Test.Utils as Test.Utils
+import Test.Utils (WrappedTests, pureGroup)
 import TrustlessSidechain.MerkleTree
   ( MerkleProof(MerkleProof)
   , MerkleTree(Bin, Tip)
@@ -41,18 +38,14 @@ type MerkleTreeTest = Mote (Const Void) Test Unit
 -- | Test.Unit.Main.runTest (interpretMerkleTreeTest tests)
 -- | ```
 -- | to run all tests
-tests ∷ MerkleTreeTest
-tests = Mote.Monad.group "Merkle tree integration tests" do
+tests ∷ WrappedTests
+tests = pureGroup "Merkle tree integration tests" do
   test1
   test2
   test3
   test4
   test5
   test6
-
--- | `interpretMerkleTreeTest` wraps `Test.Utils.interpretConstVoidTest`
-interpretMerkleTreeTest ∷ MerkleTreeTest → TestSuite
-interpretMerkleTreeTest = Test.Utils.interpretConstVoidTest
 
 -- | `unsafeByteArrayFromAscii` is a partial function which wraps `Types.ByteArray.byteArrayFromAscii`
 unsafeByteArrayFromAscii ∷ String → ByteArray

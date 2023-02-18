@@ -1,8 +1,4 @@
-module Test.MerkleProofSerialisation
-  ( tests
-  , interpretMerkleProofSerialisationTest
-  , MerkleProofSerialisationTest
-  ) where
+module Test.MerkleProofSerialisation (tests) where
 
 import Contract.Prelude
 
@@ -12,8 +8,9 @@ import Contract.Prim.ByteArray as ByteArray
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
-import Test.Unit (Test, TestSuite)
+import Test.Unit (Test)
 import Test.Unit.Assert as Test.Unit.Assert
+import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(..)
@@ -32,16 +29,12 @@ import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 -- | wrapping `Test` with no bracketting for setup
 type MerkleProofSerialisationTest = Mote (Const Void) Test Unit
 
--- | `interpretMerkleProofSerialisationTest` wraps `Test.Utils.interpretConstVoidTest`
-interpretMerkleProofSerialisationTest ∷ MerkleProofSerialisationTest → TestSuite
-interpretMerkleProofSerialisationTest = Test.Utils.interpretConstVoidTest
-
 -- | `tests` follows the integration tests described in #249. We have a test
 -- | cases for:
 -- |    1. Testing if the plutus data representation, AND the hex encoded cbor of the plutus data is as expected
 -- |    2. Testing if hex encoded cbor is as expected.
-tests ∷ MerkleProofSerialisationTest
-tests = Mote.Monad.group "Merkle proof serialisation for #249" do
+tests ∷ WrappedTests
+tests = pureGroup "Merkle proof serialisation for #249" do
   test1
   test2
   test3

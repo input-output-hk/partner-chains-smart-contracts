@@ -2,8 +2,7 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
-import Data.Foldable as Foldable
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group)
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
@@ -12,7 +11,6 @@ import Test.MerkleRoot as MerkleRoot
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options.Parsers as Options.Parsers
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
@@ -20,6 +18,7 @@ import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
+import Test.Utils (interpretWrappedTest, plutipGroup)
 
 -- | `main` runs all tests.
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
@@ -32,31 +31,25 @@ import Test.UpdateCommitteeHash as UpdateCommitteeHash
 -- > You can ignore it, it's not a memory leak, it's just that we attach a lot of listeners to the exit event
 main ∷ Effect Unit
 main = do
-  -- Run the merkle tree integration tests
   Test.Unit.Main.runTest
-    $
-      Foldable.fold
-        [ MerkleTree.interpretMerkleTreeTest MerkleTree.tests
-        , MerkleProofSerialisation.interpretMerkleProofSerialisationTest
-            MerkleProofSerialisation.tests
-        , Options.Parsers.interpretOptionsTest Options.Parsers.tests
+    $ interpretWrappedTest do
 
-        -- Plutip tests
-        ----------------
-        , Test.PlutipTest.interpretPlutipTest InitSidechain.tests
-        , Test.PlutipTest.interpretPlutipTest CommitteeCandidateValidator.tests
-        , Test.PlutipTest.interpretPlutipTest FUELMintingPolicy.tests
-        , Test.PlutipTest.interpretPlutipTest UpdateCommitteeHash.tests
-        , Test.PlutipTest.interpretPlutipTest MerkleRoot.tests
-        , Test.PlutipTest.interpretPlutipTest MerkleRootChaining.tests
-        -- Plutip POC tests
-        ----------------
-        , Test.PlutipTest.interpretPlutipTest
-            ( Mote.Monad.group "POC Plutip tests" do
-                PoCInlineDatum.tests
-                PoCReferenceInput.tests
-                PoCReferenceScript.tests
-                PoCSerialiseData.tests
-                PoCECDSA.testScenario
-            )
-        ]
+        group "Unit tests" do
+          MerkleTree.tests
+          MerkleProofSerialisation.tests
+          Options.Parsers.tests
+
+        group "Plutip integration tests" do
+          InitSidechain.tests
+          CommitteeCandidateValidator.tests
+          FUELMintingPolicy.tests
+          UpdateCommitteeHash.tests
+          MerkleRoot.tests
+          MerkleRootChaining.tests
+
+        plutipGroup "POC Plutip tests" do
+          PoCInlineDatum.tests
+          PoCReferenceInput.tests
+          PoCReferenceScript.tests
+          PoCSerialiseData.tests
+          PoCECDSA.testScenario

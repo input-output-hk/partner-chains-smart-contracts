@@ -19,6 +19,7 @@ import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy
   ( Bech32Bytes
@@ -40,8 +41,8 @@ import TrustlessSidechain.Utils.Crypto as Crypto
 import TrustlessSidechain.Utils.SerialiseData as SerialiseData
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
-tests ∷ PlutipTest
-tests = Mote.Monad.group "Merkle root insertion" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "Merkle root insertion" $ do
   testScenario1
   testScenario2
 

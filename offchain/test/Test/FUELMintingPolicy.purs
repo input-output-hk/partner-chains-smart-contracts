@@ -14,7 +14,14 @@ import Partial.Unsafe (unsafePartial)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (assertMaxFee, fails, getOwnTransactionInput, toTxIn)
+import Test.Utils
+  ( WrappedTests
+  , assertMaxFee
+  , fails
+  , getOwnTransactionInput
+  , plutipGroup
+  , toTxIn
+  )
 import TrustlessSidechain.FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
@@ -28,16 +35,13 @@ import TrustlessSidechain.InitSidechain
 import TrustlessSidechain.MerkleTree (MerkleProof(..), fromList, lookupMp)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams(..))
-import TrustlessSidechain.Utils.Crypto
-  ( generatePrivKey
-  , toPubKeyUnsafe
-  )
+import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe)
 import TrustlessSidechain.Utils.SerialiseData (serialiseData)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
-tests ∷ PlutipTest
-tests = Mote.Monad.group "Claiming and burning FUEL tokens" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "Claiming and burning FUEL tokens" $ do
   testScenarioSuccess
   testScenarioSuccess2
   testScenarioFailure

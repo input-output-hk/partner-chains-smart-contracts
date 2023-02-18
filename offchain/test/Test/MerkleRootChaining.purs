@@ -16,6 +16,7 @@ import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
+import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import TrustlessSidechain.InitSidechain as InitSidechain
@@ -27,8 +28,8 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `tests` aggregates all MerkleRootChaining tests together conveniently
-tests ∷ PlutipTest
-tests = Mote.Monad.group "MerkleRootChaining tests" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "MerkleRootChaining tests" $ do
   testScenario1
   testScenario2
 

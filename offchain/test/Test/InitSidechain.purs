@@ -22,14 +22,15 @@ import Effect.Exception as Exception
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- | `tests` aggregates all the tests together in one convenient funciton
-tests ∷ PlutipTest
-tests = Mote.Monad.group "Initialising the sidechain" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "Initialising the sidechain" $ do
   testScenario1
   testScenario2
   testScenario3

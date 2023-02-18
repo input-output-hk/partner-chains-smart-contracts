@@ -24,7 +24,7 @@ import Data.Set as Set
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (fails, toTxIn)
+import Test.Utils (WrappedTests, fails, plutipGroup, toTxIn)
 import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -44,8 +44,8 @@ mockSpoPubKey = hexToByteArrayUnsafe
   "40802011e4fa2af0ec57dbf341cac38b344fe0867bfc67d38988dd1006d3eb9e"
 
 -- | `tests` wraps up all the committee candidate validator tests conveniently
-tests ∷ PlutipTest
-tests = Mote.Monad.group "Committe candidate registration/deregistration" $ do
+tests ∷ WrappedTests
+tests = plutipGroup "Committe candidate registration/deregistration" $ do
   testScenarioSuccess
   testScenarioFailure1
   testScenarioFailure2
