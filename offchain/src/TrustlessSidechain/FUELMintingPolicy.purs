@@ -500,14 +500,16 @@ findMerkleRootTokenUtxoByRootHash ∷
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
 
-  -- Then, we get the merkle root token minting policy..
+  -- Then, we get the merkle root token validator hash / minting policy..
+  merkleRootValidatorHash ← map Scripts.validatorHash $
+    MerkleRoot.merkleRootTokenValidator sidechainParams
   let
-
     msg = Logging.mkReport
       { mod: "FUELMintingPolicy", fun: "findMerkleRootTokenUtxoByRootHash" }
     smrm = SignedMerkleRootMint
       { sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , merkleRootValidatorHash
       }
   merkleRootTokenName ←
     liftContractM

@@ -142,6 +142,7 @@ Minting policy verifies the following:
 - verifies that size(signatures) > 2/3 \* size(committeePubKeys)
 - list of public keys does not contain duplicates
 - if `previousMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
+- there exists a `MerkleRootToken` with `tokenName` as `merkleRoot` at a `MerkleRootTokenValidator` script address.
 
 Validator script verifies the following:
 

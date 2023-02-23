@@ -623,11 +623,14 @@ getMerkleRootTokenPolicy isp = do
   -- some awkwardness that we need the committee hash policy first.
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
 
-  -- Then, we get the merkle root token minting policy..
+  -- Then, we get the merkle root token validator hash / minting policy..
+  merkleRootValidatorHash ← map Scripts.validatorHash $
+    MerkleRoot.merkleRootTokenValidator sc
   merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
     SignedMerkleRootMint
       { sidechainParams: sc
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , merkleRootValidatorHash
       }
   merkleRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM

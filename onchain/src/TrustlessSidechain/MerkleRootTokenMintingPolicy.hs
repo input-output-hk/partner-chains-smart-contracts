@@ -11,13 +11,15 @@ import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
+  Address (addressCredential),
+  Credential (ScriptCredential),
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
   ScriptContext (..),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
-  TxOut (txOutDatum, txOutValue),
+  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
+  TxOut (txOutAddress, txOutDatum, txOutValue),
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (compile)
@@ -32,7 +34,7 @@ import TrustlessSidechain.Types (
   ),
   SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (..),
-  SignedMerkleRootMint (smrmSidechainParams, smrmUpdateCommitteeHashCurrencySymbol),
+  SignedMerkleRootMint (..),
   UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -64,6 +66,8 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
 
       TODO: the spec doesn't say this, but this is what the implementation
       does. Fairly certain this is what we want...
+
+      5. At least one token is paid to 'smrmValidatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRoot -> ScriptContext -> Bool
@@ -80,6 +84,7 @@ mkMintingPolicy
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' verifyMultisig failed" p2
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' committee hash mismatch" p3
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p4
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' must pay to validator hash" p5
     where
       info = scriptContextTxInfo ctx
       minted = txInfoMint info
@@ -118,8 +123,8 @@ mkMintingPolicy
           + 1
 
       -- Checks:
-      -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3., 4. resp. in the
-      -- documentation of this function.
+      -- @p1@, @p2@, @p3@, @p4@, @p5@ correspond to verifications 1., 2., 3.,
+      -- 4., 5. resp. in the documentation of this function.
       p1, p2, p3, p4 :: Bool
       p1 = case previousMerkleRoot of
         Nothing -> True
@@ -157,6 +162,16 @@ mkMintingPolicy
         -- minting a token, and we pattern match to guarantee that there is
         -- only one token being minted namely this token.
         _ -> False
+      p5 =
+        let go [] = False
+            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
+              ScriptCredential vh
+                | vh == smrmValidatorHash smrm
+                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
+                    > 0 ->
+                  True
+              _ -> go txOuts
+         in go $ txInfoOutputs info
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

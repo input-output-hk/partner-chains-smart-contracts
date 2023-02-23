@@ -17,6 +17,7 @@ import Contract.PlutusData
   , PlutusData(..)
   , toData
   )
+import Contract.Scripts (ValidatorHash)
 import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -58,16 +59,25 @@ newtype SignedMerkleRootMint = SignedMerkleRootMint
     -- (uniquely) identifies the utxo for which the `UpdateCommitteeHashDatum`
     -- resides.
     updateCommitteeHashCurrencySymbol ∷ CurrencySymbol
+  , -- | `merkleRootValidatorHash` is used to ensure that the token is paid to
+    -- the "right" script
+    merkleRootValidatorHash ∷ ValidatorHash
   }
 
 derive instance Generic SignedMerkleRootMint _
 derive instance Newtype SignedMerkleRootMint _
 instance ToData SignedMerkleRootMint where
   toData
-    (SignedMerkleRootMint { sidechainParams, updateCommitteeHashCurrencySymbol }) =
+    ( SignedMerkleRootMint
+        { sidechainParams
+        , updateCommitteeHashCurrencySymbol
+        , merkleRootValidatorHash
+        }
+    ) =
     Constr zero
       [ toData sidechainParams
       , toData updateCommitteeHashCurrencySymbol
+      , toData merkleRootValidatorHash
       ]
 
 -- | `SaveRootParams` is the offchain parameter for MerkleRoot (`MerkleRoot.saveRoot`)

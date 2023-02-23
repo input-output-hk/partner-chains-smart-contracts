@@ -89,12 +89,16 @@ runUpdateCommitteeHash
   , committeeHashTokenName
   } ← getCommitteeHashPolicy sidechainParams
 
-  -- Getting the minting policy for the mpt root token
+  -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     smrm

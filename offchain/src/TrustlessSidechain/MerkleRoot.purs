@@ -63,8 +63,7 @@ import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
--- | parameter from the given sidechain parameters, and calls
--- | `merkleRootTokenValidator`
+-- | parameter from the given sidechain parameters
 getMerkleRootTokenMintingPolicy ∷
   SidechainParams →
   Contract ()
@@ -72,6 +71,9 @@ getMerkleRootTokenMintingPolicy ∷
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
 getMerkleRootTokenMintingPolicy sidechainParams = do
+  merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
+    sidechainParams
+
   let msg = report "getMerkleRootTokenMintingPolicy"
   updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
@@ -82,6 +84,7 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
   policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
     , updateCommitteeHashCurrencySymbol
+    , merkleRootValidatorHash
     }
   merkleRootTokenCurrencySymbol ←
     liftContractM (msg "Cannot get currency symbol") $
@@ -110,10 +113,15 @@ runSaveRoot
     liftContractM
       (msg "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
+
+  merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
+    sidechainParams
+
   let
     smrm = SignedMerkleRootMint
       { sidechainParams
       , updateCommitteeHashCurrencySymbol
+      , merkleRootValidatorHash
       }
   rootTokenMP ← merkleRootTokenMintingPolicy smrm
   rootTokenCS ←

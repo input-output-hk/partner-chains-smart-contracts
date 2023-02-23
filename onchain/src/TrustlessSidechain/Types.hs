@@ -7,6 +7,7 @@ module TrustlessSidechain.Types where
 import Data.String (IsString)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
+import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
@@ -137,6 +138,10 @@ data SignedMerkleRootMint = SignedMerkleRootMint
     -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
     -- resides.
     smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
+  , -- | 'smrmValidatorHash' is the validator hash corresponding to
+    -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
+    -- to ensure that this token gets minted to the "right" place.
+    smrmValidatorHash :: ValidatorHash
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
