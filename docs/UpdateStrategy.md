@@ -99,9 +99,11 @@ As an aside -- this suggests that it is sufficient for the collection of
 minting policies to be of exactly size 1, but we will not pursue this idea
 further.
 
-_Remark._ What are the cons of this approach? Indeed, this makes transactions
-larger and hence more costly, but in our opinion it gives us the cleanest break
-of abstraction where we can decouple behavior while permitting upgrading.
+_Remark._ What are the tradeoffs of this approach? Indeed, this makes
+transactions larger and hence more costly, but in our opinion it gives us the
+cleanest break of abstraction where we can decouple behavior while permitting
+upgrading. Moreover, this approach avoids costly migrations in the case of
+upgrading.
 
 ### 3.1 FUELMintingPolicy Validators / Minting Policies
 Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
