@@ -44,7 +44,7 @@ We considered the following strategies, but these can also be used in combinatio
   The drawback is that this would slightly raise the fees due to the cost of an extra token minted for each transaction.
 
 These strategies can be used in combination for optimal migration cost/complexity.
-We also have to decide for each validator, wheter
+We also have to decide for each validator, whether
 
 In case of our sidechain protocol, I propose the following strategies for our validators and minting policies:
 
@@ -59,12 +59,109 @@ In case of our sidechain protocol, I propose the following strategies for our va
 - `DsInsertValidator`: versioned update
 - `DsKeyPolicy`: versioned update
 
-## 3. Implementation:
+## 3. FUELMintingPolicy Transaction Token Pattern Implementation:
+This section discusses in more detail how to apply the transaction token pattern to the FUELMintingPolicy.
+
+As a high level idea, the Transaction Token Pattern will change the
+FUELMintingPolicy to forward all of its validations to some
+*collection of minting policies* stored in the datum at a distinguished UTxO, and
+the FUELMintingPolicy will mint only if the aforementioned collection of
+minting policies *all* mint.
+
+Provided we have sufficient governance mechanisms, one may arbitrarily change
+the distinguished UTxO which holds the collection of minting policies to modify
+the sufficient conditions for the FUELMintingPolicy to mint. In essence, this
+allows one to upgrade the FUELMintingPolicy without requiring changes to
+existing FUEL already stored onchain i.e., there is no need to migrate existing
+tokens over to a new upgraded FUELMintingPolicy which can be costly (in terms
+of ada) if there are already many FUEL tokens existing onchain.
+
+Moreover, since the FUELMintingPolicy will mint only if the collection of
+minting policies *all* mint, this provides some modularity onchain with regards
+to the sufficient conditions for the FUELMintingPolicy in the following sense:
+
+- If an upgrade would like to modify an existing minting policy in the
+  collection of minting policies, this amounts to replacing that minting policy
+  with a new one.
+
+- If an upgrade would like to add a minting policy to the collection of minting
+  policies (in effect, this adds more required conditions to mint a FUEL
+  token), then this amounts to adding a minting policy to the collection of
+  minting policies in the UTxO.
+
+One shortcoming of this would be an upgrade which modifies the
+FUELMintingPolicy to mint only if *either* of two distinct minting policies
+would mint (say, in the case of a partial version upgrade). This would require
+replacing the entire collection of minting policies with a single minting
+policy that mints only if either of the two distinct minting policies would
+mint.
+As an aside -- this suggests that it is sufficient for the collection of
+minting policies to be of exactly size 1, but we will not pursue this idea
+further.
+
+_Remark._ What are the cons of this approach? Indeed, this makes transactions
+larger and hence more costly, but in our opinion it gives us the cleanest break
+of abstraction where we can decouple behavior while permitting upgrading.
+
+### 3.1 FUELMintingPolicy Validators / Minting Policies
+Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
+See the original Plutus contract specification for details
+[here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
+
+We will introduce a new `FUELMintingPolicy'` which will be regarded as the `FUEL`
+tokens.
+
+We will need a minting policy `FUELOracleMintingPolicy` to create an NFT (so this must
+be parameterized by a UTxO) to act as an oracle which will uniquely identify
+the UTxO that holds the collection of minting policies.
+
+The collection of minting policies will reside at a script validator
+address,`FUELOracle`, which has as datum
+```
+newtype FUELOracleDatum =
+    { unFUELOracleDatum :: [CurrencySymbol]
+    }
+```
+That is, this contains the collection of the currency symbols of minting
+policies which are required for `FUELMintingPolicy'` to mint.
+It is outside the scope of this document for when this validator will succeed,
+as there would need to be some sort of governance mechanism which decides
+exactly when we may upgrade `FUELMintingPolicy'`.
+
+Finally, `FUELMintingPolicy'` will be parameterized by the currency symbol of
+the `FUELOracle` and will mint only if the following are satisfied:
+- `FUELMintingPolicy'` has token name `FUEL`;
+- there is a reference input in the current transaction which contains a
+  `FUELOracleMintingPolicy` token with `FUELOracleDatum` as datum;
+- the first currency symbol `c` in the `FUELOracleDatum` mints `k` tokens iff
+  `FUELMintingPolicy'` mints `k` tokens; and
+- for every currency symbol `c` in the `FUELOracleDatum`, at least one such `c`
+  is minted.
+
+We summarize the entire workflow.
+
+**Workflow**
+1. An NFT `FUELOracleMintingPolicy` is minted, and paid to the `FUELOracle` validator script with datum
+```
+FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
+```
+2. Users may mint `FUELMintingPolicy'` for `FUEL` where we note that we have
+   `FUELMintingPolicy'` minting only if `FUELMintingPolicy` mints.
+3. A governance mechanism chooses to upgrade the system by spending the
+   validator `FUELOracle`, paying the `FUELOracleMintingPolicy` to a new
+   `FUELOracle` validator address with a new `FUELOracleDatum` with new
+   currency symbols in the datum.
+4. Note that any new `FUEL` tokens must now validate with the new collection of
+   minting policies provided.
+5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
+
+## 4. Versioning Implementation:
+In this section we discuss how different versions will be maintained onchain.
 
 We implement a new validator and a new minting policy:
 
 - `VersionOracleValidator`: validator address holding the references to all the above mentioned
-  validators and minting policies. Using reference scripts, we could also store the actual
+  validators and minting policies in [#2](#2-strategies). Using reference scripts, we could also store the actual
   scripts themselves.
 - `VersionOraclePolicy`: this token will prove that the version update was approved and the
   references are valid.
@@ -73,7 +170,7 @@ Both of the above are parameterised by the `SidechainParams`.
 Also, we will modify `FUELMintingPolicy` and `MPTRootTokenMintingPolicy` to include the current
 protocol version in their signed message and only allow minting with the actual version.
 
-### 3.1. VersionOracleValidator
+### 4.1. VersionOracleValidator
 
 For each validator or minting policy, a separate UTxO with the following datum will
 be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the
@@ -96,9 +193,9 @@ The same UTxO should also include the script itself, so users of the protocol ca
 scripts ([CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)).
 
 Spending from the validator requires all the `VersionOraclePolicy` tokens at the UTxO
-to be burnt. This is discussed in more detail in [3.3. Invalidating a version](#33-invalidating-a-version)
+to be burnt. This is discussed in more detail in [4.3. Invalidating a version](#33-invalidating-a-version)
 
-### 3.2. VersionOraclePolicy
+### 4.2. VersionOraclePolicy
 
 This token will prove that the `VersionOracle` datum was approved by the committee.
 
@@ -113,11 +210,11 @@ versionHash = blake2b(cbor(VersionOracle))
 ```
 
 **Burning**:
-see [3.3. Invalidating a version](#33-invalidating-a-version)
+see [4.3. Invalidating a version](#33-invalidating-a-version)
 
 - `concat("invalidate", versionHash)` message is signed by the committee
 
-### 3.3. Invalidating a version
+### 4.3. Invalidating a version
 
 Invalidating a version will require us to
 
