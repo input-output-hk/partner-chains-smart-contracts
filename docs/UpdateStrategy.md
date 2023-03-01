@@ -207,28 +207,33 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
 
 ### 3.5 Sufficiency of implementing an update strategy for FUELMintingPolicy
 In this section, we discuss why it is sufficient to provide a means to update
-    the FUELMintingPolicy to any of the other validators / minting policies in the
-    system.
+    the FUELMintingPolicy to update any of the other validators / minting
+    policies in the system.
 
-In the current implementation, we can classify the validators and minting policies into two categories
+In the current implementation, we can classify the validators and minting policies into two categories:
 
 - Validators and minting policies that do *not* interact in any way with the
   FUELMintingPolicy such as the `CommitteeCandidateValidator`.
 
-- Validators and minting policies that do interact in any way with the
+- Validators and minting policies that do interact in some way with the
   FUELMintingPolicy
 
-For the former of the two, we can upgrade these at any point as we see fit
-since nothing else interacts with these. Indeed, the
-`CommitteeCandidateValidator` is exclusively used offchain for technical
-reasons in the Bridge.
+For the former of the two, we can upgrade these at any point since these are
+used exclusively by the Bridge (which is completely offchain), so the Bridge
+may arbitrarily decide that it would like to observe transactions from some
+other validator address.
 
-As for the latter case, in the view that `FUEL` is what all participants care
-about in the system; if any update of any minting policy or validator occurs,
-then this implies that we would need to update the FUELMintingPolicy.
+As for the latter case, in the view that `FUEL` is what all participants are
+interested in; we may observe that, if any update of any minting policy or
+validator occurs, then this implies that we would need to update the
+FUELMintingPolicy.
 So instead of providing a means to upgrade individual subparts of the system, it's
 enough to just provide a method to upgrade the FUELMintingPolicy, and make the
 new FUELMintingPolicy depend on the upgraded subparts instead.
+For example, if we would like to upgrade the committee hash part of the system,
+since the FUELMintingPolicy already depends on the committee hash, any change
+the committee hash would require a change to the FUELMintingPolicy; hence we
+only need to be concerned about updating the FUELMintingPolicy.
 
 ## 4. Versioning Implementation:
 In this section we discuss how different versions will be maintained onchain.
