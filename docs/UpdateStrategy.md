@@ -99,13 +99,61 @@ As an aside -- this suggests that it is sufficient for the collection of
 minting policies to be of exactly size 1, but we will not pursue this idea
 further.
 
-_Remark._ What are the tradeoffs of this approach? Indeed, this makes
-transactions larger and hence more costly, but in our opinion it gives us the
-cleanest break of abstraction where we can decouple behavior while permitting
-upgrading. Moreover, this approach avoids costly migrations in the case of
-upgrading.
+### 3.2 Alternative designs
+We discuss alternative designs.
 
-### 3.1 FUELMintingPolicy Validators / Minting Policies
+We classify the designs in two categories: explicit token migration, and
+implicit token migration.
+
+- _Explicit token migration._ Suppose that one would like to modify the system
+  for an upgrade.
+  Indeed, this forces a change in the current system's validators and minting
+  policies; so participants must agree what the new `FUEL` tokens are, and
+  explicitly burn their current `FUEL` tokens in exchange for the new `FUEL`
+  tokens. We call this process of participants explicitly burning their assets
+  in exchange for a new version of their assets an *explicit token migration*.
+
+  We discuss various ways of implementing the explicit token migration.
+
+    - _Allowing individuals to migrate tokens themselves._ This could be
+      achieved by implementing the upgraded FUEL minting policy to
+      alternatively mint only if the old FUEL is burnt. Then, users could
+      individually claim their new FUEL via burn their own old FUEL.
+
+
+    - _Using the Bridge to migrate tokens._ Recalling that the Bridge already
+      observes changes in the main chain, we may modify the Bridge / `FUEL`
+      claiming mechanism to allow new `FUEL` to be claimed in the case that old
+      `FUEL` is burnt.
+
+_Problems with explicit token migration._ If there's a critical security issue
+with the old FUEL (e.g. someone can mint themselves unlimited FUEL), then this
+critical security issue also appears in the new `FUEL`. Moreover, if this
+system runs for a long time, it would be costly (in terms of ada) for every old
+`FUEL` to be burnt and minted to new `FUEL`. Also, the new `FUEL` minting
+needs to support the migration of assets, and would hence be a bit more
+expensive.
+
+- _Implicit token migration._ In
+  [3.](#3-fuelmintingpolicy-transaction-token-pattern-implementation) we
+  described a method to upgrade the system without requiring participants to
+  migrate their assets via burning / minting to the new system.
+  Indeed, the upgrade requires no actions from participants, and we call this an
+  *implicit token migration*.
+
+_Problems with implicit token migration._ Since the method of implicit token
+migration introduces additional minting policies and validators inside of the
+transaction, this certainly will make things cost more (in terms of ada). So,
+this has the potential issue of running into transaction size limits.
+
+_Discussion._ Clearly, both of the presented methods have their shortcomings.
+In our opinion, we believe that the implicit token migration using the
+    transaction token minting policy pattern is the superior choice.
+It provides us with the ability to migrate tokens for free, and provides us with the flexibility
+    to modify the system in production should there need changes (upgrades, security patches, etc.).
+Also, it provides a clean break of abstraction to decouple behavior.
+
+### 3.3 FUELMintingPolicy Validators / Minting Policies
 Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
 See the original Plutus contract specification for details
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
