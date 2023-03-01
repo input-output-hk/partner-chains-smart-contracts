@@ -99,7 +99,7 @@ As an aside -- this suggests that it is sufficient for the collection of
 minting policies to be of exactly size 1, but we will not pursue this idea
 further.
 
-### 3.2 Alternative designs
+### 3.3 Alternative designs
 We discuss alternative designs.
 
 We classify the designs in two categories: explicit token migration, and
@@ -153,7 +153,7 @@ It provides us with the ability to migrate tokens for free, and provides us with
     to modify the system in production should there need changes (upgrades, security patches, etc.).
 Also, it provides a clean break of abstraction to decouple behavior.
 
-### 3.3 FUELMintingPolicy Validators / Minting Policies
+### 3.4 FUELMintingPolicy Validators / Minting Policies
 Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
 See the original Plutus contract specification for details
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
@@ -204,6 +204,31 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
 4. Note that any new `FUEL` tokens must now validate with the new collection of
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
+
+### 3.5 Sufficiency of implementing an update strategy for FUELMintingPolicy
+In this section, we discuss why it is sufficient to provide a means to update
+    the FUELMintingPolicy to any of the other validators / minting policies in the
+    system.
+
+In the current implementation, we can classify the validators and minting policies into two categories
+
+- Validators and minting policies that do *not* interact in any way with the
+  FUELMintingPolicy such as the `CommitteeCandidateValidator`.
+
+- Validators and minting policies that do interact in any way with the
+  FUELMintingPolicy
+
+For the former of the two, we can upgrade these at any point as we see fit
+since nothing else interacts with these. Indeed, the
+`CommitteeCandidateValidator` is exclusively used offchain for technical
+reasons in the Bridge.
+
+As for the latter case, in the view that `FUEL` is what all participants care
+about in the system; if any update of any minting policy or validator occurs,
+then this implies that we would need to update the FUELMintingPolicy.
+So instead of providing a means to upgrade individual subparts of the system, it's
+enough to just provide a method to upgrade the FUELMintingPolicy, and make the
+new FUELMintingPolicy depend on the upgraded subparts instead.
 
 ## 4. Versioning Implementation:
 In this section we discuss how different versions will be maintained onchain.
