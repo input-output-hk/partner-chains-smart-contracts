@@ -187,9 +187,8 @@ That is, this contains the collection of the currency symbols of minting
 policies which are required for `FUELMintingPolicy'` to mint.
 It is outside the scope of this document to discuss the conditions for when
 this validator will succeed, as there would need to be some sort of governance
-mechanism which decides when we may upgrade `FUELMintingPolicy'`.
-
-If we choose to also implement the versioning system described below, reusing the same `VersionOracle` would make the design conceptually simpler. Instead of having a concrete `FUELOraclePolicy` and `FUELOracleValidator` pair, with slightly different behaviour compared to the `VersionOraclePolicy`, we could just use the same abstraction. This also allows us to reuse the same optimisations, such as attaching reference scripts to VersionOracle utxos, thus also solving the problem of storing old versions of scripts.
+mechanism which decides when we may upgrade `FUELMintingPolicy'`. See
+[3.5](#35-governance-of-updates) for details.
 
 Finally, `FUELPolicy` will be parameterized by the currency symbol of
 the `FUELOracle` and will mint only if the following are satisfied:
@@ -218,7 +217,28 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
-### 3.5 Sufficiency of implementing an update strategy for FUELMintingPolicy
+### 3.5 Governance of updates
+In this section, we discuss options for governing updates. Previously, we
+described the conditions for which an update happens is completely determined
+by the script validator address which holds the `FUELOracle` NFT.
+
+Indeed, the only constraint that this script validator has is that it must have
+`FUELOracleDatum` as its datum; so this means that the conditions on which this
+validator may succeed (and hence permit an update) can be changed alongside an
+update of the system. In other words, this mechanism allows updating of the
+governance mechanism itself.
+
+Alternatively, if we choose to also implement the versioning system described
+below, reusing the same `VersionOracle` would make the design conceptually
+simpler. Instead of having a concrete `FUELOraclePolicy` and
+`FUELOracleValidator` pair, with slightly different behaviour compared to the
+`VersionOraclePolicy`, we could just use the same abstraction. This also allows
+us to reuse the same optimisations, such as attaching reference scripts to
+VersionOracle utxos, thus also solving the problem of storing old versions of
+scripts.
+
+
+### 3.6 Sufficiency of implementing an update strategy for FUELMintingPolicy
 In this section, we discuss why it is sufficient to provide a means to update
     the FUELMintingPolicy to update any of the other validators / minting
     policies in the system.
