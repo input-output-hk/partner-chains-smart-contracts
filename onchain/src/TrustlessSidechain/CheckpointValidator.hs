@@ -31,48 +31,27 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.Types (
-  -- CheckpointDatum (checkpointBlockHash, checkpointBlockNumber),
-  CheckpointDatum,
+  CheckpointDatum (checkpointBlockHash, checkpointBlockNumber),
   CheckpointMessage (CheckpointMessage, checkpointMsgBlockHash, checkpointMsgBlockNumber, checkpointMsgSidechainEpoch, checkpointMsgSidechainParams),
   CheckpointParameter (checkpointSidechainParams, checkpointToken),
-  CheckpointRedeemer (checkpointCommitteePubKeys, checkpointCommitteeSignatures, newCheckpointBlockHash, newCheckpointBlockNumber),
+  CheckpointRedeemer (checkpointCommitteePubKeys, checkpointCommitteeSignatures),
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  -- SignedMerkleRootMint (..),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch)
+  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
  )
-
--- import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils (verifyMultisig)
 import Prelude qualified
 
-{- | 'serialiseUchm' serialises a 'CheckpointMessage' via converting
- to the Plutus data representation, then encoding it to cbor via the builtin.
--}
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'aggregateKeys' aggregates a list of public keys into a singCheckpointl
- committee hash by essentially computing the merkle root of all public keys
- together.
- We call the output of this function an /aggregate public key/.
--}
 {-# INLINEABLE aggregateKeys #-}
 aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
 aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 
-{- Note [Aggregate Keys Append Scheme]
- Potential optimizations: instead of doing the concatenated hash, we could
- instead compute a merkle root.
- -}
-
-{- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
- key, and returns true or false to determinig whether the public keys weCheckpointr
- used to produce the aggregate public key
--}
 {-# INLINEABLE aggregateCheck #-}
 aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
@@ -84,22 +63,17 @@ mkCheckpointValidator ::
   CheckpointRedeemer ->
   ScriptContext ->
   Bool
-mkCheckpointValidator checkpointParam _ red ctx =
+mkCheckpointValidator checkpointParam datum red ctx =
   traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputHasToken
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
     && traceIfFalse "error 'mkCheckpointValidator': current committee mismatch" isCurrentCommittee
+    && traceIfFalse
+      "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
+      (checkpointBlockNumber datum < checkpointBlockNumber outputDatum)
+    && traceIfFalse
+      "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
+      (checkpointBlockHash datum /= checkpointBlockHash outputDatum)
   where
-    -- && traceIfFalse
-    --   "error 'mkCheckpointValidator': expected different new committee"
-    --   (checkpointCommitteeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
-    -- Note: we only need to check if the new committee is "as signed
-    -- by the committee", since we already know that the sidechainEpoch in
-    -- the datum was "as signed by the committee" -- see how we constructed
-    -- the 'CheckpointMessage'
-    -- && traceIfFalse
-    --   "error 'mkCheckpointValidator': sidechain epoch is not strictly increasing"
-    --   (sidechainEpoch dat < sidechainEpoch outputDatum)
-
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
@@ -110,11 +84,7 @@ mkCheckpointValidator checkpointParam _ red ctx =
     committeeDatum =
       let go :: [TxInInfo] -> UpdateCommitteeHashDatum
           go (t : ts)
-            | o <- txInInfoResolved t
-              , -- See Note [Committee Hash Inline Datum] in
-                -- 'TrustlessSidechain.UpdateCommitteeHash'
-                OutputDatum d <- txOutDatum o =
-              IsData.unsafeFromBuiltinData $ getDatum d
+            | o <- txInInfoResolved t, OutputDatum d <- txOutDatum o = IsData.unsafeFromBuiltinData $ getDatum d
             | otherwise = go ts
           go [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
        in go (txInfoReferenceInputs info)
@@ -124,10 +94,10 @@ mkCheckpointValidator checkpointParam _ red ctx =
       [o] -> o
       _ -> traceError "Expected exactly one output"
 
-    -- outputDatum :: CheckpointDatum
-    -- outputDatum = case txOutDatum ownOutput of
-    --   OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
-    --   _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
+    outputDatum :: CheckpointDatum
+    outputDatum = case txOutDatum ownOutput of
+      OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
+      _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
 
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
@@ -148,8 +118,8 @@ mkCheckpointValidator checkpointParam _ red ctx =
       let message =
             CheckpointMessage
               { checkpointMsgSidechainParams = sc
-              , checkpointMsgBlockHash = newCheckpointBlockHash red
-              , checkpointMsgBlockNumber = newCheckpointBlockNumber red
+              , checkpointMsgBlockHash = checkpointBlockHash outputDatum
+              , checkpointMsgBlockNumber = checkpointBlockNumber outputDatum
               , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
               }
        in verifyMultisig
@@ -160,8 +130,6 @@ mkCheckpointValidator checkpointParam _ red ctx =
 
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (checkpointCommitteePubKeys red) $ committeeHash committeeDatum
-
--- * Initializing the committee hash
 
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint

@@ -269,9 +269,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
-{- | Datum for a checkpoint. This is a hash of concatenated public key hashes
-  of the committee members
--}
+-- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
   { checkpointBlockHash :: BuiltinByteString
   , checkpointBlockNumber :: Integer
