@@ -159,7 +159,7 @@ See the original Plutus contract specification for details
 
 We will modify the `FUELMintingPolicy` to ensure that a given *claim certificate* is only valid for one version of the policy. In particular, we parameterise the `FUELMintingPolicy` with a `version :: Int`, and introduce a new `version` field in the `MerkleTreeEntry`. When verifying the `SignedMerkleProof` (which contains the hash of the `MerkleTreeEntry`), the policy has to check that the version of the script matches the version of the certificate.
 
-We will introduce a new `FUELPolicy'` which will be regarded as the `FUEL`
+We will introduce a new `FUELPolicy` which will be regarded as the `FUEL`
 tokens.
 
 We will need a minting policy `FUELOracleMintingPolicy` to create an NFT (so this must
@@ -181,13 +181,13 @@ mechanism which decides when we may upgrade `FUELMintingPolicy'`.
 
 If we choose to also implement the versioning system described below, reusing the same `VersionOracle` would make the design conceptually simpler. Instead of having a concrete `FUELOraclePolicy` and `FUELOracleValidator` pair, with slightly different behaviour compared to the `VersionOraclePolicy`, we could just use the same abstraction. This also allows us to reuse the same optimisations, such as attaching reference scripts to VersionOracle utxos, thus also solving the problem of storing old versions of scripts.
 
-Finally, `FUELPolicy'` will be parameterized by the currency symbol of
+Finally, `FUELPolicy` will be parameterized by the currency symbol of
 the `FUELOracle` and will mint only if the following are satisfied:
-- `FUELPolicy'` has token name `FUEL`;
+- `FUELPolicy` has token name `FUEL`;
 - there is a reference input in the current transaction which contains a
   `FUELOracleMintingPolicy` token with `FUELOracleDatum` as datum;
 - the first currency symbol `c` in the `FUELOracleDatum` mints `k` tokens iff
-  `FUELPolicy'` mints `k` tokens; and
+  `FUELPolicy` mints `k` tokens; and
 - for every currency symbol `c` in the `FUELOracleDatum`, at least one such `c`
   is minted.
 
@@ -198,8 +198,8 @@ We summarize the entire workflow.
 ```
 FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
 ```
-2. Users may mint `FUELPolicy'` for `FUEL` where we note that we have
-   `FUELPolicy'` minting only if `FUELMintingPolicy` mints.
+2. Users may mint `FUELPolicy` for `FUEL` where we note that we have
+   `FUELPolicy` minting only if `FUELMintingPolicy` mints.
 3. A governance mechanism chooses to upgrade the system by spending the
    validator `FUELOracle`, paying the `FUELOracleMintingPolicy` to a new
    `FUELOracle` validator address with a new `FUELOracleDatum` with new
@@ -229,7 +229,9 @@ other validator address.
 As for the latter case, in the view that `FUEL` is what all participants are
 interested in; we may observe that, if any update of any minting policy or
 validator occurs, then this implies that we would need to update the
-FUELMintingPolicy.
+FUELMintingPolicy since the FUELMintingPolicy is transitively paramaterized by
+all minting policies and validators of the latter case meaning an update to any
+of the subparts would imply a change in the original FUELMintingPolicy.
 So instead of providing a means to upgrade individual subparts of the system, it's
 enough to just provide a method to upgrade the FUELMintingPolicy, and make the
 new FUELMintingPolicy depend on the upgraded subparts instead.
