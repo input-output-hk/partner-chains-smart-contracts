@@ -117,8 +117,12 @@ implicit token migration.
     - _Allowing individuals to migrate tokens themselves._ This could be
       achieved by implementing the upgraded FUEL minting policy to
       alternatively mint only if the old FUEL is burnt. Then, users could
-      individually claim their new FUEL via burn their own old FUEL.
+      individually claim their new FUEL via burning their own old FUEL.
 
+      Note that the new `FUEL` minting policy needs to support the migration of
+      assets, and would hence be a larger than necessary as it must support
+      migration of the old `FUEL`. As more updates happen, this could make
+      supporting many old versions impossible due to transaction size limits.
 
     - _Using the Bridge to migrate tokens._ Recalling that the Bridge already
       observes changes in the main chain, we may modify the Bridge / `FUEL`
@@ -129,21 +133,21 @@ _Problems with explicit token migration._ If there's a critical security issue
 with the old FUEL (e.g. someone can mint themselves unlimited FUEL), then this
 critical security issue also appears in the new `FUEL`. Moreover, if this
 system runs for a long time, it would be costly (in terms of ada) for every old
-`FUEL` to be burnt and minted to new `FUEL`. Also, the new `FUEL` minting
-needs to support the migration of assets, and would hence be a bit more
-expensive.
+`FUEL` to be burnt and minted to new `FUEL`.
 
 - _Implicit token migration._ In
   [3.](#3-fuelmintingpolicy-transaction-token-pattern-implementation) we
   described a method to upgrade the system without requiring participants to
   migrate their assets via burning / minting to the new system.
-  Indeed, the upgrade requires no actions from participants, and we call this an
-  *implicit token migration*.
+  Indeed, an upgrade with such a system requires no actions from participants,
+  and we call this an *implicit token migration*.
 
 _Problems with implicit token migration._ Since the method of implicit token
 migration introduces additional minting policies and validators inside of the
 transaction, this certainly will make things cost more (in terms of ada). So,
-this has the potential issue of running into transaction size limits.
+this has the potential issue of running into transaction size limits, but
+reference scripts ([CIP33](https://cips.cardano.org/cips/cip33/)) can help
+mitigate this.
 
 _Discussion._ Clearly, both of the presented methods have their shortcomings.
 In our opinion, we believe that the implicit token migration using the
@@ -157,7 +161,13 @@ Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
 See the original Plutus contract specification for details
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
 
-We will modify the `FUELMintingPolicy` to ensure that a given *claim certificate* is only valid for one version of the policy. In particular, we parameterise the `FUELMintingPolicy` with a `version :: Int`, and introduce a new `version` field in the `MerkleTreeEntry`. When verifying the `SignedMerkleProof` (which contains the hash of the `MerkleTreeEntry`), the policy has to check that the version of the script matches the version of the certificate.
+We will modify the `FUELMintingPolicy` to ensure that a given *claim
+certificate* is only valid for one version of the policy. In particular, we
+parameterise the `FUELMintingPolicy` with a `version :: Int`, and introduce a
+new `version` field in the `MerkleTreeEntry`. When verifying the
+`SignedMerkleProof` (which contains the hash of the `MerkleTreeEntry`), the
+policy has to check that the version of the script matches the version of the
+certificate. See [4.](#4-versioning-implementation).
 
 We will introduce a new `FUELPolicy` which will be regarded as the `FUEL`
 tokens.
@@ -183,7 +193,7 @@ If we choose to also implement the versioning system described below, reusing th
 
 Finally, `FUELPolicy` will be parameterized by the currency symbol of
 the `FUELOracle` and will mint only if the following are satisfied:
-- `FUELPolicy` has token name `FUEL`;
+- `FUELPolicy` only has token name `FUEL`;
 - there is a reference input in the current transaction which contains a
   `FUELOracleMintingPolicy` token with `FUELOracleDatum` as datum;
 - the first currency symbol `c` in the `FUELOracleDatum` mints `k` tokens iff
@@ -216,10 +226,10 @@ In this section, we discuss why it is sufficient to provide a means to update
 In the current implementation, we can classify the validators and minting policies into two categories:
 
 - Validators and minting policies that do *not* interact in any way with the
-  FUELMintingPolicy such as the `CommitteeCandidateValidator`.
+  FUELMintingPolicy which is just the `CommitteeCandidateValidator`.
 
 - Validators and minting policies that do interact in some way with the
-  FUELMintingPolicy
+  FUELMintingPolicy which is clearly everything else.
 
 For the former of the two, we can upgrade these at any point since these are
 used exclusively by the Bridge (which is completely offchain), so the Bridge
@@ -229,18 +239,19 @@ other validator address.
 As for the latter case, in the view that `FUEL` is what all participants are
 interested in; we may observe that, if any update of any minting policy or
 validator occurs, then this implies that we would need to update the
-FUELMintingPolicy since the FUELMintingPolicy is transitively paramaterized by
+FUELMintingPolicy since the FUELMintingPolicy is transitively parameterized by
 all minting policies and validators of the latter case meaning an update to any
 of the subparts would imply a change in the original FUELMintingPolicy.
 So instead of providing a means to upgrade individual subparts of the system, it's
 enough to just provide a method to upgrade the FUELMintingPolicy, and make the
 new FUELMintingPolicy depend on the upgraded subparts instead.
+
 For example, if we would like to upgrade the committee hash part of the system,
 since the FUELMintingPolicy already depends on the committee hash, any change
 the committee hash would require a change to the FUELMintingPolicy; hence we
 only need to be concerned about updating the FUELMintingPolicy.
 
-## 4. Versioning Implementation:
+## 4. Versioning Implementation
 In this section we discuss how different versions will be maintained onchain.
 
 We implement a new validator and a new minting policy:
@@ -278,7 +289,7 @@ The same UTxO should also include the script itself, so users of the protocol ca
 scripts ([CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)).
 
 Spending from the validator requires all the `VersionOraclePolicy` tokens at the UTxO
-to be burnt. This is discussed in more detail in [4.3. Invalidating a version](#33-invalidating-a-version)
+to be burnt. This is discussed in more detail in [4.3. Invalidating a version](#43-invalidating-a-version)
 
 ### 4.2. VersionOraclePolicy
 
@@ -295,7 +306,7 @@ versionHash = blake2b(cbor(VersionOracle))
 ```
 
 **Burning**:
-see [4.3. Invalidating a version](#33-invalidating-a-version)
+see [4.3. Invalidating a version](#43-invalidating-a-version)
 
 - `concat("invalidate", versionHash)` message is signed by the committee
 
