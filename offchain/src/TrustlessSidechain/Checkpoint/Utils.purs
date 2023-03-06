@@ -34,14 +34,14 @@ import Contract.Transaction
 import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Checkpoint.Types
   ( InitCheckpointMint
   , UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   , UpdateCommitteeHashParams(..)
   )
+import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
@@ -74,14 +74,12 @@ checkpointValidator sp = do
 -- |    - `newCommitteePubKeys` is sorted (lexicographically), and
 -- |    - `committeeSignatures` is sorted (lexicographically) by the
 -- |    `SidechainPublicKey`.
-normalizeSignatures ∷
-normalizeSignatures CheckpointEndpointParam → CheckpointEndpointParam
- (CheckpointEndpointParam p) =
-  CheckpointEndpointParam
-    p
-      { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-          p.committeeSignatures
-      }
+normalizeSignatures ∷ CheckpointEndpointParam → CheckpointEndpointParam
+normalizeSignatures (CheckpointEndpointParam p) = CheckpointEndpointParam
+  p
+    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
+        p.committeeSignatures
+    }
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
