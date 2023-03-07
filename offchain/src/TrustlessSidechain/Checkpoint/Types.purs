@@ -1,9 +1,9 @@
 module TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
-  , Checkpoint(Checkpoint)
-  , InitCommitteeHashMint(InitCommitteeHashMint)
+  , CheckpointParameter(CheckpointParameter)
+  , InitCheckpointMint(InitCheckpointMint)
   , CheckpointRedeemer(CheckpointRedeemer)
-  , CheckpointEndpointParam(CheckpointndpointParamn)
+  , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
   ) where
 
@@ -18,9 +18,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
-import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
-import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
@@ -52,11 +50,11 @@ newtype CheckpointParameter = CheckpointParameter
   , checkpointToken ∷ AssetClass
   }
 
-derive instance Generic Checkpoint _
-derive instance Newtype Checkpoint _
-instance ToData Checkpoint where
+derive instance Generic CheckpointParameter _
+derive instance Newtype CheckpointParameter _
+instance ToData CheckpointParameter where
   toData
-    ( Checkpoint
+    ( CheckpointParameter
         { sidechainParams, checkpointToken }
     ) = Constr zero
     [ toData sidechainParams
@@ -80,23 +78,24 @@ data CheckpointRedeemer = CheckpointRedeemer
   }
 
 derive instance Generic CheckpointRedeemer _
+
 instance ToData CheckpointRedeemer where
   toData
     ( CheckpointRedeemer
         { committeeSignatures
         , committeePubKeys
-        , checkpointBlockHash
-        , checkpointBlockNumber
+        , newCheckpointBlockHash
+        , newCheckpointBlockNumber
         }
     ) = Constr zero
     [ toData committeeSignatures
     , toData committeePubKeys
-    , toData checkpointBlockHash
-    , toData checkpointBlockNumber
+    , toData newCheckpointBlockHash
+    , toData newCheckpointBlockNumber
     ]
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
-newtype CheckpointEndpointParam = CheckpointndpointParamn
+newtype CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
   , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
   , sidechainEpoch ∷ BigInt

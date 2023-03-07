@@ -1,17 +1,16 @@
 module TrustlessSidechain.Checkpoint.Utils
-  ( committeeHashPolicy
-  , updateCommitteeHashValidator
-  , initCommitteeHashMintTn
-  , committeeHashAssetClass
+  ( checkpointPolicy
+  , checkpointValidator
+  , initCheckpointMintTn
+  , checkpointAssetClass
   , aggregateKeys
-  , findUpdateCommitteeHashUtxo
-  , serialiseUchmHash
-  , normalizeCommitteeHashParams
+  , serialiseCheckpointMessage
+  , normalizeSignatures
+
   ) where
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
@@ -27,25 +26,19 @@ import Contract.TextEnvelope
   ( decodeTextEnvelope
   , plutusScriptV2FromEnvelope
   )
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
 import Contract.Value as Value
-import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
   ( InitCheckpointMint
-  , UpdateCommitteeHash
-  , UpdateCommitteeHashMessage
-  , UpdateCommitteeHashParams(..)
+  , CheckpointParameter
+  , CheckpointMessage
+  , CheckpointEndpointParam(CheckpointEndpointParam)
   )
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
-import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 checkpointPolicy ∷ InitCheckpointMint → Contract () MintingPolicy
 checkpointPolicy sp = do
@@ -69,11 +62,6 @@ checkpointValidator sp = do
     [ PlutusData.toData sp ]
   pure $ Validator applied
 
--- | `normalizeCommitteeHashParams` modifies the following fields in
--- | `UpdateCommitteeHashParams` fields to satisfy the following properties
--- |    - `newCommitteePubKeys` is sorted (lexicographically), and
--- |    - `committeeSignatures` is sorted (lexicographically) by the
--- |    `SidechainPublicKey`.
 normalizeSignatures ∷ CheckpointEndpointParam → CheckpointEndpointParam
 normalizeSignatures (CheckpointEndpointParam p) = CheckpointEndpointParam
   p
@@ -85,18 +73,18 @@ normalizeSignatures (CheckpointEndpointParam p) = CheckpointEndpointParam
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
-initCheckpointhMintTn ∷ Value.TokenName
-initCheckpointhMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
+initCheckpointMintTn ∷ Value.TokenName
+initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
 {-# INLINEABLE committeeHashAssetClass #-}
-checkpointAssetClass ∷ InitCheckpointhMint → Contract () AssetClass
+checkpointAssetClass ∷ InitCheckpointMint → Contract () AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm
   curSym ← Monad.liftContractM "Couldn't get checkpoint currency symbol"
     (Value.scriptCurrencySymbol cp)
 
-  pure $ assetClass curSym initCheckpointhMintTn
+  pure $ assetClass curSym initCheckpointMintTn
 
 -- | TODO: refactor
 aggregateKeys ∷ Array SidechainPublicKey → ByteArray
