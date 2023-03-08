@@ -290,7 +290,8 @@ protocol version in their signed message and only allow minting with the actual 
 
 For each validator or minting policy, a separate UTxO with the following datum will
 be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the
-UTxO to prove its validity. This design allows multiple versions of the same validator.
+UTxO to prove its validity. Furthermore, each UTxO will also include a reference script (see [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)), holding the actual validator or minting policy script.
+This design allows multiple versions of the same validator.
 
 **Datum:**
 
@@ -300,13 +301,8 @@ data VersionOracle = VersionOracle
   -- ^ `version` of the protocol
   , scriptId :: Int
   -- ^ `scriptId` is the unique identifier of the validator
-  , scriptHash :: ScriptHash
-  -- ^ `validators` is the validator hash of the validator/minting policy
 }
 ```
-
-The same UTxO should also include the script itself, so users of the protocol can use reference
-scripts ([CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)).
 
 Spending from the validator requires all the `VersionOraclePolicy` tokens at the UTxO
 to be burnt. This is discussed in more detail in [4.3. Invalidating a version](#43-invalidating-a-version)
