@@ -12,6 +12,7 @@ import Contract.Log as Log
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Utxos as Utxos
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
@@ -20,6 +21,7 @@ import Data.Map as Map
 import Data.Set as Set
 import Effect.Exception as Exception
 import Mote.Monad as Mote.Monad
+import Test.CandidatePermissionToken as Test.CandidatePermissionToken
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -34,6 +36,8 @@ tests = plutipGroup "Initialising the sidechain" $ do
   testScenario1
   testScenario2
   testScenario3
+  testScenario4
+  testScenario5
 
 -- | `generateInitCommittee` generates an intial committee of the given size as
 -- | an array of tuple associating public key to private key.
@@ -75,6 +79,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         void $ InitSidechain.initSidechain initScParams
@@ -110,6 +115,7 @@ testScenario2 =
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
               }
 
           void do
@@ -152,6 +158,7 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         void $ InitSidechain.initSidechain initScParams
@@ -160,3 +167,89 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
           Monad.throwContractError $ Exception.error
             "Contract should have failed but it didn't."
         Left _err → pure unit
+
+-- | `testScenario4` is identical to `testScenario1` BUT we include the minting
+-- | of candidate permission tokens, and verify that we actually have the
+-- | candidate permission token afterwards
+testScenario4 ∷ PlutipTest
+testScenario4 =
+  Mote.Monad.test "Calling `initSidechain` with candidate permission tokens"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+    $ \alice →
+        Wallet.withKeyWallet alice do
+          Log.logInfo' "InitSidechain 'testScenario1'"
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          -- generate an initialize committee of `committeeSize` committee members
+          let committeeSize = 25
+          committeePrvKeys ← sequence $ Array.replicate committeeSize
+            Crypto.generatePrivKey
+          let
+            permissionToken =
+              { candidatePermissionTokenUtxo: genesisUtxo
+              , candidatePermissionTokenName: Value.adaToken
+              }
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            initScParams = InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initCommittee
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo:
+                  Just
+                    { amount: one
+                    , permissionToken
+                    }
+              }
+
+          { sidechainParams: sc } ← InitSidechain.initSidechain initScParams
+          Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
+            permissionToken
+
+-- | `testScenario5` is identical to `testScenario2` BUT we include the minting
+-- | of candidate permission tokens, and verify that we actually have the
+-- | candidate permission token afterwards
+testScenario5 ∷ PlutipTest
+testScenario5 = do
+  Mote.Monad.test
+    "Calling `initSidechain` as the two step process with candidate permission tokens"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+    $ \alice →
+        Wallet.withKeyWallet alice do
+          Log.logInfo' "InitSidechain 'testScenario2'"
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          -- generate an initialize committee of @committeeSize@ committee members
+          let committeeSize = 25
+          committeePrvKeys ← sequence $ Array.replicate committeeSize
+            Crypto.generatePrivKey
+          let
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            permissionToken =
+              { candidatePermissionTokenUtxo: genesisUtxo
+              , candidatePermissionTokenName: Value.adaToken
+              }
+            initScParams =
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initCommittee
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo:
+                  Just
+                    { amount: one
+                    , permissionToken
+                    }
+              }
+
+          void do
+            { sidechainParams: sc } ← InitSidechain.initSidechainTokens
+              initScParams
+            Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
+              permissionToken
+            InitSidechain.initSidechainCommittee initScParams

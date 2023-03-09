@@ -74,6 +74,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       -- 2. Saving a merkle root.
@@ -215,6 +216,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       -- 2. Saving a merkle root

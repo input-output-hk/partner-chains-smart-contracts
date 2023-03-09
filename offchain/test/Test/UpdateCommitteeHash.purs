@@ -182,6 +182,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -222,6 +223,7 @@ testScenario2 =
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -282,6 +284,7 @@ testScenario3 =
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -367,6 +370,7 @@ testScenario4 =
             , initSidechainEpoch: one
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams

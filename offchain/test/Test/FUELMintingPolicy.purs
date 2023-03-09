@@ -69,6 +69,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -142,6 +143,7 @@ testScenarioSuccess2 =
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
         -- end of mostly duplicated code from `testScenarioSuccess`
 
@@ -270,6 +272,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams

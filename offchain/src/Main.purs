@@ -2,13 +2,18 @@ module Main (main) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator as CommitteCandidateValidator
 import Contract.Monad (Contract, launchAff_, runContract)
 import Data.Bifunctor (lmap)
 import Data.List as List
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
+import TrustlessSidechain.CandidatePermissionToken
+  ( CandidatePermissionMint(..)
+  , CandidatePermissionMintParams(..)
+  )
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
@@ -84,36 +89,64 @@ runEndpoint scParams =
       , spoSig
       , sidechainSig
       , inputUtxo
+      , permissionToken
       } →
       let
-        params = CommitteCandidateValidator.RegisterParams
+        params = CommitteeCandidateValidator.RegisterParams
           { sidechainParams: scParams
           , spoPubKey
           , sidechainPubKey
           , spoSig
           , sidechainSig
           , inputUtxo
+          , permissionToken
           }
       in
-        CommitteCandidateValidator.register params
+        CommitteeCandidateValidator.register params
           <#> unwrap
           >>> { transactionId: _ }
           >>> CommitteeCandidateRegResp
 
+    CandidiatePermissionTokenAct
+      { permissionToken:
+          { candidatePermissionTokenUtxo
+          , candidatePermissionTokenName
+          }
+      , amount
+      } →
+      let
+        params = CandidatePermissionMintParams
+          { candidatePermissionTokenName
+          , amount
+          , candidateMintPermissionMint:
+              CandidatePermissionMint
+                { sidechainParams: scParams
+                , candidatePermissionTokenUtxo
+                }
+          }
+      in
+        CandidatePermissionToken.runCandidatePermissionToken params
+          <#> \{ transactionId, candidatePermissionCurrencySymbol } →
+            CandidatePermissionTokenResp
+              { transactionId: unwrap transactionId
+              , candidatePermissionCurrencySymbol
+              }
+
     CommitteeCandidateDereg { spoPubKey } →
       let
-        params = CommitteCandidateValidator.DeregisterParams
+        params = CommitteeCandidateValidator.DeregisterParams
           { sidechainParams: scParams
           , spoPubKey
           }
       in
-        CommitteCandidateValidator.deregister params
+        CommitteeCandidateValidator.deregister params
           <#> unwrap
           >>> { transactionId: _ }
           >>> CommitteeCandidateDeregResp
-    GetAddrs → do
+    GetAddrs extraInfo → do
       sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
         scParams
+        extraInfo
       pure $ GetAddrsResp { sidechainAddresses }
 
     CommitteeHash
@@ -154,16 +187,30 @@ runEndpoint scParams =
         >>> { transactionId: _ }
         >>> SaveRootResp
 
-    InitTokens → do
+    InitTokens { initCandidatePermissionTokenMintInfo } → do
       let
         sc = unwrap scParams
         isc =
           { initChainId: sc.chainId
           , initGenesisHash: sc.genesisHash
           , initUtxo: sc.genesisUtxo
-          -- v only difference between sidechain and initsidechain
           , initThresholdNumerator: sc.thresholdNumerator
           , initThresholdDenominator: sc.thresholdDenominator
+          , initCandidatePermissionTokenMintInfo:
+              case initCandidatePermissionTokenMintInfo of
+                Nothing → Nothing
+                Just
+                  { candidatePermissionTokenAmount
+                  , candidatePermissionTokenName
+                  , candidatePermissionTokenUtxo
+                  } → Just
+                  { amount: candidatePermissionTokenAmount
+                  , permissionToken:
+                      { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
+                          candidatePermissionTokenUtxo
+                      , candidatePermissionTokenName
+                      }
+                  }
           }
       { transactionId, sidechainParams, sidechainAddresses } ←
         initSidechainTokens isc
@@ -174,7 +221,12 @@ runEndpoint scParams =
         , sidechainAddresses
         }
 
-    Init { committeePubKeysInput, initSidechainEpoch, useInitTokens } → do
+    Init
+      { committeePubKeysInput
+      , initSidechainEpoch
+      , useInitTokens
+      , initCandidatePermissionTokenMintInfo
+      } → do
       committeePubKeys ← liftEffect $ ConfigFile.getCommittee
         committeePubKeysInput
       let
@@ -183,8 +235,25 @@ runEndpoint scParams =
           { initChainId: sc.chainId
           , initGenesisHash: sc.genesisHash
           , initUtxo: sc.genesisUtxo
-          -- v only difference between sidechain and initsidechain
           , initCommittee: List.toUnfoldable committeePubKeys
+
+          , -- duplicated from the `InitTokens` case
+            initCandidatePermissionTokenMintInfo:
+              case initCandidatePermissionTokenMintInfo of
+                Nothing → Nothing
+                Just
+                  { candidatePermissionTokenAmount
+                  , candidatePermissionTokenName
+                  , candidatePermissionTokenUtxo
+                  } → Just
+                  { amount: candidatePermissionTokenAmount
+                  , permissionToken:
+                      { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
+                          candidatePermissionTokenUtxo
+                      , candidatePermissionTokenName
+                      }
+                  }
+
           , initSidechainEpoch
           , initThresholdNumerator: sc.thresholdNumerator
           , initThresholdDenominator: sc.thresholdDenominator
