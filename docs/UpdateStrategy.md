@@ -184,10 +184,10 @@ newtype FUELOracleDatum =
     }
 ```
 That is, this contains the collection of the currency symbols of minting
-policies which are required for `FUELMintingPolicy'` to mint.
+policies which are required for `FUELPolicy` to mint.
 It is outside the scope of this document to discuss the conditions for when
 this validator will succeed, as there would need to be some sort of governance
-mechanism which decides when we may upgrade `FUELMintingPolicy'`. See
+mechanism which decides when we may upgrade `FUELPolicy`. See
 [3.5](#35-governance-of-updates) for details.
 
 Finally, `FUELPolicy` will be parameterized by the currency symbol of
