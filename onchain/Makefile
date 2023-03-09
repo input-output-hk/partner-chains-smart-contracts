@@ -1,11 +1,5 @@
 .PHONY: nix-cabal-repl format_check format cabalfmt cabalfmt_check hoogle lint
 
-FOURMOLU_EXTENSIONS := \
-	-o -XTypeApplications \
-	-o -XTemplateHaskell \
-	-o -XImportQualifiedPost \
-	-o -XPatternSynonyms \
-	-o -fplugin=RecordDotPreprocessor
 CABAL_SOURCES := $(shell fd -ecabal)
 
 # Starts a hoogle Server.
