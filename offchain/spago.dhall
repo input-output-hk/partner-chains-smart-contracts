@@ -28,6 +28,7 @@
   , "partial"
   , "prelude"
   , "profunctor"
+  , "record"
   , "strings"
   , "test-unit"
   , "transformers"

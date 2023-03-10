@@ -166,6 +166,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -267,6 +268,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
+          , initCandidatePermissionTokenMintInfo: Nothing
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

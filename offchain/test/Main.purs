@@ -3,6 +3,7 @@ module Test.Main (main) where
 import Contract.Prelude
 
 import Mote.Monad (group)
+import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
@@ -42,6 +43,7 @@ main = do
         group "Plutip integration tests" do
           InitSidechain.tests
           CommitteeCandidateValidator.tests
+          CandidatePermissionToken.tests
           FUELMintingPolicy.tests
           UpdateCommitteeHash.tests
           MerkleRoot.tests

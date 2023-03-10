@@ -7,11 +7,13 @@ module TrustlessSidechain.EndpointResp
 import Contract.Prelude
 
 import Contract.Prim.ByteArray (ByteArray, byteArrayToHex)
+import Contract.Value (CurrencySymbol)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
+import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.SidechainParams (SidechainParams, scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
@@ -20,6 +22,10 @@ data EndpointResp
   | ClaimActResp { transactionId ∷ ByteArray }
   | BurnActResp { transactionId ∷ ByteArray }
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
+  | CandidatePermissionTokenResp
+      { transactionId ∷ ByteArray
+      , candidatePermissionCurrencySymbol ∷ CurrencySymbol
+      }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
   | GetAddrsResp { sidechainAddresses ∷ SidechainAddresses }
   | CommitteeHashResp { transactionId ∷ ByteArray }
@@ -69,6 +75,17 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CommitteeCandidateDereg"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+    CandidatePermissionTokenResp
+      { transactionId, candidatePermissionCurrencySymbol } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "CandidatePermissionToken"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        , "candidatePermissionCurrencySymbol"
+            /\ J.fromString
+              ( GetSidechainAddresses.currencySymbolToHex
+                  candidatePermissionCurrencySymbol
+              )
         ]
     GetAddrsResp { sidechainAddresses } →
       J.fromObject $ Object.fromFoldable

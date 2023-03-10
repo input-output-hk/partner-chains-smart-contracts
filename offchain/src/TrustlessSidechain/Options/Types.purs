@@ -6,6 +6,7 @@ module TrustlessSidechain.Options.Types
   , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
+  , CandidatePermissionTokenMintInit
   ) where
 
 import Contract.Prelude
@@ -13,10 +14,16 @@ import Contract.Prelude
 import Contract.Address (Address, NetworkId)
 import Contract.Config (ConfigParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
+import Contract.Value (TokenName)
 import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import Node.Path (FilePath)
+import TrustlessSidechain.CandidatePermissionToken
+  ( CandidatePermissionTokenInfo
+  , CandidatePermissionTokenMintInfo
+  )
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -68,7 +75,12 @@ data Endpoint
       , spoSig ∷ Signature
       , sidechainSig ∷ SidechainSignature
       , inputUtxo ∷ TransactionInput
+      , permissionToken ∷
+          Maybe
+            CandidatePermissionTokenInfo
       }
+  | CandidiatePermissionTokenAct
+      CandidatePermissionTokenMintInfo
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
       { newCommitteePubKeysInput ∷ CommitteeInput
@@ -95,12 +107,31 @@ data Endpoint
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
+      SidechainAddressesExtra
   | InitTokens
+      { initCandidatePermissionTokenMintInfo ∷
+          Maybe CandidatePermissionTokenMintInit
+      }
   | Init
       { committeePubKeysInput ∷ CommitteeInput
       , initSidechainEpoch ∷ BigInt
       , useInitTokens ∷ Boolean
+      , initCandidatePermissionTokenMintInfo ∷
+          Maybe CandidatePermissionTokenMintInit
       }
+
+-- | `CandidatePermissionTokenMintInit` is a type alias for minting the
+-- | candidate permission token when initializing the sidechain
+type CandidatePermissionTokenMintInit =
+  { candidatePermissionTokenAmount ∷ BigInt
+  , candidatePermissionTokenName ∷ TokenName
+  ,
+    -- `Nothing`, indicates that we will replace this `TransactionInput` with
+    -- whatever was used as the sidechain genesis utxo.
+    -- Note that we can't just pass the sidechain params' genesis utxo in
+    -- because this is an applicative parser
+    candidatePermissionTokenUtxo ∷ Maybe TransactionInput
+  }
 
 derive instance Generic Endpoint _
 

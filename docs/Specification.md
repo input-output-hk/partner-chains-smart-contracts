@@ -11,6 +11,7 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
 - `MerkleRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' Merkle roots ([3.1.](#31-merkle-root-insertion))
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
+- `CandidatePermissionToken`: a minting policy for permissioned committee candidates [4.1](#4-1-candidate-permission-token).
 - `MerkleRootTokenValidator`: script address for storing `MerkleRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 - `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
@@ -225,7 +226,7 @@ data FUELRedeemer
 **Workflow:**
 
 1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature (where the signed message contains the sidechain parameters, sidechain public key and the input utxo in CBOR format)
-2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId, and the consumed inputUtxo
+2. The Bridge monitoring the committee candidate script address (optionally, with a specified token -- see [4.1](#4-1-candidate-permission-token)), is validating the SPO credentials, chainId, and the consumed inputUtxo
 
 **Datum:**
 
@@ -239,6 +240,43 @@ data BlockProducerRegistration = BlockProducerRegistration
   , bprOwnPkh :: PubKeyHash -- payment public key hash of the wallet owner (who is allowed to deregister)
   }
 ```
+
+#### 4.1 Candidate permission token
+**Endpoint params:**
+```haskell
+data CandidatePermissionMintParams = CandidatePermissionMintParams
+  { candidateMintPermissionMint :: CandidatePermissionMint
+  , tokenName ∷ TokenName
+  , amount ∷ BigInt
+  }
+```
+where
+```haskell
+data CandidatePermissionMint = CandidatePermissionMint
+  { sidechainParams ∷ SidechainParams
+  , permissionTokenUtxo ∷ TxOutRef
+  }
+```
+parameterizes the onchain minting policy.
+
+**Workflow:**
+1. The Bridge chooses a particular `TxOutRef` and uses this to mint the given
+   amount of `CandidatePermissionToken`s, and records the `CurrencySymbol` and
+   `TxOutRef`of the `CandidatePermissionToken`.
+2. The `CandidatePermissionToken`s are distributed amongst SPOs.
+3. As in [4.](#4-register-committee-candidate), the Bridge uses this
+   `CandidatePermissionToken` to distinguish which committee candidates have
+   permission to register. Committee candidates registering with the
+   `CandidatePermissionToken` are considered valid, but otherwise are
+   considered invalid.
+
+   If it is desired for the system to be permissionless, the Bridge may ignore
+   the `CandidatePermissionToken` requirement and consider all registrations as valid.
+
+
+
+Minting policy verifies the following:
+    - The given `permissionTokenUtxo` it is parameterized by is spent.
 
 ### 5. Deregister committee member/candidate
 

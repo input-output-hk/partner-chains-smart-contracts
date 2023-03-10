@@ -18,6 +18,7 @@ module TrustlessSidechain.InitSidechain
   , InitSidechainParams(InitSidechainParams)
   , InitSidechainParams'
   , initSidechainTokens
+  , InitTokensParams
   , initSidechainCommittee
   ) where
 
@@ -51,6 +52,12 @@ import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import TrustlessSidechain.CandidatePermissionToken
+  ( CandidatePermissionMint(..)
+  , CandidatePermissionMintParams(..)
+  , CandidatePermissionTokenMintInfo
+  )
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -88,6 +95,9 @@ type InitTokensParams r =
     initUtxo ∷ TransactionInput
   , initThresholdNumerator ∷ BigInt
   , initThresholdDenominator ∷ BigInt
+  , initCandidatePermissionTokenMintInfo ∷
+      Maybe
+        CandidatePermissionTokenMintInfo
   | r
   }
 
@@ -119,20 +129,17 @@ instance ToData InitSidechainParams where
       , toData initThresholdDenominator
       ]
 
--- | Parameters for the second step (see description above) of the initialisation procedure
+-- | Parameters for the second step (see description above) of the
+-- | initialisation procedure.
+-- | In particular, note that this augments `InitSidechainParams` with an
+-- | initial committee, and the initial committee's epoch
 type InitSidechainParams' =
-  { initChainId ∷ BigInt
-  , initGenesisHash ∷ ByteArray
-  , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
-    -- internal function of the side chain
-    initUtxo ∷ TransactionInput
-  , -- `initCommittee` is the initial committee of the sidechain
-    initCommittee ∷ Array SidechainPublicKey
-  , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
-    initSidechainEpoch ∷ BigInt
-  , initThresholdNumerator ∷ BigInt
-  , initThresholdDenominator ∷ BigInt
-  }
+  InitTokensParams
+    ( -- `initCommittee` is the initial committee of the sidechain
+      initCommittee ∷ Array SidechainPublicKey
+    , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
+      initSidechainEpoch ∷ BigInt
+    )
 
 -- | `toSidechainParams` creates a `SidechainParams` from an
 -- | `InitSidechainParams` the canonical way.
@@ -178,6 +185,40 @@ initCommitteeHashMintLookupsAndConstraints isp = do
     constraints = Constraints.mustMintValue committeeHashValue
 
   pure { lookups, constraints }
+
+-- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
+-- | constraints required when initalizing the candidiate permission tokens (this does NOT
+-- | submit any transaction). In particular, it includes lookups / constraints
+-- | to do the following:
+-- |
+-- |      - Mints the candidiate permission tokens if
+-- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
+initCandidatePermissionTokenLookupsAndConstraints ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract
+    ()
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCandidatePermissionTokenLookupsAndConstraints isp =
+  case isp.initCandidatePermissionTokenMintInfo of
+    Nothing → pure mempty
+    Just
+      { amount
+      , permissionToken:
+          { candidatePermissionTokenUtxo, candidatePermissionTokenName }
+      } → do
+      CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
+        $ CandidatePermissionMintParams
+            { candidateMintPermissionMint:
+                CandidatePermissionMint
+                  { sidechainParams: toSidechainParams isp
+                  , candidatePermissionTokenUtxo: candidatePermissionTokenUtxo
+                  }
+            , candidatePermissionTokenName
+            , amount
+            }
 
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
@@ -389,6 +430,8 @@ initDistributedSetLookupsAndContraints isp = do
 -- |
 -- |      - Spending the distinguished `InitSidechainParams.initUtxo`
 -- |
+-- |      - Optionally, minting candidate permission tokens
+-- |
 -- | Moreover, it returns the `SidechainParams` of this sidechain.
 -- |
 -- | To fully initialize the sidechain, this should be used with
@@ -420,13 +463,15 @@ initSidechainTokens isp = do
   txOut ← liftedM (msg "Cannot find genesis UTxO") $ getUtxo
     txIn
 
-  -- Grabbing the distributed set / update committee has constraints and lookups
+  -- Grabbing the distributed set / update committee hash / candidate
+  -- permission token constraints and lookups.
   -- Note: this uses the monoid instance of functions to monoids to run
   -- all functions to get the desired lookups and contraints.
   ----------------------------------------
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
+        <> initCandidatePermissionTokenLookupsAndConstraints
         <> const
           ( pure
               -- distinguished input to spend from 'InitSidechainParams.initUtxo'
@@ -455,6 +500,10 @@ initSidechainTokens isp = do
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses sidechainParams
+      $ case isp.initCandidatePermissionTokenMintInfo of
+          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
+          Just { permissionToken: { candidatePermissionTokenUtxo } } →
+            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
   pure
     { transactionId: txId
     , sidechainParams
@@ -499,7 +548,12 @@ initSidechainCommittee isp = do
 
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses sidechainParams
+    GetSidechainAddresses.getSidechainAddresses
+      sidechainParams
+      $ case isp.initCandidatePermissionTokenMintInfo of
+          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
+          Just { permissionToken: { candidatePermissionTokenUtxo } } →
+            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
   pure
     { transactionId: txId
     , sidechainParams
@@ -516,6 +570,8 @@ initSidechainCommittee isp = do
 -- |
 -- |     - Mints various tokens for the distributed set (and pay to the required
 -- |       validators)
+-- |
+-- |     - Optionally, mints candidate permission tokens
 -- |
 -- | For details, see `initSidechainTokens` and `initSidechainCommittee`.
 initSidechain ∷
@@ -550,6 +606,7 @@ initSidechain (InitSidechainParams isp) = do
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
+        <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
@@ -580,6 +637,10 @@ initSidechain (InitSidechainParams isp) = do
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses sidechainParams
+      $ case isp.initCandidatePermissionTokenMintInfo of
+          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
+          Just { permissionToken: { candidatePermissionTokenUtxo } } →
+            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
   pure
     { transactionId: txId
     , sidechainParams

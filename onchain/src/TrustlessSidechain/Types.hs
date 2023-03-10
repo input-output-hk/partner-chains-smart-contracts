@@ -53,6 +53,16 @@ data RegisterParams = RegisterParams
   , inputUtxo :: TxOutRef
   }
 
+{- | 'CandidatePermissionMint' is used to parameterize the minting policy in
+ 'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
+-}
+data CandidatePermissionMint = CandidatePermissionMint
+  { cpmSidechainParams :: SidechainParams
+  , cpmUtxo :: TxOutRef
+  }
+
+PlutusTx.makeIsDataIndexed ''CandidatePermissionMint [('CandidatePermissionMint, 0)]
+
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
   { sidechainParams :: SidechainParams

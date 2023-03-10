@@ -7,6 +7,8 @@ module TrustlessSidechain.Options.Parsers
   , sidechainPublicKey
   , sidechainAddress
   , combinedMerkleProofParserWithPkh
+  , parseTokenName
+  , tokenName
   , uint
   , bigInt
   , byteArray
@@ -23,6 +25,8 @@ import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.PlutusData (fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Contract.Value (TokenName)
+import Contract.Value as Value
 import Ctl.Internal.Deserialization.FromBytes (fromBytes)
 import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
 import Data.BigInt (BigInt)
@@ -208,3 +212,14 @@ parsePubKeyAndSignature str =
       l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
+
+-- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for
+-- | converting hex encoded strings to token names
+parseTokenName ∷ String → Maybe (TokenName)
+parseTokenName hexStr = do
+  ba ← hexToByteArray hexStr
+  Value.mkTokenName ba
+
+-- | `tokenName` wraps `parseTokenName`.
+tokenName ∷ ReadM TokenName
+tokenName = maybeReader parseTokenName

@@ -1,4 +1,4 @@
-module CommitteCandidateValidator where
+module TrustlessSidechain.CommitteeCandidateValidator where
 
 import Contract.Prelude
 
@@ -57,6 +57,12 @@ import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Record as Record
+import TrustlessSidechain.CandidatePermissionToken
+  ( CandidatePermissionMint(..)
+  , CandidatePermissionTokenInfo
+  )
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -70,6 +76,7 @@ newtype RegisterParams = RegisterParams
   , spoSig ∷ Signature
   , sidechainSig ∷ SidechainSignature
   , inputUtxo ∷ TransactionInput
+  , permissionToken ∷ Maybe CandidatePermissionTokenInfo
   }
 
 newtype DeregisterParams = DeregisterParams
@@ -145,6 +152,7 @@ register
       , spoSig
       , sidechainSig
       , inputUtxo
+      , permissionToken
       }
   ) = do
   let msg = report "register"
@@ -153,9 +161,33 @@ register
 
   ownUtxos ← utxosAt ownAddr
   validator ← getCommitteeCandidateValidator sidechainParams
+
+  maybeCandidatePermissionMintingPolicy ← case permissionToken of
+    Just
+      { candidatePermissionTokenUtxo: pUtxo
+      , candidatePermissionTokenName: pTokenName
+      } →
+      map
+        ( \rec → Just $ Record.union rec
+            { candidatePermissionTokenName: pTokenName }
+        )
+        $ CandidatePermissionToken.getCandidatePermissionMintingPolicy
+        $ CandidatePermissionMint
+            { sidechainParams
+            , candidatePermissionTokenUtxo: pUtxo
+            }
+    Nothing → pure Nothing
+
   let
     valHash = validatorHash validator
     val = Value.lovelaceValueOf (BigInt.fromInt 1)
+      <> case maybeCandidatePermissionMintingPolicy of
+        Nothing → mempty
+        Just { candidatePermissionTokenName, candidatePermissionCurrencySymbol } →
+          Value.singleton
+            candidatePermissionCurrencySymbol
+            candidatePermissionTokenName
+            one
     datum = BlockProducerRegistration
       { bprSpoPubKey: spoPubKey
       , bprSidechainPubKey: sidechainPubKey
@@ -168,6 +200,10 @@ register
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
+      <> case maybeCandidatePermissionMintingPolicy of
+        Nothing → mempty
+        Just { candidatePermissionPolicy } →
+          Lookups.mintingPolicy candidatePermissionPolicy
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints =
@@ -175,6 +211,7 @@ register
         <> Constraints.mustPayToScript valHash (Datum (toData datum))
           Constraints.DatumInline
           val
+
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx

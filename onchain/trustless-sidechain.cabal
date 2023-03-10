@@ -84,6 +84,7 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
+    TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy

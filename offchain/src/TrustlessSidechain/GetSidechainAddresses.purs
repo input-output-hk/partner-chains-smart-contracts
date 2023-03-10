@@ -2,19 +2,25 @@
 -- | identifying its associated hex encoded validator and currency symbol.
 module TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
+  , SidechainAddressesExtra
   , getSidechainAddresses
+  , currencySymbolToHex
   ) where
 
 import Contract.Prelude
 
-import CommitteCandidateValidator as CommitteCandidateValidator
 import Contract.Address as Address
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
+import Data.Array as Array
+import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -39,15 +45,20 @@ type SidechainAddresses =
   , mintingPolicies ∷ Array (Tuple String String)
   }
 
+-- | `SidechainAddressesExtra` provides extra information for creating more
+-- | addresses related to the sidechain.
+-- | In particular, this allows us to optionally grab the minting policy of the
+-- | candidate permission token.
+type SidechainAddressesExtra =
+  { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput }
+
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainParams` which contains:
--- |    - addresses:
--- |        - the validator address of the committee candidate validator
--- |    - minting policies:
--- |        - the currency symbol of the fuel minting policy
--- |        - the currency symbol of the merkle root token minting policy
-getSidechainAddresses ∷ SidechainParams → Contract () SidechainAddresses
-getSidechainAddresses scParams = do
+-- | the given `SidechainParams` which contains related addresses and currency
+-- | symbols. Moreover, it returns the currency symbol of the candidate
+-- | permission token provided the `permissionTokenUtxo` is given.
+getSidechainAddresses ∷
+  SidechainParams → SidechainAddressesExtra → Contract () SidechainAddresses
+getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
   -- Minting policies
   { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
     scParams
@@ -70,9 +81,21 @@ getSidechainAddresses scParams = do
     (wrap (unwrap scParams).genesisUtxo)
   dsConfPolicyId ← getCurrencySymbolHex dsConfPolicy
 
+  mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
+    Nothing → pure Nothing
+    Just permissionTokenUtxo → do
+      { candidatePermissionPolicy } ←
+        CandidatePermissionToken.getCandidatePermissionMintingPolicy
+          $ CandidatePermissionMint
+              { sidechainParams: scParams
+              , candidatePermissionTokenUtxo: permissionTokenUtxo
+              }
+      candidatePermissionPolicyId ← getCurrencySymbolHex candidatePermissionPolicy
+      pure $ Just candidatePermissionPolicyId
+
   -- Validators
   committeeCandidateValidatorAddr ← do
-    validator ← CommitteCandidateValidator.getCommitteeCandidateValidator
+    validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
       scParams
     getAddr validator
   merkleRootTokenValidatorAddr ← do
@@ -109,13 +132,19 @@ getSidechainAddresses scParams = do
       , "DSKeyPolicy" /\ dsKeyPolicyPolicyId
       , "DSConfPolicy" /\ dsConfPolicyId
       ]
+        <>
+          Array.catMaybes
+            [ map ("CandidatePermissionTokenPolicy" /\ _)
+                mCandidatePermissionPolicyId
+            ]
 
     addresses =
-      [ "CommitteCandidateValidator" /\ committeeCandidateValidatorAddr
+      [ "CommitteeCandidateValidator" /\ committeeCandidateValidatorAddr
       , "MerkleRootTokenValidator" /\ merkleRootTokenValidatorAddr
       , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
+
       ]
   pure
     { addresses

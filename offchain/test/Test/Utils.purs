@@ -12,6 +12,9 @@ module Test.Utils
   , plutipGroup
   , WithTestRunner(..)
   , WrappedTests
+  , assertHasOutputWithAsset
+  , assertIHaveOutputWithAsset
+  , dummySidechainParams
   ) where
 
 import Contract.Prelude
@@ -25,15 +28,22 @@ import Contract.Transaction
   ( Transaction(..)
   , TransactionHash(..)
   , TransactionInput(..)
-  , TransactionOutputWithRefScript
+  , TransactionOutput(..)
+  , TransactionOutputWithRefScript(..)
+  , TxBody(..)
   , getTxByHash
   )
 import Contract.Utxos as Utxos
+import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value as Value
 import Control.Monad.Error.Class as MonadError
+import Ctl.Internal.Plutus.Conversion as Plutus.Conversion
 import Ctl.Internal.Serialization.Hash as Hash
+import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Const (Const)
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Data.Set as Set
@@ -46,6 +56,7 @@ import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
+import TrustlessSidechain.SidechainParams (SidechainParams(..))
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
@@ -148,7 +159,7 @@ data WithTestRunner
   = WithPlutipRunner (Mote (Const Void) PlutipConfigTest Unit)
   | PureRunner (Mote (Const Void) Test Unit)
 
--- | A type synonim for wrapped tests
+-- | A type synonym for wrapped tests
 type WrappedTests = Mote (Const Void) WithTestRunner Unit
 
 -- | Interpreting wrapped tests with their respective interpreters
@@ -178,3 +189,84 @@ plutipGroup label tests =
 pureGroup ∷ String → Mote (Const Void) Test Unit → WrappedTests
 pureGroup label tests =
   Mote.Monad.test label $ PureRunner tests
+
+-- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
+-- | exists a UTxO with at least one of the given asset.
+assertIHaveOutputWithAsset ∷ CurrencySymbol → TokenName → Contract () Unit
+assertIHaveOutputWithAsset cs tn = do
+  ownUtxos ← map (Map.values) $ Monad.liftedM "Failed to query wallet utxos"
+    Utxos.getWalletUtxos
+  let
+    iHaveCurrencySymbolAndTokenName =
+      let
+        go input = case List.uncons input of
+          Nothing → false
+          Just { head, tail } →
+            let
+              TransactionOutputWithRefScript { output: TransactionOutput txOut } =
+                head
+            in
+              if Value.valueOf txOut.amount cs tn > zero then true
+              else go tail
+      in
+        go ownUtxos
+
+  unless iHaveCurrencySymbolAndTokenName $ throwContractError
+    ( "Expected me to have at least one asset with currency symbol `"
+        <> show cs
+        <> "` and token name `"
+        <> show tn
+        <> "`."
+    )
+
+-- | Verifies that a certain script output contains at least one of the given
+-- | asset.
+assertHasOutputWithAsset ∷
+  TransactionHash → Address → CurrencySymbol → TokenName → Contract () Unit
+assertHasOutputWithAsset txId addr cs tn = do
+  Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
+  let
+    TxBody txBody = tx.body
+    outputs = txBody.outputs
+    containsCurrencySymbolAndTokenName =
+      let -- Think of the type as follows:
+        -- `go :: Array TransactionOutput -> Boolean`
+        go arr = case Array.uncons arr of
+          Just { head, tail } →
+            let
+              TransactionOutputWithRefScript { output: TransactionOutput txOut } =
+                Unsafe.unsafePartial $ Maybe.fromJust $
+                  Plutus.Conversion.toPlutusTxOutputWithRefScript head
+            in
+              if
+                txOut.address == addr
+                  && Value.valueOf txOut.amount cs tn
+                  > zero then true
+              else go tail
+          Nothing → false
+      in
+        go outputs
+  unless containsCurrencySymbolAndTokenName $ throwContractError
+    ( "Expected txId `"
+        <> show txId
+        <> "` to have an address `"
+        <> show addr
+        <> "` with at least one asset with currency symbol `"
+        <> show cs
+        <> "` and token name `"
+        <> show tn
+        <> "`."
+    )
+
+-- | `dummySidechainParams` is some default sidechain parameters which may be
+-- | helpful when creating tests.
+dummySidechainParams ∷ SidechainParams
+dummySidechainParams = SidechainParams
+  { chainId: BigInt.fromInt 69
+  , genesisHash: hexToByteArrayUnsafe "112233"
+  , genesisUtxo: toTxIn
+      "211307be24c471d42012c5ebd7d98c83f349c612023ce365f9fb5e3e758d0779"
+      1
+  , thresholdNumerator: BigInt.fromInt 2
+  , thresholdDenominator: BigInt.fromInt 3
+  }

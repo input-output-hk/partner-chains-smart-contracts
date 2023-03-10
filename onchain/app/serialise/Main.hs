@@ -12,6 +12,7 @@ import Data.Foldable (traverse_)
 import Ledger (Script, Versioned (unversioned), scriptHash)
 import Plutonomy.UPLC qualified
 import System.FilePath qualified as FilePath
+import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -115,6 +116,7 @@ main =
             , ("MerkleRootTokenValidator", MerkleRootTokenValidator.serialisableValidator)
             , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
             , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
+            , ("CandidatePermissionMintingPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
             , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
             , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
             , -- Distributed set validators / minting policies
