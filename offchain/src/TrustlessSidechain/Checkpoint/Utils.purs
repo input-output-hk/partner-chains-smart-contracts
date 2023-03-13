@@ -6,11 +6,12 @@ module TrustlessSidechain.Checkpoint.Utils
   , aggregateKeys
   , serialiseCheckpointMessage
   , normalizeSignatures
-
+  , findCheckpointUtxo
   ) where
 
 import Contract.Prelude
 
+import Contract.Address as Address
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
@@ -26,19 +27,24 @@ import Contract.TextEnvelope
   ( decodeTextEnvelope
   , plutusScriptV2FromEnvelope
   )
+import Contract.Transaction
+  ( TransactionInput
+  , TransactionOutputWithRefScript
+  )
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
-  ( InitCheckpointMint
-  , CheckpointParameter
+  ( CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage
-  , CheckpointEndpointParam(CheckpointEndpointParam)
+  , CheckpointParameter
+  , InitCheckpointMint
   )
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
+import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 checkpointPolicy ∷ InitCheckpointMint → Contract () MintingPolicy
 checkpointPolicy sp = do
@@ -99,3 +105,22 @@ aggregateKeys = Hashing.blake2b256Hash <<< foldMap
 serialiseCheckpointMessage ∷ CheckpointMessage → Maybe SidechainMessage
 serialiseCheckpointMessage = Utils.Crypto.sidechainMessage <=<
   ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)
+
+findCheckpointUtxo ∷
+  CheckpointParameter →
+  Contract ()
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+findCheckpointUtxo checkpointParameter = do
+  netId ← Address.getNetworkId
+  validator ← checkpointValidator checkpointParameter
+  let validatorHash = Scripts.validatorHash validator
+
+  validatorAddress ← Monad.liftContractM
+    "error 'findCheckpointUtxo': failed to get validator address"
+    (Address.validatorHashEnterpriseAddress netId validatorHash)
+
+  Utils.Utxos.findUtxoByValueAt validatorAddress \value →
+    -- Note: there should either be 0 or 1 tokens of this checkpoint nft.
+    Value.valueOf value (fst (unwrap checkpointParameter).checkpointToken)
+      initCheckpointMintTn
+      /= zero

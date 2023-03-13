@@ -98,9 +98,9 @@ instance ToData CheckpointRedeemer where
 newtype CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
   , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
-  , sidechainEpoch ∷ BigInt
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
+  , sidechainEpoch ∷ BigInt
   }
 
 derive newtype instance Show CheckpointEndpointParam
