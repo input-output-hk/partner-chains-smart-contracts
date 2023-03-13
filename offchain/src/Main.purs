@@ -14,6 +14,7 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
@@ -303,6 +304,27 @@ runEndpoint scParams =
         UpdateCommitteeHash.updateCommitteeHash uchParams
       pure $ CommitteeHandoverResp
         { saveRootTransactionId, committeeHashTransactionId }
+
+    SaveCheckpoint
+      { committeeSignaturesInput
+      , newCheckpointBlockHash
+      , newCheckpointBlockNumber
+      , sidechainEpoch
+      } → do
+      committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        committeeSignaturesInput
+      let
+        params = Checkpoint.CheckpointEndpointParam
+          { sidechainParams: scParams
+          , committeeSignatures: List.toUnfoldable committeeSignatures
+          , newCheckpointBlockHash
+          , newCheckpointBlockNumber
+          , sidechainEpoch
+          }
+      Checkpoint.saveCheckpoint params
+        <#> unwrap
+        >>> { transactionId: _ }
+        >>> SaveCheckpointResp
 
 printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =

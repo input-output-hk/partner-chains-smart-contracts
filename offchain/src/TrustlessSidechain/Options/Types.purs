@@ -119,6 +119,12 @@ data Endpoint
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
       }
+  | SaveCheckpoint
+      { committeeSignaturesInput ∷ CommitteeSignaturesInput
+      , newCheckpointBlockHash ∷ ByteArray
+      , newCheckpointBlockNumber ∷ BigInt
+      , sidechainEpoch ∷ BigInt
+      }
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain

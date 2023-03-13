@@ -44,6 +44,7 @@ data EndpointResp
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
+  | SaveCheckpointResp { transactionId ∷ ByteArray }
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
@@ -147,6 +148,11 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                   (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
               )
           ]
+    SaveCheckpointResp { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "SaveCheckpoint"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp ∷ EndpointResp → J.Json
