@@ -20,6 +20,7 @@ module TrustlessSidechain.InitSidechain
   , initSidechainTokens
   , InitTokensParams
   , initSidechainCommittee
+  , initCheckpointMintLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -51,6 +52,7 @@ import Contract.Value as Value
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(..)
@@ -58,6 +60,12 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint
+  ( CheckpointDatum(..)
+  , InitCheckpointMint(..)
+  )
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -220,6 +228,40 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
             , amount
             }
 
+-- | `initCheckpointMintLookupsAndConstraints` creates lookups and
+-- | constraints to mint (but NOT pay to someone) the NFT which uniquely
+-- | identifies the utxo that holds the checkpoint
+initCheckpointMintLookupsAndConstraints ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract
+    ()
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCheckpointMintLookupsAndConstraints inp = do
+  -- Get checkpoint / associated values
+  -----------------------------------
+  { checkpointPolicy, checkpointCurrencySymbol } ← getCheckpointPolicy inp
+
+  let
+    checkpointValue =
+      Value.singleton
+        checkpointCurrencySymbol
+        Checkpoint.initCheckpointMintTn
+        one
+
+  -- Building the transaction
+  -----------------------------------
+  let
+    lookups ∷ ScriptLookups Void
+    lookups = Lookups.mintingPolicy checkpointPolicy
+
+    constraints ∷ TxConstraints Void Void
+    constraints = Constraints.mustMintValue checkpointValue
+
+  pure { lookups, constraints }
+
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
 -- | validator script for the update committee hash.
@@ -284,6 +326,65 @@ initCommitteeHashLookupsAndConstraints isp = do
       committeeHashDatum
       DatumInline
       committeeHashValue
+
+  pure { constraints, lookups }
+
+-- | `initCheckpointLookupsAndConstraints` creates lookups and constraints
+-- | to pay the NFT (which uniquely identifies the checkpoint utxo) to the
+-- | validator script for the checkpoint
+initCheckpointLookupsAndConstraints ∷
+  InitSidechainParams' →
+  Contract
+    ()
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCheckpointLookupsAndConstraints isp = do
+  -- Sidechain parameters
+  -----------------------------------
+  let sc = toSidechainParams isp
+
+  -- Getting the checkpoint policy
+  -----------------------------------
+  { checkpointCurrencySymbol } ← getCheckpointPolicy isp
+
+  -- Setting up
+  -----------------------------------
+  let
+    checkpointParameter = Checkpoint.Types.CheckpointParameter
+      { sidechainParams: sc
+      , checkpointToken: checkpointCurrencySymbol /\
+          Checkpoint.initCheckpointMintTn
+      }
+    checkpointDatum = Datum
+      $ PlutusData.toData
+      $ CheckpointDatum
+          { blockHash: isp.initGenesisHash
+          , blockNumber: BigInt.fromInt 0
+          }
+    checkpointValue =
+      Value.singleton
+        checkpointCurrencySymbol
+        Checkpoint.initCheckpointMintTn
+        one
+
+  checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
+
+  let
+    checkpointValidatorHash = validatorHash checkpointValidator
+
+  -- Building the transaction
+  -----------------------------------
+  let
+    lookups ∷ ScriptLookups Void
+    lookups =
+      Lookups.validator checkpointValidator
+
+    constraints ∷ TxConstraints Void Void
+    constraints = Constraints.mustPayToScript checkpointValidatorHash
+      checkpointDatum
+      DatumInline
+      checkpointValue
 
   pure { constraints, lookups }
 
@@ -700,6 +801,23 @@ getMerkleRootTokenPolicy isp = do
 
   pure
     { merkleRootTokenMintingPolicy, merkleRootTokenMintingPolicyCurrencySymbol }
+
+getCheckpointPolicy ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract ()
+    { checkpointPolicy ∷ MintingPolicy
+    , checkpointCurrencySymbol ∷ CurrencySymbol
+    }
+getCheckpointPolicy isp = do
+  let
+    msg = report "getCheckpointPolicy"
+  checkpointPolicy ← Checkpoint.checkpointPolicy $
+    InitCheckpointMint { icTxOutRef: isp.initUtxo }
+  checkpointCurrencySymbol ← Monad.liftContractM
+    (msg "Failed to get checkpoint CurrencySymbol")
+    (Value.scriptCurrencySymbol checkpointPolicy)
+  pure { checkpointPolicy, checkpointCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
