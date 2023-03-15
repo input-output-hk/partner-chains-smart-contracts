@@ -61,6 +61,8 @@ instance ToData CheckpointParameter where
     , toData checkpointToken
     ]
 
+derive newtype instance Show CheckpointParameter
+
 newtype InitCheckpointMint = InitCheckpointMint
   { icTxOutRef ∷ TransactionInput }
 

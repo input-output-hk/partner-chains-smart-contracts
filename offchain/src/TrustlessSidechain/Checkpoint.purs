@@ -219,7 +219,7 @@ runSaveCheckpoint params = do
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
+report = Utils.Logging.mkReport <<< { mod: "Checkpoint", fun: _ }
 
 -- | `getCheckpointPolicy` grabs the checkpoint hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).

@@ -229,7 +229,7 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
             }
 
 -- | `initCheckpointMintLookupsAndConstraints` creates lookups and
--- | constraints to mint (but NOT pay to someone) the NFT which uniquely
+-- | constraints to mint and pay the NFT which uniquely
 -- | identifies the utxo that holds the checkpoint
 initCheckpointMintLookupsAndConstraints ∷
   ∀ r.
@@ -245,22 +245,44 @@ initCheckpointMintLookupsAndConstraints inp = do
   { checkpointPolicy, checkpointCurrencySymbol } ← getCheckpointPolicy inp
 
   let
+    sc = toSidechainParams inp
+    checkpointParameter = Checkpoint.Types.CheckpointParameter
+      { sidechainParams: sc
+      , checkpointToken: checkpointCurrencySymbol /\
+          Checkpoint.initCheckpointMintTn
+      }
+    checkpointDatum = Datum
+      $ PlutusData.toData
+      $ CheckpointDatum
+          { blockHash: inp.initGenesisHash
+          , blockNumber: BigInt.fromInt 0
+          }
     checkpointValue =
       Value.singleton
         checkpointCurrencySymbol
         Checkpoint.initCheckpointMintTn
         one
 
+  checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
+
   -- Building the transaction
   -----------------------------------
   let
+    checkpointValidatorHash = validatorHash checkpointValidator
+
     lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy checkpointPolicy
+    lookups =
+      Lookups.validator checkpointValidator <> Lookups.mintingPolicy
+        checkpointPolicy
 
     constraints ∷ TxConstraints Void Void
-    constraints = Constraints.mustMintValue checkpointValue
+    constraints =
+      Constraints.mustPayToScript checkpointValidatorHash
+        checkpointDatum
+        DatumInline
+        checkpointValue <> Constraints.mustMintValue checkpointValue
 
-  pure { lookups, constraints }
+  pure { constraints, lookups }
 
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
@@ -326,65 +348,6 @@ initCommitteeHashLookupsAndConstraints isp = do
       committeeHashDatum
       DatumInline
       committeeHashValue
-
-  pure { constraints, lookups }
-
--- | `initCheckpointLookupsAndConstraints` creates lookups and constraints
--- | to pay the NFT (which uniquely identifies the checkpoint utxo) to the
--- | validator script for the checkpoint
-initCheckpointLookupsAndConstraints ∷
-  InitSidechainParams' →
-  Contract
-    ()
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-initCheckpointLookupsAndConstraints isp = do
-  -- Sidechain parameters
-  -----------------------------------
-  let sc = toSidechainParams isp
-
-  -- Getting the checkpoint policy
-  -----------------------------------
-  { checkpointCurrencySymbol } ← getCheckpointPolicy isp
-
-  -- Setting up
-  -----------------------------------
-  let
-    checkpointParameter = Checkpoint.Types.CheckpointParameter
-      { sidechainParams: sc
-      , checkpointToken: checkpointCurrencySymbol /\
-          Checkpoint.initCheckpointMintTn
-      }
-    checkpointDatum = Datum
-      $ PlutusData.toData
-      $ CheckpointDatum
-          { blockHash: isp.initGenesisHash
-          , blockNumber: BigInt.fromInt 0
-          }
-    checkpointValue =
-      Value.singleton
-        checkpointCurrencySymbol
-        Checkpoint.initCheckpointMintTn
-        one
-
-  checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
-
-  let
-    checkpointValidatorHash = validatorHash checkpointValidator
-
-  -- Building the transaction
-  -----------------------------------
-  let
-    lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.validator checkpointValidator
-
-    constraints ∷ TxConstraints Void Void
-    constraints = Constraints.mustPayToScript checkpointValidatorHash
-      checkpointDatum
-      DatumInline
-      checkpointValue
 
   pure { constraints, lookups }
 
@@ -525,6 +488,9 @@ initDistributedSetLookupsAndContraints isp = do
 -- |      - Minting the NFT to identify the committee hash (see
 -- |      `initCommitteeHashMintLookupsAndConstraints`)
 -- |
+-- |      - Minting and paying the NFT to identify the checkpoint (see
+-- |      `initCheckpointMintLookupsAndConstraints`)
+-- |
 -- |      - Minting the the keys token of the distributed set, and the NFT to
 -- |      identify the configuration of the distributed set (see
 -- |      `initDistributedSetLookupsAndContraints`)
@@ -573,6 +539,7 @@ initSidechainTokens isp = do
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
+        <> initCheckpointMintLookupsAndConstraints
         <> const
           ( pure
               -- distinguished input to spend from 'InitSidechainParams.initUtxo'
@@ -709,6 +676,7 @@ initSidechain (InitSidechainParams isp) = do
         <> initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
+        <> initCheckpointMintLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
           { constraints: Constraints.mustSpendPubKeyOutput txIn
