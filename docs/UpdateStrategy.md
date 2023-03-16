@@ -41,7 +41,7 @@ We considered the following strategies, but these can also be used in combinatio
   - our validator addresses and currency policies would be constant over versions
   - decoupled token minting and burning logic (a token minted with V1 logic can be burnt with V2, etc.)
 
-  The drawback is that this would slightly raise the fees due to the cost of an extra token minted for each transaction.
+  A drawback is that this would slightly raise the fees due to the cost of extra tokens minted for each FUEL minting transaction.
 
 These strategies can be used in combination for optimal migration cost/complexity.
 
@@ -60,12 +60,16 @@ In case of our sidechain protocol, I propose the following strategies for our va
 
 ## 3. FUELMintingPolicy Transaction Token Pattern Implementation:
 This section discusses in more detail how to apply the transaction token pattern to the FUELMintingPolicy.
+In the development of these ideas, we will later introduce a new minting policy, `FUELMintingProxyPolicy`, whose tokens will be regarded as the FUEL tokens.
 
 As a high level idea, the Transaction Token Pattern will change the
 FUELMintingPolicy to forward all of its validations to some
 *collection of minting policies* stored in the datum at a distinguished UTxO, and
 the FUELMintingPolicy will mint only if the aforementioned collection of
-minting policies *all* mint.
+minting policies *all* mint in the same transaction. The extra tokens minted from the aforementioned minting policies may be paid to any address and does not effect the functionality of the system[^extraTokensNote].
+
+[^extraTokensNote]:
+    The extra tokens could be sent directly back to the user's wallet, or paid to some arbitrary validator script. The former option makes this confusing for users, and the latter scenario will slightly increase the cost of the transaction (min UTxO fee).
 
 Provided we have sufficient governance mechanisms, one may arbitrarily change
 the distinguished UTxO which holds the collection of minting policies to modify
@@ -209,17 +213,14 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
 ```
 2. Users may mint `FUELPolicy` for `FUEL` where we note that we have
    `FUELPolicy` minting only if `FUELMintingPolicy` mints.
-3. A governance mechanism chooses to upgrade the system by spending the
-   validator `FUELOracle`, paying the `FUELOracleMintingPolicy` to a new
-   `FUELOracle` validator address with a new `FUELOracleDatum` with new
-   currency symbols in the datum.
+3. A governance mechanism chooses to upgrade the system by spending the UTxO that holds the `FUELOracleMintingPolicy` NFT at validator `FUELOracle`, paying it to a `FUELOracle` validator address with a new `FUELOracleDatum` with new currency symbols in the datum.
 4. Note that any new `FUEL` tokens must now validate with the new collection of
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
 ### 3.5 Governance of updates
 In this section, we discuss options for governing updates. Previously, we
-described the conditions for which an update happens is completely determined
+described the conditions for which an update happens are completely determined
 by the script validator address which holds the `FUELOracle` NFT.
 
 Indeed, the only constraint that this script validator has is that it must have
