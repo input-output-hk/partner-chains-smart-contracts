@@ -123,7 +123,9 @@ runSaveCheckpoint params = do
   -- Getting the checkpoint utxo
   -------------------------------------------------------------
   checkpointUtxoLookup ← findCheckpointUtxo checkpointParam
-  { index: checkpointOref } ←
+  { index: checkpointOref
+  , value: checkpointTxOut
+  } ←
     liftContractM (msg "Failed to find checkpoint UTxO") checkpointUtxoLookup
 
   -- Grabbing the committee hash UTxO
@@ -198,14 +200,15 @@ runSaveCheckpoint params = do
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
-      Lookups.unspentOutputs
-        (Map.singleton committeeOref committeeHashTxOut)
+      Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
+        <> Lookups.unspentOutputs (Map.singleton committeeOref committeeHashTxOut)
         <> Lookups.validator validator
 
     constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
       <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
         DatumInline
         value
+      <> TxConstraints.mustReferenceOutput committeeOref
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
