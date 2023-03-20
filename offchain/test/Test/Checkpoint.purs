@@ -99,12 +99,14 @@ saveCheckpointTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -153,12 +155,14 @@ notEnoughSignaturesTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -216,12 +220,14 @@ outOfOrderCheckpointTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -271,18 +277,21 @@ invalidCheckpointBlockHashTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
 
         let
-          newCheckpointBlockHash = hexToByteArrayUnsafe "aabbcc" -- same as genesis hash which is already checkpointed
+          newCheckpointBlockHash = hexToByteArrayUnsafe
+            "aabbccddeeffgghhiijjkkllmmnnoo" -- same as genesis hash which is already checkpointed
           newCheckpointBlockNumber = BigInt.fromInt 1
           sidechainEpoch = BigInt.fromInt 0
           toSign =
@@ -327,12 +336,14 @@ signedByUnknownCommitteeTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -386,12 +397,14 @@ committeeChangeCheckpointTest =
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initCommittee: initCommitteePubKeys
-            , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
             }
 
         { sidechainParams } ← initSidechain initScParams

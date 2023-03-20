@@ -13,8 +13,8 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionMintParams(..)
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
 import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
