@@ -127,7 +127,6 @@ runSaveCheckpoint
   let checkpointValidatorHash = Scripts.validatorHash validator
 
   -- Getting the checkpoint utxo
-  -------------------------------------------------------------
   checkpointUtxoLookup ← findCheckpointUtxo checkpointParam
   { index: checkpointOref
   , value: checkpointTxOut
@@ -139,8 +138,8 @@ runSaveCheckpoint
   { committeeHashCurrencySymbol, committeeHashTokenName } ←
     getCommitteeHashPolicy sidechainParams
 
-  -- Getting the validator / minting policy for the merkle root token
-  -------------------------------------------------------------
+  -- Getting the validator / minting policy for the merkle root token.
+  -- This is needed to get the committee hash utxo.
   merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
     sidechainParams
 
@@ -166,8 +165,7 @@ runSaveCheckpoint
       , merkleRootTokenCurrencySymbol
       }
 
-  -- Grabbing the old committee / verifying that it really is the old committee
-  -------------------------------------------------------------
+  -- Grabbing the current committee
   lkup ← findUpdateCommitteeHashUtxo uch
   { index: committeeOref
   , value:
@@ -186,7 +184,6 @@ runSaveCheckpoint
     (throwContractError "Incorrect committee provided")
 
   -- Building / submitting the transaction.
-  -------------------------------------------------------------
   let
     newCheckpointDatum = Datum $ toData
       ( CheckpointDatum
