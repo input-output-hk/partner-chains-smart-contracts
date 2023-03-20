@@ -52,7 +52,6 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
--- TODO: refactor
 import TrustlessSidechain.UpdateCommitteeHash
   ( getCommitteeHashPolicy
   )
@@ -60,10 +59,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
-import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( aggregateKeys
-  , findUpdateCommitteeHashUtxo
-  )
+import TrustlessSidechain.UpdateCommitteeHash.Utils (findUpdateCommitteeHashUtxo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
@@ -152,7 +148,7 @@ runSaveCheckpoint params = do
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
-    curCommitteeHash = aggregateKeys curCommitteePubKeys
+    curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
     uch = UpdateCommitteeHash
       { sidechainParams: (unwrap params).sidechainParams
       , uchAssetClass: assetClass committeeHashCurrencySymbol

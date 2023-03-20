@@ -3,7 +3,6 @@ module TrustlessSidechain.Checkpoint.Utils
   , checkpointValidator
   , initCheckpointMintTn
   , checkpointAssetClass
-  , aggregateKeys
   , serialiseCheckpointMessage
   , normalizeSignatures
   , findCheckpointUtxo
@@ -91,11 +90,6 @@ checkpointAssetClass ichm = do
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym initCheckpointMintTn
-
--- | TODO: refactor
-aggregateKeys ∷ Array SidechainPublicKey → ByteArray
-aggregateKeys = Hashing.blake2b256Hash <<< foldMap
-  Utils.Crypto.getSidechainPublicKeyByteArray
 
 -- | `serialiseCheckpointMessage` is an alias for (ignoring the `Maybe`)
 -- | ```
