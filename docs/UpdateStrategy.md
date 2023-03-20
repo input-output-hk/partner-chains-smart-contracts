@@ -173,7 +173,7 @@ new `version` field in the `MerkleTreeEntry`. When verifying the
 policy has to check that the version of the script matches the version of the
 certificate. See [4.](#4-versioning-implementation).
 
-We will introduce a new `FUELPolicy` which will be regarded as the `FUEL`
+We will introduce a new `FUELProxyPolicy` which will be regarded as the `FUEL`
 tokens.
 
 We will need a minting policy `FUELOracleMintingPolicy` to create an NFT (so this must
@@ -188,19 +188,19 @@ newtype FUELOracleDatum =
     }
 ```
 That is, this contains the collection of the currency symbols of minting
-policies which are required for `FUELPolicy` to mint.
+policies which are required for `FUELProxyPolicy` to mint.
 It is outside the scope of this document to discuss the conditions for when
 this validator will succeed, as there would need to be some sort of governance
-mechanism which decides when we may upgrade `FUELPolicy`. See
+mechanism which decides when we may upgrade `FUELProxyPolicy`. See
 [3.5](#35-governance-of-updates) for details.
 
-Finally, `FUELPolicy` will be parameterized by the currency symbol of
+Finally, `FUELProxyPolicy` will be parameterized by the currency symbol of
 the `FUELOracle` and will mint only if the following are satisfied:
-- `FUELPolicy` only has token name `FUEL`;
+- `FUELProxyPolicy` only has token name `FUEL`;
 - there is a reference input in the current transaction which contains a
   `FUELOracleMintingPolicy` token with `FUELOracleDatum` as datum;
 - the first currency symbol `c` in the `FUELOracleDatum` mints `k` tokens iff
-  `FUELPolicy` mints `k` tokens; and
+  `FUELProxyPolicy` mints `k` tokens; and
 - for every currency symbol `c` in the `FUELOracleDatum`, at least one such `c`
   is minted.
 
@@ -211,8 +211,8 @@ We summarize the entire workflow.
 ```
 FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
 ```
-2. Users may mint `FUELPolicy` for `FUEL` where we note that we have
-   `FUELPolicy` minting only if `FUELMintingPolicy` mints.
+2. Users may mint `FUELProxyPolicy` for `FUEL` where we note that we have
+   `FUELProxyPolicy` minting only if `FUELMintingPolicy` mints.
 3. A governance mechanism chooses to upgrade the system by spending the UTxO that holds the `FUELOracleMintingPolicy` NFT at validator `FUELOracle`, paying it to a `FUELOracle` validator address with a new `FUELOracleDatum` with new currency symbols in the datum.
 4. Note that any new `FUEL` tokens must now validate with the new collection of
    minting policies provided.
