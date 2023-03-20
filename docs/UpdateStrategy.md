@@ -273,26 +273,82 @@ the committee hash would require a change to the FUELMintingPolicy; hence we
 only need to be concerned about updating the FUELMintingPolicy.
 
 ## 4. Versioning Implementation
-In this section we discuss how different versions will be maintained onchain.
+In this section we discuss how different versions will be maintained on-chain.
+As mentioned in the previous sections, the implementation of the an on-chain
+versioning system is not a requirement, but it has some benefits:
+- backwards compatibility
+- utilising reference scripts
+- single source of truth for scripts
+
+#### Backwards compatibility
+Without on-chain versioning, the user must use the version of the toolkit that
+matches the version of the claim. With versioninig, the same off-chain code can
+handle various versions. However, it's worth mentioning that maintaining backwards
+compatibility could still be difficult on the off-chain code if the interface of
+the policies/validators change.
+
+#### Utilising reference scripts
+Versioning design is tightly coupled with the use of reference scripts, which will
+reduce the maintenance cost of the chain (e.g. FUEL mint fees [reduced by more than 50%](https://github.com/mlabs-haskell/trustless-sidechain/pull/359/files#diff-1aa9f7592eb75953f0ccffa0eb1b9029c9791cc5cdc799df278f32a4406b2bb5L195-R203)).
+
+We can implement the same optimisations using reference scripts without versioning,
+and the result would actually end up being similar to this versioning design (we
+would need an oracle validator, where the reference scripts are stored in separate UTxOs).
+However, without on-chain versioning the off-chain code has to verify, that the
+reference script on-chain matches the off-chain version, and if not, it must fall
+back to including the script in the transaction itself.
+
+#### Single source of truth for scripts
+With versioning, off-chain script handling becomes simpler:
+- protocol initialisation and update sends the scripts to the `VersionOracle`
+- all transactions use the `VersionOracle` to find the validator addresses and scripts
+
+Without versioning, for all transactions the off-chain SDK includes the Plutus scripts
+themselves (or we can use reference scripts, as explained above).
+
+### 4.1 Implementation
 
 We implement a new validator and a new minting policy:
 
 - `VersionOracleValidator`: validator address holding the references to all the above mentioned
-  validators and minting policies in [#2](#2-strategies). Using reference scripts, we could also store the actual
-  scripts themselves.
+  validators and minting policies in [#2](#2-strategies).
 - `VersionOraclePolicy`: this token will prove that the version update was approved and the
   references are valid.
 
-Both of the above are parameterised by the `SidechainParams`.
+Both of the above are parameterised by the `GenesisUtxo`.
 Also, we will modify `FUELMintingPolicy` and `MPTRootTokenMintingPolicy` to include the current
 protocol version in their signed message and only allow minting with the actual version.
 
-### 4.1. VersionOracleValidator
+The version oracle allows four actions: initialisation, insertion, update, invalidation.
+All actions except initalisation require a specific signature from the governance mechanism.
+Initialisation must occur together with the protocol initialisation, consuming the genesisUtxo.
+
+**Message of the Update Signature:**
+
+```haskell
+data SignedVersionOracle
+  = InsertVersionOracle VersionOracle ScriptHash
+  -- ^ Adding a new version alongside the existing ones
+  --    VersionOracle: identifier for the new version (scriptId + version)
+  --    ScriptHash: hash of the new Plutus Script
+  | UpdateVersionOracle VersionOracle ScriptHash Version
+  -- ^ Replacing a specific version
+  --    VersionOracle: identifier for the new version (scriptId + version)
+  --    ScriptHash: hash of the new Plutus Script
+  --    Version: old version to be invalidated (it will use the scriptId from VersionOracle)
+  | InvalidateVersionOracle VersionOracle
+  -- ^ Removing a version
+  --    VersionOracle: identifier for the old version (scriptId + version)
+```
+
+#### 4.1.1. VersionOracleValidator
 
 For each validator or minting policy, a separate UTxO with the following datum will
 be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the
-UTxO to prove its validity. Furthermore, each UTxO will also include a reference script (see [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)), holding the actual validator or minting policy script.
+UTxO to prove its validity. Furthermore, each UTxO will also include a reference script
+(see [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)), holding the actual validator or minting policy script.
 This design allows multiple versions of the same validator.
+
 
 **Datum:**
 
@@ -302,38 +358,28 @@ data VersionOracle = VersionOracle
   -- ^ `version` of the protocol
   , scriptId :: Int
   -- ^ `scriptId` is the unique identifier of the validator
-}
+  }
 ```
 
-Spending from the validator requires all the `VersionOraclePolicy` tokens at the UTxO
-to be burnt. This is discussed in more detail in [4.3. Invalidating a version](#43-invalidating-a-version)
+Spending from the validator verifies:
+ - a token was burnt (invalidation)
 
-### 4.2. VersionOraclePolicy
+OR
+
+ - exactly one VersionOracleToken exists in the transaction inputs
+ - exactly one VersionOracleToken exists in the transaction outputs
+ - `SignedVersionOracle` is built onchain using the `UpdateVersionOracle` constructor
+ - `SignedVersionOracle` is signed by the governance mechanisms
+
+#### 4.1.2. VersionOraclePolicy
 
 This token will prove that the `VersionOracle` datum was approved by the committee.
 
-**Minting**:
+**Mint/burning rules:**
+ - `GenesisUtxo` is spent
 
-- `versionHash` is signed by the governance mechanism
-- `versionHash` is stored as the tokenName of the token. (This will make it sure that the version
-  datum isn't altered after minting)
+OR
 
-```
-versionHash = blake2b(cbor(VersionOracle))
-```
-
-**Burning**:
-see [4.3. Invalidating a version](#43-invalidating-a-version)
-
-- `concat("invalidate", versionHash)` message is signed by the committee
-
-### 4.3. Invalidating a version
-
-Invalidating a version will require us to
-
-- burn the `VersionOraclePolicy` token
-- remove the UTxO from the `VersionOracleValidator` (strictly speaking this is not necessary, but it will
-  make the protocol simpler).
-
-The validator only allows spending any UTxOs, if the `VersionOracleValidator` token was burnt,
-which in turn has to verify the signature of a special message.
+ - exactly one token exists in the transaction outputs (insertion) OR in the transaction inputs (invalidation)
+ - `SignedVersionOracle` is built onchain using the `InsertVersionOracle` or `InvalidateVersionOracle` constructor respectively
+ - `SignedVersionOracle` is signed by the governance mechanisms
