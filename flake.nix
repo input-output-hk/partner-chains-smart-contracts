@@ -182,6 +182,48 @@
           mkdir $out
         '';
 
+      upToDatePlutusScriptCheckFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          hsProject = (hsProjectFor system).flake';
+        in
+        pkgs.runCommand "up-to-date-plutus-scripts-check"
+          {
+            nativeBuildInputs = self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
+          } ''
+          export LC_CTYPE=C.UTF-8
+          export LC_ALL=C.UTF-8
+          export LANG=C.UTF-8
+          export IN_NIX_SHELL='pure'
+
+          # Acquire temporary files..
+          TMP=$(mktemp)
+
+          # Setup temporary files cleanup
+          function cleanup() {
+            rm -rf $TMP
+          }
+          trap cleanup EXIT
+
+          pushd ${self}/onchain
+          ${hsProject.packages."trustless-sidechain:exe:trustless-sidechain-serialise"}/bin/trustless-sidechain-serialise \
+            --purescript-plutus-scripts="$TMP"
+          popd
+
+          pushd ${self}/offchain
+          diff $TMP src/TrustlessSidechain/RawScripts.purs
+          exitCode=$?
+          if [ "$exitCode" != "0" ]; then
+            echo "Plutus scripts out of date."
+            exit $exitCode
+          fi
+          popd
+
+          mkdir $out
+        '';
+
       # CTL's `runPursTest` won't pass command-line arugments to the `node`
       # invocation, so we can essentially recreate `runPursTest` here with and
       # pass the arguments
@@ -281,6 +323,7 @@
 
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
+        upToDatePlutusScriptCheck = upToDatePlutusScriptCheckFor system;
         trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
           testMain = "Test.Main";
         };

@@ -163,6 +163,7 @@ executable trustless-sidechain-serialise
   import:         common-lang
   main-is:        Main.hs
   build-depends:
+    , aeson
     , bytestring
     , cardano-api
     , filepath
