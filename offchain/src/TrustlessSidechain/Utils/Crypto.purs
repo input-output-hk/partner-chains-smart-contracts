@@ -29,11 +29,11 @@ module TrustlessSidechain.Utils.Crypto
 
 import Contract.Prelude
 
+import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Hashing as Hashing
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt

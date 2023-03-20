@@ -59,7 +59,9 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
-import TrustlessSidechain.UpdateCommitteeHash.Utils (findUpdateCommitteeHashUtxo)
+import TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( findUpdateCommitteeHashUtxo
+  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
@@ -69,36 +71,44 @@ saveCheckpoint ∷ CheckpointEndpointParam → Contract () TransactionHash
 saveCheckpoint = runSaveCheckpoint <<< normalizeSignatures
 
 runSaveCheckpoint ∷ CheckpointEndpointParam → Contract () TransactionHash
-runSaveCheckpoint params = do
+runSaveCheckpoint
+  ( CheckpointEndpointParam
+      { sidechainParams
+      , committeeSignatures
+      , newCheckpointBlockHash
+      , newCheckpointBlockNumber
+      , sidechainEpoch
+      }
+  ) = do
   let -- `msg` is used to help generate log messages
     msg = report "runSaveCheckpoint"
 
   -- Getting the minting policy / currency symbol / token name for checkpointing
   -------------------------------------------------------------
   { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
-    (unwrap params).sidechainParams
+    sidechainParams
 
-  when (null (unwrap params).committeeSignatures)
+  when (null committeeSignatures)
     (throwContractError $ msg "No signatures provided")
 
   let
     curCommitteePubKeys /\ curCommitteeSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures
-        (unwrap params).committeeSignatures
+        committeeSignatures
 
   checkpointMessage ← liftContractM (msg "Failed to get checkpoint message")
     $ serialiseCheckpointMessage
     $ CheckpointMessage
-        { sidechainParams: (unwrap params).sidechainParams
-        , checkpointBlockHash: (unwrap params).newCheckpointBlockHash
-        , checkpointBlockNumber: (unwrap params).newCheckpointBlockNumber
-        , sidechainEpoch: (unwrap params).sidechainEpoch
+        { sidechainParams: sidechainParams
+        , checkpointBlockHash: newCheckpointBlockHash
+        , checkpointBlockNumber: newCheckpointBlockNumber
+        , sidechainEpoch: sidechainEpoch
         }
 
   unless
     ( Utils.Crypto.verifyMultiSignature
-        ((unwrap (unwrap params).sidechainParams).thresholdNumerator)
-        ((unwrap (unwrap params).sidechainParams).thresholdDenominator)
+        ((unwrap sidechainParams).thresholdNumerator)
+        ((unwrap sidechainParams).thresholdDenominator)
         curCommitteePubKeys
         checkpointMessage
         curCommitteeSignatures
@@ -110,7 +120,7 @@ runSaveCheckpoint params = do
   -- Getting checkpoint validator
   let
     checkpointParam = CheckpointParameter
-      { sidechainParams: (unwrap params).sidechainParams
+      { sidechainParams: sidechainParams
       , checkpointToken: assetClass checkpointCurrencySymbol checkpointTokenName
       }
   validator ← checkpointValidator checkpointParam
@@ -127,16 +137,16 @@ runSaveCheckpoint params = do
   -- Grabbing the committee hash UTxO
   -------------------------------------------------------------
   { committeeHashCurrencySymbol, committeeHashTokenName } ←
-    getCommitteeHashPolicy (unwrap params).sidechainParams
+    getCommitteeHashPolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
   merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    (unwrap params).sidechainParams
+    sidechainParams
 
   let
     smrm = SignedMerkleRootMint
-      { sidechainParams: (unwrap params).sidechainParams
+      { sidechainParams: sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
@@ -150,7 +160,7 @@ runSaveCheckpoint params = do
   let
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
     uch = UpdateCommitteeHash
-      { sidechainParams: (unwrap params).sidechainParams
+      { sidechainParams: sidechainParams
       , uchAssetClass: assetClass committeeHashCurrencySymbol
           committeeHashTokenName
       , merkleRootTokenCurrencySymbol
@@ -180,8 +190,8 @@ runSaveCheckpoint params = do
   let
     newCheckpointDatum = Datum $ toData
       ( CheckpointDatum
-          { blockHash: (unwrap params).newCheckpointBlockHash
-          , blockNumber: (unwrap params).newCheckpointBlockNumber
+          { blockHash: newCheckpointBlockHash
+          , blockNumber: newCheckpointBlockNumber
           }
       )
     value = assetClassValue (unwrap checkpointParam).checkpointToken one
@@ -189,8 +199,8 @@ runSaveCheckpoint params = do
       ( CheckpointRedeemer
           { committeeSignatures: curCommitteeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCheckpointBlockHash: (unwrap params).newCheckpointBlockHash
-          , newCheckpointBlockNumber: (unwrap params).newCheckpointBlockNumber
+          , newCheckpointBlockHash: newCheckpointBlockHash
+          , newCheckpointBlockNumber: newCheckpointBlockNumber
           }
       )
 
