@@ -14,6 +14,7 @@ import Contract.Log (logInfo')
 import Contract.Monad (liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
+import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -75,10 +76,8 @@ generateCheckpointSignatures
 tests ∷ WrappedTests
 tests = plutipGroup "Checkpointing" $ do
   saveCheckpointTest
-
--- testScenario2
--- testScenario3
--- testScenario4
+  invalidCommitteeTest
+  notEnoughSignaturesTest
 
 saveCheckpointTest ∷ PlutipTest
 saveCheckpointTest = Mote.Monad.test "Save checkpoint (happy path)"
@@ -105,9 +104,9 @@ saveCheckpointTest = Mote.Monad.test "Save checkpoint (happy path)"
       { sidechainParams } ← initSidechain initScParams
 
       let
-        newCheckpointBlockHash = hexToByteArrayUnsafe "aabbcc"
+        newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
         newCheckpointBlockNumber = BigInt.fromInt 1
-        sidechainEpoch = BigInt.fromInt 1
+        sidechainEpoch = BigInt.fromInt 0 -- same epoch checkpoint
         toSign =
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -131,6 +130,126 @@ saveCheckpointTest = Mote.Monad.test "Save checkpoint (happy path)"
           }
 
       void $ Checkpoint.saveCheckpoint saveCheckpointInput
+
+invalidCommitteeTest ∷ PlutipTest
+invalidCommitteeTest =
+  Mote.Monad.test "Save checkpoint should fail if the committee is invalid"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        logInfo' "Checkpoint 'invalidCommitteeTest'"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+        let
+          keyCount = 10
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            }
+
+        { sidechainParams } ← initSidechain initScParams
+
+        let
+          newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
+          newCheckpointBlockNumber = BigInt.fromInt 1
+          sidechainEpoch = BigInt.fromInt 0 -- same epoch checkpoint
+          toSign =
+            { sidechainParams
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , newCheckpointBlockHash
+            , newCheckpointBlockNumber
+            , sidechainEpoch
+            }
+
+        committeeSignatures ←
+          liftContractM
+            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            $ generateCheckpointSignatures toSign
+
+        --- Remove three committee members from the committee
+        let
+          committeeSignatures' = Array.take 2 committeeSignatures
+
+        let
+          saveCheckpointInput = Checkpoint.CheckpointEndpointParam
+            { sidechainParams
+            , committeeSignatures: map (Just <$> _) committeeSignatures'
+            , newCheckpointBlockHash
+            , newCheckpointBlockNumber
+            , sidechainEpoch
+            }
+
+        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
+
+notEnoughSignaturesTest ∷ PlutipTest
+notEnoughSignaturesTest =
+  Mote.Monad.test
+    "Save checkpoint should fail if there are not enough signatures"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        logInfo' "Checkpoint 'notEnoughSignaturesTest'"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+        let
+          keyCount = 5
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            }
+
+        { sidechainParams } ← initSidechain initScParams
+
+        let
+          newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
+          newCheckpointBlockNumber = BigInt.fromInt 1
+          sidechainEpoch = BigInt.fromInt 0 -- same epoch checkpoint
+          toSign =
+            { sidechainParams
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , newCheckpointBlockHash
+            , newCheckpointBlockNumber
+            , sidechainEpoch
+            }
+
+        committeeSignatures ←
+          liftContractM
+            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            $ generateCheckpointSignatures toSign
+
+        let
+          committeeSignatures' = map (Just <$> _) committeeSignatures
+          notEnoughSignatures = mapWithIndex
+            ( \idx (Tuple pk sig) →
+                if idx < 3 then Tuple pk Nothing
+                else Tuple pk sig
+            )
+            committeeSignatures'
+
+        let
+          saveCheckpointInput = Checkpoint.CheckpointEndpointParam
+            { sidechainParams
+            , committeeSignatures: notEnoughSignatures
+            , newCheckpointBlockHash
+            , newCheckpointBlockNumber
+            , sidechainEpoch
+            }
+
+        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
 
 -- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
 -- | but should fail because there isn't enough committee members signing the update
