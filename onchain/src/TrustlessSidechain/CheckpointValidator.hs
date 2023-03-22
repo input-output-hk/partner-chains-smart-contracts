@@ -42,19 +42,11 @@ import TrustlessSidechain.Types (
   SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
  )
-import TrustlessSidechain.Utils (verifyMultisig)
+import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 import Prelude qualified
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
-
-{-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
-aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
-
-{-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
-aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
 
 {-# INLINEABLE mkCheckpointValidator #-}
 mkCheckpointValidator ::

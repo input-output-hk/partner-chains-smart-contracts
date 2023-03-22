@@ -41,7 +41,7 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
-import TrustlessSidechain.Utils (verifyMultisig)
+import TrustlessSidechain.Utils (aggregateCheck, aggregateKeys, verifyMultisig)
 import Prelude qualified
 
 -- * Updating the committee hash
@@ -51,28 +51,6 @@ import Prelude qualified
 -}
 serialiseUchm :: UpdateCommitteeHashMessage -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
-
-{- | 'aggregateKeys' aggregates a list of public keys into a single
- committee hash by essentially computing the merkle root of all public keys
- together.
- We call the output of this function an /aggregate public key/.
--}
-{-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
-aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
-
-{- Note [Aggregate Keys Append Scheme]
- Potential optimizations: instead of doing the concatenated hash, we could
- instead compute a merkle root.
- -}
-
-{- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
- key, and returns true or false to determinig whether the public keys were
- used to produce the aggregate public key
--}
-{-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
-aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
 
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
   1. The native token is in both the input and output.
