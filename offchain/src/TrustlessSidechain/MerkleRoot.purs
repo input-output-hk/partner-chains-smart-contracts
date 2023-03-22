@@ -188,7 +188,7 @@ runSaveRoot
       TransactionOutputWithRefScript { output: TransactionOutput tOut } =
         committeeHashTxOut
 
-      committeeHash = UpdateCommitteeHash.aggregateKeys committeePubKeys
+      committeeHash = Utils.Crypto.aggregateKeys committeePubKeys
     rawDatum ←
       liftContractM (msg "Update committee hash UTxO is missing inline datum")
         $ outputDatumDatum tOut.datum

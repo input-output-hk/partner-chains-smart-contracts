@@ -89,7 +89,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHashDatum(..)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
@@ -144,7 +144,7 @@ instance ToData InitSidechainParams where
 type InitSidechainParams' =
   InitTokensParams
     ( -- `initCommittee` is the initial committee of the sidechain
-      initCommittee ∷ Array SidechainPublicKey
+      initCommittee ∷ Array Utils.Crypto.SidechainPublicKey
     , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
       initSidechainEpoch ∷ BigInt
     )
@@ -310,7 +310,7 @@ initCommitteeHashLookupsAndConstraints isp = do
   -- Setting up the update committee hash validator
   -----------------------------------
   let
-    aggregatedKeys = UpdateCommitteeHash.aggregateKeys $ Array.sort
+    aggregatedKeys = Utils.Crypto.aggregateKeys $ Array.sort
       isp.initCommittee
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
