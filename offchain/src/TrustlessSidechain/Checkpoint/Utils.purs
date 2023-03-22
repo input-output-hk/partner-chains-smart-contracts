@@ -15,7 +15,6 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
   ( MintingPolicy(..)
@@ -40,7 +39,7 @@ import TrustlessSidechain.Checkpoint.Types
   )
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos

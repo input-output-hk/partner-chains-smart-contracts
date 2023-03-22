@@ -99,10 +99,10 @@ runSaveCheckpoint
   checkpointMessage ← liftContractM (msg "Failed to get checkpoint message")
     $ serialiseCheckpointMessage
     $ CheckpointMessage
-        { sidechainParams: sidechainParams
+        { sidechainParams
         , checkpointBlockHash: newCheckpointBlockHash
         , checkpointBlockNumber: newCheckpointBlockNumber
-        , sidechainEpoch: sidechainEpoch
+        , sidechainEpoch
         }
 
   unless
@@ -120,7 +120,7 @@ runSaveCheckpoint
   -- Getting checkpoint validator
   let
     checkpointParam = CheckpointParameter
-      { sidechainParams: sidechainParams
+      { sidechainParams
       , checkpointToken: assetClass checkpointCurrencySymbol checkpointTokenName
       }
   validator ← checkpointValidator checkpointParam
@@ -145,7 +145,7 @@ runSaveCheckpoint
 
   let
     smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
+      { sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
@@ -159,7 +159,7 @@ runSaveCheckpoint
   let
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
     uch = UpdateCommitteeHash
-      { sidechainParams: sidechainParams
+      { sidechainParams
       , uchAssetClass: assetClass committeeHashCurrencySymbol
           committeeHashTokenName
       , merkleRootTokenCurrencySymbol
@@ -196,8 +196,8 @@ runSaveCheckpoint
       ( CheckpointRedeemer
           { committeeSignatures: curCommitteeSignatures
           , committeePubKeys: curCommitteePubKeys
-          , newCheckpointBlockHash: newCheckpointBlockHash
-          , newCheckpointBlockNumber: newCheckpointBlockNumber
+          , newCheckpointBlockHash
+          , newCheckpointBlockNumber
           }
       )
 
