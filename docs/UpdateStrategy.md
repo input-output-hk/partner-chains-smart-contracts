@@ -218,6 +218,24 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
+_Burning `FUELProxyPolicy`_
+Burning `FUELProxyPolicy` presents its own challenges. Unlike minting, where
+one may arbitrarily mint tokens iff the minting policy succeeds, burning tokens
+requires the user to additionally spend such tokens from an address. This is
+inconvenient since the first currency symbol in `FUELOracleDatum` must be
+present in some address when attempting to burn, but as time goes on updates
+will invalidate such tokens.
+
+So, instead of forcing users to have such tokens in their wallet to burn, we will
+parameterize `FUELProxyPolicy` with an additional currency symbol, say
+`burnCurrencySymbol`, that will serve the same purpose as `FUELOraclePolicy`
+(i.e., `burnCurrencySymbol` is an NFT which uniquely identifies a UTxO with a
+`FUELOracleDatum`), except that `FUELProxyPolicy` will *burn* `k` tokens only if
+the `burnCurrencySymbol` *mints* `k` tokens in the same transaction.
+
+Clearly, this removes the need to spend particular tokens when burning
+`FUELProxyPolicy`.
+
 ### 3.5 Governance of updates
 In this section, we discuss options for governing updates. Previously, we
 described the conditions for which an update happens are completely determined
