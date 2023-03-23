@@ -297,6 +297,7 @@ versioning system is not a requirement, but it has some benefits:
 - backwards compatibility
 - utilising reference scripts
 - single source of truth for scripts
+- modularity
 
 #### Backwards compatibility
 Without on-chain versioning, the user must use the version of the toolkit that
@@ -323,6 +324,13 @@ With versioning, off-chain script handling becomes simpler:
 
 Without versioning, for all transactions the off-chain SDK includes the Plutus scripts
 themselves (or we can use reference scripts, as explained above).
+
+#### Modularity
+Resulting from the single source of truth property, we can easily swap out certain scripts
+in our protocol, even without a source code change, because there are no hard-coded refrences
+in the scripts themselves. We could provide multiple implementation for a certain script
+(e.g. different signature schemes for merkle root insertion and committee handover), and the
+end-users would have the freedom, to choose from them.
 
 ### 4.1 Implementation
 
