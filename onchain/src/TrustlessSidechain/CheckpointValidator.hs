@@ -33,7 +33,7 @@ import PlutusTx.Prelude as PlutusTx
 import TrustlessSidechain.Types (
   CheckpointDatum (checkpointBlockHash, checkpointBlockNumber),
   CheckpointMessage (CheckpointMessage, checkpointMsgBlockHash, checkpointMsgBlockNumber, checkpointMsgSidechainEpoch, checkpointMsgSidechainParams),
-  CheckpointParameter (checkpointSidechainParams, checkpointToken),
+  CheckpointParameter (checkpointAssetClass, checkpointSidechainParams, committeeHashAssetClass),
   CheckpointRedeemer (checkpointCommitteePubKeys, checkpointCommitteeSignatures),
   SidechainParams (
     thresholdDenominator,
@@ -56,7 +56,7 @@ mkCheckpointValidator ::
   ScriptContext ->
   Bool
 mkCheckpointValidator checkpointParam datum red ctx =
-  traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputHasToken
+  traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputContainsCheckpointNft
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
     && traceIfFalse "error 'mkCheckpointValidator': current committee mismatch" isCurrentCommittee
     && traceIfFalse
@@ -72,14 +72,24 @@ mkCheckpointValidator checkpointParam datum red ctx =
     sc :: SidechainParams
     sc = checkpointSidechainParams checkpointParam
 
+    -- Check if the transaction input value contains the current committee NFT
+    containsCommitteeNft :: TxInInfo -> Bool
+    containsCommitteeNft txIn =
+      let resolvedOutput = txInInfoResolved txIn
+          outputValue = txOutValue resolvedOutput
+       in Value.assetClassValueOf outputValue (committeeHashAssetClass checkpointParam) == 1
+
+    -- Extract the UpdateCommitteeHashDatum from the list of input transactions
+    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeHashDatum
+    extractCommitteeDatum [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
+    extractCommitteeDatum (txIn : txIns)
+      | containsCommitteeNft txIn = case txOutDatum (txInInfoResolved txIn) of
+        OutputDatum d -> IsData.unsafeFromBuiltinData $ getDatum d
+        _ -> extractCommitteeDatum txIns
+      | otherwise = extractCommitteeDatum txIns
+
     committeeDatum :: UpdateCommitteeHashDatum
-    committeeDatum =
-      let go :: [TxInInfo] -> UpdateCommitteeHashDatum
-          go (t : ts)
-            | o <- txInInfoResolved t, OutputDatum d <- txOutDatum o = IsData.unsafeFromBuiltinData $ getDatum d
-            | otherwise = go ts
-          go [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
-       in go (txInfoReferenceInputs info)
+    committeeDatum = extractCommitteeDatum (txInfoReferenceInputs info)
 
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
@@ -91,11 +101,8 @@ mkCheckpointValidator checkpointParam datum red ctx =
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
       _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
 
-    outputHasToken :: Bool
-    outputHasToken = hasNft (txOutValue ownOutput)
-
-    hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (checkpointToken checkpointParam) == 1
+    outputContainsCheckpointNft :: Bool
+    outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (checkpointAssetClass checkpointParam) == 1
 
     threshold :: Integer
     threshold =

@@ -292,9 +292,12 @@ PlutusTx.makeIsDataIndexed ''CheckpointRedeemer [('CheckpointRedeemer, 0)]
 -- | 'Checkpoint' is used as the parameter for the validator.
 data CheckpointParameter = CheckpointParameter
   { checkpointSidechainParams :: SidechainParams
-  , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
+  , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
-    checkpointToken :: AssetClass
+    checkpointAssetClass :: AssetClass
+  , -- | 'committeeHashAssetClass' is the 'AssetClass' of the NFT that is used to
+    -- | identify the current committee
+    committeeHashAssetClass :: AssetClass
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
