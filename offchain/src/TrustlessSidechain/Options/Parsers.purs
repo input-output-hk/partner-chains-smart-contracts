@@ -16,6 +16,7 @@ module TrustlessSidechain.Options.Parsers
   , thresholdFraction
   , numerator
   , denominator
+  , blockHash
   ) where
 
 import Contract.Prelude
@@ -141,15 +142,20 @@ uint = maybeReader UInt.fromString
 rootHash ∷ ReadM RootHash
 rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray)
 
--- | `sidechainAddress` parses
+sidechainAddress ∷ ReadM ByteArray
+sidechainAddress = hexString
+
+blockHash ∷ ReadM ByteArray
+blockHash = hexString
+
 -- | ```
--- | sidechainAddress
+-- | hexString
 -- |        -> 0x hexStr
 -- |        -> hexStr
 -- | ```
 -- where `hexStr` is a sequence of hex digits.
-sidechainAddress ∷ ReadM ByteArray
-sidechainAddress = maybeReader $ \str →
+hexString ∷ ReadM ByteArray
+hexString = maybeReader $ \str →
   case split (Pattern "0x") str of
     [ "", hex ] → hexToByteArray hex
     [ hex ] → hexToByteArray hex
