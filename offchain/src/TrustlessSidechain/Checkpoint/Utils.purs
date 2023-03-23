@@ -114,6 +114,6 @@ findCheckpointUtxo checkpointParameter = do
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this checkpoint nft.
-    Value.valueOf value (fst (unwrap checkpointParameter).checkpointToken)
+    Value.valueOf value (fst (unwrap checkpointParameter).checkpointAssetClass)
       initCheckpointMintTn
       /= zero

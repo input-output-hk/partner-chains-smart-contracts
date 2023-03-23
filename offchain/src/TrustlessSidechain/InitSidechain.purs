@@ -240,16 +240,26 @@ initCheckpointMintLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCheckpointMintLookupsAndConstraints inp = do
+  let
+    msg = report "initCheckpointMintLookupsAndConstraints"
   -- Get checkpoint / associated values
   -----------------------------------
   { checkpointPolicy, checkpointCurrencySymbol } ← getCheckpointPolicy inp
+
+  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
+    InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
+  committeeHashCurrencySymbol ← Monad.liftContractM
+    (msg "Failed to get updateCommitteeHash CurrencySymbol")
+    (Value.scriptCurrencySymbol committeeHashPolicy)
 
   let
     sc = toSidechainParams inp
     checkpointParameter = Checkpoint.Types.CheckpointParameter
       { sidechainParams: sc
-      , checkpointToken: checkpointCurrencySymbol /\
+      , checkpointAssetClass: checkpointCurrencySymbol /\
           Checkpoint.initCheckpointMintTn
+      , committeeHashAssetClass: committeeHashCurrencySymbol /\
+          UpdateCommitteeHash.initCommitteeHashMintTn
       }
     checkpointDatum = Datum
       $ PlutusData.toData

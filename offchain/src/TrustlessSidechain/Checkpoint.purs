@@ -88,6 +88,9 @@ runSaveCheckpoint
   { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
     sidechainParams
 
+  { committeeHashCurrencySymbol, committeeHashTokenName } ←
+    getCommitteeHashPolicy sidechainParams
+
   when (null committeeSignatures)
     (throwContractError $ msg "No signatures provided")
 
@@ -121,7 +124,10 @@ runSaveCheckpoint
   let
     checkpointParam = CheckpointParameter
       { sidechainParams
-      , checkpointToken: assetClass checkpointCurrencySymbol checkpointTokenName
+      , checkpointAssetClass: assetClass checkpointCurrencySymbol
+          checkpointTokenName
+      , committeeHashAssetClass: assetClass committeeHashCurrencySymbol
+          committeeHashTokenName
       }
   validator ← checkpointValidator checkpointParam
   let checkpointValidatorHash = Scripts.validatorHash validator
@@ -132,11 +138,6 @@ runSaveCheckpoint
   , value: checkpointTxOut
   } ←
     liftContractM (msg "Failed to find checkpoint UTxO") checkpointUtxoLookup
-
-  -- Grabbing the committee hash UTxO
-  -------------------------------------------------------------
-  { committeeHashCurrencySymbol, committeeHashTokenName } ←
-    getCommitteeHashPolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token.
   -- This is needed to get the committee hash utxo.
@@ -191,7 +192,7 @@ runSaveCheckpoint
           , blockNumber: newCheckpointBlockNumber
           }
       )
-    value = assetClassValue (unwrap checkpointParam).checkpointToken one
+    value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
     redeemer = Redeemer $ toData
       ( CheckpointRedeemer
           { committeeSignatures: curCommitteeSignatures

@@ -47,7 +47,8 @@ instance FromData CheckpointDatum where
 
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
-  , checkpointToken ∷ AssetClass
+  , checkpointAssetClass ∷ AssetClass
+  , committeeHashAssetClass ∷ AssetClass
   }
 
 derive instance Generic CheckpointParameter _
@@ -55,10 +56,11 @@ derive instance Newtype CheckpointParameter _
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
-        { sidechainParams, checkpointToken }
+        { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
     ) = Constr zero
     [ toData sidechainParams
-    , toData checkpointToken
+    , toData checkpointAssetClass
+    , toData committeeHashAssetClass
     ]
 
 derive newtype instance Show CheckpointParameter
