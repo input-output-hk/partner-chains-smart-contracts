@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set +e
 
 die() {
 	code=$?
@@ -11,25 +11,25 @@ check() {
 		|| die "please enter a shell environment where \`$1\` is present," \
 		       "then commit your changes."
 	$*
+    [ "$?" -eq "0" ] || die 'ERROR: precommit hook failed. Running `make format-staged && git add .` in the project root may fix this'
 }
 
 # If there are whitespace errors, print the offending file names and fail.
-git diff-index --cached --check HEAD --
+check git diff-index --cached --check HEAD --
 
 # Catch formatting errors
 changed=$(git diff-index --cached --name-status HEAD -- | grep -v ^D | cut -f2)
-set +e
-	nix=$(grep '\.nix$' <<< $changed)
-	cabal=$(grep '\.cabal$' <<< $changed)
-	haskell=$(grep '\.l\?hs$' <<< $changed)
-	purescript=$(grep '\.purs$' <<< $changed)
-	javascript=$(grep '\.js$' <<< $changed)
-	dhall=$(grep '\.dhall$' <<< $changed)
-	flake=$(grep '^flake\.nix$' <<< $changed)
-set -e
+
+nix=$(grep '\.nix$' <<< $changed)
+cabal=$(grep '\.cabal$' <<< $changed)
+haskell=$(grep '\.l\?hs$' <<< $changed)
+purescript=$(grep '\.purs$' <<< $changed)
+javascript=$(grep '\.js$' <<< $changed)
+dhall=$(grep '\.dhall$' <<< $changed)
+flake=$(grep '^flake\.nix$' <<< $changed)
 
 ! [ "$nix" ] || check nixpkgs-fmt --check $nix
-! [ "$flake" ] || nix flake lock --no-update-lock-file
+! [ "$flake" ] || check nix flake lock --no-update-lock-file
 
 ! [ "$cabal" ] || check cabal-fmt --check $cabal
 ! [ "$haskell" ] || {
@@ -48,6 +48,3 @@ set -e
 ! [ "$purescript" ] || check purs-tidy check $purescript
 ! [ "$javascript" ] || check eslint $javascript
 ! [ "$dhall" ] || check dhall lint --check $dhall
-
-# `test && cmd` would fail the script if the test fails
-# `! test || cmd` would only fail if cmd fails

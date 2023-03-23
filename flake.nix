@@ -2,18 +2,18 @@
   description = "trustless-sidechain";
 
   nixConfig = {
-    extra-substituters = [ "https://cache.iog.io" "https://public-plutonomicon.cachix.org" "https://mlabs.cachix.org" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc=" ];
+    extra-substituters = [ "https://cache.iog.io" ];
+    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
   };
 
-  inputs = rec {
+  inputs = {
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/CHaP";
     plutip.follows = "cardano-transaction-lib/plutip";
 
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/7e54a52bb83926a5646fcdf863ec07bc6447edaa";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v4.0.2";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -81,7 +81,7 @@
           pkgs = nixpkgsFor system;
         in
         pkgs.haskell-nix.cabalProject {
-          src = ./.;
+          src = ./onchain;
           inputMap = {
             "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
           };
@@ -124,7 +124,7 @@
           projectName = "trustless-sidechain-ctl";
           pkgs = nixpkgsFor system;
           src = builtins.path {
-            path = ./ctl;
+            path = ./offchain;
             name = "${projectName}-src";
             # TODO: Add more filters
             filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
@@ -161,14 +161,66 @@
               ++ self.devShells.${system}.ps.nativeBuildInputs
               ++ self.devShells.${system}.ps.buildInputs;
           } ''
-          cd ${self}
+
+          pushd ${self}
           export LC_CTYPE=C.UTF-8
           export LC_ALL=C.UTF-8
           export LANG=C.UTF-8
           export IN_NIX_SHELL='pure'
-          make format_check cabalfmt_check nixpkgsfmt_check lint
-          cd ${self}/ctl
+
+          make nixpkgsfmt_check
+          popd
+
+          pushd ${self}/onchain/
+          make format_check cabalfmt_check lint
+          popd
+
+          pushd ${self}/offchain
           make check-format
+          popd
+
+          mkdir $out
+        '';
+
+      upToDatePlutusScriptCheckFor = system:
+        let
+          pkgs = nixpkgsFor system;
+          hsProject = (hsProjectFor system).flake';
+        in
+        pkgs.runCommand "up-to-date-plutus-scripts-check"
+          {
+            nativeBuildInputs = self.devShells.${system}.hs.nativeBuildInputs
+              ++ self.devShells.${system}.ps.nativeBuildInputs
+              ++ self.devShells.${system}.ps.buildInputs;
+          } ''
+          export LC_CTYPE=C.UTF-8
+          export LC_ALL=C.UTF-8
+          export LANG=C.UTF-8
+          export IN_NIX_SHELL='pure'
+
+          # Acquire temporary files..
+          TMP=$(mktemp)
+
+          # Setup temporary files cleanup
+          function cleanup() {
+            rm -rf $TMP
+          }
+          trap cleanup EXIT
+
+          pushd ${self}/onchain
+          ${hsProject.packages."trustless-sidechain:exe:trustless-sidechain-serialise"}/bin/trustless-sidechain-serialise \
+            --purescript-plutus-scripts="$TMP"
+          popd
+
+          pushd ${self}/offchain
+          diff $TMP src/TrustlessSidechain/RawScripts.purs
+          exitCode=$?
+          if [ "$exitCode" != "0" ]; then
+            echo "Plutus scripts out of date."
+            exit $exitCode
+          fi
+          popd
+
           mkdir $out
         '';
 
@@ -181,14 +233,14 @@
           project = psProjectFor system;
         in
         pkgs.writeShellApplication {
-          name = "ctl-main";
+          name = "sidechain-main-cli";
           runtimeInputs = [ project.nodejs ];
           # Node's `process.argv` always contains the executable name as the
-          # first argument, hence passing `ctl-main "$@"` rather than just
+          # first argument, hence passing `sidechain-main-cli "$@"` rather than just
           # `"$@"`
           text = ''
             export NODE_PATH="${project.nodeModules}/lib/node_modules"
-            node -e 'require("${project.compiled}/output/Main").main()' ctl-main "$@"
+            node -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
           '';
         };
 
@@ -196,7 +248,7 @@
         let
           name = "trustless-sidechain-cli";
           version = "0.1.0";
-          src = ./ctl;
+          src = ./offchain;
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
@@ -237,7 +289,7 @@
         (system: self.flake.${system}.packages // {
           ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
           ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
-          ctl-main = ctlMainFor system;
+          sidechain-main-cli = ctlMainFor system;
           # TODO: Fix web bundling
           # ctl-bundle-web = (psProjectFor system).bundlePursProject {
           #   main = "Main";
@@ -251,9 +303,9 @@
       apps = perSystem (system: self.flake.${system}.apps // {
         ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
         ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
-        ctl-main = {
+        sidechain-main-cli = {
           type = "app";
-          program = "${ctlMainFor system}/bin/ctl-main";
+          program = "${ctlMainFor system}/bin/sidechain-main-cli";
         };
       });
 
@@ -271,6 +323,7 @@
 
       checks = perSystem (system: self.flake.${system}.checks // {
         formatCheck = formatCheckFor system;
+        upToDatePlutusScriptCheck = upToDatePlutusScriptCheckFor system;
         trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
           testMain = "Test.Main";
         };

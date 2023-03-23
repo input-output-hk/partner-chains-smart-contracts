@@ -5,14 +5,14 @@ strict digraph {
 
   mRoot1 [label =
     "Merkle root ins tx (SC ep. 1) |
-      minted: MPTRootToken\l
+      minted: MerkleRootToken\l
       redeemer: none\l
       refInput: none\l
     "]
 
   mRoot2 [label =
     "Merkle root ins tx (SC ep. 1) |
-      minted: MPTRootToken\l
+      minted: MerkleRootToken\l
       redeemer: last roothash\l
       refInput: last roothash utxo\l
     "]
@@ -26,7 +26,7 @@ strict digraph {
 
   mRoot3 [label =
     "Merkle root ins tx (SC ep. 2) |
-      minted: MPTRootToken\l
+      minted: MerkleRootToken\l
       redeemer: last roothash\l
       refInput: last roothash utxo\l
     "]
@@ -40,7 +40,7 @@ strict digraph {
 
   mRoot4 [label =
     "Merkle root ins tx (SC ep. 3) |
-      minted: MPTRootToken\l
+      minted: MerkleRootToken\l
       redeemer: last roothash\l
       refInput: last roothash utxo\l
     "]

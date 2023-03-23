@@ -1,0 +1,28 @@
+strict digraph {
+  node [shape=record]
+
+//  atmsVKey [
+//    label = "UTxO with datum | ATMS verification key"
+//    ]
+
+  atmsVKey [
+    label = "UTxO with datum | committee hash"
+    ]
+
+  lastMerkleRoot [
+    label = "UTxO with datum | Merkle root"
+    ]
+
+  mintToken [label =
+    "Mint MerkleRootToken |
+      redeemer: SignedMerkleRoot \l
+      tx body: minted tokens\l
+    "]
+
+  merkleRootAddr [label = "Merkle root script address"]
+
+  atmsVKey -> mintToken [style = dashed, label = "references"]
+  lastMerkleRoot -> mintToken [style = dashed, label = "references"]
+  mintToken -> merkleRootAddr
+
+}

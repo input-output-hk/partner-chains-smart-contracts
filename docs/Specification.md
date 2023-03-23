@@ -9,9 +9,10 @@ This specification details the main chain contract of a trustless sidechain syst
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
 - `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
-- `MPTRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' MPT roots ([3.1.](#31-merkle-root-insertion))
+- `MerkleRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' Merkle roots ([3.1.](#31-merkle-root-insertion))
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
-- `MPTRootTokenValidator`: script address for storing `MPTRootToken`s ([3.1.](#31-merkle-root-insertion))
+- `CandidatePermissionToken`: a minting policy for permissioned committee candidates [4.1](#4-1-candidate-permission-token).
+- `MerkleRootTokenValidator`: script address for storing `MerkleRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 - `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
 - `DsConfValidator`: validator holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
@@ -30,6 +31,12 @@ data SidechainParams = SidechainParams
     -- ^ 'genesisUtxo' is an arbitrary 'TxOutRef' used to identify internal
     -- 'AssetClass's (e.g. see [6.](#6-update-committee-hash)) of the
     -- sidechain
+  , thresholdNumerator :: Integer
+    -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+  , thresholdDenominator :: Integer
+    -- ^ 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
   }
 ```
 
@@ -57,6 +64,12 @@ data InitSidechainParams = InitSidechainParams
     -- ^ 'initCommittee' is the initial committee of the sidechain
   , initSidechainEpoch :: Integer
     -- ^ 'initSidechainEpoch' is the initial sidechain epoch of the sidechain
+  , thresholdNumerator :: Integer
+    -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
+    -- needed to sign off committee handovers / merkle roots
+  , thresholdDenominator :: Integer
+    -- ^ 'thresholdDenominator' is the denominator for the ratio of the
+    -- committee needed to sign off committee handovers / merkle roots
   }
 ```
 
@@ -109,7 +122,7 @@ data SaveRootParams = SaveRootParams
   }
 ```
 
-Merkle roots are stored on-chain, using `MPTRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MPTRootTokenValidator` script address.
+Merkle roots are stored on-chain, using `MerkleRootToken`s, where the `tokenName` is the Merkle root. These tokens must be at the `MerkleRootTokenValidator` script address.
 
 **Redeemer:**
 
@@ -130,12 +143,13 @@ Minting policy verifies the following:
 - verifies that size(signatures) > 2/3 \* size(committeePubKeys)
 - list of public keys does not contain duplicates
 - if `previousMerkleRoot` is specified, the UTxO with the given roothash is referenced in the transaction as a reference input
+- there exists a `MerkleRootToken` with `tokenName` as `merkleRoot` at a `MerkleRootTokenValidator` script address.
 
 Validator script verifies the following:
 
-- UTxOs containing an `MPTRootToken` cannot be unlocked from the script address
+- UTxOs containing an `MerkleRootToken` cannot be unlocked from the script address
 
-![MPTRootToken minting](Spec/MPTRoot.svg)
+![MerkleRootToken minting](Spec/MerkleRoot.svg)
 
 <figcaption align = "center"><i>Merkle root token minting</i></figcaption><br />
 
@@ -185,7 +199,7 @@ data MintParams = MintParams
 
 Minting policy verifies the following:
 
-- `MPTRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MPTRootTokenValidator` script address
+- `MerkleRootToken` with the name of the Merkle root of the transaction (calculated from from the proof) can be found in the `MerkleRootTokenValidator` script address
 - recipient, amount, index and previousMerkleRoot combined with merkleProof match against merkleRootHash
 - `claimTransactionHash` of the transaction is NOT included in the distributed set (more details about the distributed set can be found [here](./DistributedSet.md))
 - a new entry with the `claimTransactionHash` of the transaction is created in the distributed set
@@ -212,7 +226,7 @@ data FUELRedeemer
 **Workflow:**
 
 1. An SPO registering as a block producer (commitee member) for the sidechain sends BlockProducerRegistration and its signature (where the signed message contains the sidechain parameters, sidechain public key and the input utxo in CBOR format)
-2. The Bridge monitoring the committee candidate script address is validating the SPO credentials, chainId, and the consumed inputUtxo
+2. The Bridge monitoring the committee candidate script address (optionally, with a specified token -- see [4.1](#4-1-candidate-permission-token)), is validating the SPO credentials, chainId, and the consumed inputUtxo
 
 **Datum:**
 
@@ -226,6 +240,43 @@ data BlockProducerRegistration = BlockProducerRegistration
   , bprOwnPkh :: PubKeyHash -- payment public key hash of the wallet owner (who is allowed to deregister)
   }
 ```
+
+#### 4.1 Candidate permission token
+**Endpoint params:**
+```haskell
+data CandidatePermissionMintParams = CandidatePermissionMintParams
+  { candidateMintPermissionMint :: CandidatePermissionMint
+  , tokenName ∷ TokenName
+  , amount ∷ BigInt
+  }
+```
+where
+```haskell
+data CandidatePermissionMint = CandidatePermissionMint
+  { sidechainParams ∷ SidechainParams
+  , permissionTokenUtxo ∷ TxOutRef
+  }
+```
+parameterizes the onchain minting policy.
+
+**Workflow:**
+1. The Bridge chooses a particular `TxOutRef` and uses this to mint the given
+   amount of `CandidatePermissionToken`s, and records the `CurrencySymbol` and
+   `TxOutRef`of the `CandidatePermissionToken`.
+2. The `CandidatePermissionToken`s are distributed amongst SPOs.
+3. As in [4.](#4-register-committee-candidate), the Bridge uses this
+   `CandidatePermissionToken` to distinguish which committee candidates have
+   permission to register. Committee candidates registering with the
+   `CandidatePermissionToken` are considered valid, but otherwise are
+   considered invalid.
+
+   If it is desired for the system to be permissionless, the Bridge may ignore
+   the `CandidatePermissionToken` requirement and consider all registrations as valid.
+
+
+
+Minting policy verifies the following:
+    - The given `permissionTokenUtxo` it is parameterized by is spent.
 
 ### 5. Deregister committee member/candidate
 
