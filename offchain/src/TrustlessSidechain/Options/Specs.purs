@@ -46,6 +46,7 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
   ( bigInt
+  , blockHash
   , byteArray
   , combinedMerkleProofParserWithPkh
   , committeeSignature
@@ -59,7 +60,6 @@ import TrustlessSidechain.Options.Parsers
   , tokenName
   , transactionInput
   , uint
-  , blockHash
   )
 import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
