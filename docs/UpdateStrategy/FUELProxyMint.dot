@@ -1,0 +1,32 @@
+strict digraph {
+  node [shape=record]
+  splines=false
+
+  wallet [label = "User wallet"]
+
+  burnAddress [label = "Burn address"]
+
+  fuelOracle [label = "FuelOracle validator"]
+
+  fuelProxy [style = dashed, label =
+    "FuelProxyPolicy |
+      gets FuelMintPolicy currency symbol from FuelOracle\l
+      can mint n tokens if FuelMintPolicy mints n tokens\l
+    "]
+
+  fuelMintPolicy [style = dashed, label =
+    "FuelMintPolicy"
+  ]
+
+  tx [shape = diamond, label = "Claim transaction\nminting both tokens" ]
+
+  fuelOracle -> fuelProxy [style = dashed, label = "references"]
+  fuelMintPolicy -> fuelOracle [arrowhead = ediamond, label = "stores reference"]
+
+  fuelMintPolicy -> tx
+  fuelProxy -> tx
+
+  tx -> wallet [label="Proxy token"]
+  tx -> burnAddress [label="Fuel mint token"]
+
+}

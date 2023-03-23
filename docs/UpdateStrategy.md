@@ -218,6 +218,14 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
+![FUELProxy mint flow](UpdateStrategy/FUELProxyMint.svg)
+
+<figcaption align = "center"><i>Claiming FUELProxy token using the transaction token pattern</i></figcaption><br />
+
+![FUELProxy mint flow](UpdateStrategy/FUELProxyUpdate.svg)
+
+<figcaption align = "center"><i>Updating the list of valid FUELMintingPolicies</i></figcaption><br />
+
 _Burning `FUELProxyPolicy`_
 Burning `FUELProxyPolicy` presents its own challenges. Unlike minting, where
 one may arbitrarily mint tokens iff the minting policy succeeds, burning tokens
@@ -235,6 +243,10 @@ the `burnCurrencySymbol` *mints* `k` tokens in the same transaction.
 
 Clearly, this removes the need to spend particular tokens when burning
 `FUELProxyPolicy`.
+
+![FUELProxy burn flow](UpdateStrategy/FUELProxyBurn.svg)
+
+<figcaption align = "center"><i>Burning FUELProxy token using the transaction token pattern</i></figcaption><br />
 
 ### 3.5 Governance of updates
 In this section, we discuss options for governing updates. Previously, we
@@ -344,6 +356,16 @@ We implement a new validator and a new minting policy:
 Both of the above are parameterised by the `GenesisUtxo`.
 Also, we will modify `FUELMintingPolicy` and `MPTRootTokenMintingPolicy` to include the current
 protocol version in their signed message and only allow minting with the actual version.
+
+Furthermore, all scripts depenedending on some other script must use the VersionOracle to
+get their dependencies (currency symbols or validator hashes) instead of a script parameter
+or any other method to ensure that we get the above mentioned benefits. All script must use
+the same version, to avoid unforeseable incompatibilities between script. To achieve this
+all scripts must match their own version with the scripts of their dependencies.
+
+![VersionOracle flow](UpdateStrategy/VersionOracle.svg)
+
+<figcaption align = "center"><i>High level concept of versioning</i></figcaption><br />
 
 The version oracle allows four actions: initialisation, insertion, update, invalidation.
 All actions except initalisation require a specific signature from the governance mechanism.
