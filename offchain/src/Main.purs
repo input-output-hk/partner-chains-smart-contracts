@@ -21,8 +21,8 @@ import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( initSidechain
-  , initSidechainCommittee
   , initSidechainTokens
+  , paySidechainTokens
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -261,7 +261,7 @@ runEndpoint scParams =
           }
 
       { transactionId, sidechainParams, sidechainAddresses } ←
-        if useInitTokens then initSidechainCommittee isc
+        if useInitTokens then paySidechainTokens isc
         else initSidechain (wrap isc)
 
       pure $ InitResp
