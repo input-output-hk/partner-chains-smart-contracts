@@ -188,7 +188,9 @@ newtype FUELOracleDatum =
     }
 ```
 That is, this contains the collection of the currency symbols of minting
-policies which are required for `FUELProxyPolicy` to mint.
+policies which are required for `FUELProxyPolicy` to mint. We will also
+require that these currency symbols are lexicographically sorted to make
+onchain verifications easier.
 It is outside the scope of this document to discuss the conditions for when
 this validator will succeed, as there would need to be some sort of governance
 mechanism which decides when we may upgrade `FUELProxyPolicy`. See
