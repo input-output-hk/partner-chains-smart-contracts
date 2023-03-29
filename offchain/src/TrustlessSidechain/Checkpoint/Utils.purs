@@ -81,7 +81,6 @@ initCheckpointMintTn ∷ Value.TokenName
 initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
-{-# INLINEABLE committeeHashAssetClass #-}
 checkpointAssetClass ∷ InitCheckpointMint → Contract () AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm

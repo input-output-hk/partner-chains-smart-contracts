@@ -411,12 +411,12 @@ In the future, we want to support multiple Merkle roots per sidechain epoch, so 
 **Endpoint params:**
 
 ```haskell
-newtype CheckpointEndpointParam = CheckpointEndpointParam
+data CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
-  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
-  , newCheckpointBlockHash ∷ ByteArray
-  , newCheckpointBlockNumber ∷ BigInt
-  , sidechainEpoch ∷ BigInt
+  , committeeSignatures ∷ [(SidechainPublicKey, Maybe SidechainSignature)]
+  , newCheckpointBlockHash ∷ ByteString
+  , newCheckpointBlockNumber ∷ Integer
+  , sidechainEpoch ∷ Integer
   }
 ```
 
@@ -433,9 +433,9 @@ Validator script verifies the following:
 **Datum**
 
 ```haskell
-newtype CheckpointDatum = CheckpointDatum
-  { blockHash ∷ ByteArray
-  , blockNumber ∷ BigInt
+data CheckpointDatum = CheckpointDatum
+  { blockHash ∷ ByteString
+  , blockNumber ∷ Integer
   }
 ```
 
@@ -443,9 +443,9 @@ newtype CheckpointDatum = CheckpointDatum
 
 ```haskell
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ Array SidechainSignature
-  , committeePubKeys ∷ Array SidechainPublicKey
-  , newCheckpointBlockHash ∷ ByteArray
-  , newCheckpointBlockNumber ∷ BigInt
+  { committeeSignatures ∷ [SidechainSignature]
+  , committeePubKeys ∷ [SidechainPublicKey]
+  , newCheckpointBlockHash ∷ ByteString
+  , newCheckpointBlockNumber ∷ Integer
   }
 ```
