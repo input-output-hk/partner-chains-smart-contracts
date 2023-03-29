@@ -617,12 +617,12 @@ initSidechainTokens isp = do
     }
 
 -- | `paySidechainTokens` pays:
--- | 1. the NFT which identifies the committee hash to the update committee hash validator script.
--- | 1. the NFT which identifies the current checkpoint to the checkpoint validator script.
+-- | 1. NFT which identifies the committee hash to the update committee hash validator script.
+-- | 1. NFT which identifies the current checkpoint to the checkpoint validator script.
 -- |
 -- | This is meant to be used _after_ `initSidechainTokens`.
 -- |
--- | Note: you must have such the NFTs in your wallet already.
+-- | Note: you must have the NFTs in your wallet already.
 paySidechainTokens ∷
   InitSidechainParams' →
   Contract ()
