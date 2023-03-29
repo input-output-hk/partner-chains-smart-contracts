@@ -120,7 +120,7 @@ testScenario2 =
 
           void do
             _sc ← InitSidechain.initSidechainTokens initScParams
-            InitSidechain.initSidechainCommittee initScParams
+            InitSidechain.paySidechainTokens initScParams
 
 -- | `testScenario3` is a bit more complicated (but this should fail!) than
 -- | `testScenario2`. It takes two distinct wallets, say Alice and Bob, grabs a
@@ -252,4 +252,4 @@ testScenario5 = do
               initScParams
             Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
               permissionToken
-            InitSidechain.initSidechainCommittee initScParams
+            InitSidechain.paySidechainTokens initScParams

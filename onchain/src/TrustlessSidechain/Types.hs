@@ -268,3 +268,45 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
+
+-- | Datum for a checkpoint
+data CheckpointDatum = CheckpointDatum
+  { checkpointBlockHash :: BuiltinByteString
+  , checkpointBlockNumber :: Integer
+  }
+
+PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
+
+{- | The Redeemer that is passed to the on-chain validator to update the
+ checkpoint
+-}
+data CheckpointRedeemer = CheckpointRedeemer
+  { checkpointCommitteeSignatures :: [BuiltinByteString]
+  , checkpointCommitteePubKeys :: [SidechainPubKey]
+  , newCheckpointBlockHash :: BuiltinByteString
+  , newCheckpointBlockNumber :: Integer
+  }
+
+PlutusTx.makeIsDataIndexed ''CheckpointRedeemer [('CheckpointRedeemer, 0)]
+
+-- | 'Checkpoint' is used as the parameter for the validator.
+data CheckpointParameter = CheckpointParameter
+  { checkpointSidechainParams :: SidechainParams
+  , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
+    -- identify the transaction.
+    checkpointAssetClass :: AssetClass
+  , -- | 'committeeHashAssetClass' is the 'AssetClass' of the NFT that is used to
+    -- | identify the current committee
+    committeeHashAssetClass :: AssetClass
+  }
+
+PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
+
+data CheckpointMessage = CheckpointMessage
+  { checkpointMsgSidechainParams :: SidechainParams
+  , checkpointMsgBlockHash :: BuiltinByteString
+  , checkpointMsgBlockNumber :: Integer
+  , checkpointMsgSidechainEpoch :: Integer
+  }
+
+PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]

@@ -27,6 +27,7 @@ import System.IO (Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
+import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -195,6 +196,8 @@ main =
           , ("CandidatePermissionMintingPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
           , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
+          , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
+          , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
           , -- Distributed set validators / minting policies
             ("InsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)

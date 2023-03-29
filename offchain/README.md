@@ -103,6 +103,7 @@ Available commands:
   register                    Register a committee candidate
   deregister                  Deregister a committee member
   candidate-permission-token  Mint candidate permission tokens
+  save-checkpoint             Save a new checkpoint block
 ```
 
 #### 3.1.1. Initialising the sidechain
@@ -349,6 +350,19 @@ nix run .#sidechain-main-cli -- candidate-permission-token \
   --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
 ```
 
+#### 3.1.8 Save checkpoint
+
+```
+nix run .#sidechain-main-cli -- save-checkpoint \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
+  --new-checkpoint-block-number 42 \
+  --sidechain-epoch 5
+```
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.

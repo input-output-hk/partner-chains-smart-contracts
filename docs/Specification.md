@@ -11,14 +11,16 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
 - `MerkleRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' Merkle roots ([3.1.](#31-merkle-root-insertion))
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
-- `CandidatePermissionToken`: a minting policy for permissioned committee candidates [4.1](#4-1-candidate-permission-token).
+- `CandidatePermissionToken`: a minting policy for permissioned committee candidates ([4.1](#41-candidate-permission-token))
 - `MerkleRootTokenValidator`: script address for storing `MerkleRootToken`s ([3.1.](#31-merkle-root-insertion))
 - `CommitteeHashValidator`: script address for the committee members' hash ([1.](#1-initialise-contract), [6.](#6-committee-handover))
 - `CommitteeHashPolicy`: oneshot token pointing to the current valid committee hash ([6.1](#61-update-committee-hash))
 - `DsConfValidator`: validator holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
 - `DsConfPolicy`: oneshot token identifying the UTxO holding the distributed set configuration ([Distributed Set](./DistributedSet.md))
-- `DsInsertValidator`: validator handling distributed set entry ([Distributed Set](./DistributedSet.md)
+- `DsInsertValidator`: validator handling distributed set entry ([Distributed Set](./DistributedSet.md))
 - `DsKeyPolicy`: tokens identifying the distributed set entries ([Distributed Set](./DistributedSet.md))
+- `CheckpointValidator`: validator handling checkpoints ([7.](#7-checkpointing))
+- `CheckpointPolicy`: oneshot token identifying the UTxO holding the checkpoint ([7.](#7-checkpointing))
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
@@ -398,3 +400,52 @@ In the future, we want to support multiple Merkle roots per sidechain epoch, so 
 ![Merkle root chaining - multipe Merkle roots per epoch](Spec/MRChain-multi.svg)
 
 <figcaption align = "center"><i>Merkle root chaining - multiple Merkle roots per epoch (SC ep = sidechain epoch)</i></figcaption><br />
+
+### 7. Checkpointing
+
+**Workflow:**
+1. During the handover phase the current committee agrees on a "checkpoint" block
+2. Signatures are collected
+3. Bridge broadcasts checkpoint block with "save-checkpoint" endpoint
+
+**Endpoint params:**
+
+```haskell
+data CheckpointEndpointParam = CheckpointEndpointParam
+  { sidechainParams ∷ SidechainParams
+  , committeeSignatures ∷ [(SidechainPublicKey, Maybe SidechainSignature)]
+  , newCheckpointBlockHash ∷ ByteString
+  , newCheckpointBlockNumber ∷ Integer
+  , sidechainEpoch ∷ Integer
+  }
+```
+
+Validator script verifies the following:
+
+- verifies that hash of committeePublicKeys matches the hash saved on chain
+- verifies that all the provided signatures are valid
+- verifies that size(signatures) > 2/3 \* size(committeePubKeys)
+- verifies the oneshot token `CheckpointPolicy` of the UTxO holding the old verification key at the script address
+- verifies that the new checkpoint number is strictly increasing
+- consumes the above mentioned UTxO
+- outputs a new UTxO with the updated checkpoint containing the oneshot token `CheckpointPolicy` to the same script address
+
+**Datum**
+
+```haskell
+data CheckpointDatum = CheckpointDatum
+  { blockHash ∷ ByteString
+  , blockNumber ∷ Integer
+  }
+```
+
+**Redeemer**
+
+```haskell
+data CheckpointRedeemer = CheckpointRedeemer
+  { committeeSignatures ∷ [SidechainSignature]
+  , committeePubKeys ∷ [SidechainPublicKey]
+  , newCheckpointBlockHash ∷ ByteString
+  , newCheckpointBlockNumber ∷ Integer
+  }
+```

@@ -38,7 +38,7 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Utils qualified as Utils (verifyMultisig)
+import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -153,7 +153,7 @@ mkMintingPolicy
                 }
           )
           signatures
-      p3 = UpdateCommitteeHash.aggregateCheck committeePubKeys $ committeeHash committeeDatum
+      p3 = Utils.aggregateCheck committeePubKeys $ committeeHash committeeDatum
       p4 = case Value.flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName
         -- There's no need to verify the following condition
