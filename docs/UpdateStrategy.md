@@ -62,6 +62,7 @@ In case of our sidechain protocol, I propose the following strategies for our va
 This section discusses in more detail how to apply the transaction token pattern to the FUELMintingPolicy.
 In the development of these ideas, we will later introduce a new minting policy, `FUELMintingProxyPolicy`, whose tokens will be regarded as the FUEL tokens.
 
+
 As a high level idea, the Transaction Token Pattern will change the
 FUELMintingPolicy to forward all of its validations to some
 *collection of minting policies* stored in the datum at a distinguished UTxO, and
@@ -189,8 +190,10 @@ newtype FUELOracleDatum =
 ```
 That is, this contains the collection of the currency symbols of minting
 policies which are required for `FUELProxyPolicy` to mint. We will also
-require that these currency symbols are lexicographically sorted to make
-onchain verifications easier.
+require that these currency symbols are lexicographically sorted (with the 
+exception of the first currency symbol which determines how much `FUELProxyPolicy` 
+to mint) to make onchain verifications easier.
+
 It is outside the scope of this document to discuss the conditions for when
 this validator will succeed, as there would need to be some sort of governance
 mechanism which decides when we may upgrade `FUELProxyPolicy`. See
