@@ -1,0 +1,27 @@
+strict digraph {
+  node [shape=record]
+  splines=false
+
+  versionOracle [label = "VersionOracle validator"]
+
+  scriptA2 [style = dashed, label = "Validator/Policy A v2"]
+  scriptB1 [style = dashed, label = "Validator/Policy B v1"]
+  scriptB2 [style = dashed, label = "Validator/Policy B v2"]
+
+  scriptA2_ [style = dashed, label = "Validator/Policy A v2"]
+  scriptB1_ [style = dashed, label = "Validator/Policy B v1"]
+  scriptB2_ [style = dashed, label = "Validator/Policy B v2"]
+
+  scriptA2 -> versionOracle [arrowhead = ediamond, label = "stores script"]
+  scriptB1 -> versionOracle [arrowhead = ediamond]
+  scriptB2 -> versionOracle [arrowhead = ediamond]
+
+  versionOracle -> scriptA2_ [style = dashed, label = "references"]
+  versionOracle -> scriptB1_ [style = dashed]
+  versionOracle -> scriptB2_ [style = dashed]
+
+  tx [shap = diamond, label = "Transaction | only same versions can be used together"]
+
+  scriptA2_ -> tx
+  scriptB2_ -> tx
+}
