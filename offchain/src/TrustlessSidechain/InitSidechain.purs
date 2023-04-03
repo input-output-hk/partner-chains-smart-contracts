@@ -10,7 +10,7 @@
 -- |          parameters), which will mint the genesis token for the committee hash
 -- |          (and set up other required tokens for the distributed set)
 -- |
--- |          - Then, call `initSidechainCommittee` which will pay the genesis
+-- |          - Then, call `paySidechainTokens` which will pay the genesis
 -- |          token for the committee hash (assuming you have it in your wallet)
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
@@ -19,7 +19,8 @@ module TrustlessSidechain.InitSidechain
   , InitSidechainParams'
   , initSidechainTokens
   , InitTokensParams
-  , initSidechainCommittee
+  , paySidechainTokens
+  , initCheckpointMintLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -51,6 +52,7 @@ import Contract.Value as Value
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(..)
@@ -58,6 +60,12 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint
+  ( CheckpointDatum(..)
+  , InitCheckpointMint(..)
+  )
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -81,7 +89,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHashDatum(..)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
@@ -136,7 +144,7 @@ instance ToData InitSidechainParams where
 type InitSidechainParams' =
   InitTokensParams
     ( -- `initCommittee` is the initial committee of the sidechain
-      initCommittee ∷ Array SidechainPublicKey
+      initCommittee ∷ Array Utils.Crypto.SidechainPublicKey
     , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
       initSidechainEpoch ∷ BigInt
     )
@@ -220,6 +228,100 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
             , amount
             }
 
+-- | `initCheckpointMintLookupsAndConstraints` creates lookups and
+-- | constraints to mint the NFT which uniquely
+-- | identifies the utxo that holds the checkpoint
+initCheckpointMintLookupsAndConstraints ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract
+    ()
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCheckpointMintLookupsAndConstraints inp = do
+
+  { checkpointPolicy, checkpointCurrencySymbol } ← getCheckpointPolicy inp
+
+  let
+    checkpointValue =
+      Value.singleton
+        checkpointCurrencySymbol
+        Checkpoint.initCheckpointMintTn
+        one
+
+    lookups ∷ ScriptLookups Void
+    lookups = Lookups.mintingPolicy checkpointPolicy
+
+    constraints ∷ TxConstraints Void Void
+    constraints = Constraints.mustMintValue checkpointValue
+
+  pure { constraints, lookups }
+
+-- | `initCheckpointLookupsAndConstraints` creates lookups and
+-- | constraints pay the NFT which uniquely
+-- | identifies the utxo that holds the checkpoint
+initCheckpointLookupsAndConstraints ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract
+    ()
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCheckpointLookupsAndConstraints inp = do
+  let
+    msg = report "initCheckpointLookupsAndConstraints"
+  -- Get checkpoint / associated values
+  -----------------------------------
+  { checkpointCurrencySymbol } ← getCheckpointPolicy inp
+
+  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
+    InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
+  committeeHashCurrencySymbol ← Monad.liftContractM
+    (msg "Failed to get updateCommitteeHash CurrencySymbol")
+    (Value.scriptCurrencySymbol committeeHashPolicy)
+
+  let
+    sc = toSidechainParams inp
+    checkpointParameter = Checkpoint.Types.CheckpointParameter
+      { sidechainParams: sc
+      , checkpointAssetClass: checkpointCurrencySymbol /\
+          Checkpoint.initCheckpointMintTn
+      , committeeHashAssetClass: committeeHashCurrencySymbol /\
+          UpdateCommitteeHash.initCommitteeHashMintTn
+      }
+    checkpointDatum = Datum
+      $ PlutusData.toData
+      $ CheckpointDatum
+          { blockHash: inp.initGenesisHash
+          , blockNumber: BigInt.fromInt 0
+          }
+    checkpointValue =
+      Value.singleton
+        checkpointCurrencySymbol
+        Checkpoint.initCheckpointMintTn
+        one
+
+  checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
+
+  -- Building the transaction
+  -----------------------------------
+  let
+    checkpointValidatorHash = validatorHash checkpointValidator
+
+    lookups ∷ ScriptLookups Void
+    lookups = Lookups.validator checkpointValidator
+
+    constraints ∷ TxConstraints Void Void
+    constraints =
+      Constraints.mustPayToScript checkpointValidatorHash
+        checkpointDatum
+        DatumInline
+        checkpointValue
+
+  pure { constraints, lookups }
+
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
 -- | validator script for the update committee hash.
@@ -246,7 +348,7 @@ initCommitteeHashLookupsAndConstraints isp = do
   -- Setting up the update committee hash validator
   -----------------------------------
   let
-    aggregatedKeys = UpdateCommitteeHash.aggregateKeys $ Array.sort
+    aggregatedKeys = Utils.Crypto.aggregateKeys $ Array.sort
       isp.initCommittee
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
@@ -424,6 +526,9 @@ initDistributedSetLookupsAndContraints isp = do
 -- |      - Minting the NFT to identify the committee hash (see
 -- |      `initCommitteeHashMintLookupsAndConstraints`)
 -- |
+-- |      - Minting and paying the NFT to identify the checkpoint (see
+-- |      `initCheckpointMintLookupsAndConstraints`)
+-- |
 -- |      - Minting the the keys token of the distributed set, and the NFT to
 -- |      identify the configuration of the distributed set (see
 -- |      `initDistributedSetLookupsAndContraints`)
@@ -435,8 +540,8 @@ initDistributedSetLookupsAndContraints isp = do
 -- | Moreover, it returns the `SidechainParams` of this sidechain.
 -- |
 -- | To fully initialize the sidechain, this should be used with
--- | `initSidechainCommittee`, and you should use this function _before_
--- | `initSidechainCommittee`.
+-- | `paySidechainTokens`, and you should use this function _before_
+-- | `paySidechainTokens`.
 -- |
 -- | Also, this should pay the committee hash NFT back to your own wallet (see
 -- | `BalanceTx.BalanceTx.buildTransactionChangeOutput` where it claims that excess
@@ -472,6 +577,7 @@ initSidechainTokens isp = do
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
+        <> initCheckpointMintLookupsAndConstraints
         <> const
           ( pure
               -- distinguished input to spend from 'InitSidechainParams.initUtxo'
@@ -510,29 +616,31 @@ initSidechainTokens isp = do
     , sidechainAddresses
     }
 
--- | `initSidechainCommittee` pays the NFT which identifies the committee hash
--- | to the update committee hash validator script.
+-- | `paySidechainTokens` pays:
+-- | 1. NFT which identifies the committee hash to the update committee hash validator script.
+-- | 1. NFT which identifies the current checkpoint to the checkpoint validator script.
 -- |
 -- | This is meant to be used _after_ `initSidechainTokens`.
 -- |
--- | Note: you must have such an NFT in your wallet already.
-initSidechainCommittee ∷
+-- | Note: you must have the NFTs in your wallet already.
+paySidechainTokens ∷
   InitSidechainParams' →
   Contract ()
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-initSidechainCommittee isp = do
+paySidechainTokens isp = do
   -- Logging
   ----------------------------------------
   let
-    msg = report "initSidechainCommittee"
+    msg = report "paySidechainTokens"
 
-  -- Grabbing the constraints / lookups for paying to the commitee hash
-  -- validator script
+  -- Grabbing the constraints / lookups for paying
   ----------------------------------------
-  { constraints, lookups } ← initCommitteeHashLookupsAndConstraints isp
+  { constraints, lookups } ←
+    (initCommitteeHashLookupsAndConstraints isp) <>
+      (initCheckpointLookupsAndConstraints isp)
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
@@ -540,11 +648,8 @@ initSidechainCommittee isp = do
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' $ msg $ "Submitted initialise sidechain tokens Tx: " <> show txId
+  logInfo' $ msg $ "Submitted pay sidechain tokens Tx: " <> show txId
   awaitTxConfirmed txId
-
-  -- logInfo' $ msg
-  --   "Initialise sidechain tokens transaction submitted successfully."
 
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
@@ -561,19 +666,23 @@ initSidechainCommittee isp = do
     }
 
 -- | `initSidechain` creates the `SidechainParams` and executes
--- | `initSidechainTokens` and `initSidechainCommittee` in one transaction. Briefly,
+-- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
 -- | this will do the following:
 -- |
 -- |     - Mints the committee hash NFT
 -- |
 -- |     - Pays the committee hash NFT to the update committee hash validator
 -- |
+-- |     - Mints the checkpoint NFT
+-- |
+-- |     - Pays the checkpoint NFT to the checkpoint hash validator
+-- |
 -- |     - Mints various tokens for the distributed set (and pay to the required
 -- |       validators)
 -- |
 -- |     - Optionally, mints candidate permission tokens
 -- |
--- | For details, see `initSidechainTokens` and `initSidechainCommittee`.
+-- | For details, see `initSidechainTokens` and `paySidechainTokens`.
 initSidechain ∷
   InitSidechainParams →
   Contract ()
@@ -583,7 +692,7 @@ initSidechain ∷
     }
 initSidechain (InitSidechainParams isp) = do
   -- Warning: this code is essentially duplicated code from
-  -- `initSidechainTokens` and `initSidechainCommittee`....
+  -- `initSidechainTokens` and `paySidechainTokens`....
 
   -- Logging
   ----------------------------------------
@@ -608,6 +717,8 @@ initSidechain (InitSidechainParams isp) = do
         <> initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
+        <> initCheckpointMintLookupsAndConstraints
+        <> initCheckpointLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
           { constraints: Constraints.mustSpendPubKeyOutput txIn
@@ -700,6 +811,23 @@ getMerkleRootTokenPolicy isp = do
 
   pure
     { merkleRootTokenMintingPolicy, merkleRootTokenMintingPolicyCurrencySymbol }
+
+getCheckpointPolicy ∷
+  ∀ r.
+  InitTokensParams r →
+  Contract ()
+    { checkpointPolicy ∷ MintingPolicy
+    , checkpointCurrencySymbol ∷ CurrencySymbol
+    }
+getCheckpointPolicy isp = do
+  let
+    msg = report "getCheckpointPolicy"
+  checkpointPolicy ← Checkpoint.checkpointPolicy $
+    InitCheckpointMint { icTxOutRef: isp.initUtxo }
+  checkpointCurrencySymbol ← Monad.liftContractM
+    (msg "Failed to get checkpoint CurrencySymbol")
+    (Value.scriptCurrencySymbol checkpointPolicy)
+  pure { checkpointPolicy, checkpointCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

@@ -13,6 +13,7 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionMintParams(..)
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
@@ -20,8 +21,8 @@ import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( initSidechain
-  , initSidechainCommittee
   , initSidechainTokens
+  , paySidechainTokens
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -260,7 +261,7 @@ runEndpoint scParams =
           }
 
       { transactionId, sidechainParams, sidechainAddresses } ←
-        if useInitTokens then initSidechainCommittee isc
+        if useInitTokens then paySidechainTokens isc
         else initSidechain (wrap isc)
 
       pure $ InitResp
@@ -303,6 +304,27 @@ runEndpoint scParams =
         UpdateCommitteeHash.updateCommitteeHash uchParams
       pure $ CommitteeHandoverResp
         { saveRootTransactionId, committeeHashTransactionId }
+
+    SaveCheckpoint
+      { committeeSignaturesInput
+      , newCheckpointBlockHash
+      , newCheckpointBlockNumber
+      , sidechainEpoch
+      } → do
+      committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        committeeSignaturesInput
+      let
+        params = Checkpoint.CheckpointEndpointParam
+          { sidechainParams: scParams
+          , committeeSignatures: List.toUnfoldable committeeSignatures
+          , newCheckpointBlockHash
+          , newCheckpointBlockNumber
+          , sidechainEpoch
+          }
+      Checkpoint.saveCheckpoint params
+        <#> unwrap
+        >>> { transactionId: _ }
+        >>> SaveCheckpointResp
 
 printEndpointResp ∷ EndpointResp → Contract () Unit
 printEndpointResp =

@@ -24,10 +24,12 @@ module TrustlessSidechain.Utils.Crypto
   , getSidechainMessageByteArray
   , byteArrayToSidechainSignatureUnsafe
   , sidechainSignature
+  , aggregateKeys
   ) where
 
 import Contract.Prelude
 
+import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray)
@@ -274,3 +276,11 @@ isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
 isSorted xss = case Array.tail xss of
   Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
   Nothing → false
+
+-- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
+-- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
+-- | For this to be truly compatible with the onchain function, you need to ensure
+-- | that the input list is sorted
+aggregateKeys ∷ Array SidechainPublicKey → ByteArray
+aggregateKeys = Hashing.blake2b256Hash <<< foldMap
+  getSidechainPublicKeyByteArray

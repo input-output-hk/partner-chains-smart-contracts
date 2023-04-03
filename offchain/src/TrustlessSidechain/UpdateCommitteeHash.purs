@@ -45,8 +45,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( aggregateKeys
-  , committeeHashAssetClass
+  ( committeeHashAssetClass
   , committeeHashPolicy
   , findUpdateCommitteeHashUtxo
   , initCommitteeHashMintTn
@@ -114,11 +113,11 @@ runUpdateCommitteeHash
     (throwContractError $ msg "Empty Committee")
 
   let
-    newCommitteeHash = aggregateKeys newCommitteePubKeys
+    newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
 
     curCommitteePubKeys /\ curCommitteeSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
-    curCommitteeHash = aggregateKeys curCommitteePubKeys
+    curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
     $ serialiseUchmHash

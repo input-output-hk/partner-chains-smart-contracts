@@ -15,7 +15,6 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   , initCommitteeHashMintTn
   , committeeHashAssetClass
-  , aggregateKeys
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
   , normalizeCommitteeHashParams
@@ -28,7 +27,6 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
   ( MintingPolicy(..)
@@ -54,7 +52,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHashMessage
   , UpdateCommitteeHashParams(..)
   )
-import TrustlessSidechain.Utils.Crypto (SidechainMessage, SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
@@ -114,14 +112,6 @@ committeeHashAssetClass ichm = do
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym initCommitteeHashMintTn
-
--- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
--- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
--- | For this to be truly compatible with the onchain function, you need to ensure
--- | that the input list is sorted.
-aggregateKeys ∷ Array SidechainPublicKey → ByteArray
-aggregateKeys = Hashing.blake2b256Hash <<< foldMap
-  Utils.Crypto.getSidechainPublicKeyByteArray
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```

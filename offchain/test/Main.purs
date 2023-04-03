@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import Mote.Monad (group)
 import Test.CandidatePermissionToken as CandidatePermissionToken
+import Test.Checkpoint as Checkpoint
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
@@ -48,6 +49,7 @@ main = do
           UpdateCommitteeHash.tests
           MerkleRoot.tests
           MerkleRootChaining.tests
+          Checkpoint.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

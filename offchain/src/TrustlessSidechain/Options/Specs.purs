@@ -46,6 +46,7 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
   ( bigInt
+  , blockHash
   , byteArray
   , combinedMerkleProofParserWithPkh
   , committeeSignature
@@ -127,6 +128,10 @@ optSpec maybeConfig =
             ( progDesc
                 "An alias for saving the merkle root, followed by updating the committee hash"
             )
+        )
+    , command "save-checkpoint"
+        ( info (withCommonOpts maybeConfig saveCheckpointSpec)
+            (progDesc "Saving a new checkpoint")
         )
     ]
 
@@ -427,7 +432,7 @@ committeeHashSpec = ado
   committeeSignaturesInput ←
     ( parseCommitteeSignatures
         "committee-pub-key-and-signature"
-        "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+        "Public key and (optionally) the signature of the new committee hash separated by a colon"
         "committee-pub-key-and-signature-file-path"
         "Filepath of a JSON file containing public keys and associated\
         \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
@@ -450,7 +455,7 @@ saveRootSpec = ado
   committeeSignaturesInput ←
     parseCommitteeSignatures
       "committee-pub-key-and-signature"
-      "Public key and (optionally) the signature of the new merkle root seperated by a colon"
+      "Public key and (optionally) the signature of the new merkle root separated by a colon"
       "committee-pub-key-and-signature-file-path"
       "Filepath of a JSON file containing public keys and associated\
       \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
@@ -464,13 +469,13 @@ committeeHandoverSpec = ado
   newCommitteePubKeysInput ← parseNewCommitteePubKeys
   newCommitteeSignaturesInput ← parseCommitteeSignatures
     "committee-pub-key-and-new-committee-signature"
-    "Public key and (optionally) the signature of the new committee hash seperated by a colon"
+    "Public key and (optionally) the signature of the new committee hash separated by a colon"
     "committee-pub-key-and-new-committee-file-path"
     "Filepath of a JSON file containing public keys and associated\
     \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
   newMerkleRootSignaturesInput ← parseCommitteeSignatures
     "committee-pub-key-and-new-merkle-root-signature"
-    "Public key and (optionally) the signature of the merkle root seperated by a colon"
+    "Public key and (optionally) the signature of the merkle root separated by a colon"
     "committee-pub-key-and-new-merkle-root-file-path"
     "Filepath of a JSON file containing public keys and associated\
     \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
@@ -482,6 +487,28 @@ committeeHandoverSpec = ado
       , newCommitteePubKeysInput
       , newCommitteeSignaturesInput
       , newMerkleRootSignaturesInput
+      , sidechainEpoch
+      }
+
+-- | Parse all parameters for the `save-checkpoint` endpoint
+saveCheckpointSpec ∷ Parser Endpoint
+saveCheckpointSpec = ado
+  committeeSignaturesInput ←
+    ( parseCommitteeSignatures
+        "committee-pub-key-and-signature"
+        "Public key and (optionally) the signature of the new checkpoint separated by a colon"
+        "committee-pub-key-and-signature-file-path"
+        "Filepath of a JSON file containing public keys and associated\
+        \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
+    )
+  newCheckpointBlockHash ← parseNewCheckpointBlockHash
+  newCheckpointBlockNumber ← parseNewCheckpointBlockNumber
+  sidechainEpoch ← parseSidechainEpoch
+  in
+    SaveCheckpoint
+      { committeeSignaturesInput
+      , newCheckpointBlockHash
+      , newCheckpointBlockNumber
       , sidechainEpoch
       }
 
@@ -587,6 +614,28 @@ parseSidechainEpoch =
         [ long "sidechain-epoch"
         , metavar "INT"
         , help "Sidechain epoch"
+        ]
+    )
+
+parseNewCheckpointBlockNumber ∷ Parser BigInt
+parseNewCheckpointBlockNumber =
+  option
+    bigInt
+    ( fold
+        [ long "new-checkpoint-block-number"
+        , metavar "INT"
+        , help "Block number of the new checkpoint"
+        ]
+    )
+
+parseNewCheckpointBlockHash ∷ Parser ByteArray
+parseNewCheckpointBlockHash =
+  option
+    blockHash
+    ( fold
+        [ long "new-checkpoint-block-hash"
+        , metavar "BLOCK_HASH"
+        , help "Hex encoded block hash of the new checkpoint"
         ]
     )
 
