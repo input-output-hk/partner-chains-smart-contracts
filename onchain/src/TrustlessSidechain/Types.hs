@@ -6,7 +6,7 @@
 module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
-import Ledger.Value (AssetClass, CurrencySymbol)
+import Ledger.Value (AssetClass, CurrencySymbol, TokenName)
 import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
@@ -291,6 +291,33 @@ data CheckpointDatum = CheckpointDatum
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
+
+{- | 'CommitteeSignedTokenMint' is used to parameterize the committee signed
+ token minting policy
+
+ This includes the committee hash NFT to uniquely identify the current
+ committee
+-}
+data CommitteeSignedTokenMint = CommitteeSignedTokenMint
+  { cstmSidechainParams :: SidechainParams
+  , cstmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
+  }
+
+PlutusTx.makeIsDataIndexed ''CommitteeSignedTokenMint [('CommitteeSignedTokenMint, 0)]
+
+-- | 'CommitteeSignedTokenRedeemer' is the redeemer used to
+data CommitteeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+  { cstrCurrentCommittee :: [SidechainPubKey]
+  , cstrCurrentCommitteeSignatures :: [BuiltinByteString]
+  , -- the hash of the message that the committee signs.
+    --
+    -- INVARIANT: this is subject to the size of a 'TokenName', so the easiest
+    -- way to ensure this in a cryptographically secure way is to just make it
+    -- the hash of a serialised message.
+    cstrMessageHash :: TokenName
+  }
+
+PlutusTx.makeIsDataIndexed ''CommitteeSignedTokenRedeemer [('CommitteeSignedTokenRedeemer, 0)]
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint

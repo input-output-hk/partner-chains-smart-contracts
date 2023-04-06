@@ -81,6 +81,7 @@ library
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CheckpointValidator
     TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.CommitteeSignedToken
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.MerkleRootTokenMintingPolicy
