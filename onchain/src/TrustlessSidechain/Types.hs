@@ -311,9 +311,9 @@ data CommitteeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
   , cstrCurrentCommitteeSignatures :: [BuiltinByteString]
   , -- the hash of the message that the committee signs.
     --
-    -- INVARIANT: this is subject to the size of a 'TokenName', so the easiest
-    -- way to ensure this in a cryptographically secure way is to just make it
-    -- the hash of a serialised message.
+    -- INVARIANT: this is subject to the size of a 'TokenName' [it is a token
+    -- name!], so the easiest way to ensure this in a cryptographically secure
+    -- way is to just make it the hash of a serialised message.
     cstrMessageHash :: TokenName
   }
 
