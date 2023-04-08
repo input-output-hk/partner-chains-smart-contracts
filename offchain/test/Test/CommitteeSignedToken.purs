@@ -30,7 +30,8 @@ import TrustlessSidechain.Utils.Crypto
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
--- | `generateSignatures`
+-- | `generateSignatures` generates signatures from the provided committee for
+-- | the given `sidechainMessage`
 generateSignatures ∷
   { -- the current committee stored on chain
     currentCommitteePrvKeys ∷ Array SidechainPrivateKey

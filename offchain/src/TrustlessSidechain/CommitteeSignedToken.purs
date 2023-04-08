@@ -1,4 +1,8 @@
 -- | `TrustlessSidechain.CommitteeSignedToken` provides functionality to
+-- | replicate the onchain code data types, and grab its minting policies and
+-- | currency symbols.
+-- | Also, we provide mechanisms for creating the lookups and constraints to
+-- | build the transaction.
 module TrustlessSidechain.CommitteeSignedToken where
 
 import Contract.Prelude
@@ -134,8 +138,8 @@ committeeSignedTokenMintFromSidechainParams sidechainParams = do
     }
 
 -- | `mustMintCommitteeSignedToken` provides the constraints to mint a
--- | committee signed token [including the script lookups for thsi, the UTxO
--- | for the committe reference input]
+-- | committee signed token [including: the script lookups for this, and the UTxO
+-- | for the committee reference input]
 mustMintCommitteeSignedToken ∷
   CommitteeSignedTokenMint →
   CommitteeSignedTokenRedeemer →
