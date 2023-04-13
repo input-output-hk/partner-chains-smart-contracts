@@ -1,4 +1,4 @@
-# Update strategy - PROPOSAL
+# Update strategy
 
 In this specification we describe the mechanisms of the Cardano mainchain part of the trustless
 sidechain protocol update. To allow the protocol to evolve with time, we need to migrate from old
@@ -61,7 +61,6 @@ In case of our sidechain protocol, I propose the following strategies for our va
 ## 3. FUELMintingPolicy Transaction Token Pattern Implementation:
 This section discusses in more detail how to apply the transaction token pattern to the FUELMintingPolicy.
 In the development of these ideas, we will later introduce a new minting policy, `FUELMintingProxyPolicy`, whose tokens will be regarded as the FUEL tokens.
-
 
 As a high level idea, the Transaction Token Pattern will change the
 FUELMintingPolicy to forward all of its validations to some
@@ -190,8 +189,8 @@ newtype FUELOracleDatum =
 ```
 That is, this contains the collection of the currency symbols of minting
 policies which are required for `FUELProxyPolicy` to mint. We will also
-require that these currency symbols are lexicographically sorted (with the 
-exception of the first currency symbol which determines how much `FUELProxyPolicy` 
+require that these currency symbols are lexicographically sorted (with the
+exception of the first currency symbol which determines how much `FUELProxyPolicy`
 to mint) to make onchain verifications easier.
 
 It is outside the scope of this document to discuss the conditions for when
@@ -223,11 +222,11 @@ FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
    minting policies provided.
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
-![FUELProxy mint flow](UpdateStrategy/FUELProxyMint.svg)
+![FUELProxy mint flow](01-UpdateStrategy/FUELProxyMint.svg)
 
 <figcaption align = "center"><i>Claiming FUELProxy token using the transaction token pattern</i></figcaption><br />
 
-![FUELProxy mint flow](UpdateStrategy/FUELProxyUpdate.svg)
+![FUELProxy mint flow](01-UpdateStrategy/FUELProxyUpdate.svg)
 
 <figcaption align = "center"><i>Updating the list of valid FUELMintingPolicies</i></figcaption><br />
 
@@ -249,7 +248,7 @@ the `burnCurrencySymbol` *mints* `k` tokens in the same transaction.
 Clearly, this removes the need to spend particular tokens when burning
 `FUELProxyPolicy`.
 
-![FUELProxy burn flow](UpdateStrategy/FUELProxyBurn.svg)
+![FUELProxy burn flow](01-UpdateStrategy/FUELProxyBurn.svg)
 
 <figcaption align = "center"><i>Burning FUELProxy token using the transaction token pattern</i></figcaption><br />
 
@@ -272,7 +271,6 @@ simpler. Instead of having a concrete `FUELOraclePolicy` and
 us to reuse the same optimisations, such as attaching reference scripts to
 VersionOracle utxos, thus also solving the problem of storing old versions of
 scripts.
-
 
 ### 3.6 Sufficiency of implementing an update strategy for FUELMintingPolicy
 In this section, we discuss why it is sufficient to provide a means to update
@@ -368,7 +366,7 @@ or any other method to ensure that we get the above mentioned benefits. All scri
 the same version, to avoid unforeseable incompatibilities between script. To achieve this
 all scripts must match their own version with the scripts of their dependencies.
 
-![VersionOracle flow](UpdateStrategy/VersionOracle.svg)
+![VersionOracle flow](01-UpdateStrategy/VersionOracle.svg)
 
 <figcaption align = "center"><i>High level concept of versioning</i></figcaption><br />
 
@@ -401,7 +399,6 @@ be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must b
 UTxO to prove its validity. Furthermore, each UTxO will also include a reference script
 (see [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)), holding the actual validator or minting policy script.
 This design allows multiple versions of the same validator.
-
 
 **Datum:**
 
