@@ -55,7 +55,6 @@ main = do
     printEndpointResp endpointResp
 
 -- | Reads configuration file from `./config.json`, then
--- | reads committee file from `./committee.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.
 getOptions ∷ Effect Options
 getOptions = do
