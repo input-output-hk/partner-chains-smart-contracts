@@ -56,7 +56,6 @@ import TrustlessSidechain.Options.Parsers
   , sidechainAddress
   , sidechainPublicKey
   , sidechainSignature
-  , thresholdFraction
   , tokenName
   , transactionInput
   , uint
@@ -271,22 +270,6 @@ scParamsSpec maybeConfig = ado
 
   { thresholdNumerator, thresholdDenominator } ←
     let
-      thresholdFractionOption =
-        option thresholdFraction
-          ( fold
-              [ long "threshold"
-              , metavar "INT/INT"
-              , help "The ratio of the threshold"
-              , maybe mempty value do
-                  { numerator, denominator } ← maybeConfig
-                    >>= _.sidechainParameters
-                    >>= _.threshold
-                  pure
-                    { thresholdNumerator: BigInt.fromInt numerator
-                    , thresholdDenominator: BigInt.fromInt denominator
-                    }
-              ]
-          )
       thresholdNumeratorDenominatorOption = ado
         thresholdNumerator ← option numerator $ fold
           [ long "threshold-numerator"
@@ -310,7 +293,7 @@ scParamsSpec maybeConfig = ado
           ]
         in { thresholdNumerator, thresholdDenominator }
     in
-      thresholdFractionOption <|> thresholdNumeratorDenominatorOption
+      thresholdNumeratorDenominatorOption
   in
     SidechainParams
       { chainId: BigInt.fromInt chainId
