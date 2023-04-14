@@ -1,0 +1,36 @@
+strict digraph {
+  node [shape=record]
+  splines=false
+
+  merkleRootAddr [label = "Merkle root validator address"]
+
+  burnAddress [label = "Burn address"]
+
+  oracle [label = "CommitteeSignedTokenOracle"]
+
+  merkleRootPolicy [label =
+    "MerkleRootTokenMintingPolicy |
+      - gets CommitteeSignedTokenOracle currency\lsymbol from CommitteeSignedTokenOracle\l
+      - can mint if CommitteeSignedTokenOracle mints\l
+    "]
+
+  committeeSignedTokenECDSA [style = dashed, label =
+    "CommitteeSignedToken - ECDSA"
+  ]
+
+  committeeSignedTokenATMS [style = dashed, label =
+    "CommitteeSignedToken - ATMS"
+  ]
+
+  tx [shape = diamond, label = "Claim transaction\nminting both tokens" ]
+
+  oracle -> merkleRootPolicy [style = dashed, label = "references"]
+  committeeSignedTokenECDSA -> oracle [arrowhead = ediamond, label = "stores reference"]
+
+  committeeSignedTokenECDSA -> tx
+  merkleRootPolicy -> tx
+
+  tx -> merkleRootAddr [label="MerkleRootToken"]
+  tx -> burnAddress [label="CommitteeSignedToken"]
+
+}
