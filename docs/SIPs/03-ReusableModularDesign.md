@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- design of a reusable design that can be used to modularise any feature of the protocol
+- design of a reusable design to modularise any feature of the protocol
 
 ## Design
 
@@ -47,7 +47,7 @@ The policy allows minting of one token, if the message hash is signed by the com
 in other scripts, the name of the minted token will be equal to the message hash.
 
 We can offer multiple verification functions simply by implementing the same interface (another minting policy with
-the rame redeemer), for example in addition to our ECDSA append scheme verification, we could add a BLS ATMS implementation.
+the same redeemer), for example in addition to our ECDSA append scheme verification, we could add a BLS ATMS implementation.
 
 To achieve modularity, we will need to introduce a `CommitteeSignedTokenOracle` validator, that will store the reference
 to the verification function of choice for the protocol in a UTxO. The validator is owned by a governing body, the UTxO

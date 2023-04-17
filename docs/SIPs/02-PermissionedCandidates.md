@@ -7,7 +7,7 @@ This design summarizes the modifications required for a permissioned committee c
 - modular system (user can decide whether she wants permissioned candidates or not)
 - only a predefined subset of SPOs are able to register as candidates
 - the permission can be transferred to other SPOs
-- SPOs who have lost (transferred) their permission, must be deregistered
+- SPOs who have lost (transferred) their permission must be deregistered
 
 ## Solution
 
