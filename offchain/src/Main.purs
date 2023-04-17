@@ -49,6 +49,13 @@ main = do
     <> "\nDenominator: "
     <> BigInt.toString denominator
 
+  unless (numerator <= denominator) $ throwError $ error
+    $ "Threshold numerator is greater than denominator.\n"
+    <> "Numerator: "
+    <> BigInt.toString numerator
+    <> "\nDenominator: "
+    <> BigInt.toString denominator
+
   launchAff_ $ runContract opts.configParams do
     endpointResp ← runEndpoint opts.scParams opts.endpoint
 
