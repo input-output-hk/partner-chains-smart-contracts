@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Test.TrustlessSidechain.UpdateCommitteeHashMessage where
 
 import Data.ByteString (ByteString)

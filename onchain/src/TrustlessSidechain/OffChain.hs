@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
  functionality. In particular, we provide utilities for generating signatures

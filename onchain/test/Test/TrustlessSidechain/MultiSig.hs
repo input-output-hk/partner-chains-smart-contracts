@@ -1,3 +1,6 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.TrustlessSidechain.MultiSig where
 
 import Data.ByteString (ByteString)

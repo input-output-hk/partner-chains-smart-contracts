@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | This module is a bunch of tests for our MerkleTree implementation. For
  now, it's just property based tests.
@@ -14,7 +14,6 @@ import PlutusTx.Builtins.Class qualified as Builtins
 import PlutusTx.Prelude
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, Testable)
 import Test.QuickCheck qualified as QuickCheck
-import Test.QuickCheck.Modifiers (NonEmptyList (getNonEmpty))
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.QuickCheck qualified as QuickCheck
@@ -26,9 +25,16 @@ import Prelude qualified
 -}
 genNonEmptyBuiltinByteString :: Gen (NonEmpty BuiltinByteString)
 genNonEmptyBuiltinByteString = do
+  h <- arbitrary
+  t <- arbitrary
+  Prelude.pure . Prelude.fmap Builtins.stringToBuiltinByteString $ h :| t
+
+{-
+genNonEmptyBuiltinByteString = do
   lst <- Prelude.fmap getNonEmpty (arbitrary :: Gen (NonEmptyList Prelude.String))
   let a : as = lst
   return $ Prelude.fmap Builtins.stringToBuiltinByteString $ a :| as
+  -}
 
 {- | @forAllNonEmptyBuiltinByteString prf@ is read as "for every nonempty list
  of BuiltinByteString, @prf@ is satisified.."
@@ -114,8 +120,9 @@ prop_inListMemberMp :: Property
 prop_inListMemberMp =
   forAllNonEmptyBuiltinByteStringWithElem $ \(lst@(_a :| _as), x) ->
     let tree = MT.fromNonEmpty lst
-        Just prf = MT.lookupMp x tree
-     in MT.memberMp x prf (MT.rootHash tree)
+     in QuickCheck.property $ case MT.lookupMp x tree of
+          Nothing -> False
+          Just prf -> MT.memberMp x prf . MT.rootHash $ tree
 
 {-
  Properties.

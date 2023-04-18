@@ -38,44 +38,22 @@ common common-lang
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
-  build-depends:
-    , base                     ^>=4.14
-    , record-dot-preprocessor
-    , record-hasfield
-
+  build-depends:      base ^>=4.14
   default-extensions:
     NoImplicitPrelude
-    BangPatterns
-    BinaryLiterals
-    ConstraintKinds
-    DataKinds
     DeriveFunctor
-    DeriveGeneric
-    DeriveTraversable
     DerivingStrategies
-    DerivingVia
-    DuplicateRecordFields
     EmptyCase
     FlexibleContexts
     FlexibleInstances
-    GADTs
     GeneralizedNewtypeDeriving
-    HexFloatLiterals
     ImportQualifiedPost
     InstanceSigs
-    KindSignatures
     LambdaCase
     MultiParamTypeClasses
-    NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
-    ScopedTypeVariables
-    StandaloneDeriving
     TupleSections
-    TypeApplications
-    TypeFamilies
-    TypeOperators
-    TypeSynonymInstances
-    UndecidableInstances
 
   default-language:   Haskell2010
 

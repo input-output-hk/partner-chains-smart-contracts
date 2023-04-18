@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 -- Functions to serialise plutus scripts into a purescript readable TextEnvelope.textEnvelope
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where

@@ -1,5 +1,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | The module 'GetOpts' provides functionality / data types to parse the command line
  arguments
