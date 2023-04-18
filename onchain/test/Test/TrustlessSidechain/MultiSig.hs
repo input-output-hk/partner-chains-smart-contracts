@@ -47,8 +47,11 @@ unitTests =
         , testCase "2-1" $
             vmbs (==) 1 ["fail", "hello"] ["hello"] @?= True
         , testCase "1-2" $
-            vmbs (==) 1 ["hello"] ["fail", "hello"] @?= True
-        , testCase "attemptDuplicatePubkey" $
+            vmbs (==) 1 ["hello"] ["fail", "hello"] @?= False
+        , -- this test is malformed, and hence should be 'False'.. while
+          -- it is a valid signature, it doesn't satisfy the
+          -- preconditions of the function
+          testCase "attemptDuplicatePubkey" $
             vmbs (==) 2 ["pk1", "pk1"] ["pk1"] @?= False
         , testCase "attemptDuplicateSigs" $
             vmbs (==) 2 ["pk1"] ["pk1", "pk1"] @?= False
