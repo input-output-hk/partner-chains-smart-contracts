@@ -22,8 +22,8 @@ the genesisUtxo, but it’s not a requirement. The currency policy is stored and
 In registration, the token must be included and verified by the Bridge, if tokens were minted. Registration UTxOs without
 a permission token where one is expected are considered invalid.
 
-At deregistration, the token can be unlocked from the `CommitteeCandidateValidator` , and reused or traded at a later
-time. offchain infrastructure must continually validate that the tokens remain locked, deregistering candidates when
+At deregistration, the token can be unlocked from the `CommitteeCandidateValidator`, and reused or traded at a later
+time. Offchain infrastructure must continually validate that the tokens remain locked, deregistering candidates when
 they remove their tokens.
 
 A protocol update can later be used to change from permissoned to permissionless or vice versa, or even allowing minting
