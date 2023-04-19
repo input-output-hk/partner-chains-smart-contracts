@@ -20,11 +20,11 @@ current-system := $(shell nix eval --impure --expr builtins.currentSystem)
 
 # Build the executables with nix (also builds the test suite).
 nix-build-executables:
-	@ nix build .#check.${current-system}
+	@ nix build -L .#check.${current-system}
 
 # Build the tests with nix.
 nix-build-test:
-	@ nix build .#trustless-sidechain:test:trustless-sidechain-test
+	@ nix build -L .#trustless-sidechain:test:trustless-sidechain-test
 
 # Target to use as dependency to fail if not inside nix-shell.
 requires_nix_shell:
