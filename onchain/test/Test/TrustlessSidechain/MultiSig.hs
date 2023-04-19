@@ -1,13 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.TrustlessSidechain.MultiSig where
+module Test.TrustlessSidechain.MultiSig (test) where
 
 import Data.ByteString (ByteString)
 import PlutusTx.Prelude
-import Test.Tasty
-import Test.Tasty.HUnit
-import TrustlessSidechain.Utils qualified as U
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TrustlessSidechain.Utils qualified as Utils
 import Prelude qualified
 
 test :: TestTree
@@ -15,7 +15,7 @@ test = unitTests
 
 unitTests :: TestTree
 unitTests =
-  let vmbs = U.verifyMulti @BuiltinByteString @BuiltinByteString
+  let vmbs = Utils.verifyMulti @BuiltinByteString @BuiltinByteString
       -- XXX: The following is a lie. Investigate why.
       --
       -- >>> conv "hello" == "hello"
@@ -38,9 +38,9 @@ unitTests =
         [ testCase "key2 > key1" $
             key2 > key1 @?= True
         , testCase "unsorted keys" $
-            U.verifyMultisig [key2, key1] 1 msg [sig1, sig2] @?= False
+            Utils.verifyMultisig [key2, key1] 1 msg [sig1, sig2] @?= False
         , testCase "sorted keys, unsorted sigs" $
-            U.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
+            Utils.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
         , testCase "0 threshold" $
             vmbs (==) 0 [] [] @?= True
         , testCase "not eq" $
