@@ -15,8 +15,6 @@ module GetOpts (
   SidechainKeyCommand (..),
 ) where
 
-import Prelude
-
 import Cardano.Binary qualified as Binary
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (
@@ -82,6 +80,7 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   SidechainPubKey,
  )
+import Prelude
 
 -- | 'getArgs' grabs the command line options ('Args').
 getOpts :: IO Args
