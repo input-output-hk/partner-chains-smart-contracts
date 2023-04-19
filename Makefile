@@ -24,7 +24,7 @@ nix-build-executables:
 
 # Build the tests with nix.
 nix-build-test:
-	@ nix build .#trustless-sidechain:test:trustless-sidechain-tests
+	@ nix build .#trustless-sidechain:test:trustless-sidechain-test
 
 # Target to use as dependency to fail if not inside nix-shell.
 requires_nix_shell:
