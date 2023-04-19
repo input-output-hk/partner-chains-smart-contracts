@@ -29,23 +29,22 @@ genNonEmptyBuiltinByteString = do
   t <- arbitrary
   Prelude.pure . Prelude.fmap Builtins.stringToBuiltinByteString $ h :| t
 
-{-
-genNonEmptyBuiltinByteString = do
-  lst <- Prelude.fmap getNonEmpty (arbitrary :: Gen (NonEmptyList Prelude.String))
-  let a : as = lst
-  return $ Prelude.fmap Builtins.stringToBuiltinByteString $ a :| as
-  -}
-
 {- | @forAllNonEmptyBuiltinByteString prf@ is read as "for every nonempty list
  of BuiltinByteString, @prf@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
+forAllNonEmptyBuiltinByteString ::
+  Testable prop =>
+  (NonEmpty BuiltinByteString -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteString = QuickCheck.forAll genNonEmptyBuiltinByteString
 
 {- | @forAllNonEmptyDistinctBuiltinByteString prf@ is read as "for every nonempty list
  of distinct BuiltinByteStrings, @prf@ is satisified.."
 -}
-forAllNonEmptyDistinctBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
+forAllNonEmptyDistinctBuiltinByteString ::
+  Testable prop =>
+  (NonEmpty BuiltinByteString -> prop) ->
+  Property
 forAllNonEmptyDistinctBuiltinByteString =
   QuickCheck.forAll
     (Prelude.fmap (NonEmpty.fromList . List.nub . NonEmpty.toList) genNonEmptyBuiltinByteString)
@@ -53,7 +52,10 @@ forAllNonEmptyDistinctBuiltinByteString =
 {- | @forAllNonEmptyBuiltinByteStringWithElem prf@ is read as "for every nonempty list @lst@, and @x \in lst@
  of BuiltinByteString, @prf (lst, x)@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteStringWithElem :: Testable prop => ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) -> Property
+forAllNonEmptyBuiltinByteStringWithElem ::
+  Testable prop =>
+  ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteStringWithElem = QuickCheck.forAll genNonEmptyWithElem
   where
     genNonEmptyWithElem :: Gen (NonEmpty BuiltinByteString, BuiltinByteString)
@@ -65,7 +67,10 @@ forAllNonEmptyBuiltinByteStringWithElem = QuickCheck.forAll genNonEmptyWithElem
 {- | @forAllNonEmptyBuiltinByteStringWithoutElem prf@ is read as "for every nonempty list @lst@, and @x \not \in lst@
  of BuiltinByteString, @prf (lst, x)@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteStringWithoutElem :: Testable prop => ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) -> Property
+forAllNonEmptyBuiltinByteStringWithoutElem ::
+  Testable prop =>
+  ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteStringWithoutElem = QuickCheck.forAll genNonEmptyWithoutElem
   where
     genNonEmptyWithoutElem :: Gen (NonEmpty BuiltinByteString, BuiltinByteString)
