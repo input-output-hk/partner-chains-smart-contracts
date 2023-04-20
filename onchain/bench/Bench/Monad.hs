@@ -1,10 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
 {- | "Bench.Monad" provides the main monad for benchmarking the system. In
  particular, it provides:
@@ -61,6 +55,7 @@ import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import System.Environment qualified as Environment
+import Prelude
 
 -- mtl / transformers
 
@@ -388,7 +383,8 @@ plotXYWithLinearRegression
 
           dataSetByTrialIx =
             -- pattern match is safe by defn. of 'Data.List.groupBy'
-            map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
+            map (\x -> (tTrialIx . head $ x, map toXY x)) $
+              -- map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
               List.groupBy ((==) `Function.on` tTrialIx) trials
 
           maxIndependentVarIx = maximum $ map fst dataSet

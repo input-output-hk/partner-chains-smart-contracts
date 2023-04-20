@@ -193,6 +193,7 @@ test-suite trustless-sidechain-test
   hs-source-dirs: test
 
 benchmark bench-ctl
+  import:           common-lang
   main-is:          Main.hs
   other-modules:
     Bench

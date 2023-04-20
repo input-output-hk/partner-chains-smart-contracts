@@ -1,6 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cases.InitSidechain where
 
 import Bench (Bench, BenchConfig (..))
@@ -13,6 +10,7 @@ import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import TrustlessSidechain.Types (SidechainParams (..))
+import Prelude
 
 initSidechainBench :: Bench ()
 initSidechainBench = do

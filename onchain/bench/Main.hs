@@ -1,16 +1,24 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import Bench (BenchConfigPaths (..))
+import Bench (
+  BenchConfigPaths (BenchConfigPaths),
+  bcfgpAddressFilePath,
+  bcfgpBenchResults,
+  bcfgpCardanoCliCmd,
+  bcfgpCtlCmd,
+  bcfgpOdcHost,
+  bcfgpOdcPort,
+  bcfgpOutputDir,
+  bcfgpSigningKeyFilePath,
+  bcfgpTestNetMagic,
+ )
 import Bench qualified
-import Control.Monad qualified as Monad
-
 import Cases.FUELMintingPolicy qualified as FUELMintingPolicy
 import Cases.GrowingTreeClaim qualified as GrowingTreeClaim
 import Cases.InitSidechain qualified as InitSidechain
 import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import Control.Monad qualified as Monad
+import Prelude
 
 {- | Assumptions:
     - `./payment.skey` is your secret key

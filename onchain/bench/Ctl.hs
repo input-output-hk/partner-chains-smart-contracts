@@ -20,6 +20,7 @@ import Plutus.V2.Ledger.Api (
 import TrustlessSidechain.MerkleTree (RootHash (..))
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (BlockProducerRegistrationMsg (..), CombinedMerkleProof (..), MerkleRootInsertionMessage (..), SidechainParams (..), SidechainPubKey, UpdateCommitteeHashMessage (..))
+import Prelude
 
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Class qualified as IO.Class

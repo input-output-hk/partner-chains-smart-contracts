@@ -24,10 +24,12 @@ import Control.Monad qualified as Monad
 import Data.Char qualified as Char
 import Data.Int (Int64)
 import Data.List qualified as List
+import Data.Maybe (fromJust)
 import System.Environment qualified as Environment
-import System.Exit (ExitCode (..))
+import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 import System.IO qualified as IO
 import System.IO.Error qualified as IO.Error
+import Prelude
 
 -- bytestring / text
 import Data.ByteString (ByteString)
@@ -92,10 +94,12 @@ timedReadCommand cmd = Exception.bracket
 
     Process.withCreateProcess shellCmd $
       \_
-       {- this partial pattern is safe since we set `Process.stdout = Process.createPipe` above -}
-       ~(Just hstdout)
+       hstdout'
        _
        processHandle -> do
+          -- This is safe to do, since we set 'Process.stdout =
+          -- Process.createPipe' above.
+          let hstdout = fromJust hstdout'
           Process.waitForProcess processHandle >>= \case
             ExitSuccess -> do
               --  close the @writeHandle@ to ensure that it gets flushed.

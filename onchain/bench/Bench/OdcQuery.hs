@@ -30,6 +30,7 @@ module Bench.OdcQuery (
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
 import Data.Proxy (Proxy (Proxy))
+import Prelude
 
 -- websocket
 import Network.WebSockets (Connection)
@@ -52,7 +53,7 @@ import Data.Text.Encoding qualified as Text.Encoding
 
 -- aeson
 
-import Data.Aeson (Value (..))
+import Data.Aeson (Value (Object, String))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 

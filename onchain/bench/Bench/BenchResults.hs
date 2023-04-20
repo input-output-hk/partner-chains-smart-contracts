@@ -1,7 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 {- | "Bench.BenchResults" is the module which includes a database connection (along
  with associated queries) for gathering benchmark results.
 -}
@@ -49,11 +45,12 @@ import Data.List qualified as List
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text.IO
-import Database.SQLite3 (Database, ParamIndex, Statement, StepResult (..))
+import Database.SQLite3 (Database, ParamIndex, Statement, StepResult (Done, Row))
 import Database.SQLite3 qualified as SQLite3
-import Database.SQLite3.Direct (Utf8 (..))
+import Database.SQLite3.Direct (Utf8)
 import Database.SQLite3.Direct qualified as SQLite3.Direct
 import System.IO qualified as IO
+import Prelude
 
 -- * High level API
 
