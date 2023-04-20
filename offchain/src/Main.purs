@@ -3,7 +3,9 @@ module Main (main) where
 import Contract.Prelude
 
 import Contract.Monad (Contract, launchAff_, runContract)
+import Control.Monad.Error.Class (throwError)
 import Data.Bifunctor (lmap)
+import Data.BigInt as BigInt
 import Data.List as List
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
@@ -38,6 +40,21 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 main ∷ Effect Unit
 main = do
   opts ← getOptions
+  let numerator = (unwrap opts.scParams).thresholdNumerator
+  let denominator = (unwrap opts.scParams).thresholdDenominator
+  unless (gcd numerator denominator == one) $ throwError $ error
+    $ "Threshold numerator and denominator are not coprime.\n"
+    <> "Numerator: "
+    <> BigInt.toString numerator
+    <> "\nDenominator: "
+    <> BigInt.toString denominator
+
+  unless (numerator <= denominator) $ throwError $ error
+    $ "Threshold numerator is greater than denominator.\n"
+    <> "Numerator: "
+    <> BigInt.toString numerator
+    <> "\nDenominator: "
+    <> BigInt.toString denominator
 
   launchAff_ $ runContract opts.configParams do
     endpointResp ← runEndpoint opts.scParams opts.endpoint
@@ -45,7 +62,6 @@ main = do
     printEndpointResp endpointResp
 
 -- | Reads configuration file from `./config.json`, then
--- | reads committee file from `./committee.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.
 getOptions ∷ Effect Options
 getOptions = do
