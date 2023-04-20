@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
 
 {- | "Bench.NodeQuery" provides utility functions for querying the cardano
