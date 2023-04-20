@@ -1,7 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 
 {- | "Bench.Process" provides utility functions for calling a process and
  timing its output.
@@ -14,31 +11,23 @@ module Bench.Process (
   parseTimeOutput,
 ) where
 
--- process
-import System.Process qualified as Process
-
--- base
-
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as ByteString
+import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.Char qualified as Char
 import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe (fromJust)
+import GHC.IO.FD qualified as FD
+import GHC.IO.Handle.FD qualified as Handle.FD
 import System.Environment qualified as Environment
 import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 import System.IO qualified as IO
 import System.IO.Error qualified as IO.Error
+import System.Process qualified as Process
 import Prelude
-
--- bytestring / text
-import Data.ByteString (ByteString)
-import Data.ByteString qualified as ByteString
-import Data.ByteString.Char8 qualified as ByteString.Char8
-
--- ghc
-import GHC.IO.FD qualified as FD
-import GHC.IO.Handle.FD qualified as Handle.FD
 
 {- | @'timedReadCommand' cmd cmdArgs@ calls @cmd@ with @cmdArgs@ seperated by
  spaces (so the usual bash quoting rules apply); and times this with the bash
