@@ -11,6 +11,10 @@ or create a PR.
 #### Before starting to work on an issue
 - If there is no GitHub issue for your task, please create one
 - Self-assign the issue if it wasn't assigned to you by the PM
+- Use a descriptive and specific title that summarizes the issue or feature request.
+- Provide a detailed description of the problem or feature request, including steps to reproduce the issue if applicable (there is a template for that).
+- Include any relevant information such as error messages, screenshots, or logs.
+- Use appropriate labels to categorize the issue (e.g. bug, enhancement, priority level).
 - Set the status of the issue to `In progress`
 - Put your name or github handle in the branch name (easier to handle stale branches), and some description of the issue and/or
   the issue number (e.g. `gergely/github-rules`)
