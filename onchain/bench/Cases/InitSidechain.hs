@@ -1,15 +1,29 @@
-module Cases.InitSidechain where
+module Cases.InitSidechain (initSidechainBench) where
 
-import Bench (Bench, BenchConfig (..))
+import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
 import Control.Monad.Reader qualified as Reader
-import Ctl (CtlCommon (..), CtlInitSidechain (..))
+import Ctl (
+  CtlCommon (CtlCommon),
+  CtlInitSidechain (CtlInitSidechain),
+  ccSidechainParams,
+  ccSigningKeyFile,
+  cisInitCommitteePubKeys,
+  cisSidechainEpoch,
+ )
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
-import TrustlessSidechain.Types (SidechainParams (..))
+import TrustlessSidechain.Types (
+  SidechainParams (SidechainParams),
+  chainId,
+  genesisHash,
+  genesisUtxo,
+  thresholdDenominator,
+  thresholdNumerator,
+ )
 import Prelude
 
 initSidechainBench :: Bench ()
