@@ -1,4 +1,7 @@
-module Cases.FUELMintingPolicy where
+module Cases.FUELMintingPolicy (
+  fuelMintingBench,
+  replicateMerkleTree,
+) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
@@ -25,6 +28,7 @@ import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text qualified as Text
+import PlutusTx.Builtins (BuiltinByteString)
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -61,7 +65,9 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
     -- TODO: just deserialize the cbor instead of doing this weird
     -- building index thing.. See `Codec.CBOR.Read` in the package
     -- `cborg`
+    indicies :: [Integer]
     indicies = [1 .. n]
+    entries :: [MerkleTreeEntry]
     entries =
       map
         ( \ix ->
@@ -73,10 +79,15 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
               }
         )
         indicies
+    cborEntries :: [BuiltinByteString]
     cborEntries = map MerkleRootTokenMintingPolicy.serialiseMte entries
+    cborToMte :: Map.Map RootHash MerkleTreeEntry
     cborToMte = Map.fromList $ zip (map MerkleTree.hashLeaf cborEntries) entries
-
-    (merkleTree, lookups) = MerkleTree.lookupsMpFromList cborEntries
+    merkleTree :: MerkleTree.MerkleTree
+    merkleTree = fst . MerkleTree.lookupsMpFromList $ cborEntries
+    lookups :: [(RootHash, MerkleTree.MerkleProof)]
+    lookups = snd . MerkleTree.lookupsMpFromList $ cborEntries
+    combinedMerkleProofs :: [CombinedMerkleProof]
     combinedMerkleProofs =
       map
         ( \(cbor, proof) ->

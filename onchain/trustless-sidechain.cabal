@@ -227,6 +227,7 @@ benchmark bench-ctl
     , network
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-tx
     , process
     , secp256k1-haskell
     , statistics
