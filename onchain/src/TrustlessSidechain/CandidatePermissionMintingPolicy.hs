@@ -1,7 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.CandidatePermissionMintingPolicy where
+module TrustlessSidechain.CandidatePermissionMintingPolicy (
+  mkCandidatePermissionMintingPolicy,
+  mkCandidatePermissionMintingPolicyUntyped,
+  serialisableCandidatePermissionMintingPolicy,
+) where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
@@ -13,10 +17,8 @@ import Plutus.V2.Ledger.Contexts (
   TxOutRef,
  )
 import PlutusTx qualified
-import PlutusTx.Prelude hiding (Semigroup ((<>)))
-import TrustlessSidechain.Types (
-  CandidatePermissionMint (..),
- )
+import PlutusTx.Prelude
+import TrustlessSidechain.Types (CandidatePermissionMint, cpmUtxo)
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 
@@ -36,12 +38,18 @@ mkCandidatePermissionMintingPolicy cpm _red ctx =
 
     -- Tests if any of the input utxos in the script context are equal to the
     -- distinguished UTxO given in @cpm@.
-    go [] = False
-    go (txIn : txIns) = (utxo == txInInfoOutRef txIn) || go txIns
+    go :: [TxInInfo] -> Bool
+    go = \case
+      [] -> False
+      (txIn : txIns) -> (utxo == txInInfoOutRef txIn) || go txIns
 
 -- Ctl hack..
 mkCandidatePermissionMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCandidatePermissionMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCandidatePermissionMintingPolicy . PlutusTx.unsafeFromBuiltinData
+mkCandidatePermissionMintingPolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy
+    . mkCandidatePermissionMintingPolicy
+    . PlutusTx.unsafeFromBuiltinData
 
 serialisableCandidatePermissionMintingPolicy :: Versioned Ledger.Script
-serialisableCandidatePermissionMintingPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])) PlutusV2
+serialisableCandidatePermissionMintingPolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])) PlutusV2
