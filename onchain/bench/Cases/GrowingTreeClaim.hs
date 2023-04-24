@@ -1,4 +1,4 @@
-module Cases.GrowingTreeClaim where
+module Cases.GrowingTreeClaim (growingTreeClaim) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
