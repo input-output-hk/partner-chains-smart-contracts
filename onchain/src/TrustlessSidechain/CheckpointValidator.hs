@@ -26,17 +26,33 @@ import Plutus.V2.Ledger.Contexts (
   TxOutRef,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (..))
+import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude as PlutusTx
+import PlutusTx.Prelude as PlutusPrelude
 import TrustlessSidechain.Types (
-  CheckpointDatum (checkpointBlockHash, checkpointBlockNumber),
-  CheckpointMessage (CheckpointMessage, checkpointMsgBlockHash, checkpointMsgBlockNumber, checkpointMsgSidechainEpoch, checkpointMsgSidechainParams),
-  CheckpointParameter (checkpointAssetClass, checkpointSidechainParams, committeeHashAssetClass),
-  CheckpointRedeemer (checkpointCommitteePubKeys, checkpointCommitteeSignatures),
+  CheckpointDatum (
+    checkpointBlockHash,
+    checkpointBlockNumber
+  ),
+  CheckpointMessage (
+    CheckpointMessage,
+    checkpointMsgBlockHash,
+    checkpointMsgBlockNumber,
+    checkpointMsgSidechainEpoch,
+    checkpointMsgSidechainParams
+  ),
+  CheckpointParameter (
+    checkpointAssetClass,
+    checkpointSidechainParams,
+    committeeHashAssetClass
+  ),
+  CheckpointRedeemer (
+    checkpointCommitteePubKeys,
+    checkpointCommitteeSignatures
+  ),
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
@@ -178,19 +194,28 @@ mkCheckpointPolicy ichm _red ctx =
 
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
-    checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
-      Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
-      _ -> False
+    checkMintedAmount =
+      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+        Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
+        _ -> False
 
 -- CTL hack
 mkCheckpointPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCheckpointPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCheckpointPolicy . PlutusTx.unsafeFromBuiltinData
+mkCheckpointPolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy
+    . mkCheckpointPolicy
+    . PlutusTx.unsafeFromBuiltinData
 
 serialisableCheckpointPolicy :: Versioned Ledger.Script
-serialisableCheckpointPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])) PlutusV2
+serialisableCheckpointPolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])) PlutusV2
 
 mkCheckpointValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCheckpointValidatorUntyped = ScriptUtils.mkUntypedValidator . mkCheckpointValidator . PlutusTx.unsafeFromBuiltinData
+mkCheckpointValidatorUntyped =
+  ScriptUtils.mkUntypedValidator
+    . mkCheckpointValidator
+    . PlutusTx.unsafeFromBuiltinData
 
 serialisableCheckpointValidator :: Versioned Ledger.Script
-serialisableCheckpointValidator = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])) PlutusV2
+serialisableCheckpointValidator =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])) PlutusV2
