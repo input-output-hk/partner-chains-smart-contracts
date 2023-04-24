@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import Bench (
   BenchConfigPaths (BenchConfigPaths),
@@ -65,22 +65,18 @@ main :: IO ()
 main = do
   -- Potentially override defaults via environment variables
   cfg <- Bench.overrideBenchConfigPathFromEnv defaultBenchConfigPaths
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "FUELMintingBenchmarks.db"})
       FUELMintingPolicy.fuelMintingBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "UpdateCommitteeHashBenchmarks.db"})
       UpdateCommitteeHash.updateCommitteeHashBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "InitSidechain.db"})
       InitSidechain.initSidechainBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "GrowingTree.db"})
