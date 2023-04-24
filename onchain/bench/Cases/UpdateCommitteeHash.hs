@@ -1,4 +1,4 @@
-module Cases.UpdateCommitteeHash where
+module Cases.UpdateCommitteeHash (updateCommitteeHashBench) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
