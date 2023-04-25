@@ -61,4 +61,5 @@ mkPoCInlineDatumValidatorUntyped = Validators.mkUntypedValidator mkPoCInlineDatu
  'mkPoCInlineDatumValidator'
 -}
 serialisablePoCInlineDatumValidator :: Versioned Script
-serialisablePoCInlineDatumValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2
+serialisablePoCInlineDatumValidator =
+  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2

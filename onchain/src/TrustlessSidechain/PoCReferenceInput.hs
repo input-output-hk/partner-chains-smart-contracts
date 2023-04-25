@@ -53,17 +53,20 @@ import PlutusTx.Prelude
  script is given as a reference input.
 -}
 mkPoCToReferenceInputValidator :: Integer -> () -> ScriptContext -> Bool
-mkPoCToReferenceInputValidator _dat _red _ctx = traceError "error 'mkPoCToReferenceInputValidator' attempt to spend"
+mkPoCToReferenceInputValidator _dat _red _ctx =
+  traceError "error 'mkPoCToReferenceInputValidator' attempt to spend"
 
 -- | 'mkPoCToReferenceInputValidatorUntyped' is an untyped script of 'mkPoCToReferenceInputValidator'
 mkPoCToReferenceInputValidatorUntyped :: UntypedValidator
-mkPoCToReferenceInputValidatorUntyped = Validators.mkUntypedValidator mkPoCToReferenceInputValidator
+mkPoCToReferenceInputValidatorUntyped =
+  Validators.mkUntypedValidator mkPoCToReferenceInputValidator
 
 {- | 'serialisablePoCToReferenceInputValidator' is a serialisable untyped script of
  'mkPoCToReferenceInputValidator'
 -}
 serialisablePoCToReferenceInputValidator :: Versioned Script
-serialisablePoCToReferenceInputValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])) PlutusV2
+serialisablePoCToReferenceInputValidator =
+  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])) PlutusV2
 
 -- * Reference
 
@@ -90,10 +93,12 @@ mkPoCReferenceInputValidator addr _dat red ctx
 
 -- | 'mkPoCReferenceInputValidatorUntyped' is an untyped script of 'mkPoCReferenceInputValidator'
 mkPoCReferenceInputValidatorUntyped :: BuiltinData -> UntypedValidator
-mkPoCReferenceInputValidatorUntyped = Validators.mkUntypedValidator . mkPoCReferenceInputValidator . PlutusTx.unsafeFromBuiltinData
+mkPoCReferenceInputValidatorUntyped =
+  Validators.mkUntypedValidator . mkPoCReferenceInputValidator . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisablePoCReferenceInputValidator' is a serialisable untyped script of
  'mkPoCReferenceInputValidator'
 -}
 serialisablePoCReferenceInputValidator :: Versioned Script
-serialisablePoCReferenceInputValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])) PlutusV2
+serialisablePoCReferenceInputValidator =
+  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])) PlutusV2
