@@ -86,7 +86,7 @@ minting policies mints.
 This allows `FUELProxyPolicy` to mint for any supported version of the protocol
 in the case a participant has unclaimed FUEL in a merkle root from a previous
 version.
-See [3.6.](#36-example-workflow-of-updating-the-committee-signing-scheme) for
+See [3.4.](#34-example-workflow-of-updating-the-committee-signing-scheme) for
 details.
 
 This method of forwarding all of `FUELProxyPolicy`'s validations to some
@@ -96,10 +96,10 @@ arbitrarily change the distinguished UTxO which holds the collection of proxied
 minting policies to modify the conditions for when `FUELProxyPolicy` mints.
 In particular, this allows a governance mechanism to modify `FUELProxyPolicy` without changing its
 currency symbol.
-See section [3.3.](#33-alternative-designs) for discussion on the importance of
+See section [3.1.](#31-alternative-designs) for discussion on the importance of
 this.
 
-### 3.3 Alternative designs
+### 3.1 Alternative designs
 We discuss alternative designs.
 
 We classify the designs in two categories: explicit token migration, and
@@ -157,7 +157,7 @@ It provides us with the ability to migrate tokens for free, and provides us with
     to modify the system in production should there need changes (upgrades, security patches, etc.).
 Also, it provides a clean break of abstraction to decouple behavior.
 
-### 3.4 FUELMintingPolicy Validators / Minting Policies
+### 3.2 FUELMintingPolicy Validators / Minting Policies
 Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
 See the original Plutus contract specification for details
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
@@ -181,7 +181,7 @@ It is outside the scope of this document to discuss the conditions for when the
 validator `FUELOracleValidator` will succeed, as there would need to be some
 sort of governance mechanism which decides when we may upgrade
 `FUELProxyPolicy`.
-See [3.5](#35-governance-of-updates) for details.
+See [3.3](#33-governance-of-updates) for details.
 
 The rest this section discusses the design of `FUELProxyPolicy` and how it
 determines which proxied minting policy must mint in order for
@@ -310,7 +310,7 @@ integer.
 
 <figcaption align = "center"><i>Burning FUELProxy token using the transaction token pattern</i></figcaption><br />
 
-### 3.5 Governance of updates
+### 3.3 Governance of updates
 In this section, we discuss options for governing updates.
 Previously, we described the conditions for which an update happens are
 completely determined by the script validator address which holds the
@@ -332,7 +332,7 @@ datum; so this means that the conditions on which this validator may succeed
 So, not only can we update `FUELProxyPolicy`, we can also update the mechanism
 which governs the updates.
 
-### 3.6 Example Workflow of Updating the Committee Signing Scheme
+### 3.4 Example Workflow of Updating the Committee Signing Scheme
 This section discusses a workflow for updating the committee signing scheme
 `FUELProxyPolicy`.
 
@@ -442,10 +442,10 @@ As a summary, this new `FUELProxyPolicy` allows users to either:
 
 as required.
 
-### 3.7 Optimization Ideas
+### 3.5 Optimization Ideas
 In this section we discuss some optimization ideas for `FUELProxyPolicy`.
 
-#### 3.7.1 Efficient `VersionMap` Lookups
+#### 3.5.1 Efficient `VersionMap` Lookups
 Recall that `VersionMap` is implemented with the [`Map` data
 type](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/AssocMap.hs#L58-L60)
 for which the `lookup` operation requires a [linear
@@ -497,7 +497,7 @@ corresponding proxied minting policy's currency symbol.
 Indeed, this may be more efficient than the linear `lookup` operation of a
 `Map`.
 
-#### 3.7.2 Using Reference Scripts for `FUELProxyPolicy`
+#### 3.5.2 Using Reference Scripts for `FUELProxyPolicy`
 Since we know that `FUELProxyPolicy` will *always* reference a
 `FUELOracleValidator`, it would be reasonable to include `FUELProxyPolicy` as a
 reference script in each `FUELOracleValidator`.
@@ -505,7 +505,7 @@ This would make the transaction smaller (and hopefully reduce fees!) as the
 `FUELProxyPolicy` is already included onchain.
 See [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033) for details.
 
-#### 3.7.3 Merging the datums identified by `FUELOracleMintPolicy` and `FUELOracleBurnPolicy` in a single `FUELOracleValidator`
+#### 3.5.3 Merging the datums identified by `FUELOracleMintPolicy` and `FUELOracleBurnPolicy` in a single `FUELOracleValidator`
 It's unclear whether having two distinct UTxOs for holding a `FUELOracleDatum`
 for minting and burning respectively was a good idea.
 Indeed, this forces us to have a large "initial transaction" when minting both
