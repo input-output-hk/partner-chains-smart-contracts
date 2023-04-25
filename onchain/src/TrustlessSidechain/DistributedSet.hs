@@ -52,17 +52,20 @@ module TrustlessSidechain.DistributedSet (
   serialisableDsKeyPolicy,
 ) where
 
-import PlutusTx.Prelude
-
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
-import Plutus.Script.Utils.V2.Typed.Scripts (UntypedMintingPolicy, UntypedValidator, mkUntypedMintingPolicy, mkUntypedValidator)
+import Plutus.Script.Utils.V2.Typed.Scripts (
+  UntypedMintingPolicy,
+  UntypedValidator,
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+ )
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
   Map,
-  OutputDatum (..),
+  OutputDatum (OutputDatum),
   Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName, unTokenName),
@@ -79,6 +82,7 @@ import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Prelude
 import Prelude qualified
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
