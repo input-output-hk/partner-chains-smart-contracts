@@ -35,7 +35,7 @@ unitTests =
         [ testCase "key2 > key1" $
             key2 > key1 @?= True
         , testCase "unsorted keys" $
-            U.verifyMultisig [key2, key1] 1 msg [sig1, sig2] @?= False
+            U.verifyMultisig [key2, key1] 1 msg [sig2, sig1] @?= True
         , testCase "sorted keys, unsorted sigs" $
             U.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
         , testCase "0 threshold" $

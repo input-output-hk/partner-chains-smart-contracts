@@ -1,8 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- Validate enough signatures are signed by legit pubkeys
--- Note. this assumes the signatures are sorted (this is O(n) to check rather than O(n^2) nub)
--- Also, This will be faster if the pubkeys and signatures are in the same order
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Utils (verifyMulti, verifyMultisig, aggregateKeys, aggregateCheck) where
@@ -14,7 +12,12 @@ import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
 -- ? can we require a single list [(Pubkey , Signature)] to validate
 
 {-# INLINEABLE verifyMulti #-}
--- Check enough pubkeys match a signature without counting duplicate pubkeys or signatures (potential security risk)
+
+{- | Checks if enough (at least @threshold@) public keys and a subsequence of
+ their corresponding signatures match.
+ If not enough of the given signatures are a subsequence of the given public
+ keys, then this returns false.
+-}
 verifyMulti :: forall a b. (a -> b -> Bool) -> Integer -> [a] -> [b] -> Bool
 verifyMulti isOK threshold pubKeys signatures =
   let go :: Integer -> [a] -> [b] -> Bool
@@ -45,16 +48,12 @@ verifyMulti isOK threshold pubKeys signatures =
 
  Preconditions
 
-      * @signatures@ should be sorted (otherwise this returns False)
+      * @signatures@ should be a subsequence of the corresponding @pubKeys@
 -}
 {-# INLINEABLE verifyMultisig #-}
 verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
--- note. we need to test nub of either signatures or pubkeys
---   | O(n^2) nub the public keys
---   | O(n)   require public keys to be sorted then test each elem greater than last O(n)
-verifyMultisig pubKeys threshold message signatures =
-  let pubKeysSorted = and (zipWith (<=) pubKeys (tail pubKeys)) -- insert (<) between all elements
-   in pubKeysSorted && verifyMulti (`verifyEcdsaSecp256k1Signature` message) threshold pubKeys signatures
+verifyMultisig pubKeys threshold message =
+  verifyMulti (`verifyEcdsaSecp256k1Signature` message) threshold pubKeys
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
  committee hash by essentially computing the merkle root of all public keys

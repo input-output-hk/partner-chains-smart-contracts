@@ -192,10 +192,13 @@ multiSign xkeys msg = map (sign msg) xkeys
 -- | associated signatures and sorts by the natural lexicographical ordering of the
 -- | `SidechainPublicKey`s
 -- |
--- | This useful since the onchain multisign method (see in the Haskell module
--- | `TrustlessSidechain.OnChain.Utils`) requires that the keys are sorted (this
--- | makes testing if the list is nubbed easy), and the signatures are associated
--- | with the public keys
+-- | Previously, the onchain multisign method required that the public keys are
+-- | sorted (to verify uniqueness of public keys), but this requirement was
+-- | relaxed and hence sorting is technically no longer necessary....
+-- |
+-- | But, as per the specification, the committee hash will be created from
+-- | lexicographically sorted public keys, so sorting the public keys will
+-- | ensure that it matches the same onchain committee format.
 normalizeCommitteePubKeysAndSignatures ∷
   Array (SidechainPublicKey /\ Maybe SidechainSignature) →
   Array (SidechainPublicKey /\ Maybe SidechainSignature)
@@ -274,7 +277,7 @@ verifyMultiSignature
 {- | Verifies that the non empty array is sorted -}
 isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
 isSorted xss = case Array.tail xss of
-  Just xs → and (Array.zipWith (<=) xss xs) -- insert (<) between all elements
+  Just xs → and (Array.zipWith (<=) xss xs)
   Nothing → false
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
