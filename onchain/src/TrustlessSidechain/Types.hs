@@ -12,7 +12,7 @@ import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
-import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import PlutusTx.Prelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
@@ -84,6 +84,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | Owner public key hash
     bprOwnPkh :: PubKeyHash
   }
+
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
