@@ -26,7 +26,7 @@ import Plutus.V2.Ledger.Contexts (
   TxOutRef,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (..))
+import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -102,15 +102,12 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-
     sc :: SidechainParams
     sc = cSidechainParams uch
-
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
       _ -> traceError "Expected exactly one committee output"
-
     outputDatum :: UpdateCommitteeHashDatum
     outputDatum = case txOutDatum ownOutput of
       -- Note [Committee Hash Inline Datum]
@@ -119,13 +116,10 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- the datum is given inline.
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
       _ -> traceError "error 'mkUpdateCommitteeHashValidator': no output inline datum missing"
-
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
-
     hasNft :: Value -> Bool
     hasNft val = Value.assetClassValueOf val (cToken uch) == 1
-
     threshold :: Integer
     threshold =
       -- Note [Threshold of Strictly More than Threshold Majority]
@@ -159,7 +153,6 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
           `Builtins.divideInteger` thresholdDenominator sc
       )
         + 1
-
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       let message =
@@ -174,10 +167,8 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
             threshold
             (Builtins.blake2b_256 (serialiseUchm message))
             (committeeSignatures red)
-
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
-
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
       -- Either we want to reference the previous merkle root or we don't (note
@@ -208,7 +199,13 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
     icTxOutRef :: TxOutRef
   }
-  deriving newtype (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic, PlutusTx.UnsafeFromData)
+  deriving newtype
+    ( Prelude.Show
+    , Prelude.Eq
+    , Prelude.Ord
+    , Generic
+    , PlutusTx.UnsafeFromData
+    )
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''InitCommitteeHashMint
@@ -240,28 +237,30 @@ mkCommitteeHashPolicy ichm _red ctx =
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-
     oref :: TxOutRef
     oref = icTxOutRef ichm
-
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
-
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
-    checkMintedAmount = case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
-      Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
-      _ -> False
+    checkMintedAmount =
+      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+        Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
+        _ -> False
 
 -- CTL hack
 mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeHashPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashPolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
 
 serialisableCommitteeHashPolicy :: Versioned Ledger.Script
-serialisableCommitteeHashPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])) PlutusV2
+serialisableCommitteeHashPolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])) PlutusV2
 
 mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeHashValidatorUntyped = ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashValidatorUntyped =
+  ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
 
 serialisableCommitteeHashValidator :: Versioned Ledger.Script
-serialisableCommitteeHashValidator = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])) PlutusV2
+serialisableCommitteeHashValidator =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])) PlutusV2
