@@ -58,24 +58,24 @@ In case of our sidechain protocol, I propose the following strategies for our va
 - `DsInsertValidator`: versioned update
 - `DsKeyPolicy`: versioned update
 
-## 3. FUELMintingPolicy Transaction Token Pattern Implementation:
+## 3. `FUELMintingPolicy` Transaction Token Pattern Implementation
 This section discusses in more detail how to apply the transaction token
-pattern to the FUELMintingPolicy.
+pattern to `FUELMintingPolicy`.
 In the development of these ideas, we will introduce a new minting policy,
 `FUELProxyPolicy`, whose tokens will be regarded as the FUEL tokens whereas
 `FUELMintingPolicy` will be seen as a "for internal use only" token.
 
 As a high level idea, the application of Transaction Token Pattern will require
 that `FUELProxyPolicy` will forward all of its validations to some
-minting policy, call this a *proxied minting policy*, (e.g.
+minting policy, called a *proxied minting policy*, (e.g.
 `FUELMintingPolicy`) stored in the datum at a *distinguished UTxO*, and
 `FUELProxyPolicy` will mint only if a that proxied minting policy mints in the
-same transaction. This extra token minted from the proxied minting policy may
+same transaction. The extra tokens minted from the proxied minting policy may
 be paid to any address and does not effect the functionality of the
 system[^extraProxiedTokenNote].
 
 [^extraProxiedTokenNote]:
-    The extra proxied token could be sent directly back to the user's wallet,
+    The extra proxied tokens could be sent directly back to the user's wallet,
     or paid to some arbitrary validator script. The former option makes this
     confusing for users, and the latter scenario will slightly increase the
     cost of the transaction (min UTxO fee).
@@ -83,17 +83,19 @@ system[^extraProxiedTokenNote].
 We will also allow the distinguished UTxO to store a collection of proxied
 minting policies where `FUELProxyPolicy` will mint only if *any* of the proxied
 minting policies mints.
-This allows `FUELProxyPolicy` to support minting multiple versions of the
-protocol at any point in time in the case a participant has unclaimed FUEL in a
-MerkleRoot from a previous version.
+This allows `FUELProxyPolicy` to mint for any supported version of the protocol
+in the case a participant has unclaimed FUEL in a merkle root from a previous
+version.
+See [3.6.](#36-example-workflow-of-updating-the-committee-signing-scheme) for
+details.
 
 This method of forwarding all of `FUELProxyPolicy`'s validations to some
 proxied minting policy allows one to update the system in the sense that
-provided we have sufficient governance mechanisms, one may arbitrarily change
-the distinguished UTxO which holds the collection of proxied minting policies
-to modify the conditions for when `FUELProxyPolicy` mints.
-In particular, this allows one allows one to modify the `FUELProxyPolicy`
-without changing its currency symbol.
+provided we have sufficient governance mechanisms for the update, one may
+arbitrarily change the distinguished UTxO which holds the collection of proxied
+minting policies to modify the conditions for when `FUELProxyPolicy` mints.
+In particular, this allows a governance mechanism to modify `FUELProxyPolicy` without changing its
+currency symbol.
 See section [3.3.](#33-alternative-designs) for discussion on the importance of
 this.
 
@@ -161,23 +163,25 @@ See the original Plutus contract specification for details
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
 
 We will introduce a new `FUELProxyPolicy` which will be regarded as the `FUEL`
-tokens. `FUELProxyPolicy` will be parameterized two currency symbols,
-`FUELOracleMintPolicy` and `FUELOracleBurnPolicy`, which are NFTs (and hence
-must be parameterized by a UTxO) that will each uniquely identify a UTxO at a
-`FUELOracleValidator` script validator address, which holds as datum some
-collection of proxied tokens that completely determines the conditions when
-`FUELProxyPolicy` mints and burns.
+tokens.
+`FUELProxyPolicy` will be parameterized by two currency symbols of minting
+policies, called `FUELOracleMintPolicy` and `FUELOracleBurnPolicy`, which are
+NFTs (and hence must be parameterized by a UTxO) that will each uniquely
+identify a UTxO at a `FUELOracleValidator` script validator address, which
+holds as datum some collection of proxied tokens that completely determines the
+conditions when `FUELProxyPolicy` mints and burns.
 
 An upgrade to the system amounts to spending the `FUELOracleValidator` that the
 NFT `FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) sits at, and paying the
 NFT `FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) to a new
 `FUELOracleValidator` with an altered collection of proxied tokens as datum.
 Then, the conditions for when `FUELProxyPolicy` mints (or burns) is now
-determined by the new altered collection of proxied tokens. It is outside the
-scope of this document to discuss the conditions for when the validator
-`FUELOracleValidator` will succeed, as there would need to be some sort of
-governance mechanism which decides when we may upgrade `FUELProxyPolicy`. See
-[3.5](#35-governance-of-updates) for details.
+determined by the new altered collection of proxied tokens.
+It is outside the scope of this document to discuss the conditions for when the
+validator `FUELOracleValidator` will succeed, as there would need to be some
+sort of governance mechanism which decides when we may upgrade
+`FUELProxyPolicy`.
+See [3.5](#35-governance-of-updates) for details.
 
 The rest this section discusses the design of `FUELProxyPolicy` and how it
 determines which proxied minting policy must mint in order for
@@ -237,12 +241,12 @@ all of the following:
 2. there is a value, `proxiedToken`, in `FUELOracleDatum` which corresponds to
    the `version` of the redeemer;
 
-3. the `proxiedToken` in `proxiedTokens` mints `k > 0` tokens with token name `""`; and
+3. the `proxiedToken` mints `k > 0` tokens with token name `""`; and
 
 4. `FUELProxyPolicy` only mints `k` tokens with token name `FUEL`.
 
 Otherwise, if the `mode` of the redeemer is `Burn`, `FUELProxyPolicy` verifies all of the
-following (note conditions 2., 4. are essentially identical to the previous case):
+following (note conditions 2., 3. are identical to the previous case):
 
 1. there is a reference input which contains the `FUELOracleBurnPolicy` token
    with `FUELOracleDatum` as datum;
@@ -250,17 +254,17 @@ following (note conditions 2., 4. are essentially identical to the previous case
 2. there is a value, `proxiedToken`, in `FUELOracleDatum` which corresponds to
    the `version` of the redeemer;
 
-3. the `proxiedToken` in `proxiedTokens` mints `k > 0` tokens with token name `""`; and
+3. the `proxiedToken` mints `k > 0` tokens with token name `""`; and
 
 4. `FUELProxyPolicy` only mints `-k` tokens (i.e., burns `k` tokens) with token name `FUEL`.
 
-Note that in the burning `FUELProxyPolicy` case,  we burn `k` `FUELProxyPolicy`
+Note that in the burning `FUELProxyPolicy` case, we burn `k` `FUELProxyPolicy`
 (i.e., mint `-k`) only if we mint `k > 0` of the proxied token.
 This is because unlike minting, where one may arbitrarily mint tokens iff the
 minting policy succeeds, burning tokens requires the participant to
 additionally spend such tokens from an address. This is inconvenient since the
-proxied minting policy must be present in some address when attempting to burn,
-but as time goes on, updates may invalidate such tokens.
+proxied minting policy must be present in some address the user may spend when
+attempting to burn, but as time goes on, updates may invalidate such tokens.
 So, this design avoids this subtle annoyance.
 
 The entire workflow is summarized as follows.
@@ -298,7 +302,7 @@ integer.
 
 <figcaption align = "center"><i>Claiming FUELProxy token using the transaction token pattern</i></figcaption><br />
 
-![FUELProxy mint flow](01-UpdateStrategy/FUELProxyUpdate.svg)
+![FUELProxy update flow](01-UpdateStrategy/FUELProxyUpdate.svg)
 
 <figcaption align = "center"><i>Updating the list of valid FUELMintingPolicies</i></figcaption><br />
 
@@ -307,10 +311,11 @@ integer.
 <figcaption align = "center"><i>Burning FUELProxy token using the transaction token pattern</i></figcaption><br />
 
 ### 3.5 Governance of updates
-In this section, we discuss options for governing updates. Previously, we
-described the conditions for which an update happens are completely determined
-by the script validator address which holds the `FUELOracleMintPolicy` or
-`FUELOracleBurnPolicy` NFT which resides at a `FUELOracleValidator` script address.
+In this section, we discuss options for governing updates.
+Previously, we described the conditions for which an update happens are
+completely determined by the script validator address which holds the
+`FUELOracleMintPolicy` or `FUELOracleBurnPolicy` NFT which resides at a
+`FUELOracleValidator` script address.
 
 As an early implementation draft, we will require that `FUELOracleValidator`
 will be parameterized by some public key, and will succeed only if the
@@ -369,7 +374,7 @@ parameterized can be modified to support different versions with different
 signature schemes.
 
 To begin, we will initialize the `FUELOracleDatum` that is uniquely identified
-the `FUELOracleMintPolicy` of the `FUELProxyPolicy` as follows.
+the `FUELOracleMintPolicy` of `FUELProxyPolicy` as follows.
 ```
 0 -> Currency symbol of FUELMintingPolicy
 ```
@@ -417,9 +422,9 @@ set; we would get a new `FUELMintingPolicy` policy, say `FUELMintingPolicy'`,
 that mints only if the merkle root was signed with the new signature scheme
 (and the same distributed set condition as `FUELMintingPolicy` is satisfied).
 
-Thus, to support claiming of new FUEL tokens in the `FUELProxyPolicy`, we would
+Thus, to support claiming of new FUEL tokens in `FUELProxyPolicy`, we would
 modify the `FUELOracleDatum` uniquely identified the `FUELOracleMintPolicy` of
-the `FUELProxyPolicy` to as follows.
+`FUELProxyPolicy` to as follows.
 ```
 0 -> Currency symbol of FUELMintingPolicy
 1 -> Currency symbol of FUELMintingPolicy'
@@ -481,7 +486,7 @@ invariants:
 
 As a picture, the memory representation is as follows
 ```
-0                 ......                 31 32                ....                   63
+0                   ...                  31 32                  ...                  63
 |------------Currency symbol 0------------| |------------Currency symbol 1------------| ...
 ```
 where the numbers on the top denote the index in `VersionMap`.
