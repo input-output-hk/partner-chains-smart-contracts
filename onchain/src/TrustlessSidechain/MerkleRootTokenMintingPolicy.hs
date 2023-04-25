@@ -1,10 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.MerkleRootTokenMintingPolicy where
-
-import PlutusTx.Prelude
+module TrustlessSidechain.MerkleRootTokenMintingPolicy (
+  serialiseMte,
+  serialiseMrimHash,
+  mkMintingPolicy,
+  mkMintingPolicyUntyped,
+  serialisableMintingPolicy,
+) where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
@@ -14,32 +19,44 @@ import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Address (addressCredential),
   Credential (ScriptCredential),
+  CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
-  ScriptContext (..),
+  ScriptContext,
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
+  Value,
+  scriptContextTxInfo,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import PlutusTx.Prelude
 import TrustlessSidechain.Types (
-  MerkleRootInsertionMessage (..),
+  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   MerkleTreeEntry,
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  SignedMerkleRoot (..),
-  SignedMerkleRootMint (..),
+  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
+  SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
+  merkleRoot,
+  mrimMerkleRoot,
+  mrimPreviousMerkleRoot,
+  mrimSidechainParams,
+  signatures,
+  smrmSidechainParams,
+  smrmUpdateCommitteeHashCurrencySymbol,
+  smrmValidatorHash,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
+import TrustlessSidechain.Utils qualified as Utils
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -87,12 +104,16 @@ mkMintingPolicy
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p4
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' must pay to validator hash" p5
     where
+      info :: TxInfo
       info = scriptContextTxInfo ctx
+      minted :: Value
       minted = txInfoMint info
+      ownCurrencySymbol :: CurrencySymbol
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+      ownTokenName :: TokenName
       ownTokenName = Value.TokenName merkleRoot
+      sc :: SidechainParams
       sc = smrmSidechainParams smrm
-
       committeeDatum :: UpdateCommitteeHashDatum
       committeeDatum =
         let go :: [TxInInfo] -> UpdateCommitteeHashDatum
@@ -126,7 +147,6 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@, @p5@ correspond to verifications 1., 2., 3.,
       -- 4., 5. resp. in the documentation of this function.
-      p1, p2, p3, p4 :: Bool
       p1 = case previousMerkleRoot of
         Nothing -> True
         Just tn ->
@@ -176,7 +196,11 @@ mkMintingPolicy
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . IsData.unsafeFromBuiltinData
+mkMintingPolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy
+    . mkMintingPolicy
+    . IsData.unsafeFromBuiltinData
 
 serialisableMintingPolicy :: Versioned Script
-serialisableMintingPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+serialisableMintingPolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
