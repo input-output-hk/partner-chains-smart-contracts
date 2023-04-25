@@ -5,7 +5,18 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module TrustlessSidechain.CheckpointValidator where
+module TrustlessSidechain.CheckpointValidator (
+  InitCheckpointMint (..),
+  mkCheckpointValidator,
+  serializeCheckpointMsg,
+  initCheckpointMintTn,
+  initCheckpointMintAmount,
+  mkCheckpointPolicy,
+  mkCheckpointPolicyUntyped,
+  serialisableCheckpointPolicy,
+  mkCheckpointValidatorUntyped,
+  serialisableCheckpointValidator,
+) where
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
