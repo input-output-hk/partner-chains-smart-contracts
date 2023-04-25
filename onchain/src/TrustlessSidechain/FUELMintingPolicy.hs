@@ -2,7 +2,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.FUELMintingPolicy where
+module TrustlessSidechain.FUELMintingPolicy (
+  fuelTokenName,
+  mkMintingPolicy,
+  mkMintingPolicyUntyped,
+  serialisableMintingPolicy,
+  bech32AddrToPubKeyHash,
+) where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
@@ -102,12 +108,16 @@ mkMintingPolicy fm mode ctx = case mode of
           && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
   where
     -- Aliases:
+    info :: TxInfo
     info = scriptContextTxInfo ctx
+    ownCurrencySymbol :: CurrencySymbol
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+    merkleRootTnCurrencySymbol :: CurrencySymbol
     merkleRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
+    dsKeyCurrencySymbol :: CurrencySymbol
     dsKeyCurrencySymbol = fmDsKeyCurrencySymbol fm
+    minted :: Value
     minted = txInfoMint info
-
     fuelAmount :: Integer
     fuelAmount
       | Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue minted
