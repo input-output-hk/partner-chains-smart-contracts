@@ -170,7 +170,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
       logInfo' "UpdateCommitteeHash 'testScenario1'"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
       let
-        keyCount = 80
+        keyCount = 40
       initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
       let
         initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys

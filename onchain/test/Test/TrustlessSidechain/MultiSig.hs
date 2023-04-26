@@ -12,8 +12,7 @@ test = unitTests
 
 unitTests :: TestTree
 unitTests =
-  let vmbs = U.verifyMulti @BuiltinByteString @BuiltinByteString
-      -- XXX: The following is a lie. Investigate why.
+  let -- XXX: The following is a lie. Investigate why.
       --
       -- >>> conv "hello" == "hello"
       -- True
@@ -39,23 +38,23 @@ unitTests =
         , testCase "sorted keys, unsorted sigs" $
             U.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
         , testCase "0 threshold" $
-            vmbs (==) 0 [] [] @?= True
+            U.verifyMultisig [] 0 msg [] @?= True
         , testCase "not eq" $
-            vmbs (==) 1 ["m1"] ["m2"] @?= False
+            U.verifyMultisig [key1] 1 msg [sig2] @?= False
         , testCase "1-1" $
-            vmbs (==) 1 ["hello"] ["hello"] @?= True
+            U.verifyMultisig [key1] 1 msg [sig1] @?= True
         , testCase "2-1" $
-            vmbs (==) 1 ["fail", "hello"] ["hello"] @?= True
+            U.verifyMultisig [key1, key2] 1 msg [sig2] @?= True
         , testCase "1-2" $
-            vmbs (==) 1 ["hello"] ["fail", "hello"] @?= False
+            U.verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
         , -- this test is malformed, and hence should be 'False'.. while
           -- it is a valid signature, it doesn't satisfy the
           -- preconditions of the function
           testCase "attemptDuplicatePubkey" $
-            vmbs (==) 2 ["pk1", "pk1"] ["pk1"] @?= False
+            U.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
         , testCase "attemptDuplicateSigs" $
-            vmbs (==) 2 ["pk1"] ["pk1", "pk1"] @?= False
+            U.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
         , testCase "testLaziness" $
             let notLazy = Prelude.error "verifyMultisig is not lazy" -- admittedly there may be a better way then error
-             in vmbs (==) 2 ["pk1", "pk2", notLazy] ["pk1", "pk2", notLazy] @?= True
+             in U.verifyMultisig [key1, key2, notLazy] 2 msg [sig1, sig2, notLazy] @?= True
         ]
