@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- | This module is a bunch of tests for our MerkleTree implementation. For
@@ -16,9 +15,116 @@ import Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, Testable)
 import Test.QuickCheck qualified as QuickCheck
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
-import Test.Tasty.QuickCheck qualified as QuickCheck
+import Test.Tasty.QuickCheck (testProperty)
 import TrustlessSidechain.MerkleTree qualified as MT
 import Prelude qualified
+
+test :: TestTree
+test =
+  Tasty.testGroup
+    "MerkleTree"
+    [ testProperty "height is logarithmic to size" logProofLength
+    , testProperty "proof in source implies proof in tree" lookupMpHasProof
+    , testProperty "proof in tree implies proof in source" notInLookupMpFail
+    , testProperty "proof in tree implies proof in root" inListMemberMp
+    , testProperty "lookups as expected" lookupsMp1
+    , testProperty "lookups as expected (converse)" lookupsMp1Converse
+    , testProperty "lookups as expected (extra)" lookupsMp2
+    ]
+
+-- Properties
+
+{- | Property.
+    Let lst be an arbitrary non empty list.
+        height (fromNonEmpty lst) <= floor(log_2 (length lst)) + 2
+-}
+logProofLength :: Property
+logProofLength = forAllNonEmptyBuiltinByteString $
+  \lst@(a :| as) ->
+    let lst' = a : as
+        tree = MT.fromNonEmpty lst
+     in MT.height tree <= Prelude.floor (Prelude.logBase @Prelude.Double 2 (Prelude.fromIntegral (length lst'))) + 2
+
+{- | Property.
+  x \in lst ==> isJust (MT.lookupMp x (MT.fromNonEmpty lst))
+-}
+lookupMpHasProof :: Property
+lookupMpHasProof =
+  forAllNonEmptyBuiltinByteStringWithElem $
+    \(lst@(_a :| _as), x) -> isJust $ MT.lookupMp x $ MT.fromNonEmpty lst
+
+{- | Property.
+  x \in lst <== isJust (MT.lookupMp x (MT.fromNonEmpty lst))
+
+ but we test this via the contrapositive.
+-}
+notInLookupMpFail :: Property
+notInLookupMpFail =
+  forAllNonEmptyBuiltinByteStringWithoutElem $
+    \(lst@(_ :| _), x) ->
+      let tree = MT.fromNonEmpty lst
+       in isNothing (MT.lookupMp x tree)
+
+{- | Property.
+ Suppose lst is an arbitrary non empty list.
+  Let tree = fromNonEmpty lst
+
+  Just prf = lookupMp x tree ==> memberMp x prf (rootHash tree) = True
+
+ TODO: Didn't test the converse -- it's a bit trickier to test, and the large search space
+ makes me doubt the usefulness of QuickCheck for this.
+-}
+inListMemberMp :: Property
+inListMemberMp =
+  forAllNonEmptyBuiltinByteStringWithElem $ \(lst@(_a :| _as), x) ->
+    let tree = MT.fromNonEmpty lst
+     in QuickCheck.property $ case MT.lookupMp x tree of
+          Nothing -> False
+          Just prf -> MT.memberMp x prf . MT.rootHash $ tree
+
+{-
+ Properties.
+    1. Suppose lst is an arbitrary non empty list of distinct elements.
+            (roothash, merkleProof) \in lookupsMp (fromNonEmpty lst)
+                ===> there exists x \in lst s.t.
+                    Just merkleProof' (lookupMp x (fromNonEmpty lst)),
+                    merkleProof == merkleProof',
+                    rootHash = hashLeaf x
+
+            x \in lst,  Just merkleProof = (lookupMp x (fromNonEmpty lst))
+                ===> (hashLeaf x, merkleProof) \in  lookupsMp (fromNonEmpty lst)
+    2. Suppose lst is an arbitrary non empty list of length n.
+        length (lookupsMp (fromNonEmpty lst)) == n
+-}
+lookupsMp1 :: Property
+lookupsMp1 =
+  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+     in QuickCheck.forAll (QuickCheck.elements (MT.lookupsMp mt)) $
+          \(rh, mp) ->
+            Prelude.any
+              ( \x ->
+                  MT.hashLeaf x == rh
+                    && Maybe.fromJust (MT.lookupMp x mt) Prelude.== mp
+              )
+              $ a : as
+
+lookupsMp1Converse :: Property
+lookupsMp1Converse =
+  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+        prfs = MT.lookupsMp mt
+     in QuickCheck.forAll (QuickCheck.elements (a : as)) $ \x ->
+          let mp = Maybe.fromJust $ MT.lookupMp x mt
+           in Maybe.fromJust (List.lookup (MT.hashLeaf x) prfs) Prelude.== mp
+
+lookupsMp2 :: Property
+lookupsMp2 =
+  forAllNonEmptyBuiltinByteString $ \(a :| as) ->
+    let mt = MT.fromList (a : as)
+     in length (MT.lookupsMp mt) == length (a : as)
+
+-- Helpers
 
 {- | 'genNonEmptyBuiltinByteString' randomly generates 'NonEmpty' lists of
  'BuiltinByteString'
@@ -80,104 +186,3 @@ forAllNonEmptyBuiltinByteStringWithoutElem = QuickCheck.forAll genNonEmptyWithou
       if x `elem` (a : as)
         then QuickCheck.discard
         else return (a :| as, x)
-
-{- | Property.
-    Let lst be an arbitrary non empty list.
-        height (fromNonEmpty lst) <= floor(log_2 (length lst)) + 2
--}
-prop_logProofLength :: Property
-prop_logProofLength = forAllNonEmptyBuiltinByteString $
-  \lst@(a :| as) ->
-    let lst' = a : as
-        tree = MT.fromNonEmpty lst
-     in MT.height tree <= Prelude.floor (Prelude.logBase @Prelude.Double 2 (Prelude.fromIntegral (length lst'))) + 2
-
-{- | Property.
-  x \in lst ==> isJust (MT.lookupMp x (MT.fromNonEmpty lst))
--}
-prop_lookupMpHasProof :: Property
-prop_lookupMpHasProof =
-  forAllNonEmptyBuiltinByteStringWithElem $
-    \(lst@(_a :| _as), x) -> isJust $ MT.lookupMp x $ MT.fromNonEmpty lst
-
-{- | Property.
-  x \in lst <== isJust (MT.lookupMp x (MT.fromNonEmpty lst))
-
- but we test this via the contrapositive.
--}
-prop_notInLookupMpFail :: Property
-prop_notInLookupMpFail =
-  forAllNonEmptyBuiltinByteStringWithoutElem $
-    \(lst@(_ :| _), x) ->
-      let tree = MT.fromNonEmpty lst
-       in isNothing (MT.lookupMp x tree)
-
-{- | Property.
- Suppose lst is an arbitrary non empty list.
-  Let tree = fromNonEmpty lst
-
-  Just prf = lookupMp x tree ==> memberMp x prf (rootHash tree) = True
-
- TODO: Didn't test the converse -- it's a bit trickier to test, and the large search space
- makes me doubt the usefulness of QuickCheck for this.
--}
-prop_inListMemberMp :: Property
-prop_inListMemberMp =
-  forAllNonEmptyBuiltinByteStringWithElem $ \(lst@(_a :| _as), x) ->
-    let tree = MT.fromNonEmpty lst
-     in QuickCheck.property $ case MT.lookupMp x tree of
-          Nothing -> False
-          Just prf -> MT.memberMp x prf . MT.rootHash $ tree
-
-{-
- Properties.
-    1. Suppose lst is an arbitrary non empty list of distinct elements.
-            (roothash, merkleProof) \in lookupsMp (fromNonEmpty lst)
-                ===> there exists x \in lst s.t.
-                    Just merkleProof' (lookupMp x (fromNonEmpty lst)),
-                    merkleProof == merkleProof',
-                    rootHash = hashLeaf x
-
-            x \in lst,  Just merkleProof = (lookupMp x (fromNonEmpty lst))
-                ===> (hashLeaf x, merkleProof) \in  lookupsMp (fromNonEmpty lst)
-    2. Suppose lst is an arbitrary non empty list of length n.
-        length (lookupsMp (fromNonEmpty lst)) == n
--}
-prop_lookupsMp1 :: Property
-prop_lookupsMp1 =
-  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
-    let mt = MT.fromList (a : as)
-     in QuickCheck.forAll (QuickCheck.elements (MT.lookupsMp mt)) $
-          \(rh, mp) ->
-            Prelude.any
-              ( \x ->
-                  MT.hashLeaf x == rh
-                    && Maybe.fromJust (MT.lookupMp x mt) Prelude.== mp
-              )
-              $ a : as
-
-prop_lookupsMp1Converse :: Property
-prop_lookupsMp1Converse =
-  forAllNonEmptyDistinctBuiltinByteString $ \(a :| as) ->
-    let mt = MT.fromList (a : as)
-        prfs = MT.lookupsMp mt
-     in QuickCheck.forAll (QuickCheck.elements (a : as)) $ \x ->
-          let mp = Maybe.fromJust $ MT.lookupMp x mt
-           in Maybe.fromJust (List.lookup (MT.hashLeaf x) prfs) Prelude.== mp
-
-prop_lookupsMp2 :: Property
-prop_lookupsMp2 =
-  forAllNonEmptyBuiltinByteString $ \(a :| as) ->
-    let mt = MT.fromList (a : as)
-     in length (MT.lookupsMp mt) == length (a : as)
-
--- This is needed because of QuickCheck. It's explained in the QuickCheck
--- documentation.
-return []
-
-test :: TestTree
-test =
-  Tasty.testGroup
-    "MerkleTree"
-    [ QuickCheck.testProperties "Properties" $(QuickCheck.allProperties)
-    ]
