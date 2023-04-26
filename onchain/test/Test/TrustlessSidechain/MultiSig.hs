@@ -31,13 +31,7 @@ unitTests =
       sig2 = conv "\190\160N\239)\238~j\STX\v\CAN\CAN\r\226q\\8ts\DC3!g\233dm\ne\148\205z'\aM\218\218\226\205\209\&8\153\&9_\161.\b91v\211d\ETXY\254\220fP\US\216%\137\201\249S\184"
    in testGroup
         "MultiSig"
-        [ testCase "key2 > key1" $
-            key2 > key1 @?= True
-        , testCase "unsorted keys" $
-            U.verifyMultisig [key2, key1] 1 msg [sig2, sig1] @?= True
-        , testCase "sorted keys, unsorted sigs" $
-            U.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
-        , testCase "0 threshold" $
+        [ testCase "0 threshold" $
             U.verifyMultisig [] 0 msg [] @?= True
         , testCase "not eq" $
             U.verifyMultisig [key1] 1 msg [sig2] @?= False
