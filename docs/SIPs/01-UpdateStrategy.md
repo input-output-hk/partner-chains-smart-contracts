@@ -79,6 +79,11 @@ system[^extraProxiedTokenNote].
     or paid to some arbitrary validator script. The former option makes this
     confusing for users, and the latter scenario will slightly increase the
     cost of the transaction (min UTxO fee).
+    Alternatively, the former option could send the token back to the user's
+    wallet, and another transaction could burn the proxied tokens (a
+    transaction pipeline could be used so we do not need to wait 2 blocks) --
+    but again, this would slightly increase fees since it does two transactions
+    instead of one.
 
 We will also allow the distinguished UTxO to store a collection of proxied
 minting policies where `FUELProxyPolicy` will mint only if *any* of the proxied
