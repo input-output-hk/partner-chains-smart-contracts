@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- | This module is a bunch of tests for our MerkleTree implementation. For
@@ -13,24 +14,27 @@ import PlutusTx.Builtins.Class qualified as Builtins
 import PlutusTx.Prelude
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, Testable)
 import Test.QuickCheck qualified as QuickCheck
-import Test.Tasty (TestTree)
-import Test.Tasty qualified as Tasty
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty (TestTree, adjustOption, testGroup)
+import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 import TrustlessSidechain.MerkleTree qualified as MT
 import Prelude qualified
 
 test :: TestTree
 test =
-  Tasty.testGroup
-    "MerkleTree"
-    [ testProperty "height is logarithmic to size" logProofLength
-    , testProperty "proof in source implies proof in tree" lookupMpHasProof
-    , testProperty "proof in tree implies proof in source" notInLookupMpFail
-    , testProperty "proof in tree implies proof in root" inListMemberMp
-    , testProperty "lookups as expected" lookupsMp1
-    , testProperty "lookups as expected (converse)" lookupsMp1Converse
-    , testProperty "lookups as expected (extra)" lookupsMp2
-    ]
+  adjustOption go
+    . testGroup
+      "MerkleTree"
+    $ [ testProperty "height is logarithmic to size" logProofLength
+      , testProperty "proof in source implies proof in tree" lookupMpHasProof
+      , testProperty "proof in tree implies proof in source" notInLookupMpFail
+      , testProperty "proof in tree implies proof in root" inListMemberMp
+      , testProperty "lookups as expected" lookupsMp1
+      , testProperty "lookups as expected (converse)" lookupsMp1Converse
+      , testProperty "lookups as expected (extra)" lookupsMp2
+      ]
+  where
+    go :: QuickCheckTests -> QuickCheckTests
+    go = Prelude.max 10_000
 
 -- Properties
 
