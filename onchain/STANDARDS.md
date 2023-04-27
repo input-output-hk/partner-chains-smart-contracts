@@ -1,6 +1,6 @@
 # Introduction
 
-This document describes a set of standards for all code under the Liqwid
+This document describes a set of standards for all code under this
 project. It also explains our reasoning for these choices, and acts as a living
 document of our practices for current and future contributors to the project. We
 intend for this document to evolve as our needs change, as well as act as a
@@ -278,12 +278,11 @@ The following pragmata MUST be enabled at project level (that is, in
 * ``FlexibleContexts``
 * ``FlexibleInstances``
 * ``GeneralizedNewtypeDeriving``
-* ``InstanceSigs``
 * ``ImportQualifiedPost``
+* ``InstanceSigs``
 * ``LambdaCase``
 * ``MultiParamTypeClasses``
 * ``NoImplicitPrelude``
-* ``OverloadedLabels``
 * ``OverloadedStrings``
 * ``TupleSections``
 

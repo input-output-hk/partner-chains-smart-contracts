@@ -16,7 +16,14 @@
 module Main (main) where
 
 import GenOutput qualified
-import GetOpts (Args (..), Command (..))
+import GetOpts (
+  Args (Args),
+  Command (
+    GenCliCommand,
+    MerkleTreeCommand,
+    SidechainKeyCommand
+  ),
+ )
 import GetOpts qualified
 import Prelude
 

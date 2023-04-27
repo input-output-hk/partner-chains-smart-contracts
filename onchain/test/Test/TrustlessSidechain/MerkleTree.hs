@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | This module is a bunch of tests for our MerkleTree implementation. For
  now, it's just property based tests.
@@ -14,7 +14,6 @@ import PlutusTx.Builtins.Class qualified as Builtins
 import PlutusTx.Prelude
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, Testable)
 import Test.QuickCheck qualified as QuickCheck
-import Test.QuickCheck.Modifiers (NonEmptyList (getNonEmpty))
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.QuickCheck qualified as QuickCheck
@@ -26,20 +25,26 @@ import Prelude qualified
 -}
 genNonEmptyBuiltinByteString :: Gen (NonEmpty BuiltinByteString)
 genNonEmptyBuiltinByteString = do
-  lst <- Prelude.fmap getNonEmpty (arbitrary :: Gen (NonEmptyList Prelude.String))
-  let a : as = lst
-  return $ Prelude.fmap Builtins.stringToBuiltinByteString $ a :| as
+  h <- arbitrary
+  t <- arbitrary
+  Prelude.pure . Prelude.fmap Builtins.stringToBuiltinByteString $ h :| t
 
 {- | @forAllNonEmptyBuiltinByteString prf@ is read as "for every nonempty list
  of BuiltinByteString, @prf@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
+forAllNonEmptyBuiltinByteString ::
+  Testable prop =>
+  (NonEmpty BuiltinByteString -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteString = QuickCheck.forAll genNonEmptyBuiltinByteString
 
 {- | @forAllNonEmptyDistinctBuiltinByteString prf@ is read as "for every nonempty list
  of distinct BuiltinByteStrings, @prf@ is satisified.."
 -}
-forAllNonEmptyDistinctBuiltinByteString :: Testable prop => (NonEmpty BuiltinByteString -> prop) -> Property
+forAllNonEmptyDistinctBuiltinByteString ::
+  Testable prop =>
+  (NonEmpty BuiltinByteString -> prop) ->
+  Property
 forAllNonEmptyDistinctBuiltinByteString =
   QuickCheck.forAll
     (Prelude.fmap (NonEmpty.fromList . List.nub . NonEmpty.toList) genNonEmptyBuiltinByteString)
@@ -47,7 +52,10 @@ forAllNonEmptyDistinctBuiltinByteString =
 {- | @forAllNonEmptyBuiltinByteStringWithElem prf@ is read as "for every nonempty list @lst@, and @x \in lst@
  of BuiltinByteString, @prf (lst, x)@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteStringWithElem :: Testable prop => ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) -> Property
+forAllNonEmptyBuiltinByteStringWithElem ::
+  Testable prop =>
+  ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteStringWithElem = QuickCheck.forAll genNonEmptyWithElem
   where
     genNonEmptyWithElem :: Gen (NonEmpty BuiltinByteString, BuiltinByteString)
@@ -59,7 +67,10 @@ forAllNonEmptyBuiltinByteStringWithElem = QuickCheck.forAll genNonEmptyWithElem
 {- | @forAllNonEmptyBuiltinByteStringWithoutElem prf@ is read as "for every nonempty list @lst@, and @x \not \in lst@
  of BuiltinByteString, @prf (lst, x)@ is satisified.."
 -}
-forAllNonEmptyBuiltinByteStringWithoutElem :: Testable prop => ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) -> Property
+forAllNonEmptyBuiltinByteStringWithoutElem ::
+  Testable prop =>
+  ((NonEmpty BuiltinByteString, BuiltinByteString) -> prop) ->
+  Property
 forAllNonEmptyBuiltinByteStringWithoutElem = QuickCheck.forAll genNonEmptyWithoutElem
   where
     genNonEmptyWithoutElem :: Gen (NonEmpty BuiltinByteString, BuiltinByteString)
@@ -114,8 +125,9 @@ prop_inListMemberMp :: Property
 prop_inListMemberMp =
   forAllNonEmptyBuiltinByteStringWithElem $ \(lst@(_a :| _as), x) ->
     let tree = MT.fromNonEmpty lst
-        Just prf = MT.lookupMp x tree
-     in MT.memberMp x prf (MT.rootHash tree)
+     in QuickCheck.property $ case MT.lookupMp x tree of
+          Nothing -> False
+          Just prf -> MT.memberMp x prf . MT.rootHash $ tree
 
 {-
  Properties.

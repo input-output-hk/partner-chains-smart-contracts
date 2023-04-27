@@ -1,5 +1,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | The module 'GetOpts' provides functionality / data types to parse the command line
  arguments
@@ -12,8 +14,6 @@ module GetOpts (
   MerkleTreeCommand (..),
   SidechainKeyCommand (..),
 ) where
-
-import Prelude
 
 import Cardano.Binary qualified as Binary
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
@@ -80,6 +80,7 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   SidechainPubKey,
  )
+import Prelude
 
 -- | 'getArgs' grabs the command line options ('Args').
 getOpts :: IO Args

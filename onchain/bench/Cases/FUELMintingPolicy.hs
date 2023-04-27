@@ -1,25 +1,55 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
+module Cases.FUELMintingPolicy (
+  fuelMintingBench,
+  replicateMerkleTree,
+) where
 
-module Cases.FUELMintingPolicy where
-
-import Bench (Bench, BenchConfig (..))
+import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
 import Control.Monad.Reader qualified as Reader
-import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
+import Ctl (
+  CtlClaim (CtlClaim),
+  CtlCommon (CtlCommon),
+  CtlInitSidechain (CtlInitSidechain),
+  CtlSaveRoot (CtlSaveRoot),
+  ccCombinedMerkleProof,
+  ccSidechainParams,
+  ccSigningKeyFile,
+  cisInitCommitteePubKeys,
+  cisSidechainEpoch,
+  csrCurrentCommitteePrivKeys,
+  csrMerkleRoot,
+  csrPreviousMerkleRoot,
+ )
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text qualified as Text
+import PlutusTx.Builtins (BuiltinByteString)
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..), SidechainParams (..))
+import TrustlessSidechain.Types (
+  CombinedMerkleProof (CombinedMerkleProof),
+  MerkleTreeEntry (MerkleTreeEntry),
+  SidechainParams (SidechainParams),
+  chainId,
+  cmpMerkleProof,
+  cmpTransaction,
+  genesisHash,
+  genesisUtxo,
+  mteAmount,
+  mteIndex,
+  mtePreviousMerkleRoot,
+  mteRecipient,
+  thresholdDenominator,
+  thresholdNumerator,
+ )
+import Prelude
 
 {- | Returns the corresponding merkle proofs for a merkle tree of the given
  size of the merkle tree entries.
@@ -35,7 +65,9 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
     -- TODO: just deserialize the cbor instead of doing this weird
     -- building index thing.. See `Codec.CBOR.Read` in the package
     -- `cborg`
+    indicies :: [Integer]
     indicies = [1 .. n]
+    entries :: [MerkleTreeEntry]
     entries =
       map
         ( \ix ->
@@ -47,10 +79,15 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
               }
         )
         indicies
+    cborEntries :: [BuiltinByteString]
     cborEntries = map MerkleRootTokenMintingPolicy.serialiseMte entries
+    cborToMte :: Map.Map RootHash MerkleTreeEntry
     cborToMte = Map.fromList $ zip (map MerkleTree.hashLeaf cborEntries) entries
-
-    (merkleTree, lookups) = MerkleTree.lookupsMpFromList cborEntries
+    merkleTree :: MerkleTree.MerkleTree
+    merkleTree = fst . MerkleTree.lookupsMpFromList $ cborEntries
+    lookups :: [(RootHash, MerkleTree.MerkleProof)]
+    lookups = snd . MerkleTree.lookupsMpFromList $ cborEntries
+    combinedMerkleProofs :: [CombinedMerkleProof]
     combinedMerkleProofs =
       map
         ( \(cbor, proof) ->
@@ -120,7 +157,7 @@ fuelMintingBench = do
               }
 
     -- Generating the merkle tree / merkle proofs
-    let ~(Right bech32Recipient) = fmap OffChain.bech32RecipientBytes $ OffChain.bech32RecipientFromText $ Text.pack addr
+    let bech32Recipient = getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
         entry =
           MerkleTreeEntry
             { mteIndex = 0
@@ -159,3 +196,11 @@ fuelMintingBench = do
   Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
 
   return ()
+
+-- Helpers
+
+-- Unsafely extracts a Right, failing if not present
+getRight :: Either a b -> b
+getRight = \case
+  Left _ -> error "Unexpected Left where a Right was meant to be."
+  Right x -> x

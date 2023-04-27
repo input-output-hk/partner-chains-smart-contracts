@@ -1,4 +1,6 @@
-module Test.TrustlessSidechain.UpdateCommitteeHashMessage where
+{-# LANGUAGE TypeApplications #-}
+
+module Test.TrustlessSidechain.UpdateCommitteeHashMessage (test) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16

@@ -1,16 +1,24 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
+module Main (main) where
 
-module Main where
-
-import Bench (BenchConfigPaths (..))
+import Bench (
+  BenchConfigPaths (BenchConfigPaths),
+  bcfgpAddressFilePath,
+  bcfgpBenchResults,
+  bcfgpCardanoCliCmd,
+  bcfgpCtlCmd,
+  bcfgpOdcHost,
+  bcfgpOdcPort,
+  bcfgpOutputDir,
+  bcfgpSigningKeyFilePath,
+  bcfgpTestNetMagic,
+ )
 import Bench qualified
-import Control.Monad qualified as Monad
-
 import Cases.FUELMintingPolicy qualified as FUELMintingPolicy
 import Cases.GrowingTreeClaim qualified as GrowingTreeClaim
 import Cases.InitSidechain qualified as InitSidechain
 import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import Control.Monad qualified as Monad
+import Prelude
 
 {- | Assumptions:
     - `./payment.skey` is your secret key
@@ -57,22 +65,18 @@ main :: IO ()
 main = do
   -- Potentially override defaults via environment variables
   cfg <- Bench.overrideBenchConfigPathFromEnv defaultBenchConfigPaths
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "FUELMintingBenchmarks.db"})
       FUELMintingPolicy.fuelMintingBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "UpdateCommitteeHashBenchmarks.db"})
       UpdateCommitteeHash.updateCommitteeHashBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "InitSidechain.db"})
       InitSidechain.initSidechainBench
-
   Monad.void $
     Bench.runBenchWith
       (cfg {bcfgpBenchResults = "GrowingTree.db"})

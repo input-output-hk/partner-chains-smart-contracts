@@ -3,7 +3,12 @@
 -- Also, This will be faster if the pubkeys and signatures are in the same order
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.Utils (verifyMulti, verifyMultisig, aggregateKeys, aggregateCheck) where
+module TrustlessSidechain.Utils (
+  verifyMulti,
+  verifyMultisig,
+  aggregateKeys,
+  aggregateCheck,
+) where
 
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
@@ -35,7 +40,8 @@ verifyMulti isOK threshold pubKeys signatures =
       * @signatures@ should be sorted (otherwise this returns False)
 -}
 {-# INLINEABLE verifyMultisig #-}
-verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
+verifyMultisig ::
+  [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
 -- note. we need to test nub of either signatures or pubkeys
 --   | O(n^2) nub the public keys
 --   | O(n)   require public keys to be sorted then test each elem greater than last O(n)
