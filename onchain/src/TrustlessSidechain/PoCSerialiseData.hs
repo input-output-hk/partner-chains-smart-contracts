@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script
@@ -47,4 +48,5 @@ mkPoCSerialiseDataUntyped = Validators.mkUntypedValidator mkPoCSerialiseData
  'mkPoCSerialiseData'
 -}
 serialisablePoCSerialiseData :: Versioned Script
-serialisablePoCSerialiseData = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])) PlutusV2
+serialisablePoCSerialiseData =
+  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])) PlutusV2

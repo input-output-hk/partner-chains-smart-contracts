@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script
@@ -60,4 +61,5 @@ mkPoCInlineDatumValidatorUntyped = Validators.mkUntypedValidator mkPoCInlineDatu
  'mkPoCInlineDatumValidator'
 -}
 serialisablePoCInlineDatumValidator :: Versioned Script
-serialisablePoCInlineDatumValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2
+serialisablePoCInlineDatumValidator =
+  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2

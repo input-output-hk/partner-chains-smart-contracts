@@ -10,7 +10,47 @@ import Control.Monad qualified as Monad
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
 import Data.List qualified as List
-import GetOpts (GenCliCommand (..), MerkleTreeCommand (..), SidechainKeyCommand (..))
+import GetOpts (
+  GenCliCommand (
+    DeregistrationCommand,
+    InitSidechainCommand,
+    RegistrationCommand,
+    SaveRootCommand,
+    UpdateCommitteeHashCommand
+  ),
+  MerkleTreeCommand (
+    CombinedMerkleProofCommand,
+    MerkleProofCommand,
+    MerkleTreeEntriesCommand,
+    RootHashCommand
+  ),
+  SidechainKeyCommand (
+    FreshSidechainCommittee,
+    FreshSidechainPrivateKey,
+    SidechainPrivateKeyToPublicKey
+  ),
+  cmpMerkleTree,
+  cmpMerkleTreeEntry,
+  drSpoPubKey,
+  fscCommitteeSize,
+  iscInitCommitteePubKeys,
+  iscSidechainEpoch,
+  mpcMerkleTree,
+  mpcMerkleTreeEntry,
+  mtecEntries,
+  rcRegistrationUtxo,
+  rcSidechainPrivKey,
+  rcSpoPrivKey,
+  rhcMerkleTree,
+  spktpkPrivateKey,
+  srcCurrentCommitteePrivKeys,
+  srcMerkleRoot,
+  srcPreviousMerkleRoot,
+  uchcCurrentCommitteePrivKeys,
+  uchcNewCommitteePubKeys,
+  uchcPreviousMerkleRoot,
+  uchcSidechainEpoch,
+ )
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
  )

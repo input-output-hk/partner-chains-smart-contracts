@@ -1,7 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 {- | "Bench.OdcQuery" provides wrapper functions for querying
  ogmios-datum-cache as a client.
 
@@ -26,35 +22,24 @@ module Bench.OdcQuery (
   getTxByHashRequest,
 ) where
 
--- base
-import Control.Exception (Exception)
-import Control.Exception qualified as Exception
-import Data.Proxy (Proxy (Proxy))
-
--- websocket
-import Network.WebSockets (Connection)
-import Network.WebSockets qualified as WebSockets
-
--- cardano
 import Cardano.Api (BabbageEra, Tx)
 import Cardano.Api qualified as Cardano
-
--- bytestring
+import Control.Exception (Exception)
+import Control.Exception qualified as Exception
+import Data.Aeson (Value (Object, String))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 import Data.ByteString (ByteString)
 import Data.ByteString.Base64 qualified as ByteString.Base64
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.ByteString.Lazy qualified as ByteString.Lazy
-
--- text
+import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
-
--- aeson
-
-import Data.Aeson (Value (..))
-import Data.Aeson qualified as Aeson
-import Data.Aeson.KeyMap qualified as Aeson.KeyMap
+import Network.WebSockets (Connection)
+import Network.WebSockets qualified as WebSockets
+import Prelude
 
 {- | @'withOdcConnection' host port f@ wraps
  'Network.WebSockets.runClient' and forks a ping thread (to avoid timeout);

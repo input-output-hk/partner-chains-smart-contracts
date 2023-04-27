@@ -3,7 +3,11 @@
 -- Validate enough signatures are signed by legit pubkeys
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.Utils (verifyMultisig, aggregateKeys, aggregateCheck) where
+module TrustlessSidechain.Utils (
+  verifyMultisig,
+  aggregateKeys,
+  aggregateCheck,
+) where
 
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
@@ -17,7 +21,8 @@ import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
       * @signatures@ should be a subsequence of the corresponding @pubKeys@
 -}
 {-# INLINEABLE verifyMultisig #-}
-verifyMultisig :: [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
+verifyMultisig ::
+  [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
 verifyMultisig pubKeys threshold message signatures =
   let go :: Integer -> [BuiltinByteString] -> [BuiltinByteString] -> Bool
       go !signed !pubs !sigs =

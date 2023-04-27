@@ -2,8 +2,8 @@ strict digraph {
   node [shape=record]
   rankdir="LR"
 
-  fuelOracleOld [label = "UTxO with\nprevious list of valid FUELMintPolicies\nat FuelOracle validator"]
-  fuelOracleNew [label = "UTxO with\nupdated list of valid FUELMintPolicies\nat FuelOracle validator"]
+  fuelOracleOld [label = "UTxO with\nprevious FUELOracleDatum\nat FuelOracle validator"]
+  fuelOracleNew [label = "UTxO with\nupdated FUELOracleDatum\nat FuelOracle validator"]
 
   fuelMintPolicy [label =
     "Datum: signed message containing FuelMintPolicy"

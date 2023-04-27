@@ -1,22 +1,45 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
+module Cases.GrowingTreeClaim (growingTreeClaim) where
 
-module Cases.GrowingTreeClaim where
-
-import Bench (Bench, BenchConfig (..))
+import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
 import Cases.FUELMintingPolicy qualified
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
 import Control.Monad.Reader qualified as Reader
-import Ctl (CtlClaim (..), CtlCommon (..), CtlInitSidechain (..), CtlSaveRoot (..))
+import Ctl (
+  CtlClaim (CtlClaim),
+  CtlCommon (CtlCommon),
+  CtlInitSidechain (CtlInitSidechain),
+  CtlSaveRoot (CtlSaveRoot),
+  ccCombinedMerkleProof,
+  ccSidechainParams,
+  ccSigningKeyFile,
+  cisInitCommitteePubKeys,
+  cisSidechainEpoch,
+  csrCurrentCommitteePrivKeys,
+  csrMerkleRoot,
+  csrPreviousMerkleRoot,
+ )
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.Text qualified as Text
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (MerkleTreeEntry (..), SidechainParams (..))
+import TrustlessSidechain.Types (
+  MerkleTreeEntry (MerkleTreeEntry),
+  SidechainParams (SidechainParams),
+  chainId,
+  genesisHash,
+  genesisUtxo,
+  mteAmount,
+  mteIndex,
+  mtePreviousMerkleRoot,
+  mteRecipient,
+  thresholdDenominator,
+  thresholdNumerator,
+ )
+import Prelude
 
 {- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which
 
@@ -82,7 +105,7 @@ growingTreeClaim = do
               }
 
     -- Generating the merkle tree / merkle proofs
-    let Right bech32Recipient = fmap OffChain.bech32RecipientBytes $ OffChain.bech32RecipientFromText $ Text.pack addr
+    let bech32Recipient = getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
 
         entry =
           MerkleTreeEntry
@@ -158,3 +181,11 @@ growingTreeClaim = do
     Bench.tLovelaceFee
 
   return ()
+
+-- Helpers
+
+-- Unsafely extracts a Right, failing if not present
+getRight :: Either a b -> b
+getRight = \case
+  Left _ -> error "Unexpected Left where a Right was meant to be."
+  Right x -> x

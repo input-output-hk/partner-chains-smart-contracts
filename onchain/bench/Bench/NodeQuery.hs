@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
 
 {- | "Bench.NodeQuery" provides utility functions for querying the cardano
@@ -17,7 +16,7 @@ module Bench.NodeQuery (
 
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
-import Data.Aeson (Value (..))
+import Data.Aeson (Value (Object))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson.Key
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
@@ -29,6 +28,7 @@ import Plutus.V2.Ledger.Api (
  )
 import System.Process qualified as Process
 import TrustlessSidechain.OffChain qualified as OffChain
+import Prelude
 
 {- | @'queryNodeUtxoAddress' cardanoCli testNetMagic address@ returns the keys
  - from the

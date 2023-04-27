@@ -1,10 +1,13 @@
-module Test.TrustlessSidechain.MultiSig where
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+module Test.TrustlessSidechain.MultiSig (test) where
 
 import Data.ByteString (ByteString)
 import PlutusTx.Prelude
-import Test.Tasty
-import Test.Tasty.HUnit
-import TrustlessSidechain.Utils qualified as U
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TrustlessSidechain.Utils qualified as Utils
 import Prelude qualified
 
 test :: TestTree
@@ -32,23 +35,23 @@ unitTests =
    in testGroup
         "MultiSig"
         [ testCase "0 threshold" $
-            U.verifyMultisig [] 0 msg [] @?= True
+            Utils.verifyMultisig [] 0 msg [] @?= True
         , testCase "not eq" $
-            U.verifyMultisig [key1] 1 msg [sig2] @?= False
+            Utils.verifyMultisig [key1] 1 msg [sig2] @?= False
         , testCase "1-1" $
-            U.verifyMultisig [key1] 1 msg [sig1] @?= True
+            Utils.verifyMultisig [key1] 1 msg [sig1] @?= True
         , testCase "2-1" $
-            U.verifyMultisig [key1, key2] 1 msg [sig2] @?= True
+            Utils.verifyMultisig [key1, key2] 1 msg [sig2] @?= True
         , testCase "1-2" $
-            U.verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
+            Utils.verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
         , -- this test is malformed, and hence should be 'False'.. while
           -- it is a valid signature, it doesn't satisfy the
           -- preconditions of the function
           testCase "attemptDuplicatePubkey" $
-            U.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
+            Utils.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
         , testCase "attemptDuplicateSigs" $
-            U.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
+            Utils.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
         , testCase "testLaziness" $
             let notLazy = Prelude.error "verifyMultisig is not lazy" -- admittedly there may be a better way then error
-             in U.verifyMultisig [key1, key2, notLazy] 2 msg [sig1, sig2, notLazy] @?= True
+             in Utils.verifyMultisig [key1, key2, notLazy] 2 msg [sig1, sig2, notLazy] @?= True
         ]

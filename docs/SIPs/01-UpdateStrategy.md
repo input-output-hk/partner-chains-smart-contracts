@@ -58,51 +58,53 @@ In case of our sidechain protocol, I propose the following strategies for our va
 - `DsInsertValidator`: versioned update
 - `DsKeyPolicy`: versioned update
 
-## 3. FUELMintingPolicy Transaction Token Pattern Implementation:
-This section discusses in more detail how to apply the transaction token pattern to the FUELMintingPolicy.
-In the development of these ideas, we will later introduce a new minting policy, `FUELMintingProxyPolicy`, whose tokens will be regarded as the FUEL tokens.
+## 3. `FUELMintingPolicy` Transaction Token Pattern Implementation
+This section discusses in more detail how to apply the transaction token
+pattern to `FUELMintingPolicy`.
+In the development of these ideas, we will introduce a new minting policy,
+`FUELProxyPolicy`, whose tokens will be regarded as the FUEL tokens whereas
+`FUELMintingPolicy` will be seen as a "for internal use only" token.
 
-As a high level idea, the Transaction Token Pattern will change the
-FUELMintingPolicy to forward all of its validations to some
-*collection of minting policies* stored in the datum at a distinguished UTxO, and
-the FUELMintingPolicy will mint only if the aforementioned collection of
-minting policies *all* mint in the same transaction. The extra tokens minted from the aforementioned minting policies may be paid to any address and does not effect the functionality of the system[^extraTokensNote].
+As a high level idea, the application of Transaction Token Pattern will require
+that `FUELProxyPolicy` will forward all of its validations to some
+minting policy, called a *proxied minting policy*, (e.g.
+`FUELMintingPolicy`) stored in the datum at a *distinguished UTxO*, and
+`FUELProxyPolicy` will mint only if a that proxied minting policy mints in the
+same transaction. The extra tokens minted from the proxied minting policy may
+be paid to any address and does not effect the functionality of the
+system[^extraProxiedTokenNote].
 
-[^extraTokensNote]:
-    The extra tokens could be sent directly back to the user's wallet, or paid to some arbitrary validator script. The former option makes this confusing for users, and the latter scenario will slightly increase the cost of the transaction (min UTxO fee).
+[^extraProxiedTokenNote]:
+    The extra proxied tokens could be sent directly back to the user's wallet,
+    or paid to some arbitrary validator script. The former option makes this
+    confusing for users, and the latter scenario will slightly increase the
+    cost of the transaction (min UTxO fee).
+    Alternatively, the former option could send the token back to the user's
+    wallet, and another transaction could burn the proxied tokens (a
+    transaction pipeline could be used so we do not need to wait 2 blocks) --
+    but again, this would slightly increase fees since it does two transactions
+    instead of one.
 
-Provided we have sufficient governance mechanisms, one may arbitrarily change
-the distinguished UTxO which holds the collection of minting policies to modify
-the sufficient conditions for the FUELMintingPolicy to mint. In essence, this
-allows one to upgrade the FUELMintingPolicy without requiring changes to
-existing FUEL already stored onchain i.e., there is no need to migrate existing
-tokens over to a new upgraded FUELMintingPolicy which can be costly (in terms
-of ada) if there are already many FUEL tokens existing onchain.
+We will also allow the distinguished UTxO to store a collection of proxied
+minting policies where `FUELProxyPolicy` will mint only if *any* of the proxied
+minting policies mints.
+This allows `FUELProxyPolicy` to mint for any supported version of the protocol
+in the case a participant has unclaimed FUEL in a merkle root from a previous
+version.
+See [3.4.](#34-example-workflow-of-updating-the-committee-signing-scheme) for
+details.
 
-Moreover, since the FUELMintingPolicy will mint only if the collection of
-minting policies *all* mint, this provides some modularity onchain with regards
-to the sufficient conditions for the FUELMintingPolicy in the following sense:
+This method of forwarding all of `FUELProxyPolicy`'s validations to some
+proxied minting policy allows one to update the system in the sense that
+provided we have sufficient governance mechanisms for the update, one may
+arbitrarily change the distinguished UTxO which holds the collection of proxied
+minting policies to modify the conditions for when `FUELProxyPolicy` mints.
+In particular, this allows a governance mechanism to modify `FUELProxyPolicy` without changing its
+currency symbol.
+See [3.1.](#31-alternative-designs) for discussion on the importance of
+this.
 
-- If an upgrade would like to modify an existing minting policy in the
-  collection of minting policies, this amounts to replacing that minting policy
-  with a new one.
-
-- If an upgrade would like to add a minting policy to the collection of minting
-  policies (in effect, this adds more required conditions to mint a FUEL
-  token), then this amounts to adding a minting policy to the collection of
-  minting policies in the UTxO.
-
-One shortcoming of this would be an upgrade which modifies the
-FUELMintingPolicy to mint only if *either* of two distinct minting policies
-would mint (say, in the case of a partial version upgrade). This would require
-replacing the entire collection of minting policies with a single minting
-policy that mints only if either of the two distinct minting policies would
-mint.
-As an aside -- this suggests that it is sufficient for the collection of
-minting policies to be of exactly size 1, but we will not pursue this idea
-further.
-
-### 3.3 Alternative designs
+### 3.1 Alternative designs
 We discuss alternative designs.
 
 We classify the designs in two categories: explicit token migration, and
@@ -160,150 +162,383 @@ It provides us with the ability to migrate tokens for free, and provides us with
     to modify the system in production should there need changes (upgrades, security patches, etc.).
 Also, it provides a clean break of abstraction to decouple behavior.
 
-### 3.4 FUELMintingPolicy Validators / Minting Policies
-Let `FUELMintingPolicy` denote the existing FUELMintingPolicy in the system.
-See the original Plutus contract specification for details
-[here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md).
-
-We will modify the `FUELMintingPolicy` to ensure that a given *claim
-certificate* is only valid for one version of the policy. In particular, we
-parameterise the `FUELMintingPolicy` with a `version :: Int`, and introduce a
-new `version` field in the `MerkleTreeEntry`. When verifying the
-`SignedMerkleProof` (which contains the hash of the `MerkleTreeEntry`), the
-policy has to check that the version of the script matches the version of the
-certificate. See [4.](#4-versioning-implementation).
-
+### 3.2 Validators / Minting Policies
 We will introduce a new `FUELProxyPolicy` which will be regarded as the `FUEL`
 tokens.
+`FUELProxyPolicy` will be parameterized by two currency symbols of minting
+policies, called `FUELOracleMintPolicy` and `FUELOracleBurnPolicy`, which are
+NFTs (and hence must be parameterized by a UTxO) that will each uniquely
+identify a UTxO at a `FUELOracleValidator` script validator address which
+holds as datum some collection of proxied tokens that completely determines the
+conditions when `FUELProxyPolicy` mints and burns.
 
-We will need a minting policy `FUELOracleMintingPolicy` to create an NFT (so this must
-be parameterized by a UTxO) to act as an oracle which will uniquely identify
-the UTxO that holds the collection of minting policies.
+An upgrade to the system amounts to spending the `FUELOracleValidator` that the
+NFT `FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) sits at, and paying the
+NFT `FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) to a new
+`FUELOracleValidator` with an altered collection of proxied tokens as datum.
+Then, the conditions for when `FUELProxyPolicy` mints (or burns) is now
+determined by the new altered collection of proxied tokens.
+It is outside the scope of this document to discuss the conditions for when the
+validator `FUELOracleValidator` will succeed, as there would need to be some
+sort of governance mechanism which decides when we may upgrade
+`FUELProxyPolicy`.
+See [3.3](#33-governance-of-updates) for details.
 
-The collection of minting policies will reside at a script validator
-address,`FUELOracle`, which has as datum
+The rest this section discusses the design of `FUELProxyPolicy` and how it
+determines which proxied minting policy must mint in order for
+`FUELProxyPolicy` to itself mint.
+
+We first describe a datum, `FUELOracleDatum`, which holds the proxied minting
+policies' currency symbols as follows.
 ```
-newtype FUELOracleDatum =
-    { unFUELOracleDatum :: [CurrencySymbol]
+type FUELOracleDatum = VersionMap
+
+newtype Version = Version Integer
+  deriving Eq
+
+newtype VersionMap = VersionMap
+    { unFUELOracleDatum :: Map Version CurrencySymbol
+        -- ^ this maps a 'Version' to a 'CurrencySymbol' where participants may
+        -- choose a 'Version' with its corresponding 'CurrencySymbol' that they
+        -- would like to use to claim their 'FUELProxyPolicy' tokens.
     }
 ```
-That is, this contains the collection of the currency symbols of minting
-policies which are required for `FUELProxyPolicy` to mint. We will also
-require that these currency symbols are lexicographically sorted (with the
-exception of the first currency symbol which determines how much `FUELProxyPolicy`
-to mint) to make onchain verifications easier.
+That is, this a map which associates a `Version` with a proxied minting
+policy's `CurrencySymbol`. See
+[here](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/AssocMap.hs#L58-L60)
+for the `Map` data type.
 
-It is outside the scope of this document to discuss the conditions for when
-this validator will succeed, as there would need to be some sort of governance
-mechanism which decides when we may upgrade `FUELProxyPolicy`. See
-[3.5](#35-governance-of-updates) for details.
+The datum `FUELOracleDatum` will reside at the script address
+`FUELOracleValidator` uniquely identified by the NFT  `FUELOracleMintPolicy`.
+Similarly for burning, at another `FUELOracleValidator` script address uniquely
+identified by `FUELOracleMintPolicy`, there will be another `FUELOracleDatum`.
 
-Finally, `FUELProxyPolicy` will be parameterized by the currency symbol of
-the `FUELOracle` and will mint only if the following are satisfied:
-- `FUELProxyPolicy` only has token name `FUEL`;
-- there is a reference input in the current transaction which contains a
-  `FUELOracleMintingPolicy` token with `FUELOracleDatum` as datum;
-- the first currency symbol `c` in the `FUELOracleDatum` mints `k` tokens iff
-  `FUELProxyPolicy` mints `k` tokens; and
-- for every currency symbol `c` in the `FUELOracleDatum`, at least one such `c`
-  is minted.
+Indeed, participants will want to determine which `Version` they would like to
+use to claim their `FUELProxyPolicy` tokens and whether they wish to mint or
+burn their `FUELProxyPolicy` tokens.
+Hence, this information will be passed as a redeemer to `FUELProxyPolicy` with
+the following data type.
+```
+data FUELProxyPolicyRedeemer = FUELProxyPolicyRedeemer
+    { version :: Version
+        -- ^ 'version' determines which proxied minting policy the participant
+        -- would like to use in the 'FUELOracleDatum'.
+    , mode :: Mode
+        -- ^ 'mode' determines whether the participant would like to mint or
+        -- burn tokens.
+    }
 
-We summarize the entire workflow.
+data Mode
+    = Mint
+    | Burn
+```
+
+Thus, if the `mode` of the redeemer is `Mint`, `FUELProxyPolicy` verifies
+all of the following:
+
+1. there is a reference input which contains the `FUELOracleMintPolicy` token
+   with `FUELOracleDatum` as datum;
+
+2. there is a value, `proxiedToken`, in `FUELOracleDatum` which corresponds to
+   the `version` of the redeemer;
+
+3. the `proxiedToken` mints `k > 0` tokens with token name `""`; and
+
+4. `FUELProxyPolicy` only mints `k` tokens with token name `FUEL`.
+
+Otherwise, if the `mode` of the redeemer is `Burn`, `FUELProxyPolicy` verifies all of the
+following (note conditions 2., 3. are identical to the previous case):
+
+1. there is a reference input which contains the `FUELOracleBurnPolicy` token
+   with `FUELOracleDatum` as datum;
+
+2. there is a value, `proxiedToken`, in `FUELOracleDatum` which corresponds to
+   the `version` of the redeemer;
+
+3. the `proxiedToken` mints `k > 0` tokens with token name `""`; and
+
+4. `FUELProxyPolicy` only mints `-k` tokens (i.e., burns `k` tokens) with token name `FUEL`.
+
+Note that in the `Burn` case, we burn `k` `FUELProxyPolicy` (i.e., mint `-k`)
+only if we mint `k > 0` of the proxied token.
+An alternative design would be to only have the `Mint` case and remove the
+restriction that `k > 0`, but this design was discarded for technical reasons.
+Unlike minting, where one may arbitrarily mint tokens iff the minting policy
+succeeds, burning tokens requires the participant to additionally
+spend such tokens from an address.
+This is inconvenient as the proxied minting policy must be present in some
+address the user may spend when attempting to burn, but as time goes on,
+updates may invalidate such tokens.
+So, this design avoids this subtle annoyance.
+
+The entire workflow is summarized as follows.
 
 **Workflow**
-1. An NFT `FUELOracleMintingPolicy` is minted, and paid to the `FUELOracle` validator script with datum
+1. NFTs `FUELOracleMintPolicy` and `FUELOracleBurnPolicy` are minted, and paid
+   to distinct `FUELOracleValidator` validator scripts with datums
 ```
-FUELOracleDatum {unFUELOracleDatum :: [ Currency symbol of FUELMintingPolicy ] }
+    0 -> Currency symbol of FUELMintingPolicy
 ```
-2. Users may mint `FUELProxyPolicy` for `FUEL` where we note that we have
-   `FUELProxyPolicy` minting only if `FUELMintingPolicy` mints.
-3. A governance mechanism chooses to upgrade the system by spending the UTxO that holds the `FUELOracleMintingPolicy` NFT at validator `FUELOracle`, paying it to a `FUELOracle` validator address with a new `FUELOracleDatum` with new currency symbols in the datum.
+and
+```
+    0 -> Currency symbol of a tautology policy that always returns true
+```
+respectively where we use the notation `a -> b` to denote "`a` maps to `b`".
+Note the choice `0` as the `Version` was arbitrary and could have been any
+integer.
+
+2. Users may mint `FUELProxyPolicy` for `FUEL` where we note that
+   `FUELProxyPolicy` mints only if `FUELMintingPolicy` mints; and similarly,
+   users may burn their `FUELProxyPolicy` only if the tautology policy mints
+   (which may always occur).
+
+3. A governance mechanism chooses to upgrade the system by spending the UTxO
+   that holds the `FUELOracleMintPolicy` NFT (or the `FUELOracleBurnPolicy`) at
+   validator `FUELOracleValidator`, and paying it to another
+   `FUELOracleValidator` validator address with a new `FUELOracleDatum`.
+
 4. Note that any new `FUEL` tokens must now validate with the new collection of
-   minting policies provided.
+   proxied minting policies provided.
+
 5. Steps 2., 3., 4. may be repeated indefinitely for users and governance mechanisms.
 
 ![FUELProxy mint flow](01-UpdateStrategy/FUELProxyMint.svg)
 
 <figcaption align = "center"><i>Claiming FUELProxy token using the transaction token pattern</i></figcaption><br />
 
-![FUELProxy mint flow](01-UpdateStrategy/FUELProxyUpdate.svg)
+![FUELProxy update flow](01-UpdateStrategy/FUELProxyUpdate.svg)
 
 <figcaption align = "center"><i>Updating the list of valid FUELMintingPolicies</i></figcaption><br />
-
-_Burning `FUELProxyPolicy`_
-Burning `FUELProxyPolicy` presents its own challenges. Unlike minting, where
-one may arbitrarily mint tokens iff the minting policy succeeds, burning tokens
-requires the user to additionally spend such tokens from an address. This is
-inconvenient since the first currency symbol in `FUELOracleDatum` must be
-present in some address when attempting to burn, but as time goes on updates
-will invalidate such tokens.
-
-So, instead of forcing users to have such tokens in their wallet to burn, we will
-parameterize `FUELProxyPolicy` with an additional currency symbol, say
-`burnCurrencySymbol`, that will serve the same purpose as `FUELOraclePolicy`
-(i.e., `burnCurrencySymbol` is an NFT which uniquely identifies a UTxO with a
-`FUELOracleDatum`), except that `FUELProxyPolicy` will *burn* `k` tokens only if
-the `burnCurrencySymbol` *mints* `k` tokens in the same transaction.
-
-Clearly, this removes the need to spend particular tokens when burning
-`FUELProxyPolicy`.
 
 ![FUELProxy burn flow](01-UpdateStrategy/FUELProxyBurn.svg)
 
 <figcaption align = "center"><i>Burning FUELProxy token using the transaction token pattern</i></figcaption><br />
 
-### 3.5 Governance of updates
-In this section, we discuss options for governing updates. Previously, we
-described the conditions for which an update happens are completely determined
-by the script validator address which holds the `FUELOracle` NFT.
+### 3.3 Governance of updates
+In this section, we discuss options for governing updates.
+Previously, we mentioned that the conditions for which an update happens are
+completely determined by the script validator address which holds the
+`FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) NFT which resides at a
+`FUELOracleValidator` script address.
 
-Indeed, the only constraint that this script validator has is that it must have
-`FUELOracleDatum` as its datum; so this means that the conditions on which this
-validator may succeed (and hence permit an update) can be changed alongside an
-update of the system. In other words, this mechanism allows updating of the
-governance mechanism itself.
+As an early implementation draft, we will require that `FUELOracleValidator`
+will be parameterized by some public key, and will succeed only if the
+transaction was signed by the given public key.
+In the future, these conditions when `FUELOracleValidator` succeeds may want to
+be changed to committee signatures.
 
-Alternatively, if we choose to also implement the versioning system described
-below, reusing the same `VersionOracle` would make the design conceptually
-simpler. Instead of having a concrete `FUELOraclePolicy` and
-`FUELOracleValidator` pair, with slightly different behaviour compared to the
-`VersionOraclePolicy`, we could just use the same abstraction. This also allows
-us to reuse the same optimisations, such as attaching reference scripts to
-VersionOracle utxos, thus also solving the problem of storing old versions of
-scripts.
+Interestingly, the mechanism which governs updates can itself be updated.
+This is because the only constraint that the script validator uniquely
+identified by `FUELOracleMintPolicy` (or `FUELOracleBurnPolicy`) has (from the
+perspective of `FUELProxyPolicy`) is that it must have `FUELOracleDatum` as its
+datum; so this means that the conditions on which this validator may succeed
+(and hence permit an update) can be changed alongside an update of the system.
+So, not only can we update `FUELProxyPolicy`, we can also update the mechanism
+which governs the updates.
 
-### 3.6 Sufficiency of implementing an update strategy for FUELMintingPolicy
-In this section, we discuss why it is sufficient to provide a means to update
-    the FUELMintingPolicy to update any of the other validators / minting
-    policies in the system.
+### 3.4 Example Workflow of Updating the Committee Signing Scheme
+This section discusses a workflow for updating the committee signing scheme.
 
-In the current implementation, we can classify the validators and minting policies into two categories:
+Let's suppose the scenario is as follows.
 
-- Validators and minting policies that do *not* interact in any way with the
-  FUELMintingPolicy which is just the `CommitteeCandidateValidator`.
+1. The sidechain is started with some given committee signing scheme.
 
-- Validators and minting policies that do interact in some way with the
-  FUELMintingPolicy which is clearly everything else.
+2. Many years later (with many unclaimed FUEL tokens left onchain), we decide
+   that it's far better to replace the committee signing scheme.
 
-For the former of the two, we can upgrade these at any point since these are
-used exclusively by the Bridge (which is completely offchain), so the Bridge
-may arbitrarily decide that it would like to observe transactions from some
-other validator address.
+3. New FUEL transactions are created with the new committee signing scheme.
 
-As for the latter case, in the view that `FUEL` is what all participants are
-interested in; we may observe that, if any update of any minting policy or
-validator occurs, then this implies that we would need to update the
-FUELMintingPolicy since the FUELMintingPolicy is transitively parameterized by
-all minting policies and validators of the latter case meaning an update to any
-of the subparts would imply a change in the original FUELMintingPolicy.
-So instead of providing a means to upgrade individual subparts of the system, it's
-enough to just provide a method to upgrade the FUELMintingPolicy, and make the
-new FUELMintingPolicy depend on the upgraded subparts instead.
+We would like to:
 
-For example, if we would like to upgrade the committee hash part of the system,
-since the FUELMintingPolicy already depends on the committee hash, any change
-the committee hash would require a change to the FUELMintingPolicy; hence we
-only need to be concerned about updating the FUELMintingPolicy.
+- support users claiming their old unclaimed FUEL;
+
+- allow users to be able to claim the new FUEL from the new committee signing
+  scheme.
+
+Recall from the [main
+specification](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md)
+that `FUELMintingPolicy` verifies the all of following conditions:
+
+1. The FUEL claimed corresponds to an element in a merkle root that was
+   inserted (i.e., minted by the `SignedMerkleRoot` policy), and the
+   transaction corresponds to the transaction specified in the merkle root in a
+   suitable sense.
+   Note that `FUELMintingPolicy` must be parameterized by the currency symbol
+   of the `SignedMerkleRoot` policy to verify this.
+
+2. The hash of the transaction of the FUEL claimed has just been inserted in
+   the distributed set.
+   Note that `FUELMintingPolicy` hence must be parameterized by the currency
+   symbol of elements inserted in the distributed set to verify this.
+
+We reiterate: `FUELMintingPolicy` must be parameterized by the currency symbol
+of the `SignedMerkleRoot` policy to verify 1., and must also be parameterized
+by the currency symbol of elements just inserted in the distributed set to
+verify 2..
+
+This example will demonstrate how the currency symbols which parameterize
+`FUELMintingPolicy` can be modified to support different versions with
+different signature schemes.
+
+To begin, we will initialize the `FUELOracleDatum` that is uniquely identified
+by the `FUELOracleMintPolicy` of `FUELProxyPolicy` as follows.
+```
+0 -> Currency symbol of FUELMintingPolicy
+```
+In other words, `FUELProxyPolicy` mints only if the same conditions as the
+original `FUELMintingPolicy` are satisfied in the original specification.
+
+Now, we discuss how we can change the committee signature scheme while
+supporting claiming old tokens.
+
+Recall from the main specification that the `SignedMerkleRoot` policy creates a
+merkle root of FUEL transactions only if the following conditions are
+satisfied:
+
+1. The current committee has signed the merkle root.
+
+2. If the previous `merkleRoot` is specified, the UTxO with that is given as
+   reference input.
+
+3. The unique `SignedMerkleRoot` token has token name as the merkle root, and
+   is paid to a `MerkleRootTokenValidator`.
+
+To facilitate discussion, we'll assume condition 1. has been modularized in a
+minting policy, say `CommitteeSignedToken`, which mints only if the current
+committee has signed its unique token name (unfortunately, the current
+iteration was not implemented this way and these verifications are hardcoded in
+the `SignedMerkleRoot` policy).
+Thus, `SignedMerkleRoot` would instead in 1. verify that `CommitteeSignedToken`
+has minted the merkle root. Clearly, `SignedMerkleRoot` must be parameterized
+with the currency symbol of `CommitteeSignedToken` to achieve this.
+
+So, if we have a new committee signing scheme, say `CommitteeSignedToken'`,
+if we were to parameterize `SignedMerkleRoot` with the new currency symbol
+of `CommitteeSignedToken'`, we would get a new `SignedMerkleRoot` policy which we
+will call `SignedMerkleRoot'` which will have a distinct currency symbol from
+the original `SignedMerkleRoot`.
+
+Of course, before this new `SignedMerkleRoot'` policy can be used, one would
+need to do the appropriate setup to ensure that the `CommitteeSignedToken` is
+able to identify the current committee onchain -- most likely ensuring that the
+NFT which identifies the committee identifies the public keys of the committee
+onchain.
+
+So, if we construct a new `FUELMintingPolicy` that is parameterized by the new
+`SignedMerkleRoot'` policy, and the same currency symbol for the distributed
+set (recall these are the two things that `FUELMintingPolicy` is parameterized
+by); we would get a new `FUELMintingPolicy` policy, say `FUELMintingPolicy'`,
+that mints only if the merkle root was signed with the new signature scheme
+(and the same distributed set condition as the original `FUELMintingPolicy` is
+satisfied).
+
+Thus, to support claiming of new FUEL tokens in `FUELProxyPolicy`, we would
+modify the `FUELOracleDatum` uniquely identified by the `FUELOracleMintPolicy`
+of `FUELProxyPolicy` to as follows.
+```
+0 -> Currency symbol of FUELMintingPolicy
+1 -> Currency symbol of FUELMintingPolicy'
+```
+Note that offchain we need to do some work to ensure that we give
+`FUELMintingPolicy` and `FUELMintingPolicy'` a unique `Version` integer.
+
+As a summary, this new `FUELProxyPolicy` allows users to either:
+
+- claim `FUEL` from merkle roots that were minted with the old
+  `FUELMintingPolicy`; or
+
+- claim `FUEL` from merkle roots that were minted with the new
+  `FUELMintingPolicy'`
+
+as required.
+
+### 3.5 Optimization Ideas
+In this section we discuss some optimization ideas for `FUELProxyPolicy`.
+
+#### 3.5.1 Efficient `VersionMap` Lookups
+Recall that `VersionMap` is implemented with the [`Map` data
+type](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/AssocMap.hs#L58-L60)
+for which the `lookup` operation requires a [linear
+scan](https://github.com/input-output-hk/plutus/blob/master/plutus-tx/src/PlutusTx/AssocMap.hs#L131-L139).
+
+Certainly, we can replace this with more efficient data structures such as an
+array.
+Unfortunately, we'll need to do some tricks to achieve this as there is no data
+type for an array of `ByteString`s in Plutus.
+
+Let's make some remarks.
+
+- We know that we only store `CurrencySymbol`s in the `VersionMap` which
+  `CurrencySymbol`s are the image of of a 256 bit hash function and are hence
+  `ByteString`s of length 32.
+
+- `ByteString`s have a builtin operation for taking a contiguous sub-`ByteString`
+  of a `ByteString` with
+  [sliceByteString](https://github.com/input-output-hk/plutus/blob/1af96af28f45030c94e11138a2f13869e9e63b79/doc/read-the-docs-site/reference/cardano/builtin-parameters.csv#L129).
+
+We will also require that `Version`s are *contiguous and start at 0*.
+Since `Version` integers are arbitrary and may be chosen in any particular way,
+this requirement isn't too onerous to assume.
+The only implication is that when updating, the governance mechanism needs to
+be sure that this requirement is satisfied.
+
+Then, we may replace `VersionMap` with
+```
+newtype VersionMap = VersionMap { unVersionMap :: ByteString }
+```
+for which any `versionMap :: VersionMap` satisfies the following
+invariants:
+
+1. `length versionMap` is a multiple of 32.
+
+2. `sliceByteString (i * 32) 32 versionMap` is a `CurrencySymbol` where `i` is the
+  `Version` a participant is interested in using, and
+  [`sliceByteString`'s arguments are described here](https://github.com/input-output-hk/plutus/blob/f6c803dcf15af9b28b7f2a0baeefa0d12d69d0c7/plutus-tx/src/PlutusTx/Builtins.hs#L94-L97).
+  This will be the new `lookup` operation for this representation of
+  `VersionMap`.
+
+As a picture, the memory representation is as follows
+```
+0                   ...                  31 32                  ...                  63
+|------------Currency symbol 0------------| |------------Currency symbol 1------------| ... etc.
+```
+where the numbers on the top denote the index of the `i`th byte of the
+`ByteString` that ``VersionMap` contains.
+
+So, if a participant was interested in version `i`, `FUELProxyPolicy` would use
+the builtin `sliceByteString` with the operation described in 2. to grab the
+corresponding proxied minting policy's currency symbol.
+Indeed, this may be more efficient than the linear `lookup` operation of a
+`Map`.
+
+#### 3.5.2 Using Reference Scripts for `FUELProxyPolicy`
+Since we know that `FUELProxyPolicy` will *always* reference a
+`FUELOracleValidator`, it would be reasonable to include `FUELProxyPolicy` as a
+reference script in each `FUELOracleValidator`.
+This would make the transaction smaller (and hopefully reduce fees!) as the
+`FUELProxyPolicy` is already included onchain.
+See [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033) for details.
+
+#### 3.5.3 Merging the datums identified by `FUELOracleMintPolicy` and `FUELOracleBurnPolicy` in a single `FUELOracleValidator`
+It's unclear whether having two distinct UTxOs for holding a `FUELOracleDatum`
+for minting and burning respectively was a good idea.
+Indeed, this forces us to have a large "initial transaction" when minting both
+NFTs (there are already issues with the init transaction being too large).
+
+An alternative would be to have a single `FUELOraclePolicy` NFT which uniquely
+identifies a UTxO with datum as follows.
+```
+data FUELOracleDatum = FUELOracleDatum
+    { mintMap :: VersionMap
+    , burnMap :: VersionMap
+    }
+```
+This would reduce the init transaction's size, but it would also force every
+`FUELProxyPolicy` mint to additionally include the `burnMap` (when it is not
+necessary) which may in turn make the transaction slightly larger (potentially
+increasing fees).
+
+It's unclear if this will provide any benefit at all.
 
 ## 4. Versioning Implementation
 In this section we discuss how different versions will be maintained on-chain.

@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
  functionality. In particular, we provide utilities for generating signatures
@@ -36,10 +37,7 @@ module TrustlessSidechain.OffChain (
   strToSecpPubKey,
   bech32RecipientFromText,
   txOutRefFromText,
-  module TrustlessSidechain.Types,
 ) where
-
-import Prelude
 
 -- we import Prelude unqualified here because this module is
 -- used for Prelude projects that just generate data for the sidechain
@@ -90,6 +88,7 @@ import TrustlessSidechain.Types (
   GenesisHash (getGenesisHash),
   SidechainPubKey (SidechainPubKey),
  )
+import Prelude
 
 -- * Bech32 addresses
 
@@ -148,7 +147,9 @@ bech32RecipientFromText str =
             , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr_test
             ]
       where
+        surroundAndShowTextWithBackticks :: Text -> String
         surroundAndShowTextWithBackticks t = "`" ++ show t ++ "`"
+        isAddr :: Bool
         isAddr =
           bech32HumanReadablePart == Bech32.Prefixes.addr
             || bech32HumanReadablePart == Bech32.Prefixes.addr_test
