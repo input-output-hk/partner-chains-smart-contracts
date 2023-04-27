@@ -45,6 +45,7 @@ tests ∷ WrappedTests
 tests = plutipGroup "Merkle root insertion" $ do
   testScenario1
   testScenario2
+  testScenario3
 
 -- | `paymentPubKeyHashToBech32Bytes` converts a `PaymentPubKeyHash`
 -- | to the `Bech32Bytes` required for the `recipient` field of
@@ -147,11 +148,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       -- 1. Setting up the sidechain
       ---------------------------
       let
-        committeeSize = 25
-      -- It fails with ~50 (nondeterministically) with budget overspent
-      -- I would really like to get this up to 101 as with the update
-      -- committee hash endpoint! Some room for optimization is certainly
-      -- a possibility..
+        committeeSize = 100
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
@@ -316,3 +313,91 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , previousMerkleRoot: Nothing
           }
       pure unit
+
+-- | `testScenario3` does the following
+-- |    1. initializes the sidechain with repeated committee members
+-- |
+-- |    2. saves a merkle root
+-- |
+-- | Note: there is significant duplicated code from `testScenario2`
+testScenario3 ∷ PlutipTest
+testScenario3 =
+  Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        Log.logInfo' "MerkleRoot testScenario2"
+
+        -- 1. Setting up the sidechain
+        ---------------------------
+        let
+          committeeSize = 100
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
+        duplicated1PrvKey ← Crypto.generatePrivKey
+        duplicated2PrvKey ← Crypto.generatePrivKey
+
+        everyoneElsePrvKeys ← sequence $ Array.replicate (committeeSize - 20)
+          Crypto.generatePrivKey
+        let
+          initCommitteePrvKeys = Array.replicate 5 duplicated1PrvKey
+            <> everyoneElsePrvKeys
+            <> Array.replicate 15 duplicated2PrvKey
+          initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+          initSidechainParams = InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 99999
+            , initThresholdDenominator: BigInt.fromInt 100000
+            , initCandidatePermissionTokenMintInfo: Nothing
+            }
+
+        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+
+        -- Building / saving the root that pays lots of FUEL to this wallet :)
+        ----------------------------------------------------------------------
+        ownPaymentPubKeyHash ← liftedM
+          "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
+          Address.ownPaymentPubKeyHash
+
+        ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+
+        { merkleRoot: merkleRoot1 } ←
+          saveRoot
+            { sidechainParams
+            , merkleTreeEntries:
+                [ MerkleTreeEntry
+                    { index: BigInt.fromInt 0
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Nothing
+                    , recipient: ownRecipient
+                    }
+                ]
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , previousMerkleRoot: Nothing
+            }
+        _ ←
+          saveRoot
+            { sidechainParams
+            , merkleTreeEntries:
+                [ MerkleTreeEntry
+                    { index: BigInt.fromInt 0
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Just merkleRoot1
+                    , recipient: ownRecipient
+                    }
+                , MerkleTreeEntry
+                    { index: BigInt.fromInt 1
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Just merkleRoot1
+                    , recipient: ownRecipient
+                    }
+                ]
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , previousMerkleRoot: Nothing
+            }
+        pure unit
