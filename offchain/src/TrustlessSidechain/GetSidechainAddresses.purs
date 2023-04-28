@@ -74,8 +74,9 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     UpdateCommitteeHash.getCommitteeHashPolicy scParams
   let committeeNftPolicyId = currencySymbolToHex committeeHashCurrencySymbol
 
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-    (unwrap scParams).genesisUtxo
+  ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
+
   let dsKeyPolicyPolicyId = currencySymbolToHex dsKeyPolicyCurrencySymbol
 
   dsConfPolicy ← DistributedSet.dsConfPolicy

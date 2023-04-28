@@ -313,15 +313,14 @@ getDs txInput = do
 -- | not possible). Often, the `TransactionInput` should be the `genesisUtxo`
 -- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
-  TransactionInput →
+  Ds →
   Contract ()
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
-getDsKeyPolicy txInput = do
+getDsKeyPolicy ds = do
   let
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDsKeyPolicy" }
 
-  ds ← getDs txInput
   insertValidator' ← insertValidator ds
 
   let
@@ -381,7 +380,7 @@ findDsConfOutput ds = do
     , confDat
     }
 
--- | `findDsOutput` finds the transaction which we must insert to
+-- | `slowFindDsOutput` finds the transaction which we must insert to
 -- | (if it exists) for the distributed set. It returns:
 -- |
 -- |    - the `TransactionInput` of the output to spend;

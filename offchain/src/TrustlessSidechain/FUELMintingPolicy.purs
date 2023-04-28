@@ -294,8 +294,9 @@ getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-    (unwrap sidechainParams).genesisUtxo
+  ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
   policy ← fuelMintingPolicy $
     FUELMint
@@ -418,8 +419,9 @@ claimFUEL
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
-    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-      (unwrap sidechainParams).genesisUtxo
+    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")
