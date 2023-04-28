@@ -210,7 +210,7 @@ newtype CombinedMerkleProof = CombinedMerkleProof
 -- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
 -- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.
 -- | This is a modestly convenient wrapper to help call the `runFuelMP `
--- | endpoint.
+-- | endpoint for internal tests.
 combinedMerkleProofToFuelParams ∷
   SidechainParams → CombinedMerkleProof → Maybe FuelParams
 combinedMerkleProofToFuelParams
@@ -231,6 +231,7 @@ combinedMerkleProofToFuelParams
           , sidechainParams
           , index: transaction'.index
           , previousMerkleRoot: transaction'.previousMerkleRoot
+          , dsOutput: Nothing
           }
 
 instance Show CombinedMerkleProof where
@@ -318,6 +319,7 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
+      , dsOutput ∷ Maybe TransactionInput
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -353,12 +355,20 @@ claimFUEL ∷
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
   , previousMerkleRoot ∷ Maybe RootHash
+  , dsOutput ∷ Maybe TransactionInput
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 claimFUEL
   fuelMP
-  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  { amount
+  , recipient
+  , merkleProof
+  , sidechainParams
+  , index
+  , previousMerkleRoot
+  , dsOutput
+  } =
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash

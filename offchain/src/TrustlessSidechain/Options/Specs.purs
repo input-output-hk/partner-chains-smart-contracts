@@ -313,6 +313,13 @@ claimSpec = ado
         , metavar "CBOR"
         , help "CBOR-encoded Combined Merkle Proof"
         ]
+  dsOutput ← optional $ option transactionInput $ fold
+    [ long "distributed-set-utxo"
+    , metavar "TX_ID#TX_IDX"
+    , help
+        "Optional UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
+    ]
+
   let
     { transaction, merkleProof } = unwrap combinedMerkleProof
     { amount, index, previousMerkleRoot } = unwrap transaction
@@ -323,6 +330,7 @@ claimSpec = ado
       , merkleProof
       , index
       , previousMerkleRoot
+      , dsOutput
       }
 
 -- | Parse all parameters for the `burn` endpoint
