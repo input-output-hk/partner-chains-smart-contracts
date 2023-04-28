@@ -609,6 +609,12 @@ The version oracle allows four actions: initialisation, insertion, update, inval
 All actions except initalisation require a specific signature from the governance mechanism.
 Initialisation must occur together with the protocol initialisation, consuming the genesisUtxo.
 
+> Note: strictly speaking the _update_ action is not necessarry. It is just an optimised way of
+> inserting a new version and invalidating the old one; instead of burning and reminting the token
+> it moves it to the new UTxO. The end result is exactly the same.
+> One more caveat with the Update action is the duplication of the governance mechanism, both the
+> minting policy and the validator has to be able to execute the governance mechanism verification.
+
 **Message of the Update Signature:**
 
 ```haskell
@@ -668,3 +674,26 @@ OR
  - exactly one token exists in the transaction outputs (insertion) OR in the transaction inputs (invalidation)
  - `SignedVersionOracle` is built onchain using the `InsertVersionOracle` or `InvalidateVersionOracle` constructor respectively
  - `SignedVersionOracle` is signed by the governance mechanisms
+
+ > Note: the policy does not check whether it was sent to the correct validator address or not. If we want to add this check,
+ > we run into a circular dependency problem: both the validator and the minting policy has to know about each other. There are
+ > two possible solutions: injecting the validator address through the redeemer (for example part of the SignedVersionOracle);
+ > allowing mint to any arbitrary address, but hasing the signed message and putting the value to the token name of the minted
+ > token, so it cannot be tampered with. In this case, and additional validation has to happen when we find the VersionOracle on-chain
+
+#### 4.1.3. VersionOracle lookup
+
+We will make VersionOracle the single source of truth of finding validators and minting policies. This includes the following two cases:
+- regular reference scripts (as described in CIP33 a reference input holds a reference script instead of attaching the script itself to the transaction)
+- referencing currency symbol or validator hash of a different script (for example a validator wants to check whether a certain token was minted)
+
+The workflow is the following:
+1. off-chain: lookup the UTxOs of all the required scripts
+2. off-chain: adding any script dependencies as reference inputs to the transaction
+3. on-chain:
+      - in regular use of reference script, no extra change is required on-chain
+      - when a script depends on some other script, the validator has to find the correct UTxO from the reference scripts
+
+To help with the above tasks, we will implement the following utility functions:
+- offchain: find UTxO with reference script at the VersionOracleValidator address (`findVersionOracle(ScriptId, Version) -> Contract () TxOutRef`)
+- onchain: find the currency symbol or validator hash of a script from reference inputs (`getVersionedScript(VersionOracleCurrencySymbol, ScriptId, Version, TxInfo) -> ScriptHash`)
