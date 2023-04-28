@@ -294,7 +294,8 @@ getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
+    (unwrap sidechainParams).genesisUtxo
 
   policy ← fuelMintingPolicy $
     FUELMint
@@ -375,7 +376,7 @@ claimFUEL
 
     cs /\ tn ← getFuelAssetClass fuelMP
 
-    ds ← DistributedSet.getDs sidechainParams
+    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
     bech32BytesRecipient ← bech32BytesFromAddress recipient
     let
@@ -411,14 +412,14 @@ claimFUEL
         }
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
     } ← liftedM (msg "Couldn't find distributed set nodes") $
-      DistributedSet.findDsOutput ds cborMteHashedTn
+      DistributedSet.slowFindDsOutput ds cborMteHashedTn
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
     { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-      sidechainParams
+      (unwrap sidechainParams).genesisUtxo
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")

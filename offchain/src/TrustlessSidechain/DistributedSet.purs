@@ -23,7 +23,7 @@ module TrustlessSidechain.DistributedSet
   , getDs
   , getDsKeyPolicy
   , findDsConfOutput
-  , findDsOutput
+  , slowFindDsOutput
   ) where
 
 import Contract.Prelude
@@ -53,7 +53,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
   )
-import Contract.Utxos (utxosAt)
+import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
@@ -293,32 +293,35 @@ insertNode str (Node node)
           }
   | otherwise = Nothing
 
--- | `getDs` grabs the `Ds` type given `SidechainParams`
-getDs ∷ SidechainParams → Contract () Ds
-getDs (SidechainParams sp) = do
+-- | `getDs` grabs the `Ds` type given `TransactionInput`. Often, the
+-- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
+getDs ∷ TransactionInput → Contract () Ds
+getDs txInput = do
   let
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDs" }
 
-  dsConfPolicy' ← dsConfPolicy $ DsConfMint sp.genesisUtxo
+  dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
       (msg "Failed to get dsConfPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
--- | `getDsKeyPolicy` grabs the key policy and currency symbol
--- | (potentially throwing an error in the case that it is not possible).
+-- | `getDsKeyPolicy` grabs the key policy and currency symbol from the given
+-- | `TransactionInput` (potentially throwing an error in the case that it is
+-- | not possible). Often, the `TransactionInput` should be the `genesisUtxo`
+-- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
-  SidechainParams →
+  TransactionInput →
   Contract ()
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
-getDsKeyPolicy (SidechainParams sp) = do
+getDsKeyPolicy txInput = do
   let
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDsKeyPolicy" }
 
-  ds ← getDs (SidechainParams sp)
+  ds ← getDs txInput
   insertValidator' ← insertValidator ds
 
   let
@@ -355,7 +358,7 @@ findDsConfOutput ds = do
       "Couldn't derive distributed set configuration validator address"
       $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
 
-  utxos ← utxosAt scriptAddr
+  utxos ← Utxos.utxosAt scriptAddr
 
   out ←
     liftContractM
@@ -390,7 +393,7 @@ findDsConfOutput ds = do
 -- | Note: this is linear in the size of the distributed set... one should maintain
 -- | an efficient offchain index of the utxos, and set up the appropriate actions
 -- | when the list gets updated by someone else.
-findDsOutput ∷
+slowFindDsOutput ∷
   Ds →
   TokenName →
   Contract ()
@@ -404,10 +407,10 @@ findDsOutput ∷
         , nodes ∷ Ib Node
         }
     )
-findDsOutput ds tn = do
+slowFindDsOutput ds tn = do
   netId ← getNetworkId
   scriptAddr ← insertAddress netId ds
-  utxos ← utxosAt scriptAddr
+  utxos ← Utxos.utxosAt scriptAddr
   go $ Map.toUnfoldable utxos
 
   where
