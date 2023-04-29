@@ -31,6 +31,7 @@ import Contract.Prelude
 import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
+import Contract.Log as Log
 import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
 import Contract.PlutusData
@@ -56,6 +57,7 @@ import Contract.Transaction
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
+import Control.Alternative as Alternative
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
@@ -380,6 +382,99 @@ findDsConfOutput ds = do
     , confDat
     }
 
+-- | `findDsOutput` finds the transaction which we must insert to
+-- | (if it exists) for the distributed set from the given `TransactionInput`. It
+-- | returns:
+-- |
+-- |    - the `TransactionInput` of the output to spend;
+-- |    - the transaction output information;
+-- |    - the datum at that utxo to spend;
+-- |    - the `TokenName` of the key of the utxo we want to spend; and
+-- |    - the new nodes to insert (after replacing the given node)
+-- |
+-- | Note: this is linear in the size of the distributed set... one should maintain
+-- | an efficient offchain index of the utxos, and set up the appropriate actions
+-- | when the list gets updated by someone else.
+findDsOutput ∷
+  Ds →
+  TokenName →
+  TransactionInput →
+  Contract ()
+    ( Maybe
+        { inUtxo ∷
+            { nodeRef ∷ TransactionInput
+            , oNode ∷ TransactionOutputWithRefScript
+            , datNode ∷ DsDatum
+            , tnNode ∷ TokenName
+            }
+        , nodes ∷ Ib Node
+        }
+    )
+findDsOutput ds tn txInput = do
+  mTxOutput ← Utxos.getUtxo txInput
+  case mTxOutput of
+    Nothing → pure Nothing
+    Just txOut → do
+      let msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
+      { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
+
+      --  Grab the datum
+      dat ← liftContractM (msg "datum not a distributed set node")
+        $ outputDatumDatum (unwrap txOut).datum
+        >>= (fromData <<< unwrap)
+
+      --  Validate that this is a distributed set node / grab the necessary
+      -- information about it
+      -- `tn'` is the distributed set node onchain.
+      tn' ← do
+        netId ← getNetworkId
+        scriptAddr ← insertAddress netId ds
+
+        Alternative.unless
+          (scriptAddr == (unwrap txOut).address)
+          $ Monad.throwContractError
+          $ msg "provided transaction is not at distributed set node address"
+
+        keyNodeTn ← liftContractM
+          (msg "missing token name in distributed set node")
+          do
+            tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
+              (unwrap txOut).amount
+            Array.head $ AssocMap.keys tns
+
+        pure keyNodeTn
+
+      nodes ←
+        Monad.liftContractM
+          ( msg
+              "invalid distributed set node provided \
+              \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+              \but got `providedNode` "
+              <> show (getTokenName tn')
+              <> ", `newNode` "
+              <> show (getTokenName tn)
+              <> ", and `next` "
+              <> show (unwrap dat)
+          ) $ insertNode (getTokenName tn) $ mkNode
+          (getTokenName tn')
+          dat
+      pure $
+        Just
+          { inUtxo:
+              { nodeRef: txInput
+              , oNode:
+                  TransactionOutputWithRefScript
+                    { output: txOut
+                    , scriptRef: Nothing
+                    -- there shouldn't be a script ref for this. TODO: what
+                    -- are the consequences if this isn't the case?
+                    }
+              , datNode: dat
+              , tnNode: tn'
+              }
+          , nodes
+          }
+
 -- | `slowFindDsOutput` finds the transaction which we must insert to
 -- | (if it exists) for the distributed set. It returns:
 -- |
@@ -407,6 +502,9 @@ slowFindDsOutput ∷
         }
     )
 slowFindDsOutput ds tn = do
+  Log.logWarn'
+    "Finding the required distributed set node (this may take a while)..."
+
   netId ← getNetworkId
   scriptAddr ← insertAddress netId ds
   utxos ← Utxos.utxosAt scriptAddr
