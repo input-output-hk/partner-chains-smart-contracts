@@ -6,6 +6,7 @@ import Contract.Address (ownPaymentPubKeyHash, pubKeyHashAddress)
 import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -22,11 +23,13 @@ import Test.Utils
   , plutipGroup
   , toTxIn
   )
+import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
   , combinedMerkleProofToFuelParams
   , runFuelMP
+  , serialiseMteAndHash
   )
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -44,6 +47,7 @@ tests ∷ WrappedTests
 tests = plutipGroup "Claiming and burning FUEL tokens" $ do
   testScenarioSuccess
   testScenarioSuccess2
+  testScenarioSuccess3
   testScenarioFailure
   testScenarioFailure2
 
@@ -211,6 +215,86 @@ testScenarioSuccess2 =
           )
 
         pure unit
+
+-- | `testScenarioSuccess3` tests minting some tokens with the fast distributed
+-- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
+testScenarioSuccess3 ∷ PlutipTest
+testScenarioSuccess3 =
+  Mote.Monad.test "Claiming FUEL tokens with fast distributed set lookup"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+        ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        genesisUtxo ← getOwnTransactionInput
+        let
+          keyCount = 25
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            }
+
+        { sidechainParams } ← initSidechain initScParams
+        let
+          amount = BigInt.fromInt 5
+          recipient = pubKeyHashAddress pkh Nothing
+          index = BigInt.fromInt 0
+          previousMerkleRoot = Nothing
+          ownEntry =
+            MerkleTreeEntry
+              { index
+              , amount
+              , previousMerkleRoot
+              , recipient: ownRecipient
+              }
+
+          ownEntryBytes /\ ownEntryHash = unsafePartial
+            $ fromJust
+            $ serialiseMteAndHash ownEntry
+
+          ownEntryHashTn = unsafePartial $ fromJust $ Value.mkTokenName
+            ownEntryHash
+          merkleTree =
+            unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
+              [ ownEntryBytes ]
+
+          merkleProof = unsafePartial $ fromJust $ MerkleTree.lookupMp
+            ownEntryBytes
+            merkleTree
+
+        void $ Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries: [ ownEntry ]
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          }
+
+        void do
+          ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+          { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
+            $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
+
+          void $ runFuelMP sidechainParams
+            ( Mint
+                { amount
+                , recipient
+                , sidechainParams
+                , merkleProof
+                , index
+                , previousMerkleRoot
+                , dsUtxo: Just nodeRef
+                }
+            )
 
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =

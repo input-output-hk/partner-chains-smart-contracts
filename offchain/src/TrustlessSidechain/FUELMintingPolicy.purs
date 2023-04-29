@@ -12,6 +12,7 @@ module TrustlessSidechain.FUELMintingPolicy
   , addressFromCborBytes
   , bech32BytesFromAddress
   , combinedMerkleProofToFuelParams
+  , serialiseMteAndHash
   ) where
 
 import Contract.Prelude
@@ -173,6 +174,17 @@ newtype MerkleTreeEntry = MerkleTreeEntry
   , recipient ∷ Bech32Bytes
   , previousMerkleRoot ∷ Maybe RootHash
   }
+
+-- | `serialiseMteAndHash` serialises a merkle tree entry to bytes (cbor), and gives
+-- | the hash (blake2b256) of the bytes (in the left and right projections
+-- | respectively).
+-- | Note: this is compatible with how this is done onchain in
+-- | `TrustlessSidechain.MerkleRootTokenMintingPolicy` and
+-- | `TrustlessSidechain.FUELMintingPolicy`.
+serialiseMteAndHash ∷ MerkleTreeEntry → Maybe (ByteArray /\ ByteArray)
+serialiseMteAndHash mte = case serialiseData $ toData mte of
+  Just bytes → Just $ bytes /\ blake2b256Hash bytes
+  Nothing → Nothing
 
 instance FromData MerkleTreeEntry where
   fromData (Constr n [ a, b, c, d ]) | n == zero = ado
@@ -389,16 +401,15 @@ claimFUEL
           , recipient: bech32BytesRecipient
           }
 
-    entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")
-      $ serialiseData
-      $ toData
-          merkleTreeEntry
-
-    let rootHash = rootMp entryBytes merkleProof
+    entryBytes /\ cborMteHashed ←
+      liftContractM (msg "Cannot serialise merkle tree entry") $
+        serialiseMteAndHash merkleTreeEntry
 
     cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
       $ mkTokenName
-      $ blake2b256Hash entryBytes
+      $ cborMteHashed
+
+    let rootHash = rootMp entryBytes merkleProof
 
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
