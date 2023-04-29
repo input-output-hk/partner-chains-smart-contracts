@@ -24,6 +24,7 @@ module TrustlessSidechain.DistributedSet
   , getDsKeyPolicy
   , findDsConfOutput
   , slowFindDsOutput
+  , findDsOutput
   ) where
 
 import Contract.Prelude
@@ -64,7 +65,6 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -400,80 +400,78 @@ findDsOutput ∷
   TokenName →
   TransactionInput →
   Contract ()
-    ( Maybe
-        { inUtxo ∷
-            { nodeRef ∷ TransactionInput
-            , oNode ∷ TransactionOutputWithRefScript
-            , datNode ∷ DsDatum
-            , tnNode ∷ TokenName
-            }
-        , nodes ∷ Ib Node
+    { inUtxo ∷
+        { nodeRef ∷ TransactionInput
+        , oNode ∷ TransactionOutputWithRefScript
+        , datNode ∷ DsDatum
+        , tnNode ∷ TokenName
         }
-    )
+    , nodes ∷ Ib Node
+    }
 findDsOutput ds tn txInput = do
-  mTxOutput ← Utxos.getUtxo txInput
-  case mTxOutput of
-    Nothing → pure Nothing
-    Just txOut → do
-      let msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
-      { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
+  let msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
 
-      --  Grab the datum
-      dat ← liftContractM (msg "datum not a distributed set node")
-        $ outputDatumDatum (unwrap txOut).datum
-        >>= (fromData <<< unwrap)
+  txOut ← Monad.liftedM (msg "failed to find provided distributed set UTxO") $
+    Utxos.getUtxo txInput
 
-      --  Validate that this is a distributed set node / grab the necessary
-      -- information about it
-      -- `tn'` is the distributed set node onchain.
-      tn' ← do
-        netId ← getNetworkId
-        scriptAddr ← insertAddress netId ds
+  { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
 
-        Alternative.unless
-          (scriptAddr == (unwrap txOut).address)
-          $ Monad.throwContractError
-          $ msg "provided transaction is not at distributed set node address"
+  --  Grab the datum
+  dat ← liftContractM (msg "datum not a distributed set node")
+    $ outputDatumDatum (unwrap txOut).datum
+    >>= (fromData <<< unwrap)
 
-        keyNodeTn ← liftContractM
-          (msg "missing token name in distributed set node")
-          do
-            tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
-              (unwrap txOut).amount
-            Array.head $ AssocMap.keys tns
+  --  Validate that this is a distributed set node / grab the necessary
+  -- information about it
+  -- `tn'` is the distributed set node onchain.
+  tn' ← do
+    netId ← getNetworkId
+    scriptAddr ← insertAddress netId ds
 
-        pure keyNodeTn
+    Alternative.unless
+      (scriptAddr == (unwrap txOut).address)
+      $ Monad.throwContractError
+      $ msg "provided transaction is not at distributed set node address"
 
-      nodes ←
-        Monad.liftContractM
-          ( msg
-              "invalid distributed set node provided \
-              \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
-              \but got `providedNode` "
-              <> show (getTokenName tn')
-              <> ", `newNode` "
-              <> show (getTokenName tn)
-              <> ", and `next` "
-              <> show (unwrap dat)
-          ) $ insertNode (getTokenName tn) $ mkNode
-          (getTokenName tn')
-          dat
-      pure $
-        Just
-          { inUtxo:
-              { nodeRef: txInput
-              , oNode:
-                  TransactionOutputWithRefScript
-                    { output: txOut
-                    , scriptRef: Nothing
-                    -- there shouldn't be a script ref for this. TODO: what
-                    -- are the consequences if this isn't the case?
-                    }
-              , datNode: dat
-              , tnNode: tn'
+    keyNodeTn ← liftContractM
+      (msg "missing token name in distributed set node")
+      do
+        tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
+          (unwrap txOut).amount
+        Array.head $ AssocMap.keys tns
+
+    pure keyNodeTn
+
+  nodes ←
+    Monad.liftContractM
+      ( msg
+          "invalid distributed set node provided \
+          \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+          \but got `providedNode` "
+          <> show (getTokenName tn')
+          <> ", `newNode` "
+          <> show (getTokenName tn)
+          <> ", and `next` "
+          <> show (unwrap dat)
+      ) $ insertNode (getTokenName tn) $ mkNode
+      (getTokenName tn')
+      dat
+
+  pure
+    { inUtxo:
+        { nodeRef: txInput
+        , oNode:
+            TransactionOutputWithRefScript
+              { output: txOut
+              , scriptRef: Nothing
+              -- There shouldn't be a script ref for this... TODO: what
+              -- are the consequences if this isn't the case?
               }
-          , nodes
-          }
+        , datNode: dat
+        , tnNode: tn'
+        }
+    , nodes
+    }
 
 -- | `slowFindDsOutput` finds the transaction which we must insert to
 -- | (if it exists) for the distributed set. It returns:

@@ -231,7 +231,7 @@ combinedMerkleProofToFuelParams
           , sidechainParams
           , index: transaction'.index
           , previousMerkleRoot: transaction'.previousMerkleRoot
-          , dsOutput: Nothing
+          , dsUtxo: Nothing
           }
 
 instance Show CombinedMerkleProof where
@@ -321,7 +321,7 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
-      , dsOutput ∷ Maybe TransactionInput
+      , dsUtxo ∷ Maybe TransactionInput
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -357,7 +357,7 @@ claimFUEL ∷
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
   , previousMerkleRoot ∷ Maybe RootHash
-  , dsOutput ∷ Maybe TransactionInput
+  , dsUtxo ∷ Maybe TransactionInput
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
@@ -369,7 +369,7 @@ claimFUEL
   , sidechainParams
   , index
   , previousMerkleRoot
-  , dsOutput
+  , dsUtxo
   } =
   do
     let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
@@ -412,14 +412,15 @@ claimFUEL
         , tnNode
         }
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
-    } ← liftedM (msg "Couldn't find distributed set nodes") $
-      DistributedSet.slowFindDsOutput ds cborMteHashedTn
+    } ← case dsUtxo of
+      Nothing → liftedM (msg "Couldn't find distributed set nodes") $
+        DistributedSet.slowFindDsOutput ds cborMteHashedTn
+      Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
-    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
     { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 

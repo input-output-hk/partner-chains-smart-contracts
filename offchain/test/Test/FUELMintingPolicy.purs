@@ -111,7 +111,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
             , merkleProof
             , index
             , previousMerkleRoot
-            , dsOutput: Nothing
+            , dsUtxo: Nothing
             }
         )
 
@@ -243,7 +243,7 @@ testScenarioFailure =
             , amount: BigInt.fromInt 1
             , index: BigInt.fromInt 0
             , previousMerkleRoot: Nothing
-            , dsOutput: Nothing
+            , dsUtxo: Nothing
             }
           void $ runFuelMP scParams $ Burn
             { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }

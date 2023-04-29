@@ -118,7 +118,6 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
       validator ← updateCommitteeHashValidator uch
       getAddr validator
 
-  ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
   dsInsertValidatorAddr ← do
     validator ← DistributedSet.insertValidator ds
     getAddr validator

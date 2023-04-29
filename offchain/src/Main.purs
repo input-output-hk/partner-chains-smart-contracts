@@ -79,7 +79,7 @@ runEndpoint ∷ SidechainParams → Endpoint → Contract () EndpointResp
 runEndpoint scParams =
   case _ of
     ClaimAct
-      { amount, recipient, merkleProof, index, previousMerkleRoot, dsOutput } →
+      { amount, recipient, merkleProof, index, previousMerkleRoot, dsUtxo } →
       runFuelMP sp
         ( Mint
             { amount
@@ -88,7 +88,7 @@ runEndpoint scParams =
             , merkleProof
             , index
             , previousMerkleRoot
-            , dsOutput
+            , dsUtxo
             }
         )
         <#> unwrap

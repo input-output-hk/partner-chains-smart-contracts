@@ -313,7 +313,7 @@ claimSpec = ado
         , metavar "CBOR"
         , help "CBOR-encoded Combined Merkle Proof"
         ]
-  dsOutput ← optional $ option transactionInput $ fold
+  dsUtxo ← optional $ option transactionInput $ fold
     [ long "distributed-set-utxo"
     , metavar "TX_ID#TX_IDX"
     , help
@@ -330,7 +330,7 @@ claimSpec = ado
       , merkleProof
       , index
       , previousMerkleRoot
-      , dsOutput
+      , dsUtxo
       }
 
 -- | Parse all parameters for the `burn` endpoint
