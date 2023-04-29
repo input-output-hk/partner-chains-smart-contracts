@@ -386,15 +386,15 @@ findDsConfOutput ds = do
 -- | (if it exists) for the distributed set from the given `TransactionInput`. It
 -- | returns:
 -- |
--- |    - the `TransactionInput` of the output to spend;
+-- |    - the `TransactionInput` of the output to spend (i.e., the provided
+-- |    input);
 -- |    - the transaction output information;
 -- |    - the datum at that utxo to spend;
 -- |    - the `TokenName` of the key of the utxo we want to spend; and
 -- |    - the new nodes to insert (after replacing the given node)
 -- |
--- | Note: this is linear in the size of the distributed set... one should maintain
--- | an efficient offchain index of the utxos, and set up the appropriate actions
--- | when the list gets updated by someone else.
+-- | See `slowFindDsOutput` for an alternative lookup function which is much
+-- | slower!
 findDsOutput ∷
   Ds →
   TokenName →

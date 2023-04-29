@@ -317,7 +317,7 @@ claimSpec = ado
     [ long "distributed-set-utxo"
     , metavar "TX_ID#TX_IDX"
     , help
-        "Optional UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
+        "UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
     ]
 
   let
