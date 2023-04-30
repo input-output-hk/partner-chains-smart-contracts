@@ -16,7 +16,7 @@ packages: ./.
 
 tests: true
 benchmarks: true
-test-show-detail: direct
+test-show-details: direct
 
 allow-newer:
     *:aeson
