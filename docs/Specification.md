@@ -199,7 +199,8 @@ data MintParams = MintParams
   , dsUtxo:: Maybe TxOutRef
     -- ^ 'dsUtxo' is used exclusively offchain to potentially avoid a linear
     -- scan through the UTxO set to ensure uniqueness of claiming FUEL.
-    -- See [footnote [1] here](./DistributedSet.md) for details.
+    -- See [footnote [1] in the distributed set document](./DistributedSet.md)
+    -- for details.
   }
 ```
 

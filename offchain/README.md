@@ -196,7 +196,7 @@ nix run .#sidechain-main-cli -- claim \
   --threshold 2/3 \
   --combined-proof aabb \
   --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
-    # ^ Optional flag to avoid linear scan through UTxO set
+    # ^ Optional flag to avoid a linear scan through the UTxO set
 ```
 
 #### 3.1.4. Burn user owned FUEL tokens
