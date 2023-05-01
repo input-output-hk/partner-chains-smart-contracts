@@ -384,7 +384,7 @@ claimFUEL
   , dsUtxo
   } =
   do
-    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
+    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "claimFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
 
     cs /\ tn ← getFuelAssetClass fuelMP
@@ -405,7 +405,7 @@ claimFUEL
       liftContractM (msg "Cannot serialise merkle tree entry") $
         serialiseMteAndHash merkleTreeEntry
 
-    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
+    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limit")
       $ mkTokenName
       $ cborMteHashed
 
