@@ -164,13 +164,13 @@ instance (Arbitrary a, Prelude.Ord a) => Arbitrary (UniqueNonEmpty a) where
   arbitrary = Prelude.fmap UniqueNonEmpty $ do
     h <- arbitrary
     t <- arbitrary
-    Prelude.pure $ case List.uncons . List.nub . List.sort $ h : t of
+    Prelude.pure $ case List.uncons . List.nub $ h : t of
       -- Technically this is impossible, but if it happens, we just make an
       -- empty list of just the head.
       Nothing -> h :| []
       Just (h', t') -> h' :| t'
 
-  -- To ensure our sort invariant doesn't break, we only drop list elements,
+  -- To ensure our invariant doesn't break, we only drop list elements,
   -- never shrink them.
   shrink (UniqueNonEmpty xs) =
     Prelude.fmap UniqueNonEmpty (liftShrink (const []) xs)
