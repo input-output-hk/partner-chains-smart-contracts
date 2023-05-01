@@ -281,6 +281,8 @@ testScenarioSuccess3 =
         void do
           ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
+          -- we first grab the distributed set UTxO (the slow way as we have no
+          -- other mechanism for doing this with ctl)
           { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
             $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
 
@@ -292,7 +294,7 @@ testScenarioSuccess3 =
                 , merkleProof
                 , index
                 , previousMerkleRoot
-                , dsUtxo: Just nodeRef
+                , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
                 }
             )
 
