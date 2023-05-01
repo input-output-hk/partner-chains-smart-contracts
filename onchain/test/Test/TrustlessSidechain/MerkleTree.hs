@@ -160,7 +160,7 @@ instance Arbitrary1 NonEmpty where
 -- violate invariants by doing so.
 newtype UniqueNonEmpty a = UniqueNonEmpty (NonEmpty a)
 
-instance (Arbitrary a, Prelude.Ord a) => Arbitrary (UniqueNonEmpty a) where
+instance (Arbitrary a, Prelude.Eq a) => Arbitrary (UniqueNonEmpty a) where
   arbitrary = Prelude.fmap UniqueNonEmpty $ do
     h <- arbitrary
     t <- arbitrary
@@ -188,7 +188,7 @@ data NonEmptyPlus a
   | Excluding (NonEmpty a) a
   deriving stock (Prelude.Show)
 
-instance (Arbitrary a, Prelude.Ord a) => Arbitrary (NonEmptyPlus a) where
+instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
   arbitrary = Gen.oneof [mkIncluding, mkExcluding]
     where
       -- We generate a non-empty list of a, pick a random element, and go with
@@ -336,7 +336,7 @@ forAllHelper =
 
 -- Helper for using NonEmptyPlus in properties. Wires in coverage automatically.
 forAllNonEmptyPlus ::
-  (Prelude.Show a, Arbitrary a, Prelude.Ord a) =>
+  (Prelude.Show a, Arbitrary a, Prelude.Eq a) =>
   (NonEmpty a -> a -> Property) ->
   Property
 forAllNonEmptyPlus cb =
