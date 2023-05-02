@@ -132,9 +132,9 @@
         in
         pkgs.purescriptProject {
           inherit src pkgs projectName;
-          packageJson = "${src}/package.json";
-          packageLock = "${src}/package-lock.json";
-          spagoPackages = "${src}/spago-packages.nix";
+          packageJson = ./offchain/package.json;
+          packageLock = ./offchain/package-lock.json;
+          spagoPackages = ./offchain/spago-packages.nix;
           withRuntime = true;
           shell.packages = with pkgs; [
             # Shell Utils
