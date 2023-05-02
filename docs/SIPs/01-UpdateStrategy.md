@@ -609,7 +609,7 @@ The version oracle allows four actions: initialisation, insertion, update, inval
 All actions except initalisation require a specific signature from the governance mechanism.
 Initialisation must occur together with the protocol initialisation, consuming the genesisUtxo.
 
-> Note: strictly speaking the _update_ action is not necessarry. It is just an optimised way of
+> Note: strictly speaking the _update_ action is not necessary. It is just an optimised way of
 > inserting a new version and invalidating the old one; instead of burning and reminting the token
 > it moves it to the new UTxO. The end result is exactly the same.
 > One more caveat with the Update action is the duplication of the governance mechanism, both the
