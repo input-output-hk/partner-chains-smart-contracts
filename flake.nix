@@ -7,13 +7,13 @@
   };
 
   inputs = {
+    plutip.url = "github:mlabs-haskell/plutip/8d1795d9ac3f9c6f31381104b25c71576eeba009";
+    haskell-nix.follows = "plutip/haskell-nix";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
-    haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
-    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
-    CHaP.follows = "cardano-transaction-lib/CHaP";
-    plutip.follows = "cardano-transaction-lib/plutip";
-
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v4.0.2";
+    iohk-nix.follows = "plutip/iohk-nix";
+    CHaP.follows = "plutip/CHaP";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v5.0.0";
+    ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/"; #FIXME shouldn't be needed
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -21,7 +21,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ogmios-datum-cache, ... }@inputs:
     let
       vasilDevRuntimeConfig = {
         network = {
@@ -326,6 +326,10 @@
         upToDatePlutusScriptCheck = upToDatePlutusScriptCheckFor system;
         trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
           testMain = "Test.Main";
+          buildInputs = with (nixpkgsFor system); [
+            postgresql # FIXME shoudln't be needed, for some reason tests expect `initdb` (postgresql) in PATH
+            ogmios-datum-cache.packages.${system}.ogmios-datum-cache # FIXME shouldn't be needed
+          ];
         };
       });
 
