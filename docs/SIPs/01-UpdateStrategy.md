@@ -678,7 +678,7 @@ OR
  > Note: the policy does not check whether it was sent to the correct validator address or not. If we want to add this check,
  > we run into a circular dependency problem: both the validator and the minting policy has to know about each other. There are
  > two possible solutions: injecting the validator address through the redeemer (for example part of the SignedVersionOracle);
- > allowing mint to any arbitrary address, but hasing the signed message and putting the value to the token name of the minted
+ > allowing mint to any arbitrary address, but hashing the signed message and putting the value to the token name of the minted
  > token, so it cannot be tampered with. In this case, and additional validation has to happen when we find the VersionOracle on-chain
 
 #### 4.1.3. VersionOracle lookup
