@@ -93,8 +93,13 @@ The words MUST, SHOULD, MUST NOT, SHOULD NOT and MAY are defined as per [RFC
 
 The `--strict` mode of [`psa`](https://github.com/natefaubion/purescript-psa)
 MUST be used for any build; this does not apply to dependencies. Furthermore,
-errors MUST be stashed. We achieve both of these by using
-`spago build --purs-args="--stash --censor-lib --strict"`.
+errors MUST be stashed. Lastly, `UserDefinedWarning` MUST be disabled. The
+following command illustrates how to set this:
+
+```
+spago build --purs-args="--stash --censor-lib --censor-codes=UserDefinedWarning
+--strict
+```
 
 ### Justification
 
@@ -118,6 +123,16 @@ warnings): if something successfully compiles, or fails but doesn't change,
 errors will not be re-displayed unless their source module changes. This can be
 annoying, especially when working across multiple modules: thus, we use `psa`'s
 stashing support.
+
+We ignore `UserDefinedWarning` due to a set of warnings from CTL which are
+benign, specifically warnings like these:
+
+```
+This function returns only one `PaymentPubKeyHash` even in case multiple `PaymentPubKeysHash`es are available. Use `ownPaymentPubKeysHashes` instead
+```
+
+While it would be better to disable these on a per-file basis, currently,
+PureScript doesn't allow this, hence our solution.
 
 ## Code formatting
 
@@ -382,7 +397,35 @@ Every module-level identifier, and `where` binding, MUST have a type signature.
 Any type variables MUST have kind signatures when first introduced.
 `let`-bindings CAN have a type signature.
 
+Type holes MUST NOT be left in finished code: they CAN be used during
+development, but MUST be filled in before code is committed.
+
 ### Justification
+
+The power of PureScript's type system is significant: it allows us to describe
+(and actively document) functionality in a way other type systems can't, which
+helps us not only avoid mistakes, but can even guide us towards a solution.
+While PureScript _can_ infer (many) types even if we don't provide a signature,
+this is suboptimal for several reasons:
+
+* Having a signature acts as 'active documentation' which both informs the
+  reader what the function can do, and is checkable by the compiler.
+* Signatures together with [typed
+  holes](https://github.com/purescript/purescript/issues/1283#issuecomment-423122704)
+  can be a huge development aid, as they allow us to figure out what we need to
+  'fill the hole'.
+* Many signatures cannot be inferred (especially involving row types or type
+  classes, or where types would be ambiguous).
+
+All of the above are advantageous enough that we make module-level signatures
+mandatory. We also mandate signatures for `where` binds, as these often define
+complex functionality such as helper functions, while `let` binds are usually
+for simpler cases (though they can benefit from signatures in any case).
+
+Typed holes are a useful development tool, but they shouldn't be left in
+finished code: even if the signature is inferrable, it removes the benefit of
+having a signature in the first place. Thus, we allow their use, but any code
+that gets committed cannot contain them.
 
 ## Other
 
@@ -455,6 +498,25 @@ publically visible classes have laws, and that any instances we write must
 follow laws, if they exist. We permit non-exported type class instances to lack
 laws, as these are often 'helpers' for functionality and aren't otherwise
 visible.
+
+## `Generic` derivations require fully open constructors
+
+If a type has a `Generic` derivation, it MUST export its data constructors.
+
+### Justification
+
+`Generic` gives us two capabilities for any instance:
+
+* The ability to convert any value of that type into a 'general' representation;
+  and
+* The ability to take that representation and convert it back into a value of
+  that type.
+
+These two capabilities basically mean that the data constructors of that type
+are de-facto exposed: hiding them away doesn't stop people constructing whatever
+values of that type its data constructors permit. If this is undesirable for
+some reason (such as invariants that the type system doesn't enforce), a
+`Generic` instance should not be defined for the type.
 
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman

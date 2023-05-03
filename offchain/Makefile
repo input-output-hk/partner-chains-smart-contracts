@@ -5,7 +5,7 @@ SHELL := bash
 
 BROWSER_RUNTIME ?= 1
 
-spago-args := --purs-args="--censor-lib --stash --strict"
+spago-args := --purs-args="--censor-lib --stash --strict --censor-codes=UserDefinedWarning"
 ps-sources := $(shell fd -epurs)
 js-sources := $(shell fd -ejs)
 dhall-sources := $(shell fd -edhall)
