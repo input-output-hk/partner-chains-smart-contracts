@@ -58,7 +58,6 @@ import Contract.Transaction
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
-import Control.Alternative as Alternative
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
@@ -428,7 +427,7 @@ findDsOutput ds tn txInput = do
     netId ← getNetworkId
     scriptAddr ← insertAddress netId ds
 
-    Alternative.unless
+    unless
       (scriptAddr == (unwrap txOut).address)
       $ Monad.throwContractError
       $ msg "provided transaction is not at distributed set node address"
