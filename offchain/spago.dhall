@@ -1,6 +1,7 @@
 { name = "ctl-test"
 , dependencies =
-  [ "argonaut-core"
+  [ "argonaut"
+  , "argonaut-core"
   , "arrays"
   , "bifunctors"
   , "bigints"

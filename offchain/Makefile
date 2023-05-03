@@ -1,7 +1,7 @@
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
-.PHONY: dev build test check-format update-scripts format spago2nix clean
+.PHONY: source-build dev build test check-format update-scripts format spago2nix clean
 
 BROWSER_RUNTIME ?= 1
 
@@ -16,6 +16,9 @@ raw-scripts-purs := src/TrustlessSidechain/RawScripts.purs
 
 ps-entrypoint := Main
 ps-test-entrypoint := Test.Main
+
+source-build:
+	spago build ${spago-args}
 
 dev: output.js
 	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack-dev-server --progress

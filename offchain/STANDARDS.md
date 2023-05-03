@@ -222,6 +222,14 @@ Exceptions are granted when:
 * The import would cause a name clash anyway; or
 * We have to import a data type qualified as well.
 
+Each module imported named MUST have a unique prefix. Thus, the following is not
+allowed:
+
+```purescript
+import Foo as Foo
+import Bar as Foo
+```
+
 All modules MUST import `Contract.Prelude` from `ctl` as so:
 
 ```purescript

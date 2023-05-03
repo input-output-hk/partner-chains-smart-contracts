@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, launchAff_, runContract)
 import Control.Monad.Error.Class (throwError)
+import Data.Argonaut (Json)
 import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.List as List
@@ -11,14 +12,29 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
-  , CandidatePermissionMintParams(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
+  , CandidatePermissionMintParams(CandidatePermissionMintParams)
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
-import TrustlessSidechain.EndpointResp (EndpointResp(..), stringifyEndpointResp)
+import TrustlessSidechain.EndpointResp
+  ( EndpointResp
+      ( ClaimActResp
+      , BurnActResp
+      , CommitteeCandidateRegResp
+      , CandidatePermissionTokenResp
+      , CommitteeCandidateDeregResp
+      , GetAddrsResp
+      , CommitteeHashResp
+      , SaveRootResp
+      , InitResp
+      , CommitteeHandoverResp
+      , SaveCheckpointResp
+      )
+  , stringifyEndpointResp
+  )
 import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
@@ -29,7 +45,23 @@ import TrustlessSidechain.InitSidechain
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.Options.Specs (options)
-import TrustlessSidechain.Options.Types (Endpoint(..), Options)
+import TrustlessSidechain.Options.Types
+  ( Endpoint
+      ( ClaimAct
+      , BurnAct
+      , GetAddrs
+      , CommitteeCandidateReg
+      , CandidiatePermissionTokenAct
+      , CommitteeCandidateDereg
+      , CommitteeHash
+      , SaveRoot
+      , InitTokens
+      , Init
+      , CommitteeHandover
+      , SaveCheckpoint
+      )
+  , Options
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
@@ -69,7 +101,7 @@ getOptions = do
   execParser (options config)
 
   where
-  decodeWith ∷ ∀ e a. Show e ⇒ (_ → Either e a) → _ → Effect (Maybe a)
+  decodeWith ∷ ∀ e a. Show e ⇒ (Json → Either e a) → String → Effect (Maybe a)
   decodeWith decode file = do
     maybeJson ← map hush (ConfigFile.readJson file)
     traverse (decode >>> lmap (show >>> error) >>> liftEither) maybeJson
