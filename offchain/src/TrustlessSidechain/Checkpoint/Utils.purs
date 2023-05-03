@@ -17,8 +17,8 @@ import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
+  ( MintingPolicy(PlutusMintingPolicy)
+  , Validator(Validator)
   )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope

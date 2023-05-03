@@ -9,21 +9,26 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
-import Contract.PlutusData (Datum(..), Redeemer(..), fromData, toData)
+import Contract.PlutusData
+  ( Datum(Datum)
+  , Redeemer(Redeemer)
+  , fromData
+  , toData
+  )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
   , outputDatumDatum
   , signTransaction
   , submit
   )
-import Contract.TxConstraints (DatumPresence(..))
+import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
@@ -50,7 +55,7 @@ import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash
   ( getCommitteeHashPolicy
@@ -65,7 +70,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract () TransactionHash
 saveCheckpoint = runSaveCheckpoint <<< normalizeSignatures
@@ -225,8 +229,8 @@ runSaveCheckpoint
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "Checkpoint", fun: _ }
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
+report = Logging.mkReport <<< { mod: "Checkpoint", fun: _ }
 
 -- | `getCheckpointPolicy` grabs the checkpoint hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
