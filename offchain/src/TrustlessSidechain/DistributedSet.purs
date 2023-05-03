@@ -463,8 +463,7 @@ findDsOutput ds tn txInput = do
             TransactionOutputWithRefScript
               { output: txOut
               , scriptRef: Nothing
-              -- There shouldn't be a script ref for this... TODO: what
-              -- are the consequences if this isn't the case?
+              -- There shouldn't be a script ref for this...
               }
         , datNode: dat
         , tnNode: tn'
