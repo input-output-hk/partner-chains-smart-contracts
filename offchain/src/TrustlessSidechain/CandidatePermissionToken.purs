@@ -14,7 +14,7 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData (class ToData, PlutusData(..))
+import Contract.PlutusData (class ToData, PlutusData(Constr))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -24,7 +24,7 @@ import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
   , signTransaction
@@ -209,5 +209,5 @@ runCandidatePermissionToken
   pure { transactionId: txId, candidatePermissionCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = Utils.Logging.mkReport <<< { mod: "CandidatePermissionToken", fun: _ }

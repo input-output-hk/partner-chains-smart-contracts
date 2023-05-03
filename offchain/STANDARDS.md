@@ -248,6 +248,10 @@ import Foo as Foo
 import Bar as Bar
 ```
 
+The `Contract.Prelude` import MUST be listed first, with a single blank line
+between it and other imports: this is enforced by our tooling, and is the only
+exception to the above.
+
 ### Justification
 
 One of the biggest challenges for modules which depend on other modules
@@ -274,7 +278,7 @@ to import many CTL-related identifiers anyway. `Contract.Prelude` solves both
 problems, as it includes both useful builtin identifiers and useful CTL
 identifiers with only a single import. For reasons of clarity and consistency,
 we only allow the CTL prelude, and allow it to be imported without either naming
-or restriction.
+or restriction. We also 'single it out' in the import block for clarity.
 
 Separating imports into 'sections' seems initially like a logical idea. However,
 it actually creates more problems than it solves: firstly, it makes git diffs
@@ -407,6 +411,12 @@ Any type variables MUST have kind signatures when first introduced.
 
 Type holes MUST NOT be left in finished code: they CAN be used during
 development, but MUST be filled in before code is committed.
+
+Each identifier MUST have its own signature; thus, the following is wrong:
+
+```purescript
+foo, bar :: String
+```
 
 ### Justification
 

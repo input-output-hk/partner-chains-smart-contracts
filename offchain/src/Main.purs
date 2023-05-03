@@ -125,6 +125,7 @@ runEndpoint scParams =
         >>> { transactionId: _ }
         >>> ClaimActResp
       where
+      sp ∷ _
       sp = scParams
 
     BurnAct { amount, recipient } →
