@@ -43,8 +43,7 @@ import TrustlessSidechain.Checkpoint.Types
   , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointAssetClass
-  , checkpointPolicy
+  ( checkpointPolicy
   , checkpointValidator
   , findCheckpointUtxo
   , initCheckpointMintTn

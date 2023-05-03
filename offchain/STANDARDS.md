@@ -143,6 +143,14 @@ source file MUST be formatted according to `dhall lint`.
 Each PureScript or JavaScript source line MUST be at most 100 characters wide,
 and SHOULD be at most 80 characters wide.
 
+Type class instance definitions MUST be separated by one blank line. Thus, the
+following is wrong:
+
+```purescript
+derive instance Generic Foo _
+derive instance Newtype Foo _
+```
+
 ### Justification
 
 Consistency is the most important goal of readable codebases. Having a single,
@@ -159,6 +167,14 @@ descriptive identifiers or long string constants), but a line length of over 100
 characters becomes difficult to read even without a split screen. We don't
 _enforce_ a maximum of 80 characters for this exact reason; some judgment is
 allowed.
+
+Keeping good whitespace separation between significant units of meaning
+(function definitions, type definitions and so on) makes it visually much
+clearer where one unit ends and another unit begins. This applies just as much
+to type class instances, if not more so, as they range in length from a single
+line (typical `Newtype` or `Generic` instances) to many lines, with possibly
+their own helper binds (many others). Keeping them all separated with one blank
+line ensures that it's clear where each instance ends.
 
 # Code practices
 
@@ -309,7 +325,8 @@ imported from.
 
 When re-exporting identifiers from another module, the module where the
 re-exports are coming from MUST be a named import. Furthermore, the export list
-MUST qualify the identifier, even if it's available unqualified.
+MUST qualify the identifier, even if it's available unqualified. `module`
+re-exports MUST NOT be used.
 
 ### Justification
 
@@ -334,7 +351,8 @@ identifiers, but gain considerable clarity and ease of reading.
 Re-exports from another module need to be clearly designated, especially when
 the module also exports some of its own identifiers. To help this, we require
 naming any module from which we re-export an identifier, and using a qualified
-name.
+name. By extension, we also prohibit re-exporting of modules wholesale: if you
+find yourself needing to do this, your design is wrong.
 
 ## Versioning and changelogging
 

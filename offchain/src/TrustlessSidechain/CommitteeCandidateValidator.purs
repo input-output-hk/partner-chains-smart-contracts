@@ -1,4 +1,12 @@
-module TrustlessSidechain.CommitteeCandidateValidator where
+module TrustlessSidechain.CommitteeCandidateValidator
+  ( RegisterParams(..)
+  , DeregisterParams(..)
+  , getCommitteeCandidateValidator
+  , BlockProducerRegistration(..)
+  , BlockProducerRegistrationMsg(..)
+  , register
+  , deregister
+  ) where
 
 import Contract.Prelude
 
@@ -21,7 +29,7 @@ import Contract.Monad
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , Datum(..)
+  , Datum(Datum)
   , PlutusData(Constr)
   , fromData
   , toData
@@ -29,7 +37,7 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( Validator(..)
+  ( Validator(Validator)
   , applyArgs
   , validatorHash
   )
@@ -59,7 +67,7 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Record as Record
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -104,7 +112,9 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   }
 
 derive instance Generic BlockProducerRegistration _
+
 derive instance Newtype BlockProducerRegistration _
+
 instance ToData BlockProducerRegistration where
   toData
     ( BlockProducerRegistration
@@ -268,5 +278,5 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   pure txId
 
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }
