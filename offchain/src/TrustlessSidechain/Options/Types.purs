@@ -126,6 +126,11 @@ data Endpoint
       , sidechainEpoch ∷ BigInt
       }
 
+derive instance Generic Endpoint _
+
+instance Show Endpoint where
+  show = genericShow
+
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain
 type CandidatePermissionTokenMintInit =
@@ -138,11 +143,6 @@ type CandidatePermissionTokenMintInit =
     -- because this is an applicative parser
     candidatePermissionTokenUtxo ∷ Maybe TransactionInput
   }
-
-derive instance Generic Endpoint _
-
-instance Show Endpoint where
-  show = genericShow
 
 -- | `CommitteeSignatures` is the committee members' public keys with associated
 -- | signatures (if such a signature exists)
