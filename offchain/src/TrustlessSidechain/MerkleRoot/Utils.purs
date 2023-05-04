@@ -24,7 +24,10 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Scripts (MintingPolicy(..), Validator(..))
+import Contract.Scripts
+  ( MintingPolicy(PlutusMintingPolicy)
+  , Validator(Validator)
+  )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
   ( decodeTextEnvelope
@@ -35,7 +38,7 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
-  , SaveRootParams(..)
+  , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint
   )
 import TrustlessSidechain.MerkleTree (RootHash)
