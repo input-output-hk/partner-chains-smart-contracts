@@ -27,8 +27,8 @@ places:
 3. [Checkpointing](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#7-checkpointing)
 
 In all three cases, the same code for the committee certificate verifications
-is hardcoded inside each of those systems i.e., each of those systems have
-hardcoded logic to verify that enough of the current committee onchain has
+is duplicated inside each of those systems i.e., each of those systems have
+duplicated logic to verify that enough of the current committee onchain has
 signed a message.
 To this end, each of these systems are:
 
@@ -37,8 +37,8 @@ To this end, each of these systems are:
   (generated from the [`initUtxo` from the initialize sidechain
   transaction](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#1-initialise-contract))
   to allow them to identify the current committee on chain; and
-- have hardcoded verification logic to ensure that strictly more than the
-  threshold has signed the current committee.
+- have the same verification logic to ensure that strictly more than the
+  threshold of the current committee has signed the message.
 
 And obviously, before any of these systems may function, one must of course
 mint the `CommitteeHashPolicy` NFT which uniquely identifies the current
@@ -46,25 +46,28 @@ committee on chain.
 
 This proposal will describe:
 
-1. modularizing the hardcoded logic of committee certificate verification in a
-   single minting policy (that scripts can be parameterized by); and
+1. modularizing the duplicated logic of committee certificate verification in a
+   single minting policy (that scripts can be parameterized by);
 
 2. demonstrating how this allows one to adjust / upgrade cryptographic
+   verifications; and
+
+3. discussing potential implementations that use alternate cryptographic
    verifications.
 
-The actual upgrading will be left to the [update
+The upgrading will be left to the [update
 strategy](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/SIPs/01-UpdateStrategy.md),
 so the main contribution of this SIP is an argument towards modularity of the
-hardcoded the committee certificate verifications.
+duplicated code for committee certificate verifications.
 
 ## Modular Design of Committee Certificate Verification
-We first discuss the general structure that the various committee certificate
-verification methods will follow.
+We first discuss the general structure that all committee certificate
+verifications follow.
 
 The key idea is that we will delegate a committee certificate verification to a
 minting policy that will mint a token only if the token's name has been
 verified by the committee's cryptographic verification mechanisms.
-Note that this limits us to provide committee certificate verifications for
+Note that this limits us to providing committee certificate verifications for
 messages that are at most 256 bits long (the maximum token name length), but
 indeed, any message can be hashed with a cryptographic hash function to be 256
 bits, and so the hash can be signed instead.
@@ -78,24 +81,30 @@ minting policy with the following workflow.
    `aggregatePubKeys` (indeed, the datum may store more than just the current
    committee such as a sidechain epoch).
 
-2. Then, the committee certificate verification minting policy is parameterized
+2. The committee certificate verification minting policy is parameterized
    by: the currency symbol of the previous `CommitteeHashPolicy`, and some
    fraction `n/d` that denotes the ratio of how many committee members are
    needed to sign a message (more details below).
 
    The committee certificate verification minting policy mints only if:
 
-    - exactly one token with token name say `tn` of the committee certificate
+    - exactly one token with token name (say `tn`) of the committee certificate
       verification minting policy is minted[^exactlyOneToken]; and
 
-    - `tn` has strictly more than `size of the current committee * n / d`
-      committee members that have verified `tn` from the provided
-      multisignature (as a redeemer) of some abstract type `multisignature` where
-      the current committee's `aggregatePubKeys` is identified by the NFT
-      `CommitteeHashPolicy` (in a reference input).
+    - `tn` has strictly more than `size of the current committee * n / d` (in
+      the real number sense) committee members that have verified `tn` from the
+      provided multisignature (as a redeemer) of some abstract type
+      `multisignature` where the current committee's `aggregatePubKeys` is
+      identified by the NFT `CommitteeHashPolicy` (in a reference input or input[^inputOrReferenceInput]).
 
    Note that the committee certificate verification token is not needed after
    this transaction and may be paid to some arbitrary burn address.
+
+[^inputOrReferenceInput]: In the [reference input
+  CIP](https://cips.cardano.org/cips/cip31/#:~:text=A%20reference%20input%20is%20a,output%20rather%20than%20spending%20it.),
+  it unfortunately does not allow one to reference and spend the same
+  transaction, so to allow upgrading of the committee, it is necessary to
+  search through the regular transaction inputs as well.
 
 [^exactlyOneToken]: If the restriction of having exactly one token is too
   strong, then this can be generalized to allow any number of tokens.
@@ -133,7 +142,7 @@ for these systems to use a committee certificate verification minting policy.
 We will assume that each of these scripts are parameterized by the currency
 symbol of some committee certificate verification policy.
 
-### Committee handover mainchain changes
+### Committee Handover Changes
 See
 [here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#61-update-committee-hash)
 for the original specification.
@@ -155,7 +164,7 @@ only difference being we abstract the representation of the committee's public
 keys to some `aggregatePubKeys` type.
 
 As redeemer, `UpdateCommitteeValidator` will take the following
-`UpdateCommitteeRedeemer` data type as follows.
+`UpdateCommitteeMessage` data type as follows.
 ```haskell
 data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
   { sidechainParams :: SidechainParams
@@ -170,13 +179,9 @@ data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
     -- one to reuse the `CommitteeHashPolicy` when one change the
     -- cryptographic mechanisms)
   }
-
-type UpdateCommitteeRedeemer aggregatePubKeys = UpdateCommitteeMessage aggregatePubKeys
 ```
-where we note that the redeemer is just a wrapper around the message that will
-be signed.
 
-Finally, `UpdateCommitteeValidator` succeeds only if the following are all
+Finally, `UpdateCommitteeValidator` validates only if the following are all
 satisfied:
 
 - The committee certificate verification minting policy mints with token name
@@ -196,21 +201,106 @@ satisfied:
 
 - There is a reference to the `previousMerkleRoot` in the transaction.
 
-In essence, these verifications verify that the this transaction for updating
-the committee corresponds to the  signed `UpdateCommitteeMessage` in a
-reasonable sense.
+In essence, these verify that this transaction for updating the committee
+corresponds to the signed `UpdateCommitteeMessage` in a reasonable sense.
 
 Note that this new committee handover mechanism does *not* rely on specifics of
 the committee certificate verification mechanism, as it assumes that the
 committee certificate verification minting policy will "do the right thing".
 
-### Checkpoint and Merkle Root Insertion (Save Root) changes
-These are both essentially identical to as they are given, with the only change
-being that instead of doing the hard coded committee certificate verification,
-they instead ensure that their signed message matches whatever token the
-committee certificate verification minting policy mints.
+### Merkle Root Insertion (Save Root) Changes
+This section discusses the changes to the
+[`MerkleRootTokenMintingPolicy` as defined in the original specification](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#31-merkle-root-insertion).
 
-This requires no changes on the Bridge.
+The endpoint params will be identical to as they were before, and hence
+requires no changes to the Bridge.
+
+As redeemer, `MerkleRootTokenMintingPolicy` will take the following data type.
+```haskell
+data SignedMerkleRoot = SignedMerkleRoot
+  { merkleRoot :: ByteString
+  , previousMerkleRoot :: Maybe ByteString -- Last Merkle root hash
+  , beneficiary :: SidechainAddress
+  }
+```
+Note that this is identical to the original specification, but differs only in that
+the original specification's redeemer needed the signatures but the new mechanism
+will instead use the committee certificate verification minting policy to
+verify the signature.
+
+`MerkleRootTokenMintingPolicy` will mint only if the following are satisfied.
+
+- If `previousMerkleRoot` is specified, the UTxO with the given roothash is
+  referenced in the transaction as a reference input
+
+- There exists a `MerkleRootToken` with token name as `merkleRoot` at a
+  `MerkleRootTokenValidator` script address.
+
+- The committee certificate verification minting policy mints a token name (say
+  `tn`) which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))` where
+  `MerkleRootInsertionMessage` is defined as follows.
+
+```haskell
+data MerkleRootInsertionMessage = MerkleRootInsertionMessage
+  { sidechainParams :: SidechainParams
+    -- ^ Parameters identifying the Sidechain
+  , merkleRoot :: ByteString
+  , previousMerkleRoot :: Maybe ByteString
+  }
+```
+
+### Checkpoint Changes
+This section discusses the changes to the
+[`CheckpointValidator` as defined in the original specification](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#7-checkpointing).
+
+This essentially follows the same ideas of changes as the previous section.
+
+The endpoint params will be identical to as before, and hence requires no
+changes to the Bridge.
+
+As redeemer, the `CheckpointValidator` will take the following data type.
+```haskell
+data CheckpointRedeemer = CheckpointRedeemer
+  { committeeSignatures ∷ [SidechainSignature]
+  , committeePubKeys ∷ [SidechainPublicKey]
+  , newCheckpointBlockHash ∷ ByteString
+  , newCheckpointBlockNumber ∷ Integer
+  }
+```
+
+The datum of the `CheckpointValidator` will remain the same -- we reproduce it here again.
+```haskell
+data CheckpointDatum = CheckpointDatum
+  { blockHash ∷ ByteString
+  , blockNumber ∷ Integer
+  }
+```
+
+Then, `CheckpointValidator` will validate only if all of the following are
+satisfied.
+
+- Verifies the oneshot token `CheckpointPolicy` of the UTxO holding the old
+  verification key at the script address.
+
+- Verifies that the new checkpoint number is strictly increasing
+
+- Consumes the above mentioned UTxO
+
+- Outputs a new UTxO with the updated checkpoint containing the oneshot token
+  `CheckpointPolicy` to the same script address
+
+- The committee certificate verification minting policy mints a token name (say
+  `tn`) which satisfies `tn == blake2b(cbor(CheckpointMessage))` where
+  `CheckpointMessage` is defined as follows.
+
+```haskell
+data CheckpointMessage = CheckpointMessage
+  { checkpointMsgSidechainParams :: SidechainParams
+  , checkpointMsgBlockHash :: BuiltinByteString
+  , checkpointMsgBlockNumber :: Integer
+  , checkpointMsgSidechainEpoch :: Integer
+  }
+```
 
 ## Discussion of Different Committee Certificate Verification Minting Policies
 Since we have finished discussing changes for how the current Plutus scripts
@@ -218,7 +308,7 @@ can use a committee certificate verification minting policy, all that remains
 is to discuss different ways one may implement a committee certificate
 verification minting policy.
 
-The steps all implementations will follow will be
+The steps all implementations will follow will be:
 
 1. Instantiating `UpdateCommitteeHashDatum aggregatePubKeys` with a specific
    type for `aggregatePubKeys`, and choosing a specific type for
@@ -228,9 +318,12 @@ The steps all implementations will follow will be
 2. Defining the committee certificate verification policy.
 
 For an academic reference on these mechanisms, see this
-reference[^proofOfStakeSidechains].
+reference[^proofOfStakeSidechains]. This section chases out the implementation
+details.
 
-[^proofOfStakeSidechains]: Gazi, Peter, et al. "Proof-of-Stake Sidechains." *2019 IEEE Symposium on Security and Privacy (SP)*, IEEE, 2019, pp. 139-56, https://doi.org/10.1109/SP.2019.00040.
+[^proofOfStakeSidechains]: Gazi, Peter, et al. "Proof-of-Stake Sidechains."
+  *2019 IEEE Symposium on Security and Privacy (SP)*, IEEE, 2019, pp. 139-56,
+  https://doi.org/10.1109/SP.2019.00040.
 
 ### Design of `CommitteePlainATMSPolicy`
 The `CommitteePlainATMSPolicy` is the same committee certificate verification
@@ -246,36 +339,37 @@ public keys
 -- committeePubKeysHash = blake2b(concat(committeePubKeys))
 -- keyN - 33 bytes compressed ecdsa public key of a committee member
 -- @
-type ATMSPlainAggregatePubKey = ByteString
+newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey ByteString
 ```
 and we instantiate the `multisignature` type to two lists of public keys and
 their associated signatures
 ```haskell
--- | Invariant: 'ATMSPlainAggregatePubKey' is sorted lexicographically, and the
--- `atmsSignatures` signatures is a subsequence of the corresponding public
+-- | Invariant: 'atmsPublicKeys' is sorted lexicographically, and the
+-- `atmsSignatures` signatures is a subsequence of the signatures corresponding public
 -- keys of `atmsPublicKeys`
 data ATMSPlainMultisignature = ATMSPlainMultisignature
     { atmsPublicKeys :: [SidechainPubKey]
     , atmsSignatures :: [ByteString]
     }
 ```
-where we require that the `ATMSPlainAggregatePubKey` is lexicographically
-sorted and `[ByteString]` is a subsequence of the corresponding signatures of
-`ATMSPlainAggregatePubKey` for a given message.
+where we require that the `atmsPublicKeys` is lexicographically
+sorted and `atmsSignature` is a subsequence of the corresponding signatures of
+`atmsPublicKeys` for a given message.
 
 Then, `CommitteePlainATMSPolicy` takes as redeemer an `ATMSPlainMultisignature`, and
 is parameterized by the currency symbol of `CommitteeHashPolicy` and a
 threshold `n/d`; and mints only if the following are all satisfied:
 
-- there is a reference input with the `CommitteeHashPolicy` NFT with datum
-  `UpdateCommitteeDatum ATMSPlainAggregatePubKey`;
+- there is a reference input (or input) with the `CommitteeHashPolicy` NFT with
+  datum `UpdateCommitteeDatum ATMSPlainAggregatePubKey`;
 
 - the concatenated hash of the public keys `atmsPublicKeys` of the redeemer
   `ATMSPlainMultisignature` matches `aggregateCommitteePubKeys` in
   `UpdateCommitteeDatum ATMSPlainAggregatePubKey`; and
 
 - the unique token name of `CommitteePlainATMSPolicy` has been verified by
-  strictly more than `length atmsPublicKeys * n / d` public keys and signatures.
+  strictly more than `length atmsPublicKeys * n / d` (in the real number sense)
+  public keys and signatures.
 
 Clearly, this satisfies the workflow required for a committee certificate
 verification minting policy.
@@ -285,43 +379,52 @@ The `CommitteeDummyATMSPolicy` is a trivial minting policy that verifies
 nothing (and always mints) while we wait for new cryptographic primitives to be
 added in the blockchain.
 
-We don't discuss this further since it's straightforward and technically does
-not satisfy the requirements for a committee certificate verification minting policy
+We do not discuss this further since it's straightforward and technically does
+not satisfy the requirements for a committee certificate verification minting policy.
 
 ### Design of `CommitteeMultisignatureATMSPolicy`
 The `CommitteeMultisignatureATMSPolicy` is an alternative committee certificate
 verification mechanism that should be a bit more efficient since it uses proper
 cryptographic multisignature schemes, but it unfortunately requires some features
-unavailable on Cardano now.
+unavailable on Cardano.
 
-### Required Builtins
+We will first discuss the required builtins (that are unavailable on Cardano),
+then discuss how these builtins can be used to give us a committee certificate
+verification minting policy.
+
+#### Required Builtins
 We will assume the following builtin functions
 ```haskell
-type GDH = ..
-
-type GDHPubKey = GDH
-type GDHSignature = GDH
-type MessageDigest = GDH -- cryptographic hash to the GDH group (not including the unit)
+data GDH = ...
 
 gdhMul :: GDH -> GDH -> GDH
 gdhDiv :: GDH -> GDH -> GDH
-gdhHash :: ByteString -> MessageDigest
+gdhHash :: ByteString -> GDH
 
-ddhVerify :: GDHPubKey -> MessageDigest -> GDHSignature -> Bool
+ddhVerify
+    :: GDH -- ^ Public key
+    -> GDH -- ^ Message
+    -> GDH -- ^ Signature
+    -> Bool
 
 byteStringToGdh :: ByteString -> GDH  -- converts a bytestring to an element of GDH (throwing an error otherwise)
 gdhToByteString :: GDH -> ByteString  -- converts a GDH element to a bytestring
 ```
 where
 
-- `GDH` is a type for a *Gap Diffie Hellman Group*;
+- `GDH` is a type for elements in a *Gap Diffie Hellman Group*;
 
-- `gdhMul` is the group multiplication for `GDH`;
+- `gdhMul` is the group multiplication in `GDH`;
 
-- `gdhDiv` is the inverse of the group multiplication for `GDH`; and
+- `gdhDiv` is the group multiplication by the inverse in `GDH`;
+
+- `gdhHash` is a cryptographic hash function to `GDH` except for the unit;
 
 - `ddhVerify` verifies that the provided signature shows that the given public
-  key has signed the message digest.
+  key has signed the message digest; and
+
+- `byteStringToGdh` and `gdhToByteString` obviously unsafely casts
+  `ByteString`s to `GDH` (vice versa).
 
 For details, see these references[^shortSignaturesFromTheWeilPairing][^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme].
 
@@ -329,15 +432,15 @@ For details, see these references[^shortSignaturesFromTheWeilPairing][^threshold
 
 [^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme]: Boldyreva, Alexandra. "Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme." *Public Key Cryptography - PKC 2003*, Springer Berlin Heidelberg, 2003, pp. 31-46, https://doi.org/10.1007/3-540-36288-6_3.
 
-Now, we will recall some simple facts about the GDH group (without proof).
+Now, we will recall a fact about the GDH group (without proof).
 
-- Given public keys `key1`, ... `keyN` of the GDH group, we can create an
-  *aggregate public key* by simply multiplying each of the keys together i.e.,
+- Given public keys `key1`, ..., `keyN` of the GDH group, we can create an
+  *aggregate public key* by multiplying each of the keys together i.e.,
   ```haskell
   aggregateKeys = key1 `gdhMul` ... `gdhMul` keyN
   ```
   and similarly, given signatures (of the aforementioned keys)
-  `sig1`, ... `sigN`, we can create an multisignature by simply multiplying the
+  `sig1`, ... `sigN`, we can create an multisignature by multiplying the
   signatures together
   ```haskell
   multisignature = sig1 `gdhMul` ... `gdhMul` sigN
@@ -350,72 +453,85 @@ Now, we will recall some simple facts about the GDH group (without proof).
 
 [^rogueKeyAttacks]: Ristenpart, Thomas, and Scott Yilek. "The Power of Proofs-of-Possession: Securing Multiparty Signatures Against Rogue-Key Attacks." *Advances in Cryptology - EUROCRYPT 2007*, Springer Berlin Heidelberg, pp. 228–45, https://doi.org/10.1007/978-3-540-72540-4_13.
 
-### Implementation
+#### Implementation
 Assuming we have the aforementioned builtin functions, we are almost ready to
 discuss how to implement `CommitteeMultisignatureATMSPolicy`.
 But first, note that we will make use of functionality and types from [Merkle
-trees implmemented
+trees implemented
 here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/onchain/src/TrustlessSidechain/MerkleTree.hs).
 
-Then, to implement `CommitteeMultisignatureATMSPolicy`, we will instantiate the
-`aggregatePubKeys` type with the product of each of the committee member's
-public keys, the number of members in the committee, and the root of a merkle tree of
-all of the committee members
+So, to implement `CommitteeMultisignatureATMSPolicy`, we will instantiate the
+`aggregatePubKeys` type with the product (in the `GDH` group) of each of the
+committee member's public keys, the number of members in the committee, and the
+root of a Merkle tree of all of the committee members
 ```haskell
 data ATMSMultisignatureAggregatePubKey =
     ATMSMultisignatureAggregatePubKey
-    { atmsAggregatePubKeys :: GDHPubKey
-        -- ^ the product (in a GDH group) of all of the committee
+    { atmsAggregatePubKeys :: GDH
+        -- ^ the product (in the GDH group) of all of the committee
         -- member's public keys
     , atmsCommitteeeSize :: Integer
         -- ^ the number of members in the committee
     , atmsMerkleRoot :: RootHash
-        -- ^ a merkle root of all of the current committee's public keys
+        -- ^ a Merkle root of all of the current committee's public keys
     }
 ```
-and we instantiate the `multisignature` type with the signature of the GDH
+and we instantiate the `multisignature` type with a signature of the GDH
 group, the public keys of committee members who did *not* sign the message, and
-merkle proofs of the committee members who did not sign the message in
+Merkle proofs of the committee members who did not sign the message in
 `atmsMerkleRoot`
 ```haskell
 data ATMSMultisignatureSignature = ATMSMultisignatureSignature
-    { atmsSignature :: GDHSignature
-        -- ^ the product (in a GDH group) of all the committee members who
+    { atmsSignature :: GDH
+        -- ^ the product (in the GDH group) of all the committee members who
         -- signed the message
-    , atmsNonSigningPubKeys :: [GDHPubKey]
+    , atmsNonSigningPubKeys :: [GDH]
         -- ^ the committee members who did not sign the message
     , atmsNonSigningPubKeysMerkleProofs :: [MerkleProof]
-        -- ^ the merkle proofs for the corresponding committee members' who
+        -- ^ the Merkle proofs for the corresponding committee members' who
         -- did not sign the message sorted lexicographically
     }
 ```
 where we require that `atmsNonSigningPubKeysMerkleProofs` are the
-corresponding distinct merkle proofs of the given `atmsNonSigningPubKeys` and
-sorted lexicographically (to allow testing for distinctness of merkle proofs
+corresponding distinct Merkle proofs of the given `atmsNonSigningPubKeys`, and
+`atmsNonSigningPubKeysMerkleProofs` is sorted
+lexicographically[^merkleProofsSortedLexicographically] (to allow testing for
+distinctness of Merkle proofs
 easily -- later we will see why this is desired).
+
+[^merkleProofsSortedLexicographically]: The [current representation of a
+  `MerkleProof`](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/onchain/src/TrustlessSidechain/MerkleTree.hs#L238-L241)
+  most likely will have an inefficient comparisions, but this can be optimized to
+  "flattening" the Merkle proof to a single ByteString, then using the builtin
+  [sliceByteString](https://github.com/input-output-hk/plutus/blob/1af96af28f45030c94e11138a2f13869e9e63b79/doc/read-the-docs-site/reference/cardano/builtin-parameters.csv#L129)
+  to extract the specific "sides" when proving the element is in the given
+  Merkle root. And finally, this permits efficient comparision of Merkle proofs
+  since `ByteString`s may be compared using the efficient builtin
+  [lessThanByteString](https://github.com/input-output-hk/plutus/blob/1af96af28f45030c94e11138a2f13869e9e63b79/doc/read-the-docs-site/reference/cardano/builtin-parameters.csv#L71).
 
 Then, `CommitteeMultisignatureATMSPolicy` takes as redeemer an `ATMSMultisignatureSignature`, and
 is parameterized by the currency symbol of `CommitteeHashPolicy` and a
 threshold `n/d`; and mints only if the following are satisfied.
 
-- There is a reference input with the `CommitteeHashPolicy` NFT with datum
-  `UpdateCommitteeDatum ATMSMultisignatureAggregatePubKey`.
+- There is a reference input (or input) with the `CommitteeHashPolicy` NFT with
+  datum `UpdateCommitteeDatum ATMSMultisignatureAggregatePubKey`.
 
 - `length atmsNonSigningPubKeys == length atmsNonSigningPubKeysMerkleProofs` is true,
   and write this quantity as `numNonSigners` (the number of nonsigners). We must further verify that
-  `atmsCommitteeeSize - numNonSigners > atmsCommitteeeSize * n / d` i.e., there
-  are strictly more signers than the required threshold.
+  `atmsCommitteeeSize - numNonSigners > atmsCommitteeeSize * n / d` (in the
+  real number sense) i.e., there are strictly more signers than the required
+  threshold.
 
 - Every `atmsNonSigningPubKeysMerkleProofs` is distinct (requiring that these
-  are sorted lexicographically makes this check easy) and are all in the
-  `atmsMerkleRoot` (i.e., this verifies that every non signer is actually in
-  the current committee).
+  are sorted lexicographically makes this check easy) and all of the
+  corresponding `atmsNonSigningPubKeys` are in the `atmsMerkleRoot` (i.e., this
+  verifies that every non signer is actually in the current committee).
 
-- The unique token name `tn` minted for `ATMSMultisignatureSignature` satisfies
+- The unique token name `tn` minted for `CommitteeMultisignatureATMSPolicy` satisfies
     ```haskell
     ddhVerify
         -- the public key of the committee except for the non signers
-        (atmsAggregatePubKeys `gdhDiv` (atmsNonSigningPubKey1 `gdhMul` .. `gdhMul` atmsNonSigningPubKeyN))
+        (atmsAggregatePubKeys `gdhDiv` (atmsNonSigningPubKey1 `gdhMul` ... `gdhMul` atmsNonSigningPubKeyN))
         -- the message we wish to verify is signed
         (byteStringToGdh tn)
         -- the multisignature
@@ -424,6 +540,9 @@ threshold `n/d`; and mints only if the following are satisfied.
     i.e., the public key of the committee except for the non signers (the non
     signers are divided out of the aggregated public key) have signed the
     message.
+
+Clearly, this satisfies the workflow required for a committee certificate
+verification minting policy.
 
 ### Design of `CommitteePoKATMSPolicy`
 The `CommitteePoKATMSPolicy` is an alternative committee certificate
