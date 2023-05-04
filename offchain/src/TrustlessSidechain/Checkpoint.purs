@@ -1,6 +1,6 @@
 module TrustlessSidechain.Checkpoint
-  ( module TrustlessSidechain.Checkpoint.Types
-  , module TrustlessSidechain.Checkpoint.Utils
+  ( module ExportTypes
+  , module ExportUtils
   , saveCheckpoint
   , getCheckpointPolicy
   ) where
@@ -42,6 +42,12 @@ import TrustlessSidechain.Checkpoint.Types
   , CheckpointRedeemer(CheckpointRedeemer)
   , InitCheckpointMint(InitCheckpointMint)
   )
+import TrustlessSidechain.Checkpoint.Types
+  ( CheckpointDatum(CheckpointDatum)
+  , CheckpointEndpointParam(CheckpointEndpointParam)
+  , CheckpointMessage(CheckpointMessage)
+  , InitCheckpointMint(InitCheckpointMint)
+  ) as ExportTypes
 import TrustlessSidechain.Checkpoint.Utils
   ( checkpointPolicy
   , checkpointValidator
@@ -50,6 +56,12 @@ import TrustlessSidechain.Checkpoint.Utils
   , normalizeSignatures
   , serialiseCheckpointMessage
   )
+import TrustlessSidechain.Checkpoint.Utils
+  ( checkpointPolicy
+  , checkpointValidator
+  , initCheckpointMintTn
+  , serialiseCheckpointMessage
+  ) as ExportUtils
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )

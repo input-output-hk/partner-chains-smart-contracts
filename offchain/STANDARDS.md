@@ -201,6 +201,7 @@ Each import line for any module MUST one one of the following conventions:
 
 * ``import Foo (Baz, class Bar, quux)``
 * ``import Foo as F``
+* ``import Foo (Baz (Baz), quux) as ExportFoo``
 
 Data types from named imports SHOULD be imported by themselves:
 
@@ -324,9 +325,15 @@ where _n_ is the 'export length' of the identifier in the module it is being
 imported from.
 
 When re-exporting identifiers from another module, the module where the
-re-exports are coming from MUST be a named import. Furthermore, the export list
-MUST qualify the identifier, even if it's available unqualified. `module`
-re-exports MUST NOT be used.
+re-exports are coming from MUST be imported using a convention like so:
+
+```purescript
+import Foo (Bar (Bar), quux) as ExportFoo
+```
+
+More precisely: each exported identifier MUST be defined explicitly, the prefix
+MUST begin with `Export`. Module re-exports MUST be only of modules imported in
+this way.
 
 ### Justification
 
@@ -351,8 +358,7 @@ identifiers, but gain considerable clarity and ease of reading.
 Re-exports from another module need to be clearly designated, especially when
 the module also exports some of its own identifiers. To help this, we require
 naming any module from which we re-export an identifier, and using a qualified
-name. By extension, we also prohibit re-exporting of modules wholesale: if you
-find yourself needing to do this, your design is wrong.
+name.
 
 ## Versioning and changelogging
 
