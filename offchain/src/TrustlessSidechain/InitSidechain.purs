@@ -28,7 +28,12 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData (class ToData, Datum(..), PlutusData(Constr), toData)
+import Contract.PlutusData
+  ( class ToData
+  , Datum(Datum)
+  , PlutusData(Constr)
+  , toData
+  )
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
@@ -38,7 +43,7 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
   , signTransaction
@@ -55,14 +60,14 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
-  , CandidatePermissionMintParams(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
+  , CandidatePermissionMintParams(CandidatePermissionMintParams)
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint
-  ( CheckpointDatum(..)
-  , InitCheckpointMint(..)
+  ( CheckpointDatum(CheckpointDatum)
+  , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
@@ -84,9 +89,9 @@ import TrustlessSidechain.MerkleRoot
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
-  ( InitCommitteeHashMint(..)
-  , UpdateCommitteeHash(..)
-  , UpdateCommitteeHashDatum(..)
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -116,7 +121,9 @@ instance Show InitSidechainParams where
   show = genericShow
 
 derive instance Generic InitSidechainParams _
+
 derive instance Newtype InitSidechainParams _
+
 instance ToData InitSidechainParams where
   toData
     ( InitSidechainParams
@@ -151,7 +158,7 @@ type InitSidechainParams' =
 
 -- | `toSidechainParams` creates a `SidechainParams` from an
 -- | `InitSidechainParams` the canonical way.
-toSidechainParams ∷ ∀ r. InitTokensParams r → SidechainParams
+toSidechainParams ∷ ∀ (r ∷ Row Type). InitTokensParams r → SidechainParams
 toSidechainParams isp = SidechainParams
   { chainId: isp.initChainId
   , genesisHash: isp.initGenesisHash
@@ -164,7 +171,7 @@ toSidechainParams isp = SidechainParams
 -- | constraints to mint (but NOT pay to someone) the NFT which uniquely
 -- | identifies the utxo that holds the committee hash.
 initCommitteeHashMintLookupsAndConstraints ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -202,7 +209,7 @@ initCommitteeHashMintLookupsAndConstraints isp = do
 -- |      - Mints the candidiate permission tokens if
 -- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
 initCandidatePermissionTokenLookupsAndConstraints ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -232,7 +239,7 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
 -- | constraints to mint the NFT which uniquely
 -- | identifies the utxo that holds the checkpoint
 initCheckpointMintLookupsAndConstraints ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -262,7 +269,7 @@ initCheckpointMintLookupsAndConstraints inp = do
 -- | constraints pay the NFT which uniquely
 -- | identifies the utxo that holds the checkpoint
 initCheckpointLookupsAndConstraints ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -406,7 +413,7 @@ initCommitteeHashLookupsAndConstraints isp = do
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
 initDistributedSetLookupsAndContraints ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -547,7 +554,7 @@ initDistributedSetLookupsAndContraints isp = do
 -- | `BalanceTx.BalanceTx.buildTransactionChangeOutput` where it claims that excess
 -- | value is returned back to the owner's address).
 initSidechainTokens ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract ()
     { transactionId ∷ TransactionHash
@@ -761,7 +768,7 @@ initSidechain (InitSidechainParams isp) = do
 -- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract ()
     { committeeHashPolicy ∷ MintingPolicy
@@ -780,7 +787,7 @@ getCommitteeHashPolicy isp = do
 -- | `getMerkleRootTokenPolicy` grabs the merkle root token policy and currency
 -- | symbol (potentially throwing an error if this is not possible).
 getMerkleRootTokenPolicy ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
     ()
@@ -813,7 +820,7 @@ getMerkleRootTokenPolicy isp = do
     { merkleRootTokenMintingPolicy, merkleRootTokenMintingPolicyCurrencySymbol }
 
 getCheckpointPolicy ∷
-  ∀ r.
+  ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract ()
     { checkpointPolicy ∷ MintingPolicy
@@ -830,5 +837,5 @@ getCheckpointPolicy isp = do
   pure { checkpointPolicy, checkpointCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = Utils.Logging.mkReport <<< { mod: "InitSidechain", fun: _ }
