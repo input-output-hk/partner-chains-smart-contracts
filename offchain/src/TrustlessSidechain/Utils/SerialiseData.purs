@@ -22,5 +22,5 @@ serialiseData = ((Serialization.toBytes <<< Union.asOneOf) <$> _) <<<
 -- |    1. convert the given type into `PlutusData`
 -- |
 -- |    2. running `Utils.SerialiseData.serialiseData`
-serialiseToData ∷ ∀ a. ToData a ⇒ a → Maybe ByteArray
+serialiseToData ∷ ∀ (a ∷ Type). ToData a ⇒ a → Maybe ByteArray
 serialiseToData = serialiseData <<< PlutusData.toData
