@@ -133,6 +133,21 @@ Indeed, this will change the hash of the Plutus script and hence requires an
 strategy](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/SIPs/01-UpdateStrategy.md)
 to avoid this issue.
 
+_Drawbacks._
+Some drawbacks of this method include: it may increase fees since
+transactions will need to include this minting policy in the transaction, and
+the fees may be higher than just directly coding the logic to verify a
+committee certificate inside a Plutus script.
+For the former drawback, one can store a [reference script](https://cips.cardano.org/cips/cip33/) of the committee
+certificate verification minting policy and reference it in every transaction it is
+used.
+Indeed, one may consider putting the reference script in the UTxO identified by
+the `CommitteeHashPolicy` since this UTxO will always be present in a
+transaction for which the committee certificate verification minting policy
+mints.
+As for the latter drawback, it is the hope that this will be negligible and
+the gains of modularity will outweigh this.
+
 ## Changes
 As mentioned in the [background](#background), there are currently three Plutus
 scripts which verify a committee certificate.
