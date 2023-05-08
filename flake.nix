@@ -7,13 +7,13 @@
   };
 
   inputs = {
-    plutip.url = "github:mlabs-haskell/plutip/8d1795d9ac3f9c6f31381104b25c71576eeba009";
-    haskell-nix.follows = "plutip/haskell-nix";
-    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
-    iohk-nix.follows = "plutip/iohk-nix";
-    CHaP.follows = "plutip/CHaP";
     cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v5.0.0";
-    ogmios-datum-cache.url = "github:mlabs-haskell/ogmios-datum-cache/"; #FIXME shouldn't be needed
+
+    plutip.follows = "cardano-transaction-lib/plutip";
+    haskell-nix.follows = "cardano-transaction-lib/plutip/haskell-nix";
+    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
+    iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
+    CHaP.follows = "cardano-transaction-lib/plutip/CHaP";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -21,7 +21,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ogmios-datum-cache, ... }@inputs:
+  outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
       vasilDevRuntimeConfig = {
         network = {
@@ -45,18 +45,6 @@
           # the version of the node to use, corresponds to the image version tag,
           # i.e. `"inputoutput/cardano-node:${tag}"`
           tag = "1.35.4";
-        };
-
-        datumCache = {
-          # The `firstBlock` is essentially what ogmios-datum-cache starts
-          # "syncing" from, and the default doesn't exist apparently... so
-          # we give it a block which actually exists.
-          blockFetcher = {
-            firstBlock = {
-              slot = 3212169;
-              id = "199a5953f54a216532b396b112c7b8c561710e93a978383173dddadda3b9bc17";
-            };
-          };
         };
       };
 
@@ -136,6 +124,7 @@
           packageLock = ./offchain/package-lock.json;
           spagoPackages = ./offchain/spago-packages.nix;
           withRuntime = true;
+          shell.withChromium = false;
           shell.packages = with pkgs; [
             # Shell Utils
             bashInteractive
@@ -259,6 +248,7 @@
             inherit src pkgs;
             projectName = name;
             withRuntime = false;
+            shell.withChromium = false;
           };
         in
         pkgs.stdenv.mkDerivation rec {
@@ -326,10 +316,6 @@
         upToDatePlutusScriptCheck = upToDatePlutusScriptCheckFor system;
         trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
           testMain = "Test.Main";
-          buildInputs = with (nixpkgsFor system); [
-            postgresql # FIXME shoudln't be needed, for some reason tests expect `initdb` (postgresql) in PATH
-            ogmios-datum-cache.packages.${system}.ogmios-datum-cache # FIXME shouldn't be needed
-          ];
         };
       });
 
