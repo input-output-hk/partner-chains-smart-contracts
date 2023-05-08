@@ -1,4 +1,4 @@
-# Trustless Sidechain CTL CTL
+# Trustless Sidechain CTL 
 The Trustless Sidechain CTL is not production ready in its current form and use of it is entirely at your own risk as these repos are not maintained. 
 
 You acknowledge and agree to have an adequate understanding of the risks associated with use of the Trustless Sidechain CTL and that all information and materials published, distributed or otherwise made available on Cardano Docs is provided for non-commercial, personal use, and testing purposes only. This includes test currency tokens which have no economic value and are provided only for the purpose of testing on the Trustless Sidechain CTL.
