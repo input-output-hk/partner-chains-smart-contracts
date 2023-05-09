@@ -197,10 +197,10 @@ particular reason for this.
 
 ## Imports
 
-Each import line for any module MUST one one of the following conventions:
+Each import line for any module MUST use one of the following conventions:
 
 * ``import Foo (Baz, class Bar, quux)``
-* ``import Foo as F``
+* ``import Foo as OurFoo``
 * ``import Foo (Baz (Baz), quux) as ExportFoo``
 
 Data types from named imports SHOULD be imported by themselves:
@@ -212,7 +212,7 @@ import Data.Array as Array
 
 An exception is granted if such an import would cause a name clash.
 
-Data constructions MUST be imported individually. For example, given the
+Data constructors MUST be imported individually. For example, given the
 following data type declaration:
 
 ```purescript
@@ -284,7 +284,7 @@ to use a type name every time we write a type signature, but it's unlikely we
 use only one function that operates on said type. Thus, we want to reduce the
 amount of extra noise needed to write a type name if possible. Additionally,
 name clashes from function names are far more likely than name clashes from type
-names: consider the number of types on which a ``size` function makes sense.
+names: consider the number of types on which a ``size`` function makes sense.
 Thus, preferring un-named imports of type names, even if the rest of the module
 uses a named import, is good practice, and saves on a lot of prefixing.
 
