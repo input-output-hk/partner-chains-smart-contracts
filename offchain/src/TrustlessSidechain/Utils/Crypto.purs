@@ -215,6 +215,12 @@ unzipCommitteePubKeysAndSignatures ∷
   Tuple (Array SidechainPublicKey) (Array SidechainSignature)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
+isEnoughForVerification ∷
+  SidechainParams →
+  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
+  Int
+isEnoughForVerification params arr = ?huh
+
 -- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
 -- | returns true iff
 -- |

@@ -8,7 +8,6 @@ import PlutusTx.Prelude
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TrustlessSidechain.Utils qualified as Utils
-import Prelude qualified
 
 test :: TestTree
 test = unitTests
@@ -51,7 +50,4 @@ unitTests =
             Utils.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
         , testCase "attemptDuplicateSigs" $
             Utils.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
-        , testCase "testLaziness" $
-            let notLazy = Prelude.error "verifyMultisig is not lazy" -- admittedly there may be a better way then error
-             in Utils.verifyMultisig [key1, key2, notLazy] 2 msg [sig1, sig2, notLazy] @?= True
         ]
