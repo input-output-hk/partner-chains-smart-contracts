@@ -4,7 +4,7 @@ import Contract.Prelude
 
 import Contract.Address (ownPaymentPubKeyHash, pubKeyHashAddress)
 import Contract.Monad (liftContractM, liftedE, liftedM)
-import Contract.PlutusData (toData)
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -36,7 +36,6 @@ import TrustlessSidechain.MerkleTree (MerkleProof(..), fromList, lookupMp)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe)
-import TrustlessSidechain.Utils.SerialiseData (serialiseData)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
@@ -54,7 +53,9 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+      ownRecipient ←
+        liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
       genesisUtxo ← getOwnTransactionInput
       let
         keyCount = 25
@@ -86,10 +87,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
             , recipient: ownRecipient
             }
 
-        ownEntryBytes = unsafePartial
-          $ fromJust
-          $ serialiseData
-          $ toData ownEntry
+        ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
         merkleTree =
           unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
             [ ownEntryBytes ]
@@ -128,7 +126,9 @@ testScenarioSuccess2 =
     $ \alice → Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-        ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        ownRecipient ←
+          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -182,15 +182,11 @@ testScenarioSuccess2 =
                   /\ combinedMerkleProof1
                 _ → Nothing
 
-        fp0 ←
-          liftContractM
-            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
-            $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+        fp0 ← liftContractM "Could not build FuelParams" $
+          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
 
-        fp1 ←
-          liftContractM
-            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
-            $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
+        fp1 ← liftContractM "Could not build FuelParams" $
+          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
 
         assertMaxFee (BigInt.fromInt 1_350_000) =<< runFuelMP sidechainParams fp0
         assertMaxFee (BigInt.fromInt 1_350_000) =<< runFuelMP sidechainParams fp1
@@ -230,8 +226,7 @@ testScenarioFailure =
               }
 
           -- This is not how you create a working merkleproof that passes onchain validator.
-          mp' ← liftedM "impossible" $ pure
-            (serialiseData (toData (MerkleProof [])))
+          let mp' = unwrap $ PlutusData.serializeData (MerkleProof [])
           mt ← liftedE $ pure (fromList (pure mp'))
           mp ← liftedM "couldn't lookup merkleproof" $ pure (lookupMp mp' mt)
 
@@ -257,7 +252,9 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
       Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess2`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-        ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        ownRecipient ←
+          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -311,10 +308,8 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
                   /\ combinedMerkleProof1
                 _ → Nothing
 
-        fp0 ←
-          liftContractM
-            "`Test.FUELMintingPolicy.testScenarioSuccess2` failed converting to FUELParams"
-            $ combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+        fp0 ← liftContractM "Could not build FuelParams" $
+          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
 
         -- the very bad double mint attempt...
         void $ runFuelMP sidechainParams fp0

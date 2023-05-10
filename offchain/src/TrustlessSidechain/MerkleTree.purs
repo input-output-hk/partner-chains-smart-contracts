@@ -7,7 +7,6 @@ module TrustlessSidechain.MerkleTree
   , RootHash
   , rootHashFromByteArray
   , byteArrayToRootHashUnsafe
-
   , fromList
   , lookupMp
   , fromArray
@@ -20,6 +19,7 @@ module TrustlessSidechain.MerkleTree
 import Contract.Prelude
 
 import Contract.Hashing as Hashing
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -29,6 +29,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
+import Data.BigInt as BigInt
 import Data.Function as Function
 import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
@@ -126,18 +127,18 @@ instance ToData Side where
 instance FromData Side where
   fromData plutusData = case plutusData of
     Integer n
-      | n == zero → Just L
-      | n == one → Just R
+      | n == BigInt.fromInt 0 → Just L
+      | n == BigInt.fromInt 1 → Just R
     _ → Nothing
 
 instance ToData Up where
-  toData (Up record) = Constr zero
+  toData (Up record) = Constr (BigNum.fromInt 0)
     [ toData record.siblingSide, toData record.sibling ]
 
 instance FromData Up where
   fromData plutusData = case plutusData of
     Constr n [ a, b ]
-      | n == zero →
+      | n == BigNum.fromInt 0 →
           Up <$> (({ siblingSide: _, sibling: _ }) <$> fromData a <*> fromData b)
     _ → Nothing
 
@@ -146,18 +147,18 @@ derive newtype instance FromData MerkleProof
 
 instance ToData MerkleTree where
   toData (Bin roothash l r) =
-    Constr zero [ toData roothash, toData l, toData r ]
+    Constr (BigNum.fromInt 0) [ toData roothash, toData l, toData r ]
   toData (Tip roothash) =
-    Constr one [ toData roothash ]
+    Constr (BigNum.fromInt 1) [ toData roothash ]
 
 instance FromData MerkleTree where
   fromData plutusData = case plutusData of
     Constr n args
-      | n == zero → case args of
+      | n == BigNum.fromInt 0 → case args of
           [ roothash, l, r ] → Bin <$> fromData roothash <*> fromData l <*>
             fromData r
           _ → Nothing
-      | n == one → case args of
+      | n == BigNum.fromInt 1 → case args of
           [ roothash ] → Tip <$> fromData roothash
           _ → Nothing
     _ → Nothing

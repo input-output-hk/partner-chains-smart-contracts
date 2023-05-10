@@ -33,6 +33,7 @@ import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -194,34 +195,34 @@ derive instance Newtype Node _
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
-insertValidator ∷ Ds → Contract () Validator
+insertValidator ∷ Ds → Contract Validator
 insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
-dsConfValidator ∷ Ds → Contract () Validator
+dsConfValidator ∷ Ds → Contract Validator
 dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
-dsConfPolicy ∷ DsConfMint → Contract () MintingPolicy
+dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
 dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
   toData
   [ dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
-dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
+dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
   toData
   [ dskm ]
 
 -- | The address for the insert validator of the distributed set.
-insertAddress ∷ NetworkId → Ds → Contract () Address
+insertAddress ∷ NetworkId → Ds → Contract Address
 insertAddress netId ds = do
   v ← insertValidator ds
   liftContractM "Couldn't derive distributed set insert validator address"
@@ -238,30 +239,32 @@ derive newtype instance FromData DsDatum
 
 instance FromData DsKeyMint where
   fromData (Constr n [ a, b ])
-    | n == zero = DsKeyMint <$>
+    | n == (BigNum.fromInt 0) = DsKeyMint <$>
         ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
             fromData b
         )
   fromData _ = Nothing
 
 instance ToData DsKeyMint where
-  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
+  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr
+    (BigNum.fromInt 0)
     [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
 
 instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == zero =
+  fromData (Constr n [ a, b ]) | n == (BigNum.fromInt 0) =
     DsConfDatum <$>
       ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
   fromData _ = Nothing
 
 instance ToData DsConfDatum where
-  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
+  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr
+    (BigNum.fromInt 0)
     [ toData dscKeyPolicy, toData dscFUELPolicy ]
 
 derive newtype instance ToData DsConfMint
 derive newtype instance FromData DsConfMint
 
-dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
+dsToDsKeyMint ∷ Ds → Contract DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
 
@@ -294,7 +297,7 @@ insertNode str (Node node)
   | otherwise = Nothing
 
 -- | `getDs` grabs the `Ds` type given `SidechainParams`
-getDs ∷ SidechainParams → Contract () Ds
+getDs ∷ SidechainParams → Contract Ds
 getDs (SidechainParams sp) = do
   let
     msg = Logging.mkReport
@@ -311,7 +314,7 @@ getDs (SidechainParams sp) = do
 -- | (potentially throwing an error in the case that it is not possible).
 getDsKeyPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy (SidechainParams sp) = do
   let
@@ -340,7 +343,7 @@ getDsKeyPolicy (SidechainParams sp) = do
 -- | holds the configuration of the distributed set.
 findDsConfOutput ∷
   Ds →
-  Contract ()
+  Contract
     { confRef ∷ TransactionInput
     , confO ∷ TransactionOutputWithRefScript
     , confDat ∷ DsConfDatum
@@ -393,7 +396,7 @@ findDsConfOutput ds = do
 findDsOutput ∷
   Ds →
   TokenName →
-  Contract ()
+  Contract
     ( Maybe
         { inUtxo ∷
             { nodeRef ∷ TransactionInput

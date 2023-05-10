@@ -106,7 +106,7 @@ updateCommitteeHash ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
-  Contract () Unit
+  Contract Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
 
 -- | `updateCommitteeHashWith params f` is a convenient wrapper around
@@ -127,8 +127,8 @@ updateCommitteeHashWith ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
-  (UpdateCommitteeHashParams → Contract () UpdateCommitteeHashParams) →
-  Contract () Unit
+  (UpdateCommitteeHashParams → Contract UpdateCommitteeHashParams) →
+  Contract Unit
 updateCommitteeHashWith params f = void do
   committeeSignatures ←
     liftContractM

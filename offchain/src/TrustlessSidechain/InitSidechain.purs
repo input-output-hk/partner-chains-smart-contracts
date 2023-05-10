@@ -28,6 +28,7 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE, liftedM)
 import Contract.Monad as Monad
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, Datum(..), PlutusData(Constr), toData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
@@ -128,7 +129,7 @@ instance ToData InitSidechainParams where
         , initThresholdDenominator
         }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData initChainId
       , toData initGenesisHash
       , toData initUtxo
@@ -167,7 +168,6 @@ initCommitteeHashMintLookupsAndConstraints ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -205,7 +205,6 @@ initCandidatePermissionTokenLookupsAndConstraints ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -235,7 +234,6 @@ initCheckpointMintLookupsAndConstraints ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -265,7 +263,6 @@ initCheckpointLookupsAndConstraints ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -328,7 +325,6 @@ initCheckpointLookupsAndConstraints inp = do
 initCommitteeHashLookupsAndConstraints ∷
   InitSidechainParams' →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -409,7 +405,6 @@ initDistributedSetLookupsAndContraints ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -549,7 +544,7 @@ initDistributedSetLookupsAndContraints isp = do
 initSidechainTokens ∷
   ∀ r.
   InitTokensParams r →
-  Contract ()
+  Contract
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
@@ -625,7 +620,7 @@ initSidechainTokens isp = do
 -- | Note: you must have the NFTs in your wallet already.
 paySidechainTokens ∷
   InitSidechainParams' →
-  Contract ()
+  Contract
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
@@ -685,7 +680,7 @@ paySidechainTokens isp = do
 -- | For details, see `initSidechainTokens` and `paySidechainTokens`.
 initSidechain ∷
   InitSidechainParams →
-  Contract ()
+  Contract
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
@@ -763,7 +758,7 @@ initSidechain (InitSidechainParams isp) = do
 getCommitteeHashPolicy ∷
   ∀ r.
   InitTokensParams r →
-  Contract ()
+  Contract
     { committeeHashPolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     }
@@ -783,7 +778,6 @@ getMerkleRootTokenPolicy ∷
   ∀ r.
   InitTokensParams r →
   Contract
-    ()
     { merkleRootTokenMintingPolicy ∷ MintingPolicy
     , merkleRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
     }
@@ -815,7 +809,7 @@ getMerkleRootTokenPolicy isp = do
 getCheckpointPolicy ∷
   ∀ r.
   InitTokensParams r →
-  Contract ()
+  Contract
     { checkpointPolicy ∷ MintingPolicy
     , checkpointCurrencySymbol ∷ CurrencySymbol
     }

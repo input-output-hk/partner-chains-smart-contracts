@@ -14,6 +14,7 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -41,12 +42,12 @@ derive instance Generic UpdateCommitteeHashDatum _
 derive instance Newtype UpdateCommitteeHashDatum _
 instance ToData UpdateCommitteeHashDatum where
   toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) = Constr
-    zero
+    (BigNum.fromInt 0)
     [ toData committeeHash, toData sidechainEpoch ]
 
 instance FromData UpdateCommitteeHashDatum where
   fromData (Constr n [ a, b ])
-    | n == zero =
+    | n == BigNum.fromInt 0 =
         UpdateCommitteeHashDatum <$>
           ( { committeeHash: _, sidechainEpoch: _ }
               <$> fromData a
@@ -68,7 +69,7 @@ instance ToData UpdateCommitteeHash where
   toData
     ( UpdateCommitteeHash
         { sidechainParams, uchAssetClass, merkleRootTokenCurrencySymbol }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData uchAssetClass
     , toData merkleRootTokenCurrencySymbol
@@ -103,7 +104,7 @@ instance ToData UpdateCommitteeHashRedeemer where
         , newCommitteePubKeys
         , previousMerkleRoot
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData committeeSignatures
     , toData committeePubKeys
     , toData newCommitteePubKeys
@@ -146,7 +147,7 @@ instance ToData UpdateCommitteeHashMessage where
         , previousMerkleRoot
         , sidechainEpoch
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData newCommitteePubKeys
     , toData previousMerkleRoot

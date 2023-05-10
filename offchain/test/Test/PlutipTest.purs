@@ -60,7 +60,7 @@ mkPlutipConfigTest ∷
   ∀ distr wallets.
   UtxoDistribution distr wallets ⇒
   distr →
-  (wallets → Contract () Unit) →
+  (wallets → Contract Unit) →
   PlutipConfigTest
 mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d t
 

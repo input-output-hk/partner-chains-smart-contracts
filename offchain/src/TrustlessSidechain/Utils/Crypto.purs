@@ -180,7 +180,7 @@ foreign import sign ∷
 foreign import verifyEcdsaSecp256k1Signature ∷
   SidechainPublicKey → SidechainMessage → SidechainSignature → Boolean
 
-generatePrivKey ∷ Contract () SidechainPrivateKey
+generatePrivKey ∷ Contract SidechainPrivateKey
 generatePrivKey =
   liftEffect generateRandomPrivateKey
 

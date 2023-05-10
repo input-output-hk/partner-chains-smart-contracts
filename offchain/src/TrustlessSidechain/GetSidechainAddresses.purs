@@ -57,7 +57,7 @@ type SidechainAddressesExtra =
 -- | symbols. Moreover, it returns the currency symbol of the candidate
 -- | permission token provided the `permissionTokenUtxo` is given.
 getSidechainAddresses ∷
-  SidechainParams → SidechainAddressesExtra → Contract () SidechainAddresses
+  SidechainParams → SidechainAddressesExtra → Contract SidechainAddresses
 getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
   -- Minting policies
   { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
@@ -152,7 +152,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     }
 
 -- | Print the bech32 serialised address of a given validator
-getAddr ∷ Validator → Contract () String
+getAddr ∷ Validator → Contract String
 getAddr v = do
   netId ← Address.getNetworkId
   addr ← Monad.liftContractM ("Cannot get validator address") $
@@ -164,7 +164,7 @@ getAddr v = do
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
-getCurrencySymbolHex ∷ MintingPolicy → Contract () String
+getCurrencySymbolHex ∷ MintingPolicy → Contract String
 getCurrencySymbolHex mp = do
   let msg = report "getCurrencySymbolHex"
   cs ← Monad.liftContractM (msg "Cannot get currency symbol") $

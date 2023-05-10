@@ -17,24 +17,11 @@ config =
       , secure: false
       , path: Nothing
       }
-  , ogmiosDatumCacheConfig:
-      { port: UInt.fromInt 8088
-      , host: "127.0.0.1"
-      , secure: false
-      , path: Nothing
-      }
   , kupoConfig:
       { port: UInt.fromInt 8081
       , host: "127.0.0.1"
       , secure: false
       , path: Nothing
-      }
-  , postgresConfig:
-      { host: "127.0.0.1"
-      , port: UInt.fromInt 5432
-      , user: "postgres"
-      , password: "password"
-      , dbname: "ctl"
       }
   , customLogger: Nothing
   , suppressLogs: true
