@@ -2,29 +2,24 @@ module Test.Utils.Address (tests) where
 
 import Contract.Prelude
 
-import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData (PlutusData(..))
-import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray as ByteArray
+import Contract.Address
+  ( PaymentPubKeyHash(..)
+  , PubKeyHash(..)
+  , pubKeyHashAddress
+  )
+import Contract.CborBytes (hexToCborBytesUnsafe)
+import Contract.Credential (Credential(..))
+import Ctl.Internal.Deserialization.FromBytes (fromBytes)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Test.Unit (Test)
-import Test.Unit.Assert as Test.Unit.Assert
+import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
-import Test.Utils as Test.Utils
-import TrustlessSidechain.FUELMintingPolicy
-  ( CombinedMerkleProof(..)
-  , MerkleTreeEntry(..)
-  )
-import TrustlessSidechain.MerkleTree
-  ( MerkleProof(..)
-  , Side(..)
-  , Up(..)
-  , byteArrayToRootHashUnsafe
-  )
 import TrustlessSidechain.Utils.Address
-  ( byteArrayToBech32BytesUnsafe
+  ( addressFromBech32Bytes
+  , bech32BytesFromAddress
   )
 
 type TestCase = Mote (Const Void) Test Unit
@@ -36,6 +31,45 @@ tests = pureGroup "Merkle proof serialisation for #249" do
 test1 ∷ TestCase
 test1 =
   Mote.Monad.test
-    "Serialize address to bech32"
-    $ Test.Unit.Assert.assert "expected different bytearray representation"
-    $ (1 == 1)
+    "Pub key hash address <-> binary roundtrip"
+    $
+      let
+        testAddresses =
+          [ pubKeyHashAddress
+              ( PaymentPubKeyHash
+                  ( hexToPubKeyHash
+                      "3763063891c6ff9987a10382d65ff8c1486c760f98d82186c129cdf7"
+                  )
+              )
+              Nothing
+          , pubKeyHashAddress
+              ( PaymentPubKeyHash
+                  ( hexToPubKeyHash
+                      "3763063891c6ff9987a10382d65ff8c1486c760f98d82186c129cdf7"
+                  )
+              )
+              ( Just
+                  ( PubKeyCredential
+                      ( hexToPubKeyHash
+                          "3763063891c6ff9987a10382d65ff8c1486c760f98d82186c129cdf7"
+                      )
+                  )
+              )
+          ]
+
+        roundTrip = bech32BytesFromAddress >=> addressFromBech32Bytes
+
+      in
+        traverse_
+          ( \address →
+              roundTrip address `shouldEqual` Just address
+          )
+          testAddresses
+
+hexToPubKeyHash ∷ String → PubKeyHash
+hexToPubKeyHash hex =
+  PubKeyHash
+    $ unsafePartial
+    $ fromJust
+    $ fromBytes
+    $ hexToCborBytesUnsafe hex

@@ -3,7 +3,6 @@ module TrustlessSidechain.Utils.Address
   , getBech32BytesByteArray
   , bech32BytesFromAddress
   , addressFromBech32Bytes
-  , unsafeBech32BytesFromAddress
   , byteArrayToBech32BytesUnsafe
   ) where
 
@@ -11,16 +10,14 @@ import Contract.Prelude
 
 import Contract.Address (Address)
 import Contract.PlutusData (class FromData, class ToData)
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , CborBytes(..)
-  , byteArrayToHex
-  )
+import Contract.Prim.ByteArray (ByteArray, CborBytes(..))
 import Control.Alternative ((<|>))
 import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
 import Ctl.Internal.Serialization.Address
   ( baseAddressBytes
   , baseAddressFromAddress
+  , baseAddressFromBytes
+  , baseAddressToAddress
   , enterpriseAddressBytes
   , enterpriseAddressFromAddress
   , enterpriseAddressFromBytes
@@ -28,10 +25,13 @@ import Ctl.Internal.Serialization.Address
   , intToNetworkId
   , pointerAddressBytes
   , pointerAddressFromAddress
+  , pointerAddressFromBytes
+  , pointerAddressToAddress
   , rewardAddressBytes
   , rewardAddressFromAddress
+  , rewardAddressFromBytes
+  , rewardAddressToAddress
   )
-import Ctl.Internal.Serialization.Address as CtlInternalAddress
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
 -- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
@@ -75,16 +75,6 @@ bech32BytesFromAddress address = do
 
   pure $ Bech32Bytes $ unwrap bytes
 
--- | Converting a Bech32 byte array to an address without verifying the network ID
-unsafeBech32BytesFromAddress ∷ Bech32Bytes → Maybe Address
-unsafeBech32BytesFromAddress bytes = do
-  addr ←
-    ( getBech32BytesByteArray >>> byteArrayToHex >>>
-        CtlInternalAddress.addressFromBech32
-    ) bytes
-
-  toPlutusAddress addr
-
 -- | `addressFromBech32Bytes` is a convenient wrapper to convert cbor bytes
 -- | into an `Address.`
 -- | It is useful to use this with `Contract.CborBytes.cborBytesFromByteArray`
@@ -95,8 +85,11 @@ unsafeBech32BytesFromAddress bytes = do
 -- | Then, you can use `bech32BytesFromAddress` to get the `recipient`.
 addressFromBech32Bytes ∷ Bech32Bytes → Maybe Address
 addressFromBech32Bytes bechBytes = do
+  let cborBytes = CborBytes $ getBech32BytesByteArray bechBytes
   enterpriseAddr ←
-    (getBech32BytesByteArray >>> CborBytes >>> enterpriseAddressFromBytes)
-      bechBytes
+    (baseAddressToAddress <$> baseAddressFromBytes cborBytes)
+      <|> (enterpriseAddressToAddress <$> enterpriseAddressFromBytes cborBytes)
+      <|> (pointerAddressToAddress <$> pointerAddressFromBytes cborBytes)
+      <|> (rewardAddressToAddress <$> rewardAddressFromBytes cborBytes)
 
-  toPlutusAddress $ enterpriseAddressToAddress enterpriseAddr
+  toPlutusAddress enterpriseAddr
