@@ -25,7 +25,7 @@ unsafeFromHex bs = case Bytes.fromHex bs of
     BuiltinByteString bs'' -> bs''
   Left err -> Prelude.error err
 
-{- | 'testSide' includes some integration tests with the mamba people for #249
+{- | 'testSide' includes some integration tests with the SC_EVM people for #249
  for the 'Side' type
 -}
 testSide :: TestTree
@@ -60,7 +60,7 @@ testSide =
          in expected HUnit.@=? actual
     ]
 
-{- | 'testRootHash' includes some integration tests with the mamba people for #249
+{- | 'testRootHash' includes some integration tests with the SC_EVM people for #249
  for the 'Side' type
 -}
 testRootHash :: TestTree
