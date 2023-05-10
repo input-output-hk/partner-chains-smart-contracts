@@ -25,6 +25,7 @@ module TrustlessSidechain.Utils.Crypto
   , byteArrayToSidechainSignatureUnsafe
   , sidechainSignature
   , aggregateKeys
+  , isEnoughForVerification
   ) where
 
 import Contract.Prelude
@@ -39,6 +40,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Function (on)
 import Data.Ord as Ord
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | Invariant: ∀ x : SidechainPublicKey. length x = 33
 -- | Format: Compressed & Serialized as per secp256k1 implementation
@@ -215,11 +217,15 @@ unzipCommitteePubKeysAndSignatures ∷
   Tuple (Array SidechainPublicKey) (Array SidechainSignature)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
--- isEnoughForVerification ∷
---   SidechainParams →
---   Array (SidechainPublicKey /\ Maybe SidechainSignature) →
---   Int
--- isEnoughForVerification params arr = ?huh
+isEnoughForVerification ∷
+  SidechainParams →
+  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
+  BigInt
+isEnoughForVerification (SidechainParams params) arr =
+  let
+    len = BigInt.fromInt $ Array.length arr
+  in
+    one + ((params.thresholdNumerator * len) / params.thresholdDenominator)
 
 -- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
 -- | returns true iff
