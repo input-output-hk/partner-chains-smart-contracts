@@ -2,7 +2,7 @@
 
 ## 1. Development
 
-If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.
+If you want to develop for this submodule, please before setting up an environment consult the notes on [SETUPNOTES.md](SETUPNOTES.md) first.
 
 ## 2. Environment setup
 
