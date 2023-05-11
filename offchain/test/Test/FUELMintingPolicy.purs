@@ -122,7 +122,10 @@ testScenarioSuccess2 =
   Mote.Monad.test
     "Multiple claim and burn steps (minting 5 FUEL, minting 7 FUEL, burning 10 FUEL, burning 2 FUEL)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 10_000_000
+        , BigInt.fromInt 10_000_000
+        , BigInt.fromInt 10_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess`
         pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
