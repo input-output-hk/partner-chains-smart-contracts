@@ -112,7 +112,7 @@ runEndpoint scParams =
   case _ of
     ClaimAct
       { amount, recipient, merkleProof, index, previousMerkleRoot, dsUtxo } →
-      runFuelMP sp
+      runFuelMP scParams
         ( Mint
             { amount
             , recipient
@@ -126,9 +126,6 @@ runEndpoint scParams =
         <#> unwrap
         >>> { transactionId: _ }
         >>> ClaimActResp
-      where
-      sp ∷ _
-      sp = scParams
 
     BurnAct { amount, recipient } →
       runFuelMP scParams
