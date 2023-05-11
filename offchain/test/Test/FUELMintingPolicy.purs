@@ -3,9 +3,11 @@ module Test.FUELMintingPolicy (tests) where
 import Contract.Prelude
 
 import Contract.Address (ownPaymentPubKeyHash, pubKeyHashAddress)
+import Contract.Hashing (blake2b256Hash)
 import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -16,12 +18,12 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils
   ( WrappedTests
-  -- , assertMaxFee
   , fails
   , getOwnTransactionInput
   , plutipGroup
   , toTxIn
   )
+import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy
   ( FuelParams(..)
   , MerkleTreeEntry(..)
@@ -43,6 +45,7 @@ tests ∷ WrappedTests
 tests = plutipGroup "Claiming and burning FUEL tokens" $ do
   testScenarioSuccess
   testScenarioSuccess2
+  testScenarioSuccess3
   testScenarioFailure
   testScenarioFailure2
 
@@ -109,6 +112,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
             , merkleProof
             , index
             , previousMerkleRoot
+            , dsUtxo: Nothing
             }
         )
 
@@ -215,6 +219,89 @@ testScenarioSuccess2 =
 
         pure unit
 
+-- | `testScenarioSuccess3` tests minting some tokens with the fast distributed
+-- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
+testScenarioSuccess3 ∷ PlutipTest
+testScenarioSuccess3 =
+  Mote.Monad.test "Claiming FUEL tokens with fast distributed set lookup"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+        ownRecipient ←
+          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        genesisUtxo ← getOwnTransactionInput
+        let
+          keyCount = 25
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            }
+
+        { sidechainParams } ← initSidechain initScParams
+        let
+          amount = BigInt.fromInt 5
+          recipient = pubKeyHashAddress pkh Nothing
+          index = BigInt.fromInt 0
+          previousMerkleRoot = Nothing
+          ownEntry =
+            MerkleTreeEntry
+              { index
+              , amount
+              , previousMerkleRoot
+              , recipient: ownRecipient
+              }
+
+          ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
+          ownEntryHash = blake2b256Hash ownEntryBytes
+
+          ownEntryHashTn = unsafePartial $ fromJust $ Value.mkTokenName
+            ownEntryHash
+          merkleTree =
+            unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
+              [ ownEntryBytes ]
+
+          merkleProof = unsafePartial $ fromJust $ MerkleTree.lookupMp
+            ownEntryBytes
+            merkleTree
+
+        void $ Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries: [ ownEntry ]
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          }
+
+        void do
+          ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+          -- we first grab the distributed set UTxO (the slow way as we have no
+          -- other mechanism for doing this with ctl)
+          { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
+            $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
+
+          void $ runFuelMP sidechainParams
+            ( Mint
+                { amount
+                , recipient
+                , sidechainParams
+                , merkleProof
+                , index
+                , previousMerkleRoot
+                , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
+                }
+            )
+
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
   Mote.Monad.test "Attempt to claim with invalid merkle proof (should fail)"
@@ -244,7 +331,8 @@ testScenarioFailure =
             , sidechainParams: scParams
             , amount: BigInt.fromInt 1
             , index: BigInt.fromInt 0
-            , previousMerkleRoot: Nothing -- Just $ byteArrayFromIntArrayUnsafe (replicate 32 0)
+            , previousMerkleRoot: Nothing
+            , dsUtxo: Nothing
             }
           void $ runFuelMP scParams $ Burn
             { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }

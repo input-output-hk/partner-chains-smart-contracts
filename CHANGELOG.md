@@ -12,6 +12,18 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
    [378](https://github.com/mlabs-haskell/trustless-sidechain/pull/378) offchain).
 
+* Added an optional flag `--distributed-set-utxo` to the `claim` CLI subcommand
+  to avoid the linear scan through the UTxO set
+  ([412](https://github.com/mlabs-haskell/trustless-sidechain/issues/412),
+  [414](https://github.com/mlabs-haskell/trustless-sidechain/pull/414)
+  offchain)
+
+* Added a warning when the optional flag `--distributed-set-utxo` in the
+  `claim` CLI endpoint is *not* used
+  ([412](https://github.com/mlabs-haskell/trustless-sidechain/issues/412),
+  [414](https://github.com/mlabs-haskell/trustless-sidechain/pull/414)
+  offchain)
+
 ## Changed
 
 * `--threshold` is no longer used: `--threshold-numerator` and
