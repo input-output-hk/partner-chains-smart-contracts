@@ -67,6 +67,7 @@ data Endpoint
       , merkleProof ∷ MerkleProof
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
+      , dsUtxo ∷ Maybe TransactionInput
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg

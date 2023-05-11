@@ -12,6 +12,7 @@ module TrustlessSidechain.FUELMintingPolicy
   , addressFromCborBytes
   , bech32BytesFromAddress
   , combinedMerkleProofToFuelParams
+  , serialiseMteAndHash
   ) where
 
 import Contract.Prelude
@@ -174,6 +175,17 @@ newtype MerkleTreeEntry = MerkleTreeEntry
   , previousMerkleRoot ∷ Maybe RootHash
   }
 
+-- | `serialiseMteAndHash` serialises a merkle tree entry to bytes (cbor), and gives
+-- | the hash (blake2b256) of the bytes (in the left and right projections
+-- | respectively).
+-- | Note: this is compatible with how this is done onchain in
+-- | `TrustlessSidechain.MerkleRootTokenMintingPolicy` and
+-- | `TrustlessSidechain.FUELMintingPolicy`.
+serialiseMteAndHash ∷ MerkleTreeEntry → Maybe (ByteArray /\ ByteArray)
+serialiseMteAndHash mte = case serialiseData $ toData mte of
+  Just bytes → Just $ bytes /\ blake2b256Hash bytes
+  Nothing → Nothing
+
 instance FromData MerkleTreeEntry where
   fromData (Constr n [ a, b, c, d ]) | n == zero = ado
     index ← fromData a
@@ -210,7 +222,7 @@ newtype CombinedMerkleProof = CombinedMerkleProof
 -- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
 -- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.
 -- | This is a modestly convenient wrapper to help call the `runFuelMP `
--- | endpoint.
+-- | endpoint for internal tests.
 combinedMerkleProofToFuelParams ∷
   SidechainParams → CombinedMerkleProof → Maybe FuelParams
 combinedMerkleProofToFuelParams
@@ -231,6 +243,7 @@ combinedMerkleProofToFuelParams
           , sidechainParams
           , index: transaction'.index
           , previousMerkleRoot: transaction'.previousMerkleRoot
+          , dsUtxo: Nothing
           }
 
 instance Show CombinedMerkleProof where
@@ -293,7 +306,9 @@ getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
+  ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
   policy ← fuelMintingPolicy $
     FUELMint
@@ -318,6 +333,7 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
+      , dsUtxo ∷ Maybe TransactionInput
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
@@ -353,19 +369,27 @@ claimFUEL ∷
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
   , previousMerkleRoot ∷ Maybe RootHash
+  , dsUtxo ∷ Maybe TransactionInput
   } →
   Contract ()
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 claimFUEL
   fuelMP
-  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  { amount
+  , recipient
+  , merkleProof
+  , sidechainParams
+  , index
+  , previousMerkleRoot
+  , dsUtxo
+  } =
   do
-    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
+    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "claimFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
 
     cs /\ tn ← getFuelAssetClass fuelMP
 
-    ds ← DistributedSet.getDs sidechainParams
+    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
     bech32BytesRecipient ← bech32BytesFromAddress recipient
     let
@@ -377,16 +401,15 @@ claimFUEL
           , recipient: bech32BytesRecipient
           }
 
-    entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")
-      $ serialiseData
-      $ toData
-          merkleTreeEntry
+    entryBytes /\ cborMteHashed ←
+      liftContractM (msg "Cannot serialise merkle tree entry") $
+        serialiseMteAndHash merkleTreeEntry
+
+    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limit")
+      $ mkTokenName
+      $ cborMteHashed
 
     let rootHash = rootMp entryBytes merkleProof
-
-    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
-      $ mkTokenName
-      $ blake2b256Hash entryBytes
 
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
@@ -400,15 +423,17 @@ claimFUEL
         , tnNode
         }
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
-    } ← liftedM (msg "Couldn't find distributed set nodes") $
-      DistributedSet.findDsOutput ds cborMteHashedTn
+    } ← case dsUtxo of
+      Nothing → liftedM (msg "Couldn't find distributed set nodes") $
+        DistributedSet.slowFindDsOutput ds cborMteHashedTn
+      Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
-    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-      sidechainParams
+
+    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")
