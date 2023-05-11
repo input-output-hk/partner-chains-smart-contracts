@@ -19,27 +19,22 @@ module Test.Utils
 
 import Contract.Prelude
 
-import Contract.Address (Address, PaymentPubKeyHash, scriptHashAddress)
+import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
-import Contract.Monad (Contract, liftedM, throwContractError)
+import Contract.Monad (Contract, throwContractError)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( Transaction(..)
-  , TransactionHash(..)
+  ( TransactionHash(..)
   , TransactionInput(..)
   , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
-  , TxBody(..)
   )
-import Contract.Utxos (utxosAt)
-import Contract.Utxos as Utxos
+import Contract.Utxos (getWalletUtxos, utxosAt)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Control.Monad.Error.Class as MonadError
-import Ctl.Internal.Plutus.Conversion as Plutus.Conversion
 import Ctl.Internal.Serialization.Hash as Hash
-import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Const (Const)
@@ -70,7 +65,7 @@ toTxIn txId txIdx =
 getUniqueUtxoAt ∷
   Address → Contract (Tuple TransactionInput TransactionOutputWithRefScript)
 getUniqueUtxoAt addr = do
-  utxoMap ← Utxos.utxosAt addr
+  utxoMap ← utxosAt addr
   let
     err = Monad.throwContractError
       $ "Expected exactly one script address but got:"
@@ -98,7 +93,7 @@ paymentPubKeyHashToByteArray =
 -- | an NFT for the initial committee
 getOwnTransactionInput ∷ Contract TransactionInput
 getOwnTransactionInput = do
-  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" Utxos.getWalletUtxos
+  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" getWalletUtxos
   Monad.liftContractM "No utxo found in wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
@@ -196,7 +191,7 @@ pureGroup label tests =
 assertIHaveOutputWithAsset ∷ CurrencySymbol → TokenName → Contract Unit
 assertIHaveOutputWithAsset cs tn = do
   ownUtxos ← map (Map.values) $ Monad.liftedM "Failed to query wallet utxos"
-    Utxos.getWalletUtxos
+    getWalletUtxos
   let
     iHaveCurrencySymbolAndTokenName =
       let
