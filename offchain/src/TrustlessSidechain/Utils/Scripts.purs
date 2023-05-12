@@ -18,7 +18,7 @@ import Data.Array as Array
 -- | `mkValidatorWithParams hexScript params` returns the `Validator` of `hexScript`
 -- | with the script applied to `params`. This is a convenient alias
 -- | to help create the distributed set validators.
-mkValidatorWithParams ∷ ∀ a. ToData a ⇒ String → Array a → Contract () Validator
+mkValidatorWithParams ∷ ∀ a. ToData a ⇒ String → Array a → Contract Validator
 mkValidatorWithParams hexScript params = do
   let
     script = decodeTextEnvelope hexScript
@@ -34,7 +34,7 @@ mkValidatorWithParams hexScript params = do
 -- | with the script applied to `params`. This is a convenient alias
 -- | to help create the distributed set minting policies.
 mkMintingPolicyWithParams ∷
-  ∀ a. ToData a ⇒ String → Array a → Contract () MintingPolicy
+  ∀ a. ToData a ⇒ String → Array a → Contract MintingPolicy
 mkMintingPolicyWithParams hexScript params = do
   let
     script = decodeTextEnvelope hexScript

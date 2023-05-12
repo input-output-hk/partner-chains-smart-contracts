@@ -23,6 +23,7 @@ module TrustlessSidechain.DistributedSet
   , getDs
   , getDsKeyPolicy
   , findDsConfOutput
+  , slowFindDsOutput
   , findDsOutput
   ) where
 
@@ -31,8 +32,10 @@ import Contract.Prelude
 import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
+import Contract.Log as Log
 import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -53,7 +56,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(..)
   , outputDatumDatum
   )
-import Contract.Utxos (utxosAt)
+import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
@@ -62,7 +65,6 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
 import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -194,34 +196,34 @@ derive instance Newtype Node _
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
-insertValidator ∷ Ds → Contract () Validator
+insertValidator ∷ Ds → Contract Validator
 insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
-dsConfValidator ∷ Ds → Contract () Validator
+dsConfValidator ∷ Ds → Contract Validator
 dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
-dsConfPolicy ∷ DsConfMint → Contract () MintingPolicy
+dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
 dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
   toData
   [ dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
-dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
+dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
   toData
   [ dskm ]
 
 -- | The address for the insert validator of the distributed set.
-insertAddress ∷ NetworkId → Ds → Contract () Address
+insertAddress ∷ NetworkId → Ds → Contract Address
 insertAddress netId ds = do
   v ← insertValidator ds
   liftContractM "Couldn't derive distributed set insert validator address"
@@ -238,30 +240,32 @@ derive newtype instance FromData DsDatum
 
 instance FromData DsKeyMint where
   fromData (Constr n [ a, b ])
-    | n == zero = DsKeyMint <$>
+    | n == (BigNum.fromInt 0) = DsKeyMint <$>
         ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
             fromData b
         )
   fromData _ = Nothing
 
 instance ToData DsKeyMint where
-  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
+  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr
+    (BigNum.fromInt 0)
     [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
 
 instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == zero =
+  fromData (Constr n [ a, b ]) | n == (BigNum.fromInt 0) =
     DsConfDatum <$>
       ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
   fromData _ = Nothing
 
 instance ToData DsConfDatum where
-  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
+  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr
+    (BigNum.fromInt 0)
     [ toData dscKeyPolicy, toData dscFUELPolicy ]
 
 derive newtype instance ToData DsConfMint
 derive newtype instance FromData DsConfMint
 
-dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
+dsToDsKeyMint ∷ Ds → Contract DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
 
@@ -293,32 +297,34 @@ insertNode str (Node node)
           }
   | otherwise = Nothing
 
--- | `getDs` grabs the `Ds` type given `SidechainParams`
-getDs ∷ SidechainParams → Contract () Ds
-getDs (SidechainParams sp) = do
+-- | `getDs` grabs the `Ds` type given `TransactionInput`. Often, the
+-- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
+getDs ∷ TransactionInput → Contract Ds
+getDs txInput = do
   let
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDs" }
 
-  dsConfPolicy' ← dsConfPolicy $ DsConfMint sp.genesisUtxo
+  dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
       (msg "Failed to get dsConfPolicy CurrencySymbol")
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
--- | `getDsKeyPolicy` grabs the key policy and currency symbol
--- | (potentially throwing an error in the case that it is not possible).
+-- | `getDsKeyPolicy` grabs the key policy and currency symbol from the given
+-- | `TransactionInput` (potentially throwing an error in the case that it is
+-- | not possible). Often, the `TransactionInput` should be the `genesisUtxo`
+-- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
-  SidechainParams →
-  Contract ()
+  Ds →
+  Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
-getDsKeyPolicy (SidechainParams sp) = do
+getDsKeyPolicy ds = do
   let
     msg = Logging.mkReport
       { mod: "DistributedSet", fun: "getDsKeyPolicy" }
 
-  ds ← getDs (SidechainParams sp)
   insertValidator' ← insertValidator ds
 
   let
@@ -340,7 +346,7 @@ getDsKeyPolicy (SidechainParams sp) = do
 -- | holds the configuration of the distributed set.
 findDsConfOutput ∷
   Ds →
-  Contract ()
+  Contract
     { confRef ∷ TransactionInput
     , confO ∷ TransactionOutputWithRefScript
     , confDat ∷ DsConfDatum
@@ -355,7 +361,7 @@ findDsConfOutput ds = do
       "Couldn't derive distributed set configuration validator address"
       $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
 
-  utxos ← utxosAt scriptAddr
+  utxos ← Utxos.utxosAt scriptAddr
 
   out ←
     liftContractM
@@ -379,6 +385,96 @@ findDsConfOutput ds = do
     }
 
 -- | `findDsOutput` finds the transaction which we must insert to
+-- | (if it exists) for the distributed set from the given `TransactionInput`. It
+-- | returns:
+-- |
+-- |    - the `TransactionInput` of the output to spend (i.e., the provided
+-- |    input);
+-- |    - the transaction output information;
+-- |    - the datum at that utxo to spend;
+-- |    - the `TokenName` of the key of the utxo we want to spend; and
+-- |    - the new nodes to insert (after replacing the given node)
+-- |
+-- | See `slowFindDsOutput` for an alternative lookup function which is much
+-- | slower!
+findDsOutput ∷
+  Ds →
+  TokenName →
+  TransactionInput →
+  Contract
+    { inUtxo ∷
+        { nodeRef ∷ TransactionInput
+        , oNode ∷ TransactionOutputWithRefScript
+        , datNode ∷ DsDatum
+        , tnNode ∷ TokenName
+        }
+    , nodes ∷ Ib Node
+    }
+findDsOutput ds tn txInput = do
+  let msg = Logging.mkReport { mod: "DistributedSet", fun: "findDsOutput" }
+
+  txOut ← Monad.liftedM (msg "failed to find provided distributed set UTxO") $
+    Utxos.getUtxo txInput
+
+  { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
+
+  --  Grab the datum
+  dat ← liftContractM (msg "datum not a distributed set node")
+    $ outputDatumDatum (unwrap txOut).datum
+    >>= (fromData <<< unwrap)
+
+  --  Validate that this is a distributed set node / grab the necessary
+  -- information about it
+  -- `tn'` is the distributed set node onchain.
+  tn' ← do
+    netId ← getNetworkId
+    scriptAddr ← insertAddress netId ds
+
+    unless
+      (scriptAddr == (unwrap txOut).address)
+      $ Monad.throwContractError
+      $ msg "provided transaction is not at distributed set node address"
+
+    keyNodeTn ← liftContractM
+      (msg "missing token name in distributed set node")
+      do
+        tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
+          (unwrap txOut).amount
+        Array.head $ AssocMap.keys tns
+
+    pure keyNodeTn
+
+  nodes ←
+    Monad.liftContractM
+      ( msg
+          "invalid distributed set node provided \
+          \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+          \but got `providedNode` "
+          <> show (getTokenName tn')
+          <> ", `newNode` "
+          <> show (getTokenName tn)
+          <> ", and `next` "
+          <> show (unwrap dat)
+      ) $ insertNode (getTokenName tn) $ mkNode
+      (getTokenName tn')
+      dat
+
+  pure
+    { inUtxo:
+        { nodeRef: txInput
+        , oNode:
+            TransactionOutputWithRefScript
+              { output: txOut
+              , scriptRef: Nothing
+              -- There shouldn't be a script ref for this...
+              }
+        , datNode: dat
+        , tnNode: tn'
+        }
+    , nodes
+    }
+
+-- | `slowFindDsOutput` finds the transaction which we must insert to
 -- | (if it exists) for the distributed set. It returns:
 -- |
 -- |    - the `TransactionInput` of the output to spend;
@@ -390,10 +486,10 @@ findDsConfOutput ds = do
 -- | Note: this is linear in the size of the distributed set... one should maintain
 -- | an efficient offchain index of the utxos, and set up the appropriate actions
 -- | when the list gets updated by someone else.
-findDsOutput ∷
+slowFindDsOutput ∷
   Ds →
   TokenName →
-  Contract ()
+  Contract
     ( Maybe
         { inUtxo ∷
             { nodeRef ∷ TransactionInput
@@ -404,10 +500,13 @@ findDsOutput ∷
         , nodes ∷ Ib Node
         }
     )
-findDsOutput ds tn = do
+slowFindDsOutput ds tn = do
+  Log.logWarn'
+    "Finding the required distributed set node (this may take a while)..."
+
   netId ← getNetworkId
   scriptAddr ← insertAddress netId ds
-  utxos ← utxosAt scriptAddr
+  utxos ← Utxos.utxosAt scriptAddr
   go $ Map.toUnfoldable utxos
 
   where

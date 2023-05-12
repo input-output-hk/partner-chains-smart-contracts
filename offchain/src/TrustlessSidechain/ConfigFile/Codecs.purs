@@ -50,7 +50,6 @@ configCodec =
   runtimeConfigCodec =
     ( CAR.object "runtimeConfig"
         { ogmios: CAC.maybe serverConfigCodec
-        , ogmiosDatumCache: CAC.maybe serverConfigCodec
         , kupo: CAC.maybe serverConfigCodec
         , network: CAC.maybe networkIdCodec
         }

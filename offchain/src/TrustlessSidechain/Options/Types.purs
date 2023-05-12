@@ -12,7 +12,7 @@ module TrustlessSidechain.Options.Types
 import Contract.Prelude
 
 import Contract.Address (Address, NetworkId)
-import Contract.Config (ConfigParams, ServerConfig)
+import Contract.Config (ContractParams, ServerConfig)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (TokenName)
 import Ctl.Internal.Types.ByteArray (ByteArray)
@@ -33,7 +33,7 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 type Options =
   { scParams ∷ SidechainParams
   , endpoint ∷ Endpoint
-  , configParams ∷ ConfigParams ()
+  , contractParams ∷ ContractParams
   }
 
 -- | Sidechain configuration file including common parameters.
@@ -55,7 +55,7 @@ type Config =
     paymentSigningKeyFile ∷ Maybe FilePath
   , -- | Filepath of the stake signing key of the wallet owner
     stakeSigningKeyFile ∷ Maybe FilePath
-  , -- | Network configuration of the runtime dependencies (kupo, ogmios, ogmios-datum-cache)
+  , -- | Network configuration of the runtime dependencies (kupo, ogmios)
     runtimeConfig ∷ Maybe RuntimeConfig
   }
 
@@ -67,6 +67,7 @@ data Endpoint
       , merkleProof ∷ MerkleProof
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
+      , dsUtxo ∷ Maybe TransactionInput
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
@@ -184,7 +185,6 @@ instance Show CommitteeInput where
 -- Any parameter can be set `null` falling back to its default value
 type RuntimeConfig =
   { ogmios ∷ Maybe ServerConfig
-  , ogmiosDatumCache ∷ Maybe ServerConfig
   , kupo ∷ Maybe ServerConfig
   , network ∷ Maybe NetworkId
   }

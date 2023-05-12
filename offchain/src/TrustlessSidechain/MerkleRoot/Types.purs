@@ -12,6 +12,7 @@ module TrustlessSidechain.MerkleRoot.Types
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , PlutusData(..)
@@ -44,7 +45,7 @@ instance ToData SignedMerkleRoot where
     ( SignedMerkleRoot
         { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData merkleRoot
       , toData previousMerkleRoot
       , toData signatures
@@ -74,7 +75,7 @@ instance ToData SignedMerkleRootMint where
         , merkleRootValidatorHash
         }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData sidechainParams
       , toData updateCommitteeHashCurrencySymbol
       , toData merkleRootValidatorHash
@@ -109,7 +110,7 @@ instance ToData MerkleRootInsertionMessage where
     ( MerkleRootInsertionMessage
         { sidechainParams, merkleRoot, previousMerkleRoot }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData sidechainParams
       , toData merkleRoot
       , toData previousMerkleRoot

@@ -1,5 +1,4 @@
 SHELL := bash
-.ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 .PHONY: dev build test check-format update-scripts format spago2nix clean
 
@@ -8,9 +7,10 @@ BROWSER_RUNTIME ?= 1
 ps-sources := $(shell fd -epurs)
 js-sources := $(shell fd -ejs)
 dhall-sources := $(shell fd -edhall)
-trustless-sidechain-serialise=cabal run -v0 trustless-sidechain-serialise --
+trustless-sidechain-serialise=cabal run trustless-sidechain-serialise --
 onchain-dir := ../onchain/
-haskell-scripts := $(wildcard $(onchain-dir)/src/TrustlessSidechain/*.hs)
+haskell-scripts := $(wildcard $(onchain-dir)/src/TrustlessSidechain/*.hs) $(wildcard $(onchain-dir)/app/serialise/*.hs)
+
 raw-scripts-purs := src/TrustlessSidechain/RawScripts.purs
 
 ps-entrypoint := Main
@@ -51,9 +51,9 @@ main.js: src/Main.purs $(raw-scripts-purs)
 # and allows our ctl code to reference them without relying on directory
 # structure
 ${raw-scripts-purs}: ${haskell-scripts}
-	@echo 'Generating $@'
-	@cd $(onchain-dir) && ${trustless-sidechain-serialise} --purescript-plutus-scripts=${CURDIR}/${raw-scripts-purs}
-	@echo 'Updated $@'
+	@echo 'Generating `$@` with the following command...'
+	cd $(onchain-dir) && ${trustless-sidechain-serialise} --purescript-plutus-scripts=${CURDIR}/${raw-scripts-purs}
+	@echo 'Updated `$@`.'
 
 clean:
 	-rm src/TrustlessSidechain/RawScripts.purs

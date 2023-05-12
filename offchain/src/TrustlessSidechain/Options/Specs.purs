@@ -5,8 +5,8 @@ import Contract.Prelude
 import Contract.Config
   ( PrivateStakeKeySource(..)
   , ServerConfig
-  , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
+  , mkCtlBackendParams
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -147,10 +147,6 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultOgmiosWsConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
 
-  datumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
-    fromMaybe defaultDatumCacheWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
-
   kupoConfig ← serverConfigSpec "kupo" $
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
@@ -158,7 +154,7 @@ withCommonOpts maybeConfig endpointParser = ado
   in
     { scParams
     , endpoint
-    , configParams: testnetConfig
+    , contractParams: testnetConfig
         { logLevel = environment.logLevel
         , suppressLogs = not environment.isTTY
         , customLogger = Just
@@ -166,9 +162,7 @@ withCommonOpts maybeConfig endpointParser = ado
         , walletSpec = Just $ UseKeys
             (PrivatePaymentKeyFile pSkey)
             (PrivateStakeKeyFile <$> stSkey)
-        , kupoConfig = kupoConfig
-        , datumCacheConfig = datumCacheConfig
-        , ogmiosConfig = ogmiosConfig
+        , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
         }
     }
   where
@@ -313,6 +307,13 @@ claimSpec = ado
         , metavar "CBOR"
         , help "CBOR-encoded Combined Merkle Proof"
         ]
+  dsUtxo ← optional $ option transactionInput $ fold
+    [ long "distributed-set-utxo"
+    , metavar "TX_ID#TX_IDX"
+    , help
+        "UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
+    ]
+
   let
     { transaction, merkleProof } = unwrap combinedMerkleProof
     { amount, index, previousMerkleRoot } = unwrap transaction
@@ -323,6 +324,7 @@ claimSpec = ado
       , merkleProof
       , index
       , previousMerkleRoot
+      , dsUtxo
       }
 
 -- | Parse all parameters for the `burn` endpoint

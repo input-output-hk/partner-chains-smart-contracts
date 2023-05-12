@@ -121,7 +121,7 @@ testScenarioSuccess1 =
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
 assertIHaveCandidatePermissionToken ∷
-  SidechainParams → CandidatePermissionTokenInfo → Contract () Unit
+  SidechainParams → CandidatePermissionTokenInfo → Contract Unit
 assertIHaveCandidatePermissionToken
   scParams
   { candidatePermissionTokenUtxo, candidatePermissionTokenName } = do

@@ -60,7 +60,7 @@ import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
-updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
+updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
 updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
 
 -- | `runUpdateCommitteeHash` is the main worker function of the
@@ -68,7 +68,7 @@ updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
 -- | Preconditions:
 -- |    - `UpdateCommitteeHashParams` has been normalized via
 -- |    `UpdateCommitteeHash.Utils.normalizeCommitteeHashParams`
-runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
+runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
 runUpdateCommitteeHash
   ( UpdateCommitteeHashParams
       { sidechainParams
@@ -228,7 +228,7 @@ report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { committeeHashPolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     , committeeHashTokenName ∷ TokenName
