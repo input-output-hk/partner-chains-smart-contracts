@@ -200,6 +200,7 @@ test-suite trustless-sidechain-test
     , plutus-ledger-api
     , plutus-tx
     , QuickCheck
+    , secp256k1-haskell
     , tasty
     , tasty-hunit
     , tasty-quickcheck
