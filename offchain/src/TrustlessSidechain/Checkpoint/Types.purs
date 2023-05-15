@@ -12,7 +12,7 @@ import Contract.Prelude
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -29,7 +29,9 @@ newtype CheckpointDatum = CheckpointDatum
   }
 
 derive instance Generic CheckpointDatum _
+
 derive instance Newtype CheckpointDatum _
+
 instance ToData CheckpointDatum where
   toData (CheckpointDatum { blockHash, blockNumber }) = Constr
     zero
@@ -52,7 +54,9 @@ newtype CheckpointParameter = CheckpointParameter
   }
 
 derive instance Generic CheckpointParameter _
+
 derive instance Newtype CheckpointParameter _
+
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
@@ -69,7 +73,9 @@ newtype InitCheckpointMint = InitCheckpointMint
   { icTxOutRef ∷ TransactionInput }
 
 derive instance Generic InitCheckpointMint _
+
 derive instance Newtype InitCheckpointMint _
+
 instance ToData InitCheckpointMint where
   toData (InitCheckpointMint { icTxOutRef }) =
     toData icTxOutRef
@@ -108,6 +114,7 @@ newtype CheckpointEndpointParam = CheckpointEndpointParam
   }
 
 derive newtype instance Show CheckpointEndpointParam
+
 derive instance Newtype CheckpointEndpointParam _
 
 newtype CheckpointMessage = CheckpointMessage
@@ -118,6 +125,7 @@ newtype CheckpointMessage = CheckpointMessage
   }
 
 derive instance Generic CheckpointMessage _
+
 instance ToData CheckpointMessage where
   toData
     ( CheckpointMessage

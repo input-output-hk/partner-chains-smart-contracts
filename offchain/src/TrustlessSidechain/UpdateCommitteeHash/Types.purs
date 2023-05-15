@@ -17,7 +17,7 @@ import Contract.Prelude
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -38,7 +38,9 @@ newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   }
 
 derive instance Generic UpdateCommitteeHashDatum _
+
 derive instance Newtype UpdateCommitteeHashDatum _
+
 instance ToData UpdateCommitteeHashDatum where
   toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) = Constr
     zero
@@ -63,7 +65,9 @@ newtype UpdateCommitteeHash = UpdateCommitteeHash
   }
 
 derive instance Generic UpdateCommitteeHash _
+
 derive instance Newtype UpdateCommitteeHash _
+
 instance ToData UpdateCommitteeHash where
   toData
     ( UpdateCommitteeHash
@@ -80,7 +84,9 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
   { icTxOutRef ∷ TransactionInput }
 
 derive instance Generic InitCommitteeHashMint _
+
 derive instance Newtype InitCommitteeHashMint _
+
 instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
@@ -95,6 +101,7 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   }
 
 derive instance Generic UpdateCommitteeHashRedeemer _
+
 instance ToData UpdateCommitteeHashRedeemer where
   toData
     ( UpdateCommitteeHashRedeemer
@@ -121,6 +128,7 @@ newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   }
 
 derive newtype instance Show UpdateCommitteeHashParams
+
 derive instance Newtype UpdateCommitteeHashParams _
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
@@ -138,6 +146,7 @@ newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   }
 
 derive instance Generic UpdateCommitteeHashMessage _
+
 instance ToData UpdateCommitteeHashMessage where
   toData
     ( UpdateCommitteeHashMessage

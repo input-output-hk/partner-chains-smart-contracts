@@ -8,6 +8,7 @@ import Contract.Prelude
 
 import Contract.Prim.ByteArray (ByteArray, byteArrayToHex)
 import Contract.Value (CurrencySymbol)
+import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
@@ -50,7 +51,10 @@ data EndpointResp
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
 endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
   where
+  dec ∷ Json → Maybe EndpointResp
   dec _ = Nothing
+
+  enc ∷ EndpointResp → Json
   enc = case _ of
     MintActResp { transactionId } →
       J.fromObject $ Object.fromFoldable

@@ -12,12 +12,12 @@ import Contract.Prelude
 
 import Contract.Config (Message)
 import Data.Log.Formatter.JSON (jsonFormatter)
-import Node.Encoding (Encoding(..))
+import Node.Encoding (Encoding(UTF8))
 import Node.FS.Aff (appendTextFile)
 import Node.Process (stdoutIsTTY)
 
 -- | This class overrides `Show` in order to remove quoting from strings
-class Display a where
+class Display (a ∷ Type) where
   display ∷ a → String
 
 instance Display String where
@@ -36,7 +36,7 @@ type Location = { mod ∷ String, fun ∷ String }
 -- | myformatter = mkReport { mod : "MyModule", fun : "myFunction" }
 -- | myformatter "this is an error message."
 -- | ```
-mkReport ∷ Location → ∀ e. Display e ⇒ e → String
+mkReport ∷ Location → (∀ (e ∷ Type). Display e ⇒ e → String)
 mkReport { mod, fun } msg = mod <> "." <> fun <> ": " <> display msg
 
 -- | The logging environment, may be used to parametrize functions and override

@@ -23,7 +23,7 @@ import Contract.Hashing as Hashing
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Integer, Constr)
   , fromData
   , toData
   )
@@ -41,6 +41,21 @@ import Data.Unfoldable as Unfoldable
 -- | Invariants:
 -- |    - the underlying `ByteArray` should be the image of `blake2b256Hash`
 newtype RootHash = RootHash ByteArray
+
+derive instance Eq RootHash
+
+derive instance Ord RootHash
+
+instance Show RootHash where
+  show (RootHash byteArray) = "(" <> "byteArrayToRootHashUnsafe "
+    <> show byteArray
+    <> ")"
+
+-- Note [`ToData` / `FromData` Instances of the Merkle Tree]
+-- All of these instances should correspond to `/src/TrustlessSidechain/MerkleTree.hs`
+derive newtype instance ToData RootHash
+
+derive newtype instance FromData RootHash
 
 -- | `byteArrayToRootHashUnsafe` constructs a `RootHash` from a given
 -- | `ByteArray` without checking any invariants.
@@ -62,62 +77,11 @@ data Side
   = L
   | R
 
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-data MerkleTree
-  = Bin RootHash MerkleTree MerkleTree
-  | Tip RootHash
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-newtype Up = Up { siblingSide ∷ Side, sibling ∷ RootHash }
-
--- | See `src/TrustlessSidechain/MerkleTree.hs`
-newtype MerkleProof = MerkleProof (Array Up)
-
-instance Show MerkleTree where
-  show (Bin h l r) = String.joinWith " " [ "Bin", show h, show l, show r ]
-  show (Tip h) = String.joinWith " " [ "Tip", show h ]
-
-derive instance Eq RootHash
-derive instance Ord RootHash
-
-derive instance Generic MerkleProof _
-derive instance Newtype MerkleProof _
-derive instance Eq MerkleProof
-
-derive instance Generic Up _
-derive instance Newtype Up _
-derive instance Eq Up
-
-instance Eq Side where
-  eq L L = true
-  eq R R = true
-  eq _ _ = false
+derive instance Eq Side
 
 instance Show Side where
   show L = "L"
   show R = "R"
-
-instance Show Up where
-  show = genericShow
-
-instance Eq MerkleTree where
-  eq (Bin rh0 l0 r0) (Bin rh1 l1 r1) =
-    rh0 == rh1 && l0 == l1 && r0 == r1
-  eq (Tip rh0) (Tip rh1) = rh0 == rh1
-  eq _ _ = false
-
-instance Show MerkleProof where
-  show = genericShow
-
-instance Show RootHash where
-  show (RootHash byteArray) = "(" <> "byteArrayToRootHashUnsafe "
-    <> show byteArray
-    <> ")"
-
--- Note [`ToData` / `FromData` Instances of the Merkle Tree]
--- All of these instances should correspond to `/src/TrustlessSidechain/MerkleTree.hs`
-derive newtype instance ToData RootHash
-derive newtype instance FromData RootHash
 
 instance ToData Side where
   toData L = Integer zero
@@ -130,19 +94,20 @@ instance FromData Side where
       | n == one → Just R
     _ → Nothing
 
-instance ToData Up where
-  toData (Up record) = Constr zero
-    [ toData record.siblingSide, toData record.sibling ]
+-- | See `src/TrustlessSidechain/MerkleTree.hs`
+data MerkleTree
+  = Bin RootHash MerkleTree MerkleTree
+  | Tip RootHash
 
-instance FromData Up where
-  fromData plutusData = case plutusData of
-    Constr n [ a, b ]
-      | n == zero →
-          Up <$> (({ siblingSide: _, sibling: _ }) <$> fromData a <*> fromData b)
-    _ → Nothing
+instance Show MerkleTree where
+  show (Bin h l r) = String.joinWith " " [ "Bin", show h, show l, show r ]
+  show (Tip h) = String.joinWith " " [ "Tip", show h ]
 
-derive newtype instance ToData MerkleProof
-derive newtype instance FromData MerkleProof
+instance Eq MerkleTree where
+  eq (Bin rh0 l0 r0) (Bin rh1 l1 r1) =
+    rh0 == rh1 && l0 == l1 && r0 == r1
+  eq (Tip rh0) (Tip rh1) = rh0 == rh1
+  eq _ _ = false
 
 instance ToData MerkleTree where
   toData (Bin roothash l r) =
@@ -161,6 +126,45 @@ instance FromData MerkleTree where
           [ roothash ] → Tip <$> fromData roothash
           _ → Nothing
     _ → Nothing
+
+-- | See `src/TrustlessSidechain/MerkleTree.hs`
+newtype Up = Up { siblingSide ∷ Side, sibling ∷ RootHash }
+
+derive instance Generic Up _
+
+derive instance Newtype Up _
+
+derive instance Eq Up
+
+instance Show Up where
+  show = genericShow
+
+instance ToData Up where
+  toData (Up record) = Constr zero
+    [ toData record.siblingSide, toData record.sibling ]
+
+instance FromData Up where
+  fromData plutusData = case plutusData of
+    Constr n [ a, b ]
+      | n == zero →
+          Up <$> (({ siblingSide: _, sibling: _ }) <$> fromData a <*> fromData b)
+    _ → Nothing
+
+-- | See `src/TrustlessSidechain/MerkleTree.hs`
+newtype MerkleProof = MerkleProof (Array Up)
+
+derive instance Generic MerkleProof _
+
+derive instance Newtype MerkleProof _
+
+derive instance Eq MerkleProof
+
+instance Show MerkleProof where
+  show = genericShow
+
+derive newtype instance ToData MerkleProof
+
+derive newtype instance FromData MerkleProof
 
 -- * Internal helper functions
 
@@ -181,7 +185,7 @@ hash ∷ ByteArray → RootHash
 hash = RootHash <<< Hashing.blake2b256Hash
 
 -- | `listToArray` converts a `List` to an `Array`
-listToArray ∷ ∀ a. List a → Array a
+listToArray ∷ ∀ (a ∷ Type). List a → Array a
 listToArray =
   let
     go Nil = Nothing

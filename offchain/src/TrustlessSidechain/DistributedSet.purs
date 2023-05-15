@@ -15,7 +15,6 @@ module TrustlessSidechain.DistributedSet
   , mkNode
   , nodeToDatum
   , dsConfTokenName
-
   , insertValidator
   , dsConfValidator
   , dsConfPolicy
@@ -38,7 +37,7 @@ import Contract.Monad as Monad
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -52,13 +51,13 @@ import Contract.Scripts
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionInput
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
-import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), lift, runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
@@ -77,6 +76,14 @@ import TrustlessSidechain.Utils.Scripts
 -- | the distributed set.
 newtype Ds = Ds CurrencySymbol
 
+derive instance Generic Ds _
+
+derive instance Newtype Ds _
+
+derive newtype instance ToData Ds
+
+derive newtype instance FromData Ds
+
 -- | `dsConf` accesses the underlying `ByteArray` of `Ds`
 dsConf ∷ Ds → CurrencySymbol
 dsConf (Ds currencySymbol) = currencySymbol
@@ -84,6 +91,14 @@ dsConf (Ds currencySymbol) = currencySymbol
 -- | `DsDatum` is the datum for the validator script for insertion in the
 -- | distributed set.
 newtype DsDatum = DsDatum ByteArray
+
+derive instance Generic DsDatum _
+
+derive instance Newtype DsDatum _
+
+derive newtype instance ToData DsDatum
+
+derive newtype instance FromData DsDatum
 
 -- | `dsNext` accesses the underlying `ByteArray` of `DsDatum`
 dsNext ∷ DsDatum → ByteArray
@@ -97,10 +112,32 @@ newtype DsConfDatum = DsConfDatum
   , dscFUELPolicy ∷ CurrencySymbol
   }
 
+derive instance Generic DsConfDatum _
+
+derive instance Newtype DsConfDatum _
+
+instance FromData DsConfDatum where
+  fromData (Constr n [ a, b ]) | n == zero =
+    DsConfDatum <$>
+      ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
+  fromData _ = Nothing
+
+instance ToData DsConfDatum where
+  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
+    [ toData dscKeyPolicy, toData dscFUELPolicy ]
+
 -- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
 -- | which initializes the distributed set (i.e., the parameter for the
 -- | minting policy that is the configuration of the distributed set).
 newtype DsConfMint = DsConfMint TransactionInput
+
+derive instance Generic DsConfMint _
+
+derive instance Newtype DsConfMint _
+
+derive newtype instance ToData DsConfMint
+
+derive newtype instance FromData DsConfMint
 
 -- | `dscmTxOutRef` accesses the underlying `TransactionInput` of `DsConfMint`
 dscmTxOutRef ∷ DsConfMint → TransactionInput
@@ -113,11 +150,31 @@ newtype DsKeyMint = DsKeyMint
   , dskmConfCurrencySymbol ∷ CurrencySymbol
   }
 
+derive instance Generic DsKeyMint _
+
+derive instance Newtype DsKeyMint _
+
+instance FromData DsKeyMint where
+  fromData (Constr n [ a, b ])
+    | n == zero = DsKeyMint <$>
+        ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
+            fromData b
+        )
+  fromData _ = Nothing
+
+instance ToData DsKeyMint where
+  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
+    [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
+
 -- | `Node` is an internal type to represent the nodes in the distributed set.
 newtype Node = Node
   { nKey ∷ ByteArray
   , nNext ∷ ByteArray
   }
+
+derive instance Generic Node _
+
+derive instance Newtype Node _
 
 -- | `mkNode` is a wrapper to create a Node from a string (a key) and the
 -- | datum.
@@ -178,19 +235,6 @@ dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
 -- Note: this really *should* be safe to use the partial function here since the
 -- empty TokenName is clearly a valid token. Clearly!
 
-derive instance Generic Ds _
-derive instance Newtype Ds _
-derive instance Generic DsDatum _
-derive instance Newtype DsDatum _
-derive instance Generic DsConfDatum _
-derive instance Newtype DsConfDatum _
-derive instance Generic DsConfMint _
-derive instance Newtype DsConfMint _
-derive instance Generic DsKeyMint _
-derive instance Newtype DsKeyMint _
-derive instance Generic Node _
-derive instance Newtype Node _
-
 -- * Validator / minting policies
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
@@ -230,37 +274,6 @@ insertAddress netId ds = do
 
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
-
-derive newtype instance ToData Ds
-derive newtype instance FromData Ds
-
-derive newtype instance ToData DsDatum
-derive newtype instance FromData DsDatum
-
-instance FromData DsKeyMint where
-  fromData (Constr n [ a, b ])
-    | n == zero = DsKeyMint <$>
-        ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
-            fromData b
-        )
-  fromData _ = Nothing
-
-instance ToData DsKeyMint where
-  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
-    [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
-
-instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == zero =
-    DsConfDatum <$>
-      ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
-  fromData _ = Nothing
-
-instance ToData DsConfDatum where
-  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
-    [ toData dscKeyPolicy, toData dscFUELPolicy ]
-
-derive newtype instance ToData DsConfMint
-derive newtype instance FromData DsConfMint
 
 dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
 dsToDsKeyMint ds = do
@@ -543,5 +556,9 @@ slowFindDsOutput ds tn = do
             Nothing → go tail
             Just r → pure $ r
 
-hoistMaybe ∷ ∀ m b. Applicative m ⇒ Maybe b → MaybeT m b
+hoistMaybe ∷
+  ∀ (m ∷ Type → Type) (b ∷ Type).
+  Applicative m ⇒
+  Maybe b →
+  MaybeT m b
 hoistMaybe = MaybeT <<< pure

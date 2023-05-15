@@ -14,7 +14,7 @@ import Contract.Prelude
 
 import Contract.PlutusData
   ( class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , toData
   )
 import Contract.Scripts (ValidatorHash)
@@ -39,6 +39,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   }
 
 derive instance Generic SignedMerkleRoot _
+
 instance ToData SignedMerkleRoot where
   toData
     ( SignedMerkleRoot
@@ -65,7 +66,9 @@ newtype SignedMerkleRootMint = SignedMerkleRootMint
   }
 
 derive instance Generic SignedMerkleRootMint _
+
 derive instance Newtype SignedMerkleRootMint _
+
 instance ToData SignedMerkleRootMint where
   toData
     ( SignedMerkleRootMint
@@ -103,7 +106,9 @@ newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
   }
 
 derive instance Generic MerkleRootInsertionMessage _
+
 derive instance Newtype MerkleRootInsertionMessage _
+
 instance ToData MerkleRootInsertionMessage where
   toData
     ( MerkleRootInsertionMessage
