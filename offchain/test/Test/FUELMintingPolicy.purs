@@ -25,8 +25,8 @@ import Test.Utils
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy
-  ( FuelParams(..)
-  , MerkleTreeEntry(..)
+  ( FuelParams(Mint, Burn)
+  , MerkleTreeEntry(MerkleTreeEntry)
   , combinedMerkleProofToFuelParams
   , runFuelMP
   )
@@ -34,9 +34,13 @@ import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
-import TrustlessSidechain.MerkleTree (MerkleProof(..), fromList, lookupMp)
+import TrustlessSidechain.MerkleTree
+  ( MerkleProof(MerkleProof)
+  , fromList
+  , lookupMp
+  )
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient

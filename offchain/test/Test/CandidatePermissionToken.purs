@@ -21,8 +21,8 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
-  , CandidatePermissionMintParams(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
+  , CandidatePermissionMintParams(CandidatePermissionMintParams)
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken

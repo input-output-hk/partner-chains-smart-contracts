@@ -26,8 +26,8 @@ import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CommitteeCandidateValidator
-  ( DeregisterParams(..)
-  , RegisterParams(..)
+  ( DeregisterParams(DeregisterParams)
+  , RegisterParams(RegisterParams)
   , deregister
   , register
   )

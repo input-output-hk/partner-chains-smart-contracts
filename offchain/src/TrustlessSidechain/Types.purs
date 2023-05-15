@@ -19,7 +19,9 @@ import Data.BigInt (BigInt)
 
 -- * Utility types relating to cryptography
 type PubKey = ByteArray
+
 type Signature = Ed25519Signature
+
 type Ed25519Signature = ByteArray
 
 -- * Utility types and functions for working with `CurrencySymbol`s and `TokenName`s

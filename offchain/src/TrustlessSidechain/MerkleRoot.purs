@@ -1,7 +1,7 @@
 -- | `MerkleRoot` contains the endpoint functionality for the `MerkleRoot` endpoint
 module TrustlessSidechain.MerkleRoot
-  ( module TrustlessSidechain.MerkleRoot.Types
-  , module TrustlessSidechain.MerkleRoot.Utils
+  ( module ExportTypes
+  , module ExportUtils
   , saveRoot
   , getMerkleRootTokenMintingPolicy
   ) where
@@ -22,8 +22,8 @@ import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
   , outputDatumDatum
@@ -42,9 +42,19 @@ import TrustlessSidechain.MerkleRoot.Types
   , SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
   )
+import TrustlessSidechain.MerkleRoot.Types
+  ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
+  , SaveRootParams(SaveRootParams)
+  , SignedMerkleRootMint(SignedMerkleRootMint)
+  ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
-  , findPreviousMerkleRootTokenUtxo
+  , merkleRootTokenMintingPolicy
+  , merkleRootTokenValidator
+  , serialiseMrimHash
+  ) as ExportUtils
+import TrustlessSidechain.MerkleRoot.Utils
+  ( findPreviousMerkleRootTokenUtxo
   , merkleRootTokenMintingPolicy
   , merkleRootTokenValidator
   , normalizeSaveRootParams
@@ -241,5 +251,5 @@ runSaveRoot
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = Utils.Logging.mkReport <<< { mod: "MerkleRoot", fun: _ }

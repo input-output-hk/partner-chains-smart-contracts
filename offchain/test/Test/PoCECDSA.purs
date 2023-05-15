@@ -13,14 +13,14 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , PlutusData(Constr)
-  , Redeemer(..)
+  , Redeemer(Redeemer)
   , toData
   , unitDatum
   )
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( Validator(..)
+  ( Validator(Validator)
   , validatorHash
   )
 import Contract.TextEnvelope
@@ -61,7 +61,9 @@ newtype ECDSARed = ECDSARed
   }
 
 derive instance Generic ECDSARed _
+
 derive instance Newtype ECDSARed _
+
 instance ToData ECDSARed where
   toData (ECDSARed { msg, sig, pk }) = Constr (BigNum.fromInt 0)
     [ toData msg, toData sig, toData pk ]

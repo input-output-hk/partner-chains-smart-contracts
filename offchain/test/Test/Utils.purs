@@ -25,10 +25,10 @@ import Contract.Monad (Contract, throwContractError)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( TransactionHash(..)
-  , TransactionInput(..)
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  ( TransactionHash(TransactionHash)
+  , TransactionInput(TransactionInput)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.Utxos (getWalletUtxos, utxosAt)
 import Contract.Value (CurrencySymbol, TokenName)
@@ -51,7 +51,7 @@ import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =

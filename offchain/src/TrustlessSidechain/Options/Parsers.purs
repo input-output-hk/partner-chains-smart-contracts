@@ -24,7 +24,10 @@ import Contract.Address (Address)
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
-import Contract.Transaction (TransactionHash(..), TransactionInput(..))
+import Contract.Transaction
+  ( TransactionHash(TransactionHash)
+  , TransactionInput(TransactionInput)
+  )
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)

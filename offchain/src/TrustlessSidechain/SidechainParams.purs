@@ -31,7 +31,9 @@ newtype SidechainParams = SidechainParams
   }
 
 derive instance Generic SidechainParams _
+
 derive instance Newtype SidechainParams _
+
 instance ToData SidechainParams where
   toData
     ( SidechainParams

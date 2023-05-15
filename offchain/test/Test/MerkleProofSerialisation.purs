@@ -3,7 +3,7 @@ module Test.MerkleProofSerialisation (tests) where
 import Contract.Prelude
 
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData (PlutusData(..))
+import Contract.PlutusData (PlutusData(Constr, Integer, Bytes, List))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Data.Const (Const)
@@ -14,13 +14,13 @@ import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy
-  ( CombinedMerkleProof(..)
-  , MerkleTreeEntry(..)
+  ( CombinedMerkleProof(CombinedMerkleProof)
+  , MerkleTreeEntry(MerkleTreeEntry)
   )
 import TrustlessSidechain.MerkleTree
-  ( MerkleProof(..)
-  , Side(..)
-  , Up(..)
+  ( MerkleProof(MerkleProof)
+  , Side(L, R)
+  , Up(Up)
   , byteArrayToRootHashUnsafe
   )
 import TrustlessSidechain.Utils.Address
