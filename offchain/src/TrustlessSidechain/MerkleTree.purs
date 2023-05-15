@@ -29,7 +29,6 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Data.BigInt as BigInt
 import Data.Function as Function
 import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
