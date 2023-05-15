@@ -2,6 +2,7 @@ module Test.MerkleProofSerialisation (tests) where
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (PlutusData(Constr, Integer, Bytes, List))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
@@ -15,7 +16,6 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
-  , byteArrayToBech32BytesUnsafe
   )
 import TrustlessSidechain.MerkleTree
   ( MerkleProof(MerkleProof)
@@ -23,7 +23,9 @@ import TrustlessSidechain.MerkleTree
   , Up(Up)
   , byteArrayToRootHashUnsafe
   )
-import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
+import TrustlessSidechain.Utils.Address
+  ( byteArrayToBech32BytesUnsafe
+  )
 
 -- | `MerkleProofSerialisationTest` is a convenient type alias around `Mote`
 -- | wrapping `Test` with no bracketting for setup
@@ -111,49 +113,49 @@ test1 =
         testCase = combinedMerkleProofTestCase
 
         expectedPlutusData =
-          Constr zero
-            [ Constr zero
+          Constr (BigNum.fromInt 0)
+            [ Constr (BigNum.fromInt 0)
                 [ Integer $ Test.Utils.unsafeBigIntFromString "-8858258933817599851"
                 , Integer $ Test.Utils.unsafeBigIntFromString "8887194232705394223"
                 , Bytes $ ByteArray.hexToByteArrayUnsafe
                     "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Bytes $ ByteArray.hexToByteArrayUnsafe
                         "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
                     ]
                 ]
             , List
-                [ Constr zero
+                [ Constr (BigNum.fromInt 0)
                     [ Integer zero
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer one
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer zero
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer zero
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer one
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer one
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
                     ]
-                , Constr zero
+                , Constr (BigNum.fromInt 0)
                     [ Integer zero
                     , Bytes $ ByteArray.hexToByteArrayUnsafe
                         "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
@@ -173,11 +175,10 @@ test2 =
     $
       let
         testCase = combinedMerkleProofTestCase
-        expectedCbor = ByteArray.hexToByteArrayUnsafe
+        expectedCbor = ByteArray.hexToCborBytesUnsafe
           "d8799fd8799f3b7aeedb9136a0e76a1b7b55a8117a4e262f5820ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180d8799f5820803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01ffff9fd8799f005820595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004bffd8799f0158208073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ffffd8799f00582000ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162ffd8799f005820803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2ffd8799f0158207b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301ffd8799f015820a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079ffd8799f005820a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00ffffff"
       in
-        Just expectedCbor == Utils.SerialiseData.serialiseData
-          (PlutusData.toData testCase)
+        expectedCbor == PlutusData.serializeData testCase
 
 -- | `test3` is an integration test to see if the hex encoded cbor is as
 -- | expected
@@ -265,8 +266,7 @@ test3 =
                     }
                 ]
             }
-        expectedCbor = ByteArray.hexToByteArrayUnsafe
+        expectedCbor = ByteArray.hexToCborBytesUnsafe
           "d8799fd8799f1930fe1a00083b1e5820ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180d8799f5820803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01ffff9fd8799f005820595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004bffd8799f0158208073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ffffd8799f00582000ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162ffd8799f005820803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2ffd8799f0158207b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301ffd8799f015820a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079ffd8799f005820a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00ffffff"
       in
-        Just expectedCbor == Utils.SerialiseData.serialiseData
-          (PlutusData.toData testCase)
+        expectedCbor == PlutusData.serializeData testCase

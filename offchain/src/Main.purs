@@ -88,7 +88,7 @@ main = do
     <> "\nDenominator: "
     <> BigInt.toString denominator
 
-  launchAff_ $ runContract opts.configParams do
+  launchAff_ $ runContract opts.contractParams do
     endpointResp ← runEndpoint opts.scParams opts.endpoint
 
     printEndpointResp endpointResp
@@ -107,7 +107,7 @@ getOptions = do
     traverse (decode >>> lmap (show >>> error) >>> liftEither) maybeJson
 
 -- | Executes an endpoint and returns a response object
-runEndpoint ∷ SidechainParams → Endpoint → Contract () EndpointResp
+runEndpoint ∷ SidechainParams → Endpoint → Contract EndpointResp
 runEndpoint scParams =
   case _ of
     ClaimAct
@@ -374,6 +374,6 @@ runEndpoint scParams =
         >>> { transactionId: _ }
         >>> SaveCheckpointResp
 
-printEndpointResp ∷ EndpointResp → Contract () Unit
+printEndpointResp ∷ EndpointResp → Contract Unit
 printEndpointResp =
   log <<< stringifyEndpointResp

@@ -9,6 +9,7 @@ import Contract.Monad
   , liftContractM
   , liftedE
   )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , PlutusData(Constr)
@@ -45,7 +46,7 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import TrustlessSidechain.RawScripts (rawPoCECDSA)
 
-getValidator ∷ Contract () Validator
+getValidator ∷ Contract Validator
 getValidator = do
   let
     script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptV2FromEnvelope
@@ -64,11 +65,11 @@ derive instance Generic ECDSARed _
 derive instance Newtype ECDSARed _
 
 instance ToData ECDSARed where
-  toData (ECDSARed { msg, sig, pk }) = Constr zero
+  toData (ECDSARed { msg, sig, pk }) = Constr (BigNum.fromInt 0)
     [ toData msg, toData sig, toData pk ]
 
 -- | Prepate the ECDSA test by locking some funds at the validator address
-prepTest ∷ Contract () TransactionHash
+prepTest ∷ Contract TransactionHash
 prepTest = do
   validator ← getValidator
   let
@@ -93,7 +94,7 @@ prepTest = do
   pure txId
 
 -- | Attempt to unlock one utxo using an ECDSA signature
-testVerification ∷ ECDSARed → Contract () TransactionHash
+testVerification ∷ ECDSARed → Contract TransactionHash
 testVerification ecdsaRed = do
   let red = Redeemer $ toData ecdsaRed
 

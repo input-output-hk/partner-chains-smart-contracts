@@ -10,7 +10,6 @@ In order to run CTL you need to setup the runtime dependencies:
 
 - cardano-node
 - ogmios
-- ogmios-datum-cache
 - kupo
 
 Luckily, we have a dockerised setup, that spins up all these easily with a preset test network. Just run:
@@ -34,7 +33,7 @@ You can also run these components directly without using Docker, more about thes
 
 ### 2.1. Configuring hosted runtime dependencies
 
-In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and kupo) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
+In case you are running the runtime dependencies (ogmios and kupo) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
 
 The arguments for each service are using the following scheme:
 

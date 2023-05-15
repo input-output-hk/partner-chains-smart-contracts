@@ -26,6 +26,7 @@ import Contract.Monad
   , liftedM
   , throwContractError
   )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -92,7 +93,7 @@ newtype DeregisterParams = DeregisterParams
   , spoPubKey ∷ PubKey
   }
 
-getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
+getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
 getCommitteeCandidateValidator sp = do
   let
     script = decodeTextEnvelope rawCommitteeCandidateValidator >>=
@@ -125,7 +126,7 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData bprSpoPubKey
     , toData bprSidechainPubKey
     , toData bprSpoSignature
@@ -135,7 +136,7 @@ instance ToData BlockProducerRegistration where
     ]
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ]) | n == zero =
+  fromData (Constr n [ a, b, c, d, e, f ]) | n == (BigNum.fromInt 0) =
     { bprSpoPubKey: _
     , bprSidechainPubKey: _
     , bprSpoSignature: _
@@ -153,7 +154,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
-register ∷ RegisterParams → Contract () TransactionHash
+register ∷ RegisterParams → Contract TransactionHash
 register
   ( RegisterParams
       { sidechainParams
@@ -232,7 +233,7 @@ register
 
   pure txId
 
-deregister ∷ DeregisterParams → Contract () TransactionHash
+deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let msg = report "deregister"
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash

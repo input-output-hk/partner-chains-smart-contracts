@@ -82,10 +82,10 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
 
-saveCheckpoint ∷ CheckpointEndpointParam → Contract () TransactionHash
+saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 saveCheckpoint = runSaveCheckpoint <<< normalizeSignatures
 
-runSaveCheckpoint ∷ CheckpointEndpointParam → Contract () TransactionHash
+runSaveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 runSaveCheckpoint
   ( CheckpointEndpointParam
       { sidechainParams
@@ -247,7 +247,7 @@ report = Logging.mkReport <<< { mod: "Checkpoint", fun: _ }
 -- | (potentially throwing an error in the case that it is not possible).
 getCheckpointPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { checkpointPolicy ∷ MintingPolicy
     , checkpointCurrencySymbol ∷ CurrencySymbol
     , checkpointTokenName ∷ TokenName

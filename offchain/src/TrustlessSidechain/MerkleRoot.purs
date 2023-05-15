@@ -76,7 +76,7 @@ import TrustlessSidechain.Utils.Logging as Utils.Logging
 -- | parameter from the given sidechain parameters
 getMerkleRootTokenMintingPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { merkleRootTokenMintingPolicy ∷ MintingPolicy
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
@@ -102,13 +102,13 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
 -- | `saveRoot` is the endpoint.
-saveRoot ∷ SaveRootParams → Contract () TransactionHash
+saveRoot ∷ SaveRootParams → Contract TransactionHash
 saveRoot = runSaveRoot <<< normalizeSaveRootParams
 
 -- | `runSaveRoot` is the main worker of the `saveRoot` endpoint.
 -- | Preconditions
 -- |    - `SaveRootParams` must be normalized with `MerkleRoot.Utils.normalizeSaveRootParams`
-runSaveRoot ∷ SaveRootParams → Contract () TransactionHash
+runSaveRoot ∷ SaveRootParams → Contract TransactionHash
 runSaveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }

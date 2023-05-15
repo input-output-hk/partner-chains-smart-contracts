@@ -5,8 +5,8 @@ import Contract.Prelude
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
-  , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
+  , mkCtlBackendParams
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -164,10 +164,6 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultOgmiosWsConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
 
-  datumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
-    fromMaybe defaultDatumCacheWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
-
   kupoConfig ← serverConfigSpec "kupo" $
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
@@ -175,7 +171,7 @@ withCommonOpts maybeConfig endpointParser = ado
   in
     { scParams
     , endpoint
-    , configParams: testnetConfig
+    , contractParams: testnetConfig
         { logLevel = environment.logLevel
         , suppressLogs = not environment.isTTY
         , customLogger = Just
@@ -183,9 +179,7 @@ withCommonOpts maybeConfig endpointParser = ado
         , walletSpec = Just $ UseKeys
             (PrivatePaymentKeyFile pSkey)
             (PrivateStakeKeyFile <$> stSkey)
-        , kupoConfig = kupoConfig
-        , datumCacheConfig = datumCacheConfig
-        , ogmiosConfig = ogmiosConfig
+        , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
         }
     }
   where

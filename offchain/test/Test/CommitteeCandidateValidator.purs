@@ -47,13 +47,13 @@ tests = plutipGroup "Committe candidate registration/deregistration" $ do
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
-runRegister ∷ SidechainParams → Contract () TransactionHash
+runRegister ∷ SidechainParams → Contract TransactionHash
 runRegister = runRegisterWithCandidatePermissionInfo Nothing
 
 runRegisterWithCandidatePermissionInfo ∷
   Maybe CandidatePermissionTokenInfo →
   SidechainParams →
-  Contract () TransactionHash
+  Contract TransactionHash
 runRegisterWithCandidatePermissionInfo cpti scParams = do
   ownAddr ← liftedM "Cannot get own address" getWalletAddress
   ownUtxos ← utxosAt ownAddr
@@ -76,7 +76,7 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
     , permissionToken: cpti
     }
 
-runDeregister ∷ SidechainParams → Contract () Unit
+runDeregister ∷ SidechainParams → Contract Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: mockSpoPubKey }

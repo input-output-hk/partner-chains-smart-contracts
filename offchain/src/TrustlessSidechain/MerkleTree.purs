@@ -7,7 +7,6 @@ module TrustlessSidechain.MerkleTree
   , RootHash
   , rootHashFromByteArray
   , byteArrayToRootHashUnsafe
-
   , fromList
   , lookupMp
   , fromArray
@@ -20,6 +19,7 @@ module TrustlessSidechain.MerkleTree
 import Contract.Prelude
 
 import Contract.Hashing as Hashing
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -111,18 +111,18 @@ instance Eq MerkleTree where
 
 instance ToData MerkleTree where
   toData (Bin roothash l r) =
-    Constr zero [ toData roothash, toData l, toData r ]
+    Constr (BigNum.fromInt 0) [ toData roothash, toData l, toData r ]
   toData (Tip roothash) =
-    Constr one [ toData roothash ]
+    Constr (BigNum.fromInt 1) [ toData roothash ]
 
 instance FromData MerkleTree where
   fromData plutusData = case plutusData of
     Constr n args
-      | n == zero → case args of
+      | n == (BigNum.fromInt 0) → case args of
           [ roothash, l, r ] → Bin <$> fromData roothash <*> fromData l <*>
             fromData r
           _ → Nothing
-      | n == one → case args of
+      | n == (BigNum.fromInt 1) → case args of
           [ roothash ] → Tip <$> fromData roothash
           _ → Nothing
     _ → Nothing
@@ -140,13 +140,13 @@ instance Show Up where
   show = genericShow
 
 instance ToData Up where
-  toData (Up record) = Constr zero
+  toData (Up record) = Constr (BigNum.fromInt 0)
     [ toData record.siblingSide, toData record.sibling ]
 
 instance FromData Up where
   fromData plutusData = case plutusData of
     Constr n [ a, b ]
-      | n == zero →
+      | n == BigNum.fromInt 0 →
           Up <$> (({ siblingSide: _, sibling: _ }) <$> fromData a <*> fromData b)
     _ → Nothing
 

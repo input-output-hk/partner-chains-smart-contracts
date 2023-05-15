@@ -30,6 +30,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   `--threshold-denominator` now behave correctly and are no longer deprecated
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
    [378](https://github.com/mlabs-haskell/trustless-sidechain/pull/378), offchain).
+* CTL is now version 5.0.0
+  ([395](https://github.com/mlabs-haskell/trustless-sidechain/issues/395),
+  offchain).
 
 # v2.0.0
 

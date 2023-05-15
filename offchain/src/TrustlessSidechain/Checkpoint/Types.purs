@@ -9,6 +9,7 @@ module TrustlessSidechain.Checkpoint.Types
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -34,12 +35,12 @@ derive instance Newtype CheckpointDatum _
 
 instance ToData CheckpointDatum where
   toData (CheckpointDatum { blockHash, blockNumber }) = Constr
-    zero
+    (BigNum.fromInt 0)
     [ toData blockHash, toData blockNumber ]
 
 instance FromData CheckpointDatum where
   fromData (Constr n [ a, b ])
-    | n == zero =
+    | n == (BigNum.fromInt 0) =
         CheckpointDatum <$>
           ( { blockHash: _, blockNumber: _ }
               <$> fromData a
@@ -61,7 +62,7 @@ instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
         { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData checkpointAssetClass
     , toData committeeHashAssetClass
@@ -97,7 +98,7 @@ instance ToData CheckpointRedeemer where
         , newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData committeeSignatures
     , toData committeePubKeys
     , toData newCheckpointBlockHash
@@ -134,7 +135,7 @@ instance ToData CheckpointMessage where
         , checkpointBlockNumber
         , sidechainEpoch
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData checkpointBlockHash
     , toData checkpointBlockNumber

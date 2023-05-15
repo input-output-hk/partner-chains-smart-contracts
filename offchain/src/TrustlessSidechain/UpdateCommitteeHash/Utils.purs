@@ -23,6 +23,7 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
 import Contract.Prelude
 
 import Contract.Address as Address
+import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
@@ -54,10 +55,9 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
-committeeHashPolicy ∷ InitCommitteeHashMint → Contract () MintingPolicy
+committeeHashPolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
 committeeHashPolicy sp = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
@@ -68,7 +68,7 @@ committeeHashPolicy sp = do
     [ PlutusData.toData sp ]
   pure $ PlutusMintingPolicy applied
 
-updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract () Validator
+updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
 updateCommitteeHashValidator sp = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteeHashValidator
@@ -105,7 +105,7 @@ initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
 -- | `committeeHashCurSymbol` is the asset class. See `initCommitteeHashMintTn`
 -- | for details on the token name
 {-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass ∷ InitCommitteeHashMint → Contract () AssetClass
+committeeHashAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
 committeeHashAssetClass ichm = do
   cp ← committeeHashPolicy ichm
   curSym ← Monad.liftContractM "Couldn't get committeeHash currency symbol"
@@ -115,12 +115,14 @@ committeeHashAssetClass ichm = do
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```
--- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
+-- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
 serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe SidechainMessage
-serialiseUchmHash = Utils.Crypto.sidechainMessage <=<
-  ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)
+serialiseUchmHash = Utils.Crypto.sidechainMessage
+  <<< Hashing.blake2b256Hash
+  <<< cborBytesToByteArray
+  <<< PlutusData.serializeData
 
 -- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
 -- | identifies the committee hash.
@@ -129,7 +131,7 @@ serialiseUchmHash = Utils.Crypto.sidechainMessage <=<
 -- validator, then linearly scans through each utxo to determine which has token
 findUpdateCommitteeHashUtxo ∷
   UpdateCommitteeHash →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUpdateCommitteeHashUtxo uch = do
   netId ← Address.getNetworkId

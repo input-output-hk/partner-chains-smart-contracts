@@ -22,7 +22,7 @@ import Contract.Prelude
 
 import Contract.Address (Address)
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
-import Contract.PlutusData (fromData)
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
@@ -30,21 +30,16 @@ import Contract.Transaction
   )
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import Ctl.Internal.Deserialization.FromBytes (fromBytes)
-import Ctl.Internal.Deserialization.PlutusData (convertPlutusData)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
-import TrustlessSidechain.FUELMintingPolicy
-  ( CombinedMerkleProof
-  , addressFromCborBytes
-  , getBech32BytesByteArray
-  )
+import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -62,11 +57,8 @@ transactionInput = maybeReader \txIn →
           }
     _ → Nothing
 
-toCombinedMerkleProof ∷ CborBytes → Maybe CombinedMerkleProof
-toCombinedMerkleProof = unwrap >>> fromBytes >=> convertPlutusData >=> fromData
-
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
-combinedMerkleProofParser = cbor >>= toCombinedMerkleProof >>>
+combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>
   maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
     pure
 
@@ -78,14 +70,11 @@ combinedMerkleProofParserWithPkh = do
   -- Getting the parsed recipient from the combined proof and deserialising to
   -- an address
   let
-    recipient = getBech32BytesByteArray $
-      (unwrap (unwrap cmp).transaction).recipient
-  addr ← maybe
-    (readerError "Couldn't convert recipient bech32 to Plutus address")
-    pure
-    (addressFromCborBytes (cborBytesFromByteArray recipient))
-
-  pure (cmp /\ addr)
+    recipient = (unwrap (unwrap cmp).transaction).recipient
+    maybeAddr = addressFromBech32Bytes recipient
+  case maybeAddr of
+    Just addr → pure (cmp /\ addr)
+    Nothing → readerError "Couldn't convert recipient bech32 to Plutus address"
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray

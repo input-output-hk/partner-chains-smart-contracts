@@ -21,6 +21,7 @@ import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
 import Test.Utils (interpretWrappedTest, plutipGroup)
+import Test.Utils.Address as AddressUtils
 
 -- | `main` runs all tests.
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
@@ -40,6 +41,7 @@ main = do
           MerkleTree.tests
           MerkleProofSerialisation.tests
           Options.Parsers.tests
+          AddressUtils.tests
 
         group "Plutip integration tests" do
           InitSidechain.tests

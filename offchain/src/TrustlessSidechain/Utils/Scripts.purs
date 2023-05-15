@@ -23,7 +23,7 @@ mkValidatorWithParams ∷
   ToData a ⇒
   String →
   Array a →
-  Contract () Validator
+  Contract Validator
 mkValidatorWithParams hexScript params = do
   let
     script = decodeTextEnvelope hexScript
@@ -43,7 +43,7 @@ mkMintingPolicyWithParams ∷
   ToData a ⇒
   String →
   Array a →
-  Contract () MintingPolicy
+  Contract MintingPolicy
 mkMintingPolicyWithParams hexScript params = do
   let
     script = decodeTextEnvelope hexScript

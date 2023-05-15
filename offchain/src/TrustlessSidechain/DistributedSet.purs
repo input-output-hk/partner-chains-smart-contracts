@@ -34,6 +34,7 @@ import Contract.AssocMap as AssocMap
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractM)
 import Contract.Monad as Monad
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -117,14 +118,14 @@ derive instance Generic DsConfDatum _
 derive instance Newtype DsConfDatum _
 
 instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == zero =
+  fromData (Constr n [ a, b ]) | n == BigNum.fromInt 0 =
     DsConfDatum <$>
       ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
   fromData _ = Nothing
 
 instance ToData DsConfDatum where
-  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) = Constr zero
-    [ toData dscKeyPolicy, toData dscFUELPolicy ]
+  toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) =
+    Constr (BigNum.fromInt 0) [ toData dscKeyPolicy, toData dscFUELPolicy ]
 
 -- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
 -- | which initializes the distributed set (i.e., the parameter for the
@@ -156,15 +157,16 @@ derive instance Newtype DsKeyMint _
 
 instance FromData DsKeyMint where
   fromData (Constr n [ a, b ])
-    | n == zero = DsKeyMint <$>
+    | n == BigNum.fromInt 0 = DsKeyMint <$>
         ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
             fromData b
         )
   fromData _ = Nothing
 
 instance ToData DsKeyMint where
-  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) = Constr zero
-    [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
+  toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) =
+    Constr (BigNum.fromInt 0)
+      [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
 
 -- | `Node` is an internal type to represent the nodes in the distributed set.
 newtype Node = Node
@@ -239,34 +241,34 @@ dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
-insertValidator ∷ Ds → Contract () Validator
+insertValidator ∷ Ds → Contract Validator
 insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
-dsConfValidator ∷ Ds → Contract () Validator
+dsConfValidator ∷ Ds → Contract Validator
 dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
-dsConfPolicy ∷ DsConfMint → Contract () MintingPolicy
+dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
 dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
   toData
   [ dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
-dsKeyPolicy ∷ DsKeyMint → Contract () MintingPolicy
+dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
   toData
   [ dskm ]
 
 -- | The address for the insert validator of the distributed set.
-insertAddress ∷ NetworkId → Ds → Contract () Address
+insertAddress ∷ NetworkId → Ds → Contract Address
 insertAddress netId ds = do
   v ← insertValidator ds
   liftContractM "Couldn't derive distributed set insert validator address"
@@ -275,7 +277,7 @@ insertAddress netId ds = do
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
 
-dsToDsKeyMint ∷ Ds → Contract () DsKeyMint
+dsToDsKeyMint ∷ Ds → Contract DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
 
@@ -309,7 +311,7 @@ insertNode str (Node node)
 
 -- | `getDs` grabs the `Ds` type given `TransactionInput`. Often, the
 -- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
-getDs ∷ TransactionInput → Contract () Ds
+getDs ∷ TransactionInput → Contract Ds
 getDs txInput = do
   let
     msg = Logging.mkReport
@@ -328,7 +330,7 @@ getDs txInput = do
 -- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
   Ds →
-  Contract ()
+  Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy ds = do
   let
@@ -356,7 +358,7 @@ getDsKeyPolicy ds = do
 -- | holds the configuration of the distributed set.
 findDsConfOutput ∷
   Ds →
-  Contract ()
+  Contract
     { confRef ∷ TransactionInput
     , confO ∷ TransactionOutputWithRefScript
     , confDat ∷ DsConfDatum
@@ -411,7 +413,7 @@ findDsOutput ∷
   Ds →
   TokenName →
   TransactionInput →
-  Contract ()
+  Contract
     { inUtxo ∷
         { nodeRef ∷ TransactionInput
         , oNode ∷ TransactionOutputWithRefScript
@@ -499,7 +501,7 @@ findDsOutput ds tn txInput = do
 slowFindDsOutput ∷
   Ds →
   TokenName →
-  Contract ()
+  Contract
     ( Maybe
         { inUtxo ∷
             { nodeRef ∷ TransactionInput

@@ -35,7 +35,6 @@
   , "transformers"
   , "uint"
   , "unfoldable"
-  , "untagged-union"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

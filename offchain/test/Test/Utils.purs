@@ -2,7 +2,7 @@ module Test.Utils
   ( toTxIn
   , getUniqueUtxoAt
   , paymentPubKeyHashToByteArray
-  , assertMaxFee
+  -- , assertMaxFee
   , getOwnTransactionInput
   , fails
   , unsafeBigIntFromString
@@ -21,25 +21,20 @@ import Contract.Prelude
 
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
-import Contract.Monad (Contract, liftedM, throwContractError)
+import Contract.Monad (Contract, throwContractError)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( Transaction(Transaction)
-  , TransactionHash(TransactionHash)
+  ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , TxBody(TxBody)
-  , getTxByHash
   )
-import Contract.Utxos as Utxos
+import Contract.Utxos (getWalletUtxos, utxosAt)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Control.Monad.Error.Class as MonadError
-import Ctl.Internal.Plutus.Conversion as Plutus.Conversion
 import Ctl.Internal.Serialization.Hash as Hash
-import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Const (Const)
@@ -68,9 +63,9 @@ toTxIn txId txIdx =
 -- | `getUniqueUtxoAt addr` gets the first utxo at the given address, and throws an
 -- | error if there is NOT exactly one utxo at this address.
 getUniqueUtxoAt ∷
-  Address → Contract () (Tuple TransactionInput TransactionOutputWithRefScript)
+  Address → Contract (Tuple TransactionInput TransactionOutputWithRefScript)
 getUniqueUtxoAt addr = do
-  utxoMap ← Utxos.utxosAt addr
+  utxoMap ← utxosAt addr
   let
     err = Monad.throwContractError
       $ "Expected exactly one script address but got:"
@@ -96,9 +91,9 @@ paymentPubKeyHashToByteArray =
 -- | This throws an error if such a utxo does not exist.
 -- | This is useful for e.g. initializing the sidechain because we need to mint
 -- | an NFT for the initial committee
-getOwnTransactionInput ∷ Contract () TransactionInput
+getOwnTransactionInput ∷ Contract TransactionInput
 getOwnTransactionInput = do
-  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" Utxos.getWalletUtxos
+  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" getWalletUtxos
   Monad.liftContractM "No utxo found in wallet"
     $ Set.findMin
     $ Map.keys ownUtxos
@@ -114,7 +109,7 @@ getOwnTransactionInput = do
 -- | ```
 -- | Test.Utils.fails myTest
 -- | ```
-fails ∷ Contract () Unit → Contract () Unit
+fails ∷ Contract Unit → Contract Unit
 fails contract = do
   result ← MonadError.try contract
   case result of
@@ -140,19 +135,20 @@ interpretConstVoidTest = go <<< Mote.Monad.plan
     (\{ label, value } → Test.Unit.suite label (go value))
     sequence_
 
+-- TODO: getTxByHash is removed, find a way to implent this
 -- | Verifies that the fees of a certain transaction does
 -- | not exceed a given amount, it throws an effor otherwise
-assertMaxFee ∷ ∀ (r ∷ Row Type). BigInt → TransactionHash → Contract () Unit
-assertMaxFee maxFee txId = do
-  Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
-  let fee = (unwrap (unwrap tx.body).fee)
-  when (fee > maxFee) $ throwContractError
-    ( "Expected transaction fee to be less than "
-        <> BigInt.toString maxFee
-        <> " lovelaces, but it was "
-        <> BigInt.toString fee
-        <> " lovelaces."
-    )
+-- assertMaxFee ∷ ∀ (r ∷ Row Type). BigInt → TransactionHash → Contract Unit
+-- assertMaxFee maxFee txId = do
+--   Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
+--   let fee = (unwrap (unwrap tx.body).fee)
+--   when (fee > maxFee) $ throwContractError
+--     ( "Expected transaction fee to be less than "
+--         <> BigInt.toString maxFee
+--         <> " lovelaces, but it was "
+--         <> BigInt.toString fee
+--         <> " lovelaces."
+--     )
 
 -- | Test wrapper, to distinguish between different test interpreters
 data WithTestRunner
@@ -192,10 +188,10 @@ pureGroup label tests =
 
 -- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
 -- | exists a UTxO with at least one of the given asset.
-assertIHaveOutputWithAsset ∷ CurrencySymbol → TokenName → Contract () Unit
+assertIHaveOutputWithAsset ∷ CurrencySymbol → TokenName → Contract Unit
 assertIHaveOutputWithAsset cs tn = do
   ownUtxos ← map (Map.values) $ Monad.liftedM "Failed to query wallet utxos"
-    Utxos.getWalletUtxos
+    getWalletUtxos
   let
     iHaveCurrencySymbolAndTokenName =
       let
@@ -222,31 +218,12 @@ assertIHaveOutputWithAsset cs tn = do
 -- | Verifies that a certain script output contains at least one of the given
 -- | asset.
 assertHasOutputWithAsset ∷
-  TransactionHash → Address → CurrencySymbol → TokenName → Contract () Unit
+  TransactionHash → Address → CurrencySymbol → TokenName → Contract Unit
 assertHasOutputWithAsset txId addr cs tn = do
-  Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
-  let
-    TxBody txBody = tx.body
-    outputs = txBody.outputs
-    containsCurrencySymbolAndTokenName =
-      let -- Think of the type as follows:
-        -- `go :: Array TransactionOutput -> Boolean`
-        go arr = case Array.uncons arr of
-          Just { head, tail } →
-            let
-              TransactionOutputWithRefScript { output: TransactionOutput txOut } =
-                Unsafe.unsafePartial $ Maybe.fromJust $
-                  Plutus.Conversion.toPlutusTxOutputWithRefScript head
-            in
-              if
-                txOut.address == addr
-                  && Value.valueOf txOut.amount cs tn
-                  > zero then true
-              else go tail
-          Nothing → false
-      in
-        go outputs
-  unless containsCurrencySymbolAndTokenName $ throwContractError
+  utxos ∷ Array (TransactionInput /\ TransactionOutputWithRefScript) ←
+    Map.toUnfoldable <$> utxosAt addr
+
+  unless (any hasAsset utxos) $ throwContractError
     ( "Expected txId `"
         <> show txId
         <> "` to have an address `"
@@ -257,6 +234,15 @@ assertHasOutputWithAsset txId addr cs tn = do
         <> show tn
         <> "`."
     )
+
+  where
+  hasAsset ∷ (TransactionInput /\ TransactionOutputWithRefScript) → Boolean
+  hasAsset
+    ( TransactionInput { transactionId } /\ TransactionOutputWithRefScript
+        { output: TransactionOutput txOut }
+    ) =
+    transactionId == txId
+      && (Value.valueOf txOut.amount cs tn > zero)
 
 -- | `dummySidechainParams` is some default sidechain parameters which may be
 -- | helpful when creating tests.

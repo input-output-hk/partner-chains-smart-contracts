@@ -20,7 +20,7 @@ import Data.FoldableWithIndex as FoldableWithIndex
 findUtxoByValueAt ∷
   Address →
   (Value → Boolean) →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUtxoByValueAt addr p = do
   scriptUtxos ← Utxos.utxosAt addr
