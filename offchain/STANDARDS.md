@@ -169,9 +169,9 @@ Consistency is the most important goal of readable codebases. Having a single,
 automatically-enforced standard means that we can be sure everything will look
 similar, and not have to spend time or mind-space ensuring that our code
 complies. The tools we use are either standard in their respective communities
-(`purs-tidy` for PureScript, `eslint` for JavaScript), or are actually part of
-the language itself (`dhall lint`); this ensures that anyone familiar with any
-of these kinds of source will find our code easy to follow.
+(`purs-tidy` for PureScript), or are actually part of the language itself
+(`dhall lint`); this ensures that anyone familiar with any of these kinds of
+source will find our code easy to follow.
 
 Lines wider than 80 characters become difficult to read, especially when viewed
 on a split screen. Sometimes, we can't avoid longer lines (especially with more
