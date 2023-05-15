@@ -1,6 +1,6 @@
 module TrustlessSidechain.UpdateCommitteeHash
-  ( module TrustlessSidechain.UpdateCommitteeHash.Types
-  , module TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( module ExportTypes
+  , module ExportUtils
   , updateCommitteeHash
   , getCommitteeHashPolicy
   ) where
@@ -29,13 +29,19 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
-import Data.Maybe (Maybe(..))
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.UpdateCommitteeHash.Types
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
+  ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -45,22 +51,27 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( committeeHashAssetClass
-  , committeeHashPolicy
+  ( committeeHashPolicy
   , findUpdateCommitteeHashUtxo
   , initCommitteeHashMintTn
   , normalizeCommitteeHashParams
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
+import TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( committeeHashPolicy
+  , findUpdateCommitteeHashUtxo
+  , initCommitteeHashMintTn
+  , serialiseUchmHash
+  , updateCommitteeHashValidator
+  ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
-updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
+updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
 updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
 
 -- | `runUpdateCommitteeHash` is the main worker function of the
@@ -68,7 +79,7 @@ updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
 -- | Preconditions:
 -- |    - `UpdateCommitteeHashParams` has been normalized via
 -- |    `UpdateCommitteeHash.Utils.normalizeCommitteeHashParams`
-runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract () TransactionHash
+runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
 runUpdateCommitteeHash
   ( UpdateCommitteeHashParams
       { sidechainParams
@@ -221,14 +232,14 @@ runUpdateCommitteeHash
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
+report = Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
 
 -- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { committeeHashPolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     , committeeHashTokenName ∷ TokenName

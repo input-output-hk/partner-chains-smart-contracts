@@ -12,7 +12,7 @@ import Contract.Prelude
 
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( TransactionHash(..)
+  ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
 import Data.Argonaut.Core as J
@@ -31,9 +31,9 @@ import TrustlessSidechain.ConfigFile.Codecs
   , configCodec
   )
 import TrustlessSidechain.Options.Types
-  ( CommitteeInput(..)
+  ( CommitteeInput(Committee, CommitteeFilePath)
   , CommitteeSignatures
-  , CommitteeSignaturesInput(..)
+  , CommitteeSignaturesInput(CommitteeSignatures, CommitteeSignaturesFilePath)
   , Config
   )
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)

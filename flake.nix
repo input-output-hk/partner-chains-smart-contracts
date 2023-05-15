@@ -7,13 +7,13 @@
   };
 
   inputs = {
-    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
-    haskell-nix.follows = "cardano-transaction-lib/haskell-nix";
-    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
-    CHaP.follows = "cardano-transaction-lib/CHaP";
-    plutip.follows = "cardano-transaction-lib/plutip";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v5.0.0";
 
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v4.0.2";
+    plutip.follows = "cardano-transaction-lib/plutip";
+    haskell-nix.follows = "cardano-transaction-lib/plutip/haskell-nix";
+    nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
+    iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
+    CHaP.follows = "cardano-transaction-lib/plutip/CHaP";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -45,18 +45,6 @@
           # the version of the node to use, corresponds to the image version tag,
           # i.e. `"inputoutput/cardano-node:${tag}"`
           tag = "1.35.4";
-        };
-
-        datumCache = {
-          # The `firstBlock` is essentially what ogmios-datum-cache starts
-          # "syncing" from, and the default doesn't exist apparently... so
-          # we give it a block which actually exists.
-          blockFetcher = {
-            firstBlock = {
-              slot = 3212169;
-              id = "199a5953f54a216532b396b112c7b8c561710e93a978383173dddadda3b9bc17";
-            };
-          };
         };
       };
 
@@ -132,10 +120,11 @@
         in
         pkgs.purescriptProject {
           inherit src pkgs projectName;
-          packageJson = "${src}/package.json";
-          packageLock = "${src}/package-lock.json";
-          spagoPackages = "${src}/spago-packages.nix";
+          packageJson = ./offchain/package.json;
+          packageLock = ./offchain/package-lock.json;
+          spagoPackages = ./offchain/spago-packages.nix;
           withRuntime = true;
+          shell.withChromium = false;
           shell.packages = with pkgs; [
             # Shell Utils
             bashInteractive
@@ -259,6 +248,7 @@
             inherit src pkgs;
             projectName = name;
             withRuntime = false;
+            shell.withChromium = false;
           };
         in
         pkgs.stdenv.mkDerivation rec {

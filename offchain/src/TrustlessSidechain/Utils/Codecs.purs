@@ -32,6 +32,7 @@ transactionInputCodec ∷ CA.JsonCodec TransactionInput
 transactionInputCodec =
   CA.prismaticCodec "TransactionInput" toF fromF CA.string
   where
+  toF ∷ String → Maybe TransactionInput
   toF txIn =
     case split (Pattern "#") txIn of
       [ txId, txIdx ] → ado

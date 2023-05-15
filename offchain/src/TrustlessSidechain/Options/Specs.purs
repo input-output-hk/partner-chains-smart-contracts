@@ -3,19 +3,23 @@ module TrustlessSidechain.Options.Specs (options) where
 import Contract.Prelude
 
 import Contract.Config
-  ( PrivateStakeKeySource(..)
+  ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
-  , defaultDatumCacheWsConfig
   , defaultOgmiosWsConfig
+  , mkCtlBackendParams
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Value as Value
-import Contract.Wallet (PrivatePaymentKeySource(..), WalletSpec(..))
+import Contract.Wallet
+  ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
+  , WalletSpec(UseKeys)
+  )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative
   ( Parser
@@ -62,13 +66,26 @@ import TrustlessSidechain.Options.Parsers
   )
 import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
-  , CommitteeInput(..)
-  , CommitteeSignaturesInput(..)
+  , CommitteeInput(Committee, CommitteeFilePath)
+  , CommitteeSignaturesInput(CommitteeSignatures, CommitteeSignaturesFilePath)
   , Config
-  , Endpoint(..)
+  , Endpoint
+      ( ClaimAct
+      , BurnAct
+      , GetAddrs
+      , CandidiatePermissionTokenAct
+      , Init
+      , InitTokens
+      , CommitteeCandidateReg
+      , CommitteeCandidateDereg
+      , CommitteeHash
+      , SaveRoot
+      , CommitteeHandover
+      , SaveCheckpoint
+      )
   , Options
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -147,10 +164,6 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultOgmiosWsConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
 
-  datumCacheConfig ← serverConfigSpec "ogmios-datum-cache" $
-    fromMaybe defaultDatumCacheWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmiosDatumCache)
-
   kupoConfig ← serverConfigSpec "kupo" $
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
@@ -158,7 +171,7 @@ withCommonOpts maybeConfig endpointParser = ado
   in
     { scParams
     , endpoint
-    , configParams: testnetConfig
+    , contractParams: testnetConfig
         { logLevel = environment.logLevel
         , suppressLogs = not environment.isTTY
         , customLogger = Just
@@ -166,13 +179,17 @@ withCommonOpts maybeConfig endpointParser = ado
         , walletSpec = Just $ UseKeys
             (PrivatePaymentKeyFile pSkey)
             (PrivateStakeKeyFile <$> stSkey)
-        , kupoConfig = kupoConfig
-        , datumCacheConfig = datumCacheConfig
-        , ogmiosConfig = ogmiosConfig
+        , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
         }
     }
   where
   -- the default server config upstream is different than Kupo's defaults
+  defaultKupoServerConfig ∷
+    { host ∷ String
+    , path ∷ Maybe String
+    , port ∷ UInt
+    , secure ∷ Boolean
+    }
   defaultKupoServerConfig =
     { port: UInt.fromInt 1442
     , host: "localhost"
@@ -313,6 +330,13 @@ claimSpec = ado
         , metavar "CBOR"
         , help "CBOR-encoded Combined Merkle Proof"
         ]
+  dsUtxo ← optional $ option transactionInput $ fold
+    [ long "distributed-set-utxo"
+    , metavar "TX_ID#TX_IDX"
+    , help
+        "UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
+    ]
+
   let
     { transaction, merkleProof } = unwrap combinedMerkleProof
     { amount, index, previousMerkleRoot } = unwrap transaction
@@ -323,6 +347,7 @@ claimSpec = ado
       , merkleProof
       , index
       , previousMerkleRoot
+      , dsUtxo
       }
 
 -- | Parse all parameters for the `burn` endpoint

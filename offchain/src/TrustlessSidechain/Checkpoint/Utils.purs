@@ -11,14 +11,15 @@ module TrustlessSidechain.Checkpoint.Utils
 import Contract.Prelude
 
 import Contract.Address as Address
+import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
+  ( MintingPolicy(PlutusMintingPolicy)
+  , Validator(Validator)
   )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
@@ -41,10 +42,9 @@ import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
-checkpointPolicy ∷ InitCheckpointMint → Contract () MintingPolicy
+checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
 checkpointPolicy sp = do
   let
     script = decodeTextEnvelope RawScripts.rawCheckpointPolicy
@@ -55,7 +55,7 @@ checkpointPolicy sp = do
     [ PlutusData.toData sp ]
   pure $ PlutusMintingPolicy applied
 
-checkpointValidator ∷ CheckpointParameter → Contract () Validator
+checkpointValidator ∷ CheckpointParameter → Contract Validator
 checkpointValidator sp = do
   let
     script = decodeTextEnvelope RawScripts.rawCheckpointValidator
@@ -81,7 +81,7 @@ initCheckpointMintTn ∷ Value.TokenName
 initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
-checkpointAssetClass ∷ InitCheckpointMint → Contract () AssetClass
+checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm
   curSym ← Monad.liftContractM "Couldn't get checkpoint currency symbol"
@@ -89,18 +89,20 @@ checkpointAssetClass ichm = do
 
   pure $ assetClass curSym initCheckpointMintTn
 
--- | `serialiseCheckpointMessage` is an alias for (ignoring the `Maybe`)
+-- | `serialiseCheckpointMessage` is an alias for
 -- | ```
--- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
+-- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
 serialiseCheckpointMessage ∷ CheckpointMessage → Maybe SidechainMessage
-serialiseCheckpointMessage = Utils.Crypto.sidechainMessage <=<
-  ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)
+serialiseCheckpointMessage = Utils.Crypto.sidechainMessage
+  <<< Hashing.blake2b256Hash
+  <<< cborBytesToByteArray
+  <<< PlutusData.serializeData
 
 findCheckpointUtxo ∷
   CheckpointParameter →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findCheckpointUtxo checkpointParameter = do
   netId ← Address.getNetworkId

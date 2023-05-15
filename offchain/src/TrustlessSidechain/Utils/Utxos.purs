@@ -1,5 +1,7 @@
 -- | `Utils.Utxos` provides some utility functions for querying utxos.
-module TrustlessSidechain.Utils.Utxos where
+module TrustlessSidechain.Utils.Utxos
+  ( findUtxoByValueAt
+  ) where
 
 import Contract.Prelude
 
@@ -18,7 +20,7 @@ import Data.FoldableWithIndex as FoldableWithIndex
 findUtxoByValueAt ∷
   Address →
   (Value → Boolean) →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUtxoByValueAt addr p = do
   scriptUtxos ← Utxos.utxosAt addr

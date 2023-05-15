@@ -6,11 +6,6 @@ module TrustlessSidechain.FUELMintingPolicy
   , fuelMintingPolicy
   , getFuelMintingPolicy
   , runFuelMP
-  , Bech32Bytes
-  , getBech32BytesByteArray
-  , byteArrayToBech32BytesUnsafe
-  , addressFromCborBytes
-  , bech32BytesFromAddress
   , combinedMerkleProofToFuelParams
   ) where
 
@@ -20,16 +15,15 @@ import Contract.Address
   ( Address
   , PaymentPubKeyHash(..)
   , StakePubKeyHash(..)
-  , getNetworkId
   , ownPaymentPubKeyHash
   , toPubKeyHash
   , toStakingCredential
   )
-import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedE, liftedM)
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -39,15 +33,13 @@ import Contract.PlutusData
   , toData
   , unitRedeemer
   )
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -57,10 +49,7 @@ import Contract.Transaction
   , signTransaction
   , submit
   )
-import Contract.TxConstraints
-  ( DatumPresence(..)
-  , TxConstraints
-  )
+import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
@@ -70,8 +59,6 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
-import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
-import Ctl.Internal.Serialization.Address (addressBytes, addressFromBytes)
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -86,9 +73,13 @@ import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash (getCommitteeHashPolicy)
+import TrustlessSidechain.Utils.Address
+  ( Bech32Bytes
+  , addressFromBech32Bytes
+  , bech32BytesFromAddress
+  )
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
-import TrustlessSidechain.Utils.SerialiseData (serialiseData)
 
 -- | `FUELMint` is the data type to parameterize the minting policy.
 -- | Note: this matches the haskell onchain data type.
@@ -105,56 +96,11 @@ instance ToData FUELMint where
     ( FUELMint
         { merkleRootTokenCurrencySymbol, sidechainParams, dsKeyCurrencySymbol }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData merkleRootTokenCurrencySymbol
       , toData sidechainParams
       , toData dsKeyCurrencySymbol
       ]
-
--- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
--- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
--- | which should be a decoded bech32 cardano address.
--- | See [here](https://cips.cardano.org/cips/cip19/) for details.
-newtype Bech32Bytes = Bech32Bytes ByteArray
-
--- | `getBech32BytesByteArray` gets the underlying `ByteArray` of `Bech32Bytes`
-getBech32BytesByteArray ∷ Bech32Bytes → ByteArray
-getBech32BytesByteArray (Bech32Bytes byteArray) = byteArray
-
-derive newtype instance ordBech32Bytes ∷ Ord Bech32Bytes
-derive newtype instance eqBech32Bytes ∷ Eq Bech32Bytes
-derive newtype instance toDataBech32Bytes ∷ ToData Bech32Bytes
-derive newtype instance fromDataBech32Bytes ∷ FromData Bech32Bytes
-
-instance Show Bech32Bytes where
-  show (Bech32Bytes byteArray) = "(byteArrayToBech32BytesUnsafe "
-    <> show byteArray
-    <> ")"
-
--- | `byteArrayToBech32BytesUnsafe` converts a `ByteArray` to `Bech32Bytes`
--- | without checking the data format.
-byteArrayToBech32BytesUnsafe ∷ ByteArray → Bech32Bytes
-byteArrayToBech32BytesUnsafe = Bech32Bytes
-
--- | `bech32BytesFromAddress` serialises an `Address` to `Bech32Bytes` using
--- | the network id in the `Contract`
-bech32BytesFromAddress ∷ ∀ r. Address → Contract r Bech32Bytes
-bech32BytesFromAddress address =
-  ( \netId → byteArrayToBech32BytesUnsafe $ unwrap $ addressBytes $
-      fromPlutusAddress netId address
-  )
-    <$> getNetworkId
-
--- | `addressFromCborBytes` is a convenient wrapper to convert cbor bytes
--- | into an `Address.`
--- | It is useful to use this with `Contract.CborBytes.cborBytesFromByteArray`
--- | to create an address from a `ByteArray` i.e.,
--- | ```
--- | addressFromCborBytes <<< Contract.CborBytes.cborBytesFromByteArray
--- | ```
--- | Then, you can use `bech32BytesFromAddress` to get the `recipient`.
-addressFromCborBytes ∷ CborBytes → Maybe Address
-addressFromCborBytes = toPlutusAddress <=< addressFromBytes
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:
@@ -175,7 +121,7 @@ newtype MerkleTreeEntry = MerkleTreeEntry
   }
 
 instance FromData MerkleTreeEntry where
-  fromData (Constr n [ a, b, c, d ]) | n == zero = ado
+  fromData (Constr n [ a, b, c, d ]) | n == BigNum.fromInt 0 = ado
     index ← fromData a
     amount ← fromData b
     recipient ← fromData c
@@ -190,7 +136,7 @@ instance ToData MerkleTreeEntry where
     ( MerkleTreeEntry
         { index, amount, recipient, previousMerkleRoot }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData index
       , toData amount
       , toData recipient
@@ -210,28 +156,24 @@ newtype CombinedMerkleProof = CombinedMerkleProof
 -- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
 -- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.
 -- | This is a modestly convenient wrapper to help call the `runFuelMP `
--- | endpoint.
+-- | endpoint for internal tests.
 combinedMerkleProofToFuelParams ∷
   SidechainParams → CombinedMerkleProof → Maybe FuelParams
 combinedMerkleProofToFuelParams
   sidechainParams
-  (CombinedMerkleProof { transaction, merkleProof }) =
-  let
-    transaction' = unwrap transaction
-  in
+  (CombinedMerkleProof { transaction, merkleProof }) = do
+  let transaction' = unwrap transaction
 
-    addressFromBytes
-      (cborBytesFromByteArray $ getBech32BytesByteArray $ transaction'.recipient)
-      >>= toPlutusAddress
-      >>=
-        \recipient → pure $ Mint
-          { amount: transaction'.amount
-          , recipient
-          , merkleProof
-          , sidechainParams
-          , index: transaction'.index
-          , previousMerkleRoot: transaction'.previousMerkleRoot
-          }
+  recipient ← addressFromBech32Bytes transaction'.recipient
+  pure $ Mint
+    { amount: transaction'.amount
+    , recipient
+    , merkleProof
+    , sidechainParams
+    , index: transaction'.index
+    , previousMerkleRoot: transaction'.previousMerkleRoot
+    , dsUtxo: Nothing
+    }
 
 instance Show CombinedMerkleProof where
   show = genericShow
@@ -243,13 +185,13 @@ instance ToData CombinedMerkleProof where
     ( CombinedMerkleProof
         { transaction, merkleProof }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData transaction
       , toData merkleProof
       ]
 
 instance FromData CombinedMerkleProof where
-  fromData (Constr n [ a, b ]) | n == zero = ado
+  fromData (Constr n [ a, b ]) | n == BigNum.fromInt 0 = ado
     transaction ← fromData a
     merkleProof ← fromData b
     in CombinedMerkleProof { transaction, merkleProof }
@@ -261,15 +203,15 @@ data FUELRedeemer
 
 derive instance Generic FUELRedeemer _
 instance ToData FUELRedeemer where
-  toData (MainToSide s1) = Constr zero [ toData s1 ]
-  toData (SideToMain s1 s2) = Constr one
+  toData (MainToSide s1) = Constr (BigNum.fromInt 0) [ toData s1 ]
+  toData (SideToMain s1 s2) = Constr (BigNum.fromInt 1)
     [ toData s1
     , toData s2
     ]
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
-fuelMintingPolicy ∷ FUELMint → Contract () MintingPolicy
+fuelMintingPolicy ∷ FUELMint → Contract MintingPolicy
 fuelMintingPolicy fm = do
   let
     script = decodeTextEnvelope rawFUELMintingPolicy >>=
@@ -285,7 +227,7 @@ fuelMintingPolicy fm = do
 -- | policy
 getFuelMintingPolicy ∷
   SidechainParams →
-  Contract ()
+  Contract
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingPolicyCurrencySymbol ∷ CurrencySymbol
     }
@@ -293,7 +235,9 @@ getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy sidechainParams
+  ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+
+  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
   policy ← fuelMintingPolicy $
     FUELMint
@@ -318,11 +262,12 @@ data FuelParams
       , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
+      , dsUtxo ∷ Maybe TransactionInput
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
 -- | `runFuelMP` executes the FUEL mint / burn endpoint.
-runFuelMP ∷ SidechainParams → FuelParams → Contract () TransactionHash
+runFuelMP ∷ SidechainParams → FuelParams → Contract TransactionHash
 runFuelMP sp fp = do
   let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
 
@@ -353,21 +298,31 @@ claimFUEL ∷
   , sidechainParams ∷ SidechainParams
   , index ∷ BigInt
   , previousMerkleRoot ∷ Maybe RootHash
+  , dsUtxo ∷ Maybe TransactionInput
   } →
-  Contract ()
+  Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 claimFUEL
   fuelMP
-  { amount, recipient, merkleProof, sidechainParams, index, previousMerkleRoot } =
+  { amount
+  , recipient
+  , merkleProof
+  , sidechainParams
+  , index
+  , previousMerkleRoot
+  , dsUtxo
+  } =
   do
-    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "mintFUEL" }
+    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "claimFUEL" }
     ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
 
     cs /\ tn ← getFuelAssetClass fuelMP
 
-    ds ← DistributedSet.getDs sidechainParams
+    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
-    bech32BytesRecipient ← bech32BytesFromAddress recipient
+    bech32BytesRecipient ←
+      liftContractM (msg "Cannot convert address to bech 32 bytes")
+        $ bech32BytesFromAddress recipient
     let
       merkleTreeEntry =
         MerkleTreeEntry
@@ -377,16 +332,14 @@ claimFUEL
           , recipient: bech32BytesRecipient
           }
 
-    entryBytes ← liftContractM (msg "Cannot serialise merkle tree entry")
-      $ serialiseData
-      $ toData
-          merkleTreeEntry
+    let
+      entryBytes = unwrap $ PlutusData.serializeData merkleTreeEntry
+      cborMteHashed = blake2b256Hash entryBytes
+      rootHash = rootMp entryBytes merkleProof
 
-    let rootHash = rootMp entryBytes merkleProof
-
-    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limet")
+    cborMteHashedTn ← liftContractM (msg "Token name exceeds size limit")
       $ mkTokenName
-      $ blake2b256Hash entryBytes
+      $ cborMteHashed
 
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
@@ -400,15 +353,17 @@ claimFUEL
         , tnNode
         }
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
-    } ← liftedM (msg "Couldn't find distributed set nodes") $
-      DistributedSet.findDsOutput ds cborMteHashedTn
+    } ← case dsUtxo of
+      Nothing → liftedM (msg "Couldn't find distributed set nodes") $
+        DistributedSet.slowFindDsOutput ds cborMteHashedTn
+      Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
-    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy
-      sidechainParams
+
+    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
       liftContractM (msg "Couldn't derive payment public key hash from address")
@@ -476,7 +431,7 @@ claimFUEL
 burnFUEL ∷
   MintingPolicy →
   { amount ∷ BigInt, recipient ∷ ByteArray } →
-  Contract ()
+  Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 burnFUEL fuelMP { amount, recipient } = do
   cs /\ tn ← getFuelAssetClass fuelMP
@@ -495,7 +450,7 @@ burnFUEL fuelMP { amount, recipient } = do
 findMerkleRootTokenUtxoByRootHash ∷
   SidechainParams →
   RootHash →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
@@ -533,7 +488,7 @@ mustPayToPubKeyAddress' pkh = case _ of
   Nothing → Constraints.mustPayToPubKey pkh
 
 -- | Return the currency symbol and token name of the FUEL token
-getFuelAssetClass ∷ MintingPolicy → Contract () (CurrencySymbol /\ TokenName)
+getFuelAssetClass ∷ MintingPolicy → Contract (CurrencySymbol /\ TokenName)
 getFuelAssetClass fuelMP = do
   cs ← liftContractM "Cannot get FUEL currency symbol" $
     Value.scriptCurrencySymbol fuelMP

@@ -196,6 +196,11 @@ data MintParams = MintParams
   , merkleProof :: MerkleProof
   , index :: Integer
   , previousMerkleRoot:: Maybe ByteString
+  , dsUtxo:: Maybe TxOutRef
+    -- ^ 'dsUtxo' is used exclusively offchain to potentially avoid a linear
+    -- scan through the UTxO set to ensure uniqueness of claiming FUEL.
+    -- See [footnote [1] in the distributed set document](./DistributedSet.md)
+    -- for details.
   }
 ```
 
@@ -274,8 +279,6 @@ parameterizes the onchain minting policy.
 
    If it is desired for the system to be permissionless, the Bridge may ignore
    the `CandidatePermissionToken` requirement and consider all registrations as valid.
-
-
 
 Minting policy verifies the following:
     - The given `permissionTokenUtxo` it is parameterized by is spent.

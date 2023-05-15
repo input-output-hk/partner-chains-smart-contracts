@@ -1,6 +1,7 @@
 { name = "ctl-test"
 , dependencies =
-  [ "argonaut-core"
+  [ "argonaut"
+  , "argonaut-core"
   , "arrays"
   , "bifunctors"
   , "bigints"
@@ -34,7 +35,6 @@
   , "transformers"
   , "uint"
   , "unfoldable"
-  , "untagged-union"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
