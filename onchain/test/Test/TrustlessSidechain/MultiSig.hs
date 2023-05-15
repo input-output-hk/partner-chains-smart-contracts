@@ -3,6 +3,7 @@
 
 module Test.TrustlessSidechain.MultiSig (test) where
 
+import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Crypto.Secp256k1 qualified as SECP
 import Data.ByteString (ByteString)
@@ -14,6 +15,7 @@ import Test.QuickCheck (
   Property,
   classify,
   forAllShrinkShow,
+  label,
   liftShrink,
   property,
  )
@@ -80,9 +82,34 @@ propertyTests =
   testGroup
     "properties"
     [ testProperty "verifies with sufficient signatures" sufficientVerification
+    , testProperty "fails to verify with unsufficient signatures" insufficientVerification
     ]
 
 -- Properties
+
+sufficientVerification :: Property
+sufficientVerification =
+  forAllShrinkShow arbitrary shrink showSufficientVerification $
+    \(SufficientVerification pubKeys enough message signatures) ->
+      let sigLen = Prelude.length signatures
+          densityRatio :: Prelude.Double =
+            Prelude.fromIntegral enough Prelude./ Prelude.fromIntegral sigLen
+       in classify (densityRatio Prelude.< 0.5) "sparse (less than half signatures needed)"
+            . classify (densityRatio Prelude.>= 0.5) "dense (at least half signatures neeeded)"
+            . property
+            $ Utils.verifyMultisig pubKeys enough message signatures
+
+insufficientVerification :: Property
+insufficientVerification =
+  forAllShrinkShow arbitrary shrink showInsufficientVerification $
+    \(InsufficientVerification pubKeys enough message signatures) ->
+      let sigLen = Prelude.fromIntegral . Prelude.length $ signatures
+       in label ("shortfall of " <> Prelude.show (enough - sigLen))
+            . property
+            . Prelude.not
+            $ Utils.verifyMultisig pubKeys enough message signatures
+
+-- Helpers
 
 data SufficientVerification
   = SufficientVerification
@@ -109,9 +136,6 @@ instance Arbitrary SufficientVerification where
     let pubKeyBytes = Prelude.fmap (toBuiltin . SECP.exportPubKey True) pubKeys
     let messageBBS = toBuiltin messageBS
     Prelude.pure .SufficientVerification pubKeyBytes enough messageBBS $ signatures
-
-  -- The only possible shrinks are:
-
   shrink (SufficientVerification pks enough msg sigs) = do
     enough' <- shrink enough
     guard (enough' Prelude.> 0)
@@ -139,19 +163,56 @@ showSufficientVerification (SufficientVerification pks enough msg sigs) =
     <> "Message: "
     <> Prelude.show msg
 
-sufficientVerification :: Property
-sufficientVerification =
-  forAllShrinkShow arbitrary shrink showSufficientVerification $
-    \(SufficientVerification pubKeys enough message signatures) ->
-      let sigLen = Prelude.length signatures
-          densityRatio :: Prelude.Double =
-            Prelude.fromIntegral enough Prelude./ Prelude.fromIntegral sigLen
-       in classify (densityRatio Prelude.< 0.5) "sparse (less than half signatures needed)"
-            . classify (densityRatio Prelude.>= 0.5) "dense (at least half signatures neeeded)"
-            . property
-            $ Utils.verifyMultisig pubKeys enough message signatures
+data InsufficientVerification
+  = InsufficientVerification
+      [BuiltinByteString]
+      Integer
+      BuiltinByteString
+      [BuiltinByteString]
 
--- Helpers
+-- We piggyback off SufficientVerification, then cull some signatures
+instance Arbitrary InsufficientVerification where
+  arbitrary = do
+    SufficientVerification pks enough msg sigs <- arbitrary
+    shortfall <- Gen.chooseInteger (1, enough)
+    let sigs' = Prelude.take (Prelude.fromIntegral $ enough - shortfall) sigs
+    Prelude.pure $ InsufficientVerification pks enough msg sigs'
+  shrink (InsufficientVerification pks enough msg sigs) =
+    fewerSignatures <|> fewerNeeded
+    where
+      fewerSignatures :: [InsufficientVerification]
+      fewerSignatures = do
+        sigs' <- liftShrink (const []) sigs
+        Prelude.pure $ InsufficientVerification pks enough msg sigs'
+      fewerNeeded :: [InsufficientVerification]
+      fewerNeeded = do
+        enough' <- shrink enough
+        guard (enough' Prelude.> 0)
+        sigs' <- liftShrink (const []) sigs
+        let len = Prelude.fromIntegral . Prelude.length $ sigs'
+        guard (len Prelude.> enough)
+        Prelude.pure $ InsufficientVerification pks enough' msg sigs'
+
+showInsufficientVerification :: InsufficientVerification -> Prelude.String
+showInsufficientVerification (InsufficientVerification pks enough msg sigs) =
+  "Pubkeys: " <> Prelude.show pks <> "\n"
+    <> "Pubkeys length: "
+    <> Prelude.show (Prelude.length pks)
+    <> "\n"
+    <> "Signatures: "
+    <> Prelude.show sigs
+    <> "\n"
+    <> "Signatures length: "
+    <> Prelude.show (Prelude.length sigs)
+    <> "\n"
+    <> "Needed signatures: "
+    <> Prelude.show enough
+    <> "\n"
+    <> "Shortfall: "
+    <> Prelude.show (enough - (Prelude.fromIntegral . Prelude.length $ sigs))
+    <> "\n"
+    <> "Message: "
+    <> Prelude.show msg
 
 mkPrivKey :: [Word8] -> Maybe SECP.SecKey
 mkPrivKey = SECP.secKey . fromListN 32
