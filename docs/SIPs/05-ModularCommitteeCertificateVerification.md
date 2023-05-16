@@ -342,13 +342,22 @@ The steps all implementations will follow will be:
 
 2. Defining the committee certificate verification policy.
 
-For an academic reference on these mechanisms, see this
-reference[^proofOfStakeSidechains]. This section chases out the implementation
-details.
+Most of these mechanisms spell out the details in the original white
+paper[^proofOfStakeSidechains].
+There are no claims of originality for these ideas.
 
 [^proofOfStakeSidechains]: Gazi, Peter, et al. "Proof-of-Stake Sidechains."
   *2019 IEEE Symposium on Security and Privacy (SP)*, IEEE, 2019, pp. 139-56,
   https://doi.org/10.1109/SP.2019.00040.
+
+### Design of `CommitteeDummyATMSPolicy`
+The `CommitteeDummyATMSPolicy` is a trivial minting policy that verifies
+nothing (and always mints) and may be used while we wait for new cryptographic
+primitives to be added in the blockchain.
+
+We do not discuss this further since it's straightforward and technically does
+not satisfy the requirements for a committee certificate verification minting
+policy.
 
 ### Design of `CommitteePlainATMSPolicy`
 The `CommitteePlainATMSPolicy` is the same committee certificate verification
@@ -398,14 +407,6 @@ threshold `n/d`; and mints only if the following are all satisfied:
 
 Clearly, this satisfies the workflow required for a committee certificate
 verification minting policy.
-
-### Design of `CommitteeDummyATMSPolicy`
-The `CommitteeDummyATMSPolicy` is a trivial minting policy that verifies
-nothing (and always mints) while we wait for new cryptographic primitives to be
-added in the blockchain.
-
-We do not discuss this further since it's straightforward and technically does
-not satisfy the requirements for a committee certificate verification minting policy.
 
 ### Design of `CommitteeMultisignatureATMSPolicy`
 The `CommitteeMultisignatureATMSPolicy` is an alternative committee certificate
@@ -548,7 +549,17 @@ threshold `n/d`; and mints only if the following are satisfied.
 - Every `atmsNonSigningPubKeysMerkleProofs` is distinct (requiring that these
   are sorted lexicographically makes this check easy) and all of the
   corresponding `atmsNonSigningPubKeys` are in the `atmsMerkleRoot` (i.e., this
-  verifies that every non signer is actually in the current committee).
+  verifies that every non signer is in the current committee and there are no
+  duplicated non signers[^nonSignersAreUnique]).
+
+[^nonSignersAreUnique]: It may not be immediately clear why Merkle proofs
+  uniquely identify elements in a Merkle tree (even when there are duplicated
+  elements in the Merkle tree).
+  The easiest way to see this result is to just observe that Merkle proofs are
+  essentially a path from the root down to the leaf containing either a `L` or
+  a `R` (left or right) denoting the sibling branch.
+  So, two distinct leaves in the Merkle tree have distinct paths from the root,
+  and hence must have distinct Merkle proofs.
 
 - The unique token name `tn` minted for `CommitteeMultisignatureATMSPolicy` satisfies
     ```haskell
@@ -569,10 +580,10 @@ verification minting policy.
 
 ### Design of `CommitteePoKATMSPolicy`
 The `CommitteePoKATMSPolicy` is an alternative committee certificate
-verification mechanism that uses proofs of knowledge for the committee
-certificate verification mechanism.
-
-TODO
+verification mechanism that uses proofs of knowledge.
+Unfortunately, this is a bit more complicated to spell out so we leave this for
+a different SIP.
+Interested readers may refer to the original white paper[^proofOfStakeSidechains].
 
 ## Conclusion
 We have discussed a design for modularizing the committee certificate verification mechanism.
