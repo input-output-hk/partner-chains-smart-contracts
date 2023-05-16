@@ -91,11 +91,21 @@ minting policy with the following workflow.
     - exactly one token with token name (say `tn`) of the committee certificate
       verification minting policy is minted[^exactlyOneToken]; and
 
-    - `tn` has strictly more than `size of the current committee * n / d` (in
-      the real number sense) committee members that have verified `tn` from the
-      provided multisignature (as a redeemer) of some abstract type
-      `multisignature` where the current committee's `aggregatePubKeys` is
-      identified by the NFT `CommitteeHashPolicy` (in a reference input or input[^inputOrReferenceInput]).
+    - `tn` has *enough* (details on how much "enough" is later) committee
+      members that have verified `tn` from the provided multisignature (as a
+      redeemer) of some abstract type `multisignature` where the current
+      committee's `aggregatePubKeys` is identified by the NFT
+      `CommitteeHashPolicy` (in a reference input or
+      input[^inputOrReferenceInput]).
+
+      The number of *enough* committee members that have verified `tn` is
+      currently implemented as any number of committee members that is
+      *strictly larger* than `size of current committee * n / d` (in the real
+      number sense).
+      The original white paper[^proofOfStakeSidechains] [Section 4.1] suggests
+      that this really should be any number of committee members that is *at
+      least* the threshold amount i.e., any number of committee members greater
+      than or equal to `ceil(size of current committee * n / d)`.
 
    Note that the committee certificate verification token is not needed after
    this transaction and may be paid to some arbitrary burn address.
@@ -383,8 +393,8 @@ threshold `n/d`; and mints only if the following are all satisfied:
   `UpdateCommitteeDatum ATMSPlainAggregatePubKey`; and
 
 - the unique token name of `CommitteePlainATMSPolicy` has been verified by
-  strictly more than `length atmsPublicKeys * n / d` (in the real number sense)
-  public keys and signatures.
+  enough public keys and signatures where the size of the current committee is
+  determined by `length atmsPublicKeys`.
 
 Clearly, this satisfies the workflow required for a committee certificate
 verification minting policy.
@@ -532,10 +542,10 @@ threshold `n/d`; and mints only if the following are satisfied.
   datum `UpdateCommitteeDatum ATMSMultisignatureAggregatePubKey`.
 
 - `length atmsNonSigningPubKeys == length atmsNonSigningPubKeysMerkleProofs` is true,
-  and write this quantity as `numNonSigners` (the number of nonsigners). We must further verify that
-  `atmsCommitteeeSize - numNonSigners > atmsCommitteeeSize * n / d` (in the
-  real number sense) i.e., there are strictly more signers than the required
-  threshold.
+  and write this quantity as `numNonSigners` (the number of nonsigners). We
+  must further verify that there are enough signers (by subtracting the
+  `numNonSigners`) where the committee size is taken as the integer
+  `atmsCommitteeeSize`.
 
 - Every `atmsNonSigningPubKeysMerkleProofs` is distinct (requiring that these
   are sorted lexicographically makes this check easy) and all of the
