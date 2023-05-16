@@ -22,7 +22,7 @@ places:
 
 1. [Committee handover](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#6-committee-handover)
 
-2. [Transfer FUEL tokens from sidehcain to mainchain](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#3-transfer-fuel-tokens-from-sidechain-to-mainchain)
+2. [Transfer FUEL tokens from sidechain to mainchain](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#3-transfer-fuel-tokens-from-sidechain-to-mainchain)
 
 3. [Checkpointing](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#7-checkpointing)
 
@@ -448,15 +448,21 @@ where
   key has signed the message digest (errors if the arguments are not group
   elements).
 
-For details, see these references[^shortSignaturesFromTheWeilPairing][^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme].
+For details, see these references[^shortSignaturesFromTheWeilPairing][^thresholdSignaturesMultisignatures].
 
-[^shortSignaturesFromTheWeilPairing]: Boneh, Dan, et al. "Short Signatures from the Weil Pairing." *Journal of Cryptology*, vol. 17, no. 4, 2004, pp. 297-319, https://doi.org/10.1007/s00145-004-0314-9.
+[^shortSignaturesFromTheWeilPairing]: Boneh, Dan, et al. "Short Signatures from
+  the Weil Pairing." *Journal of Cryptology*, vol. 17, no. 4, 2004, pp.
+  297-319, https://doi.org/10.1007/s00145-004-0314-9.
 
-[^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme]: Boldyreva, Alexandra. "Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme." *Public Key Cryptography - PKC 2003*, Springer Berlin Heidelberg, 2003, pp. 31-46, https://doi.org/10.1007/3-540-36288-6_3.
+[^thresholdSignaturesMultisignatures]: Boldyreva, Alexandra. "Threshold
+  Signatures, Multisignatures and Blind Signatures Based on the
+  Gap-Diffie-Hellman-Group Signature Scheme." *Public Key Cryptography - PKC
+  2003*, Springer Berlin Heidelberg, 2003, pp. 31-46,
+  https://doi.org/10.1007/3-540-36288-6_3.
 
-Now, we will recall a
-fact[^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme]
-about GDH groups (without proof).
+Now, we will recall a fact[^thresholdSignaturesMultisignatures] about GDH
+groups (without proof).
+
 
 - Given public keys `key1`, ..., `keyN` of the GDH group, we can create an
   *aggregate public key* by multiplying each of the keys together i.e.,
@@ -473,9 +479,18 @@ about GDH groups (without proof).
   Then, rather surprisingly, the original `ddhVerify` will verify that the
   provided multisignature shows that the provided aggregated public key (and
   hence *all* the public keys `key1`,..,`keyN`) has signed a message digest --
-  subject to rogue key attacks[^rogueKeyAttacks].
+  subject to rogue key attacks[^rogueKeyAttacksPoP][^rogueKeyAttacks].
 
-[^rogueKeyAttacks]: Ristenpart, Thomas, and Scott Yilek. "The Power of Proofs-of-Possession: Securing Multiparty Signatures Against Rogue-Key Attacks." *Advances in Cryptology - EUROCRYPT 2007*, Springer Berlin Heidelberg, pp. 228–45, https://doi.org/10.1007/978-3-540-72540-4_13.
+[^rogueKeyAttacksPoP]: Ristenpart, Thomas, and Scott Yilek. "The Power of
+  Proofs-of-Possession: Securing Multiparty Signatures Against Rogue-Key
+  Attacks." *Advances in Cryptology - EUROCRYPT 2007*, Springer Berlin
+  Heidelberg, pp. 228-45, https://doi.org/10.1007/978-3-540-72540-4_13.
+
+[^rogueKeyAttacks]: Peyrin, Thomas, and Steven Galbraith. "Compact
+  Multi-Signatures for Smaller Blockchains." *Advances in Cryptology -
+  ASIACRYPT 2018*, vol. 11273, Springer International Publishing AG, 2018, pp.
+  435–64, https://doi.org/10.1007/978-3-030-03329-3_15.
+
 
 #### Implementation
 Assuming we have the aforementioned builtin functions, we are almost ready to
