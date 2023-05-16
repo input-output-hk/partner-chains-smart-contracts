@@ -1,0 +1,15 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="1", ranksep="1"]
+
+  DistinguishedUTxO [ label = "Distinguished UTxO"];
+  Transaction [ shape=diamond ];
+  LockConfigOraclePolicy;
+  LockConfigValidator;
+
+  DistinguishedUTxO -> Transaction [ label = "input" ];
+  Transaction -> LockConfigOraclePolicy [ label = "mints"];
+  Transaction -> LockConfigValidator [ label = "output"];
+  LockConfigOraclePolicy -> LockConfigValidator [ xlabel = "is paid to", style=dashed ];
+  DistinguishedUTxO -> LockConfigOraclePolicy [ xlabel = "checks if spent", style=dashed, dir=back ];
+}
