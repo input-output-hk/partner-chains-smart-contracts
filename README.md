@@ -9,9 +9,9 @@ After three months of experimentation with the proof-of-concept EVM sidechain te
 All information included below is considered publicly available and is free to be leveraged by developers to fork it to build and experiment with their own EVM sidechain solution. Should you have any questions, please reach out to our team on our IOG Discord server.
 
 ## 2. Description
-This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, but this might not be available in time for Cardano, so we decided to implement the contract in two phases:
+This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, so we decided to implement the contract in two phases:
 
-- [phase [1](https://github.com/mlabs-haskell/trustless-sidechain/milestone/1)MVP using an append-only signature scheme
+- [phase 1](https://github.com/mlabs-haskell/trustless-sidechain/milestone/1)MVP using an append-only signature scheme
 - [phase 1.5](https://github.com/mlabs-haskell/trustless-sidechain/milestone/3): script optimizations and security improvements
 - [phase 2](https://github.com/mlabs-haskell/trustless-sidechain/milestone/2): using ATMS signature scheme.
 
