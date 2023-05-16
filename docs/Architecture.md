@@ -93,6 +93,46 @@ is not implemented yet, and Kupo which is not a dependency of our currently used
 This section of the document will only serve as a high level guideline to understand the overall
 interactions of components. For a more detailed explanation please refer to the [specification](../Specification.md).
 
+### Sidechain lifecycle
+
+The mainchain contracts of the system goes through the following licycle stages:
+- _Adopted_: comittee member registration is open
+- _Activated_: first committee is set, and the protocol has started
+- _Functional_: first Merkle root is inserted, and end-users can claim their tokens
+
+![Sidechain lifecycle](Architecture/Lifecycle.svg)
+
+<figcaption align = "center"><i>Sidechain lifecycle</i></figcaption><br />
+
+1. _Adopted_
+
+The initial state of the chain, after a stakeholder of the chain adopts a codebase and initialises
+some contracts of the chain:
+- initalising the distributed set for double spending prevention
+- candidate permission tokens are minted (if required)
+- mint NFTs the checkpoint and committee hash validators
+
+The above mentioned NFTs are stored in the wallet of the stakeholder, who ran the initialisation script, so it will
+be his responsibility to _Activate_ the sidechain in the next step.
+
+After this step committee candidate registration is open, and all validator addresses and currency policies of the
+protocol can be queried.
+
+2. _Activated_
+
+When enough committee candidate registration have accumulated to start the protocol, the sidechain
+has to be activated, using the aformentioned NFTs. Activation includes the following actions:
+- initialising the first committee (storing the first committee hash)
+- storing the initial checkpoint
+
+After this step, the sidechain is decentralised, any further action requires the consensus of the committee.
+Merkle root insertion and committee handover is open.
+
+3. _Functional_
+
+Once the first Merkle root is inserted, end-users can claim their tokens with the sidechain certificate,
+and also burn these tokens to bridge them back to the sidechain.
+
 ### Claiming FUEL tokens (sidechain to mainchain)
 
 The graph below explains the flow of data:
