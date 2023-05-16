@@ -15,7 +15,6 @@ import Data.Codec.Argonaut.Common as CAM
 import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
-import Data.UInt (UInt)
 import Data.UInt as UInt
 import TrustlessSidechain.Options.Types (CommitteeSignatures, Config)
 import TrustlessSidechain.Utils.Codecs
@@ -64,21 +63,9 @@ configCodec =
 
   runtimeConfigCodec ∷
     CA.JsonCodec
-      { kupo ∷
-          Maybe
-            { host ∷ String
-            , path ∷ Maybe String
-            , port ∷ UInt
-            , secure ∷ Boolean
-            }
+      { kupo ∷ Maybe ServerConfig
       , network ∷ Maybe NetworkId
-      , ogmios ∷
-          Maybe
-            { host ∷ String
-            , path ∷ Maybe String
-            , port ∷ UInt
-            , secure ∷ Boolean
-            }
+      , ogmios ∷ Maybe ServerConfig
       }
   runtimeConfigCodec =
     ( CAR.object "runtimeConfig"
