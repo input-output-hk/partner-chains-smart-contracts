@@ -420,36 +420,32 @@ verification minting policy.
 #### Required Builtins
 We will assume the following builtin functions
 ```haskell
-data GDH = ...
+-- Group operations in a Gap Diffie Hellman (abbr. GDH) Group
+gdhMul :: ByteString -> ByteString -> ByteString
+gdhDiv :: ByteString -> ByteString -> ByteString
 
-gdhMul :: GDH -> GDH -> GDH
-gdhDiv :: GDH -> GDH -> GDH
-gdhHash :: ByteString -> GDH
+-- Hashes arbitrary 'ByteString's to a non unit element of a GDH group
+gdhHash :: ByteString -> ByteString
 
 ddhVerify
-    :: GDH -- ^ Public key
-    -> GDH -- ^ Message
-    -> GDH -- ^ Signature
+    :: ByteString -- ^ Public key (element in a GDH group)
+    -> ByteString -- ^ Message    (element in a GDH group)
+    -> ByteString -- ^ Signature  (element in a GDH group)
     -> Bool
-
-byteStringToGdh :: ByteString -> GDH  -- converts a bytestring to an element of GDH (throwing an error otherwise)
-gdhToByteString :: GDH -> ByteString  -- converts a GDH element to a bytestring
 ```
 where
+- `gdhMul` is the group multiplication in a GDH group (errors if the arguments
+  are not group elements);
 
-- `GDH` is a type for elements in a *Gap Diffie Hellman Group*;
+- `gdhDiv` is the group multiplication by the inverse in a GDH group (errors if
+  the arguments are not group elements);
 
-- `gdhMul` is the group multiplication in `GDH`;
-
-- `gdhDiv` is the group multiplication by the inverse in `GDH`;
-
-- `gdhHash` is a cryptographic hash function to `GDH` except for the unit;
+- `gdhHash` is a cryptographic hash function to a GDH group except for the
+  unit; and
 
 - `ddhVerify` verifies that the provided signature shows that the given public
-  key has signed the message digest; and
-
-- `byteStringToGdh` and `gdhToByteString` obviously unsafely casts
-  `ByteString`s to `GDH` (vice versa).
+  key has signed the message digest (errors if the arguments are not group
+  elements).
 
 For details, see these references[^shortSignaturesFromTheWeilPairing][^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme].
 
@@ -457,7 +453,9 @@ For details, see these references[^shortSignaturesFromTheWeilPairing][^threshold
 
 [^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme]: Boldyreva, Alexandra. "Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme." *Public Key Cryptography - PKC 2003*, Springer Berlin Heidelberg, 2003, pp. 31-46, https://doi.org/10.1007/3-540-36288-6_3.
 
-Now, we will recall a fact about the GDH group (without proof).
+Now, we will recall a
+fact[^thresholdSignaturesMultisignaturesAndBlindSignaturesBasedOnTheGDHGroupSignatureScheme]
+about GDH groups (without proof).
 
 - Given public keys `key1`, ..., `keyN` of the GDH group, we can create an
   *aggregate public key* by multiplying each of the keys together i.e.,
@@ -492,8 +490,8 @@ root of a Merkle tree of all of the committee members
 ```haskell
 data ATMSMultisignatureAggregatePubKey =
     ATMSMultisignatureAggregatePubKey
-    { atmsAggregatePubKeys :: GDH
-        -- ^ the product (in the GDH group) of all of the committee
+    { atmsAggregatePubKeys :: ByteString
+        -- ^ the product (in a GDH group) of all of the committee
         -- member's public keys
     , atmsCommitteeeSize :: Integer
         -- ^ the number of members in the committee
@@ -501,16 +499,16 @@ data ATMSMultisignatureAggregatePubKey =
         -- ^ a Merkle root of all of the current committee's public keys
     }
 ```
-and we instantiate the `multisignature` type with a signature of the GDH
-group, the public keys of committee members who did *not* sign the message, and
-Merkle proofs of the committee members who did not sign the message in
-`atmsMerkleRoot`
+and we instantiate the `multisignature` type with a signature  (an element of
+a GDH group), the public keys of committee members who did *not* sign the
+message, and Merkle proofs of the committee members who did not sign the
+message in `atmsMerkleRoot`
 ```haskell
 data ATMSMultisignatureSignature = ATMSMultisignatureSignature
-    { atmsSignature :: GDH
-        -- ^ the product (in the GDH group) of all the committee members who
+    { atmsSignature :: ByteString
+        -- ^ the product (in a GDH group) of all the committee members who
         -- signed the message
-    , atmsNonSigningPubKeys :: [GDH]
+    , atmsNonSigningPubKeys :: [ByteString]
         -- ^ the committee members who did not sign the message
     , atmsNonSigningPubKeysMerkleProofs :: [MerkleProof]
         -- ^ the Merkle proofs for the corresponding committee members' who
@@ -558,7 +556,7 @@ threshold `n/d`; and mints only if the following are satisfied.
         -- the public key of the committee except for the non signers
         (atmsAggregatePubKeys `gdhDiv` (atmsNonSigningPubKey1 `gdhMul` ... `gdhMul` atmsNonSigningPubKeyN))
         -- the message we wish to verify is signed
-        (byteStringToGdh tn)
+        tn
         -- the multisignature
         atmsSignature
     ```
