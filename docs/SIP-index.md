@@ -12,3 +12,4 @@ The status of an improvement proposal can be `In Progress` `Accepted` or `Implem
 | [02: Permissioned Committee Candidate Registration](./SIPs/02-PermissionedCandidates.md) | `Implemented` |
 | [03: Reusable Modular Design](./SIPs/03-ReusableModularDesign.md)                        | `Accepted`    |
 | [04: Light Wallet SDK](./SIPs/04-LightWalletSDK.md)                                      | `In Progress` |
+| [05: Flexible Initialisation](./SIPs/05-FlexibleInitialisation.md)                       | `In Progress` |
