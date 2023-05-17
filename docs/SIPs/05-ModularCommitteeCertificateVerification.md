@@ -135,6 +135,17 @@ following:
 
 - `tn` is the cryptographic hash of `M`.
 
+The following diagram depicts that such a Plutus script must be parameterized
+by the committee certificate policy.
+
+![Plutus_script_parameterization](./05-ModularCommitteeCertificateVerification/PlutusScriptParameterizedBy.svg)
+
+The following diagram demonstrates the components of a transaction which contains
+such a Plutus script which is given as a transaction input (the case when the
+Plutus script is a minting policy is essentially identical).
+
+![Plutus_script_tx](./05-ModularCommitteeCertificateVerification/PlutusScriptTx.svg)
+
 If any such of these Plutus scripts wish to _upgrade_ their cryptographic
 verification mechanisms, then this amounts to simply changing which committee
 certificate verification minting policy it is parameterized by.
@@ -463,7 +474,6 @@ For details, see these references[^shortSignaturesFromTheWeilPairing][^threshold
 Now, we will recall a fact[^thresholdSignaturesMultisignatures] about GDH
 groups (without proof).
 
-
 - Given public keys `key1`, ..., `keyN` of the GDH group, we can create an
   *aggregate public key* by multiplying each of the keys together i.e.,
   ```haskell
@@ -490,7 +500,6 @@ groups (without proof).
   Multi-Signatures for Smaller Blockchains." *Advances in Cryptology -
   ASIACRYPT 2018*, vol. 11273, Springer International Publishing AG, 2018, pp.
   435–64, https://doi.org/10.1007/978-3-030-03329-3_15.
-
 
 #### Implementation
 Assuming we have the aforementioned builtin functions, we are almost ready to
