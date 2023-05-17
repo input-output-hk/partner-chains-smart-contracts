@@ -143,11 +143,17 @@ by the committee certificate verification policy.
 
 ![Plutus_script_parameterization](./05-ModularCommitteeCertificateVerification/PlutusScriptParameterizedBy.svg)
 
-The following diagram demonstrates the components of a transaction which contains
-such a Plutus script which is given as a transaction input (the case when the
-Plutus script is a minting policy is essentially identical).
+The following diagram demonstrates the components of a transaction which
+contains such a Plutus script as a validator that is given as a transaction
+input.
 
 ![Plutus_script_tx](./05-ModularCommitteeCertificateVerification/PlutusScriptTx.svg)
+
+
+The following diagram demonstrates the components of a transaction which
+contains such a Plutus script as a minting policy that is paid to some recipient address.
+
+![Plutus_script_mint_tx](./05-ModularCommitteeCertificateVerification/PlutusScriptMintTx.svg)
 
 If any such of these Plutus scripts wish to _upgrade_ their cryptographic
 verification mechanisms, then this amounts to simply changing which committee
@@ -218,8 +224,8 @@ data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
     -- ^ the sidechain epoch of the new committee
   , newValidatorAddress :: Address
     -- ^ the validator address where the new committee will reside (this allows
-    -- one to reuse the `CommitteeHashPolicy` when one change the
-    -- cryptographic mechanisms)
+    -- one to reuse the `CommitteeHashPolicy` when one changes the
+    -- committee certificate verification minting policy)
   }
 ```
 
@@ -245,6 +251,10 @@ satisfied:
 
 In essence, these verify that this transaction for updating the committee
 corresponds to the signed `UpdateCommitteeMessage` in a reasonable sense.
+
+The following diagram captures how this transaction is intended to be built.
+
+![Committee_handover_tx](./05-ModularCommitteeCertificateVerification/CommitteeHandoverTx.svg)
 
 Note that this new committee handover mechanism does *not* rely on specifics of
 the committee certificate verification mechanism, as it assumes that the
@@ -281,6 +291,10 @@ a separate redeemer type and reconstructing the message onchain.
 - The committee certificate verification minting policy mints a token name, say
   `tn`, which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))`.
 
+
+The following diagram captures how this transaction is intended to be built.
+
+![Merkle_root_tx](./05-ModularCommitteeCertificateVerification/MerkleRootTx.svg)
 
 ### Checkpoint Changes
 This section discusses the changes to the
@@ -334,6 +348,10 @@ data CheckpointMessage = CheckpointMessage
   , checkpointMsgSidechainEpoch :: Integer
   }
 ```
+
+The following diagram captures how this transaction is intended to be built.
+
+![Checkpoint_tx](./05-ModularCommitteeCertificateVerification/CheckpointTx.svg)
 
 ## Implementations of Committee Certificate Verification Minting Policies
 We have finished discussing changes for how the current Plutus scripts can use

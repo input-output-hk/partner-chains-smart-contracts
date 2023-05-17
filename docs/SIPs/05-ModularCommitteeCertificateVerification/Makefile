@@ -16,4 +16,4 @@ all: $(SVGS)
 	dot -Tsvg $< -o $@
 
 clean:
-	-rm *.dot
+	-rm *.svg
