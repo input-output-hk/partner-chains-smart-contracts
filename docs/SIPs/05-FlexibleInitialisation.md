@@ -62,4 +62,4 @@ We’re removing the dependency on the `GenesisUTxO` from the parameter of `DsCo
 
 We also change the verification logic:
 - removing genesis utxo check
-- adding check for `dscmInitTokenCurSym` with the token name of `DsConfMint`
+- adding check, verifying that exactly one token  with the currency symbol of `dscmInitTokenCurSym` and the token name of `DsConfMint` was burnt in the transaction
