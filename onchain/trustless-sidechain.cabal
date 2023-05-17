@@ -266,3 +266,15 @@ benchmark bench-ctl
 
   default-language: Haskell2010
   hs-source-dirs:   bench/
+
+benchmark quickcheck-extra-bench
+  import:         common-lang
+  main-is:        Main.hs
+  ghc-options:    -O2 -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
+  type:           exitcode-stdio-1.0
+  build-depends:
+    , QuickCheck
+    , quickcheck-extra
+    , tasty-bench
+
+  hs-source-dirs: bench/quickcheck-extra-bench
