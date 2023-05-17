@@ -117,6 +117,8 @@ library quickcheck-extra
 
   hs-source-dirs:  src
 
+-- Executables
+
 executable trustless-sidechain-gen-signatures
   import:         common-lang
   main-is:        Main.hs
@@ -175,6 +177,8 @@ executable trustless-sidechain-merkle-tree
 
   hs-source-dirs: app/merkle-tree
 
+-- Tests
+
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
@@ -200,6 +204,21 @@ test-suite trustless-sidechain-test
     , trustless-sidechain
 
   hs-source-dirs: test
+
+test-suite quickcheck-extra-test
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , QuickCheck
+    , quickcheck-extra
+    , tasty
+    , tasty-quickcheck
+
+  hs-source-dirs: test/quickcheck-extra-test
+
+-- Benchmarks
 
 benchmark bench-ctl
   import:           common-lang
