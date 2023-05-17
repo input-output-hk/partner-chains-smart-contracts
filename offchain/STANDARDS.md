@@ -134,11 +134,23 @@ This function returns only one `PaymentPubKeyHash` even in case multiple `Paymen
 While it would be better to disable these on a per-file basis, currently,
 PureScript doesn't allow this, hence our solution.
 
+## Linting
+
+Every source file MUST be free of warnings as produced by [ESLint][eslint], with
+default settings.
+
+### Justification
+
+ESLint automates away the detection of many common sources of boilerplate and
+inefficiency. It also describes many useful refactors, which in many cases make
+the code easier to read and understand. As this is fully automatic, it saves
+effort on our part, and ensures consistency across the codebase without us
+having to think about it.
+
 ## Code formatting
 
 Every PureScript source file MUST be formatted according to `purs-tidy`. Every
-JavaScript source file MUST be formatted according to `eslint`. Every Dhall
-source file MUST be formatted according to `dhall lint`.
+Dhall source file MUST be formatted according to `dhall lint`.
 
 Each PureScript or JavaScript source line MUST be at most 100 characters wide,
 and SHOULD be at most 80 characters wide.
@@ -157,9 +169,9 @@ Consistency is the most important goal of readable codebases. Having a single,
 automatically-enforced standard means that we can be sure everything will look
 similar, and not have to spend time or mind-space ensuring that our code
 complies. The tools we use are either standard in their respective communities
-(`purs-tidy` for PureScript, `eslint` for JavaScript), or are actually part of
-the language itself (`dhall lint`); this ensures that anyone familiar with any
-of these kinds of source will find our code easy to follow.
+(`purs-tidy` for PureScript), or are actually part of the language itself
+(`dhall lint`); this ensures that anyone familiar with any of these kinds of
+source will find our code easy to follow.
 
 Lines wider than 80 characters become difficult to read, especially when viewed
 on a split screen. Sometimes, we can't avoid longer lines (especially with more
@@ -561,20 +573,11 @@ some reason (such as invariants that the type system doesn't enforce), a
 `Generic` instance should not be defined for the type.
 
 [pvp]: https://pvp.haskell.org/
-[policeman]: https://hackage.haskell.org/package/policeman
-[haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
-[bird-tracks]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#code-blocks
-[hedgehog-classes]: http://hackage.haskell.org/package/hedgehog-classes
-[hspec-hedgehog]: http://hackage.haskell.org/package/hspec-hedgehog
 [property-based-testing]: https://dl.acm.org/doi/abs/10.1145/1988042.1988046
-[hedgehog]: http://hackage.haskell.org/package/hedgehog
-[deriving-strategies]: https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/deriving-strategies
 [functor-parametricity]: https://www.schoolofhaskell.com/user/edwardk/snippets/fmap
 [alexis-king-options]: https://lexi-lambda.github.io/blog/2018/02/10/an-opinionated-guide-to-haskell-in-2018/#warning-flags-for-a-safe-build
-[hlint]: http://hackage.haskell.org/package/hlint
-[fourmolu]: http://hackage.haskell.org/package/fourmolu
+[eslint]: https://eslint.org/
 [rfc-2119]: https://tools.ietf.org/html/rfc2119
 [boolean-blindness]: http://dev.stephendiehl.com/hask/#boolean-blindness
 [parse-dont-validate]: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
-[hspec]: http://hackage.haskell.org/package/hspec
 [rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
