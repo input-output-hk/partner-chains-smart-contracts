@@ -17,39 +17,39 @@ to support the requirements.
 
 ## Background
 
-In the current implementation, the committee verifies certificates in three
-places:
+In the current implementation, the committee verifies certificates in the
+following three places.
 
-1. [Committee handover](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#6-committee-handover)
+1. [Committee handover](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#6-committee-handover).
 
-2. [Transfer FUEL tokens from sidechain to mainchain](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#3-transfer-fuel-tokens-from-sidechain-to-mainchain)
+2. [Transfer FUEL tokens from sidechain to mainchain](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#3-transfer-fuel-tokens-from-sidechain-to-mainchain).
 
-3. [Checkpointing](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#7-checkpointing)
+3. [Checkpointing](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#7-checkpointing).
 
-In all three cases, the same code for the committee certificate verifications
-is duplicated inside each of those systems i.e., each of those systems have
-duplicated logic to verify that enough of the current committee onchain has
-signed a message.
+In all three cases, the same code for the committee certificate verification
+is duplicated inside each of these systems i.e., each of these systems have
+the same duplicated logic to verify that enough of the current committee
+onchain has signed a message.
 To this end, each of these systems are:
 
 - parameterized by the currency symbol of an [NFT
   `CommitteeHashPolicy`](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#61-update-committee-hash)
   (generated from the [`initUtxo` from the initialize sidechain
   transaction](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/docs/Specification.md#1-initialise-contract))
-  to allow them to identify the current committee on chain; and
+  to allow them to identify the current committee onchain; and
 - have the same verification logic to ensure that strictly more than the
   threshold of the current committee has signed the message.
 
-And obviously, before any of these systems may function, one must of course
-mint the `CommitteeHashPolicy` NFT which uniquely identifies the current
-committee on chain.
+And obviously, before any of these systems may function, one must mint the
+`CommitteeHashPolicy` NFT which uniquely identifies the current committee
+onchain.
 
 This proposal will describe:
 
 1. modularizing the duplicated logic of committee certificate verification in a
-   single minting policy (that scripts can be parameterized by);
+   single minting policy (that scripts may be parameterized by);
 
-2. demonstrating how this allows one to adjust / upgrade cryptographic
+2. describe how this allows one to adjust / upgrade cryptographic
    verifications; and
 
 3. discussing potential implementations that use alternate cryptographic
@@ -62,11 +62,11 @@ duplicated code for committee certificate verifications.
 
 ## Modular Design of Committee Certificate Verification
 We first discuss the general structure that all committee certificate
-verifications follow.
+verifications will follow.
 
 The key idea is that we will delegate a committee certificate verification to a
 minting policy that will mint a token only if the token's name has been
-verified by the committee's cryptographic verification mechanisms.
+verified by the current committee's cryptographic verification mechanisms.
 Note that this limits us to providing committee certificate verifications for
 messages that are at most 256 bits long (the maximum token name length), but
 indeed, any message can be hashed with a cryptographic hash function to be 256
@@ -88,7 +88,7 @@ minting policy with the following workflow.
 
    The committee certificate verification minting policy mints only if:
 
-    - exactly one token with token name (say `tn`) of the committee certificate
+    - exactly one token with token name, say `tn`, of the committee certificate
       verification minting policy is minted[^exactlyOneToken]; and
 
     - `tn` has *enough* (details on how much "enough" is later) committee
@@ -102,7 +102,7 @@ minting policy with the following workflow.
       currently implemented as any number of committee members that is
       *strictly larger* than `size of current committee * n / d` (in the real
       number sense).
-      The original white paper[^proofOfStakeSidechains] [Section 4.1] suggests
+      The original white paper[^proofOfStakeSidechains] (Section 4.1) suggests
       that this really should be any number of committee members that is *at
       least* the threshold amount i.e., any number of committee members greater
       than or equal to `ceil(size of current committee * n / d)`.
@@ -118,6 +118,9 @@ minting policy with the following workflow.
 
 [^exactlyOneToken]: If the restriction of having exactly one token is too
   strong, then this can be generalized to allow any number of tokens.
+  Or alternatively, these scripts can be parameterized by a dummy integer to
+  ensure that the currency symbol of committee certificate verification
+  policies are distinct.
 
 Later, we will show specific examples of this definition from different
 cryptographic primitives. For now, we will take this as a definition and assume
@@ -136,7 +139,7 @@ following:
 - `tn` is the cryptographic hash of `M`.
 
 The following diagram depicts that such a Plutus script must be parameterized
-by the committee certificate policy.
+by the committee certificate verification policy.
 
 ![Plutus_script_parameterization](./05-ModularCommitteeCertificateVerification/PlutusScriptParameterizedBy.svg)
 
@@ -161,7 +164,7 @@ the fees may be higher than just directly coding the logic to verify a
 committee certificate inside a Plutus script.
 For the former drawback, one can store a [reference script](https://cips.cardano.org/cips/cip33/) of the committee
 certificate verification minting policy and reference it in every transaction it is
-used.
+used in.
 Indeed, one may consider putting the reference script in the UTxO identified by
 the `CommitteeHashPolicy` since this UTxO will always be present in a
 transaction for which the committee certificate verification minting policy
@@ -176,7 +179,8 @@ scripts which verify a committee certificate.
 In this section, we address each of these scripts and discuss the modifications
 for these systems to use a committee certificate verification minting policy.
 We will assume that each of these scripts are parameterized by the currency
-symbol of some committee certificate verification policy.
+symbol of some committee certificate verification policy which satisfies the
+definition in the previous section.
 
 ### Committee Handover Changes
 See
@@ -189,15 +193,17 @@ committee and sidechain epoch.
 We will call this validator `UpdateCommitteeValidator`.
 
 Its datum will be as follows.
-```haskell
-data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
-    { aggregateCommitteePubKeys :: aggregatePubKeys
+```diff
+- data UpdateCommitteeHash = UpdateCommitteeHash
++ data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
+-   { committeePubKeysHash :: ByteString
++   { aggregateCommitteePubKeys :: aggregatePubKeys
     , sidechainEpoch :: Integer
     }
 ```
 Note that this is essentially identical to the previous specification with the
-only difference being we abstract the representation of the committee's public
-keys to some `aggregatePubKeys` type.
+only difference being we abstract the representation of the aggregated
+committee public keys to some `aggregatePubKeys` type.
 
 As redeemer, `UpdateCommitteeValidator` will take the following
 `UpdateCommitteeMessage` data type as follows.
@@ -253,30 +259,6 @@ requires no changes to the Bridge.
 
 As redeemer, `MerkleRootTokenMintingPolicy` will take the following data type.
 ```haskell
-data SignedMerkleRoot = SignedMerkleRoot
-  { merkleRoot :: ByteString
-  , previousMerkleRoot :: Maybe ByteString -- Last Merkle root hash
-  , beneficiary :: SidechainAddress
-  }
-```
-Note that this is identical to the original specification, but differs only in that
-the original specification's redeemer needed the signatures but the new mechanism
-will instead use the committee certificate verification minting policy to
-verify the signature.
-
-`MerkleRootTokenMintingPolicy` will mint only if the following are satisfied.
-
-- If `previousMerkleRoot` is specified, the UTxO with the given roothash is
-  referenced in the transaction as a reference input
-
-- There exists a `MerkleRootToken` with token name as `merkleRoot` at a
-  `MerkleRootTokenValidator` script address.
-
-- The committee certificate verification minting policy mints a token name (say
-  `tn`) which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))` where
-  `MerkleRootInsertionMessage` is defined as follows.
-
-```haskell
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
     -- ^ Parameters identifying the Sidechain
@@ -284,6 +266,21 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , previousMerkleRoot :: Maybe ByteString
   }
 ```
+Note that similarly to the committee handover from the previous section, we
+pass the `MerkleRootInsertionMessage` directly as a redeemer instead of passing
+a separate redeemer type and reconstructing the message onchain.
+
+`MerkleRootTokenMintingPolicy` will mint only if the following are satisfied.
+
+- If `previousMerkleRoot` is specified, the UTxO with the given Merkle root is
+  referenced in the transaction as a reference input.
+
+- There exists a `MerkleRootToken` with token name as `merkleRoot` at a
+  `MerkleRootTokenValidator` script address as a transaction output.
+
+- The committee certificate verification minting policy mints a token name, say
+  `tn`, which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))`.
+
 
 ### Checkpoint Changes
 This section discusses the changes to the
@@ -338,11 +335,11 @@ data CheckpointMessage = CheckpointMessage
   }
 ```
 
-## Discussion of Different Committee Certificate Verification Minting Policies
-Since we have finished discussing changes for how the current Plutus scripts
-can use a committee certificate verification minting policy, all that remains
-is to discuss different ways one may implement a committee certificate
-verification minting policy.
+## Implementations of Committee Certificate Verification Minting Policies
+We have finished discussing changes for how the current Plutus scripts can use
+a committee certificate verification minting policy, so all that remains is to
+discuss how one may implement a committee certificate verification minting
+policy.
 
 The steps all implementations will follow will be:
 
@@ -353,9 +350,23 @@ The steps all implementations will follow will be:
 
 2. Defining the committee certificate verification policy.
 
+We will discuss four designs.
+
+- `CommitteeDummyATMSPolicy`: a "dummy" design which may be used while we wait
+  for new cryptographic primitives.
+
+- `CommitteePlainATMSPolicy`: the current design used which relies on
+  appending public keys together.
+
+- `CommitteeMultisignatureATMSPolicy`: a design which uses multisignature
+  mechanisms not available on the blockchain.
+
+- `CommitteePoKATMSPolicy`: a design which uses proofs of knowledge (but the
+  features are unavailable on the blockchain).
+
 Most of these mechanisms spell out the details in the original white
-paper[^proofOfStakeSidechains].
-There are no claims of originality for these ideas.
+paper[^proofOfStakeSidechains], so there are no claims of originality of these
+ideas.
 
 [^proofOfStakeSidechains]: Gazi, Peter, et al. "Proof-of-Stake Sidechains."
   *2019 IEEE Symposium on Security and Privacy (SP)*, IEEE, 2019, pp. 139-56,
@@ -432,7 +443,7 @@ verification minting policy.
 #### Required Builtins
 We will assume the following builtin functions
 ```haskell
--- Group operations in a Gap Diffie Hellman (abbr. GDH) Group
+-- Group operations in a Gap Diffie Hellman (abbr. GDH) group
 gdhMul :: ByteString -> ByteString -> ByteString
 gdhDiv :: ByteString -> ByteString -> ByteString
 
@@ -509,19 +520,19 @@ trees implemented
 here](https://github.com/mlabs-haskell/trustless-sidechain/blob/master/onchain/src/TrustlessSidechain/MerkleTree.hs).
 
 So, to implement `CommitteeMultisignatureATMSPolicy`, we will instantiate the
-`aggregatePubKeys` type with the product (in the `GDH` group) of each of the
-committee member's public keys, the number of members in the committee, and the
+`aggregatePubKeys` type with the product (in a GDH group) of each of the
+committee members' public keys, the number of members in the committee, and the
 root of a Merkle tree of all of the committee members
 ```haskell
 data ATMSMultisignatureAggregatePubKey =
     ATMSMultisignatureAggregatePubKey
     { atmsAggregatePubKeys :: ByteString
         -- ^ the product (in a GDH group) of all of the committee
-        -- member's public keys
+        -- members' public keys
     , atmsCommitteeeSize :: Integer
         -- ^ the number of members in the committee
     , atmsMerkleRoot :: RootHash
-        -- ^ a Merkle root of all of the current committee's public keys
+        -- ^ a Merkle root of all of the current committees' public keys
     }
 ```
 and we instantiate the `multisignature` type with a signature  (an element of
@@ -536,7 +547,7 @@ data ATMSMultisignatureSignature = ATMSMultisignatureSignature
     , atmsNonSigningPubKeys :: [ByteString]
         -- ^ the committee members who did not sign the message
     , atmsNonSigningPubKeysMerkleProofs :: [MerkleProof]
-        -- ^ the Merkle proofs for the corresponding committee members' who
+        -- ^ the Merkle proofs for the corresponding committee members who
         -- did not sign the message sorted lexicographically
     }
 ```
