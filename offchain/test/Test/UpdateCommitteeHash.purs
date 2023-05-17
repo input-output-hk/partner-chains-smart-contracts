@@ -3,6 +3,7 @@ module Test.UpdateCommitteeHash
   , testScenario2
   , testScenario3
   , testScenario4
+  , testScenario5
   , updateCommitteeHash
   , updateCommitteeHashWith
   , tests
@@ -160,6 +161,7 @@ tests = plutipGroup "Committee handover (committe hash update)" $ do
   testScenario2
   testScenario3
   testScenario4
+  testScenario5
 
 -- | 'testScenario1' updates the committee hash
 testScenario1 ∷ PlutipTest
@@ -396,3 +398,61 @@ testScenario4 =
               -- didn't order the committee), so we won't include those
               -- signatures
               }
+
+-- | `testScenario5` is essentially `testScenario2` but updates the committee
+-- | with exactly the required signatures instead.
+testScenario5 ∷ PlutipTest
+testScenario5 =
+  Mote.Monad.test
+    "Update committee hash with the exact amount of signatures needed"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        logInfo' "UpdateCommitteeHash 'testScenario2'"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+        let
+          keyCount = 4
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe
+                "aabbccddeeffgghhiijjkkllmmnnoo"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initThresholdNumerator: BigInt.fromInt 1
+            , initThresholdDenominator: BigInt.fromInt 2
+            , initSidechainEpoch: BigInt.fromInt 0
+            , initCandidatePermissionTokenMintInfo: Nothing
+            }
+
+        { sidechainParams: scParams } ← initSidechain initScParams
+        nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+
+        updateCommitteeHashWith
+          { sidechainParams: scParams
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , newCommitteePrvKeys: nextCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          , sidechainEpoch: BigInt.fromInt 1
+          }
+          $ \(UpdateCommitteeHashParams params) →
+              pure
+                $ UpdateCommitteeHashParams
+                $ params
+                    { committeeSignatures =
+                        Unsafe.unsafePartial
+                          ( case params.committeeSignatures of
+                              [ c1 /\ _s1
+                              , c2 /\ s2
+                              , c3 /\ s3
+                              , c4 /\ s4
+                              ] →
+                                [ c1 /\ Nothing
+                                , c2 /\ s2
+                                , c3 /\ s3
+                                , c4 /\ s4
+                                ]
+                          )
+                    }
