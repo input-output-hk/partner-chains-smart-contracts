@@ -108,6 +108,15 @@ library
   -- Needed for the `TrustlessSidechain.OffChain` module
   hs-source-dirs:  src
 
+library quickcheck-extra
+  import:          common-lang
+  exposed-modules: Test.QuickCheck.Extra
+  build-depends:
+    , QuickCheck
+    , transformers
+
+  hs-source-dirs:  src
+
 executable trustless-sidechain-gen-signatures
   import:         common-lang
   main-is:        Main.hs
