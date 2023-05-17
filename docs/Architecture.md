@@ -95,7 +95,7 @@ interactions of components. For a more detailed explanation please refer to the 
 
 ### Sidechain lifecycle
 
-The mainchain contracts of the system goes through the following licycle stages:
+The mainchain contracts of the system goes through the following lifecycle stages:
 - _Adopted_: comittee member registration is open
 - _Activated_: first committee is set, and the protocol has started
 - _Functional_: first Merkle root is inserted, and end-users can claim their tokens
@@ -110,7 +110,7 @@ The initial state of the chain, after a stakeholder of the chain adopts a codeba
 some contracts of the chain:
 - initalising the distributed set for double spending prevention
 - candidate permission tokens are minted (if required)
-- mint NFTs the checkpoint and committee hash validators
+- mint NFTs for the checkpoint and committee hash validators
 
 The above mentioned NFTs are stored in the wallet of the stakeholder, who ran the initialisation script, so it will
 be his responsibility to _Activate_ the sidechain in the next step.
@@ -120,7 +120,7 @@ protocol can be queried.
 
 2. _Activated_
 
-When enough committee candidate registration have accumulated to start the protocol, the sidechain
+When enough committee candidate registrations have accumulated to start the protocol, the sidechain
 has to be activated, using the aformentioned NFTs. Activation includes the following actions:
 - initialising the first committee (storing the first committee hash)
 - storing the initial checkpoint
@@ -130,7 +130,7 @@ Merkle root insertion and committee handover is open.
 
 3. _Functional_
 
-Once the first Merkle root is inserted, end-users can claim their tokens with the sidechain certificate,
+Once the first Merkle root is inserted, end-users can claim their tokens with a sidechain certificate,
 and also burn these tokens to bridge them back to the sidechain.
 
 ### Claiming FUEL tokens (sidechain to mainchain)

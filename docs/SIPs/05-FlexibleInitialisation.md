@@ -1,4 +1,4 @@
-# Flexible Initialiasion
+# Flexible Initialisation
 
 ## Problem
 
@@ -56,8 +56,8 @@ Note, there are no verifications wrt. the exact amount of the minted tokens, or 
 We’re removing the dependency on the `GenesisUTxO` from the parameter of `DsConfMint`, and replacing it with the currency symbol for `InitToken` instead:
 
 ```diff
-- newtype DsConfMint = DsConfMint {dscmInitTokenCurSym :: CurrencySymbol}
-+ newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
+- newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
++ newtype DsConfMint = DsConfMint {dscmInitTokenCurSym :: CurrencySymbol}
 ```
 
 We also change the verification logic:
