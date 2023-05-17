@@ -110,9 +110,12 @@ runSaveCheckpoint
     (throwContractError $ msg "No signatures provided")
 
   let
-    curCommitteePubKeys /\ curCommitteeSignatures =
+    curCommitteePubKeys /\ allCurCommitteeSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures
         committeeSignatures
+    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
+      sidechainParams
+      (curCommitteePubKeys /\ allCurCommitteeSignatures)
 
   checkpointMessage ← liftContractM (msg "Failed to get checkpoint message")
     $ serialiseCheckpointMessage

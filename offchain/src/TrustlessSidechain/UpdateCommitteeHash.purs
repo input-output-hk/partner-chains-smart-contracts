@@ -126,8 +126,11 @@ runUpdateCommitteeHash
   let
     newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
 
-    curCommitteePubKeys /\ curCommitteeSignatures =
+    curCommitteePubKeys /\ allCurCommitteeSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
+    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
+      sidechainParams
+      (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
   uchmsg ← liftContractM (msg "Failed to get update committee hash message")
