@@ -106,32 +106,32 @@ The mainchain contracts of the system goes through the following lifecycle stage
 
 1. _Adopted_
 
-The initial state of the chain, after a stakeholder of the chain adopts a codebase and initialises
-some contracts of the chain:
-- initalising the distributed set for double spending prevention
-- candidate permission tokens are minted (if required)
-- mint NFTs for the checkpoint and committee hash validators
+    The initial state of the chain, after a stakeholder of the chain adopts a codebase and initialises
+    some contracts of the chain:
+    - initalising the distributed set for double spending prevention
+    - candidate permission tokens are minted (if required)
+    - mint NFTs for the checkpoint and committee hash validators
 
-The above mentioned NFTs are stored in the wallet of the stakeholder, who ran the initialisation script, so it will
-be his responsibility to _Activate_ the sidechain in the next step.
+    The above mentioned NFTs are stored in the wallet of the stakeholder, who ran the initialisation script, so it will
+    be his responsibility to _Activate_ the sidechain in the next step.
 
-After this step committee candidate registration is open, and all validator addresses and currency policies of the
-protocol can be queried.
+    After this step committee candidate registration is open, and all validator addresses and currency policies of the
+    protocol can be queried.
 
 2. _Activated_
 
-When enough committee candidate registrations have accumulated to start the protocol, the sidechain
-has to be activated, using the aformentioned NFTs. Activation includes the following actions:
-- initialising the first committee (storing the first committee hash)
-- storing the initial checkpoint
+    When enough committee candidate registrations have accumulated to start the protocol, the sidechain
+    has to be activated, using the aformentioned NFTs. Activation includes the following actions:
+    - initialising the first committee (storing the first committee hash)
+    - storing the initial checkpoint
 
-After this step, the sidechain is decentralised, any further action requires the consensus of the committee.
-Merkle root insertion and committee handover is open.
+    After this step, the sidechain is decentralised, any further action requires the consensus of the committee.
+    Merkle root insertion and committee handover is open.
 
 3. _Functional_
 
-Once the first Merkle root is inserted, end-users can claim their tokens with a sidechain certificate,
-and also burn these tokens to bridge them back to the sidechain.
+    Once the first Merkle root is inserted, end-users can claim their tokens with a sidechain certificate,
+    and also burn these tokens to bridge them back to the sidechain.
 
 ### Claiming FUEL tokens (sidechain to mainchain)
 
