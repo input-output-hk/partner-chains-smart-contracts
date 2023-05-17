@@ -169,8 +169,11 @@ runSaveRoot
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
   let
-    committeePubKeys /\ signatures =
+    committeePubKeys /\ allSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
+    _ /\ signatures = Utils.Crypto.takeExactlyEnoughSignatures
+      sidechainParams
+      (committeePubKeys /\ allSignatures)
 
   -- Verifying the signature is valid
   void do
