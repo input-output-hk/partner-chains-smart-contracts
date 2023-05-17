@@ -13,6 +13,7 @@ import PlutusTx.Prelude
 import PlutusTx.TH (compile)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Providers (IsTest (run, testOptions), singleTest, testFailed, testPassed)
+import TrustlessSidechain.Utils (verifyMultisig)
 import Type.Reflection (Typeable)
 import Prelude qualified
 
@@ -108,29 +109,10 @@ originalVerifyMultisig pubKeys threshold message signatures =
                  )
    in go 0 pubKeys signatures
 
-{-# INLINEABLE newVerifyMultisig #-}
-newVerifyMultisig ::
-  [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
-newVerifyMultisig pubKeys enough message signatures = go pubKeys signatures 0
-  where
-    go :: [BuiltinByteString] -> [BuiltinByteString] -> Integer -> Bool
-    go !pks !sigs !counted = case sigs of
-      -- All signatures are verified, we're done
-      [] -> counted >= enough
-      (s : ss) -> case pks of
-        -- Unverified signature after checking all cases, give up
-        [] -> False
-        (pk : pks') ->
-          if verifyEcdsaSecp256k1Signature pk message s
-            then -- Found a verifying key, continue
-              go pks' ss (counted + 1)
-            else -- Not found a verifying key yet, try again with the next one
-              go pks' sigs counted
-
 oldVerify ::
   CompiledCode ([BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool)
 oldVerify = $$(compile [||originalVerifyMultisig||])
 
 newVerify ::
   CompiledCode ([BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool)
-newVerify = $$(compile [||newVerifyMultisig||])
+newVerify = $$(compile [||verifyMultisig||])
