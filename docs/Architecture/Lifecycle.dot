@@ -1,13 +1,12 @@
 digraph {
   node [shape=box style=rounded]
 
-
   Adopted
-  Started
+  Activated
   Functional
 
   Adopted -> Adopted [label=" Committee member registratons"]
-  Adopted -> Started [label=" Initialise first committee"]
-  Started -> Functional  [label=" First Merkle root insertion"]
+  Adopted -> Activated [label=" Initialise first committee"]
+  Activated -> Functional  [label=" First Merkle root insertion"]
   Functional -> Functional [label=" Claim funds"]
 }
