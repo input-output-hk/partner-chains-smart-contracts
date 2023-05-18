@@ -12,7 +12,7 @@ module Test.QuickCheck.Extra (
 ) where
 
 import Control.Category ((>>>))
-import Data.Bits (testBit, unsafeShiftL)
+import Data.Bits (testBit, unsafeShiftL, unsafeShiftR)
 import Data.Kind (Type)
 import Test.QuickCheck.Gen (Gen)
 import Test.QuickCheck.Gen qualified as Gen
@@ -77,13 +77,13 @@ sublistOf ::
   Gen [a]
 sublistOf src = do
   let len = length src
-  encoding <- Gen.chooseInteger (0, (1 `unsafeShiftL` len) - 1)
-  pure . go encoding [] 0 $ src
+  (\encoding -> go src encoding []) <$> Gen.chooseInteger (0, (1 `unsafeShiftL` len) - 1)
   where
-    go :: Integer -> [a] -> Int -> [a] -> [a]
-    go encoding acc ix = \case
-      [] -> reverse acc
+    go :: [a] -> Integer -> [a] -> [a]
+    go acc encoding = \case
+      [] -> acc
       (x : xs) ->
-        if testBit encoding ix
-          then go encoding (x : acc) (ix + 1) xs
-          else go encoding acc (ix + 1) xs
+        let !encoding' = encoding `unsafeShiftR` 1
+         in if testBit encoding 0
+              then go (x : acc) encoding' xs
+              else go acc encoding' xs
