@@ -275,6 +275,7 @@ benchmark quickcheck-extra-bench
   build-depends:
     , QuickCheck
     , quickcheck-extra
+    , tasty
     , tasty-bench
 
   hs-source-dirs: bench/quickcheck-extra-bench

@@ -1,4 +1,6 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.QuickCheck.Extra (
@@ -9,8 +11,7 @@ module Test.QuickCheck.Extra (
   sublistOf,
 ) where
 
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, modify)
+import Control.Category ((>>>))
 import Data.Bits (testBit, unsafeShiftL)
 import Data.Kind (Type)
 import Test.QuickCheck.Gen (Gen)
@@ -37,8 +38,17 @@ suchThatRetrying ::
   Gen a ->
   (a -> Bool) ->
   Gen a
-suchThatRetrying limit gen p =
-  suchThatHelper "suchThat" limit gen (\x -> if p x then Just x else Nothing)
+suchThatRetrying limit gen p = go 0
+  where
+    go :: Word -> Gen a
+    go !count =
+      gen >>= \x ->
+        if
+            | p x -> pure x
+            | count == limit -> errorOut
+            | otherwise -> go (count + 1)
+    errorOut :: Gen a
+    errorOut = error $ "suchThat exceeded retry limit: " <> show limit
 
 suchThatMapRetrying ::
   forall (a :: Type) (b :: Type).
@@ -46,7 +56,20 @@ suchThatMapRetrying ::
   Gen a ->
   (a -> Maybe b) ->
   Gen b
-suchThatMapRetrying = suchThatHelper "suchThatMap"
+suchThatMapRetrying limit gen k = go 0
+  where
+    go :: Word -> Gen b
+    go !count =
+      gen
+        >>= ( k >>> \case
+                Nothing ->
+                  if count == limit
+                    then errorOut
+                    else go (count + 1)
+                Just res -> pure res
+            )
+    errorOut :: Gen b
+    errorOut = error $ "suchThatMap exceeded retry limit: " <> show limit
 
 sublistOf ::
   forall (a :: Type).
@@ -64,27 +87,3 @@ sublistOf src = do
         if testBit encoding ix
           then go encoding (x : acc) (ix + 1) xs
           else go encoding acc (ix + 1) xs
-
--- Helpers
-
-suchThatHelper ::
-  forall (a :: Type) (b :: Type).
-  String ->
-  Word ->
-  Gen a ->
-  (a -> Maybe b) ->
-  Gen b
-suchThatHelper label limit gen k = do
-  res <- evalStateT go 0
-  maybe (error $ label <> " exceeded retry limit: " <> show limit) pure res
-  where
-    go :: StateT Word Gen (Maybe b)
-    go = do
-      res <- k <$> lift gen
-      case res of
-        Nothing -> do
-          count <- get
-          if count == limit
-            then pure Nothing
-            else modify (+ 1) *> go
-        Just _ -> pure res
