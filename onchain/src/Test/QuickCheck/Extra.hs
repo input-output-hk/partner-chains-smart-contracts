@@ -3,7 +3,17 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- | Module: Test.QuickCheck.Extra
+ Description: Some improved versions and helpers for QuickCheck functions
+ Copyright: (C) MLabs 2023
+ Mainainter: Koz Ross (koz@mlabs.city)
+ Portability: GHC only
+
+ Some functions designed to supercede equivalent functionality from
+ QuickCheck, for reasons of efficiency or safety.
+-}
 module Test.QuickCheck.Extra (
+  -- * Generators
   suchThat,
   suchThatMap,
   suchThatRetrying,
@@ -18,6 +28,12 @@ import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen (Gen, elements)
 import Prelude
 
+{- | Same as 'Test.QuickCheck.Gen.suchThat', but has a retry limit of 100; if it
+ fails to generate a satisfactory @a@ within that many attempts, the
+ generator will error out, and notify the user of this.
+
+ @since Unreleased
+-}
 suchThat ::
   forall (a :: Type).
   Gen a ->
@@ -25,6 +41,12 @@ suchThat ::
   Gen a
 suchThat = suchThatRetrying 100
 
+{- | Same as 'Test.QuickCheck.Gen.suchThatMap', but has a retry limit of 100; if
+ it fails to generate a 'Just' within that many attempts, the generator will
+ error out, and notify the user of this.
+
+ @since Unreleased
+-}
 suchThatMap ::
   forall (a :: Type) (b :: Type).
   Gen a ->
@@ -32,6 +54,10 @@ suchThatMap ::
   Gen b
 suchThatMap = suchThatMapRetrying 100
 
+{- | As 'suchThat', but allows setting the retry limit explicitly.
+
+ @since Unreleased
+-}
 suchThatRetrying ::
   forall (a :: Type).
   Word ->
@@ -50,6 +76,10 @@ suchThatRetrying limit gen p = go 0
     errorOut :: Gen a
     errorOut = error $ "suchThat exceeded retry limit: " <> show limit
 
+{- | As 'suchThatMap', but allows setting the retry limit explicitly.
+
+ @since Unreleased
+-}
 suchThatMapRetrying ::
   forall (a :: Type) (b :: Type).
   Word ->
@@ -71,6 +101,10 @@ suchThatMapRetrying limit gen k = go 0
     errorOut :: Gen b
     errorOut = error $ "suchThatMap exceeded retry limit: " <> show limit
 
+{- | As 'Test.QuickCheck.Gen.sublistOf', but about twice as fast.
+
+ @since Unreleased
+-}
 sublistOf ::
   forall (a :: Type).
   [a] ->
@@ -81,10 +115,13 @@ sublistOf = \case
   src -> arbitrary >>= go src 64
   where
     go :: [a] -> Int -> Word64 -> Gen [a]
-    go rest bitsLeft encoding
-      | bitsLeft == 0 = arbitrary >>= go rest 64
-      | otherwise = case rest of
-        [] -> pure []
-        (x : xs) -> case encoding `quotRem` 2 of
-          (encoding', 0) -> go xs (bitsLeft - 1) encoding'
-          (encoding', _) -> (x :) <$> go xs (bitsLeft - 1) encoding'
+    go rest bitsLeft encoding = case rest of
+      [] -> pure []
+      (x : xs) ->
+        if bitsLeft == 0
+          then arbitrary >>= go rest 64
+          else
+            let k = go xs (bitsLeft - 1)
+             in case encoding `quotRem` 2 of
+                  (encoding', 0) -> k encoding'
+                  (encoding', _) -> (x :) <$> k encoding'
