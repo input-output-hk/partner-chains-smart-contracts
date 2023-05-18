@@ -11,17 +11,11 @@ module Test.QuickCheck.Extra (
   sublistOf,
 ) where
 
-import Acc (Acc)
-import Acc qualified
 import Control.Category ((>>>))
-import Data.Bits (unsafeShiftL)
 import Data.Kind (Type)
-import Data.List.Split (chunksOf)
 import Data.Word (Word64)
-import GHC.Exts (toList)
 import Test.QuickCheck (arbitrary)
-import Test.QuickCheck.Gen (Gen)
-import Test.QuickCheck.Gen qualified as Gen
+import Test.QuickCheck.Gen (Gen, elements)
 import Prelude
 
 suchThat ::
@@ -81,46 +75,16 @@ sublistOf ::
   forall (a :: Type).
   [a] ->
   Gen [a]
-sublistOf src = do
-  let !len = length src
-  if
-      | len < 64 -> do
-        encoding <- Gen.chooseEnum (0, (1 `unsafeShiftL` len) - 1)
-        pure . go encoding $ src
-      | len == 64 -> (`go` src) <$> arbitrary
-      | otherwise -> do
-        let pieces = chunksOf 64 src
-        let !tailCount = len `rem` 64
-        combinedSublistOf tailCount pieces
+sublistOf = \case
+  [] -> pure []
+  [x] -> elements [[], [x]]
+  src -> arbitrary >>= go src 64
   where
-    go :: Word64 -> [a] -> [a]
-    go encoding = case encoding `quotRem` 2 of
-      (0, _) -> const []
-      (encoding', 0) -> go encoding'
-      (encoding', _) -> \case
-        [] -> []
-        (x : xs) -> x : go encoding' xs
-
--- Helpers
-
-combinedSublistOf ::
-  forall (a :: Type).
-  Int ->
-  [[a]] ->
-  Gen [a]
-combinedSublistOf tailLength srcs = toList <$> go srcs
-  where
-    go :: [[a]] -> Gen (Acc a)
-    go = \case
-      [] -> pure mempty
-      [xs] -> do
-        encoding <- Gen.chooseEnum (0, (1 `unsafeShiftL` tailLength) - 1)
-        pure . goAcc encoding $ xs
-      (xs : xss) -> (<>) <$> ((`goAcc` xs) <$> arbitrary) <*> go xss
-    goAcc :: Word64 -> [a] -> Acc a
-    goAcc encoding = case encoding `quotRem` 2 of
-      (0, _) -> const mempty
-      (encoding', 0) -> goAcc encoding'
-      (encoding', _) -> \case
-        [] -> mempty
-        (x : xs) -> Acc.cons x . goAcc encoding' $ xs
+    go :: [a] -> Int -> Word64 -> Gen [a]
+    go rest bitsLeft encoding
+      | bitsLeft == 0 = arbitrary >>= go rest 64
+      | otherwise = case rest of
+        [] -> pure []
+        (x : xs) -> case encoding `quotRem` 2 of
+          (encoding', 0) -> go xs (bitsLeft - 1) encoding'
+          (encoding', _) -> (x :) <$> go xs (bitsLeft - 1) encoding'

@@ -52,7 +52,7 @@ main =
             . benchGenerator1
             $ \gen -> suchThatMap gen toNat
         ]
-    , bgroup "sublistOf" . sublistOfBenches . powersOf2 $ 15
+    , bgroup "sublistOf" . sublistOfBenches $ [10, 20 .. 100]
     ]
 
 -- Benching functions
@@ -95,11 +95,3 @@ toNat x
 
 make42s :: Int -> [Integer]
 make42s count = replicate count 42
-
-powersOf2 :: Int -> [Int]
-powersOf2 = go 1
-  where
-    go :: Int -> Int -> [Int]
-    go curr remaining
-      | remaining == 0 = []
-      | otherwise = curr : go (curr * 2) (remaining - 1)
