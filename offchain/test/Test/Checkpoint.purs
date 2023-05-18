@@ -25,7 +25,10 @@ import Test.UpdateCommitteeHash (updateCommitteeHash)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.InitSidechain
+  ( InitSidechainParams(InitSidechainParams)
+  , initSidechain
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto
   ( SidechainPrivateKey

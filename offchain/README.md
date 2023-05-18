@@ -10,7 +10,6 @@ In order to run CTL you need to setup the runtime dependencies:
 
 - cardano-node
 - ogmios
-- ogmios-datum-cache
 - kupo
 
 Luckily, we have a dockerised setup, that spins up all these easily with a preset test network. Just run:
@@ -34,7 +33,7 @@ You can also run these components directly without using Docker, more about thes
 
 ### 2.1. Configuring hosted runtime dependencies
 
-In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and kupo) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
+In case you are running the runtime dependencies (ogmios and kupo) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
 
 The arguments for each service are using the following scheme:
 
@@ -172,7 +171,6 @@ nix run .#sidechain-main-cli -- init \
   --use-init-tokens
 ```
 
-
 #### 3.1.2. Get script addresses of a sidechain
 
 Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
@@ -195,7 +193,9 @@ nix run .#sidechain-main-cli -- claim \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
-  --combined-proof aabb
+  --combined-proof aabb \
+  --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
+    # ^ Optional flag to avoid a linear scan through the UTxO set
 ```
 
 #### 3.1.4. Burn user owned FUEL tokens

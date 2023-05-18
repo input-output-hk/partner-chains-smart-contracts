@@ -1,10 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
 {- | "Bench.Monad" provides the main monad for benchmarking the system. In
  particular, it provides:
@@ -34,74 +28,52 @@ module Bench.Monad (
   overrideBenchConfigPathFromEnv,
 ) where
 
--- this project
 import Bench.BenchResults (
   BenchResults,
-  Description,
-  IndependentVarIx,
-  LovelaceFee,
-  Trial (..),
-  TrialIx,
-  TxHash,
+  Trial (Trial),
+  tDescription,
+  tIndependentVarIx,
+  tLovelaceFee,
+  tMs,
+  tTrialIx,
+  tTxHash,
  )
 import Bench.BenchResults qualified as BenchResults
 import Bench.Logger qualified as Logger
 import Bench.NodeQuery qualified as NodeQuery
 import Bench.OdcQuery qualified as OdcQuery
 import Bench.Process qualified as Process
-
--- base
-
+import Cardano.Api qualified as Cardano
 import Control.Exception (Exception)
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
-import Data.Foldable qualified as Foldable
-import Data.Function qualified as Function
-import Data.Int (Int64)
-import Data.List qualified as List
-import Data.Maybe qualified as Maybe
-import System.Environment qualified as Environment
-
--- mtl / transformers
-
 import Control.Monad.IO.Class qualified as IO.Class
 import Control.Monad.Reader (MonadReader, ReaderT)
 import Control.Monad.Reader qualified as Reader
 import Control.Monad.Trans
 import Control.Monad.Trans qualified as Trans
-
--- bytestring
+import Data.Aeson (Value (String))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 import Data.ByteString.Char8 qualified as ByteString.Char8
-
--- text
+import Data.Foldable qualified as Foldable
+import Data.Function qualified as Function
+import Data.Int (Int64)
+import Data.List qualified as List
+import Data.Maybe qualified as Maybe
+import Data.Text (Text)
 import Data.Text qualified as Text
-
--- cardano
-import Cardano.Api qualified as Cardano
+import Data.Vector.Unboxed qualified as Vector.Unboxed
+import Graphics.Rendering.Chart.Backend.Diagrams qualified as Graphics.Backend
+import Graphics.Rendering.Chart.Easy qualified as Graphics
+import Network.WebSockets (Connection)
 import Plutus.V2.Ledger.Api (
   TxOutRef,
  )
-
--- web sockets
-import Network.WebSockets (Connection)
-
--- aeson
-
-import Data.Aeson (Value (..))
-import Data.Aeson qualified as Aeson
-import Data.Aeson.KeyMap qualified as Aeson.KeyMap
-
--- filepath
-import System.FilePath qualified as FilePath
-
--- plotting
--- N.B. we change the qualified name to make it more evident what we are
--- actually importing.
-import Graphics.Rendering.Chart.Backend.Diagrams qualified as Graphics.Backend
-import Graphics.Rendering.Chart.Easy qualified as Graphics
-
-import Data.Vector.Unboxed qualified as Vector.Unboxed
 import Statistics.Regression qualified as Regression
+import System.Environment qualified as Environment
+import System.FilePath qualified as FilePath
+import Prelude
 
 -- | 'BenchConfig' is the static configuration used for benchmarking
 data BenchConfig = BenchConfig
@@ -165,14 +137,14 @@ newtype Bench a = Bench {unBench :: ReaderT BenchConfig IO a}
 
  See 'runBenchSuiteN' for how to use
 -}
-newtype BenchSuite a = BenchSuite {unBenchSuite :: ReaderT TrialIx Bench a}
+newtype BenchSuite a = BenchSuite {unBenchSuite :: ReaderT Int64 Bench a}
   deriving newtype
     ( Functor
     , Applicative
     , Monad
     , MonadIO
     , MonadFail
-    , MonadReader TrialIx
+    , MonadReader Int64
     )
 
 liftBenchSuite :: Bench a -> BenchSuite a
@@ -245,7 +217,7 @@ runBenchSuiteN n benchSuite =
  Moreover, it also records internally that this is the @k@th time we have
  executed this @description@ for the given trial.
 -}
-benchCtl :: Description -> IndependentVarIx -> String -> BenchSuite ()
+benchCtl :: Text -> Int64 -> String -> BenchSuite ()
 benchCtl description independentVarIx cmd = do
   trialIx <- Reader.ask
   benchResults <- liftBenchSuite $ Reader.asks bcfgBenchResults
@@ -260,7 +232,7 @@ benchCtl description independentVarIx cmd = do
     --  - in stdout of ctl, we know it outputs a JSON object with field
     --  "transactionId" with the hash of the transaction
     --  - then, we beg ogmios datum cache for the corresponding transaction.
-    let getFeeAndTxHash :: IO (LovelaceFee, TxHash)
+    let getFeeAndTxHash :: IO (Int64, Text)
         getFeeAndTxHash =
           Aeson.eitherDecodeStrict stdout Function.& \case
             Right obj -> case Aeson.KeyMap.lookup "transactionId" obj of
@@ -326,7 +298,7 @@ instance Exception GetTxFeeError
       -
  and also does linear regression.
 -}
-plotOffChainWithLinearRegression :: FilePath -> Description -> Bench ()
+plotOffChainWithLinearRegression :: FilePath -> Text -> Bench ()
 plotOffChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
@@ -345,7 +317,7 @@ plotOffChainWithLinearRegression filePath description = do
       -
  and also does linear regression.
 -}
-plotOnChainWithLinearRegression :: FilePath -> Description -> Bench ()
+plotOnChainWithLinearRegression :: FilePath -> Text -> Bench ()
 plotOnChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
@@ -355,7 +327,8 @@ plotOnChainWithLinearRegression filePath description = do
     "Lovelace"
     tLovelaceFee
 
-plotXYWithLinearRegression :: FilePath -> Description -> String -> String -> String -> (Trial -> Int64) -> Bench ()
+plotXYWithLinearRegression ::
+  FilePath -> Text -> String -> String -> String -> (Trial -> Int64) -> Bench ()
 plotXYWithLinearRegression
   filePath
   description
@@ -388,7 +361,8 @@ plotXYWithLinearRegression
 
           dataSetByTrialIx =
             -- pattern match is safe by defn. of 'Data.List.groupBy'
-            map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
+            map (\x -> (tTrialIx . head $ x, map toXY x)) $
+              -- map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
               List.groupBy ((==) `Function.on` tTrialIx) trials
 
           maxIndependentVarIx = maximum $ map fst dataSet

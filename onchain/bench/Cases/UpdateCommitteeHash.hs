@@ -1,18 +1,28 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
+module Cases.UpdateCommitteeHash (updateCommitteeHashBench) where
 
-module Cases.UpdateCommitteeHash where
-
-import Bench (Bench, BenchConfig (..))
+import Bench (Bench, bcfgSigningKeyFilePath)
 import Bench qualified
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as IO.Class
 import Control.Monad.Reader qualified as Reader
-import Ctl (CtlCommon (..), CtlInitSidechain (..), CtlUpdateCommitteeHash (..))
+import Ctl (
+  CtlCommon (CtlCommon),
+  CtlInitSidechain (CtlInitSidechain),
+  CtlUpdateCommitteeHash (CtlUpdateCommitteeHash),
+  ccSidechainParams,
+  ccSigningKeyFile,
+  cisInitCommitteePubKeys,
+  cisSidechainEpoch,
+  cuchCurrentCommitteePrvKeys,
+  cuchNewCommitteePubKeys,
+  cuchPreviousMerkleRoot,
+  cuchSidechainEpoch,
+ )
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import TrustlessSidechain.Types (SidechainParams (..))
+import Prelude
 
 updateCommitteeHashBench :: Bench ()
 updateCommitteeHashBench = do

@@ -6,7 +6,7 @@ import Contract.Prelude
 
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (liftContractM, liftedE, liftedM)
+import Contract.Monad (liftContractM, liftedE)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
@@ -32,7 +32,6 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.Utils.SerialiseData as SerialiseData
 
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSerialiseData tests" do
@@ -69,11 +68,11 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
       --  - Convert it to Plutus Data
       --  - Serialise it to cbor (this is ByteArray)
       --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
-      validatorDat ← Datum <<< PlutusData.toData <$>
-        liftedM "Failed to serialise data to cbor"
-          ( pure $ SerialiseData.serialiseData $ PlutusData.toData $
-              BigInt.fromInt 69
-          )
+      let
+        validatorDat = Datum $ PlutusData.toData
+          $ PlutusData.serializeData
+          $ PlutusData.toData
+          $ BigInt.fromInt 69
 
       -- 2.
       void do
@@ -153,11 +152,12 @@ testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
       --  - Convert it to Plutus Data
       --  - Serialise it to cbor (this is ByteArray)
       --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
-      validatorDat ← Datum <<< PlutusData.toData <$>
-        liftedM "Failed to serialise data to cbor"
-          ( pure $ SerialiseData.serialiseData $ PlutusData.toData $
-              BigInt.fromInt 69
-          )
+      let
+        validatorDat = Datum
+          $ PlutusData.toData
+          $ PlutusData.serializeData
+          $ PlutusData.toData
+          $ BigInt.fromInt 69
 
       -- 2.
       void do

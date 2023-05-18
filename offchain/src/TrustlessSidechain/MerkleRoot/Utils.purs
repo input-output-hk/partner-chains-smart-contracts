@@ -20,11 +20,15 @@ module TrustlessSidechain.MerkleRoot.Utils
 import Contract.Prelude
 
 import Contract.Address as Address
+import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData as PlutusData
-import Contract.Scripts (MintingPolicy(..), Validator(..))
+import Contract.Scripts
+  ( MintingPolicy(PlutusMintingPolicy)
+  , Validator(Validator)
+  )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
   ( decodeTextEnvelope
@@ -35,7 +39,7 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
-  , SaveRootParams(..)
+  , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint
   )
 import TrustlessSidechain.MerkleTree (RootHash)
@@ -44,7 +48,6 @@ import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SerialiseData as Utils.SerialiseData
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 -- | `normalizeSaveRootParams` modifies the following fields in
@@ -61,7 +64,7 @@ normalizeSaveRootParams (SaveRootParams p) =
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMerkleRootTokenMintingPolicy` paramaterized by the given
 -- | `SignedMerkleRootMint`.
-merkleRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract () MintingPolicy
+merkleRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract MintingPolicy
 merkleRootTokenMintingPolicy sp = do
   let
     script = decodeTextEnvelope RawScripts.rawMerkleRootTokenMintingPolicy
@@ -74,7 +77,7 @@ merkleRootTokenMintingPolicy sp = do
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
 -- | 'RawScripts.rawMerkleRootTokenValidator' paramaterized by `SidechainParams`.
-merkleRootTokenValidator ∷ SidechainParams → Contract () Validator
+merkleRootTokenValidator ∷ SidechainParams → Contract Validator
 merkleRootTokenValidator sp = do
   let
     script = decodeTextEnvelope RawScripts.rawMerkleRootTokenValidator
@@ -98,7 +101,7 @@ merkleRootTokenValidator sp = do
 findMerkleRootTokenUtxo ∷
   TokenName →
   SignedMerkleRootMint →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxo merkleRoot smrm = do
   netId ← Address.getNetworkId
@@ -130,7 +133,7 @@ findMerkleRootTokenUtxo merkleRoot smrm = do
 findPreviousMerkleRootTokenUtxo ∷
   Maybe RootHash →
   SignedMerkleRootMint →
-  Contract ()
+  Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm =
   case maybeLastMerkleRoot of
@@ -148,9 +151,11 @@ findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm =
 
 -- | `serialiseMrimHash` is an alias for (ignoring the `Maybe`)
 -- | ```purescript
--- | Contract.Hashing.blake2b256Hash <<< Utils.SerialiseData.serialiseToData
+-- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe SidechainMessage
 serialiseMrimHash =
-  Utils.Crypto.sidechainMessage <=<
-    ((Hashing.blake2b256Hash <$> _) <<< Utils.SerialiseData.serialiseToData)
+  Utils.Crypto.sidechainMessage
+    <<< Hashing.blake2b256Hash
+    <<< cborBytesToByteArray
+    <<< PlutusData.serializeData

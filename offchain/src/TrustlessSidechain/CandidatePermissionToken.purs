@@ -14,7 +14,8 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData (class ToData, PlutusData(..))
+import Contract.Numeric.BigNum as BigNum
+import Contract.PlutusData (class ToData, PlutusData(Constr))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -24,7 +25,7 @@ import Contract.TextEnvelope as TextEnvelope
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
   , signTransaction
@@ -60,7 +61,7 @@ instance ToData CandidatePermissionMint where
   toData
     (CandidatePermissionMint { sidechainParams, candidatePermissionTokenUtxo }) =
     Constr
-      zero
+      (BigNum.fromInt 0)
       [ PlutusData.toData sidechainParams
       , PlutusData.toData candidatePermissionTokenUtxo
       ]
@@ -69,7 +70,7 @@ instance ToData CandidatePermissionMint where
 -- | currency symbol for the candidate permission minting policy.
 getCandidatePermissionMintingPolicy ∷
   CandidatePermissionMint →
-  Contract ()
+  Contract
     { candidatePermissionPolicy ∷ MintingPolicy
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
@@ -89,7 +90,7 @@ getCandidatePermissionMintingPolicy cpm = do
 -- | `candidatePermissionMintingPolicy` gets the minting policy for the
 -- | candidate permission minting policy
 candidatePermissionMintingPolicy ∷
-  CandidatePermissionMint → Contract () MintingPolicy
+  CandidatePermissionMint → Contract MintingPolicy
 candidatePermissionMintingPolicy cpm = do
   let
     script =
@@ -134,7 +135,6 @@ type CandidatePermissionTokenMintInfo =
 candidatePermissionTokenLookupsAndConstraints ∷
   CandidatePermissionMintParams →
   Contract
-    ()
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -181,7 +181,7 @@ candidatePermissionTokenLookupsAndConstraints
 -- | permission tokens.
 runCandidatePermissionToken ∷
   CandidatePermissionMintParams →
-  Contract ()
+  Contract
     { transactionId ∷ TransactionHash
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
@@ -209,5 +209,5 @@ runCandidatePermissionToken
   pure { transactionId: txId, candidatePermissionCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = Utils.Logging.mkReport <<< { mod: "CandidatePermissionToken", fun: _ }

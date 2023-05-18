@@ -9,10 +9,11 @@ module TrustlessSidechain.Checkpoint.Types
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -29,15 +30,17 @@ newtype CheckpointDatum = CheckpointDatum
   }
 
 derive instance Generic CheckpointDatum _
+
 derive instance Newtype CheckpointDatum _
+
 instance ToData CheckpointDatum where
   toData (CheckpointDatum { blockHash, blockNumber }) = Constr
-    zero
+    (BigNum.fromInt 0)
     [ toData blockHash, toData blockNumber ]
 
 instance FromData CheckpointDatum where
   fromData (Constr n [ a, b ])
-    | n == zero =
+    | n == (BigNum.fromInt 0) =
         CheckpointDatum <$>
           ( { blockHash: _, blockNumber: _ }
               <$> fromData a
@@ -52,12 +55,14 @@ newtype CheckpointParameter = CheckpointParameter
   }
 
 derive instance Generic CheckpointParameter _
+
 derive instance Newtype CheckpointParameter _
+
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
         { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData checkpointAssetClass
     , toData committeeHashAssetClass
@@ -69,7 +74,9 @@ newtype InitCheckpointMint = InitCheckpointMint
   { icTxOutRef ∷ TransactionInput }
 
 derive instance Generic InitCheckpointMint _
+
 derive instance Newtype InitCheckpointMint _
+
 instance ToData InitCheckpointMint where
   toData (InitCheckpointMint { icTxOutRef }) =
     toData icTxOutRef
@@ -91,7 +98,7 @@ instance ToData CheckpointRedeemer where
         , newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData committeeSignatures
     , toData committeePubKeys
     , toData newCheckpointBlockHash
@@ -108,6 +115,7 @@ newtype CheckpointEndpointParam = CheckpointEndpointParam
   }
 
 derive newtype instance Show CheckpointEndpointParam
+
 derive instance Newtype CheckpointEndpointParam _
 
 newtype CheckpointMessage = CheckpointMessage
@@ -118,6 +126,7 @@ newtype CheckpointMessage = CheckpointMessage
   }
 
 derive instance Generic CheckpointMessage _
+
 instance ToData CheckpointMessage where
   toData
     ( CheckpointMessage
@@ -126,7 +135,7 @@ instance ToData CheckpointMessage where
         , checkpointBlockNumber
         , sidechainEpoch
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData checkpointBlockHash
     , toData checkpointBlockNumber

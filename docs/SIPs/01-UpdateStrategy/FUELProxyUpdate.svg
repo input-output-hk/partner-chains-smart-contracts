@@ -13,7 +13,7 @@
 <title>fuelOracleOld</title>
 <polygon fill="none" stroke="black" points="30.5,-56 30.5,-109 266.5,-109 266.5,-56 30.5,-56"/>
 <text text-anchor="middle" x="148.5" y="-93.8" font-family="Times,serif" font-size="14.00">UTxO with</text>
-<text text-anchor="middle" x="148.5" y="-78.8" font-family="Times,serif" font-size="14.00">previous list of valid FUELMintPolicies</text>
+<text text-anchor="middle" x="148.5" y="-78.8" font-family="Times,serif" font-size="14.00">previous FUELOracleDatum</text>
 <text text-anchor="middle" x="148.5" y="-63.8" font-family="Times,serif" font-size="14.00">at FuelOracle validator</text>
 </g>
 <!-- tx -->
@@ -34,7 +34,7 @@
 <title>fuelOracleNew</title>
 <polygon fill="none" stroke="black" points="643.76,-24 643.76,-77 876.76,-77 876.76,-24 643.76,-24"/>
 <text text-anchor="middle" x="760.26" y="-61.8" font-family="Times,serif" font-size="14.00">UTxO with</text>
-<text text-anchor="middle" x="760.26" y="-46.8" font-family="Times,serif" font-size="14.00">updated list of valid FUELMintPolicies</text>
+<text text-anchor="middle" x="760.26" y="-46.8" font-family="Times,serif" font-size="14.00">updated FUELOracleDatum</text>
 <text text-anchor="middle" x="760.26" y="-31.8" font-family="Times,serif" font-size="14.00">at FuelOracle validator</text>
 </g>
 <!-- fuelMintPolicy -->

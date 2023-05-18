@@ -1,4 +1,12 @@
-module TrustlessSidechain.CommitteeCandidateValidator where
+module TrustlessSidechain.CommitteeCandidateValidator
+  ( RegisterParams(..)
+  , DeregisterParams(..)
+  , getCommitteeCandidateValidator
+  , BlockProducerRegistration(..)
+  , BlockProducerRegistrationMsg(..)
+  , register
+  , deregister
+  ) where
 
 import Contract.Prelude
 
@@ -18,10 +26,11 @@ import Contract.Monad
   , liftedM
   , throwContractError
   )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , Datum(..)
+  , Datum(Datum)
   , PlutusData(Constr)
   , fromData
   , toData
@@ -29,7 +38,7 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( Validator(..)
+  ( Validator(Validator)
   , applyArgs
   , validatorHash
   )
@@ -59,7 +68,7 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Record as Record
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -84,7 +93,7 @@ newtype DeregisterParams = DeregisterParams
   , spoPubKey ∷ PubKey
   }
 
-getCommitteeCandidateValidator ∷ SidechainParams → Contract () Validator
+getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
 getCommitteeCandidateValidator sp = do
   let
     script = decodeTextEnvelope rawCommitteeCandidateValidator >>=
@@ -104,7 +113,9 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   }
 
 derive instance Generic BlockProducerRegistration _
+
 derive instance Newtype BlockProducerRegistration _
+
 instance ToData BlockProducerRegistration where
   toData
     ( BlockProducerRegistration
@@ -115,7 +126,7 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData bprSpoPubKey
     , toData bprSidechainPubKey
     , toData bprSpoSignature
@@ -125,7 +136,7 @@ instance ToData BlockProducerRegistration where
     ]
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ]) | n == zero =
+  fromData (Constr n [ a, b, c, d, e, f ]) | n == (BigNum.fromInt 0) =
     { bprSpoPubKey: _
     , bprSidechainPubKey: _
     , bprSpoSignature: _
@@ -143,7 +154,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
-register ∷ RegisterParams → Contract () TransactionHash
+register ∷ RegisterParams → Contract TransactionHash
 register
   ( RegisterParams
       { sidechainParams
@@ -222,7 +233,7 @@ register
 
   pure txId
 
-deregister ∷ DeregisterParams → Contract () TransactionHash
+deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let msg = report "deregister"
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
@@ -268,5 +279,5 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   pure txId
 
-report ∷ String → ∀ e. Display e ⇒ e → String
+report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }

@@ -1,6 +1,6 @@
 # Introduction
 
-This document describes a set of standards for all code under the Liqwid
+This document describes a set of standards for all code under this
 project. It also explains our reasoning for these choices, and acts as a living
 document of our practices for current and future contributors to the project. We
 intend for this document to evolve as our needs change, as well as act as a
@@ -278,12 +278,11 @@ The following pragmata MUST be enabled at project level (that is, in
 * ``FlexibleContexts``
 * ``FlexibleInstances``
 * ``GeneralizedNewtypeDeriving``
-* ``InstanceSigs``
 * ``ImportQualifiedPost``
+* ``InstanceSigs``
 * ``LambdaCase``
 * ``MultiParamTypeClasses``
 * ``NoImplicitPrelude``
-* ``OverloadedLabels``
 * ``OverloadedStrings``
 * ``TupleSections``
 
@@ -445,10 +444,30 @@ it isn't clear if we need all of this in our dependency tree.
 For all of the above reasons, the best choice is 'default to Plutus, with local
 replacements from `base`'.
 
-## Versioning
+## Versioning and changelogging
 
-A project MUST use the [PVP][pvp]. Two, and only two, version numbers MUST be
-used: a major version and a minor version.
+A project MUST use the [PVP][pvp]. Three, and only three, version numbers MUST be
+used: a major version and two minor versions.
+
+Any changes MUST be logged in `CHANGELOG.md`, which MUST comply with [Keep A
+Changelog](https://keepachangelog.com/en/1.1.0/) requirements. Each entry SHOULD
+provide two additional pieces of information:
+
+* A link to Github issue(s) that the entry corresponds to; and
+* A marker (either "onchain" or "offchain") explaining which part of the
+  codebase it relates to.
+
+Exceptions are given when:
+
+* The change did not have a Github issue associated with it; or
+* The change affects both onchain and offchain.
+
+An example entry is below:
+
+```
+* Demons no longer fly out your nose
+  ([666](https://github.com/mlabs/trustless-sidechain/issues/666), onchain)
+```
 
 ### Justification
 
@@ -457,12 +476,17 @@ scheme, adopted by most packages on Hackage. It is clearly described, and even
 automatically verifiable by use of tools like [``policeman``][policeman]. Thus,
 adopting it is both in line with community standards (making it easier to
 remember), and simplifies cases such as Hackage publication or open-sourcing in
-general.
+general. Three version numbers are typically used for most packages, thus making
+it the sensible choice for the largest familiarity to most developers.
 
-Two version numbers (major and minor) is the minimum allowed by the PVP,
-indicating compilation-breaking and compilation-non-breaking changes
-respectively. As parsimony is best, and more granularity than this isn't
-generally necessary, adopting this model is the right decision.
+Changelogs are critical for several reasons: they allow downstream users to
+quickly see what's changed, provide context for incoming developers, and
+maintain an easier-to-read record of project changes over time. Keep A Changelog
+is a relatively common format, which is designed for easy reading, which suits
+our needs. In order to add context to our changes, we require 'linking' to
+Github issues, as well as a marker of whether the change affects onchain or
+offchain: this helps both users and developers get more context easily if they
+need to.
 
 ## Documentation
 

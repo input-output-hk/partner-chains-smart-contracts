@@ -12,9 +12,10 @@ module TrustlessSidechain.MerkleRoot.Types
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
-  , PlutusData(..)
+  , PlutusData(Constr)
   , toData
   )
 import Contract.Scripts (ValidatorHash)
@@ -39,12 +40,13 @@ data SignedMerkleRoot = SignedMerkleRoot
   }
 
 derive instance Generic SignedMerkleRoot _
+
 instance ToData SignedMerkleRoot where
   toData
     ( SignedMerkleRoot
         { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData merkleRoot
       , toData previousMerkleRoot
       , toData signatures
@@ -65,7 +67,9 @@ newtype SignedMerkleRootMint = SignedMerkleRootMint
   }
 
 derive instance Generic SignedMerkleRootMint _
+
 derive instance Newtype SignedMerkleRootMint _
+
 instance ToData SignedMerkleRootMint where
   toData
     ( SignedMerkleRootMint
@@ -74,7 +78,7 @@ instance ToData SignedMerkleRootMint where
         , merkleRootValidatorHash
         }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData sidechainParams
       , toData updateCommitteeHashCurrencySymbol
       , toData merkleRootValidatorHash
@@ -103,13 +107,15 @@ newtype MerkleRootInsertionMessage = MerkleRootInsertionMessage
   }
 
 derive instance Generic MerkleRootInsertionMessage _
+
 derive instance Newtype MerkleRootInsertionMessage _
+
 instance ToData MerkleRootInsertionMessage where
   toData
     ( MerkleRootInsertionMessage
         { sidechainParams, merkleRoot, previousMerkleRoot }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData sidechainParams
       , toData merkleRoot
       , toData previousMerkleRoot

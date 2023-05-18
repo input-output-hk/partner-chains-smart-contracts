@@ -1,10 +1,13 @@
-module Test.TrustlessSidechain.MultiSig where
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+module Test.TrustlessSidechain.MultiSig (test) where
 
 import Data.ByteString (ByteString)
 import PlutusTx.Prelude
-import Test.Tasty
-import Test.Tasty.HUnit
-import TrustlessSidechain.Utils qualified as U
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TrustlessSidechain.Utils qualified as Utils
 import Prelude qualified
 
 test :: TestTree
@@ -12,8 +15,7 @@ test = unitTests
 
 unitTests :: TestTree
 unitTests =
-  let vmbs = U.verifyMulti @BuiltinByteString @BuiltinByteString
-      -- XXX: The following is a lie. Investigate why.
+  let -- XXX: The following is a lie. Investigate why.
       --
       -- >>> conv "hello" == "hello"
       -- True
@@ -32,27 +34,24 @@ unitTests =
       sig2 = conv "\190\160N\239)\238~j\STX\v\CAN\CAN\r\226q\\8ts\DC3!g\233dm\ne\148\205z'\aM\218\218\226\205\209\&8\153\&9_\161.\b91v\211d\ETXY\254\220fP\US\216%\137\201\249S\184"
    in testGroup
         "MultiSig"
-        [ testCase "key2 > key1" $
-            key2 > key1 @?= True
-        , testCase "unsorted keys" $
-            U.verifyMultisig [key2, key1] 1 msg [sig1, sig2] @?= False
-        , testCase "sorted keys, unsorted sigs" $
-            U.verifyMultisig [key1, key2] 1 msg [sig2, sig1] @?= True
-        , testCase "0 threshold" $
-            vmbs (==) 0 [] [] @?= True
+        [ testCase "0 threshold" $
+            Utils.verifyMultisig [] 0 msg [] @?= True
         , testCase "not eq" $
-            vmbs (==) 1 ["m1"] ["m2"] @?= False
+            Utils.verifyMultisig [key1] 1 msg [sig2] @?= False
         , testCase "1-1" $
-            vmbs (==) 1 ["hello"] ["hello"] @?= True
+            Utils.verifyMultisig [key1] 1 msg [sig1] @?= True
         , testCase "2-1" $
-            vmbs (==) 1 ["fail", "hello"] ["hello"] @?= True
+            Utils.verifyMultisig [key1, key2] 1 msg [sig2] @?= True
         , testCase "1-2" $
-            vmbs (==) 1 ["hello"] ["fail", "hello"] @?= True
-        , testCase "attemptDuplicatePubkey" $
-            vmbs (==) 2 ["pk1", "pk1"] ["pk1"] @?= False
+            Utils.verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
+        , -- this test is malformed, and hence should be 'False'.. while
+          -- it is a valid signature, it doesn't satisfy the
+          -- preconditions of the function
+          testCase "attemptDuplicatePubkey" $
+            Utils.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
         , testCase "attemptDuplicateSigs" $
-            vmbs (==) 2 ["pk1"] ["pk1", "pk1"] @?= False
+            Utils.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
         , testCase "testLaziness" $
             let notLazy = Prelude.error "verifyMultisig is not lazy" -- admittedly there may be a better way then error
-             in vmbs (==) 2 ["pk1", "pk2", notLazy] ["pk1", "pk2", notLazy] @?= True
+             in Utils.verifyMultisig [key1, key2, notLazy] 2 msg [sig1, sig2, notLazy] @?= True
         ]

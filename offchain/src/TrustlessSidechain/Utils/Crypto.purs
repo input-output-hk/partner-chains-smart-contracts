@@ -45,6 +45,19 @@ import Data.Ord as Ord
 -- | make sure to check the leading byte for valid key format
 newtype SidechainPublicKey = SidechainPublicKey ByteArray
 
+derive newtype instance ordSidechainPublicKey ∷ Ord SidechainPublicKey
+
+derive newtype instance eqSidechainPublicKey ∷ Eq SidechainPublicKey
+
+derive newtype instance toDataSidechainPublicKey ∷ ToData SidechainPublicKey
+
+derive newtype instance fromDataSidechainPublicKey ∷ FromData SidechainPublicKey
+
+instance Show SidechainPublicKey where
+  show (SidechainPublicKey byteArray) = "(byteArrayToSidechainPublicKeyUnsafe "
+    <> show byteArray
+    <> ")"
+
 -- | Smart constructor for `SidechainPublicKey` to ensure it is a valid
 -- | compressed (33 bytes) secp256k1 public key.
 sidechainPublicKey ∷ ByteArray → Maybe SidechainPublicKey
@@ -63,15 +76,6 @@ getSidechainPublicKeyByteArray (SidechainPublicKey byteArray) = byteArray
 byteArrayToSidechainPublicKeyUnsafe ∷ ByteArray → SidechainPublicKey
 byteArrayToSidechainPublicKeyUnsafe = SidechainPublicKey
 
-derive newtype instance ordSidechainPublicKey ∷ Ord SidechainPublicKey
-derive newtype instance eqSidechainPublicKey ∷ Eq SidechainPublicKey
-derive newtype instance toDataSidechainPublicKey ∷ ToData SidechainPublicKey
-derive newtype instance fromDataSidechainPublicKey ∷ FromData SidechainPublicKey
-instance Show SidechainPublicKey where
-  show (SidechainPublicKey byteArray) = "(byteArrayToSidechainPublicKeyUnsafe "
-    <> show byteArray
-    <> ")"
-
 -- | Invariant: ∀ x : SidechainPrivateKey. length x = 32, and is non zero and
 -- | less then the secp256k1 curve order. See 1. for details.
 -- | Format: raw bytes
@@ -81,8 +85,11 @@ instance Show SidechainPublicKey where
 newtype SidechainPrivateKey = SidechainPrivateKey ByteArray
 
 derive newtype instance ordSidechainPrivateKey ∷ Ord SidechainPrivateKey
+
 derive newtype instance eqSidechainPrivateKey ∷ Eq SidechainPrivateKey
+
 derive newtype instance toDataSidechainPrivateKey ∷ ToData SidechainPrivateKey
+
 derive newtype instance fromDataSidechainPrivateKey ∷
   FromData SidechainPrivateKey
 
@@ -113,6 +120,19 @@ getSidechainPrivateKeyByteArray (SidechainPrivateKey byteArray) = byteArray
 -- | Format: raw bytes
 newtype SidechainMessage = SidechainMessage ByteArray
 
+derive newtype instance ordSidechainMessage ∷ Ord SidechainMessage
+
+derive newtype instance eqSidechainMessage ∷ Eq SidechainMessage
+
+derive newtype instance toDataSidechainMessage ∷ ToData SidechainMessage
+
+derive newtype instance fromDataSidechainMessage ∷ FromData SidechainMessage
+
+instance Show SidechainMessage where
+  show (SidechainMessage byteArray) = "(byteArrayToSidechainMessageUnsafe "
+    <> show byteArray
+    <> ")"
+
 -- | `sidechainMessage` is a smart constructor for `SidechainMessage` which verifies the
 -- | invariants
 sidechainMessage ∷ ByteArray → Maybe SidechainMessage
@@ -130,17 +150,21 @@ byteArrayToSidechainMessageUnsafe = SidechainMessage
 getSidechainMessageByteArray ∷ SidechainMessage → ByteArray
 getSidechainMessageByteArray (SidechainMessage byteArray) = byteArray
 
-derive newtype instance ordSidechainMessage ∷ Ord SidechainMessage
-derive newtype instance eqSidechainMessage ∷ Eq SidechainMessage
-derive newtype instance toDataSidechainMessage ∷ ToData SidechainMessage
-derive newtype instance fromDataSidechainMessage ∷ FromData SidechainMessage
-instance Show SidechainMessage where
-  show (SidechainMessage byteArray) = "(byteArrayToSidechainMessageUnsafe "
-    <> show byteArray
-    <> ")"
-
 -- | Invariant: ∀ x : SidechainSignature. length x = 64
 newtype SidechainSignature = SidechainSignature ByteArray
+
+derive newtype instance ordSidechainSignature ∷ Ord SidechainSignature
+
+derive newtype instance eqSidechainSignature ∷ Eq SidechainSignature
+
+derive newtype instance toDataSidechainSignature ∷ ToData SidechainSignature
+
+derive newtype instance fromDataSidechainSignature ∷ FromData SidechainSignature
+
+instance Show SidechainSignature where
+  show (SidechainSignature byteArray) = "(byteArrayToSidechainSignatureUnsafe "
+    <> show byteArray
+    <> ")"
 
 -- | `sidechainSignature` is a smart constructor for `SidechainSignature` to
 -- | verify the invariants.
@@ -154,15 +178,6 @@ sidechainSignature byteArray
 getSidechainSignatureByteArray ∷ SidechainSignature → ByteArray
 getSidechainSignatureByteArray (SidechainSignature byteArray) = byteArray
 
-derive newtype instance ordSidechainSignature ∷ Ord SidechainSignature
-derive newtype instance eqSidechainSignature ∷ Eq SidechainSignature
-derive newtype instance toDataSidechainSignature ∷ ToData SidechainSignature
-derive newtype instance fromDataSidechainSignature ∷ FromData SidechainSignature
-instance Show SidechainSignature where
-  show (SidechainSignature byteArray) = "(byteArrayToSidechainSignatureUnsafe "
-    <> show byteArray
-    <> ")"
-
 -- | `byteArrayToSidechainSignatureUnsafe` constructs a sidechain public key without
 -- | verifying any of the invariants.
 byteArrayToSidechainSignatureUnsafe ∷ ByteArray → SidechainSignature
@@ -171,16 +186,20 @@ byteArrayToSidechainSignatureUnsafe = SidechainSignature
 -- TODO: newtype checks the type aliases above
 
 foreign import generateRandomPrivateKey ∷ Effect SidechainPrivateKey
+
 foreign import toPubKeyUnsafe ∷ SidechainPrivateKey → SidechainPublicKey
+
 foreign import pubKeyVerify ∷ ByteArray → Boolean
+
 foreign import secKeyVerify ∷ ByteArray → Boolean
+
 foreign import sign ∷
   SidechainMessage → SidechainPrivateKey → SidechainSignature
 
 foreign import verifyEcdsaSecp256k1Signature ∷
   SidechainPublicKey → SidechainMessage → SidechainSignature → Boolean
 
-generatePrivKey ∷ Contract () SidechainPrivateKey
+generatePrivKey ∷ Contract SidechainPrivateKey
 generatePrivKey =
   liftEffect generateRandomPrivateKey
 
@@ -192,10 +211,13 @@ multiSign xkeys msg = map (sign msg) xkeys
 -- | associated signatures and sorts by the natural lexicographical ordering of the
 -- | `SidechainPublicKey`s
 -- |
--- | This useful since the onchain multisign method (see in the Haskell module
--- | `TrustlessSidechain.OnChain.Utils`) requires that the keys are sorted (this
--- | makes testing if the list is nubbed easy), and the signatures are associated
--- | with the public keys
+-- | Previously, the onchain multisign method required that the public keys are
+-- | sorted (to verify uniqueness of public keys), but this requirement was
+-- | relaxed and hence sorting is technically no longer necessary....
+-- |
+-- | But, as per the specification, the committee hash will be created from
+-- | lexicographically sorted public keys, so sorting the public keys will
+-- | ensure that it matches the same onchain committee format.
 normalizeCommitteePubKeysAndSignatures ∷
   Array (SidechainPublicKey /\ Maybe SidechainSignature) →
   Array (SidechainPublicKey /\ Maybe SidechainSignature)
@@ -272,9 +294,9 @@ verifyMultiSignature
     isSorted pubKeys && go zero pubKeys signatures
 
 {- | Verifies that the non empty array is sorted -}
-isSorted ∷ ∀ a. Ord a ⇒ Array a → Boolean
+isSorted ∷ ∀ (a ∷ Type). Ord a ⇒ Array a → Boolean
 isSorted xss = case Array.tail xss of
-  Just xs → and (Array.zipWith (<) xss xs) -- insert (<) between all elements
+  Just xs → and (Array.zipWith (<=) xss xs)
   Nothing → false
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`

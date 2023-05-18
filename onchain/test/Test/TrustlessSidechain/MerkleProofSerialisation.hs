@@ -1,8 +1,13 @@
-module Test.TrustlessSidechain.MerkleProofSerialisation (testUp, testSide, testRootHash, testCombinedMerkleProof) where
+module Test.TrustlessSidechain.MerkleProofSerialisation (
+  testUp,
+  testSide,
+  testRootHash,
+  testCombinedMerkleProof,
+) where
 
 import Data.ByteString (ByteString)
 import Plutus.V1.Ledger.Bytes qualified as Bytes
-import PlutusCore.Data (Data (..))
+import PlutusCore.Data (Data (B, Constr, I, List))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.IsData.Class (
@@ -14,8 +19,24 @@ import PlutusTx.Prelude
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.HUnit qualified as HUnit
-import TrustlessSidechain.MerkleTree (MerkleProof (..), RootHash (..), Side (..), Up (..))
-import TrustlessSidechain.Types (CombinedMerkleProof (..), MerkleTreeEntry (..))
+import TrustlessSidechain.MerkleTree (
+  MerkleProof (MerkleProof),
+  RootHash (RootHash),
+  Side (L, R),
+  Up (Up),
+  sibling,
+  siblingSide,
+ )
+import TrustlessSidechain.Types (
+  CombinedMerkleProof (CombinedMerkleProof),
+  MerkleTreeEntry (MerkleTreeEntry),
+  cmpMerkleProof,
+  cmpTransaction,
+  mteAmount,
+  mteIndex,
+  mtePreviousMerkleRoot,
+  mteRecipient,
+ )
 import Prelude qualified
 
 -- | 'unsafeFromHex' unsafely converts hex to the byte representation

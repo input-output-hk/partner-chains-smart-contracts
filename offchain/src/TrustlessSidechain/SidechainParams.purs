@@ -2,6 +2,7 @@ module TrustlessSidechain.SidechainParams where
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
@@ -30,7 +31,9 @@ newtype SidechainParams = SidechainParams
   }
 
 derive instance Generic SidechainParams _
+
 derive instance Newtype SidechainParams _
+
 instance ToData SidechainParams where
   toData
     ( SidechainParams
@@ -41,7 +44,7 @@ instance ToData SidechainParams where
         , thresholdDenominator
         }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData chainId
       , toData genesisHash
       , toData genesisUtxo

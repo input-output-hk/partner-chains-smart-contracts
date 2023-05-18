@@ -57,10 +57,10 @@ interpretPlutipTest = go <<< Mote.Monad.plan
 
 -- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
 mkPlutipConfigTest ∷
-  ∀ distr wallets.
+  ∀ (distr ∷ Type) (wallets ∷ Type).
   UtxoDistribution distr wallets ⇒
   distr →
-  (wallets → Contract () Unit) →
+  (wallets → Contract Unit) →
   PlutipConfigTest
 mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d t
 

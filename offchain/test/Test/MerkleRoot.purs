@@ -12,6 +12,7 @@ import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -22,10 +23,8 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.FUELMintingPolicy
-  ( Bech32Bytes
-  , CombinedMerkleProof(CombinedMerkleProof)
+  ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
-  , bech32BytesFromAddress
   )
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot
@@ -36,21 +35,22 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (Bech32Bytes, bech32BytesFromAddress)
 import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
-import TrustlessSidechain.Utils.SerialiseData as SerialiseData
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
 tests ∷ WrappedTests
 tests = plutipGroup "Merkle root insertion" $ do
   testScenario1
   testScenario2
+  testScenario3
 
 -- | `paymentPubKeyHashToBech32Bytes` converts a `PaymentPubKeyHash`
 -- | to the `Bech32Bytes` required for the `recipient` field of
 -- | `FUELMintingPolicy.MerkleTreeEntry`.
 -- | Note this assumes no staking public key hash to simplify writing tests.
-paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → Contract () Bech32Bytes
+paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → Maybe Bech32Bytes
 paymentPubKeyHashToBech32Bytes pubKeyHash =
   bech32BytesFromAddress $ Address.pubKeyHashAddress pubKeyHash Nothing
 
@@ -66,7 +66,7 @@ saveRoot ∷
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe RootHash
   } →
-  Contract ()
+  Contract
     { -- merkle root that was just saved
       merkleRoot ∷ RootHash
     , -- merkle tree corresponding to the merkle root
@@ -81,10 +81,9 @@ saveRoot
   , currentCommitteePrvKeys
   , previousMerkleRoot
   } = do
-  serialisedEntries ←
-    liftContractM
-      "error 'Test.MerkleRoot.saveRoot': bad serialisation of merkle root" $
-      traverse SerialiseData.serialiseToData merkleTreeEntries
+  let
+    serialisedEntries = map (PlutusData.serializeData >>> unwrap)
+      merkleTreeEntries
   merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
   let
@@ -95,7 +94,7 @@ saveRoot
     liftContractM "error 'Test.MerkleRoot.saveRoot': Impossible merkle proof"
       $ flip traverse merkleTreeEntries
       $ \entry → do
-          serialisedEntry ← SerialiseData.serialiseToData entry
+          let serialisedEntry = unwrap $ PlutusData.serializeData entry
           merkleProof ← MerkleTree.lookupMp serialisedEntry merkleTree
           pure $ CombinedMerkleProof
             { transaction: entry
@@ -147,11 +146,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       -- 1. Setting up the sidechain
       ---------------------------
       let
-        committeeSize = 25
-      -- It fails with ~50 (nondeterministically) with budget overspent
-      -- I would really like to get this up to 101 as with the update
-      -- committee hash endpoint! Some room for optimization is certainly
-      -- a possibility..
+        committeeSize = 100
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
@@ -177,17 +172,17 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
 
-      ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
-      serialisedEntries ←
-        liftContractM "error 'testScenario1': bad serialisation of merkle root" $
-          traverse SerialiseData.serialiseToData
-            [ MerkleTreeEntry
-                { index: BigInt.fromInt 0
-                , amount: BigInt.fromInt 69
-                , previousMerkleRoot: Nothing
-                , recipient: ownRecipient
-                }
-            ]
+      ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
+        paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      let
+        serialisedEntries = map (PlutusData.serializeData >>> unwrap) $
+          [ MerkleTreeEntry
+              { index: BigInt.fromInt 0
+              , amount: BigInt.fromInt 69
+              , previousMerkleRoot: Nothing
+              , recipient: ownRecipient
+              }
+          ]
       merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
 
       let
@@ -226,6 +221,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         { sidechainParams
         , merkleRoot
         , previousMerkleRoot: Nothing
+
         , committeeSignatures
         }
 
@@ -279,7 +275,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
         "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
 
-      ownRecipient ← paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
+        paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
       { merkleRoot: merkleRoot1 } ←
         saveRoot
@@ -316,3 +313,93 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , previousMerkleRoot: Nothing
           }
       pure unit
+
+-- | `testScenario3` does the following
+-- |    1. initializes the sidechain with repeated committee members
+-- |
+-- |    2. saves a merkle root
+-- |
+-- | Note: there is significant duplicated code from `testScenario2`
+testScenario3 ∷ PlutipTest
+testScenario3 =
+  Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        Log.logInfo' "MerkleRoot testScenario2"
+
+        -- 1. Setting up the sidechain
+        ---------------------------
+        let
+          committeeSize = 100
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
+        duplicated1PrvKey ← Crypto.generatePrivKey
+        duplicated2PrvKey ← Crypto.generatePrivKey
+
+        everyoneElsePrvKeys ← sequence $ Array.replicate (committeeSize - 20)
+          Crypto.generatePrivKey
+        let
+          initCommitteePrvKeys = Array.replicate 5 duplicated1PrvKey
+            <> everyoneElsePrvKeys
+            <> Array.replicate 15 duplicated2PrvKey
+          initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+          initSidechainParams = InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 99999
+            , initThresholdDenominator: BigInt.fromInt 100000
+            , initCandidatePermissionTokenMintInfo: Nothing
+            }
+
+        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+
+        -- Building / saving the root that pays lots of FUEL to this wallet :)
+        ----------------------------------------------------------------------
+        ownPaymentPubKeyHash ← liftedM
+          "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
+          Address.ownPaymentPubKeyHash
+
+        ownRecipient ← liftContractM "Could not convert address to bech 32 bytes"
+          $
+            paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+
+        { merkleRoot: merkleRoot1 } ←
+          saveRoot
+            { sidechainParams
+            , merkleTreeEntries:
+                [ MerkleTreeEntry
+                    { index: BigInt.fromInt 0
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Nothing
+                    , recipient: ownRecipient
+                    }
+                ]
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , previousMerkleRoot: Nothing
+            }
+        _ ←
+          saveRoot
+            { sidechainParams
+            , merkleTreeEntries:
+                [ MerkleTreeEntry
+                    { index: BigInt.fromInt 0
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Just merkleRoot1
+                    , recipient: ownRecipient
+                    }
+                , MerkleTreeEntry
+                    { index: BigInt.fromInt 1
+                    , amount: BigInt.fromInt 69
+                    , previousMerkleRoot: Just merkleRoot1
+                    , recipient: ownRecipient
+                    }
+                ]
+            , currentCommitteePrvKeys: initCommitteePrvKeys
+            , previousMerkleRoot: Nothing
+            }
+        pure unit

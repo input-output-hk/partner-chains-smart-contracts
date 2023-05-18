@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fexpose-all-unfoldings #-}
 
@@ -489,7 +490,7 @@ lookupMp bt mt = fmap MerkleProof $ go [] mt
     N.B. 2. follows from [Merkle Tree Height Bound].
 -}
 
-{- | @/O(n)/@ where /n/ is the size of the list used to make the merkle
+{- | @/O(n log n)/@ where /n/ is the size of the list used to make the merkle
  tree.
 
  'lookupsMp' mt@ returns all leafs associated with its 'MerkleProof' in a list
@@ -513,6 +514,12 @@ lookupsMp = ($ []) . go []
     -- Similarly to 'lookupMp', this does a dfs through the tree to gather the
     -- paths, and is implemented via a difference list for efficient
     -- concatenation.
+    --
+    -- Complexity analysis.
+    -- - Recursing through the entire tree is bounded by /O(n)/
+    -- - Difference list appending is /O(1)/ (and /O(n)/ at the end)
+    -- - There are /n/ merkle proofs, and each are of length /O(log n)/
+    -- Hence, we have /O(n log n)/ complexity (when evaluating to a normal form).
     go :: [Up] -> MerkleTree -> [(RootHash, MerkleProof)] -> [(RootHash, MerkleProof)]
     go prf mt = case mt of
       -- See Note [lookupMp Invariants] for the invariants here.

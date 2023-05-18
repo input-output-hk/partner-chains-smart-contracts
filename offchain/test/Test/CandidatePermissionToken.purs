@@ -21,8 +21,8 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
-  , CandidatePermissionMintParams(..)
+  ( CandidatePermissionMint(CandidatePermissionMint)
+  , CandidatePermissionMintParams(CandidatePermissionMintParams)
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -121,7 +121,7 @@ testScenarioSuccess1 =
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
 assertIHaveCandidatePermissionToken ∷
-  SidechainParams → CandidatePermissionTokenInfo → Contract () Unit
+  SidechainParams → CandidatePermissionTokenInfo → Contract Unit
 assertIHaveCandidatePermissionToken
   scParams
   { candidatePermissionTokenUtxo, candidatePermissionTokenName } = do

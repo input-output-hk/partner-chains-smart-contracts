@@ -1,12 +1,12 @@
 -- | `Test.MerkleRootChaining` includes tests which demonstrate the merkle root
 -- | chaining with both updating the committee hash and creating new merkle roots.
-module Test.MerkleRootChaining where
+module Test.MerkleRootChaining (tests) where
 
 import Contract.Prelude
 
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad as Monad
+import Contract.Monad (liftContractM, liftedM)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -49,11 +49,13 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      ownPaymentPubKeyHash ← Monad.liftedM
+      ownPaymentPubKeyHash ← liftedM
         "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
-      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-        ownPaymentPubKeyHash
+      ownRecipient ←
+        liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+            ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
@@ -61,7 +63,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 25
+      let keyCount = 80
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
 
@@ -191,11 +193,13 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      ownPaymentPubKeyHash ← Monad.liftedM
+      ownPaymentPubKeyHash ← liftedM
         "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
         Address.ownPaymentPubKeyHash
-      ownRecipient ← Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-        ownPaymentPubKeyHash
+      ownRecipient ←
+        liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+            ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
@@ -203,7 +207,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         "'Test.MerkleRootChaining.testScenario2': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 25
+      let keyCount = 80
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
 
@@ -249,7 +253,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         committee3PubKeys = map Utils.Crypto.toPubKeyUnsafe committee3PrvKeys
       -- the message updates committee1 to be committee3
       committee1Message ←
-        Monad.liftContractM
+        liftContractM
           "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage

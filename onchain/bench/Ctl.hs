@@ -4,25 +4,59 @@
 {- | "Ctl" defines a monad which allows one to conveniently call CLI ctl
  commands / generate required data.
 -}
-module Ctl where
+module Ctl (
+  CtlRegistration (..),
+  CtlDeregistration (..),
+  CtlUpdateCommitteeHash (..),
+  CtlSaveRoot (..),
+  CtlInitSidechain (..),
+  CtlClaim (..),
+  CtlCommon (..),
+  ctlCommonFlags,
+  ctlInitSidechainFlags,
+  ctlRegistrationFlags,
+  ctlDeregistrationFlags,
+  ctlUpdateCommitteeHash,
+  ctlSaveRootFlags,
+  ctlClaimFlags,
+  generateFreshCommittee,
+) where
 
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
-import Cardano.Crypto.DSIGN.Class (
-  SignKeyDSIGN,
- )
+import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN)
 import Control.Monad qualified as Monad
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class qualified as IO.Class
 import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1 qualified as Secp256k1
 import Data.List qualified as List
-import Plutus.V2.Ledger.Api (
-  TxOutRef,
- )
-import TrustlessSidechain.MerkleTree (RootHash (..))
+import Plutus.V2.Ledger.Api (TxOutRef)
+import TrustlessSidechain.MerkleTree (RootHash, unRootHash)
 import TrustlessSidechain.OffChain qualified as OffChain
-import TrustlessSidechain.Types (BlockProducerRegistrationMsg (..), CombinedMerkleProof (..), MerkleRootInsertionMessage (..), SidechainParams (..), SidechainPubKey, UpdateCommitteeHashMessage (..))
-
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.IO.Class qualified as IO.Class
+import TrustlessSidechain.Types (
+  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
+  CombinedMerkleProof,
+  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
+  SidechainParams (SidechainParams),
+  SidechainPubKey,
+  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  bprmInputUtxo,
+  bprmSidechainParams,
+  bprmSidechainPubKey,
+  chainId,
+  genesisHash,
+  genesisUtxo,
+  mrimMerkleRoot,
+  mrimPreviousMerkleRoot,
+  mrimSidechainParams,
+  thresholdDenominator,
+  thresholdNumerator,
+  uchmNewCommitteePubKeys,
+  uchmPreviousMerkleRoot,
+  uchmSidechainEpoch,
+  uchmSidechainParams,
+ )
+import Prelude
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
