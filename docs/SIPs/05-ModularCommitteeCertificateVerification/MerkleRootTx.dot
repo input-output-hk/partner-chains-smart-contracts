@@ -1,0 +1,21 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="1", ranksep="0.75"]
+
+  currentCommittee [ label = "Aggregated committee \nmembers' public keys\nwith CommitteeHashPolicy NFT" ];
+  transaction [ label = "Transaction", shape=diamond ];
+  committeeCertificateVerificationMintingPolicy [label = "Committee Certificate\nVerification Minting\nPolicy"];
+  plutusScript [ label = "MerkleRootTokenMintingPolicy"];
+  burnAddress [ label = "Burn address"];
+  recipient [ label = "MerkleRootTokenValidator"];
+
+  currentCommittee  -> transaction [ xlabel = "reference input"];
+  plutusScript -> committeeCertificateVerificationMintingPolicy [ style = dashed, label = "checks if\n token is minted" ];
+  committeeCertificateVerificationMintingPolicy -> currentCommittee [ style = dashed, xlabel = "searches for" ];
+  transaction -> committeeCertificateVerificationMintingPolicy [ xlabel = "mints" ];
+  committeeCertificateVerificationMintingPolicy -> burnAddress [ xlabel = "is paid to", style=dashed ];
+  transaction -> plutusScript [ label = "mints" ];
+  recipient -> plutusScript  [ label = "is paid to", style=dashed, dir=back ];
+  transaction -> recipient [ xlabel = "output" ];
+  transaction -> burnAddress [ xlabel = "output" ];
+}

@@ -190,7 +190,7 @@ determines which proxied minting policy must mint in order for
 
 We first describe a datum, `FUELOracleDatum`, which holds the proxied minting
 policies' currency symbols as follows.
-```
+```haskell
 type FUELOracleDatum = VersionMap
 
 newtype Version = Version Integer
@@ -218,7 +218,7 @@ use to claim their `FUELProxyPolicy` tokens and whether they wish to mint or
 burn their `FUELProxyPolicy` tokens.
 Hence, this information will be passed as a redeemer to `FUELProxyPolicy` with
 the following data type.
-```
+```haskell
 data FUELProxyPolicyRedeemer = FUELProxyPolicyRedeemer
     { version :: Version
         -- ^ 'version' determines which proxied minting policy the participant
@@ -483,7 +483,7 @@ The only implication is that when updating, the governance mechanism needs to
 be sure that this requirement is satisfied.
 
 Then, we may replace `VersionMap` with
-```
+```haskell
 newtype VersionMap = VersionMap { unVersionMap :: ByteString }
 ```
 for which any `versionMap :: VersionMap` satisfies the following
@@ -527,7 +527,7 @@ NFTs (there are already issues with the init transaction being too large).
 
 An alternative would be to have a single `FUELOraclePolicy` NFT which uniquely
 identifies a UTxO with datum as follows.
-```
+```haskell
 data FUELOracleDatum = FUELOracleDatum
     { mintMap :: VersionMap
     , burnMap :: VersionMap
