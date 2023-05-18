@@ -9,13 +9,27 @@ _Adoption_ and _Activation_.
 The current implementation depends on spending the genesis UTxO to initialise
 components such as distributed set or checkpoint. This means that everything has
 to happen in one transaction, and we can only split these actions by using some
-trick (for example pre-minting the NFT for checkpoint and committee hash). This
-method works well for previous versions, but it has it’s limitations:
+trick (for example pre-minting the NFT for checkpoint and committee hash -- see
+the diagrams below). This method works well for previous versions, but it has
+it’s limitations:
 
 - adoption transaction is close to the maximum transaction size
 - [protocol update](./01-UpdateStrategy.md) requires reinitialising components
   (e.g. distributed set and checkpoint)
 - no clear abstraction boundary between adoption and activation (with pre-minting)
+
+The following diagram depicts a transaction currently used to premint tokens
+for initialization.
+Note that the distributed set has some complexities in its initialization to
+have a trustless setup.
+
+![OldInit](./05-FlexibleInitialisation/OldInit.svg)
+
+Once the tokens are preminted, a separate transaction must pay the
+aforementioned tokens to the appropriate validators.
+The following diagram depicts this scenario.
+
+![OldPayTokens](./05-FlexibleInitialisation/OldPayTokens.svg)
 
 ## Solution
 
@@ -75,6 +89,11 @@ the proper naming of the token names. These are taken care of by the off-chain
 part of our code. However, this is based on the assumption, that the sidechain
 initialiser is an honest player.
 
+As a diagram, a transaction which corresponds to the `Genesis` mode is
+depicted below.
+
+![NewInit](./05-FlexibleInitialisation/NewInit.svg)
+
 #### DsConfMint
 
 `DsConfMint`, `CommitteeHashCurrencySymbol` and `CheckpointCurrencySymbol` are
@@ -94,3 +113,10 @@ We also change the verification logic:
 - adding check, verifying that exactly one token  with the currency symbol of
   `dscmInitTokenCurSym` and the token name of `DsConfMint` was burnt in the
   transaction
+
+As a diagram, initialisation of the distributed set amounts to submitting a
+transaction of the following form where we note that the only difference from
+the current setup is that is that `DsConfMint` checks if `InitToken` is burned
+and the other required validators minting policies are the same as before.
+
+![DsConfMintBurn](./05-FlexibleInitialisation/DsConfMintBurn.svg)

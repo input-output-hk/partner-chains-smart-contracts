@@ -1,0 +1,15 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  trustedWallet [ label = "Trusted wallet UTxO with\ntoken InitToken with\ntoken name \"CheckpointMint\""];
+  transaction [ label = "An activation transaction for initialising\nthe checkpoint", shape=diamond ];
+  checkpointPolicy [ label = "CheckpointPolicy NFT\nminting policy"];
+  checkpointValidator [ label = "CheckpointValidator validator"];
+
+  trustedWallet -> transaction [ label = "input"];
+  trustedWallet -> checkpointPolicy [ label = "checks if token is burned", style=dashed, dir=back];
+  transaction -> checkpointPolicy [ label = "mints" ];
+  checkpointPolicy -> checkpointValidator [ label = "is paid to", style=dashed ]
+  transaction -> checkpointValidator [ label = "output"];
+}
