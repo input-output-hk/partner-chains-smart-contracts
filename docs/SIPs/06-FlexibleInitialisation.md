@@ -23,13 +23,13 @@ for initialization.
 Note that the distributed set has some complexities in its initialization to
 have a trustless setup.
 
-![OldInit](./05-FlexibleInitialisation/OldInit.svg)
+![OldInit](./06-FlexibleInitialisation/OldInit.svg)
 
 Once the tokens are preminted, a separate transaction must pay the
 aforementioned tokens to the appropriate validators.
 The following diagram depicts this scenario.
 
-![OldPayTokens](./05-FlexibleInitialisation/OldPayTokens.svg)
+![OldPayTokens](./06-FlexibleInitialisation/OldPayTokens.svg)
 
 ## Solution
 
@@ -92,7 +92,7 @@ initialiser is an honest player.
 As a diagram, a transaction which corresponds to the `Genesis` mode is
 depicted below.
 
-![NewInit](./05-FlexibleInitialisation/NewInit.svg)
+![NewInit](./06-FlexibleInitialisation/NewInit.svg)
 
 #### DsConfMint
 
@@ -119,4 +119,4 @@ transaction of the following form where we note that the only difference from
 the current setup is that is that `DsConfMint` checks if `InitToken` is burned
 and the other required validators minting policies are the same as before.
 
-![DsConfMintBurn](./05-FlexibleInitialisation/DsConfMintBurn.svg)
+![DsConfMintBurn](./06-FlexibleInitialisation/DsConfMintBurn.svg)
