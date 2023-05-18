@@ -112,8 +112,9 @@ library quickcheck-extra
   import:          common-lang
   exposed-modules: Test.QuickCheck.Extra
   build-depends:
+    , acc
     , QuickCheck
-    , transformers
+    , split
 
   hs-source-dirs:  src
 

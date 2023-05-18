@@ -11,9 +11,15 @@ module Test.QuickCheck.Extra (
   sublistOf,
 ) where
 
+import Acc (Acc)
+import Acc qualified
 import Control.Category ((>>>))
-import Data.Bits (testBit, unsafeShiftL, unsafeShiftR)
+import Data.Bits (unsafeShiftL)
 import Data.Kind (Type)
+import Data.List.Split (chunksOf)
+import Data.Word (Word64)
+import GHC.Exts (toList)
+import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen (Gen)
 import Test.QuickCheck.Gen qualified as Gen
 import Prelude
@@ -76,14 +82,45 @@ sublistOf ::
   [a] ->
   Gen [a]
 sublistOf src = do
-  let len = length src
-  (\encoding -> go src encoding []) <$> Gen.chooseInteger (0, (1 `unsafeShiftL` len) - 1)
+  let !len = length src
+  if
+      | len < 64 -> do
+        encoding <- Gen.chooseEnum (0, (1 `unsafeShiftL` len) - 1)
+        pure . go encoding $ src
+      | len == 64 -> (`go` src) <$> arbitrary
+      | otherwise -> do
+        let pieces = chunksOf 64 src
+        let !tailCount = len `rem` 64
+        combinedSublistOf tailCount pieces
   where
-    go :: [a] -> Integer -> [a] -> [a]
-    go acc encoding = \case
-      [] -> acc
-      (x : xs) ->
-        let !encoding' = encoding `unsafeShiftR` 1
-         in if testBit encoding 0
-              then go (x : acc) encoding' xs
-              else go acc encoding' xs
+    go :: Word64 -> [a] -> [a]
+    go encoding = case encoding `quotRem` 2 of
+      (0, _) -> const []
+      (encoding', 0) -> go encoding'
+      (encoding', _) -> \case
+        [] -> []
+        (x : xs) -> x : go encoding' xs
+
+-- Helpers
+
+combinedSublistOf ::
+  forall (a :: Type).
+  Int ->
+  [[a]] ->
+  Gen [a]
+combinedSublistOf tailLength srcs = toList <$> go srcs
+  where
+    go :: [[a]] -> Gen (Acc a)
+    go = \case
+      [] -> pure mempty
+      [xs] -> do
+        encoding <- Gen.chooseEnum (0, (1 `unsafeShiftL` tailLength) - 1)
+        pure . goAcc encoding $ xs
+      (xs : xss) -> (<>) <$> ((`goAcc` xs) <$> arbitrary) <*> go xss
+    goAcc :: Word64 -> [a] -> Acc a
+    goAcc encoding = case encoding `quotRem` 2 of
+      (0, _) -> const mempty
+      (encoding', 0) -> goAcc encoding'
+      (encoding', _) -> \case
+        [] -> mempty
+        (x : xs) -> Acc.cons x . goAcc encoding' $ xs
