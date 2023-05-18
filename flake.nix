@@ -90,6 +90,7 @@
               haskellPackages.cabal-fmt
               haskellPackages.fourmolu
               nixpkgs-fmt
+              graphviz
             ];
             additional = ps: with ps; [
               cardano-crypto-class

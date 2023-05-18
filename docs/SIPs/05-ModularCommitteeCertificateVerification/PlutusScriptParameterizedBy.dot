@@ -1,0 +1,10 @@
+strict digraph {
+  node [shape=record]
+  splines=false
+
+  plutusScript [ label = "PlutusScript"];
+  committeeCertificateVerificationMintingPolicy [label = "Committee Certificate Verification \nMinting Policy"];
+
+  plutusScript -> committeeCertificateVerificationMintingPolicy [style = dashed, label = "parameterized by"]
+
+}
