@@ -23,6 +23,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   offchain)
 * Added new sublibrary `quickcheck-extra` with some QuickCheck helpers
   ([435](https://github.com/mlabs-haskell/trustless-sidechain/issues/435),
+  [444](https://github.com/mlabs-haskell/trustless-sidechain/pull/444),
   onchain)
 
 ## Changed
