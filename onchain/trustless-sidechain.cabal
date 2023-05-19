@@ -111,11 +111,7 @@ library
 library quickcheck-extra
   import:          common-lang
   exposed-modules: Test.QuickCheck.Extra
-  build-depends:
-    , acc
-    , QuickCheck
-    , split
-
+  build-depends:   QuickCheck
   hs-source-dirs:  src
 
 -- Executables
@@ -180,6 +176,21 @@ executable trustless-sidechain-merkle-tree
 
 -- Tests
 
+test-suite perf-check
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-core
+    , plutus-tx
+    , plutus-tx-plugin
+    , tagged
+    , tasty
+    , trustless-sidechain
+
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs: perf-check
+
 test-suite trustless-sidechain-test
   import:         common-lang
   type:           exitcode-stdio-1.0
@@ -199,6 +210,7 @@ test-suite trustless-sidechain-test
     , plutus-ledger-api
     , plutus-tx
     , QuickCheck
+    , secp256k1-haskell
     , tasty
     , tasty-hunit
     , tasty-quickcheck

@@ -25,6 +25,8 @@ module TrustlessSidechain.Utils.Crypto
   , byteArrayToSidechainSignatureUnsafe
   , sidechainSignature
   , aggregateKeys
+  , countEnoughSignatures
+  , takeExactlyEnoughSignatures
   ) where
 
 import Contract.Prelude
@@ -38,7 +40,10 @@ import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Function (on)
+import Data.Maybe as Maybe
 import Data.Ord as Ord
+import Partial.Unsafe as Unsafe
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | Invariant: ∀ x : SidechainPublicKey. length x = 33
 -- | Format: Compressed & Serialized as per secp256k1 implementation
@@ -233,6 +238,39 @@ unzipCommitteePubKeysAndSignatures ∷
   Array (SidechainPublicKey /\ Maybe SidechainSignature) →
   Tuple (Array SidechainPublicKey) (Array SidechainSignature)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
+
+-- | `countEnoughSignatures` counts the minimum number of signatures needed for
+-- | the onchain code to verify successfully.
+countEnoughSignatures ∷
+  SidechainParams →
+  Array SidechainPublicKey →
+  BigInt
+countEnoughSignatures (SidechainParams params) arr =
+  let
+    len = BigInt.fromInt $ Array.length arr
+  in
+    one + ((params.thresholdNumerator * len) / params.thresholdDenominator)
+
+-- | `takeExactlyEnoughSignatures` takes exactly enough signatures (if it
+-- | or less than if it cannot) for committee certificate verification as a
+-- | minor optimization so that we only provide the onchain code with the
+-- | minimum amount of
+-- | signatures needed.
+takeExactlyEnoughSignatures ∷
+  SidechainParams →
+  Array SidechainPublicKey /\ Array SidechainSignature →
+  Array SidechainPublicKey /\ Array SidechainSignature
+takeExactlyEnoughSignatures sc (pks /\ sigs) =
+  pks /\
+    Array.take
+      -- It should be big enough to fit in a plain old int as this
+      -- corresponds to the array length (size of int is log of array
+      -- length)
+      -- TODO
+      ( Unsafe.unsafePartial $ Maybe.fromJust $ BigInt.toInt
+          (countEnoughSignatures sc pks)
+      )
+      sigs
 
 -- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
 -- | returns true iff
