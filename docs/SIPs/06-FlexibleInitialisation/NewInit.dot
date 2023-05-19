@@ -1,0 +1,14 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  genesisUTxO [ label = "GenesisUTxO" ];
+  transaction [ label = "Adoption transaction", shape=diamond ];
+  trustedWallet [ label = "Trusted wallet"];
+  initToken [ label = "InitToken minting policy with token names:\n\"DsConfMint\",\"CommitteeHashMint\",\"CheckpointMint\""];
+
+  genesisUTxO -> transaction [ label = "input"];
+  transaction -> initToken [ label = "mints" ];
+  transaction -> trustedWallet [ label = "output" ];
+  initToken -> trustedWallet [ label = "is paid to", style=dashed ]
+}

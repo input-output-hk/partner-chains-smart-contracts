@@ -1,0 +1,29 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  genesisUTxO [ label = "GenesisUTxO" ];
+  transaction [ label = "Init tokens transaction", shape=diamond ];
+
+  committeeHashNFT [ label = "CommitteeHashPolicy NFT\nminting policy"];
+  checkpointNFT [ label = "CheckpointPolicy NFT\nminting policy"];
+  trustedWallet [ label = "Trusted wallet"];
+
+  dsConfMintNFT [ label = "DsConfMint NFT\nminting policy"];
+  dsConfValidator [ label = "DsConfValidator"];
+  dsInsertValidator [ label = "DsInsertValidator"];
+  dsKeyPolicy [ label = "DsKeyPolicy\nminting policy"];
+
+  genesisUTxO -> transaction [ label = "input"];
+  transaction -> committeeHashNFT [ label = "mints" ];
+  transaction -> dsConfMintNFT [ label = "mints" ];
+  transaction -> checkpointNFT [ label = "mints" ];
+  transaction -> dsKeyPolicy [ label = "mints" ];
+  transaction -> trustedWallet [ label = "output"];
+  transaction -> dsConfValidator [ label = "output"];
+  transaction -> dsInsertValidator [ label = "output"];
+  checkpointNFT -> trustedWallet [ label = "is paid to", style=dashed ]
+  committeeHashNFT -> trustedWallet [ label = "is paid to", style=dashed ]
+  dsConfMintNFT -> dsConfValidator [ label = "is paid to", style=dashed ]
+  dsKeyPolicy -> dsInsertValidator [ label = "is paid to", style=dashed ]
+}

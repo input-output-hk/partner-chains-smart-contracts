@@ -1,0 +1,24 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  trustedWallet [ label = "Trusted wallet UTxO with tokens for\nCommitteeHashPolicy and CheckpointPolicy"];
+  transaction [ label = "Init sidechain transaction", shape=diamond ];
+  // committeeHashPolicy [ label = "CommitteeHashPolicy NFT\nminting policy"];
+  committteeHashValidator [ label = "CommitteeHashValidator validator\nwith the initial committee"];
+  // checkpointPolicy [ label = "CheckpointPolicy NFT\nminting policy"];
+  checkpointValidator [ label = "CheckpointValidator validator"];
+
+  trustedWallet -> transaction [ label = "input"];
+  // trustedWallet -> committeeHashPolicy [ label = "CommitteeHashPolicy NFT is paid to", style=dashed];
+  // transaction -> committeeHashPolicy [ label = "mints" ];
+  // committeeHashPolicy -> committteeHashValidator [ label = "is paid to", style=dashed ]
+  transaction -> committteeHashValidator [ label = "output"];
+  trustedWallet -> committteeHashValidator [ label = "CommitteeHashPolicy is paid to", style=dashed ]
+
+  // trustedWallet -> checkpointPolicy [ label = "CheckpointPolicy NFT is paid to", style=dashed];
+  // transaction -> checkpointPolicy [ label = "mints" ];
+  // checkpointPolicy -> checkpointValidator [ label = "is paid to", style=dashed ]
+  transaction -> checkpointValidator [ label = "output"];
+  trustedWallet -> checkpointValidator [ label = "CheckpointPolicy is paid to", style=dashed ]
+}
