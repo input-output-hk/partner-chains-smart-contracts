@@ -25,7 +25,7 @@ import Control.Category ((>>>))
 import Data.Kind (Type)
 import Data.Word (Word64)
 import Test.QuickCheck (arbitrary)
-import Test.QuickCheck.Gen (Gen, elements)
+import Test.QuickCheck.Gen (Gen, elements, resize, sized)
 import Prelude
 
 {- | Same as 'Test.QuickCheck.Gen.suchThat', but has a retry limit of 100; if it
@@ -64,15 +64,15 @@ suchThatRetrying ::
   Gen a ->
   (a -> Bool) ->
   Gen a
-suchThatRetrying limit gen p = go 0
+suchThatRetrying limit gen p = sized (go 0)
   where
-    go :: Word -> Gen a
-    go !count =
-      gen >>= \x ->
+    go :: Word -> Int -> Gen a
+    go !count size =
+      resize size gen >>= \x ->
         if
             | p x -> pure x
             | count == limit -> errorOut
-            | otherwise -> go (count + 1)
+            | otherwise -> go (count + 1) (size + 1)
     errorOut :: Gen a
     errorOut = error $ "suchThat exceeded retry limit: " <> show limit
 
@@ -86,16 +86,16 @@ suchThatMapRetrying ::
   Gen a ->
   (a -> Maybe b) ->
   Gen b
-suchThatMapRetrying limit gen k = go 0
+suchThatMapRetrying limit gen k = sized (go 0)
   where
-    go :: Word -> Gen b
-    go !count =
-      gen
+    go :: Word -> Int -> Gen b
+    go !count size =
+      resize size gen
         >>= ( k >>> \case
                 Nothing ->
                   if count == limit
                     then errorOut
-                    else go (count + 1)
+                    else go (count + 1) (size + 1)
                 Just res -> pure res
             )
     errorOut :: Gen b
