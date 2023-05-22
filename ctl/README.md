@@ -2,7 +2,9 @@
 
 ## 1. Development
 
-If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.
+If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.  
+
+The term 'FUEL' is used widely in this repository. It refers to a test token used as an example of a sidechain token. It has no real-world value.  
 
 ## 2. Environment setup
 

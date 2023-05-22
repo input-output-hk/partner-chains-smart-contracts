@@ -1,6 +1,8 @@
 ## 1. Notice
 This repository is not maintained. It is provided for your education and experimentation.
 The instructions below will help you set up a development environment to conduct your investigation.
+
+The term 'FUEL' is used widely in this repository. It refers to a test token used as an example of a sidechain token. It has no real-world value.
  
 ## 2. Development
 
