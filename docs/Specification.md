@@ -1,4 +1,6 @@
-# Trustless sidechain - main chain contract specification
+# Trustless sidechain
+  
+The term 'FUEL' is used widely in this repository. It refers to a test token used as an example of a sidechain token. It has no real-world value.  
 
 This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, but this might not be available in time for Cardano, so we decided to implement the contract in two phases:
 
