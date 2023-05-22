@@ -1,13 +1,20 @@
-# Trustless Sidechain - Plutus contracts
+# Trustless Sidechain CTL
 
-This is the repository of Trustless Sidechain with the Cardano Plutus contracts.
+## 1. Notice
 
-Currently we only support Passive Bridge functionality using our CLI, but we will support light wallets in the future.
+As of [insert date], IOG will no longer be updating or maintaining this repo.
 
-- [Instruction for the CLI tool](./ctl/README.md)
-- [The specification of the Plutus contracts](./docs/README.md)
-- [High level technical specifications](https://docs.google.com/document/d/1UJs4ews1wnKIv4RMyPjFtJcyniyRHi7GmU2JPdUfbQk)
-- [Proof-of-Stake Sidechains - White Paper](https://eprint.iacr.org/2018/1239.pdf)
-- [Off-chain developer guideline](./ctl/CONTRIBUTING.md)
-- [Coding standards](./STANDARDS.md)
-- [Project task board](https://github.com/orgs/mlabs-haskell/projects/11)
+After three months of experimentation with the proof-of-concept EVM sidechain testnet, we have gathered valuable learnings from this experience and this innovative playground. New use cases and functionality were tested, feedback from the community was gathered, and we are now shifting our focus back to the strategic evolution of our sidechains approach.
+
+All information included below is considered publicly available and is free to be leveraged by developers to fork it to build and experiment with their own EVM sidechain solution. Should you have any questions, please reach out to our team on our IOG Discord server.
+
+## 2. Description
+This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, so we decided to implement the contract in two phases:
+
+- [phase 1](https://github.com/mlabs-haskell/trustless-sidechain/milestone/1)MVP using an append-only signature scheme
+- [phase 1.5](https://github.com/mlabs-haskell/trustless-sidechain/milestone/3): script optimizations and security improvements
+- [phase 2](https://github.com/mlabs-haskell/trustless-sidechain/milestone/2): using ATMS signature scheme.
+
+## 3. Next steps.
+
+If you decide to investigate further, or add your own development, start with the [development instructions](DEVELOPMENT.md) and go from there.
