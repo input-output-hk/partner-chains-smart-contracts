@@ -1,0 +1,21 @@
+digraph {
+  node [shape=square style=rounded]
+  rankdir=LR
+
+  sidechain_a [label = "Sidechain A"]
+  sidechain_b [label = "Sidechain B"]
+  {rank=same; sidechain_a; sidechain_b;}
+  mainchain [label = "Mainchain validator"]
+
+  certificate_a [
+    label="Certificate\nsigned by committee of\nsidechain A"
+    style=filled
+  ]
+  certificate_b [
+    label="Certificate\nsigned by committee of\nsidechain B"
+    style=filled
+  ]
+
+  sidechain_a -> certificate_a -> mainchain
+  sidechain_a -> sidechain_b -> certificate_b -> mainchain
+}
