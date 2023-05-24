@@ -11,9 +11,9 @@ All information included below is considered publicly available and is free to b
 ## 2. Description
 This specification details the main chain contract of a trustless sidechain system. The work relies on the BLS ATMS signature scheme, so we decided to implement the contract in two phases:
 
-- [phase 1](https://github.com/mlabs-haskell/trustless-sidechain/milestone/1)MVP using an append-only signature scheme
-- [phase 1.5](https://github.com/mlabs-haskell/trustless-sidechain/milestone/3): script optimizations and security improvements
-- [phase 2](https://github.com/mlabs-haskell/trustless-sidechain/milestone/2): using ATMS signature scheme.
+- Phase 1: MVP using an append-only signature scheme
+- Phase 1.5: script optimizations and security improvements
+- Phase 2: using ATMS signature scheme.
 
 ## 3. Next steps.
 
