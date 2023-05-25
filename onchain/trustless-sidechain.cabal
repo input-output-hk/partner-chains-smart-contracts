@@ -108,6 +108,23 @@ library
   -- Needed for the `TrustlessSidechain.OffChain` module
   hs-source-dirs:  src
 
+library trustless-sidechain-prelude
+  import:          common-lang
+  exposed-modules: TrustlessSidechain.Prelude
+  build-depends:
+    , bytestring
+    , containers
+    , indexed-traversable
+    , integer-gmp
+    , semialign
+    , semirings
+    , text
+    , these
+    , vector
+    , witherable
+
+  hs-source-dirs:  prelude
+
 executable trustless-sidechain-gen-signatures
   import:         common-lang
   main-is:        Main.hs
