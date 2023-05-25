@@ -233,7 +233,7 @@ it helps to have a fixed formatting convention.
 
 The project MUST have CI. The CI MUST ensure the following:
 
-* All stanzas in the project compile; namely, that the equivalent of `cabal
+* All stanzas in the project compile; namely, that the equivalent of ``cabal
   build --enable-tests --enable-benchmarks`` completes without error.
 * The formatting requirements described in 'Code formatting' are enforced.
 * The linting requirements described in 'Linting' are enforced.
