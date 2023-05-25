@@ -1,0 +1,15 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  trustedWallet [ label = "Trusted wallet UTxO with\ntoken InitToken with\ntoken name \"CommitteeHashMint\""];
+  transaction [ label = "An activation transaction for initialising\nthe committee", shape=diamond ];
+  committeeHashPolicy [ label = "CommitteeHashPolicy NFT\nminting policy"];
+  committteeHashValidator [ label = "CommitteeHashValidator validator\nwith the initial committee"];
+
+  trustedWallet -> transaction [ label = "input"];
+  trustedWallet -> committeeHashPolicy [ label = "checks if token is burned", style=dashed, dir=back];
+  transaction -> committeeHashPolicy [ label = "mints" ];
+  committeeHashPolicy -> committteeHashValidator [ label = "is paid to", style=dashed ]
+  transaction -> committteeHashValidator [ label = "output"];
+}

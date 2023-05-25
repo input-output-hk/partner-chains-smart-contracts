@@ -197,21 +197,24 @@
           }
           trap cleanup EXIT
 
-          pushd ${self}/onchain
+          pushd ${self}/onchain > /dev/null
           ${hsProject.packages."trustless-sidechain:exe:trustless-sidechain-serialise"}/bin/trustless-sidechain-serialise \
             --purescript-plutus-scripts="$TMP"
-          popd
+          popd > /dev/null
 
-          pushd ${self}/offchain
-          diff $TMP src/TrustlessSidechain/RawScripts.purs
-          exitCode=$?
-          if [ "$exitCode" != "0" ]; then
-            echo "Plutus scripts out of date."
-            exit $exitCode
-          fi
-          popd
+          pushd ${self}/offchain > /dev/null
 
-          mkdir $out
+          # Compare the generated file and the file provided in the repo.
+          cmp $TMP src/TrustlessSidechain/RawScripts.purs || {
+            exitCode=$? ;
+            echo "Plutus scripts out of date." ;
+            echo 'See `offchain/src/TrustlessSidechain/RawScripts.purs` for instructions to resolve this' ;
+            exit $exitCode ;
+          }
+
+          popd > /dev/null
+
+          touch $out
         '';
 
       # CTL's `runPursTest` won't pass command-line arugments to the `node`

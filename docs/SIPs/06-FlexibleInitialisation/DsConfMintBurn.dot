@@ -1,0 +1,20 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="0.5", ranksep="0.5"]
+
+  trustedWallet [ label = "Trusted wallet UTxO with\ntoken InitToken with\ntoken name \"DsConfMint\""];
+  transaction [ label = "An activation transaction for initialising\nthe distributed set", shape=diamond ];
+  dsConfMintNFT [ label = "DsConfMint NFT\nminting policy"];
+  dsConfValidator [ label = "DsConfValidator"];
+  dsInsertValidator [ label = "DsInsertValidator"];
+  dsKeyPolicy [ label = "DsKeyPolicy\nminting policy"];
+
+  trustedWallet -> transaction [ label = "input"];
+  trustedWallet -> dsConfMintNFT [ label = "checks if token is burned", style=dashed, dir=back];
+  transaction -> dsConfMintNFT [ label = "mints" ];
+  transaction -> dsKeyPolicy [ label = "mints" ];
+  transaction -> dsConfValidator [ label = "output"];
+  transaction -> dsInsertValidator [ label = "output"];
+  dsConfMintNFT -> dsConfValidator [ label = "is paid to", style=dashed ]
+  dsKeyPolicy -> dsInsertValidator [ label = "is paid to", style=dashed ]
+}
