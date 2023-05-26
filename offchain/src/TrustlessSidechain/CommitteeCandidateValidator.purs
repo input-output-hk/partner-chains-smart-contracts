@@ -11,7 +11,7 @@ module TrustlessSidechain.CommitteeCandidateValidator
 import Contract.Prelude
 
 import Contract.Address
-  ( PaymentPubKeyHash(..)
+  ( PaymentPubKeyHash
   , getNetworkId
   , getWalletAddress
   , ownPaymentPubKeyHash
