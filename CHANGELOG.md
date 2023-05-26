@@ -34,6 +34,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([395](https://github.com/mlabs-haskell/trustless-sidechain/issues/395),
   offchain).
 
+## Fixed
+* Deregistration fail after multiple registrations with the same SPO public key
+  ([236](https://github.com/mlabs-haskell/trustless-sidechain/issues/236)
+
 # v2.0.0
 
 TODO: Backfill
