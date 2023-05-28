@@ -1443,6 +1443,23 @@ Since ``Type.Reflection`` can do everything ``Data.Typeable`` can, has a more
 modern API, and is also lower-cost, there is no reason to use
 ``Data.Typeable`` anymore except for legacy compatibility reasons.
 
+## Import QuickCheck definitions from `Test.QuickCheck` instead of
+`Test.Tasty.Quickcheck`
+
+Identifiers exported from both `Test.Tasty.QuickCheck` and `Test.QuickCheck`
+MUST be imported from `Test.QuickCheck`.
+
+### Justification
+
+`Test.Tasty.QuickCheck` re-exports `Test.QuickCheck` in its entirety. This is
+designed to be convenient, but is in fact problematic for the same reasons that
+led us to forbid the re-export of external dependencies. The re-export is of
+whatever version of QuickCheck `tasty-quickcheck` was built against: this could
+be older than the version you want to use, which can lead to [unpleasant
+surprised](https://github.com/UnkindPartition/tasty/issues/208) together with
+`tasty-quickcheck`'s loose bound. To avoid this issue, we require any
+QuickCheck-provided identifiers to come from QuickCheck itself.
+
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman
 [haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
