@@ -416,7 +416,7 @@ We allow exceptions when any of the following hold:
 * The exported identifier serve a single purpose, apparent from the module's
   name.
 
-n the specific case where a module only provides instances ('compatibility
+In the specific case where a module only provides instances ('compatibility
 orphans' for example), the export list MUST be empty.
 
 A module SHOULD NOT re-export identifiers from outside of the project: for
@@ -442,7 +442,7 @@ Explicit export lists are an immediate, clear and obvious indication of what
 public interface a module provides. It gives us stability guarantees (namely,
 we know that we can change things that aren’t exported without breaking
 downstream code at compile time), and tells us where to go looking first when
-inspecting or learning the module. Additionally, it means there is less change
+inspecting or learning the module. Additionally, it means there is less chance
 that implementation details ‘leak’ out of the module due to mistakes on the
 part of developers, especially those who may not be familiar with the code in
 question.
@@ -1279,7 +1279,7 @@ rename, since it's equivalent semantically.
 
 The combination of record syntax and sum types, while allowed, causes
 [considerable issues](https://stackoverflow.com/questions/37652243/record-syntax-and-sum-types/37657296#37657296).
-The main issue heere is that such a combination silently sneaks partiality in
+The main issue here is that such a combination silently sneaks partiality in
 'via the back door', which, given our stance against partiality, is definitely
 not desirable. While arguably useful in some cases, this extra trouble
 doesn’t make it worth its weight.
