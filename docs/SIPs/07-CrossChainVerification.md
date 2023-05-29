@@ -182,6 +182,8 @@ One important detail is that `FinalMerkleRootToken` will take scriptId of
 `MerkeRootToken` so there's no need to change the implementation of
 `FUELMintingPolicy`.
 
+![TokenAggregation](./07-CrossChainVerification/TokenAggregation.svg)
+
 Although this is a relatively light-weight operation, the amount of tokens to be
 aggregrated could be limited due to transaction size limits. To mitigate
 this issue tokens could be aggregated in chunks, or incrementally. Both of
