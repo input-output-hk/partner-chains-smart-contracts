@@ -159,13 +159,22 @@ and mint a single `FinalMerkleRootToken`.
 
 `FinalMerkleRoot` is parameterised by the list of `VersionOracleRef`s of the
 verifier sidechains.
-Minting a `FinalMerkleRoot` verifies that for each of the `VersionOracleRef`s
+Minting a `FinalMerkleRoot` verifies that
+- for each of the `VersionOracleRef`s
 in the list, there is one `PartialMerkleRootToken` burnt with the same
-Merkle root as the token name.
+Merkle root as the token name
+- if `previousMerkleRoot` is specified, the UTxO with the given roothash is
+  referenced in the transaction as a reference input
 
 One important detail is that `FinalMerkleRootToken` will take scriptId of
 `MerkeRootToken` so there's no need to change the implementation of
 `FUELMintingPolicy`.
+
+Although this is a relatively light-weight operation, the amount of tokens to be
+aggregrated could be limited due to transaction size limits. To mitigate
+this issue tokens could be aggregated in chunks, or incrementally. Both of
+these ideas are explained in more detail in the Alternative design
+considerations section.
 
 ## Alternative design considerations
 
@@ -189,6 +198,17 @@ This approach has it's issues: we could run into a race condition, when two
 or more sidechain submit their Merkle root at the same time, without aggregating
 them. Defining an order could solve this issue, but it could seriously slower
 the process, and is harder to optimise.
+
+#### Chunked aggregation
+
+This design could mitigate the problem of transaction size limitations when
+aggregating many `PartialMerkleRootToken`s. We could mint multiple intermediate
+tokens, each consuming a subset of `PartialMerkleRootToken`s. These intermediate
+tokens could be finally aggregated into a `FinalMerkleRootToken` or even into
+new intermediate tokens, removing any upper limitations to the participating
+sidechains.
+These intermediate tokens will have to track their verifier sidechains in their
+datums.
 
 #### Non-aggregated variant
 
