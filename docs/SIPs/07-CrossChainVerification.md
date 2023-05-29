@@ -102,13 +102,22 @@ each UTxO to prove the authenticity of the oracle.
 By knowing the address of `VersionOracleValidator` and the currency symbol of
 `VersionOracleToken`, we can access all validators and currency symbols of the
 sidechain. We will use this fact, to access the on-chain code of sidechain A
-from the off-chain code of sidechain B.
+from the off-chain code of sidechain B. As these two script are immutable
+through the whole lifecycle of the sidechain, we will not need to worry about
+protocol updates, these oracles will always point to the currently valid
+scripts.
 
 We will reserve a range of `scriptId`s for foreign sidechains from 100-119,
 where 100-109 are the `VersionOracleValidator`s, and 110-119 are the respective
 `VersionOracleToken`s (e.g. 100: `ForeignVersionOracleValidatorA`,
 101: `ForeignVersionOracleValidatorB`, 110: `ForeignVersionOracleTokenA`,
 111: `ForeignVersionOracleTokenB`)
+
+It's important to note, that `scriptId`s are local identifiers of sidechains:
+Sidechain A will use scriptId 100 and 110 to refer to Sidechain B, while
+Sidechain B could use the same 100 and 110 to refer to Sidechain A.
+
+![VersionOracle](./07-CrossChainVerification/VersionOracle.svg)
 
 At initialisation or protocol update, the above mentioned reference scripts of
 the verifier chain will be deployed, with a special version of
@@ -218,7 +227,6 @@ datums.
 Instead of aggregating `PartialMerkleRootToken`, we could use them directly
 in the `FUELMintingPolicy`, checking all tokens. However, this pushes a lot of
 excess memory and execution cost to all claim actions, making the costs higher.
-
 
 [whitepaper]: https://eprint.iacr.org/2018/1239.pdf
 [update_str]: ./01-UpdateStrategy.md

@@ -21,7 +21,7 @@
 <g id="clust3" class="cluster">
 <title>cluster_sidechain_b</title>
 <polygon fill="none" stroke="black" stroke-dasharray="5,2" points="351,-8 351,-282 681,-282 681,-8 351,-8"/>
-<text text-anchor="middle" x="516" y="-266.8" font-family="Times,serif" font-size="14.00">Cross verifier sidechain node</text>
+<text text-anchor="middle" x="516" y="-266.8" font-family="Times,serif" font-size="14.00">Cross&#45;verifier sidechain node</text>
 </g>
 <!-- M -->
 <g id="node1" class="node">
