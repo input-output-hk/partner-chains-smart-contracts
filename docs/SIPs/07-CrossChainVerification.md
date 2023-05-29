@@ -5,10 +5,10 @@ Allow one sidechain to rely on a secondary sidechain for validation before relea
 ## Problem
 
 We want to expand the initial design with one mainchain and one singular
-sidechain, to a more open system with more than one sidechain. This opens up
-a lot of possibilities, such as cross-chain token and data transfer, or cross-chain
-verification, etc. This document will go into detail about the latter, but it
-also lays the groundwork for all cross-chain capabilities.
+sidechain, to a more open system with more than one sidechain. This opens up a
+lot of possibilities, one of which (cross-chain verification) we will go into
+detail about in this document. At the same time, such support lays the
+groundwork for all cross-chain capabilities.
 
 Cross-chain verification will be a special configuration of two or more
 sidechains, where sidechain A will require both its own committee and the
