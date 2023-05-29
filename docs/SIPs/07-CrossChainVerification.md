@@ -39,9 +39,9 @@ there is a hierarchical relation to mainchain and sidechain: all sidechain nodes
 have to directly observe the mainchain too, while not all mainchain nodes have
 to follow sidechains. Sidechains participating in a cross-chain verification
 configuration will follow a similar relationship:
-- A cross verified sidechain does not need to directly observe verifier
+- A cross-verified sidechain does not need to directly observe verifier
   chain(s)
-- Cross verifier sidechain(s) will have to observe the verified chain
+- Cross-verifier sidechain(s) will have to observe the verified chain
 
 As a summary, we could distinguish three different actors in the same network:
 
@@ -114,7 +114,7 @@ the verifier chain will be deployed, with a special version of
 
 #### 2. Merkle root mint
 
-For the cross verified chain, we will use a special version of `MerkleRootToken`
+For the cross-verified chain, we will use a special version of `MerkleRootToken`
 and `MerkleRootValidator`, we will call these `PartialMerkleRootToken` and
 `PartialMerkleRootValidator` respectively. Their implementation will be
 identical to their non-cross-chain counterparts, with the following differences:
