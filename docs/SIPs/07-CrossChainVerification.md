@@ -44,6 +44,9 @@ configuration will follow a similar relationship:
 - Cross-verifier sidechain(s) will have to observe the verified chain
 
 As a summary, we could distinguish three different actors in the same network:
+- Mainchain only node
+- Sidechain only node
+- Cross-verifier node
 
 ![Network](./07-CrossChainVerification/Network.svg)
 
