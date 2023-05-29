@@ -1,23 +1,25 @@
 # Cross-Chain Verification
+## Requirements
+Allow one sidechain to rely on a secondary sidechain for validation before releasing funds. This should be a modular option, so end-users can decide to use this, or the simple 1-1 model.
 
 ## Problem
 
 We want to expand the initial design with one mainchain and one singular
-sidechain, to a more open system with more than one sidechains. This opens up
-a lot of possibilities, as cross-chain token and data transfer, or cross-chain
+sidechain, to a more open system with more than one sidechain. This opens up
+a lot of possibilities, such as cross-chain token and data transfer, or cross-chain
 verification, etc. This document will go into detail about the latter, but it
-also lays the groudwork for all cross-chain capabilities.
+also lays the groundwork for all cross-chain capabilities.
 
 Cross-chain verification will be a special configuration of two or more
 sidechains, where sidechain A will require both its own committee and the
 committee of sidechain B to sign sidechain certificates. If there are more
-than two sidechains are involved, all of them will create certificates.
+than two sidechains involved, all of them will create certificates.
 
 ![Certificates](./07-CrossChainVerification/Certificates.svg)
 
 ## Assumptions
 
-As we open up a huge flexibility with cross-chain capabilities, it brings it's
+As we open up a huge flexibility with cross-chain capabilities, it brings its
 own challenges: sidechains will need to be compatible with each other, account
 for different modular options and different consensus mechanisms. To limit the
 variations and possibilities, we have to establish a few constraints:
@@ -37,7 +39,7 @@ there is a hierarchical relation to mainchain and sidechain: all sidechain nodes
 have to directly observe the mainchain too, while not all mainchain nodes have
 to follow sidechains. Sidechains participating in a cross-chain verification
 configuration will follow a similar relationship:
-- Cross verified sidechain does not need to have directly observe the verifier
+- A cross verified sidechain does not need to directly observe verifier
   chain(s)
 - Cross verifier sidechain(s) will have to observe the verified chain
 
@@ -53,18 +55,18 @@ mainchain to trigger events between the sidechains.
 
 ![Chain relationship](./07-CrossChainVerification/Relationship.svg)
 
-The workflow of a regular certificate creation and verification is as follows:
+The workflow of regular certificate creation and verification is as follows:
 1. Merkle tree is built, and Merkle root insertion message is generated
 2. Message is signed by committee members
 3. Signatures aggregated into a certificate
 4. Certificate is sent to mainchain contract, `MerkleRootToken` minted
 
 A cross-chain verification workflow will follow the exact same flow, with the
-only difference in the 4th step, minting a `PartialMerkelRootToken` instaed of
+only difference in the 4th step, minting a `PartialMerkleRootToken` instead of
 `MerkleRootToken`. Sidechain B, observing the validator address of sidechain A
 will be able to follow the process:
 
-1. Committee observing `PartialMerkleRootToken` mint
+1. Committee observes `PartialMerkleRootToken` mint
 2. Committee verifies the Merkle root, creates and signs a message
 3. Signatures aggregated into certificate
 4. Certificate is sent to mainchain contract, `MerkleRootToken` minted
@@ -86,7 +88,7 @@ areas:
 We will have to be able to initialise a sidechain with some knowledge about the
 other chain. We will use the `VersionOracle` for this purpose. As it was
 mentioned in the [Update Strategy][update_str] document, the `VersionOracle`
-of a sidechain is the Single Source of Truth holding the reference scripts of
+of a sidechain is the single source of truth holding the reference scripts of
 the validators and currency symbols. Reference scripts are attached to UTxOs
 at the `VersionOracleValidator` address, with a datum called `VersionOracle`
 storing the `scriptId`, a unique ID for the Plutus script, and the `version`
@@ -113,12 +115,12 @@ the verifier chain will be deployed, with a special version of
 #### 2. Merkle root mint
 
 For the cross verified chain, we will use a special version of `MerkleRootToken`
-and `MerkleRootValidator`, we will call there `PartialMerkleRootToken` and
+and `MerkleRootValidator`, we will call these `PartialMerkleRootToken` and
 `PartialMerkleRootValidator` respectively. Their implementation will be
 identical to their non-cross-chain counterparts, with the following differences:
 
 As `PartialMerkleRootValidator` will hold multiple `PartialMerkleRootToken`s
-with the same merkle root, one from each sidechain, we will need to
+with the same Merkle root, one from each sidechain, we will need to
 differentiate between them, and make sure we have one token from each required
 sidechain. To achieve this, we will add a datum to the UTxO of the merkle root,
 with this information. We will use the `VersionOracleToken` currency symbol (we
@@ -137,7 +139,7 @@ however in this case, `PartialMerkleRootToken` minting policy will be
 parameterised by the `VersionOracleRef` of the verifier sidechain, while
 `PartialMerkleRootValidator` will be parameterised by the `VersionOracleRef`
 of the verified sidechain. This is justified by the fact that we send a
-certified root form sidechain B to A.
+certified root from sidechain B to A.
 
 The verification of `PartialMerkleRootToken` will be different in the following
 three points:
