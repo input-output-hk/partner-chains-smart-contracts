@@ -23,7 +23,11 @@ module Test.QuickCheck.Extra (
 ) where
 
 import Control.Category ((>>>))
-import Data.Bits (finiteBitSize)
+import Data.Bits (
+  countTrailingZeros,
+  finiteBitSize,
+  unsafeShiftR,
+ )
 import Data.Kind (Type)
 import Data.Word (Word64)
 import Test.QuickCheck (arbitrary)
@@ -117,13 +121,15 @@ sublistOf = \case
   src -> arbitrary >>= go src (finiteBitSize @Word64 undefined)
   where
     go :: [a] -> Int -> Word64 -> Gen [a]
-    go rest bitsLeft encoding = case rest of
+    go rest !bitsLeft !encoding = case rest of
       [] -> pure []
-      (x : xs) ->
+      whole@(x : xs) ->
         if bitsLeft == 0
           then arbitrary >>= go rest (finiteBitSize @Word64 undefined)
           else
-            let k = go xs (bitsLeft - 1)
-             in case encoding `quotRem` 2 of
-                  (encoding', 0) -> k encoding'
-                  (encoding', _) -> (x :) <$> k encoding'
+            let !counted = countTrailingZeros encoding
+             in if counted == 0
+                  then (x :) <$> go xs (bitsLeft - 1) (encoding `unsafeShiftR` 1)
+                  else
+                    let !shift = min bitsLeft counted
+                     in go (drop shift whole) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
