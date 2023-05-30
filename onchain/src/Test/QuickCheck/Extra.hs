@@ -107,7 +107,7 @@ suchThatMapRetrying limit gen k = sized (go 0)
     errorOut :: Gen b
     errorOut = error $ "suchThatMap exceeded retry limit: " <> show limit
 
-{- | As 'Test.QuickCheck.Gen.sublistOf', but about twice as fast.
+{- | As 'Test.QuickCheck.Gen.sublistOf', but about faster by a factor of 2-3.
 
  @since Unreleased
 -}
@@ -123,13 +123,11 @@ sublistOf = \case
     go :: [a] -> Int -> Word64 -> Gen [a]
     go rest !bitsLeft !encoding = case rest of
       [] -> pure []
-      whole@(x : xs) ->
-        if bitsLeft == 0
+      whole@(x : _) ->
+        if bitsLeft <= 0
           then arbitrary >>= go rest (finiteBitSize @Word64 undefined)
           else
-            let !counted = countTrailingZeros encoding
-             in if counted == 0
-                  then (x :) <$> go xs (bitsLeft - 1) (encoding `unsafeShiftR` 1)
-                  else
-                    let !shift = min bitsLeft counted
-                     in go (drop shift whole) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
+            let !shift = countTrailingZeros encoding
+             in if shift == 0
+                  then (x :) <$> go (drop 1 whole) (bitsLeft - 1) (encoding `unsafeShiftR` 1)
+                  else go (drop shift whole) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
