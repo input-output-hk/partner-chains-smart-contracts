@@ -39,9 +39,6 @@ module TrustlessSidechain.OffChain (
   txOutRefFromText,
 ) where
 
--- we import Prelude unqualified here because this module is
--- used for Prelude projects that just generate data for the sidechain
-
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (
@@ -81,6 +78,7 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
@@ -88,7 +86,6 @@ import TrustlessSidechain.Types (
   GenesisHash (getGenesisHash),
   SidechainPubKey (SidechainPubKey),
  )
-import Prelude
 
 -- * Bech32 addresses
 
@@ -130,10 +127,10 @@ newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteSt
   deriving (Show, Eq)
 
 -- | 'bech32RecipientFromText' parses a Bech32Recipient from 'Text'.
-bech32RecipientFromText :: Text -> Either String Bech32Recipient
+bech32RecipientFromText :: Text -> Either Text Bech32Recipient
 bech32RecipientFromText str =
   case Bech32.decode str of
-    Left err -> Left $ "Failed decoding bech32: " ++ show err
+    Left err -> Left $ "Failed decoding bech32: " <> show err
     Right (bech32HumanReadablePart, bech32DataPart)
       | isAddr -> case bech32DataPartBytes Bech32 {..} of
         Just bs -> Right $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
@@ -147,16 +144,16 @@ bech32RecipientFromText str =
             , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr_test
             ]
       where
-        surroundAndShowTextWithBackticks :: Text -> String
-        surroundAndShowTextWithBackticks t = "`" ++ show t ++ "`"
+        surroundAndShowTextWithBackticks :: Text -> Text
+        surroundAndShowTextWithBackticks t = "`" <> show t <> "`"
         isAddr :: Bool
         isAddr =
           bech32HumanReadablePart == Bech32.Prefixes.addr
             || bech32HumanReadablePart == Bech32.Prefixes.addr_test
 
 instance FromJSON Bech32Recipient where
-  parseJSON = Aeson.withText "bech32" $ \str -> case bech32RecipientFromText str of
-    Left err -> Aeson.Types.parseFail err
+  parseJSON = Aeson.withText (Text.unpack "bech32") $ \str -> case bech32RecipientFromText str of
+    Left err -> Aeson.Types.parseFail . Text.unpack $ err
     Right bech32 -> pure bech32
 
 -- * Convenient sidechain committee public / private key wrapper + utility
@@ -179,35 +176,37 @@ newtype SidechainCommittee = SidechainCommittee
   deriving newtype (FromJSON, ToJSON)
 
 instance FromJSON SidechainCommitteeMember where
-  parseJSON = Aeson.withObject "SidechainCommitteeMember" $ \v ->
+  parseJSON = Aeson.withObject (Text.unpack "SidechainCommitteeMember") $ \v ->
     -- wraps up 'strToSecpPrivKey' and 'strToSecpPubKey' as JSON
     -- parsers.
     let pPrivKey :: Aeson.Value -> Aeson.Types.Parser SECP.SecKey
         pPrivKey (Aeson.String text) =
-          case strToSecpPrivKey (Text.unpack text) of
-            Left err -> Aeson.Types.parseFail err
+          case strToSecpPrivKey text of
+            Left err -> Aeson.Types.parseFail . Text.unpack $ err
             Right ans -> pure ans
-        pPrivKey _ = Aeson.Types.parseFail "Expected hex encoded SECP private key"
+        pPrivKey _ =
+          Aeson.Types.parseFail . Text.unpack $ "Expected hex encoded SECP private key"
 
         pPubKey :: Aeson.Value -> Aeson.Types.Parser SidechainPubKey
         pPubKey (Aeson.String text) =
-          case fmap secpPubKeyToSidechainPubKey $ strToSecpPubKey (Text.unpack text) of
-            Left err -> Aeson.Types.parseFail err
+          case fmap secpPubKeyToSidechainPubKey $ strToSecpPubKey text of
+            Left err -> Aeson.Types.parseFail . Text.unpack $ err
             Right ans -> pure ans
-        pPubKey _ = Aeson.Types.parseFail "Expected hex encoded DER SECP public key"
+        pPubKey _ =
+          Aeson.Types.parseFail . Text.unpack $ "Expected hex encoded DER SECP public key"
      in SidechainCommitteeMember
-          <$> Aeson.Types.explicitParseField pPrivKey v "private-key"
-          <*> Aeson.Types.explicitParseField pPubKey v "public-key"
+          <$> Aeson.Types.explicitParseField pPrivKey v (_ "private-key")
+          <*> Aeson.Types.explicitParseField pPubKey v (_ "public-key")
 
 instance ToJSON SidechainCommitteeMember where
   toJSON (SidechainCommitteeMember {..}) =
     Aeson.object
-      [ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
-      , "public-key" Aeson..= showScPubKey scmPublicKey
+      [ _ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
+      , _ "public-key" Aeson..= showScPubKey scmPublicKey
       ]
 
 -- | Parses a hex encoded string into a sidechain private key
-strToSecpPrivKey :: String -> Either String SECP.SecKey
+strToSecpPrivKey :: Text -> Either Text SECP.SecKey
 strToSecpPrivKey raw = do
   decoded <-
     Bifunctor.first ("Invalid sidechain key hex: " <>)
@@ -220,7 +219,7 @@ strToSecpPrivKey raw = do
  uses 'Crypto.Secp256k1.importPubKey' which imports a DER-encoded
  public key.
 -}
-strToSecpPubKey :: String -> Either String SECP.PubKey
+strToSecpPubKey :: Text -> Either Text SECP.PubKey
 strToSecpPubKey raw = do
   decoded <-
     Bifunctor.first ("Invalid sidechain public key hex: " <>)
@@ -310,7 +309,7 @@ signWithSidechainKey skey msg =
   c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
  @
 -}
-txOutRefFromText :: Text -> Either String TxOutRef
+txOutRefFromText :: Text -> Either Text TxOutRef
 txOutRefFromText = Attoparsec.Text.parseOnly $ do
   rawTxId <- Attoparsec.Text.takeWhile (/= '#')
   txId <- case Aeson.Extras.tryDecode rawTxId of
@@ -324,72 +323,72 @@ txOutRefFromText = Attoparsec.Text.parseOnly $ do
 -- * Show functions
 
 -- | Serialise transaction output reference into CLI format (TX_ID#TX_IDX)
-showTxOutRef :: TxOutRef -> String
+showTxOutRef :: TxOutRef -> Text
 showTxOutRef (TxOutRef (TxId txId) txIdx) =
   showBuiltinBS txId ++ "#" ++ show txIdx
 
 -- | Serialise a ByteString into hex string
-showBS :: ByteString -> String
+showBS :: ByteString -> Text
 showBS =
   Char8.unpack . Base16.encode
 
 -- | Serialise a ByteString into hex string
-showGenesisHash :: GenesisHash -> String
+showGenesisHash :: GenesisHash -> Text
 showGenesisHash = showBuiltinBS . getGenesisHash
 
 -- | Serialise a BuiltinByteString into hex string
-showBuiltinBS :: BuiltinByteString -> String
+showBuiltinBS :: BuiltinByteString -> Text
 showBuiltinBS = showBS . Builtins.fromBuiltin
 
 -- | Serialise a RootHash into hex of serialized built in data.
-showRootHash :: RootHash -> String
+showRootHash :: RootHash -> Text
 showRootHash = showHexOfCborBuiltinData
 
 -- | Serialise public key
-showPubKey :: PubKey -> String
+showPubKey :: PubKey -> Text
 showPubKey (PubKey (LedgerBytes pk)) = showBuiltinBS pk
 
 -- | Serialise sidechain public key
-showScPubKey :: SidechainPubKey -> String
+showScPubKey :: SidechainPubKey -> Text
 showScPubKey (SidechainPubKey pk) = showBuiltinBS pk
 
 -- | Serailises a 'SECP.SecKey' private key by hex encoding it
-showSecpPrivKey :: SECP.SecKey -> String
+showSecpPrivKey :: SECP.SecKey -> Text
 showSecpPrivKey = showBS . SECP.getSecKey
 
 {- | Serialise a sidechain public key and signature into
  > PUBKEY:SIG
 -}
-showScPubKeyAndSig :: SidechainPubKey -> Signature -> String
+showScPubKeyAndSig :: SidechainPubKey -> Signature -> Text
 showScPubKeyAndSig sckey sig = concat [showScPubKey sckey, ":", showSig sig]
 
 -- | Serialise signature
-showSig :: Signature -> String
+showSig :: Signature -> Text
 showSig (Signature sig) = showBuiltinBS sig
 
 {- | 'showThreshold' shows integers @n@ and @m@ as
  > n/m
  Importantly, this is compatible with the purescript parser format
 -}
-showThreshold :: Integer -> Integer -> String
+showThreshold :: Integer -> Integer -> Text
 showThreshold n m = show n ++ "/" ++ show m
 
 {- | 'showMerkleTree' seralises a merkle tree to the hex encoded cbor builtin
  data representation
 -}
-showMerkleTree :: MerkleTree -> String
+showMerkleTree :: MerkleTree -> Text
 showMerkleTree = showHexOfCborBuiltinData
 
 {- | 'showMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
  data representation
 -}
-showMerkleProof :: MerkleProof -> String
+showMerkleProof :: MerkleProof -> Text
 showMerkleProof = showHexOfCborBuiltinData
 
 {- | 'showCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
  cbor builtin data representation
 -}
-showCombinedMerkleProof :: CombinedMerkleProof -> String
+showCombinedMerkleProof :: CombinedMerkleProof -> Text
 showCombinedMerkleProof = showHexOfCborBuiltinData
 
 {- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
@@ -397,7 +396,7 @@ showCombinedMerkleProof = showHexOfCborBuiltinData
 
  Many serialization mechanisms are an alias of this.
 -}
-showHexOfCborBuiltinData :: ToData a => a -> String
+showHexOfCborBuiltinData :: ToData a => a -> Text
 showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinData
 
 -- * Covnerting converting private keys to public keys

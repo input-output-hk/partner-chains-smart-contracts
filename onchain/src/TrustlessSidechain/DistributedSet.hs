@@ -1,9 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -53,6 +50,7 @@ module TrustlessSidechain.DistributedSet (
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts (
@@ -78,12 +76,11 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude
-import Prelude qualified
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
  for the distributed set. (See Note [How This All Works]. Moreover, this
@@ -95,14 +92,14 @@ newtype Ds = Ds
     -- with 'DsConfDatum'.
     dsConf :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
@@ -112,7 +109,7 @@ data Node = Node
   { nKey :: BuiltinByteString
   , nNext :: BuiltinByteString
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
@@ -135,11 +132,11 @@ instance Eq DsConfDatum where
  generated after inserting into a node.
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
-instance Prelude.Foldable Ib where
-  foldMap f (Ib (a, b)) = f a Prelude.<> f b
+instance TSPrelude.Foldable Ib where
+  foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
@@ -163,7 +160,7 @@ data DsKeyMint = DsKeyMint
   , -- | 'dskmConfCurrencySymbol' is the currency symbol to identify a utxo with 'DsConfDatum'
     dskmConfCurrencySymbol :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
@@ -187,12 +184,12 @@ getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
 getConf currencySymbol info = go $ txInfoReferenceInputs info
   where
     go :: [TxInInfo] -> DsConfDatum
-    go (t : ts) =
-      case txInInfoResolved t of
+    go = \case
+      [] -> traceError "error 'getConf' missing conf"
+      (t : ts) -> case txInInfoResolved t of
         o -> case AssocMap.lookup currencySymbol $ getValue $ txOutValue o of
           Just _ -> unsafeGetDatum info o
           Nothing -> go ts
-    go [] = traceError "error 'getConf' missing conf"
 
 deriveJSON defaultOptions ''Ds
 PlutusTx.makeLift ''Ds
@@ -298,10 +295,12 @@ mkInsertValidator ds _dat _red ctx =
                       fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
                         ownAddr ->
                           let go :: [TxOut] -> [Node]
-                              go (t : ts)
-                                | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
-                                | otherwise = go ts
-                              go [] = []
+                              go = \case
+                                [] -> []
+                                (t : ts) ->
+                                  if txOutAddress t == ownAddr
+                                    then getTxOutNodeInfo t : go ts
+                                    else go ts
                            in go (txInfoOutputs info)
 
               -- the total number tokens which are prefixes is @1 + the number of
@@ -451,7 +450,8 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     -- determines the nodes we are consuming
     ins :: [TokenName]
     ins =
-      let go [] = []
+      let go :: [TxInInfo] -> [TokenName]
+          go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
               , txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)

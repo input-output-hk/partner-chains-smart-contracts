@@ -43,7 +43,7 @@ import Plutus.V2.Ledger.Tx (
   OutputDatum (OutputDatumHash),
  )
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 
 -- * To Reference
 

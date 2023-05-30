@@ -5,16 +5,15 @@
 
 module TrustlessSidechain.Types where
 
-import Data.String (IsString)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
-import Prelude qualified
+import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
@@ -34,13 +33,25 @@ data SidechainParams = SidechainParams
   }
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
-  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData, IsString)
+  deriving newtype
+    ( TSPrelude.Show
+    , ToData
+    , FromData
+    , UnsafeFromData
+    , IsString
+    )
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
-  deriving newtype (Prelude.Eq, Prelude.Ord, ToData, FromData, UnsafeFromData)
+  deriving newtype
+    ( TSPrelude.Eq
+    , TSPrelude.Ord
+    , ToData
+    , FromData
+    , UnsafeFromData
+    )
 
 -- * Committee Candidate Validator data
 

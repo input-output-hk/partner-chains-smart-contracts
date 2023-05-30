@@ -15,15 +15,15 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Contexts as V2
 import PlutusTx qualified
-import PlutusTx.Prelude
-import Prelude qualified
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 
 data ECDSARed = ECDSARed
   { msg :: BuiltinByteString
   , sig :: BuiltinByteString
   , pk :: BuiltinByteString
   }
-  deriving stock (Prelude.Eq, Prelude.Show)
+  deriving stock (TSPrelude.Eq, TSPrelude.Show)
 
 PlutusTx.unstableMakeIsData ''ECDSARed
 

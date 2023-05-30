@@ -137,7 +137,8 @@ Additionally, for script modules, the following flags MUST be enabled:
 * ``-fno-omit-interface-pragmas``
 * ``-fplugin-opt PlutuxTx.Plugin:defer-errors``
 
-Additionally, for `test-suite` stanzas, the following flags MUST be enabled:
+Additionally, for `test-suite` and `executable` stanzas, the following flags
+MUST be enabled:
 
 * ``-O2``
 * ``-threaded``
@@ -174,6 +175,8 @@ do that. The flags specified guarantee that parallelism is automatically used;
 furthermore, we use ``-O2`` to make sure we get the benefit of most
 optimizations. We do something similar for benchmarks, but because parallelism
 can interfere with benchmark measurements, we don't require the same flag set.
+For executables, we also want to use whatever parallelism is available: hence,
+we require the same settings as for tests.
 
 ## Linting
 
@@ -493,7 +496,6 @@ The following pragmata MUST be enabled for all stanzas:
 * ``MultiParamTypeClasses``
 * ``NoStarIsType``
 * ``NumericUnderscores``
-* ``OverloadedLists``
 * ``OverloadedStrings``
 * ``PackageImports``
 * ``RebindableSyntax``
@@ -690,17 +692,6 @@ produce some very odd-looking error messages. ``NoStarIsType`` resolves this
 problem, particularly in error messages, by replacing ``*`` with ``Type``,
 which is more informative and more consistent. There’s no reason not to have
 this enabled by default.
-
-``OverloadedLists`` addresses the problem of Haskell privileging the
-singly-linked list with dedicated syntax, while simultaneously having the
-singly-linked list be an extremely suboptimal structure for many purposes. We
-address the use of ``String`` in improper ways in a different section of these
-standards, but we would prefer to make the use of alternatives to the
-singly-linked list as straightforward as possible, especially in the case of
-literals. While ``OverloadedLists`` isn't the perfect solution for this (as it
-has some issues with type inference, and some instances could be better), it
-allows the use of ``Vector``, ``Set``, ``Map`` and many other structure literals
-much more conveniently, which we believe to be a worthwhile tradeoff.
 
 ``OverloadedStrings`` deals with the problem of ``String`` being a suboptimal
 choice of string representation for basically _any_ problem, but at the same
@@ -950,6 +941,7 @@ These, along with their reasoning, are:
 * ``vector``: The ``Vector`` type.
 * ``witherable``: Generalizations of filtering, as well as ``mapMaybe`` and
   similar functions.
+* ``aeson``: [TODO]
 
 ## Versioning and changelogging
 
@@ -1459,6 +1451,30 @@ be older than the version you want to use, which can lead to [unpleasant
 surprised](https://github.com/UnkindPartition/tasty/issues/208) together with
 `tasty-quickcheck`'s loose bound. To avoid this issue, we require any
 QuickCheck-provided identifiers to come from QuickCheck itself.
+
+## Treat `aeson`'s `Value` as a read-only type
+
+[TODO]
+
+### Justification
+
+[TODO]
+
+## Do not use (or define) `toJSON`
+
+[TODO]
+
+### Justification
+
+[TODO]
+
+## Manually specify any serializations
+
+[TODO]
+
+### Justification
+
+[TODO]
 
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman

@@ -37,7 +37,7 @@ import Plutus.V2.Ledger.Contexts (
   TxOut (txOutReferenceScript),
  )
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 
 -- * To Reference
 
