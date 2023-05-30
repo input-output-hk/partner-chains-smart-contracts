@@ -2,6 +2,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- | Module: Test.QuickCheck.Extra
  Description: Some improved versions and helpers for QuickCheck functions
@@ -22,6 +23,7 @@ module Test.QuickCheck.Extra (
 ) where
 
 import Control.Category ((>>>))
+import Data.Bits (finiteBitSize)
 import Data.Kind (Type)
 import Data.Word (Word64)
 import Test.QuickCheck (arbitrary)
@@ -112,14 +114,14 @@ sublistOf ::
 sublistOf = \case
   [] -> pure []
   [x] -> elements [[], [x]]
-  src -> arbitrary >>= go src 64
+  src -> arbitrary >>= go src (finiteBitSize @Word64 undefined)
   where
     go :: [a] -> Int -> Word64 -> Gen [a]
     go rest bitsLeft encoding = case rest of
       [] -> pure []
       (x : xs) ->
         if bitsLeft == 0
-          then arbitrary >>= go rest 64
+          then arbitrary >>= go rest (finiteBitSize @Word64 undefined)
           else
             let k = go xs (bitsLeft - 1)
              in case encoding `quotRem` 2 of
