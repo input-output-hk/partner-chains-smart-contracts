@@ -289,7 +289,7 @@ report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
--- the registration UTxOs of the committee member/candidate
+-- | the registration UTxOs of the committee member/candidate
 findOwnRegistrations ∷
   PaymentPubKeyHash →
   PubKey →
