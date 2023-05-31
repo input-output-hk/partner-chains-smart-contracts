@@ -37,15 +37,8 @@ import Contract.PlutusData
   , unitRedeemer
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( Validator(Validator)
-  , applyArgs
-  , validatorHash
-  )
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.Scripts (Validator(Validator), applyArgs, validatorHash)
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -58,7 +51,7 @@ import Contract.Transaction
   , submit
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
+import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value as Value
 import Control.Alternative (guard)
 import Control.Parallel (parTraverse)
@@ -167,11 +160,20 @@ register
       }
   ) = do
   let msg = report "register"
+  netId ← getNetworkId
+
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
   ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
 
-  ownUtxos ← utxosAt ownAddr
   validator ← getCommitteeCandidateValidator sidechainParams
+  let valHash = validatorHash validator
+  valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
+    (validatorHashEnterpriseAddress netId valHash)
+
+  ownUtxos ← utxosAt ownAddr
+  valUtxos ← utxosAt valAddr
+
+  ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
   maybeCandidatePermissionMintingPolicy ← case permissionToken of
     Just
@@ -190,7 +192,6 @@ register
     Nothing → pure Nothing
 
   let
-    valHash = validatorHash validator
     val = Value.lovelaceValueOf (BigInt.fromInt 1)
       <> case maybeCandidatePermissionMintingPolicy of
         Nothing → mempty
@@ -211,6 +212,7 @@ register
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
+      <> Lookups.unspentOutputs valUtxos
       <> case maybeCandidatePermissionMintingPolicy of
         Nothing → mempty
         Just { candidatePermissionPolicy } →
@@ -218,10 +220,18 @@ register
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints =
+      -- Sending new registration to validator address
       Constraints.mustSpendPubKeyOutput inputUtxo
         <> Constraints.mustPayToScript valHash (Datum (toData datum))
           Constraints.DatumInline
           val
+
+        -- Consuming old registration UTxOs
+        <> Constraints.mustBeSignedBy ownPkh
+        <> mconcat
+          ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
+              ownRegistrations
+          )
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
@@ -236,9 +246,11 @@ register
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   let msg = report "deregister"
+
+  netId ← getNetworkId
+
   ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
   ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
-  netId ← getNetworkId
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
@@ -247,16 +259,9 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
 
-  ourDatums ← liftAff $ Map.toUnfoldable valUtxos # parTraverse
-    \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
-      pure do
-        Datum d ← outputDatumDatum out.datum
-        BlockProducerRegistration r ← fromData d
-        guard (r.bprSpoPubKey == spoPubKey && r.bprOwnPkh == ownPkh)
-        pure input
-  let datums = catMaybes ourDatums
+  ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
-  when (null datums)
+  when (null ownRegistrations)
     $ throwContractError (msg "Registration utxo cannot be found")
 
   let
@@ -267,7 +272,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = Constraints.mustBeSignedBy ownPkh
-      <> mconcat (flip Constraints.mustSpendScriptOutput unitRedeemer <$> datums)
+      <> mconcat
+        (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
@@ -281,3 +287,21 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
 report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
 report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }
+
+-- | Based on the wallet public key hash and the SPO public key, it finds the
+-- | the registration UTxOs of the committee member/candidate
+findOwnRegistrations ∷
+  PaymentPubKeyHash →
+  PubKey →
+  UtxoMap →
+  Contract (Array TransactionInput)
+findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
+  mayTxIns ← Map.toUnfoldable validatorUtxos #
+    parTraverse
+      \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
+        pure do
+          Datum d ← outputDatumDatum out.datum
+          BlockProducerRegistration r ← fromData d
+          guard (r.bprSpoPubKey == spoPubKey && r.bprOwnPkh == ownPkh)
+          pure input
+  pure $ catMaybes mayTxIns
