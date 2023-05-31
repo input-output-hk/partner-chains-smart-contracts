@@ -29,6 +29,7 @@ import Test.QuickCheck (
   property,
   (===),
  )
+import Test.QuickCheck.Extra qualified as QCExtra
 import Test.QuickCheck.Gen qualified as Gen
 import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
@@ -205,7 +206,7 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
         case ne of
           (x :| []) -> do
             -- Generate an item different to us
-            y <- arbitrary `Gen.suchThat` (Prelude./= x)
+            y <- arbitrary `QCExtra.suchThat` (Prelude./= x)
             Prelude.pure $ Excluding (y :| []) x
           (x :| (y : ys)) -> Prelude.pure $ Excluding (y :| ys) x
   shrink = \case
@@ -290,7 +291,7 @@ instance Arbitrary LookupsWrapper where
       mkNotIn :: NonEmpty BuiltinByteString -> Gen LookupsWrapper
       mkNotIn (x :| xs) = case xs of
         [] -> do
-          y <- arbitrary `Gen.suchThat` (x Prelude./=)
+          y <- arbitrary `QCExtra.suchThat` (x Prelude./=)
           Prelude.pure . NotInLookups (y :| []) $ x
         (y : ys) -> Prelude.pure . NotInLookups (y :| ys) $ x
   shrink = \case

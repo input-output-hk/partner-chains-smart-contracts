@@ -149,7 +149,6 @@ input.
 
 ![Plutus_script_tx](./05-ModularCommitteeCertificateVerification/PlutusScriptTx.svg)
 
-
 The following diagram demonstrates the components of a transaction which
 contains such a Plutus script as a minting policy that is paid to some recipient address.
 
@@ -290,7 +289,6 @@ a separate redeemer type and reconstructing the message onchain.
 
 - The committee certificate verification minting policy mints a token name, say
   `tn`, which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))`.
-
 
 The following diagram captures how this transaction is intended to be built.
 
