@@ -13,7 +13,7 @@ The end goal is to be able to deploy two types of sidechains:
 The current semantics of the onchain Plutus code to provide the
 mechanism for which an asset is transferred between the mainchain and the
 sidechain (vice versa) is realized with the `FUEL` token which accomplishes the
-following.
+following:
 
 - A transfer from *mainchain* to *sidechain* burns a participant's `FUEL`
   tokens with a specified the sidechain recipient (as redeemer).
@@ -49,10 +49,10 @@ as follows.
   participants sending their `MCToken` to a distinguished address that contains
   the sidechain recipient, call such an address a *lock box address*,
   which *locks* the participant's `MCToken`s.
-  Thus, for sidechain recipient to receive their corresponding sidechain tokens
-  in the sidechain, the Bridge must observe transactions which lock `MCToken`s
-  at a lock box address and mint the corresponding amount to the sidechain
-  recipient.
+  Thus, for a sidechain recipient to receive their corresponding sidechain
+  tokens in the sidechain, the Bridge must observe transactions which lock
+  `MCToken`s at a lock box address and mint the corresponding amount to the
+  sidechain recipient.
 
 - Transfers of `MCToken` from *sidechain* to *mainchain* amounts to (again)
   creating a Merkle root of such transactions which are posted to the mainchain
@@ -72,8 +72,8 @@ allow both a lock/unlock transfer of assets in Cardano while supporting the
 mint/burn mechanism as well.
 
 ## Plutus Design Specification.
-This design will have a `LockBoxValidator` validator which will be the lock box
-address for `MCToken`s.
+This design will have a `LockBoxValidator` which will be the lock box address
+for `MCToken`s.
 In the original specification, recall that participants claimed `FUEL` tokens
 from Merkle roots.
 This proposal will allow participants to claim an alternate token (in addition
@@ -81,17 +81,17 @@ to `FUEL` tokens), `UnlockMintingPolicy`, from Merkle roots for which burning
 of `UnlockMintingPolicy` allows unlocking `MCToken`s residing at
 `LockBoxValidator` addresses.
 Moreover, to ensure that mainchain recipients may only claim at most the number
-of `MCToken` specified from the sidechain, we will also require
-a validator, `LockConfigValidator`, which holds as datum information regarding
-`UnlockMintingPolicy` and `LockBoxValidator` (to avoid circular dependencies); and
-we will also need an NFT `LockConfigOraclePolicy` which will uniquely identify
-a `LockConfigValidator`.
+of `MCToken`s specified from the sidechain, we will also require a validator,
+`LockConfigValidator`, which holds as datum information regarding
+`UnlockMintingPolicy` and `LockBoxValidator` (to avoid circular dependencies);
+and we will also need an NFT `LockConfigOraclePolicy` which will uniquely
+identify a `LockConfigValidator`.
 
 In summary, the design will require the following Plutus scripts.
 - `LockBoxValidator`: the validator address which will be the lock box address.
 - `UnlockMintingPolicy`: a minting policy which is minted from Merkle roots and
   whose burning unlocks `LockBoxValidator`.
-- `LockConfigValidator`: a validator which always returns false which as
+- `LockConfigValidator`: a validator which always returns false which as its
   datum contains necessary information to handle the circular dependencies
   between `LockBoxValidator` and `UnlockMintingPolicy`.
 - `LockConfigOraclePolicy`: an NFT to uniquely identify `LockConfigValidator`.
@@ -102,7 +102,7 @@ We first define `LockConfigOraclePolicy` and `LockConfigValidator`.
 
 `LockConfigOraclePolicy` is an NFT (and hence must be parameterized by a UTxO)
 that must be paid to a `LockConfigValidator` (which it uniquely identifies).
-`LockConfigValidator` never succeeds and has as datum
+`LockConfigValidator` never succeeds and has as its datum
 ```haskell
 data LockConfigDatum = LockConfigDatum
     { lockBoxValidatorAddress :: Address
@@ -123,7 +123,8 @@ Now, we define `LockBoxValidator`.
 
 `LockBoxValidator` will be parameterized by `LockConfigOraclePolicy`.
 `LockBoxValidator`'s redeemer does not matter (and hence may be the unit type),
-and as datum it must contain a `ByteString` of the sidechain recipient.
+and as datum it must contain a `ByteString` of the address of the sidechain
+recipient.
 `LockBoxValidator` validates only if all of the following are satisfied:
 
 -  there exists a reference input which holds `LockConfigOraclePolicy` that has
@@ -166,15 +167,19 @@ Note that `UnlockMintingPolicy` is parameterized by the same things as
 
 As redeemer, `UnlockMintingPolicy` will take the following data type.
 ```haskell
+data UnlockBurnInfo = UnlockBurnInfo
+  { unlockBurnCurrencySymbol :: CurrencySymbol
+  , unlockBurnTokenName :: TokenName
+  }
+
+data UnlockMintInfo = UnlockMintInfo
+  { unlockMintMerkleTreeEntry :: MerkleTreeEntry
+  , unlockMintMerkleProof :: MerkleProof
+  }
+
 data UnlockMintingPolicyRedeemer
-  = UnlockMintingPolicyMint
-    { unlockMintingMintMerkleTreeEntry :: MerkleTreeEntry
-    , unlockMintingMintMerkleProof :: MerkleProof
-    }
-  | UnlockMintingPolicyBurn
-    { unlockMintingBurnCurrencySymbol :: CurrencySymbol
-    , unlockMintingBurnTokenName :: TokenName
-    }
+  = UnlockMint UnlockMintingInfo
+  | UnlockBurn UnlockBurnInfo
 ```
 Again, note the similarities to `FUELRedeemer` from the main specification --
 `UnlockMintingPolicyMint` is identical to `SideToMain`, but `UnlockMintingPolicyBurn` is different
@@ -191,15 +196,14 @@ Since `MCToken` may have an arbitrary token name and the current
 `MerkleTreeEntry` as follows.
 
 ```diff
--data MerkleTreeEntry = MerkleTreeEntry
-+data MerkleTreeEntry
-+  = FUELClaimEntry
-  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
-  }
-+  | LockBoxEntry
++data FUELClaimEntryInfo = FUELClaimEntryInfo
++  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
++  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
++  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
++  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
++  }
+
++data LockBoxEntryInfo = LockBoxEntryInfo
 +  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
 +  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
 +  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
@@ -207,6 +211,11 @@ Since `MCToken` may have an arbitrary token name and the current
 +  , tokenName :: TokenName  -- the token name of the currency symbol to unlock from a lock box
 +  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
 +  }
+
+-data MerkleTreeEntry = MerkleTreeEntry
++data MerkleTreeEntry
++  = FUELClaimEntry FUELClaimEntryInfo
++  | LockBoxEntry LockBoxEntryInfo
 ```
 Note the following.
 - We renamed the constructor for `MerkleTreeEntry` to `FUELClaimEntry`. This
@@ -263,7 +272,7 @@ be inserted in the distributed set only if `FUELMintingPolicy` mints, so
 it's clear that the hash of a `MerkleTreeEntry` may be inserted in the
 distributed set iff `FUELMintingPolicy` mints.
 This condition is needed so that adversaries cannot arbitrarily insert things
-in the distributed set potentially locking participant's tokens away forever
+in the distributed set potentially locking a participant's tokens away forever
 (as otherwise the system will believe that the honest participant is attempting
 to "double spend" their tokens).
 Indeed, this condition must be generalized so that either:
