@@ -16,7 +16,7 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
 import Data.UInt as UInt
-import TrustlessSidechain.Options.Types (CommitteeSignatures, Config)
+import TrustlessSidechain.Options.Types (Config)
 import TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , thresholdCodec
@@ -76,7 +76,8 @@ configCodec =
     )
 
 -- | Accepts the format: `[ {"public-key":"aabb...", "signature":null}, ... ]`
-committeeSignaturesCodec ∷ CA.JsonCodec CommitteeSignatures
+committeeSignaturesCodec ∷
+  CA.JsonCodec (List (SidechainPublicKey /\ Maybe SidechainSignature))
 committeeSignaturesCodec = CAM.list memberCodec
   where
   memberRecord ∷

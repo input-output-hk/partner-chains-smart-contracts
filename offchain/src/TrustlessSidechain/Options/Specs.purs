@@ -19,6 +19,7 @@ import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.List (List)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative
@@ -66,8 +67,6 @@ import TrustlessSidechain.Options.Parsers
   )
 import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
-  , CommitteeInput(Committee, CommitteeFilePath)
-  , CommitteeSignaturesInput(CommitteeSignatures, CommitteeSignaturesFilePath)
   , Config
   , Endpoint
       ( ClaimAct
@@ -83,9 +82,11 @@ import TrustlessSidechain.Options.Types
       , CommitteeHandover
       , SaveCheckpoint
       )
+  , InputArgOrFile(InputFromArg, InputFromFile)
   , Options
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -522,9 +523,14 @@ saveCheckpointSpec = ado
 
 -- `parseCommittee` parses the committee public keys and takes the long
 -- flag / help message as parameters
-parseCommittee ∷ String → String → String → String → Parser CommitteeInput
+parseCommittee ∷
+  String →
+  String →
+  String →
+  String →
+  Parser (InputArgOrFile (List SidechainPublicKey))
 parseCommittee longflag hdesc filelongflag filehdesc =
-  map Committee
+  map InputFromArg
     ( many
         ( option sidechainPublicKey
             ( fold
@@ -536,7 +542,7 @@ parseCommittee longflag hdesc filelongflag filehdesc =
         )
     )
     <|>
-      map CommitteeFilePath
+      map InputFromFile
         ( option
             str
             ( fold
@@ -548,7 +554,7 @@ parseCommittee longflag hdesc filelongflag filehdesc =
         )
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
-parseNewCommitteePubKeys ∷ Parser CommitteeInput
+parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List SidechainPublicKey))
 parseNewCommitteePubKeys =
   parseCommittee
     "new-committee-pub-key"
@@ -561,9 +567,13 @@ parseNewCommitteePubKeys =
 -- committees' signatures. This is used in both `saveRootSpec` and
 -- `committeeHashSpec`.
 parseCommitteeSignatures ∷
-  String → String → String → String → Parser CommitteeSignaturesInput
+  String →
+  String →
+  String →
+  String →
+  Parser (InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)))
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
-  map CommitteeSignatures
+  map InputFromArg
     ( many
         ( option committeeSignature
             ( fold
@@ -575,7 +585,7 @@ parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
         )
     )
     <|>
-      map CommitteeSignaturesFilePath
+      map InputFromFile
         ( option
             str
             ( fold

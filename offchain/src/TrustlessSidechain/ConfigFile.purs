@@ -1,11 +1,10 @@
 module TrustlessSidechain.ConfigFile
-  ( decodeCommitteeSignatures
-  , decodeCommittee
-  , decodeConfig
+  ( decodeConfig
   , optExample
   , readJson
-  , getCommitteeSignatures
+  , getInputArgOrFile
   , getCommittee
+  , getCommitteeSignatures
   ) where
 
 import Contract.Prelude
@@ -31,12 +30,10 @@ import TrustlessSidechain.ConfigFile.Codecs
   , configCodec
   )
 import TrustlessSidechain.Options.Types
-  ( CommitteeInput(Committee, CommitteeFilePath)
-  , CommitteeSignatures
-  , CommitteeSignaturesInput(CommitteeSignatures, CommitteeSignaturesFilePath)
-  , Config
+  ( Config
+  , InputArgOrFile(InputFromArg, InputFromFile)
   )
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 optExample ∷ Config
 optExample =
@@ -60,51 +57,41 @@ optExample =
 decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config
 decodeConfig = CA.decode configCodec
 
-decodeCommitteeSignatures ∷
-  J.Json → Either CA.JsonDecodeError CommitteeSignatures
-decodeCommitteeSignatures = CA.decode committeeSignaturesCodec
+--- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
+getCommittee ∷
+  InputArgOrFile (List SidechainPublicKey) →
+  Effect (List SidechainPublicKey)
+getCommittee =
+  getInputArgOrFile "committee" committeeCodec
 
-decodeCommittee ∷ J.Json → Either CA.JsonDecodeError (List SidechainPublicKey)
-decodeCommittee = CA.decode committeeCodec
+--- | `getCommitteeSignatures` grabs the committee signatures from CLI argument or a JSON file
+getCommitteeSignatures ∷
+  InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)) →
+  Effect (List (SidechainPublicKey /\ Maybe SidechainSignature))
+getCommitteeSignatures =
+  getInputArgOrFile "committee signatures" committeeSignaturesCodec
 
--- | `getCommitteeSignatures` grabs the committee from
--- | `CommitteeSignaturesInput` either by:
--- |    - just grabbing the committee provided; or
--- |    - doing the associated file IO to read the file / decode the json.
-getCommitteeSignatures ∷ CommitteeSignaturesInput → Effect CommitteeSignatures
-getCommitteeSignatures = case _ of
-  CommitteeSignatures committee → pure committee
-  CommitteeSignaturesFilePath filePath → do
+-- | `getInputArgOrFile` grabs the input from the CLI argument or parses the
+-- | JSON file at the given path
+getInputArgOrFile ∷
+  ∀ (a ∷ Type). String → CA.JsonCodec a → InputArgOrFile a → Effect a
+getInputArgOrFile name codec = case _ of
+  InputFromArg value → pure value
+  InputFromFile filePath → do
     fileInput ← readTextFile ASCII filePath
     case jsonParser fileInput of
       Left errMsg → Exception.throw
-        $ "Failed JSON parsing for committee signatures: "
+        $ "Failed JSON parsing for "
+        <> name
+        <> ": "
         <> errMsg
-      Right json → case decodeCommitteeSignatures json of
+      Right json → case CA.decode codec json of
         Left err → Exception.throw
-          $ "Failed decoding JSON committee signatures: "
+          $ "Failed decoding JSON "
+          <> name
+          <> ": "
           <> CA.printJsonDecodeError err
         Right committee → pure committee
-
--- | `getCommittee` grabs the committee from `CommitteeInput` either by
-getCommittee ∷ CommitteeInput → Effect (List SidechainPublicKey)
-getCommittee = case _ of
-  Committee committee → pure committee
-  CommitteeFilePath filePath → do
-    -- Start of duplicated code from `getCommitteeSignatures` (only the
-    -- decoder and error messages are different)
-    fileInput ← readTextFile ASCII filePath
-    case jsonParser fileInput of
-      Left errMsg → Exception.throw
-        $ "Failed JSON parsing for committee: "
-        <> errMsg
-      Right json → case decodeCommittee json of
-        Left err → Exception.throw
-          $ "Failed decoding JSON committee: "
-          <> CA.printJsonDecodeError err
-        Right committee → pure committee
-
--- End of duplicated code from `getCommitteeSignatures`
 
 readJson ∷ FilePath → Effect (Either String J.Json)
 readJson path = do
