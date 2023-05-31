@@ -1,7 +1,6 @@
 module TrustlessSidechain.ConfigFile
-  ( decodeConfig
-  , optExample
-  , readJson
+  ( optExample
+  , readConfigJson
   , getInputArgOrFile
   , getCommittee
   , getCommitteeSignatures
@@ -14,16 +13,13 @@ import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
-import Data.Argonaut.Core as J
 import Data.Argonaut.Parser (jsonParser)
 import Data.Codec.Argonaut as CA
 import Data.List (List)
 import Data.UInt as UInt
 import Effect.Exception as Exception
-import Node.Buffer.Class as Buff
 import Node.Encoding (Encoding(ASCII))
-import Node.FS.Sync (exists, readFile, readTextFile)
-import Node.Path (FilePath)
+import Node.FS.Sync (exists, readTextFile)
 import TrustlessSidechain.ConfigFile.Codecs
   ( committeeCodec
   , committeeSignaturesCodec
@@ -54,9 +50,6 @@ optExample =
   , runtimeConfig: Nothing
   }
 
-decodeConfig ∷ J.Json → Either CA.JsonDecodeError Config
-decodeConfig = CA.decode configCodec
-
 --- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
 getCommittee ∷
   InputArgOrFile (List SidechainPublicKey) →
@@ -77,27 +70,31 @@ getInputArgOrFile ∷
   ∀ (a ∷ Type). String → CA.JsonCodec a → InputArgOrFile a → Effect a
 getInputArgOrFile name codec = case _ of
   InputFromArg value → pure value
-  InputFromFile filePath → do
-    fileInput ← readTextFile ASCII filePath
-    case jsonParser fileInput of
-      Left errMsg → Exception.throw
-        $ "Failed JSON parsing for "
+  InputFromFile filePath → readJson name codec filePath
+
+-- | Read and decode config JSON if exists, return Nothing otherwise
+readConfigJson ∷ String → Effect (Maybe Config)
+readConfigJson filePath = do
+  hasConfig ← exists filePath
+  if hasConfig then do
+    Just <$> readJson "config" configCodec filePath
+  else
+    pure Nothing
+
+-- | Read and decode a JSON file with a given codec
+readJson ∷ ∀ (a ∷ Type). String → CA.JsonCodec a → String → Effect a
+readJson name codec filePath = do
+  fileInput ← readTextFile ASCII filePath
+  case jsonParser fileInput of
+    Left errMsg → Exception.throw
+      $ "Failed JSON parsing for "
+      <> name
+      <> ": "
+      <> errMsg
+    Right json → case CA.decode codec json of
+      Left err → Exception.throw
+        $ "Failed decoding JSON "
         <> name
         <> ": "
-        <> errMsg
-      Right json → case CA.decode codec json of
-        Left err → Exception.throw
-          $ "Failed decoding JSON "
-          <> name
-          <> ": "
-          <> CA.printJsonDecodeError err
-        Right committee → pure committee
-
-readJson ∷ FilePath → Effect (Either String J.Json)
-readJson path = do
-  hasConfig ← exists path
-  if hasConfig then do
-    file ← Buff.toString ASCII =<< readFile path
-    pure $ jsonParser file
-  else
-    pure $ Left "No configuration file found."
+        <> CA.printJsonDecodeError err
+      Right decoded → pure decoded
