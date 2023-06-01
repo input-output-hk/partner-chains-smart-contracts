@@ -1,7 +1,7 @@
 ---
 name: Development Ticket
 about: A ticket describing a task relating to DApp development - can be either onchain or offchain.
-labels: offchain onchain
+labels:
 assignees: ''
 
 ---

@@ -50,7 +50,7 @@ What steps have you taken to better understand the subject
 
 -->
 
-## Links
+## Related issues/PRs
 
 <!--
 Add other linked tasks here.
