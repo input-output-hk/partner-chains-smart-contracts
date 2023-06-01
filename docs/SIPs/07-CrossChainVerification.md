@@ -2,7 +2,7 @@
 ## Requirements
 Allow one sidechain to rely on a secondary sidechain for validation before releasing funds. This should be a modular option, so end-users can decide to use this, or the simple 1-1 model.
 
-## Problem
+## Background
 
 We want to expand the initial design with one mainchain and one singular
 sidechain, to a more open system with more than one sidechain. This opens up a
@@ -44,9 +44,9 @@ configuration will follow a similar relationship:
 - Cross-verifier sidechain(s) will have to observe the verified chain
 
 As a summary, we could distinguish three different actors in the same network:
-- Mainchain only node
-- Sidechain only node
-- Cross-verifier node
+- _Mainchain only node_
+- _Sidechain only node_ following mainchain and sidechain
+- _Cross-verifier node_ following mainchain and both sidechains
 
 ![Network](./07-CrossChainVerification/Network.svg)
 
@@ -129,7 +129,8 @@ the verifier chain will be deployed, with a special version of
 For the cross-verified chain, we will use a special version of `MerkleRootToken`
 and `MerkleRootValidator`, we will call these `PartialMerkleRootToken` and
 `PartialMerkleRootValidator` respectively. Their implementation will be
-identical to their non-cross-chain counterparts, with the following differences:
+identical to their non-cross-chain counterparts, with the differences described
+below.
 
 As `PartialMerkleRootValidator` will hold multiple `PartialMerkleRootToken`s
 with the same Merkle root, one from each sidechain, we will need to
