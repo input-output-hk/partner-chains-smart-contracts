@@ -1,8 +1,5 @@
 module Test.CommitteeCandidateValidator
   ( tests
-  , testScenarioFailure1
-  , testScenarioFailure2
-  , testScenarioSuccess
   , runRegisterWithCandidatePermissionInfo
   , runDeregister
   ) where
@@ -16,6 +13,7 @@ import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
+import Data.List.Lazy (replicate)
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
@@ -41,7 +39,8 @@ mockSpoPubKey = hexToByteArrayUnsafe
 -- | `tests` wraps up all the committee candidate validator tests conveniently
 tests ∷ WrappedTests
 tests = plutipGroup "Committe candidate registration/deregistration" $ do
-  testScenarioSuccess
+  testScenarioSuccess1
+  testScenarioSuccess2
   testScenarioFailure1
   testScenarioFailure2
 
@@ -82,13 +81,27 @@ runDeregister scParams =
     { sidechainParams: scParams, spoPubKey: mockSpoPubKey }
 
 -- Register then Deregister
-testScenarioSuccess ∷ PlutipTest
-testScenarioSuccess = Mote.Monad.test "Register followed by deregister"
+testScenarioSuccess1 ∷ PlutipTest
+testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       void $ runRegister dummySidechainParams
       runDeregister dummySidechainParams
+
+-- Register multipe times then Deregister
+testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 =
+  Mote.Monad.test "10 registrations followed by 1 deregister"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 5_000_000
+        , BigInt.fromInt 5_000_000
+        , BigInt.fromInt 5_000_000
+        ]
+    $ \alice → Wallet.withKeyWallet alice do
+        sequence_ $ replicate 10 $ runRegister dummySidechainParams
+        runDeregister dummySidechainParams
 
 -- Deregister without prior registeration (i.e. no registration utxo present)
 testScenarioFailure1 ∷ PlutipTest
