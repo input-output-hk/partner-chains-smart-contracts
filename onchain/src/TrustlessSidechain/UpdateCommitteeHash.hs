@@ -1,6 +1,4 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -31,7 +29,8 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude as PlutusTx
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   SidechainParams (
     thresholdDenominator,
@@ -44,7 +43,6 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
 import TrustlessSidechain.Utils (aggregateCheck, aggregateKeys, verifyMultisig)
-import Prelude qualified
 
 -- * Updating the committee hash
 
@@ -182,13 +180,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         Just tn ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                if Value.valueOf
-                  (txOutValue (txInInfoResolved txInInfo))
-                  (cMptRootTokenCurrencySymbol uch)
-                  (TokenName tn)
-                  > 0
-                  then True
-                  else go rest
+                ((Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0) || go rest)
               go [] = False
            in go (txInfoReferenceInputs info)
 
@@ -200,9 +192,9 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
     icTxOutRef :: TxOutRef
   }
   deriving newtype
-    ( Prelude.Show
-    , Prelude.Eq
-    , Prelude.Ord
+    ( TSPrelude.Show
+    , TSPrelude.Eq
+    , TSPrelude.Ord
     , Generic
     , PlutusTx.UnsafeFromData
     )

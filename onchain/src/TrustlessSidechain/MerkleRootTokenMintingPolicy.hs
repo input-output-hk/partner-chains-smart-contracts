@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -34,7 +33,7 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   MerkleTreeEntry,

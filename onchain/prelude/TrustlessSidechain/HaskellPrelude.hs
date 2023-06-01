@@ -74,7 +74,8 @@ module TrustlessSidechain.HaskellPrelude (
   Euclidean.GcdDomain (..),
 
   -- ** JSON
-  Aeson.ToJSON (..),
+  Aeson.ToJSON (toEncoding),
+  Aeson.FromJSON (..),
 
   -- ** Functor hierarchy
   Functor.Functor (..),
@@ -166,6 +167,8 @@ module TrustlessSidechain.HaskellPrelude (
   fromJsonObject,
   fromJsonArray,
   fromJsonString,
+  jsonParseFail,
+  jsonParseKey,
 
   -- ** Functor
   (Functor.$>),
@@ -300,7 +303,7 @@ module TrustlessSidechain.HaskellPrelude (
 
 import Control.Applicative (Applicative)
 import Control.Applicative qualified as Applicative
-import Control.Category ((>>>))
+import Control.Category ((.), (>>>))
 import Control.Category qualified as Category
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as MonadIO
@@ -325,6 +328,7 @@ import Data.Field qualified as Field
 import Data.Foldable (Foldable (foldMap))
 import Data.Foldable qualified as Foldable
 import Data.Foldable.WithIndex qualified as FoldableWithIndex
+import Data.Function (($))
 import Data.Function qualified as Function
 import Data.Functor qualified as Functor
 import Data.Functor.WithIndex qualified as FunctorWithIndex
@@ -594,3 +598,24 @@ pattern JsonNumber s <- Aeson.Number s
 -}
 pattern JsonString :: Text -> Value
 pattern JsonString t <- Aeson.String t
+
+{- | Fail a JSON parse with the given error.
+
+ @since Unreleased
+-}
+jsonParseFail :: forall (a :: Type). Text -> AesonTypes.Parser a
+jsonParseFail msg = AesonTypes.parseFail (Text.unpack msg)
+
+{- | Given the name of a key, and a parser, attempt to parse the given key of a
+ JSON object with that parser.
+
+ @since Unreleased
+-}
+jsonParseKey ::
+  forall (a :: Type).
+  Text ->
+  (Value -> AesonTypes.Parser a) ->
+  KeyMap Value ->
+  AesonTypes.Parser a
+jsonParseKey k p kvs =
+  AesonTypes.explicitParseField p kvs (Exts.fromString . Text.unpack $ k)

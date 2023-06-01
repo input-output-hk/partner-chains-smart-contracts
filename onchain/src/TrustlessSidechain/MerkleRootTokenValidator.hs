@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.MerkleRootTokenValidator (
@@ -8,8 +7,8 @@ module TrustlessSidechain.MerkleRootTokenValidator (
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import PlutusTx (compile, unsafeFromBuiltinData)
-import PlutusTx.Prelude
 import PlutusTx.Trace qualified as Trace
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 
 -- | 'mkMptRootTokenValidator' always fails.
