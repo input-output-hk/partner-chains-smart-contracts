@@ -25,6 +25,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([435](https://github.com/mlabs-haskell/trustless-sidechain/issues/435),
   [444](https://github.com/mlabs-haskell/trustless-sidechain/pull/444),
   onchain)
+* Added a QuickCheck guide
+  ([449](https://github.com/mlabs-haskell/trustless-sidechain/issues/449),
+  [468](https://github.com/mlabs-haskell/trustless-sidechain/pull/468),
+  onchain)
 
 ## Changed
 
