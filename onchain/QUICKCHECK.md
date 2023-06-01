@@ -81,7 +81,7 @@ reached, they will 'error out'. While not a perfect solution, this at least
 ensures that generators will never run too long, and if they do, you'll know
 why (but not which generator). If you want a different limit, you can set it to
 the value you want using `suchThatRetrying` and `suchThatMapRetrying`
-respectively. Plus, our versions even run faster than QuickCheck's!
+respectively.
 
 ### Use modifiers
 
@@ -543,17 +543,325 @@ suitable instances. There are also instances for types with kinds similar to
 
 ## Properties
 
-### Define 'case types' for more intricate tests
-
-[TODO]
-
 ### Prefer `forAllShrinkShow`
 
-[TODO]
+When defining properties, there is a range of options to combine _preparation_
+tasks (generation of inputs, methods of shrinking, what to show when cases need
+to be displayed) versus the property itself (what to do with the generated
+data). The most general of these is `forAllShrinkShow`:
+
+```haskell
+forAllShrinkShow :: forall (prop :: Type) (a :: Type) .
+    Testable prop =>
+    Gen a ->
+    (a -> [a]) ->
+    (a -> String) ->
+    (a -> prop) ->
+    Property
+```
+
+Essentially, all the preparation tasks are handle via explicit, user-specified
+arguments. There exist some variants of `forAllShrinkShow` where some, or all,
+of the preparation tasks are implicit through type classes (`Arbitrary` and
+`Show`). While these appear convenient, there are reasons to prefer
+`forAllShrinkShow`:
+
+1. `show` is rarely a good way to display failing cases, especially for more
+   complex data. By allowing us to specify this manually, `forAllShrinkShow`
+   enables us to use a better method (such as a prettyprinter) without having to
+   use `Show` for that purpose.
+2. We can write tests even when the type we need lacks an `Arbitrary` instance
+   directly (such as by way of `Arbitrary1`).
+3. If we need to modify any of the preparation, we can do that inline, instead
+   of having to change type class instances.
+4. `forAll` (the most simplified option) has the habit of not shrinking.
+
+Thus, in general, `forAllShrinkShow`, while slightly more verbose, is the better
+option for long-term clarity and maintenance.
 
 ### Do not use `discard` or `==>`
 
-[TODO]
+Consider a `TextMap a` data type representing a mapping from `Text` keys to
+values of type `a`, with the following functions:
+
+```haskell
+lookup :: forall (a :: Type) . Text -> KeyMap a -> Maybe a
+
+fromList :: forall (a :: Type) . [(Text, a)] -> KeyMap a
+```
+
+An initial attempt at a test for these functions would be similar to this:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    if (k, v) `elem` kvs
+    then lookup k (fromList kvs) === Just v
+    else discard
+```
+
+QuickCheck even provides a shorthand way of writing something similar with the
+`==>` operator:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    ((k, v) `elem` kvs) ==> (lookup k (fromList kvs) == Just v)
+```
+
+However, this test is not very useful. Because we generate the key, value and
+source list independently, it is highly improbable that we happen to generate a
+key-value pair that exists in the source list. In such a case, QuickCheck will
+simply not check anything, and continue. In the best case scenario, your test
+will pass, but with a large number of 'discarded' cases: for example, even if
+you ran 100,000 tests, but your discard rate was 90%, you really only ran 10,000
+tests: a far smaller number than expected. In worse cases, the discard rate will
+be so high that the test will fail (although this is unreliable). The biggest
+problem, however, is that even if the test passes, it's lying to you: it checks
+only the case where the 'precondition' holds, even though when the precondition
+_fails_, something else should hold instead.
+
+For all of these reasons, use of `discard` and `==>` is incorrect: it fosters
+bad practices and tests that don't say what we think. Instead, you should use
+'case types' and coverage, described in more detail below.
+
+### Use coverage
+
+Continuing with our example from before, suppose we re-wrote our test as follows
+to avoid `discard` and `==>`:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    if (k, v) `elem` kvs
+    then lookup k (fromList kvs) === Just v
+    otherwise lookup k (fromList kvs) === Nothing
+```
+
+While this eliminates a problem, it arguably introduces an even worse one: now,
+our test is _silently_ lying to us about the correctness of our code.
+Essentially, the problem remains the same: it is far more likely that
+independently-generated `(k, v)` will _not_ be part of `kvs`, which means that
+we test the `Nothing` case far more than the `Just` case. While in the current
+situation, this flaw is clear, with more complex tests and conditions, this
+error may appear silently.
+
+To avoid this problem, QuickCheck provides a range of tools. The first of these
+is `label`:
+
+```haskell
+label :: forall (prop :: Type) .
+    Testable prop =>
+    String -> prop -> Property
+```
+
+This function takes a label, supposed to be constructed from the test data, and
+as the tests run, counts how many unique labels it sees. At the end, QuickCheck
+displays what percentage of cases ended up with which label. To use this
+functionality in our test, we could do something like this:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    let cond = (k, v) `elem` kvs in
+      label ("keyval in source: " <> show cond) $
+      if cond
+      then lookup k (fromList kvs) === Just v
+      else lookup k (fromList kvs) === Nothing
+```
+
+As `label` returns a 'property transformation' function, you can sequence these
+together for multiple `label`s for different conditions:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    let cond (k, v) `elem` kvs
+        keyLength = Text.length k in
+      label ("keyval in source: " <> show cond) .
+      label ("key size " <> show keyLength) $
+      if cond
+      then lookup k (fromList kvs) === Just v
+      else lookup k (fromList kvs) === Nothing
+```
+
+While `label` is one way of finding out the distribution of cases, it's usually
+too specific to be useful: a more general tool is `classify`:
+
+```haskell
+classify :: forall (prop :: Type) .
+    Testable prop =>
+    Bool ->
+    String ->
+    prop ->
+    Property
+```
+
+`classify` is different from `label` in that, instead of the `String` argument
+being used to separate generated data into cases, the `Bool` argument (again,
+supposedly derived from the test data) determines if we 'match the case' or not.
+Instead of using `label`, we can rewrite our test using `classify`:
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    let cond = (k, v) `elem` kvs in
+      classify cond "keyval in source" $
+      if cond
+      then lookup k (fromList kvs) === Just v
+      else lookup k (fromList kvs) === Nothing
+```
+
+Just as with `label`, we can 'chain together' multiple uses of `classify`, and
+indeed, uses of `classify` and `label`.
+
+Both `label` and `classify` are strictly informative: they will only indicate
+what distribution(s) our generated cases have. If we want to ensure our tests
+only pass if certain distributions have been achieved, we instead need to use
+the following functions:
+
+```haskell
+cover :: forall (prop :: Type) .
+    Testable prop =>
+    Double -> Bool -> String -> prop -> Property
+
+checkCoverage :: forall (prop :: Type) .
+    Testable prop =>
+    prop -> Property
+```
+
+`cover` behaves similarly to `classify`, but with an extra `Double` argument,
+which is a 'target percentage' (from 0 to 100), and we can use it in a similar
+way. However, `cover` also changes how tests are run. Normally, QuickCheck will
+simply try as many cases as we request (100 by default), but with `cover`,
+QuickCheck will instead track both what percentage of generated cases satisfy
+the condition, and how many tests we've run so far, until one of the following
+happens:
+
+1. QuickCheck finds that we have achieved (almost) the requested distribution,
+   and that running more cases won't cause the distribution to get worse.
+2. QuickCheck finds that we have not achieved the requested distribution, and
+   that running more cases won't cause the distribution to improve.
+
+In either case, QuickCheck will stop running the tests at that point (regardless
+of how many we requested), and in case 2, will indicate that it failed to
+achieve the requested coverage. This helps us resolve the 'how many tests to
+run' problem, as QuickCheck can handle this for us. Additionally, if we also use
+`checkCoverage` to 'modify' our property, case 2 will cause the tests to fail.
+Thus, the correct way to write our test would be
+
+```haskell
+forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
+    let cond = (k, v) `elem` kvs in
+      checkCoverage .
+      cover 50.0 cond "keyval in source" $
+      if cond
+      then lookup k (fromList kvs) === Just v
+      else lookup k (fromList kvs) === Nothing
+```
+
+This will ensure that, if half of our cases aren't 'hits', the test will fail,
+as well as ensuring we run exactly enough tests to ensure this happens (or never
+can).
+
+Whenever possible, we should use these tools (referred to as 'coverage
+checking') to make sure our tests are, in fact, telling us what we think they
+are. It is worth noting, however, that QuickCheck cannot be told two conditions
+are mutually exclusive. Specifically, if we have:
+
+```haskell
+cover 50.0 cond1 "something" . cover 50.0 cond2 "something else"
+```
+
+QuickCheck will assume that `cond1` and `cond2` could be true simultaneously.
+While this won't cause problems with logic if they _are_ mutually-exclusive, it
+will mean more tests will be run than would be needed if this information could
+be made available to QuickCheck. This is not usually a serious limitation,
+unless we have a large number of conditions.
+
+### Define 'case types' for more intricate tests
+
+The above examples with the `TextMap` test show a major problem that can often
+arise: properties frequently require multiple inputs, which may not be
+completely independent of one another. In our running example, we have a
+dependency between the key-value pair and the source list, which is meant to
+yield two different outcomes, in roughly equal proportion. However, the standard
+approach to generating 'bundled property data' assumes that each 'piece' is
+independent of the others: if that's not your situation, this creates a whole
+host of problems.
+
+While this is [generally a very hard
+problem](https://www.cs.tufts.edu/comp/150FP/archive/john-hughes/beginners-luck.pdf),
+we can simplify it somewhat by use of 'case types': wrappers around combination
+arguments with custom `Arbitrary` instances and a range of helpers. For example,
+in our case, we could define a 'case type' like so:
+
+```haskell
+data LookupCase (a :: Type) =
+    LookupHitCase Text a [(Text, a)]) |
+    LookupMissCase Text a [(Text, a)])
+    deriving stock (Eq, Show)
+
+instance (Arbitrary a) => Arbitrary (LookupCase a) where
+    arbitrary = oneof [genHitCase, genMissCase]
+    shrink = \case
+        LookupHitCase k v kvs -> do
+            ...
+            pure . LookupHitCase k' v' $ kvs'
+        LookupMissCase k v kvs -> do
+            ...
+            pure . LookupMissCase k' v' $ kvs'
+
+toCaseData :: forall (a :: Type) .
+    LookupCase a -> (Text, a, [(Text, a)])
+toCaseData = ...
+
+isHitCase :: forall (a :: Type) .
+    LookupCase a -> Bool
+isHitCase = \case
+    LookupHitCase{} -> True
+    _ -> False
+
+showLookupCase :: forall (a :: Type) .
+    LookupCase a -> String
+showLookupCase = ...
+```
+
+We can see several components to this pattern:
+
+1. A custom sum type, which has one 'arm' for each case, together with all the
+   data needed for that case.
+2. An `Arbitrary` instance, which generates each case with equal probability,
+   and also ensures that shrinkers do not 'shrink out of case'.
+3. A 'disassembler' function that pulls out our test data irrespective of our
+   case.
+4. A 'discriminator' function which informs us which case we're in.
+5. A way of displaying the data in a more human-readable way.
+
+With such a type at our disposal, we can rewrite our test like this:
+
+```haskell
+forAllShrinkShow arbitrary shrink showLookupCase $ \lookupCase ->
+    let cond = isHitCase lookupCase
+        (k, v, kvs) = toCaseData lookupCase in
+      checkCoverage .
+      cover 50.0 cond "keyval in source' $
+      if cond
+      then lookup k (fromList kvs) === Just v
+      else lookup k (fromList kvs) === Nothing
+```
+
+This has a range of advantages:
+
+* All the complexity of generation and shrinking is hidden away, which means
+  that the person writing tests doesn't have to worry about it.
+* The coverage conditions are no longer dependant on the test writer getting
+  them correct.
+* We have the ability to change representations, or improve the efficiency of
+  generators and shrinkers, without breaking any tests relying on them.
+* We can 'hack' our generators to ensure we don't fail coverage requirements,
+  and also ensure that our shrinkers don't take us 'out of case'.
+* We can bundle useful metadata into the 'case type' to avoid having the
+  property definition re-derive it, possibly at some expense (for example, list
+  lengths).
+
+In effect, we're making the generation and shrinking opaque to the property
+definition by strictly separating concerns. This allows us to use coverage more
+easily, and improves test organization.
 
 ### Use `A` and similar types for polymorphic properties
 
@@ -571,18 +879,6 @@ These 'dummy' types have a range of useful instances, such as `Arbitrary`,
 `CoArbitrary` and `Function`, as well as `Eq`, `Ord` and `Show`, allowing their
 use with most QuickCheck machinery. In any cases where we test over polymorphic
 types, their use is preferred.
-
-### Use `property` for more flexible definitions
-
-[TODO]
-
-### Use coverage
-
-[TODO]
-
-### Use `label` for feedback on generated data
-
-[TODO]
 
 ### Use `PropertyT` for monadic tests
 
