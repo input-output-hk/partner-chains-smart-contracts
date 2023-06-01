@@ -19,6 +19,7 @@ import Test.QuickCheck (
   liftShrink,
   property,
  )
+import Test.QuickCheck.Extra qualified as QCExtra
 import Test.QuickCheck.Gen as Gen
 import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -120,15 +121,15 @@ data SufficientVerification
 
 instance Arbitrary SufficientVerification where
   arbitrary = do
-    privKeys <- Gen.listOf1 $ Gen.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
+    privKeys <- Gen.listOf1 $ QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
     let pubKeys = Prelude.fmap SECP.derivePubKey privKeys
-    (message, messageBS) <- Gen.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
+    (message, messageBS) <- QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
       let bs = fromListN 32 bytes
       msg <- SECP.msg bs
       Prelude.pure (msg, bs)
     signatures <-
       Prelude.fmap (Prelude.fmap (`signWithKey` message))
-        . Gen.suchThatMap (Gen.sublistOf privKeys)
+        . QCExtra.suchThatMap (QCExtra.sublistOf privKeys)
         $ \pkSubs -> do
           guard (Prelude.not . Prelude.null $ pkSubs)
           Prelude.pure pkSubs
