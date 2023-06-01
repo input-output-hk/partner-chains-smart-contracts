@@ -55,11 +55,8 @@ describe them.
 
 -->
 
-## Links
+## Related issues/PRs
 
 <!--
-Add other linked tasks here. Leave the meta-task in place so the task gets
-mentioned on its timeline.
+Add other linked tasks here.
 -->
-
-- meta-task #181
