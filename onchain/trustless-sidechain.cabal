@@ -146,6 +146,15 @@ library plutus-shim-prelude
   exposed-modules: TrustlessSidechain.PlutusPrelude
   hs-source-dirs:  prelude
 
+library quickcheck-extra
+  import:          common-lang
+  exposed-modules: Test.QuickCheck.Extra
+  build-depends:
+    , QuickCheck
+    , trustless-sidechain-prelude
+
+  hs-source-dirs:  src
+
 -- Executables
 
 executable trustless-sidechain-gen-signatures
@@ -204,7 +213,7 @@ executable trustless-sidechain-merkle-tree
 
   hs-source-dirs: app/merkle-tree
 
--- Test suites
+-- Tests
 
 test-suite perf-check
   import:         common-lang, common-optimized-parallel
@@ -235,6 +244,7 @@ test-suite trustless-sidechain-test
     , plutus-ledger
     , plutus-ledger-api
     , QuickCheck
+    , quickcheck-extra
     , secp256k1-haskell
     , tasty
     , tasty-hunit
@@ -242,6 +252,19 @@ test-suite trustless-sidechain-test
     , trustless-sidechain
 
   hs-source-dirs: test
+
+test-suite quickcheck-extra-test
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , QuickCheck
+    , quickcheck-extra
+    , tasty
+    , tasty-quickcheck
+
+  hs-source-dirs: test/quickcheck-extra-test
 
 -- Benchmarks
 
@@ -288,3 +311,16 @@ benchmark bench-ctl
     , websockets
 
   hs-source-dirs: bench/
+
+benchmark quickcheck-extra-bench
+  import:         common-lang
+  main-is:        Main.hs
+  ghc-options:    -O2 -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
+  type:           exitcode-stdio-1.0
+  build-depends:
+    , QuickCheck
+    , quickcheck-extra
+    , tasty
+    , tasty-bench
+
+  hs-source-dirs: bench/quickcheck-extra-bench

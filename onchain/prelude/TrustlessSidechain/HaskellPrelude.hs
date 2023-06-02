@@ -299,6 +299,7 @@ module TrustlessSidechain.HaskellPrelude (
   Function.on,
   fromString,
   error,
+  ifThenElse,
 ) where
 
 import Control.Applicative (Applicative)
@@ -315,7 +316,7 @@ import Data.Aeson.KeyMap qualified as AesonKeyMap
 import Data.Aeson.Types qualified as AesonTypes
 import Data.Bifunctor (first)
 import Data.Bifunctor qualified as Bifunctor
-import Data.Bool (Bool)
+import Data.Bool (Bool (False, True))
 import Data.Bool qualified as Bool
 import Data.ByteString qualified as ByteString
 import Data.Char (Char)
@@ -619,3 +620,16 @@ jsonParseKey ::
   AesonTypes.Parser a
 jsonParseKey k p kvs =
   AesonTypes.explicitParseField p kvs (Exts.fromString . Text.unpack $ k)
+
+{- | Needed to ensure @if@ works properly.
+
+ @since Unreleased
+-}
+ifThenElse ::
+  forall (a :: Type).
+  Bool ->
+  a ->
+  a ->
+  a
+ifThenElse False _ x = x
+ifThenElse True x _ = x
