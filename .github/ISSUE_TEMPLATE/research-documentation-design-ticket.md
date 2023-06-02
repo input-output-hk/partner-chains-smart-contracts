@@ -1,28 +1,15 @@
 ---
 name: Research, Design, Specification, or Documentation Task
 about: A ticket describing a task relating to a design issue, research, or addition of documentation.
-labels: Documentation/Spec/Research
+labels: ["research", "specification", "documentation"]
 assignees: ''
+title: Research/Spec/Doc:
 
 ---
-## Type
 
 <!--
-Is your ticket related to a specification issue, a design proposal, a research
-question or adding further documentation?.
-
-If it is a question, then probably you should be using the question template.
-
---- Example ---
-
-- [x] Research
-- [ ] Spec/Design
-- [ ] Documentation
-
+Pick one of Research/Spec/Doc for the title above, do the same for the issue labels
 -->
-- [ ] Research
-- [ ] Spec/Design
-- [ ] Documentation
 
 ## Description
 
@@ -47,19 +34,14 @@ describe them.
 
 ## Goals
 
-- [ ] refactor X
-- [ ] add Y
-- [ ] test Z
-- [ ] update X
-- [ ] amend Y
+- [ ] Produce a draft with research findings
+- [ ] Write a Sidechain Improvement Proposal
+- [ ] Update documentation
 
 -->
 
-## Links
+## Related issues/PRs
 
 <!--
-Add other linked tasks here. Leave the meta-task in place so the task gets
-mentioned on its timeline.
+Add other linked tasks here.
 -->
-
-- meta-task #181
