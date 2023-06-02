@@ -3,7 +3,7 @@ name: Research, Design, Specification, or Documentation Task
 about: A ticket describing a task relating to a design issue, research, or addition of documentation.
 labels: ["research", "specification", "documentation"]
 assignees: ''
-title: Research/Spec/Doc:
+title: "Research/Spec/Doc:"
 
 ---
 
