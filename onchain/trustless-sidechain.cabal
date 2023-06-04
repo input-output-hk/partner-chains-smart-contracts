@@ -147,7 +147,7 @@ library plutus-shim-prelude
   hs-source-dirs:  prelude
 
 library quickcheck-extra
-  import:          common-lang
+  import:          common-lang, common-optimized
   exposed-modules: Test.QuickCheck.Extra
   build-depends:
     , QuickCheck

@@ -1,7 +1,7 @@
 ---
 name: Development Ticket
 about: A ticket describing a task relating to DApp development - can be either onchain or offchain.
-labels: offchain onchain
+labels:
 assignees: ''
 
 ---
@@ -62,11 +62,8 @@ considered  _done_ until all these tests are :green: and integrated into the
 CI.
 -->
 
-## Links
+## Related issues/PRs
 
 <!--
-Add other linked tasks here. Leave the meta-task in place so the task gets
-mentioned on its timeline.
+Add other linked tasks here.
 -->
-
-- meta-task #181

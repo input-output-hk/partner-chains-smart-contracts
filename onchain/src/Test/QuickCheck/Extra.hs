@@ -68,7 +68,7 @@ suchThatRetrying ::
 suchThatRetrying limit gen p = sized (go 0)
   where
     go :: Word -> Int -> Gen a
-    go !count size =
+    go !count !size =
       resize size gen >>= \x ->
         if
             | p x -> pure x
@@ -90,7 +90,7 @@ suchThatMapRetrying ::
 suchThatMapRetrying limit gen k = sized (go 0)
   where
     go :: Word -> Int -> Gen b
-    go !count size =
+    go !count !size =
       resize size gen
         >>= ( k >>> \case
                 Nothing ->
@@ -118,11 +118,9 @@ sublistOf = \case
     go :: [a] -> Int -> Word64 -> Gen [a]
     go rest !bitsLeft !encoding = case rest of
       [] -> pure []
-      whole@(x : _) ->
-        if bitsLeft <= 0
-          then arbitrary >>= go rest (finiteBitSize @Word64 undefined)
-          else
-            let !shift = countTrailingZeros encoding
-             in if shift == 0
-                  then (x :) <$> go (drop 1 whole) (bitsLeft - 1) (encoding `unsafeShiftR` 1)
-                  else go (drop shift whole) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
+      (x : xs) ->
+        let !shift = min bitsLeft (countTrailingZeros encoding)
+         in if
+                | shift > 0 -> go (drop shift rest) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
+                | bitsLeft == 0 -> arbitrary >>= go rest (finiteBitSize @Word64 undefined)
+                | otherwise -> (x :) <$> go xs (bitsLeft - 1) (encoding `unsafeShiftR` 1)

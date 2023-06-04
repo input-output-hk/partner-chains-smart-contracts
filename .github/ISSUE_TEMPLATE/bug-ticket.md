@@ -62,11 +62,8 @@ Offer some useful information regarding your system.
 Add any other information about the problem here.
 -->
 
-## Links
+## Related issues/PRs
 
 <!--
-Add other linked tasks here. Leave the meta-task in place so the task gets
-mentioned on its timeline.
+Add other linked tasks here.
 -->
-
-- meta-task #181
