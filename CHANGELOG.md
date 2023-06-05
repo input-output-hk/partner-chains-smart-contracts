@@ -35,6 +35,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * CTL is now version 5.0.0 (removing ogmios-datum-cache from runtime dependencies)
   ([395](https://github.com/mlabs-haskell/trustless-sidechain/issues/395),
   offchain)
+* Refactored configuration file parser
+  ([460](https://github.com/mlabs-haskell/trustless-sidechain/issues/460),
 
 ## Fixed
 * Deregistration fail after multiple registrations with the same SPO public key

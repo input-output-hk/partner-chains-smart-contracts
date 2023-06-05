@@ -1,7 +1,5 @@
 module TrustlessSidechain.Options.Types
-  ( CommitteeSignaturesInput(..)
-  , CommitteeInput(..)
-  , CommitteeSignatures
+  ( InputArgOrFile(..)
   , Config(..)
   , Endpoint(..)
   , Options(..)
@@ -84,15 +82,17 @@ data Endpoint
       CandidatePermissionTokenMintInfo
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
-      { newCommitteePubKeysInput ∷ CommitteeInput
-      , committeeSignaturesInput ∷ CommitteeSignaturesInput
+      { newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
+      , committeeSignaturesInput ∷
+          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
   | SaveRoot
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , committeeSignaturesInput ∷ CommitteeSignaturesInput
+      , committeeSignaturesInput ∷
+          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -100,11 +100,11 @@ data Endpoint
     CommitteeHandover
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , newCommitteePubKeysInput ∷ CommitteeInput
+      , newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , newCommitteeSignaturesInput ∷
-          CommitteeSignaturesInput
+          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
       , newMerkleRootSignaturesInput ∷
-          CommitteeSignaturesInput
+          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
@@ -114,23 +114,19 @@ data Endpoint
           Maybe CandidatePermissionTokenMintInit
       }
   | Init
-      { committeePubKeysInput ∷ CommitteeInput
+      { committeePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , initSidechainEpoch ∷ BigInt
       , useInitTokens ∷ Boolean
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
       }
   | SaveCheckpoint
-      { committeeSignaturesInput ∷ CommitteeSignaturesInput
+      { committeeSignaturesInput ∷
+          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt
       }
-
-derive instance Generic Endpoint _
-
-instance Show Endpoint where
-  show = genericShow
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain
@@ -145,41 +141,11 @@ type CandidatePermissionTokenMintInit =
     candidatePermissionTokenUtxo ∷ Maybe TransactionInput
   }
 
--- | `CommitteeSignatures` is the committee members' public keys with associated
--- | signatures (if such a signature exists)
-type CommitteeSignatures = List (SidechainPublicKey /\ Maybe SidechainSignature)
-
--- | `CommitteeSignaturesInput` represents that we either may allow a
--- | committees' signatures as input via
--- |
--- |    - A list of `SidechainPublicKey` and its associated
--- |    `SidechainSignature` (if such a signature is provided); or
--- |
--- |    - A FilePath of a JSON file with the aforementioned data
--- |    encoded as in `ConfigFile.decodeCommitteeSignatures`
-data CommitteeSignaturesInput
-  = CommitteeSignatures CommitteeSignatures
-  | CommitteeSignaturesFilePath FilePath
-
-derive instance Generic CommitteeSignaturesInput _
-
-instance Show CommitteeSignaturesInput where
-  show = genericShow
-
--- | `CommitteeInput` represents that we may either allow a committee as input
--- | via
--- |
--- |    - A list of `SidechainPublicKey`; or
--- |
--- |    - A filePath of a JSON file with the aforementioned data encoded as in `ConfigFile.decodeCommittee`
-data CommitteeInput
-  = Committee (List SidechainPublicKey)
-  | CommitteeFilePath FilePath
-
-derive instance Generic CommitteeInput _
-
-instance Show CommitteeInput where
-  show = genericShow
+-- | `InputArgOrFile` represents that we may either allow an option as input
+-- | via a CLI argument or a filepath of a JSON file
+data InputArgOrFile (a ∷ Type)
+  = InputFromArg a
+  | InputFromFile FilePath
 
 -- | Network configuration of the runtime dependencies
 -- Any parameter can be set `null` falling back to its default value
