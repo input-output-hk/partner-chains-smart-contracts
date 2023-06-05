@@ -1,7 +1,3 @@
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 -- Needed for Arbitrary instances for Plutus types
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,13 +6,14 @@
 -}
 module Test.TrustlessSidechain.MerkleTree (test) where
 
-import Control.Monad (guard, void)
+import Control.Monad (fail, guard, void)
 import Data.Kind (Type)
 import Data.List qualified as List
-import GHC.Float (Double)
+import Data.String qualified as HString
+import GHC.Float (Double, logBase)
+import GHC.Real (floor, fromRational)
 import PlutusPrelude (NonEmpty ((:|)))
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Prelude
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Arbitrary1 (liftArbitrary, liftShrink),
@@ -33,8 +30,9 @@ import Test.QuickCheck.Extra qualified as QCExtra
 import Test.QuickCheck.Gen qualified as Gen
 import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree qualified as MT
-import Prelude qualified
+import TrustlessSidechain.PlutusPrelude
 
 test :: TestTree
 test =
@@ -49,7 +47,7 @@ test =
       ]
   where
     go :: QuickCheckTests -> QuickCheckTests
-    go = Prelude.max 10_000
+    go = TSPrelude.max 10_000
 
 -- Properties
 
@@ -59,18 +57,18 @@ logProofLength :: Property
 logProofLength = forAllHelper $ \lst ->
   let tree = MT.fromNonEmpty lst
       heightLimit =
-        Prelude.floor (Prelude.logBase @Double 2 (Prelude.fromIntegral (neLength lst))) + 2
+        floor (logBase @Double 2 (TSPrelude.fromIntegral (neLength lst))) + 2
       measuredHeight = MT.height tree
    in counterexample (go heightLimit measuredHeight)
         . property
         $ measuredHeight <= heightLimit
   where
-    go :: Integer -> Integer -> Prelude.String
+    go :: Integer -> Integer -> HString.String
     go heightLimit measuredHeight =
       "Measured height: "
-        <> Prelude.show measuredHeight
+        <> TSPrelude.show measuredHeight
         <> " , height limit: "
-        <> Prelude.show heightLimit
+        <> TSPrelude.show heightLimit
 
 -- Verify that presence in list if and only if presence in tree from list
 lookupMpProof :: Property
@@ -87,7 +85,7 @@ lookupMpProof = forAllNonEmptyPlus $ \ne x ->
 
 -- root hash
 inListMemberMp :: Property
-inListMemberMp = forAllShrinkShow arbitrary shrink Prelude.show $ \x ->
+inListMemberMp = forAllShrinkShow arbitrary shrink TSPrelude.show $ \x ->
   checkCoverage
     . cover 50.0 (isPresent x) "present case"
     . cover 50.0 (not . isPresent $ x) "absent case"
@@ -124,10 +122,10 @@ lookupsProof = forAllLookupsWrapper $ \ne x ->
         Just proof -> isJust . List.find (go2 rootHash proof) $ lookups
   where
     go :: MT.RootHash -> (MT.RootHash, MT.MerkleProof) -> Bool
-    go needle (rootHash, _) = needle Prelude.== rootHash
+    go needle (rootHash, _) = needle TSPrelude.== rootHash
     go2 :: MT.RootHash -> MT.MerkleProof -> (MT.RootHash, MT.MerkleProof) -> Bool
     go2 needleHash needleProof (rootHash, proof) =
-      needleHash Prelude.== rootHash Prelude.&& needleProof Prelude.== proof
+      needleHash TSPrelude.== rootHash TSPrelude.&& needleProof TSPrelude.== proof
 
 -- Helpers
 
@@ -135,25 +133,25 @@ lookupsProof = forAllLookupsWrapper $ \ne x ->
 instance Arbitrary BuiltinByteString where
   arbitrary = do
     byteList :: [Integer] <- liftArbitrary $ Gen.choose (0, 255)
-    Prelude.pure . Prelude.foldr Builtins.consByteString Builtins.emptyByteString $ byteList
+    TSPrelude.pure . TSPrelude.foldr Builtins.consByteString Builtins.emptyByteString $ byteList
   shrink bbs = do
     let len = Builtins.lengthOfByteString bbs
     guard (len > 0)
     start <- [0 .. len - 1]
     len' <- [1 .. len]
     guard (len' <= len - start)
-    Prelude.pure . Builtins.sliceByteString start len' $ bbs
+    TSPrelude.pure . Builtins.sliceByteString start len' $ bbs
 
 -- Orphan 'Arbitrary1' for Plutus NonEmpty
 instance Arbitrary1 NonEmpty where
   liftArbitrary gen = do
     h <- gen
     t <- liftArbitrary gen
-    Prelude.pure $ h :| t
+    TSPrelude.pure $ h :| t
   liftShrink shr (h :| t) = do
     h' <- shr h
     t' <- liftShrink shr t
-    Prelude.pure $ h' :| t'
+    TSPrelude.pure $ h' :| t'
 
 -- Wrapper for NonEmpty with only unique elements in it
 --
@@ -161,11 +159,11 @@ instance Arbitrary1 NonEmpty where
 -- violate invariants by doing so.
 newtype UniqueNonEmpty a = UniqueNonEmpty (NonEmpty a)
 
-instance (Arbitrary a, Prelude.Eq a) => Arbitrary (UniqueNonEmpty a) where
-  arbitrary = Prelude.fmap UniqueNonEmpty $ do
+instance (Arbitrary a, TSPrelude.Eq a) => Arbitrary (UniqueNonEmpty a) where
+  arbitrary = TSPrelude.fmap UniqueNonEmpty $ do
     h <- arbitrary
     t <- arbitrary
-    Prelude.pure $ case List.uncons . List.nub $ h : t of
+    TSPrelude.pure $ case List.uncons . List.nub $ h : t of
       -- Technically this is impossible, but if it happens, we just make an
       -- empty list of just the head.
       Nothing -> h :| []
@@ -174,7 +172,7 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (UniqueNonEmpty a) where
   -- To ensure our invariant doesn't break, we only drop list elements,
   -- never shrink them.
   shrink (UniqueNonEmpty xs) =
-    Prelude.fmap UniqueNonEmpty (liftShrink (const []) xs)
+    TSPrelude.fmap UniqueNonEmpty (liftShrink (const []) xs)
 
 -- Wrapper for NonEmpty together with either an element it must include, or an
 -- element it must exclude.
@@ -187,9 +185,9 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (UniqueNonEmpty a) where
 data NonEmptyPlus a
   = Including (NonEmpty a) a
   | Excluding (NonEmpty a) a
-  deriving stock (Prelude.Show)
+  deriving stock (TSPrelude.Show)
 
-instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
+instance (Arbitrary a, TSPrelude.Eq a) => Arbitrary (NonEmptyPlus a) where
   arbitrary = Gen.oneof [mkIncluding, mkExcluding]
     where
       -- We generate a non-empty list of a, pick a random element, and go with
@@ -197,7 +195,7 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
       mkIncluding :: Gen (NonEmptyPlus a)
       mkIncluding = do
         ne@(x :| _) <- liftArbitrary arbitrary
-        Prelude.pure $ Including ne x
+        TSPrelude.pure $ Including ne x
       -- Generate a non-empty list with only unique elements in it, pick a
       -- random element, and go with that
       mkExcluding :: Gen (NonEmptyPlus a)
@@ -206,9 +204,9 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
         case ne of
           (x :| []) -> do
             -- Generate an item different to us
-            y <- arbitrary `QCExtra.suchThat` (Prelude./= x)
-            Prelude.pure $ Excluding (y :| []) x
-          (x :| (y : ys)) -> Prelude.pure $ Excluding (y :| ys) x
+            y <- arbitrary `QCExtra.suchThat` (TSPrelude./= x)
+            TSPrelude.pure $ Excluding (y :| []) x
+          (x :| (y : ys)) -> TSPrelude.pure $ Excluding (y :| ys) x
   shrink = \case
     -- To avoid breaking the invariant, we 'crack' the list around the included
     -- element, shrink both sides, then reassemble.
@@ -222,12 +220,12 @@ instance (Arbitrary a, Prelude.Eq a) => Arbitrary (NonEmptyPlus a) where
         let combined = pre' List.++ [x] List.++ post'
         -- This is safe, as we know there must be at least one element present.
         let shrunk = List.head combined :| List.tail combined
-        Prelude.pure $ Including shrunk x
+        TSPrelude.pure $ Including shrunk x
     -- To avoid breaking the invariant, we only shrink structurally, and don't
     -- touch the omitted element
     Excluding xs x -> do
       xs' <- liftShrink (const []) xs
-      Prelude.pure $ Excluding xs' x
+      TSPrelude.pure $ Excluding xs' x
 
 -- Checks which case we're in
 isInclusive :: NonEmptyPlus a -> Bool
@@ -246,28 +244,28 @@ getContents = \case
 data MerkleLookupProof
   = Present (NonEmpty BuiltinByteString) BuiltinByteString
   | Absent (NonEmpty BuiltinByteString) BuiltinByteString MT.MerkleProof
-  deriving stock (Prelude.Show)
+  deriving stock (TSPrelude.Show)
 
 instance Arbitrary MerkleLookupProof where
   arbitrary = do
     nePlus <- arbitrary
     case nePlus of
-      Including ne x -> Prelude.pure . Present ne $ x
+      Including ne x -> TSPrelude.pure . Present ne $ x
       Excluding ne x -> do
         let tree = MT.fromNonEmpty ne
-        let allProofs = Prelude.fmap snd . MT.lookupsMp $ tree
+        let allProofs = TSPrelude.fmap snd . MT.lookupsMp $ tree
         proof <- Gen.elements allProofs
-        Prelude.pure . Absent ne x $ proof
+        TSPrelude.pure . Absent ne x $ proof
   shrink = \case
     Present ne x -> do
-      (ne', x') <- Prelude.fmap getContents . shrink . Including ne $ x
-      Prelude.pure . Present ne' $ x'
+      (ne', x') <- TSPrelude.fmap getContents . shrink . Including ne $ x
+      TSPrelude.pure . Present ne' $ x'
     Absent ne x _ -> do
-      (ne', x') <- Prelude.fmap getContents . shrink . Excluding ne $ x
+      (ne', x') <- TSPrelude.fmap getContents . shrink . Excluding ne $ x
       let tree = MT.fromNonEmpty ne'
-      let allProofs = Prelude.fmap snd . MT.lookupsMp $ tree
+      let allProofs = TSPrelude.fmap snd . MT.lookupsMp $ tree
       proof' <- allProofs
-      Prelude.pure . Absent ne' x' $ proof'
+      TSPrelude.pure . Absent ne' x' $ proof'
 
 -- Checks which case we're in
 isPresent :: MerkleLookupProof -> Bool
@@ -279,7 +277,7 @@ isPresent = \case
 data LookupsWrapper
   = InLookups (NonEmpty BuiltinByteString) BuiltinByteString
   | NotInLookups (NonEmpty BuiltinByteString) BuiltinByteString
-  deriving stock (Prelude.Show)
+  deriving stock (TSPrelude.Show)
 
 instance Arbitrary LookupsWrapper where
   arbitrary = do
@@ -287,13 +285,13 @@ instance Arbitrary LookupsWrapper where
     Gen.oneof [mkIn ne, mkNotIn ne]
     where
       mkIn :: NonEmpty BuiltinByteString -> Gen LookupsWrapper
-      mkIn ne@(x :| _) = Prelude.pure . InLookups ne $ x
+      mkIn ne@(x :| _) = TSPrelude.pure . InLookups ne $ x
       mkNotIn :: NonEmpty BuiltinByteString -> Gen LookupsWrapper
       mkNotIn (x :| xs) = case xs of
         [] -> do
-          y <- arbitrary `QCExtra.suchThat` (x Prelude./=)
-          Prelude.pure . NotInLookups (y :| []) $ x
-        (y : ys) -> Prelude.pure . NotInLookups (y :| ys) $ x
+          y <- arbitrary `QCExtra.suchThat` (x TSPrelude./=)
+          TSPrelude.pure . NotInLookups (y :| []) $ x
+        (y : ys) -> TSPrelude.pure . NotInLookups (y :| ys) $ x
   shrink = \case
     -- To preserve the invariant, we crack the list around the present element,
     -- shrink both sides, then reassemble.
@@ -306,11 +304,11 @@ instance Arbitrary LookupsWrapper where
         let combined = pre' List.++ [x] List.++ post'
         -- This is safe, as we know there must be least one element present.
         let shrunk = List.head combined :| List.tail combined
-        Prelude.pure $ InLookups shrunk x
+        TSPrelude.pure $ InLookups shrunk x
     -- If our element isn't present, shrinking won't magically make it so.
     NotInLookups ne x -> do
       UniqueNonEmpty ne' <- shrink . UniqueNonEmpty $ ne
-      Prelude.pure . NotInLookups ne' $ x
+      TSPrelude.pure . NotInLookups ne' $ x
 
 -- Checks which case we're in
 inLookups :: LookupsWrapper -> Bool
@@ -326,22 +324,22 @@ getLookupsData = \case
 
 -- Helper for properties to reduce line noise
 forAllHelper ::
-  (Arbitrary a, Prelude.Show a) =>
+  (Arbitrary a, TSPrelude.Show a) =>
   (NonEmpty a -> Property) ->
   Property
 forAllHelper =
   forAllShrinkShow
     (liftArbitrary arbitrary)
     (liftShrink shrink)
-    Prelude.show
+    TSPrelude.show
 
 -- Helper for using NonEmptyPlus in properties. Wires in coverage automatically.
 forAllNonEmptyPlus ::
-  (Prelude.Show a, Arbitrary a, Prelude.Eq a) =>
+  (TSPrelude.Show a, Arbitrary a, TSPrelude.Eq a) =>
   (NonEmpty a -> a -> Property) ->
   Property
 forAllNonEmptyPlus cb =
-  forAllShrinkShow arbitrary shrink Prelude.show $ \x ->
+  forAllShrinkShow arbitrary shrink TSPrelude.show $ \x ->
     checkCoverage
       . cover 50.0 (isInclusive x) "present case"
       . cover 50.0 (not . isInclusive $ x) "absent case"
@@ -352,7 +350,7 @@ forAllLookupsWrapper ::
   (NonEmpty BuiltinByteString -> BuiltinByteString -> Property) ->
   Property
 forAllLookupsWrapper cb =
-  forAllShrinkShow arbitrary shrink Prelude.show $ \x ->
+  forAllShrinkShow arbitrary shrink TSPrelude.show $ \x ->
     checkCoverage
       . cover 50.0 (inLookups x) "present case"
       . cover 50.0 (not . inLookups $ x) "absent case"
@@ -365,14 +363,14 @@ neLength (_ :| xs) = 1 + length xs
 neFind :: (Eq a) => a -> NonEmpty a -> Maybe a
 neFind needle (stack :| stacks) =
   if needle == stack
-    then Prelude.pure needle
+    then TSPrelude.pure needle
     else List.find (== needle) stacks
 
 -- If the element is in the list, return everything before it, and the rest
 -- without it, otherwise Nothing.
 crackList ::
   forall (a :: Type).
-  (Prelude.Eq a) =>
+  (TSPrelude.Eq a) =>
   a ->
   [a] ->
   Maybe ([a], [a])
@@ -383,6 +381,6 @@ crackList x = go []
       -- We never found the element, fail
       [] -> Nothing
       (y : ys) ->
-        if x Prelude.== y
+        if x TSPrelude.== y
           then Just (List.reverse acc, ys)
           else go (y : acc) ys

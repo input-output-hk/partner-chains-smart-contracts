@@ -20,14 +20,9 @@ import PlutusTx.IsData.Class (FromData, ToData)
 import PlutusTx.IsData.Class qualified as IsData
 import System.IO (Handle, IOMode (ReadMode, WriteMode))
 import System.IO qualified as IO
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
-
--- N.B. technically, the @STANDARDS.md@ says something like we shouldn't
--- import 'Prelude' unqualified, but this little CLI thing is more of a
--- 'Prelude' project instead of a 'PlutusTx' sorta project and it makes
--- more sense to just use 'Prelude' here..
-import Prelude
 
 -- * Utility functions
 

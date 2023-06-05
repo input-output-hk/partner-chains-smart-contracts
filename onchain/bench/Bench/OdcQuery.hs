@@ -29,17 +29,15 @@ import Control.Exception qualified as Exception
 import Data.Aeson (Value (Object, String))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
-import Data.ByteString (ByteString)
 import Data.ByteString.Base64 qualified as ByteString.Base64
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.ByteString.Lazy qualified as ByteString.Lazy
-import Data.Proxy (Proxy (Proxy))
-import Data.Text (Text)
+import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Network.WebSockets (Connection)
 import Network.WebSockets qualified as WebSockets
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 {- | @'withOdcConnection' host port f@ wraps
  'Network.WebSockets.runClient' and forks a ping thread (to avoid timeout);
@@ -54,7 +52,7 @@ import Prelude
 -}
 withOdcConnection ::
   -- | Host
-  String ->
+  HString.String ->
   -- | Port
   Int ->
   -- | IO action
@@ -63,7 +61,7 @@ withOdcConnection ::
 withOdcConnection host port f =
   -- TODO: maybe put a 'Network.Socket.withSocketsDo' for windows compatibility?
   WebSockets.runClient host port "ws" $ \conn ->
-    WebSockets.withPingThread conn pingInterval (return ()) $ f conn
+    WebSockets.withPingThread conn pingInterval (pure ()) $ f conn
   where
     pingInterval = 30
 
@@ -100,10 +98,10 @@ getTxByHashRequest txId =
 getBabbageTxByHash :: Text -> Connection -> IO (Maybe (Tx BabbageEra))
 getBabbageTxByHash txId conn =
   getRawTxByHash txId conn >>= \case
-    Nothing -> return Nothing
+    Nothing -> pure Nothing
     Just rawTx -> case Cardano.deserialiseFromCBOR (Cardano.proxyToAsType (Proxy :: Proxy (Tx BabbageEra))) rawTx of
-      Left err -> error $ "'getBabbageTxByhash' invalid Babbage era transaction: " ++ show err
-      Right result -> return $ Just result
+      Left err -> error $ "'getBabbageTxByhash' invalid Babbage era transaction: " <> show err
+      Right result -> pure $ Just result
 
 {- | See <https://github.com/mlabs-haskell/ogmios-datum-cache#gettxbyhash>.
  This returns the raw bytestring of the tx (if it exists)
@@ -114,11 +112,11 @@ getRawTxByHash txId conn =
     >> WebSockets.receiveData conn
     >>= \byteString -> case Aeson.eitherDecodeStrict byteString of
       Right (Object json) ->
-        let missingJsonField :: String -> IO a
+        let missingJsonField :: HString.String -> IO a
             missingJsonField field =
               Exception.throwIO $
                 OdcQueryError
-                  ("'getRawTxByHash' bad ogmios-datum-cache response missing json field `" ++ field ++ "`")
+                  ("'getRawTxByHash' bad ogmios-datum-cache response missing json field `" <> field <> "`")
                   byteString
          in -- high level idea of this unreadable mess...
             -- we focus on either
@@ -139,14 +137,14 @@ getRawTxByHash txId conn =
                     -- they're probably right:
                     -- <https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/src/Internal/QueryM/GetTxByHash.purs#L23>
                     case ByteString.Base64.decodeBase64 $ Text.Encoding.encodeUtf8 base64RawTx of
-                      Right rawTx -> return $ Just rawTx
+                      Right rawTx -> pure $ Just rawTx
                       Left err ->
                         Exception.throwIO $
                           OdcQueryError
-                            ("'getRawTxByHash' bad ogmios-datum-cache failed decoding base64 hash: " ++ Text.unpack err)
+                            ("'getRawTxByHash' bad ogmios-datum-cache failed decoding base64 hash: " <> Text.unpack err)
                             byteString
                   _ -> missingJsonField "result.TxFound.rawTx"
-                _ -> return Nothing
+                _ -> pure Nothing
               -- If it's more clear, we are really testing something along
               -- the lines of:
               -- > _ -> case Aeson.KeyMap.lookup "TxNotFound" of
@@ -155,7 +153,7 @@ getRawTxByHash txId conn =
       Left err ->
         Exception.throwIO $
           OdcQueryError
-            ("'getRawTxByHash' bad ogmios-datum-cache response failed parsing: " ++ err)
+            ("'getRawTxByHash' bad ogmios-datum-cache response failed parsing: " <> err)
             byteString
       _ ->
         Exception.throwIO $
@@ -166,7 +164,7 @@ getRawTxByHash txId conn =
 data OdcQueryError
   = OdcQueryError
       -- error message
-      String
+      HString.String
       -- data that was attempted to be parsed from ogmios datum cache if it exists
       ByteString
   deriving (Show)
@@ -174,6 +172,6 @@ data OdcQueryError
 instance Exception OdcQueryError where
   displayException (OdcQueryError err input) =
     "OdcQueryError: "
-      ++ err
-      ++ "Ogmios datum cache returned: "
-      ++ ByteString.Char8.unpack input
+      <> err
+      <> "Ogmios datum cache returned: "
+      <> ByteString.Char8.unpack input

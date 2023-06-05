@@ -18,7 +18,7 @@ import Cases.GrowingTreeClaim qualified as GrowingTreeClaim
 import Cases.InitSidechain qualified as InitSidechain
 import Cases.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import Control.Monad qualified as Monad
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 {- | Assumptions:
     - `./payment.skey` is your secret key

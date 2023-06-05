@@ -15,10 +15,10 @@ import PlutusTx.IsData.Class (
   unsafeFromBuiltinData,
  )
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty
 import Test.Tasty.HUnit qualified as HUnit
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleProof (MerkleProof),
   RootHash (RootHash),
@@ -27,6 +27,7 @@ import TrustlessSidechain.MerkleTree (
   sibling,
   siblingSide,
  )
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   CombinedMerkleProof (CombinedMerkleProof),
   MerkleTreeEntry (MerkleTreeEntry),
@@ -37,14 +38,13 @@ import TrustlessSidechain.Types (
   mtePreviousMerkleRoot,
   mteRecipient,
  )
-import Prelude qualified
 
 -- | 'unsafeFromHex' unsafely converts hex to the byte representation
 unsafeFromHex :: ByteString -> ByteString
 unsafeFromHex bs = case Bytes.fromHex bs of
   Right bs' -> case Bytes.getLedgerBytes bs' of
     BuiltinByteString bs'' -> bs''
-  Left err -> Prelude.error err
+  Left err -> TSPrelude.error err
 
 {- | 'testSide' includes some integration tests with the mamba people for #249
  for the 'Side' type

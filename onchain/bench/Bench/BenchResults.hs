@@ -1,3 +1,6 @@
+-- For sqlite-direct compatibility with semirings
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {- | "Bench.BenchResults" is the module which includes a database connection (along
  with associated queries) for gathering benchmark results.
 -}
@@ -34,9 +37,9 @@ import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.Coerce qualified as Coerce
-import Data.Int (Int64)
 import Data.List qualified as List
-import Data.Text (Text)
+import Data.Semiring (WrappedNum (WrapNum))
+import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text.IO
 import Database.SQLite3 (Database, ParamIndex, Statement, StepResult (Done, Row))
@@ -44,7 +47,7 @@ import Database.SQLite3 qualified as SQLite3
 import Database.SQLite3.Direct (Utf8)
 import Database.SQLite3.Direct qualified as SQLite3.Direct
 import System.IO qualified as IO
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 -- * High level API
 
@@ -74,7 +77,7 @@ openBenchResults filePath =
 {- | 'withFreshBenchResults' is a bracket style resource handler for
  'freshBenchResults'
 -}
-withFreshBenchResults :: FilePath -> Text -> (BenchResults -> IO a) -> IO a
+withFreshBenchResults :: IO.FilePath -> Text -> (BenchResults -> IO a) -> IO a
 withFreshBenchResults dir fileNameHint =
   Exception.bracket
     (freshBenchResults dir fileNameHint)
@@ -83,10 +86,10 @@ withFreshBenchResults dir fileNameHint =
 {- | @'freshBenchResults' dir fileNameHint@ is 'openBenchResults' but initialises the database
  with a fresh name in the given directory @dir@ with the given filename hint @hint@
 -}
-freshBenchResults :: FilePath -> Text -> IO BenchResults
+freshBenchResults :: IO.FilePath -> Text -> IO BenchResults
 freshBenchResults dir fileNameHint = do
   (path, handle) <- IO.openTempFile dir $ Text.unpack fileNameHint
-  Logger.logInfo $ "Creating benchmark results database at: " ++ path
+  Logger.logInfo $ "Creating benchmark results database at: " <> path
 
   -- just close the handle immediatly, since we're just using this for the
   -- fresh name
@@ -170,7 +173,7 @@ addTrial params benchResult =
     -- this is an update query, so it will run to completion in a single call.
     _stepResult <- SQLite3.step preparedStmt
 
-    return ()
+    pure ()
 
 {- | @'withSelectAllDescriptions' desc database $ \step -> ...@ is a bracket style
  resource handler to select all rows in the table @trials@
@@ -203,7 +206,7 @@ withSelectAllDescriptions description benchResult f =
           ms <- SQLite3.columnInt64 preparedStmt 2
           lovelaceFee <- SQLite3.columnInt64 preparedStmt 3
           txHash <- SQLite3.columnText preparedStmt 4
-          return $
+          pure $
             Just
               Trial
                 { tDescription = description
@@ -223,7 +226,7 @@ selectAllDescriptions :: Text -> BenchResults -> IO [Trial]
 selectAllDescriptions description benchResults =
   withSelectAllDescriptions description benchResults $ \step ->
     let go = \case
-          Nothing -> return []
+          Nothing -> pure []
           Just o -> (o :) <$> (step >>= go)
      in step >>= go
 
@@ -343,13 +346,13 @@ selectAllDescriptionsQuery =
 bindParameterIndex :: Statement -> Utf8 -> IO ParamIndex
 bindParameterIndex stmt paramName =
   SQLite3.Direct.bindParameterIndex stmt paramName >>= \case
-    Just paramIndex -> return paramIndex
+    Just paramIndex -> pure paramIndex
     Nothing ->
       Exception.throwIO $
         BenchResultsError $
           List.unwords
             [ "internal error: non-existant 'bindParameterIndex' of"
-            , "`" ++ ByteString.Char8.unpack (Coerce.coerce paramName) ++ "`."
+            , "`" <> ByteString.Char8.unpack (Coerce.coerce paramName) <> "`."
             , "Most likely an incorrectly written SQL query."
             ]
 
@@ -367,7 +370,19 @@ printQuery :: Text -> IO ()
 printQuery = Text.IO.putStrLn
 
 -- | 'BenchResultsError' newtype wrapper for internal errors of the system.
-newtype BenchResultsError = BenchResultsError String
+newtype BenchResultsError = BenchResultsError HString.String
   deriving (Show)
 
 instance Exception BenchResultsError
+
+-- Orphans
+
+deriving via
+  (WrappedNum SQLite3.Direct.ColumnIndex)
+  instance
+    Semiring SQLite3.Direct.ColumnIndex
+
+deriving via
+  (WrappedNum SQLite3.Direct.ColumnIndex)
+  instance
+    Ring SQLite3.Direct.ColumnIndex

@@ -1,6 +1,8 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+-- compat for tasty-quickcheck
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module TrustlessSidechain.HaskellPrelude (
   -- * Types
@@ -59,7 +61,7 @@ module TrustlessSidechain.HaskellPrelude (
   -- ** Basic
   Eq.Eq (..),
   Ord.Ord (..),
-  Show.Show,
+  Show.Show (..),
   Read.Read,
 
   -- ** Semigroup hierarchy
@@ -121,6 +123,7 @@ module TrustlessSidechain.HaskellPrelude (
 
   -- ** Other
   Category.Category (..),
+  Exts.IsString (..),
 
   -- * Functions
 
@@ -152,7 +155,10 @@ module TrustlessSidechain.HaskellPrelude (
   Semiring.isOne,
   Semiring.fromInteger,
   Semiring.fromIntegral,
+  signum,
   Euclidean.gcdExt,
+  even,
+  odd,
   Field.fromRational,
   Field.recip,
 
@@ -291,15 +297,13 @@ module TrustlessSidechain.HaskellPrelude (
   Tuple.curry,
   Tuple.uncurry,
   Tuple.swap,
-  show,
   (Function.$),
   (Function.&),
   Function.const,
   Function.flip,
   Function.on,
-  fromString,
-  error,
   ifThenElse,
+  Err.error,
 ) where
 
 import Control.Applicative (Applicative)
@@ -319,11 +323,11 @@ import Data.Bifunctor qualified as Bifunctor
 import Data.Bool (Bool (False, True))
 import Data.Bool qualified as Bool
 import Data.ByteString qualified as ByteString
-import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either qualified as Either
-import Data.Eq (Eq ((==)))
+import Data.Eq (Eq ((/=), (==)))
 import Data.Eq qualified as Eq
+import Data.Euclidean (Euclidean (rem))
 import Data.Euclidean qualified as Euclidean
 import Data.Field qualified as Field
 import Data.Foldable (Foldable (foldMap))
@@ -340,6 +344,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Monoid qualified as Monoid
+import Data.Ord (Ord (compare), Ordering (EQ, GT, LT))
 import Data.Ord qualified as Ord
 import Data.Proxy qualified as Proxy
 import Data.Scientific (Scientific)
@@ -347,6 +352,12 @@ import Data.Scientific qualified as Scientific
 import Data.Semialign qualified as Semialign
 import Data.Semialign.Indexed qualified as SemialignWithIndex
 import Data.Semigroup qualified as Semigroup
+import Data.Semiring (
+  Ring (negate),
+  Semiring (one, zero),
+  WrappedNum (WrapNum),
+  fromInteger,
+ )
 import Data.Semiring qualified as Semiring
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -366,8 +377,8 @@ import GHC.Float qualified as Float
 import GHC.IO qualified as IO
 import GHC.Integer qualified as Integer
 import Numeric.Natural qualified as Natural
+import Test.Tasty.QuickCheck (QuickCheckTests)
 import Text.Read qualified as Read
-import Text.Show (Show)
 import Text.Show qualified as Show
 import Witherable qualified
 
@@ -455,30 +466,6 @@ equating ::
   b ->
   Bool
 equating f x y = f x == f y
-
-{- | Outputs a 'Show' as a 'Text'.
-
- @since Unreleased
--}
-{-# INLINEABLE show #-}
-show :: forall (a :: Type). Show a => a -> Text
-show = Show.show >>> Text.pack
-
-{- | Designed for use with @RebindableSyntax@ to force string literals to be
- 'Text's instead.
-
- @since Unreleased
--}
-{-# INLINEABLE fromString #-}
-fromString :: [Char] -> Text
-fromString = Text.pack
-
-{- | Fail immediately with the given message.
-
- @since Unreleased
--}
-error :: forall (a :: Type). Text -> a
-error = Text.unpack >>> Err.error
 
 {- | Construct a JSON object from a collection of key-value pairs.
 
@@ -633,3 +620,42 @@ ifThenElse ::
   a
 ifThenElse False _ x = x
 ifThenElse True x _ = x
+
+{- | Check for evenness.
+
+ @since Unreleased
+-}
+even :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
+even x = (x `rem` 2) == 0
+
+{- | Check for oddness.
+
+ @since Unreleased
+-}
+odd :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
+odd x = (x `rem` 2) /= 0
+
+{- | Retrieve a representation of the sign of a numerical value as a type of
+ that value. Put another way, gives 'zero' when given an argument of
+ 'zero', @'negate' 'one'@ when given an argument less than 'zero', and 'one'
+ otherwise.
+
+ = Note
+
+ This is designed for fairly 'standard' numerical types. This will not work
+ correctly on something like a Gaussian integer, but for all numerical types
+ we support, this should work.
+
+ @since Unreleased
+-}
+signum :: forall (a :: Type). (Ord a, Ring a) => a -> a
+signum x = case compare x zero of
+  LT -> negate one
+  EQ -> zero
+  GT -> one
+
+-- Orphan instances
+
+deriving via (WrappedNum QuickCheckTests) instance Semiring QuickCheckTests
+
+deriving via (WrappedNum QuickCheckTests) instance Ring QuickCheckTests

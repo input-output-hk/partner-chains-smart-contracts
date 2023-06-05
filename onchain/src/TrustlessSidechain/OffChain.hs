@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
  functionality. In particular, we provide utilities for generating signatures
@@ -57,10 +56,14 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text qualified as Attoparsec.Text
+import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Hash (blake2b_256)
+import Data.List qualified as List
+import Data.String qualified as HaskellString
 import Data.Text qualified as Text
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import GHC.Err (undefined)
 import Ledger (PubKey (PubKey), Signature (Signature))
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
@@ -120,15 +123,8 @@ bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
 newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
   deriving (Show, Eq)
 
-instance FromJSON Bech32Recipient where
-  parseJSON =
-    fromJsonString "bech32" $
-      bech32RecipientFromText >>> \case
-        Left err -> jsonParseFail err
-        Right bech32 -> pure bech32
-
 -- | 'bech32RecipientFromText' parses a Bech32Recipient from 'Text'.
-bech32RecipientFromText :: Text -> Either Text Bech32Recipient
+bech32RecipientFromText :: Text -> Either HaskellString.String Bech32Recipient
 bech32RecipientFromText str =
   case Bech32.decode str of
     Left err -> Left $ "Failed decoding bech32: " <> show err
@@ -138,17 +134,24 @@ bech32RecipientFromText str =
         Nothing -> Left "Failed decoding bytes in bech32 recipient"
       | otherwise ->
         Left $
-          "Expected human readable part to be either: "
-            <> surroundAndShowTextWithBackticks (Bech32.humanReadablePartToText Bech32.Prefixes.addr)
-            <> " or "
-            <> surroundAndShowTextWithBackticks (Bech32.humanReadablePartToText Bech32.Prefixes.addr_test)
+          List.unwords
+            [ "Expected human readable part to be either:"
+            , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr
+            , "or"
+            , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr_test
+            ]
       where
-        surroundAndShowTextWithBackticks :: Text -> Text
+        surroundAndShowTextWithBackticks :: Text -> HaskellString.String
         surroundAndShowTextWithBackticks t = "`" <> show t <> "`"
         isAddr :: Bool
         isAddr =
           bech32HumanReadablePart == Bech32.Prefixes.addr
             || bech32HumanReadablePart == Bech32.Prefixes.addr_test
+
+instance FromJSON Bech32Recipient where
+  parseJSON = Aeson.withText "bech32" $ \str -> case bech32RecipientFromText str of
+    Left err -> Aeson.Types.parseFail err
+    Right bech32 -> pure bech32
 
 -- * Convenient sidechain committee public / private key wrapper + utility
 
@@ -160,32 +163,6 @@ data SidechainCommitteeMember = SidechainCommitteeMember
   , scmPublicKey :: SidechainPubKey
   }
 
-instance FromJSON SidechainCommitteeMember where
-  parseJSON = fromJsonObject "SidechainCommitteeMember" $ \obj -> do
-    SidechainCommitteeMember <$> jsonParseKey "private-key" privKey obj
-      <*> jsonParseKey "public-key" pubKey obj
-    where
-      privKey :: Value -> Aeson.Types.Parser SECP.SecKey
-      privKey =
-        fromJsonString "private-key" $
-          strToSecpPrivKey >>> \case
-            Left err -> jsonParseFail err
-            Right res -> pure res
-      pubKey :: Value -> Aeson.Types.Parser SidechainPubKey
-      pubKey =
-        fromJsonString "public-key" $
-          strToSecpPubKey >>> \case
-            Left err -> jsonParseFail err
-            Right res -> pure . secpPubKeyToSidechainPubKey $ res
-
-instance ToJSON SidechainCommitteeMember where
-  toJSON = error "SidechainCommitteeMember: detected use of toJSON, please use toEncoding"
-  toEncoding (SidechainCommitteeMember {..}) =
-    jsonObject
-      [ ("private-key", toEncoding . showSecpPrivKey $ scmPrivateKey)
-      , ("public-key", toEncoding . showScPubKey $ scmPublicKey)
-      ]
-
 {- | 'SidechainCommittee' is a newtype wrapper around a lsit of
  @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
  members (i.e., the 'Data.Aeson.FromJSON' is a derived via the newtype
@@ -195,28 +172,60 @@ newtype SidechainCommittee = SidechainCommittee
   {unSidechainCommittee :: [SidechainCommitteeMember]}
   deriving newtype (FromJSON, ToJSON)
 
+instance FromJSON SidechainCommitteeMember where
+  parseJSON = Aeson.withObject "SidechainCommitteeMember" $ \v ->
+    -- wraps up 'strToSecpPrivKey' and 'strToSecpPubKey' as JSON
+    -- parsers.
+    let pPrivKey :: Aeson.Value -> Aeson.Types.Parser SECP.SecKey
+        pPrivKey (Aeson.String text) =
+          case strToSecpPrivKey (Text.unpack text) of
+            Left err -> Aeson.Types.parseFail err
+            Right ans -> pure ans
+        pPrivKey _ = Aeson.Types.parseFail "Expected hex encoded SECP private key"
+
+        pPubKey :: Aeson.Value -> Aeson.Types.Parser SidechainPubKey
+        pPubKey (Aeson.String text) =
+          case fmap secpPubKeyToSidechainPubKey $ strToSecpPubKey (Text.unpack text) of
+            Left err -> Aeson.Types.parseFail err
+            Right ans -> pure ans
+        pPubKey _ = Aeson.Types.parseFail "Expected hex encoded DER SECP public key"
+     in SidechainCommitteeMember
+          <$> Aeson.Types.explicitParseField pPrivKey v "private-key"
+          <*> Aeson.Types.explicitParseField pPubKey v "public-key"
+
+instance ToJSON SidechainCommitteeMember where
+  toJSON (SidechainCommitteeMember {..}) =
+    Aeson.object
+      [ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
+      , "public-key" Aeson..= showScPubKey scmPublicKey
+      ]
+
 -- | Parses a hex encoded string into a sidechain private key
-strToSecpPrivKey :: Text -> Either Text SECP.SecKey
+strToSecpPrivKey ::
+  HaskellString.String ->
+  Either HaskellString.String SECP.SecKey
 strToSecpPrivKey raw = do
   decoded <-
-    first (Text.pack >>> ("Invalid sidechain key hex: " <>))
+    Bifunctor.first ("Invalid sidechain key hex: " <>)
       . Base16.decode
-      . encodeUtf8
+      . Char8.pack
       $ raw
-  maybe (Left "Unable to parse sidechain private key") Right . SECP.secKey $ decoded
+  maybe (Left "Unable to parse sidechain private key") Right $ SECP.secKey decoded
 
 {- | Parses a hex encoded string into a sidechain public key. Note that this
  uses 'Crypto.Secp256k1.importPubKey' which imports a DER-encoded
  public key.
 -}
-strToSecpPubKey :: Text -> Either Text SECP.PubKey
+strToSecpPubKey ::
+  HaskellString.String ->
+  Either HaskellString.String SECP.PubKey
 strToSecpPubKey raw = do
   decoded <-
-    first (Text.pack >>> ("Invalid sidechain public key hex: " <>))
+    Bifunctor.first ("Invalid sidechain public key hex: " <>)
       . Base16.decode
-      . encodeUtf8
+      . Char8.pack
       $ raw
-  maybe (Left "Unable to parse sidechain public key") Right . SECP.importPubKey $ decoded
+  maybe (Left "Unable to parse sidechain public key") Right $ SECP.importPubKey decoded
 
 -- * Generating a private sidechain key
 
@@ -284,15 +293,12 @@ signWithSidechainKey ::
 signWithSidechainKey skey msg =
   let serialised = Builtins.serialiseData $ toBuiltinData msg
       hashedMsg = blake2b_256 $ Builtins.fromBuiltin serialised
-      ecdsaMsg = fromMaybe errorOut . SECP.msg $ hashedMsg
+      ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
    in Crypto.Signature
         . Builtins.toBuiltin
         . SECP.getCompactSig
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
-  where
-    errorOut :: SECP.Msg
-    errorOut = error "signWithSidechainKey: unexpectedly failed to construct message"
 
 -- * Parsing functions
 
@@ -302,92 +308,96 @@ signWithSidechainKey skey msg =
   c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
  @
 -}
-txOutRefFromText :: Text -> Either Text TxOutRef
-txOutRefFromText =
-  first Text.pack
-    <<< Attoparsec.Text.parseOnly
-      ( do
-          rawTxId <- Attoparsec.Text.takeWhile (/= '#')
-          txId <- case Aeson.Extras.tryDecode rawTxId of
-            Left err -> fail err
-            Right res -> pure $ TxId $ Builtins.Internal.BuiltinByteString res
+txOutRefFromText ::
+  Text ->
+  Either HaskellString.String TxOutRef
+txOutRefFromText = Attoparsec.Text.parseOnly $ do
+  rawTxId <- Attoparsec.Text.takeWhile (/= '#')
+  txId <- case Aeson.Extras.tryDecode rawTxId of
+    Left err -> fail err
+    Right res -> pure $ TxId $ Builtins.Internal.BuiltinByteString res
 
-          _ <- Attoparsec.Text.char '#'
-          txIx <- Attoparsec.Text.decimal
-          pure $ TxOutRef txId txIx
-      )
+  _ <- Attoparsec.Text.char '#'
+  txIx <- Attoparsec.Text.decimal
+  pure $ TxOutRef txId txIx
 
 -- * Show functions
 
 -- | Serialise transaction output reference into CLI format (TX_ID#TX_IDX)
-showTxOutRef :: TxOutRef -> Text
+showTxOutRef ::
+  TxOutRef -> HaskellString.String
 showTxOutRef (TxOutRef (TxId txId) txIdx) =
   showBuiltinBS txId <> "#" <> show txIdx
 
 -- | Serialise a ByteString into hex string
-showBS :: ByteString -> Text
-showBS = decodeUtf8 . Base16.encode
+showBS :: ByteString -> HaskellString.String
+showBS =
+  Char8.unpack . Base16.encode
 
 -- | Serialise a ByteString into hex string
-showGenesisHash :: GenesisHash -> Text
+showGenesisHash :: GenesisHash -> HaskellString.String
 showGenesisHash = showBuiltinBS . getGenesisHash
 
 -- | Serialise a BuiltinByteString into hex string
-showBuiltinBS :: BuiltinByteString -> Text
+showBuiltinBS :: BuiltinByteString -> HaskellString.String
 showBuiltinBS = showBS . Builtins.fromBuiltin
 
 -- | Serialise a RootHash into hex of serialized built in data.
-showRootHash :: RootHash -> Text
+showRootHash :: RootHash -> HaskellString.String
 showRootHash = showHexOfCborBuiltinData
 
 -- | Serialise public key
-showPubKey :: PubKey -> Text
+showPubKey :: PubKey -> HaskellString.String
 showPubKey (PubKey (LedgerBytes pk)) = showBuiltinBS pk
 
 -- | Serialise sidechain public key
-showScPubKey :: SidechainPubKey -> Text
+showScPubKey :: SidechainPubKey -> HaskellString.String
 showScPubKey (SidechainPubKey pk) = showBuiltinBS pk
 
 -- | Serailises a 'SECP.SecKey' private key by hex encoding it
-showSecpPrivKey :: SECP.SecKey -> Text
+showSecpPrivKey :: SECP.SecKey -> HaskellString.String
 showSecpPrivKey = showBS . SECP.getSecKey
 
 {- | Serialise a sidechain public key and signature into
  > PUBKEY:SIG
 -}
-showScPubKeyAndSig :: SidechainPubKey -> Signature -> Text
+showScPubKeyAndSig ::
+  SidechainPubKey ->
+  Signature ->
+  HaskellString.String
 showScPubKeyAndSig sckey sig =
-  showScPubKey sckey
-    <> ":"
-    <> showSig sig
+  concat [showScPubKey sckey, ":", showSig sig]
 
 -- | Serialise signature
-showSig :: Signature -> Text
+showSig :: Signature -> HaskellString.String
 showSig (Signature sig) = showBuiltinBS sig
 
 {- | 'showThreshold' shows integers @n@ and @m@ as
  > n/m
  Importantly, this is compatible with the purescript parser format
 -}
-showThreshold :: Integer -> Integer -> Text
+showThreshold ::
+  Integer ->
+  Integer ->
+  HaskellString.String
 showThreshold n m = show n <> "/" <> show m
 
 {- | 'showMerkleTree' seralises a merkle tree to the hex encoded cbor builtin
  data representation
 -}
-showMerkleTree :: MerkleTree -> Text
+showMerkleTree :: MerkleTree -> HaskellString.String
 showMerkleTree = showHexOfCborBuiltinData
 
 {- | 'showMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
  data representation
 -}
-showMerkleProof :: MerkleProof -> Text
+showMerkleProof :: MerkleProof -> HaskellString.String
 showMerkleProof = showHexOfCborBuiltinData
 
 {- | 'showCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
  cbor builtin data representation
 -}
-showCombinedMerkleProof :: CombinedMerkleProof -> Text
+showCombinedMerkleProof :: CombinedMerkleProof -> HaskellString.String
 showCombinedMerkleProof = showHexOfCborBuiltinData
 
 {- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
@@ -395,7 +405,11 @@ showCombinedMerkleProof = showHexOfCborBuiltinData
 
  Many serialization mechanisms are an alias of this.
 -}
-showHexOfCborBuiltinData :: ToData a => a -> Text
+showHexOfCborBuiltinData ::
+  forall (a :: Type).
+  ToData a =>
+  a ->
+  HaskellString.String
 showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinData
 
 -- * Covnerting converting private keys to public keys

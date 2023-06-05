@@ -180,7 +180,9 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         Just tn ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ((Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0) || go rest)
+                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
+                    || go rest
+                )
               go [] = False
            in go (txInfoReferenceInputs info)
 

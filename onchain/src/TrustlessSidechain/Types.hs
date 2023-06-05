@@ -44,7 +44,9 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
-newtype SidechainPubKey = SidechainPubKey {getSidechainPubKey :: BuiltinByteString}
+newtype SidechainPubKey = SidechainPubKey
+  { getSidechainPubKey :: BuiltinByteString
+  }
   deriving newtype
     ( TSPrelude.Eq
     , TSPrelude.Ord

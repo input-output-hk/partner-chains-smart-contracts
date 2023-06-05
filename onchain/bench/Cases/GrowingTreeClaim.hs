@@ -24,6 +24,8 @@ import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.Text qualified as Text
+import GHC.Real ((^))
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
@@ -39,7 +41,6 @@ import TrustlessSidechain.Types (
   thresholdDenominator,
   thresholdNumerator,
  )
-import Prelude
 
 {- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which
 
@@ -81,7 +82,7 @@ growingTreeClaim = do
                   , ccSidechainParams = sidechainParams
                   }
            in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
-                ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
+                <> List.unwords (flags <> Ctl.ctlCommonFlags ctlCommon)
 
         sidechainParams =
           SidechainParams
@@ -100,7 +101,7 @@ growingTreeClaim = do
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
-              { cisInitCommitteePubKeys = map snd initCommittee
+              { cisInitCommitteePubKeys = fmap snd initCommittee
               , cisSidechainEpoch = 1
               }
 
@@ -129,14 +130,14 @@ growingTreeClaim = do
     -- Merkle root insertion
 
     Monad.void $ do
-      Foldable.for_ (zip (map ((2 :: Integer) ^) [0 :: Integer ..]) merkleRootsAndCombinedProofs) $ \(ix, (rootHash, combinedMerkleProofs)) -> do
+      Foldable.for_ (zip (fmap ((2 :: Integer) ^) [0 :: Integer ..]) merkleRootsAndCombinedProofs) $ \(ix, (rootHash, combinedMerkleProofs)) -> do
         Bench.benchCtl "SaveRoot" (fromIntegral ix) $
           ctlCommand $
             Ctl.ctlSaveRootFlags
               sidechainParams
               CtlSaveRoot
                 { csrMerkleRoot = rootHash
-                , csrCurrentCommitteePrivKeys = map fst initCommittee
+                , csrCurrentCommitteePrivKeys = fmap fst initCommittee
                 , csrPreviousMerkleRoot = Nothing
                 }
 
@@ -180,7 +181,7 @@ growingTreeClaim = do
     "Lovelace"
     Bench.tLovelaceFee
 
-  return ()
+  pure ()
 
 -- Helpers
 

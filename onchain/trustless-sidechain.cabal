@@ -134,6 +134,7 @@ library trustless-sidechain-prelude
     , scientific
     , semialign
     , semirings
+    , tasty-quickcheck
     , text
     , these
     , vector
@@ -158,7 +159,7 @@ library quickcheck-extra
 -- Executables
 
 executable trustless-sidechain-gen-signatures
-  import:         common-lang, common-optimized-parallel
+  import:         common-lang, common-optimized-parallel, common-script-lang
   main-is:        Main.hs
   other-modules:
     GenOutput
@@ -183,6 +184,7 @@ executable trustless-sidechain-gen-signatures
     , serialise
     , text
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/gen-signatures
 
@@ -198,11 +200,12 @@ executable trustless-sidechain-serialise
     , plutus-ledger
     , serialise
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/serialise
 
 executable trustless-sidechain-merkle-tree
-  import:         common-lang, common-optimized-parallel
+  import:         common-lang, common-optimized-parallel, common-script-lang
   main-is:        Main.hs
   build-depends:
     , bytestring
@@ -210,25 +213,28 @@ executable trustless-sidechain-merkle-tree
     , plutus-ledger
     , serialise
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/merkle-tree
 
 -- Tests
 
 test-suite perf-check
-  import:         common-lang, common-optimized-parallel
+  import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
     , plutus-core
+    , plutus-shim-prelude
     , tagged
     , tasty
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: perf-check
 
 test-suite trustless-sidechain-test
-  import:         common-lang, common-optimized-parallel
+  import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -243,6 +249,7 @@ test-suite trustless-sidechain-test
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-shim-prelude
     , QuickCheck
     , quickcheck-extra
     , secp256k1-haskell
@@ -250,6 +257,7 @@ test-suite trustless-sidechain-test
     , tasty-hunit
     , tasty-quickcheck
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: test
 
@@ -263,13 +271,14 @@ test-suite quickcheck-extra-test
     , quickcheck-extra
     , tasty
     , tasty-quickcheck
+    , trustless-sidechain-prelude
 
   hs-source-dirs: test/quickcheck-extra-test
 
 -- Benchmarks
 
 benchmark bench-ctl
-  import:         common-lang, common-optimized-parallel
+  import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -304,9 +313,11 @@ benchmark bench-ctl
     , plutus-ledger-api
     , process
     , secp256k1-haskell
+    , semirings
     , statistics
     , text
     , trustless-sidechain
+    , trustless-sidechain-prelude
     , vector
     , websockets
 
@@ -322,5 +333,6 @@ benchmark quickcheck-extra-bench
     , quickcheck-extra
     , tasty
     , tasty-bench
+    , trustless-sidechain-prelude
 
   hs-source-dirs: bench/quickcheck-extra-bench

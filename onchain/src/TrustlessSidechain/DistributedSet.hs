@@ -184,12 +184,12 @@ getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
 getConf currencySymbol info = go $ txInfoReferenceInputs info
   where
     go :: [TxInInfo] -> DsConfDatum
-    go = \case
-      [] -> traceError "error 'getConf' missing conf"
-      (t : ts) -> case txInInfoResolved t of
+    go (t : ts) =
+      case txInInfoResolved t of
         o -> case AssocMap.lookup currencySymbol $ getValue $ txOutValue o of
           Just _ -> unsafeGetDatum info o
           Nothing -> go ts
+    go [] = traceError "error 'getConf' missing conf"
 
 deriveJSON defaultOptions ''Ds
 PlutusTx.makeLift ''Ds
@@ -295,12 +295,10 @@ mkInsertValidator ds _dat _red ctx =
                       fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
                         ownAddr ->
                           let go :: [TxOut] -> [Node]
-                              go = \case
-                                [] -> []
-                                (t : ts) ->
-                                  if txOutAddress t == ownAddr
-                                    then getTxOutNodeInfo t : go ts
-                                    else go ts
+                              go (t : ts)
+                                | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
+                                | otherwise = go ts
+                              go [] = []
                            in go (txInfoOutputs info)
 
               -- the total number tokens which are prefixes is @1 + the number of
@@ -450,8 +448,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     -- determines the nodes we are consuming
     ins :: [TokenName]
     ins =
-      let go :: [TxInInfo] -> [TokenName]
-          go [] = []
+      let go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
               , txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)

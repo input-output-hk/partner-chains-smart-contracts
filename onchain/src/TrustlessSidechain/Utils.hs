@@ -1,4 +1,3 @@
--- Validate enough signatures are signed by legit pubkeys
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Utils (
