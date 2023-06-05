@@ -330,51 +330,85 @@ The `coarbitrary` method gives us the ability to 'perturb' or 'affect' a
 generator for any other type based on values of `a`. This is what enables
 QuickCheck to generate arbitrary functions: by using 'perturbations' of the
 generator of the function's result, we can have arguments affect outcomes in a
-way that an actual function would. Typically, this would be defined using
-`variant`:
+way that an actual function would.
+
+For product types, we can use function composition on the `coarbitrary` methods
+of their fields:
+
+```haskell
+data Pair (a :: Type) = Pair a a
+
+instance (CoArbitrary a) => CoArbitrary (Pair a) where
+  coarbitrary (Pair x y) = coarbitrary x >>> coarbitrary y
+```
+
+For sum types, this is a bit more difficult: we need to 'perturb' the generator
+not only based on the fields in any given 'arm' of the sum, but also based on
+_which_ arm we are in. Consider the following data type:
+
+```haskell
+data These (a :: Type) (b :: Type) = This a | That b | These a b
+```
+
+The following `CoArbitrary` instance is problematic:
+
+```haskell
+-- Close, but not right!
+instance (CoArbitrary a, CoArbitrary b) => CoArbitrary (These a b) where
+    coarbitrary = \case
+        This x -> coarbitrary x
+        That y -> coarbitrary y
+        These x y -> coarbitrary x >>> coarbitrary y
+```
+
+This instance would give bad results with cases where the `a` and `b` type
+parameters are the same type (for instance, `These Int Int`), as it does not
+distinguish between 'arms', only the values in the 'arms'. Thus, we need to
+treat sums as 'tagged products'; essentially, we introduce an additional
+'perturbation' based on which 'arm' we are in. To do this, we use `variant`:
 
 ```haskell
 variant :: forall (n :: Type) (a :: Type) . Integral n => n -> Gen a -> Gen a
 ```
 
-where `variant`'s first argument is a 'perturbation value'. We can use this to
-construct `CoArbitrary` instances for sum types as follows:
+The first argument to `variant` is a 'perturbation value'. We can use this to
+address the issue with the instance for `These`:
 
 ```haskell
-newtype These (a :: Type) (b :: Type) = This a | That b | These a b
-
+-- The right way
 instance (CoArbitrary a, CoArbitrary b) => CoArbitrary (These a b) where
   coarbitrary x = case x of
-    This y -> variant (0 :: Int) >>> variant y
-    That z -> variant (1 :: Int) >>> variant z
-    These y z -> variant (2 :: Int) >>> variant y >>> variant z
+    This y -> variant (0 :: Int) >>> coarbitrary y
+    That z -> variant (1 :: Int) >>> coarbitrary z
+    These y z -> variant (2 :: Int) >>> coarbitrary y >>> coarbitrary z
 ```
 
 Essentially, we 'rank' the 'arms' of the sum, assigning them a unique `Int`
 index, 'perturb' using that 'rank', then combine that with 'perturbations' using
 the data in the 'arms'. The 'rank' ensures that different 'arms' produce
-different 'perturbations'. For product types, we can use function composition:
+different 'perturbations'.
 
-```haskell
-newtype Pair (a :: Type) = Pair a a
-
-instance (CoArbitrary a) => CoArbitrary (Pair a) where
-  coarbitrary (Pair x y) = variant x >>> variant y
-```
-
-However, `CoArbitrary` does not provide any way to shrink an
-arbitrarily-generated function, or even to show it as a failing case. To enable
-this, we need a separate type class `Function`:
+While definitely helpful, `CoArbitrary` alone _only_ handles generation of
+arbitrary functions: it cannot shrink them, or even show failing cases. To
+enable both of these, we need a separate type class:
 
 ```haskell
 class Function (a :: Type) where
-    function :: forall (b :: Type) . (a -> b) -> a :-> b
+    function :: forall (c :: Type) . (a -> c) -> a :-> c
 ```
 
-`a :-> b` can be thought of as an 'explicit partial function', represented as a
-list of input-output pairs. The `function` method projects a regular function
-into this form (lazily); the easiest way to define `function` for a custom type
-is to use `functionMap`:
+`a :-> b` can be thought of as an 'explicit partial function': 'explicit' in the
+sense that we represent it as a collection of input-output pairs, and 'partial'
+in the sense that not all input-output pairs are known immediately. The explicit
+partial function is generated lazily: whenever an output is needed for an input
+we have no pairing for, we generate one, but if we already generated an output
+matching a given input, we use the existing output. This representation method
+enables both shrinking (by shrinking the collection of pairs) and showing (by
+showing the collection of pairs). To enable this, we have the `function` method:
+this essentially takes a transformation from `a` to any other type, and
+constructs an explicit partial function representation based on it (lazily).
+
+The easiest way to define `function` for a custom type is to use `functionMap`:
 
 ```haskell
 functionMap :: forall (b :: Type) (a :: Type) (c :: Type) .
@@ -382,10 +416,14 @@ functionMap :: forall (b :: Type) (a :: Type) (c :: Type) .
     (a -> b) -> (b -> a) -> (a -> c) -> a :-> c
 ```
 
-This essentially provides a reversible transformation from a type `a` (without a
-`Function` instance) to a type `b` (with a `Function` instance, which we
-borrow). Consider the previous examples of `Pair` and `These`: we could define
-`Function` for them as follows:
+`functionMap` requires two arguments to construct a valid definition of
+`function` for a type of our choice: a way to transform the type we want an
+instance for (`a` in our case) to another type which already has an instance
+(`b` in our case), and a way to 'undo' that transformation. Put another way, for
+`functionMap f g`, we expect that `f . g = g . f = id`. By doing this, we can
+'borrow' the `Function` instance of `b`, but use it for `a`. Consider the
+previous examples of `Pair` and `These`: we could define `Function` for them
+using `functionMap` as follows:
 
 ```haskell
 instance (Function a) => Function (Pair a) where
@@ -406,6 +444,14 @@ instance (Function a, Function b) => Function (These a b) where
         Just y' -> These x y'
       Right y -> That y
 ```
+
+Here, the 'borrowed' instances are those of `Function a => Function (a, a)`
+for `Pair a`, and `(Function a, Function b) => Function (Either (a, Maybe b) b)`
+for `These a b`. Note that both of the arguments given to `functionMap` together
+form bijections between our type and the type whose instance we are 'borrowing'.
+For many types, there are multiple valid instances we could 'borrow': for
+example, we could have borrowed `(Function a, Function b) => Function (Either a
+(Either b (a, b))` for `These a b` instead.
 
 We can then use this type class to enable shrinking and showing using the helper
 `Fun` type and pattern matching:
@@ -666,6 +712,15 @@ forAllShrinkShow arbitrary shrink show $ \(k, v, kvs) ->
       else lookup k (fromList kvs) === Nothing
 ```
 
+When running, we will see something similar to the following:
+
+```
+      our test description:                                  OK (6.19s)
+        +++ OK, passed 10000 tests:
+        99.24% keyval in source: False
+         0.76% keyval in source: True
+```
+
 As `label` returns a 'property transformation' function, you can sequence these
 together for multiple `label`s for different conditions:
 
@@ -839,7 +894,7 @@ forAllShrinkShow arbitrary shrink showLookupCase $ \lookupCase ->
     let cond = isHitCase lookupCase
         (k, v, kvs) = toCaseData lookupCase in
       checkCoverage .
-      cover 50.0 cond "keyval in source' $
+      cover 50.0 cond "keyval in source" $
       if cond
       then lookup k (fromList kvs) === Just v
       else lookup k (fromList kvs) === Nothing
