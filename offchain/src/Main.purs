@@ -4,8 +4,6 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, launchAff_, runContract)
 import Control.Monad.Error.Class (throwError)
-import Data.Argonaut (Json)
-import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.List as List
 import Effect.Class (liftEffect)
@@ -97,14 +95,8 @@ main = do
 -- | parses CLI arguments. CLI arguments override the config files.
 getOptions ∷ Effect Options
 getOptions = do
-  config ← decodeWith ConfigFile.decodeConfig "./config.json"
+  config ← ConfigFile.readConfigJson "./config.json"
   execParser (options config)
-
-  where
-  decodeWith ∷ ∀ e a. Show e ⇒ (Json → Either e a) → String → Effect (Maybe a)
-  decodeWith decode file = do
-    maybeJson ← map hush (ConfigFile.readJson file)
-    traverse (decode >>> lmap (show >>> error) >>> liftEither) maybeJson
 
 -- | Executes an endpoint and returns a response object
 runEndpoint ∷ SidechainParams → Endpoint → Contract EndpointResp
