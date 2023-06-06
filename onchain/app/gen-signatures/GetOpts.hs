@@ -433,7 +433,7 @@ decodeHash rawParser =
 -}
 currentCommitteePrivateKeysParser :: OptParse.Parser (IO [SECP.SecKey])
 currentCommitteePrivateKeysParser =
-  fmap return {- need to introduce the IO monad-} manyCurrentCommittePrivateKeys
+  fmap pure {- need to introduce the IO monad-} manyCurrentCommittePrivateKeys
     OptParse.<|> currentCommitteeFile
   where
     manyCurrentCommittePrivateKeys =
@@ -453,15 +453,15 @@ currentCommitteePrivateKeysParser =
             , metavar "FILEPATH"
             , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
             ]
-      return $
+      pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ fmap scmPrivateKey members
+          Just (SidechainCommittee members) -> pure $ fmap scmPrivateKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
 newCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
 newCommitteePublicKeysParser =
-  fmap return {- need to introduce io monad -} manyCommitteePublicKeys
+  fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
   where
     manyCommitteePublicKeys =
@@ -482,9 +482,9 @@ newCommitteePublicKeysParser =
             , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
             ]
 
-      return $
+      pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ fmap scmPublicKey members
+          Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 {- | 'initCommitteePublicKeysParser' is essentially identical to
@@ -493,7 +493,7 @@ newCommitteePublicKeysParser =
 -}
 initCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
 initCommitteePublicKeysParser =
-  fmap return {- need to introduce io monad -} manyCommitteePublicKeys
+  fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
   where
     manyCommitteePublicKeys =
@@ -514,9 +514,9 @@ initCommitteePublicKeysParser =
             , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
             ]
 
-      return $
+      pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ fmap scmPublicKey members
+          Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for gathering the 'SidechainParams'
@@ -669,7 +669,7 @@ initSidechainCommand =
               ]
         pure $ do
           iscInitCommitteePubKeys <- ioIscInitCommitteePubKeys
-          return $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
+          pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
         <**> helper
 
 {- | 'committeeHashCommand' parses the cli arguments for gathering the parameters for
@@ -706,7 +706,7 @@ updateCommitteeHashCommand =
         pure $ do
           uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
           uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys
-          return $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
+          pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
         <**> helper
 
 {- | 'saveRootCommand' parses the cli arguments to grab the required parameters for generating a CLI command
@@ -744,7 +744,7 @@ saveRootCommand =
 
         pure $ do
           srcCurrentCommitteePrivKeys <- ioSrcCurrentCommitteePrivKeys
-          return $ scParamsAndSigningKeyFunction $ SaveRootCommand {..}
+          pure $ scParamsAndSigningKeyFunction $ SaveRootCommand {..}
         <**> helper
 
 -- | 'committeeHashCommand' parses the cli arguments for creating merkle trees.
@@ -763,7 +763,7 @@ merkleTreeCommand =
                 , metavar "JSON_MERKLE_TREE_ENTRY"
                 , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
                 ]
-        pure $ return $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
+        pure $ pure $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
         <**> helper
 
 {- | 'rootHashCommand' parses the cli arguments to grab the root hash from a
@@ -783,7 +783,7 @@ rootHashCommand =
               , metavar "MERKLE_TREE"
               , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
               ]
-        pure $ return $ MerkleTreeCommand $ RootHashCommand {..}
+        pure $ pure $ MerkleTreeCommand $ RootHashCommand {..}
         <**> helper
 
 {- | 'combinedMerkleProofCommand' parses the cli arguments to grab the 'CombinedMerkleProof' from a merkle
@@ -812,7 +812,7 @@ combinedMerkleProofCommand =
               , metavar "JSON_MERKLE_TREE_ENTRY"
               , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
               ]
-        pure $ return $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
+        pure $ pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
         <**> helper
 
 {- | 'merkleProofCommand' parses the cli arguments to grab the merkle proof
@@ -841,7 +841,7 @@ merkleProofCommand =
               , metavar "JSON_MERKLE_TREE_ENTRY"
               , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
               ]
-        pure $ return $ MerkleTreeCommand $ MerkleProofCommand {..}
+        pure $ pure $ MerkleTreeCommand $ MerkleProofCommand {..}
         <**> helper
 
 {- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
@@ -854,7 +854,7 @@ freshSidechainPrivateKeyCommand =
       info
       (progDesc "Generates a fresh hex encoded sidechain private key")
       $ do
-        pure $ return $ SidechainKeyCommand FreshSidechainPrivateKey
+        pure $ pure $ SidechainKeyCommand FreshSidechainPrivateKey
         <**> helper
 
 {- | 'freshSidechainCommittee' parses the cli arguments for generating a Json file
@@ -874,7 +874,7 @@ freshSidechainCommittee = do
               , metavar "INT"
               , help "Non-negative int to determine the size of the sidechain committee"
               ]
-        pure $ return $ SidechainKeyCommand FreshSidechainCommittee {..}
+        pure $ pure $ SidechainKeyCommand FreshSidechainCommittee {..}
         <**> helper
   where
     nonNegativeIntParser :: HString.String -> Either HString.String Int
@@ -910,5 +910,5 @@ sidechainPrivateKeyToPublicKeyCommand =
               , metavar "SIGNING_KEY"
               , help "Signing key of the sidechain block producer candidate"
               ]
-        pure $ return $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
+        pure $ pure $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
         <**> helper
