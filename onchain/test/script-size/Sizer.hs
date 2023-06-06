@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Sizer (fitsUnder) where
+module Sizer (fitsUnder, fitsInto) where
 
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
@@ -23,25 +23,41 @@ fitsUnder ::
   (String, CompiledCode a) ->
   (String, CompiledCode a) ->
   TestTree
-fitsUnder name test target = singleTest name $ SizeComparisonTest test target
+fitsUnder name test target = singleTest name $ SizeComparison test target
+
+fitsInto ::
+  forall (a :: Type).
+  Typeable a =>
+  String ->
+  CompiledCode a ->
+  Integer ->
+  TestTree
+fitsInto name code limit = singleTest name $ SizeBound code limit
 
 -- Helpers
 
-data SizeComparisonTest (a :: Type)
-  = SizeComparisonTest
-      (String, CompiledCode a)
-      (String, CompiledCode a)
+data SizeTest (a :: Type)
+  = SizeBound (CompiledCode a) Integer
+  | SizeComparison (String, CompiledCode a) (String, CompiledCode a)
 
-instance Typeable a => IsTest (SizeComparisonTest a) where
-  run _ (SizeComparisonTest (mName, mCode) (tName, tCode)) _ = do
-    let tEstimate = sizePlc tCode
-    let mEstimate = sizePlc mCode
-    let diff = tEstimate - mEstimate
-    pure $ case signum diff of
-      (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
-      0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
-      _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
+instance Typeable a => IsTest (SizeTest a) where
   testOptions = Tagged []
+  run _ testData _ = case testData of
+    SizeBound code limit -> do
+      let estimate = sizePlc code
+      let diff = limit - estimate
+      pure $ case signum diff of
+        (-1) -> testFailed $ "Exceeded limit by " <> show (abs diff)
+        0 -> testPassed $ "Size: " <> show estimate
+        _ -> testPassed $ "Remaining headroom: " <> show diff
+    SizeComparison (mName, mCode) (tName, tCode) -> do
+      let tEstimate = sizePlc tCode
+      let mEstimate = sizePlc mCode
+      let diff = tEstimate - mEstimate
+      pure $ case signum diff of
+        (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
+        0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
+        _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
 
 renderFailed ::
   (String, Integer) ->
