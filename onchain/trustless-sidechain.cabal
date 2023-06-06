@@ -181,6 +181,10 @@ test-suite script-size
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    Legacy
+    Sizer
+
   build-depends:
     , plutus-core
     , plutus-tx
