@@ -9,7 +9,6 @@ module Main (main, serialiseBuiltinData) where
 
 import Codec.Serialise qualified as Serialise
 import Control.Exception qualified as Exception
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Lazy qualified as Lazy
 import Options.Applicative (Parser, ParserInfo)
@@ -18,8 +17,9 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.IsData.Class (FromData, ToData)
 import PlutusTx.IsData.Class qualified as IsData
-import System.IO (Handle, IOMode (ReadMode, WriteMode))
+import System.IO (FilePath, Handle, IOMode (ReadMode, WriteMode))
 import System.IO qualified as IO
+import System.IO.Error (userError)
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -135,10 +135,10 @@ readBuiltinDataCbor opt handle = case opt of
       Lazy.hGetContents handle
         >>= ( \builtinData ->
                 case IsData.fromBuiltinData builtinData of
-                  Just deserializedArg -> return deserializedArg
+                  Just deserializedArg -> pure deserializedArg
                   Nothing ->
                     Exception.throwIO $
-                      userError ("BuiltinData deserialization failed: " ++ show builtinData)
+                      userError ("BuiltinData deserialization failed: " <> show builtinData)
             )
           . Serialise.deserialise
 
@@ -229,7 +229,7 @@ data MerkleTreeOption
 options :: Parser MerkleTreeCliOptions
 options =
   Applicative.subparser $
-    Prelude.mconcat
+    fold
       [ Applicative.command "fromList" $
           Applicative.info
             (MerkleTreeCliOptions EncodeFromList <$> pFileInput <*> pFileOutput)

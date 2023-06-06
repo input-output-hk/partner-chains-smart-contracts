@@ -1,6 +1,3 @@
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Main (main) where
 
 import Data.List (replicate)

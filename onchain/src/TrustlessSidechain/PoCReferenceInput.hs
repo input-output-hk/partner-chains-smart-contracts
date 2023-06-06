@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script

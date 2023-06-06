@@ -126,12 +126,10 @@ library trustless-sidechain-prelude
   import:          common-lang
   exposed-modules: TrustlessSidechain.HaskellPrelude
   build-depends:
-    , aeson
     , bytestring
     , containers
     , indexed-traversable
     , integer-gmp
-    , scientific
     , semialign
     , semirings
     , tasty-quickcheck

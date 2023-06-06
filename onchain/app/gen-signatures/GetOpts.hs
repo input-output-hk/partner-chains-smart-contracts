@@ -1,7 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- | The module 'GetOpts' provides functionality / data types to parse the command line
  arguments
@@ -23,8 +21,8 @@ import Cardano.Crypto.DSIGN.Class (
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Codec.Serialise qualified
-import Control.Applicative (many, some, (<**>))
-import Control.Monad (MonadPlus (mzero), guard, join, void)
+import Control.Exception (ioError)
+import Control.Monad (MonadPlus (mzero), guard, join, return)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson (FromJSON (parseJSON))
 import Data.Aeson qualified as Aeson
@@ -38,7 +36,7 @@ import Data.Char qualified as Char
 import Data.Coerce as Coerce
 import Data.Either.Combinators (mapLeft)
 import Data.List qualified as List
-import Data.Text (Text)
+import Data.String qualified as HString
 import Data.Text qualified as Text
 import Options.Applicative (
   auto,
@@ -52,7 +50,6 @@ import Options.Applicative (
   long,
   metavar,
   option,
-  optional,
   progDesc,
   short,
   subparser,
@@ -65,6 +62,9 @@ import Plutus.V2.Ledger.Api (
   TxOutRef (TxOutRef),
  )
 import PlutusTx.Builtins qualified as Builtins
+import System.IO (FilePath)
+import System.IO.Error (userError)
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
@@ -80,7 +80,6 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   SidechainPubKey,
  )
-import Prelude
 
 -- | 'getArgs' grabs the command line options ('Args').
 getOpts :: IO Args
@@ -320,7 +319,7 @@ parseThreshold = eitherReader $ parseOnly thresholdParser . Text.pack
 parseSpoPrivKey :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKey = eitherReader toSpoPrivKey
   where
-    toSpoPrivKey :: String -> Either String (SignKeyDSIGN Ed25519DSIGN)
+    toSpoPrivKey :: HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
     toSpoPrivKey =
       fmap (genKeyDSIGN @Ed25519DSIGN . mkSeedFromBytes)
         . mapLeft ("Invalid spo key hex: " <>)
@@ -341,13 +340,13 @@ parseSpoPrivKey = eitherReader toSpoPrivKey
 parseSpoPrivKeyCbor :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
   where
-    toSpoPrivKeyCbor :: String -> Either String (SignKeyDSIGN Ed25519DSIGN)
+    toSpoPrivKeyCbor :: HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
     toSpoPrivKeyCbor str = do
       bin <-
         mapLeft ("Invalid spo key hex: " <>) $
           Base16.decode . Char8.pack $
             str
-      mapLeft (mappend "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
+      mapLeft ((<>) "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
 
 -- | Parse SECP256K1 private key
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
@@ -404,13 +403,13 @@ parseRootHash =
 parseSpoPubKeyCbor :: OptParse.ReadM (VerKeyDSIGN Ed25519DSIGN)
 parseSpoPubKeyCbor = eitherReader toSpoPubKeyCbor
   where
-    toSpoPubKeyCbor :: String -> Either String (VerKeyDSIGN Ed25519DSIGN)
+    toSpoPubKeyCbor :: HString.String -> Either HString.String (VerKeyDSIGN Ed25519DSIGN)
     toSpoPubKeyCbor str = do
       bin <-
         mapLeft ("Invalid spo key hex: " <>) $
           Base16.decode . Char8.pack $
             str
-      mapLeft (mappend "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
+      mapLeft ((<>) "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
 
 -- Commented out this code for legacy reasons. Originally, we parsed the
 -- roothash in its cbor representation, but really we want to actually just
@@ -456,8 +455,8 @@ currentCommitteePrivateKeysParser =
             ]
       return $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ map scmPrivateKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " ++ committeeFilepath
+          Just (SidechainCommittee members) -> return $ fmap scmPrivateKey members
+          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
 newCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
@@ -485,8 +484,8 @@ newCommitteePublicKeysParser =
 
       return $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ map scmPublicKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " ++ committeeFilepath
+          Just (SidechainCommittee members) -> return $ fmap scmPublicKey members
+          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 {- | 'initCommitteePublicKeysParser' is essentially identical to
  'newCommitteePublicKeysParser' except the help strings / command line flag
@@ -517,8 +516,8 @@ initCommitteePublicKeysParser =
 
       return $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
-          Just (SidechainCommittee members) -> return $ map scmPublicKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " ++ committeeFilepath
+          Just (SidechainCommittee members) -> return $ fmap scmPublicKey members
+          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for gathering the 'SidechainParams'
 sidechainParamsParser :: OptParse.Parser SidechainParams
@@ -878,7 +877,7 @@ freshSidechainCommittee = do
         pure $ return $ SidechainKeyCommand FreshSidechainCommittee {..}
         <**> helper
   where
-    nonNegativeIntParser :: String -> Either String Int
+    nonNegativeIntParser :: HString.String -> Either HString.String Int
     nonNegativeIntParser =
       let go acc a =
             case acc of
@@ -887,7 +886,7 @@ freshSidechainCommittee = do
                 -- we know the next "iteration" will multiply by 10,
                 -- and add at most 9, so if `acc'` is greater or equal to this, then
                 -- we know for sure that we'll go out of bounds..
-                | acc' >= (maxBound :: Int) `div` 10 -> Left "Committee size too large"
+                | acc' >= (maxBound :: Int) `quot` 10 -> Left "Committee size too large"
                 --  do the usual C magic trick (subtract by ascii value
                 --  of @0@) to figure out what int that a digit is.
                 | Char.isDigit a -> Right (acc' * 10 + (Char.ord a - Char.ord '0'))

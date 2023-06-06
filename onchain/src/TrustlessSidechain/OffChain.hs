@@ -52,6 +52,7 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types

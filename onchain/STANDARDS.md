@@ -859,14 +859,14 @@ operators, and defining our own would create more problems than it would solve.
 
 ## Prelude
 
-Script modules MUST use ``PlutusTx.Prelude``, which MUST be imported
+Script modules MUST use ``TrustlessSidechain.PlutusPrelude``, which MUST be imported
 unqualified. If off-chain prelude functionality is required, it MUST come from
 ``TrustlessSidechain.Prelude``, which MUST be imported qualified as
 ``TSPrelude``. Other preludes MUST NOT be used.
 
 Non-script modules MUST use ``TrustlessSidechain.Prelude``, which MUST be
 imported unqualified. If on-chain prelude functionality is required, it MUST come
-from ``PlutusTx.Prelude``, which MUST be imported qualified as ``PTPrelude``.
+from ``TrustlessSidechain.PlutusPrelude``, which MUST be imported qualified as ``PTPrelude``.
 Other preludes MUST NOT be used.
 
 ### Justification
@@ -941,7 +941,11 @@ These, along with their reasoning, are:
 * ``vector``: The ``Vector`` type.
 * ``witherable``: Generalizations of filtering, as well as ``mapMaybe`` and
   similar functions.
-* ``aeson``: [TODO]
+
+We also have to 'shim' some Plutus prelude functionality to work correctly with
+some of our extensions (notably `RebindableSyntax`), thus our second wrapper
+prelude. We can also use this for stability, as Plutus is known to change
+rapidly without warning.
 
 ## Versioning and changelogging
 
@@ -1451,30 +1455,6 @@ be older than the version you want to use, which can lead to [unpleasant
 surprised](https://github.com/UnkindPartition/tasty/issues/208) together with
 `tasty-quickcheck`'s loose bound. To avoid this issue, we require any
 QuickCheck-provided identifiers to come from QuickCheck itself.
-
-## Treat `aeson`'s `Value` as a read-only type
-
-[TODO]
-
-### Justification
-
-[TODO]
-
-## Do not use (or define) `toJSON`
-
-[TODO]
-
-### Justification
-
-[TODO]
-
-## Manually specify any serializations
-
-[TODO]
-
-### Justification
-
-[TODO]
 
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman

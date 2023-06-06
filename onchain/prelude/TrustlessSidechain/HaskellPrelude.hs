@@ -1,5 +1,4 @@
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- compat for tasty-quickcheck
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,6 +11,7 @@ module TrustlessSidechain.HaskellPrelude (
   Constraint,
   Bool.Bool (..),
   Ord.Ordering (..),
+  Enum.Bounded (..),
   Char.Char,
   Maybe.Maybe (..),
   Either.Either (..),
@@ -42,19 +42,6 @@ module TrustlessSidechain.HaskellPrelude (
   Natural.Natural,
   Float.Float,
   Float.Double,
-  Scientific.Scientific,
-
-  -- ** JSON
-  Aeson.Value (
-    JsonObject,
-    JsonArray,
-    JsonString,
-    JsonNumber,
-    JsonBool,
-    JsonNull
-  ),
-  Aeson.Encoding,
-  AesonKeyMap.KeyMap,
 
   -- * Type classes
 
@@ -74,10 +61,6 @@ module TrustlessSidechain.HaskellPrelude (
   Euclidean.Euclidean (..),
   Euclidean.Field,
   Euclidean.GcdDomain (..),
-
-  -- ** JSON
-  Aeson.ToJSON (toEncoding),
-  Aeson.FromJSON (..),
 
   -- ** Functor hierarchy
   Functor.Functor (..),
@@ -161,20 +144,6 @@ module TrustlessSidechain.HaskellPrelude (
   odd,
   Field.fromRational,
   Field.recip,
-
-  -- ** JSON
-
-  -- *** Encoding
-  jsonObject,
-  jsonArray,
-  jsonString,
-
-  -- *** Decoding
-  fromJsonObject,
-  fromJsonArray,
-  fromJsonString,
-  jsonParseFail,
-  jsonParseKey,
 
   -- ** Functor
   (Functor.$>),
@@ -308,17 +277,9 @@ module TrustlessSidechain.HaskellPrelude (
 
 import Control.Applicative (Applicative)
 import Control.Applicative qualified as Applicative
-import Control.Category ((.), (>>>))
 import Control.Category qualified as Category
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as MonadIO
-import Data.Aeson (Value)
-import Data.Aeson qualified as Aeson
-import Data.Aeson.Encoding (Encoding, list, pair, pairs)
-import Data.Aeson.KeyMap (KeyMap)
-import Data.Aeson.KeyMap qualified as AesonKeyMap
-import Data.Aeson.Types qualified as AesonTypes
-import Data.Bifunctor (first)
 import Data.Bifunctor qualified as Bifunctor
 import Data.Bool (Bool (False, True))
 import Data.Bool qualified as Bool
@@ -333,7 +294,6 @@ import Data.Field qualified as Field
 import Data.Foldable (Foldable (foldMap))
 import Data.Foldable qualified as Foldable
 import Data.Foldable.WithIndex qualified as FoldableWithIndex
-import Data.Function (($))
 import Data.Function qualified as Function
 import Data.Functor qualified as Functor
 import Data.Functor.WithIndex qualified as FunctorWithIndex
@@ -347,8 +307,6 @@ import Data.Monoid qualified as Monoid
 import Data.Ord (Ord (compare), Ordering (EQ, GT, LT))
 import Data.Ord qualified as Ord
 import Data.Proxy qualified as Proxy
-import Data.Scientific (Scientific)
-import Data.Scientific qualified as Scientific
 import Data.Semialign qualified as Semialign
 import Data.Semialign.Indexed qualified as SemialignWithIndex
 import Data.Semigroup qualified as Semigroup
@@ -360,17 +318,15 @@ import Data.Semiring (
  )
 import Data.Semiring qualified as Semiring
 import Data.Set qualified as Set
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as TextIO
 import Data.These qualified as These
 import Data.Traversable qualified as Traversable
 import Data.Traversable.WithIndex qualified as TraversableWithIndex
-import Data.Tuple (uncurry)
 import Data.Tuple qualified as Tuple
-import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Data.Word qualified as Word
+import GHC.Enum qualified as Enum
 import GHC.Err qualified as Err
 import GHC.Exts qualified as Exts
 import GHC.Float qualified as Float
@@ -466,147 +422,6 @@ equating ::
   b ->
   Bool
 equating f x y = f x == f y
-
-{- | Construct a JSON object from a collection of key-value pairs.
-
- @since Unreleased
--}
-jsonObject ::
-  forall (f :: Type -> Type).
-  (Foldable f) =>
-  f (Text, Encoding) ->
-  Encoding
-jsonObject =
-  foldMap (first (Text.unpack >>> Exts.fromString) >>> uncurry pair) >>> pairs
-
-{- | Construct a JSON array from a 'Foldable'.
-
- @since Unreleased
--}
-jsonArray ::
-  forall (f :: Type -> Type).
-  (Foldable f) =>
-  f Encoding ->
-  Encoding
-jsonArray = Foldable.toList >>> list Category.id
-
-{- | Construct a JSON string.
-
- @since Unreleased
--}
-jsonString :: Text -> Encoding
-jsonString = Aeson.toEncoding
-
-{- | If we're given a JSON object, parse it as specified; otherwise, throw an
- error, with the 'Text' argument being used as an indicator for what thing we
- failed to parse.
-
- @since Unreleased
--}
-fromJsonObject ::
-  forall (a :: Type).
-  Text ->
-  (KeyMap Value -> AesonTypes.Parser a) ->
-  Value ->
-  AesonTypes.Parser a
-fromJsonObject what = Aeson.withObject (Text.unpack what)
-
-{- | If we're given a JSON array, parse it as specified; otherwise, throw an
- error, with the 'Text' argument being used as an indicator for what thing we
- failed to parse.
-
- @since Unreleased
--}
-fromJsonArray ::
-  forall (a :: Type).
-  Text ->
-  (Vector Value -> AesonTypes.Parser a) ->
-  Value ->
-  AesonTypes.Parser a
-fromJsonArray what = Aeson.withArray (Text.unpack what)
-
-{- | If we're giving a JSON string, parse it as specified; otherwise, throw an
- error, with the 'Text' argument being used as an indicator for what thing we
- failed to parse.
-
- @since Unreleased
--}
-fromJsonString ::
-  forall (a :: Type).
-  Text ->
-  (Text -> AesonTypes.Parser a) ->
-  Value ->
-  AesonTypes.Parser a
-fromJsonString what = Aeson.withText (Text.unpack what)
-
-{- | Read-only pattern synonym for JSON objects. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonObject :: KeyMap Value -> Value
-pattern JsonObject kvs <- Aeson.Object kvs
-
-{- | Read-only pattern synonym for JSON arrays. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonArray :: Vector Value -> Value
-pattern JsonArray xs <- Aeson.Array xs
-
-{- | Read-only pattern synonym for JSON booleans. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonBool :: Bool -> Value
-pattern JsonBool b <- Aeson.Bool b
-
-{- | Read-only pattern synonym for the JSON null. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonNull :: Value
-pattern JsonNull <- Aeson.Null
-
-{- | Read-only pattern synonym for JSON numbers. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonNumber :: Scientific -> Value
-pattern JsonNumber s <- Aeson.Number s
-
-{- | Read-only pattern synonym for JSON strings. Use it just like you would a
- regular constructor.
-
- @since Unreleased
--}
-pattern JsonString :: Text -> Value
-pattern JsonString t <- Aeson.String t
-
-{- | Fail a JSON parse with the given error.
-
- @since Unreleased
--}
-jsonParseFail :: forall (a :: Type). Text -> AesonTypes.Parser a
-jsonParseFail msg = AesonTypes.parseFail (Text.unpack msg)
-
-{- | Given the name of a key, and a parser, attempt to parse the given key of a
- JSON object with that parser.
-
- @since Unreleased
--}
-jsonParseKey ::
-  forall (a :: Type).
-  Text ->
-  (Value -> AesonTypes.Parser a) ->
-  KeyMap Value ->
-  AesonTypes.Parser a
-jsonParseKey k p kvs =
-  AesonTypes.explicitParseField p kvs (Exts.fromString . Text.unpack $ k)
 
 {- | Needed to ensure @if@ works properly.
 

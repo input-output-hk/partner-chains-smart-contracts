@@ -1,6 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
 module Test.TrustlessSidechain.MultiSig (test) where
 
 import Control.Applicative ((<|>))
