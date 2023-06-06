@@ -177,7 +177,7 @@ executable trustless-sidechain-merkle-tree
 
 -- Tests
 
-test-suite perf-check
+test-suite script-size
   import:         common-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -190,7 +190,7 @@ test-suite perf-check
     , trustless-sidechain
 
   ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs: perf-check
+  hs-source-dirs: test/script-size
 
 test-suite trustless-sidechain-test
   import:         common-lang
