@@ -54,7 +54,7 @@ import Contract.Transaction
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
-import Control.Monad.Maybe.Trans (MaybeT(MaybeT), lift, runMaybeT)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
