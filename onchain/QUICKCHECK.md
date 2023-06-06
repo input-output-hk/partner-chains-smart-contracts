@@ -606,7 +606,7 @@ forAllShrinkShow :: forall (prop :: Type) (a :: Type) .
     Property
 ```
 
-Essentially, all the preparation tasks are handle via explicit, user-specified
+Essentially, all the preparation tasks are handled via explicit, user-specified
 arguments. There exist some variants of `forAllShrinkShow` where some, or all,
 of the preparation tasks are implicit through type classes (`Arbitrary` and
 `Show`). While these appear convenient, there are reasons to prefer
