@@ -32,7 +32,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( updateCommitteeHashValidator
   )
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
@@ -178,5 +177,5 @@ currencySymbolToHex =
   ByteArray.byteArrayToHex <<< Value.getCurrencySymbol
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
-report = Utils.Logging.mkReport <<< { mod: "GetSidechainAddresses", fun: _ }
+report ∷ String → String → String
+report = Utils.Logging.mkReport "GetSidechainAddresses"

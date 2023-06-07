@@ -66,7 +66,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
@@ -89,8 +88,8 @@ runUpdateCommitteeHash
       , sidechainEpoch
       }
   ) = do
-  let -- `msg` is used to help generate log messages
-    msg = report "runUpdateCommitteeHash"
+  let -- `mkErr` is used to help generate log messages
+    mkErr = report "runUpdateCommitteeHash"
 
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
@@ -114,14 +113,14 @@ runUpdateCommitteeHash
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (msg "Failed to get merkleRootTokenCurrencySymbol")
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Building the new committee hash / verifying that the new committee was
   -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
   when (null committeeSignatures)
-    (throwContractError $ msg "Empty Committee")
+    (throwContractError $ mkErr "Empty Committee")
 
   let
     newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
@@ -133,7 +132,7 @@ runUpdateCommitteeHash
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
-  uchmsg ← liftContractM (msg "Failed to get update committee hash message")
+  uchmsg ← liftContractM (mkErr "Failed to get update committee hash message")
     $ serialiseUchmHash
     $ UpdateCommitteeHashMessage
         { sidechainParams: sidechainParams
@@ -150,7 +149,7 @@ runUpdateCommitteeHash
         uchmsg
         curCommitteeSignatures
     )
-    ( throwContractError $ msg
+    ( throwContractError $ mkErr
         "Invalid committee signatures for UpdateCommitteeHashMessage"
     )
 
@@ -174,13 +173,13 @@ runUpdateCommitteeHash
       committeeHashTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
-    liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
+    liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
 
   rawDatum ←
-    liftContractM (msg "Update committee hash UTxO is missing inline datum")
+    liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
   UpdateCommitteeHashDatum datum ← liftContractM
-    (msg "Datum at update committee hash UTxO fromData failed")
+    (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
     (throwContractError "Incorrect committee provided")
@@ -224,19 +223,20 @@ runUpdateCommitteeHash
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
           previousMerkleRootORef
 
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' (msg "Submitted update committee hash transaction: " <> show txId)
+  logInfo' (mkErr "Submitted update committee hash transaction: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' (msg "Update committee hash transaction submitted successfully")
+  logInfo' (mkErr "Update committee hash transaction submitted successfully")
 
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = Logging.mkReport <<< { mod: "UpdateCommitteeHash", fun: _ }
+report ∷ String → String → String
+report = Logging.mkReport "UpdateCommitteeHash"
 
 -- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
@@ -249,12 +249,11 @@ getCommitteeHashPolicy ∷
     }
 getCommitteeHashPolicy (SidechainParams sp) = do
   let
-    msg = Logging.mkReport
-      { mod: "FUELMintingPolicy", fun: "getCommitteeHashPolicy" }
+    mkErr = report "getCommitteeHashPolicy"
   committeeHashPolicy ← committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeHashCurrencySymbol ← liftContractM
-    (msg "Failed to get updateCommitteeHash CurrencySymbol")
+    (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
     (Value.scriptCurrencySymbol committeeHashPolicy)
   let committeeHashTokenName = initCommitteeHashMintTn
   pure
