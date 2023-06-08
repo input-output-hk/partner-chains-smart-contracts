@@ -1,0 +1,41 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="1", ranksep="1"]
+
+  DistributedSetNode [ label = "Distributed set node"];
+  MerkleRoot [ label = "Merkle root of `MerkleTreeEntry`s"];
+  LockBoxValidator1 [ label = "LockBoxValidator uniquely identified by `LockBoxOracleMintingPolicy`\nwith datum the currency symbol of `MCToken` and token name `tn`,\nand `ki` `MCToken`s with token name `tn`"];
+  Transaction [ shape=diamond ];
+
+  LockBoxValidator2 [ label = "LockBoxValidator uniquely identified by `LockBoxOracleMintingPolicy`\nwith datum the currency symbol of `MCToken` and token name `tn`,\nand `ki - k` `MCToken`s with token name `tn`"];
+  DistributedSetNode1 [ label = "Distributed set node 1"];
+  DistributedSetNode2 [ label = "Distributed set node 2"];
+  SCToken [ shape = ellipse ];
+  Recipient [ label = "Recipient" ] ;
+
+  LockBoxValidator1 -> Transaction [ label = "input" ];
+  DistributedSetNode -> Transaction [ label = "input" ];
+  MerkleRoot -> Transaction [ label = "reference input" ];
+  Transaction -> DistributedSetNode1 [ label = "output" ];
+  Transaction -> DistributedSetNode2 [ label = "output" ];
+  Transaction -> SCToken [ label = "mints `k` tokens" ];
+  Transaction -> LockBoxValidator2 [ label = "output" ];
+  Transaction -> Recipient [ label = "output" ];
+  SCToken -> Recipient [ label = "is paid to", style=dashed ];
+  LockBoxValidator1 -> Recipient [ label = "pays `k` `MCToken`s to", style=dashed ];
+
+  // UnlockMintingPolicy -> Recipient [ label = "is paid to", style=dashed ];
+
+  // UserWallet1 [ label = "User wallet with 10 UnlockMintingPolicy tokens\nwith token name `blake2b(serialiseData((MCToken, tn)))`"];
+  // Transaction [ shape=diamond ];
+  // LockBoxValidator2 [label = "LockBoxValidator with 3 `MCToken`s\nwith token name `tn`"];
+  // UserWallet2 [ label = "UserWallet with 7 `MCToken`s\nwith token name `tn`" ] ;
+
+  // LockBoxValidator1 -> Transaction [ label = "input" ];
+  // LockBoxValidator2 -> Transaction [ label = "input" ];
+  // UserWallet1 -> Transaction [ label = "input" ];
+
+  // Transaction -> LockBoxValidator3 [ label = "output" ];
+  // Transaction -> UserWallet2 [ label = "output" ];
+  // Transaction -> UnlockMintingPolicy [ label = "burns" ];
+}
