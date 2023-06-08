@@ -9,6 +9,32 @@ import Sizer (fitsInto, fitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import Prelude
 
+-- Process for adding a new script to measurements:
+--
+-- 1. Add a CompiledCode for it in the Compiled module.
+-- 2. Use a fitsInto in an appropriate test group. Guess at a possible value
+-- (1000 is a good start.
+-- 3. Run the tests, and ensure you don't error due to Plutus weirdness. If you
+-- fail because your guess was too low, raise the limit; if you have headroom
+-- left, lower it.
+--
+-- Process for comparing two scripts:
+--
+-- 1. Make an exact copy of the script you're trying to optimize in the Legacy
+-- module.
+-- 2. Optimize (or attempt to) the original script in the codebase.
+-- 3. If it's not there already, add a CompiledCode for the (hopefully)
+-- optimized script in step 2 to the Compiled module.
+-- 4. Use a fitsUnder to compare the two. If you end up smaller, then you're
+-- done: if you end up larger, go back to the drawing board.
+--
+-- Help, I failed a test because I did a functionality change to a script!
+--
+-- This means that your change made the script larger. This isn't always
+-- avoidable; if you really need the extra size, adjust the limit to make it
+-- fit. However, you might be able to do better and make the cost less severe,
+-- so try that first.
+
 main :: IO ()
 main =
   defaultMain . testGroup "Size" $
