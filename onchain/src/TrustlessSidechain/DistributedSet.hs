@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fexpose-all-unfoldings #-}
 
 {- | Implementation of a set for on-chain proof of not in a set membership.
  We call this a *distributed set* since the set structure is distributed over
@@ -36,6 +37,7 @@ module TrustlessSidechain.DistributedSet (
   insertNode,
 
   -- * Validators / minting policies
+  mkInsertValidator,
   mkDsConfValidator,
   mkDsConfPolicy,
   dsConfTokenName,
@@ -413,6 +415,8 @@ mkDsConfPolicy dsc _red ctx =
 -}
 dsConfTokenName :: TokenName
 dsConfTokenName = TokenName emptyByteString
+
+{-# INLINE mkDsKeyPolicy #-}
 
 -- | 'mkDsKeyPolicy'.  See Note [How This All Works].
 mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool

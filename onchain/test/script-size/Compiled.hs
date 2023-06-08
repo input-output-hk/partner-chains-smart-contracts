@@ -8,10 +8,12 @@ module Compiled (
   mkCCVCode,
   mkMPFuelCode,
   mkMPMerkleRootCode,
-  mkPIDVCode,
   mkUPCVCode,
   mkCommitteeHashPolicyCode,
   mkCPCode,
+  mkInsertValidatorCode,
+  mkDsConfPolicyCode,
+  mkDsKeyPolicyCode,
 ) where
 
 import Plutus.V2.Ledger.Contexts (ScriptContext)
@@ -29,11 +31,17 @@ import TrustlessSidechain.CheckpointValidator (
 import TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
  )
+import TrustlessSidechain.DistributedSet (
+  Ds,
+  DsConfMint,
+  DsDatum,
+  DsKeyMint,
+  mkDsConfPolicy,
+  mkDsKeyPolicy,
+  mkInsertValidator,
+ )
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
-import TrustlessSidechain.PoCInlineDatum (
-  mkPoCInlineDatumValidator,
- )
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   CandidatePermissionMint,
@@ -108,15 +116,6 @@ mkMPMerkleRootCode ::
     )
 mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 
-mkPIDVCode ::
-  CompiledCode
-    ( Integer ->
-      Integer ->
-      ScriptContext ->
-      Bool
-    )
-mkPIDVCode = $$(compile [||mkPoCInlineDatumValidator||])
-
 mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
@@ -144,3 +143,15 @@ mkCPCode ::
       Bool
     )
 mkCPCode = $$(compile [||mkCheckpointPolicy||])
+
+mkInsertValidatorCode ::
+  CompiledCode (Ds -> DsDatum -> () -> ScriptContext -> Bool)
+mkInsertValidatorCode = $$(compile [||mkInsertValidator||])
+
+mkDsConfPolicyCode ::
+  CompiledCode (DsConfMint -> () -> ScriptContext -> Bool)
+mkDsConfPolicyCode = $$(compile [||mkDsConfPolicy||])
+
+mkDsKeyPolicyCode ::
+  CompiledCode (DsKeyMint -> () -> ScriptContext -> Bool)
+mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])

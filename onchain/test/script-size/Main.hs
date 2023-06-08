@@ -47,13 +47,20 @@ main =
             Compiled.mkCPCode
             400
         ]
-    , testGroup "Distributed set" []
     , testGroup
-        "PoC tests"
+        "Distributed set"
         [ fitsInto
-            "mkPoCInlineDatumValidator"
-            Compiled.mkPIDVCode
-            379
+            "mkInsertValidator"
+            Compiled.mkInsertValidatorCode
+            1_686
+        , fitsInto
+            "mkDsConfPolicy"
+            Compiled.mkDsConfPolicyCode
+            457
+        , fitsInto
+            "mkDsKeyPolicy"
+            Compiled.mkDsKeyPolicyCode
+            1_228
         ]
     , testGroup
         "Other"
