@@ -6,7 +6,7 @@ strict digraph {
   MerkleRoot [ label = "Merkle root of `MerkleTreeEntry`s"];
   LockBoxValidator1 [ label = "LockBoxValidator with `ki` `MCToken`s\nuniquely identified with `LockBoxOracleMintingPolicy`"];
   Transaction [ shape=diamond ];
-  UnlockMintingPolicy;
+  SCToken [shape = ellipse ];
   LockBoxValidator2 [ label = "LockBoxValidator with `ki - k` `MCToken`s\nuniquely identified with `LockBoxOracleMintingPolicy`"];
   Recipient [ label = "Recipient" ] ;
   DistributedSetNode1 [ label = "Distributed set node 1"];
@@ -20,8 +20,9 @@ strict digraph {
   MerkleRoot -> Transaction [ label = "reference input" ];
   Transaction -> DistributedSetNode1 [ label = "output" ];
   Transaction -> DistributedSetNode2 [ label = "output" ];
-  Transaction -> UnlockMintingPolicy [ label = "mints `k` tokens" ];
+  Transaction -> SCToken [ label = "mints `k` tokens" ];
+  SCToken -> Recipient [ label = "is paid to", style=dashed ];
   Transaction -> Recipient [ label = "output" ];
 
-  // UnlockMintingPolicy -> Recipient [ label = "is paid to", style=dashed ];
+  // SCToken -> Recipient [ label = "is paid to", style=dashed ];
 }

@@ -72,8 +72,8 @@ allows a lock/unlock transfer of Cardano assets.
 
 ## Plutus Design Specification.
 In the original specification, recall that participants claimed `FUEL` tokens
-from Merkle roots.
-This proposal will suggest that we replace the `FUEL` token claiming mechanism
+from Merkle roots with `FUELMintingPolicy`.
+This proposal will suggest that we replace `FUELMintingPolicy`
 with a new token, `SCToken`, which generalizes the token name of `FUEL` tokens.
 Then, we will have a `LockBoxValidator` which will be the lock box address for
 a Cardano asset that will be uniquely identified by an NFT
@@ -85,17 +85,17 @@ unlocking of tokens at the `LockBoxValidator` uniquely identified by
 We first define `SCToken`.
 Recall that we stated that this will be very similar to `FUELMintingPolicy`,
 and it intends to generalize `FUELMintingPolicy`'s functionality.
-Hence, we will be presenting diffs from the original definitions in
+Hence, we will be presenting diffs from the original definitions from
 `FUELMintingPolicy`.
 
 We first must change the `MerkleTreeEntry` (i.e., transactions sent over from the
-sidechain) data type from the main specification.
+sidechain) data type from the main specification as follows.
 ```diff
 data MerkleTreeEntry = MerkleTreeEntry
   { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-+  , tokenName :: TokenName -- the token name of the asset to be claimed
++ , tokenName :: TokenName -- the token name of the asset to be claimed
   , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
@@ -109,7 +109,9 @@ As redeemer, `SCToken` will take the following data type.
 -  | SideToMain MerkleTreeEntry MerkleProof
 
 +data SCTokenRedeemer
-+  = SCTokenBurn ByteString -- Recipient's sidechain address
++  = SCTokenBurn ByteString -- Recipient's sidechain address (or empty string
++                           -- in the case that we are using the lock/unlock
++                           -- mechanism)
 +  | SCTokenMint MerkleTreeEntry MerkleProof
 ```
 Note that this is identical to the current implementation of `FUELRedeemer`
@@ -118,7 +120,7 @@ with minor refactors to the names of the constructors.
 Then, `SCToken` mints (strictly more than 0 tokens) with token name
 `tn` only if all of the following are satisfied.
 
-- The redeemer is `SCTokenMint`.
+- The redeemer is `SCTokenMint scTokenMintMerkleTreeEntry scTokenMintMerkleProof`.
 
 - A `MerkleRootToken` with token name, say `merkleRoot`, is given as a
   reference input at a `MerkleRootTokenValidator` script address.
@@ -140,13 +142,13 @@ Then, `SCToken` mints (strictly more than 0 tokens) with token name
 - The transaction corresponds to the `scTokenMintMerkleTreeEntry` in the
   sense that:
 
+    - `tn` is `tokenName` from the `MerkleTreeEntry`.
+
     - There exists a transaction output at `recipient` with at least `amount`
-      `SCToken` tokens with token name `tn` (see [#280 for the security
+      `SCToken` tokens with unique token name `tn` (see [#280 for the security
       proof](https://github.com/mlabs-haskell/trustless-sidechain/issues/290)).
 
     - `amount` `SCToken`s are minted with unique token name `tn`.
-
-    - `tn` is `tokenName` from the `MerkleTreeEntry`.
 
 Again, note that this is essentially identical to the conditions given in
 [`FUELMintingPolicy` for individual
@@ -175,7 +177,7 @@ First, we will modify the endpoint parameters for `SCToken` to the following.
 
 data MintParams = MintParams
   { amount :: Integer
-+  , claimedAsset :: ClaimedAsset
++ , claimedAsset :: ClaimedAsset
   , recipient :: ByteString
   , merkleProof :: MerkleProof
   , index :: Integer
@@ -192,7 +194,8 @@ Note that this has identical endpoint parameters as
 except that we require that the endpoint also includes a `claimedAsset` field
 which is either the identifier for the `MintedAsset` (which is currently hard
 coded to "FUEL")  or the `CurrencySymbol` and `TokenName` of a Cardano asset
-(whose cbor hash will be the token name of `SCToken` -- more on this later).
+(whose hash of the cbor encoding will be the token name of `SCToken` -- more on
+this later).
 
 With this in mind, we give the definition of `LockBoxValidator` and a minting
 policy `LockBoxOracleMintingPolicy`.
@@ -201,49 +204,41 @@ policy `LockBoxOracleMintingPolicy`.
 a UTxO to ensure uniqueness, and will be paid to a `LockBoxValidator` script
 address.
 
-`LockBoxValidator` must be parameterized by the currency symbol of
-`LockBoxOracleMintingPolicy` and `SCToken`.
+`LockBoxValidator` must be parameterized by:
 
-As datum, `LockBoxValidator` will store the currency symbol and token name of
-`MCToken` that it will lock.
-Thus, `LockBoxValidator` will have as datum the following data type.
-```haskell
-data LockBoxDatum = LockBoxDatum
-    { lockedCurrencySymbol :: CurrencySymbol
-    , lockedTokenName :: TokenName
-    }
-```
+- the currency symbol of `LockBoxOracleMintingPolicy`;
+
+- the currency symbol of `SCToken`; and
+
+- the currency symbol and token name of the Cardano asset that it will lock --
+  call such a currency symbol `lockedCurrencySymbol` and such a token name
+  `lockedTokenName`.
+
+The datum of `LockBoxValidator` does not matter and hence may be the unit type.
 
 As redeemer, `LockBoxValidator` will take the following data type.
 ```haskell
 data LockBoxValidatorRedeemer
-    = Lock
-        { lockSidechainRecipient :: ByteString
-            -- ^ The sidechain recipient.
-        }
+    = Lock ByteString -- ^ the address of the sidechain recipient.
     | Unlock
-        { unlockCurrencySymbol :: CurrencySymbol
-        , unlockTokenName :: TokenName
-        }
 ```
-Note that this definition has partial functions for record accesses (which are
-bad), but we use the record field names simply as convenient notation in the
-specification to discuss the conditions which must be checked.
 
-Then, `LockBoxValidator` will succeed in two cases: either a participant is
-locking some `MCToken`s and adding to the locked tokens in the
+`LockBoxValidator` will succeed in two cases: either a participant is locking
+some more `MCToken`s and thus adding to the locked tokens in the
 `LockBoxValidator`; or a participant is claiming their tokens from the
 `LockBoxValidator`.
 
 So, in the former case `LockBoxValidator` succeeds only if the following are
 all satisfied.
 
-- The `LockBoxValidatorRedeemer` is `Lock`.
+- The `LockBoxValidatorRedeemer` is `Lock sidechainRecipient` (note that the
+  `sidechainRecipient` is used only by the offchain nodes to ensure that the
+  sidechain recieves the corresponding tokens).
 
-- There exists a script output at the `LockBoxValidator` address with the
-  `LockBoxOracleMintingPolicy` which has the same datum as the current
-  `LockBoxValidator`.
-  Note that this `LockBoxValidator` should also be "relatively small".[^relativelySmall]
+- There exists a script output at a `LockBoxValidator` address with the
+  `LockBoxOracleMintingPolicy`.
+  Note that this `LockBoxValidator` should also be "relatively
+  small".[^relativelySmall]
 
 - Let `ki` denote the number of `lockedCurrencySymbol`s with token name
   `lockedTokenName` at the current `LockBoxValidator` address.
@@ -260,7 +255,7 @@ Indeed, if we let `ko` denote the number of `lockedCurrencySymbol`s with token
 name `lockedTokenName` at the script output `LockBoxValidator` uniquely
 identified by `LockBoxOracleMintingPolicy`, then the Bridge will interpret this
 transaction to mean `ko - ki` tokens were transferred from mainchain to
-sidechain with recipient `sidechainRecipient`  (from the
+sidechain with recipient `sidechainRecipient` (from the
 `LockBoxValidatorRedeemer`).
 
 The following diagram depicts this scenario.
@@ -274,36 +269,29 @@ satisfied.
 - The `LockBoxValidatorRedeemer` is `Unlock`.
 
 - `SCToken` mints `k` tokens with token name `tn` for which `tn` is
-  `blake2b(serialiseData (unlockCurrencySymbol, unlockTokenName))`.
+  `blake2b(serialiseData (lockedCurrencySymbol, lockedTokenName))`.
   Moreover, at the output address with at least `k` such `SCToken`s, there are
-  at least `k` tokens with `unlockCurrencySymbol` and `unlockTokenName`.
+  at least `k` tokens with `lockedCurrencySymbol` and `lockedTokenName`.
 
-- The datum `LockBoxDatum` satisfies `lockedCurrencySymbol ==
-  unlockCurrencySymbol` and `lockedTokenName == unlockTokenName`.
+- Let `ki` denote the number of tokens with `lockedCurrencySymbol` and
+  `lockedTokenName` at this current address.
+  Then, there must exist a script
+  output at a `LockBoxValidator` address with a `LockBoxOracleMintingPolicy`
+  which has at least `ki - k` tokens of `lockedCurrencySymbol` token name with
+  `lockedTokenName`.
+  Again, this script output must also be "relatively small".
 
-- Let `ki` denote the number of tokens with `unlockCurrencySymbol` and
-  `unlockTokenName` at this current address. Then, there must exist script
-  outputs at a `LockBoxValidator` address with a `LockBoxOracleMintingPolicy`
-  which has the same datum as the current `LockBoxValidator` and at least `ki -
-  k` tokens of `unlockCurrencySymbol` token name with `unlockTokenName`
-  altogether.
+  In essence, this ensures that a participant only claims at most the number of
+  tokens they are allowed to claim.
 
-We can depict the transaction of unlocking tokens (via minting `SCToken` with
-the `MerkleTreeEntry`'s `claimedAsset` as `LockedAsset`) with the below
-diagram.
+We can depict the transaction of unlocking tokens (via minting `SCToken`s with
+token name `blake2b(serialiseData (lockedCurrencySymbol, lockedTokenName))`)
+with the below diagram.
 
 ![LockBoxValidatorUnlock](./07-ModularisingTokenHandling/LockBoxValidatorUnlock.svg)
 
-Thus, in summary we have demonstrated how the aforementioned definitions permit
-the following workflows.
-
-- One may mint `SCToken` to unlock assets in Cardano, and burn these tokens as
-  a noop.
-
-- One may mint `SCToken` on Cardano with an identifier that corresponds to a
-  token in the sidechain for sidechain to mainchain transfers. Moreover, one
-  may burn this token for mainchain to sidechain transfers. Note that this is
-  exactly the behavior of the old `FUELMintingPolicy`.
+After this transaction has completed, the participant will have some useless
+`SCToken`s in their wallet, and these may be burned as a noop.
 
 ## Workflow
 This section discusses the entire workflow for transferring a Cardano asset,
@@ -319,7 +307,7 @@ We will assume that the sidechain has been initialized appropriately.
    the sidechain where sidechain nodes determine the sidechain recipient from
    the redeemer `LockBoxValidatorRedeemer`.
 
-   Note sidechain nodes determine how many tokens to mint in the sidechain by
+   Note that sidechain nodes determine how many tokens to mint in the sidechain by
    letting `ki` denote the number of `MCToken`s in the consumed
    `LockBoxValidator` transaction input uniquely identified by the
    `LockBoxOracleMintingPolicy` NFT, and letting `ko` denote the the number of
@@ -334,17 +322,41 @@ The following diagram depicts the transaction for step 1 of the workflow.
 **Workflow: transferring from sidechain to mainchain**
 1. On the sidechain, a participant posts a transaction which burns `MCToken`'s
    corresponding sidechain tokens.
-2. Eventually, transactions from 1. are bundled up into a Merkle root, and
-   the Merkle root is signed by the committee and posted to the mainchain.
-3. A mainchain recipient of a transaction from 1. claims their
-   `UnlockMintingPolicy` tokens by posting a transaction on the mainchain,
-   which also unlocks `MCToken`s residing at `LockBoxValidator` addresses.
-4. A participant may burn their `SCToken`s as they serve no
-   purpose.
+2. Eventually, transactions from 1. are bundled up into a Merkle root, and the
+   Merkle root is signed by the committee and posted to the mainchain. Note
+   that the `tokenName` field of the `MerkleTreeEntry`s *must* be set to
+   `blake2b(serialiseData(MCToken currency symbol, MCToken token name))`.
+3. A mainchain recipient of a transaction from 1. claims their `SCToken`s by
+   posting a transaction on the mainchain, which also unlocks `MCToken`s
+   residing at `LockBoxValidator` addresses.
+4. A participant may burn their `SCToken`s as they serve no purpose -- note
+   that this differs from the original `FUELMintingPolicy` where burning of
+   `FUELMintingPolicy` was something sidechain nodes observed to mint the
+   corresponding tokens on the sidechain. With lock/unlock mechanism,
+   sidechains *should not* observe such a transaction, and this should be
+   considered a noop.
 
 The following diagram depicts the transaction for step 3 of the workflow.
 
 ![Lock box sidechain to mainchain part 1](./07-ModularisingTokenHandling/NftLockBoxSidechainToMainchain.svg)
+
+## Recovering the Original Workflow of `FUELMintingPolicy`
+The original workflow of `FUELMintingPolicy` is very easy to recover. It simply
+amounts to *not* using any of the `LockBoxValidator` and
+`LockBoxOracleMintingPolicy` Plutus scripts, and setting the sidechain nodes to
+observe the following on the mainchain.
+
+- If `SCToken` is burned, then the redeemer must be `SCTokenBurn
+  sidechainRecipient`, so mint the corresponding tokens on sidechain to
+  `sidechainRecipient`.
+
+Note how this differs from the lock/unlock transfer workflow where this was
+previously a noop.
+
+And finally, of course, transferring from sidechain to mainchain amounts to the
+same thing as before where sidechain nodes would bundle up transactions in a
+Merkle root with some specified token name, say "FUEL",  and submit the Merkle
+root to the mainchain.
 
 ## Design Discussion and Related Work
 This section discusses the design with other potential designs, and relevant
@@ -363,17 +375,14 @@ identified by the `LockBoxOracleMintingPolicy`.
 In this section, we will motivate alternate solutions which attempts to remedy
 the concurrency problem by having many `LockBoxValidator`s participants may
 claim tokens from.
+
 At first glance, a remedy to the concurrency situation would be to increase the
-number of `LockBoxValidator` entries.
-So, one could have a small fixed number of `LockBoxValidator`s that
-participants may interact with (which wouldn't scale as the number of
-participants grow), so we will consider the alternative of having a non-fixed
-amount of `LockBoxValidator`s.
-In other words, instead of requiring sidechain nodes to *only* observe only the
-`LockBoxValidator`s which are uniquely identified by
-`LockBoxOracleMintingPolicy`, we can instead requiring sidechain nodes to
-observe *all* `LockBoxValidator` addresses for which participants can arbitrarily
-lock funds at such an address.
+number of `LockBoxValidator`s.
+In other words, instead of requiring sidechain nodes to *only* observe the
+`LockBoxValidator` which is uniquely identified by
+`LockBoxOracleMintingPolicy`, we can instead require sidechain nodes to observe
+*all* `LockBoxValidator` addresses for which participants can arbitrarily lock
+funds at such an address.
 
 Unfortunately, there's an issue with this approach.
 Sometimes participants will not be able to always unlock their tokens using the
@@ -381,9 +390,9 @@ design described above.
 Consider the following scenario.
 
 1. Alice on the mainchain transfers 100 `MCToken`s to her own sidechain address
-   by paying 1 `MCToken` to a `LockBoxValidator` 100 times. So there are 100
-   UTxOs at the `LockBoxValidator` address in the mainchain each with a single
-   `MCToken`.
+   by paying 1 `MCToken` to a `LockBoxValidator` 100 times.
+   Thus, there are 100 UTxOs at the `LockBoxValidator` address in the mainchain
+   each with a single `MCToken`.
 
 2. Bob on the sidechain trades Alice for all of her corresponding sidechain
    tokens of `MCToken`.
@@ -396,24 +405,24 @@ Consider the following scenario.
    `MCToken` on the mainchain in a single UTxO, but this would fail as the
    transaction is too large
 
-There are numerous approaches around this that we will sketch.
+We sketch some approaches to remedy this situation.
 
 - *Change `SCToken` and `LockBoxValidator` so that  `SCToken`s are minted as
-  before (but does not correspond to unlocking of tokens at a
+  described here (but does not correspond to unlocking of tokens at a
   `LockBoxValidator`), and instead, burning of `SCToken`s corresponds to
   unlocking of tokens at a `LockBoxValidator`*.
-  This approach nice as it allows a "multi-staged" claim mechanism where the
-  original Cardano asset can be exchanged for a wrapped sidechain token over
-  multiple transactions.
+  This approach is nice as it allows a "multi-staged" claim mechanism where the
+  original Cardano asset can be exchanged for a `SCToken`s over multiple
+  transactions.
   The author believes that this maps quite nicely in the UTxO model, and this
   will be sketched out in the appendix.
 
 - *Allowing merging of arbitrary lock box addresses.*
   Unlike the previous solution where the problem of claiming a large amount of
   UTxOs to claim one's full entitled amount could be split up into multiple
-  transactions, this solution proposes that participants themselves merge lock
-  box addresses together to build a UTxO with sufficient tokens that they can
-  then claim themselves.
+  transactions via burning a participant's `SCToken`s, this solution proposes
+  that participants themselves merge lock box addresses together to build a
+  UTxO with sufficient tokens that they can then claim themselves.
 
   Alternatively, one may consider collecting locked `MCToken`s into
   a single distinguished large UTxO when uniquely minting Merkle roots, and
@@ -432,8 +441,7 @@ Some related work suggests the following solutions.
   bundle locked `MCToken`s at lock box addresses into a *single large UTxO*,
   then pay this single large UTxO to claim addresses.
 
-  This is essentially the third fix to the direct lock mechanism.
-  Note that they fix the slow/poor concurrency problem via allowing *atomic
+  Note that they "fix" the slow/poor concurrency problem via allowing *atomic
   swaps* (securely trading mainchain tokens for sidechain tokens [vice versa]
   as an independent deal without going through sidechain nodes) -- something
   that we may want to consider adding to our system as well.
@@ -454,14 +462,20 @@ Some related work suggests the following solutions.
   only may be claimed if sufficient committee members have signed the
   transaction.
 
-  This approach of committee members individual signing transactions
-  individually does not map nicely in the current system with Merkle roots as
-  this suggests that the committee members should just individually sign every
-  transaction instead of using a Merkle root at all.
+  This approach of committee members individually signing transactions does not
+  map nicely in the current system with Merkle roots as this suggests that the
+  committee members should just sign every transaction instead of using a
+  Merkle root at all.
 
 ## Appendix: Alternate Plutus Design Specification
-This section sketches an alternate design which should also work, but has
-better concurrency.
+This section sketches an alternate design which should also work and has better
+concurrency.
+Unfortunately, this is a bit more complicated to implement.
+
+As a high level overview, we will introduce a new minting policy
+`UnlockMintingPolicy` which can be claimed from Merkle roots, then
+`UnlockMintingPolicy` may be burnt to claim Cardano assets from a
+`LockBoxValidator` script address.
 
 In summary, the design will require the following Plutus scripts.
 
@@ -583,7 +597,7 @@ data MerkleTreeEntry = MerkleTreeEntry
   { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
   , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
   , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-+  , claimedAsset :: ClaimedAsset -- the asset to be claimed by a merkle proof
++ , claimedAsset :: ClaimedAsset -- the asset to be claimed by a merkle proof
   , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
   }
 ```
@@ -673,10 +687,6 @@ satisfied.
   in `LockBoxValidator`s.
 - The `lockBoxValidatorAddress` outputs are "relatively small"[^relativelySmall].
 
-[^relativelySmall]: This condition is a technical condition where adversaries
-  can add a whole bunch of garbage tokens to an output to make the output far
-  too large to be able to be spent, thus locking the tokens away forever.
-
 This completes the definitions for a design of a mainchain lock/unlock
 transfer.
 
@@ -712,11 +722,6 @@ essentially "regulates itself".
 So, following that approach, this means that offchain code should build transactions
 using a random selection of `LockBoxValidator`s in effort to reduce UTxO
 contention -- see CIP2[^refCIP2] for details.
-
-## Conclusion
-Two designs were presented for the alternate transfer mechanism.
-There are tradeoffs for both implementations and its unclear if there is a
-clear winner for either of the solutions.
 
 [^refEnablingBlockchainInnovations]: Back, A., Corallo, M., Dashjr, L.,
 Friedenbach, M., Maxwell, G., Miller, A.K., Poelstra, A., Timón, J., & Wuille,
