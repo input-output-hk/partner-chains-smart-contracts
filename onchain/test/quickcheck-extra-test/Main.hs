@@ -1,6 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Main (main) where
 
 import Data.List (isSubsequenceOf)
@@ -17,7 +14,7 @@ import Test.QuickCheck.Monadic (assert, monadicIO, monitor, run)
 import Test.QuickCheck.Poly (A)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 main :: IO ()
 main =

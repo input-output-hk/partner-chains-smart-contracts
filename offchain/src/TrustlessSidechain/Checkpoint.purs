@@ -79,7 +79,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
@@ -95,8 +94,8 @@ runSaveCheckpoint
       , sidechainEpoch
       }
   ) = do
-  let -- `msg` is used to help generate log messages
-    msg = report "runSaveCheckpoint"
+  let -- `mkErr` is used to help generate log messages
+    mkErr = Logging.mkReport "Checkpoint" "runSaveCheckpoint"
 
   -- Getting the minting policy / currency symbol / token name for checkpointing
   -------------------------------------------------------------
@@ -107,7 +106,7 @@ runSaveCheckpoint
     getCommitteeHashPolicy sidechainParams
 
   when (null committeeSignatures)
-    (throwContractError $ msg "No signatures provided")
+    (throwContractError $ mkErr "No signatures provided")
 
   let
     curCommitteePubKeys /\ allCurCommitteeSignatures =
@@ -117,7 +116,7 @@ runSaveCheckpoint
       sidechainParams
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
 
-  checkpointMessage ← liftContractM (msg "Failed to get checkpoint message")
+  checkpointMessage ← liftContractM (mkErr "Failed to get checkpoint message")
     $ serialiseCheckpointMessage
     $ CheckpointMessage
         { sidechainParams
@@ -134,7 +133,7 @@ runSaveCheckpoint
         checkpointMessage
         curCommitteeSignatures
     )
-    ( throwContractError $ msg
+    ( throwContractError $ mkErr
         "Invalid committee signatures for CheckpointMessage"
     )
 
@@ -155,7 +154,7 @@ runSaveCheckpoint
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
-    liftContractM (msg "Failed to find checkpoint UTxO") checkpointUtxoLookup
+    liftContractM (mkErr "Failed to find checkpoint UTxO") checkpointUtxoLookup
 
   -- Getting the validator / minting policy for the merkle root token.
   -- This is needed to get the committee hash utxo.
@@ -172,7 +171,7 @@ runSaveCheckpoint
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (msg "Failed to get merkleRootTokenCurrencySymbol")
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
@@ -191,13 +190,13 @@ runSaveCheckpoint
       committeeHashTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
-    liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
+    liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
 
   comitteeHashDatum ←
-    liftContractM (msg "Update committee hash UTxO is missing inline datum")
+    liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
   UpdateCommitteeHashDatum datum ← liftContractM
-    (msg "Datum at update committee hash UTxO fromData failed")
+    (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap comitteeHashDatum)
   when (datum.committeeHash /= curCommitteeHash)
     (throwContractError "Incorrect committee provided")
@@ -232,19 +231,16 @@ runSaveCheckpoint
         value
       <> TxConstraints.mustReferenceOutput committeeOref
 
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' (msg "Submitted checkpoint transaction: " <> show txId)
+  logInfo' (mkErr "Submitted checkpoint transaction: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' (msg "Checkpoint transaction submitted successfully")
+  logInfo' (mkErr "Checkpoint transaction submitted successfully")
 
   pure txId
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = Logging.mkReport <<< { mod: "Checkpoint", fun: _ }
 
 -- | `getCheckpointPolicy` grabs the checkpoint hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
@@ -257,12 +253,11 @@ getCheckpointPolicy ∷
     }
 getCheckpointPolicy (SidechainParams sp) = do
   let
-    msg = Logging.mkReport
-      { mod: "CheckpointPolicy", fun: "getCheckpointPolicy" }
+    mkErr = Logging.mkReport "CheckpointPolicy" "getCheckpointPolicy"
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
   checkpointCurrencySymbol ← liftContractM
-    (msg "Failed to get checkpoint CurrencySymbol")
+    (mkErr "Failed to get checkpoint CurrencySymbol")
     (Value.scriptCurrencySymbol checkpointPolicy)
   let checkpointTokenName = initCheckpointMintTn
   pure

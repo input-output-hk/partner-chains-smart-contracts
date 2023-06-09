@@ -29,6 +29,7 @@ import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text qualified as Text
 import PlutusTx.Builtins (BuiltinByteString)
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -49,7 +50,6 @@ import TrustlessSidechain.Types (
   thresholdDenominator,
   thresholdNumerator,
  )
-import Prelude
 
 {- | Returns the corresponding merkle proofs for a merkle tree of the given
  size of the merkle tree entries.
@@ -69,7 +69,7 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
     indicies = [1 .. n]
     entries :: [MerkleTreeEntry]
     entries =
-      map
+      fmap
         ( \ix ->
             MerkleTreeEntry
               { mteIndex = ix
@@ -80,16 +80,16 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
         )
         indicies
     cborEntries :: [BuiltinByteString]
-    cborEntries = map MerkleRootTokenMintingPolicy.serialiseMte entries
+    cborEntries = fmap MerkleRootTokenMintingPolicy.serialiseMte entries
     cborToMte :: Map.Map RootHash MerkleTreeEntry
-    cborToMte = Map.fromList $ zip (map MerkleTree.hashLeaf cborEntries) entries
+    cborToMte = Map.fromList $ zip (fmap MerkleTree.hashLeaf cborEntries) entries
     merkleTree :: MerkleTree.MerkleTree
     merkleTree = fst . MerkleTree.lookupsMpFromList $ cborEntries
     lookups :: [(RootHash, MerkleTree.MerkleProof)]
     lookups = snd . MerkleTree.lookupsMpFromList $ cborEntries
     combinedMerkleProofs :: [CombinedMerkleProof]
     combinedMerkleProofs =
-      map
+      fmap
         ( \(cbor, proof) ->
             CombinedMerkleProof
               { cmpTransaction = Maybe.fromJust $ Map.lookup cbor cborToMte
@@ -133,7 +133,7 @@ fuelMintingBench = do
                   , ccSidechainParams = sidechainParams
                   }
            in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
-                ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
+                <> List.unwords (flags <> Ctl.ctlCommonFlags ctlCommon)
 
         sidechainParams =
           SidechainParams
@@ -152,7 +152,7 @@ fuelMintingBench = do
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
-              { cisInitCommitteePubKeys = map snd initCommittee
+              { cisInitCommitteePubKeys = fmap snd initCommittee
               , cisSidechainEpoch = 1
               }
 
@@ -175,7 +175,7 @@ fuelMintingBench = do
             sidechainParams
             CtlSaveRoot
               { csrMerkleRoot = rootHash
-              , csrCurrentCommitteePrivKeys = map fst initCommittee
+              , csrCurrentCommitteePrivKeys = fmap fst initCommittee
               , csrPreviousMerkleRoot = Nothing
               }
 
@@ -195,7 +195,7 @@ fuelMintingBench = do
   Bench.plotOffChainWithLinearRegression "FUELMintingPolicyTimePlot.svg" "FUELMintingPolicy"
   Bench.plotOnChainWithLinearRegression "FUELMintingPolicyLoveLacePlot.svg" "FUELMintingPolicy"
 
-  return ()
+  pure ()
 
 -- Helpers
 

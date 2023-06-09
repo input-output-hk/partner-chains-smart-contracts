@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {- | "Ctl" defines a monad which allows one to conveniently call CLI ctl
@@ -25,12 +24,14 @@ module Ctl (
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN)
 import Control.Monad qualified as Monad
-import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Class qualified as IO.Class
 import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1 qualified as Secp256k1
 import Data.List qualified as List
+import Data.String qualified as HString
 import Plutus.V2.Ledger.Api (TxOutRef)
+import System.IO (FilePath)
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash, unRootHash)
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
@@ -56,7 +57,6 @@ import TrustlessSidechain.Types (
   uchmSidechainEpoch,
   uchmSidechainParams,
  )
-import Prelude
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
@@ -143,10 +143,10 @@ data CtlCommon = CtlCommon
 {- | 'ctlCommonFlags' generates the CLI flags that corresponds to sidechain
  parameters
 -}
-ctlCommonFlags :: CtlCommon -> [String]
+ctlCommonFlags :: CtlCommon -> [HString.String]
 ctlCommonFlags CtlCommon {..} =
   let SidechainParams {..} = ccSidechainParams
-   in map
+   in fmap
         List.unwords
         [ ["--payment-signing-key-file", ccSigningKeyFile]
         , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
@@ -158,21 +158,21 @@ ctlCommonFlags CtlCommon {..} =
 {- | 'ctlInitSidechainFlags' generates the CLI flags that corresponds to init
  sidechain command
 -}
-ctlInitSidechainFlags :: CtlInitSidechain -> [String]
+ctlInitSidechainFlags :: CtlInitSidechain -> [HString.String]
 ctlInitSidechainFlags CtlInitSidechain {..} =
-  map List.unwords $
-    mappend
+  fmap List.unwords $
+    (<>)
       [ ["init"]
       , ["--sidechain-epoch", show cisSidechainEpoch]
       ]
-      $ flip map cisInitCommitteePubKeys $
+      $ flip fmap cisInitCommitteePubKeys $
         \pubKey ->
           ["--committee-pub-key", OffChain.showScPubKey pubKey]
 
 {- | 'ctlRegistrationFlags' generates the CLI flags that corresponds to register
  command
 -}
-ctlRegistrationFlags :: SidechainParams -> CtlRegistration -> [String]
+ctlRegistrationFlags :: SidechainParams -> CtlRegistration -> [HString.String]
 ctlRegistrationFlags scParams CtlRegistration {..} =
   let msg =
         BlockProducerRegistrationMsg
@@ -180,7 +180,7 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
           , bprmSidechainPubKey = OffChain.toSidechainPubKey crSidechainPrvKey
           , bprmInputUtxo = crRegistrationUtxo
           }
-   in map
+   in fmap
         List.unwords
         [ ["register"]
         , ["--sidechain-public-key", OffChain.showScPubKey $ OffChain.toSidechainPubKey crSidechainPrvKey]
@@ -192,9 +192,9 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
 {- | 'ctlDeregistrationFlags' generates the CLI flags that corresponds to deregister
  command
 -}
-ctlDeregistrationFlags :: CtlDeregistration -> [String]
+ctlDeregistrationFlags :: CtlDeregistration -> [HString.String]
 ctlDeregistrationFlags CtlDeregistration {..} =
-  map
+  fmap
     List.unwords
     [ ["deregister"]
     , ["--spo-public-key", OffChain.showPubKey $ OffChain.vKeyToSpoPubKey cdrSpoPubKey]
@@ -203,7 +203,7 @@ ctlDeregistrationFlags CtlDeregistration {..} =
 {- | 'ctlUpdateCommitteeHash' generates the CLI flags that corresponds to the
  update committee hash command
 -}
-ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [String]
+ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.String]
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
@@ -213,7 +213,7 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
           , uchmSidechainEpoch = cuchSidechainEpoch
           }
       currentCommitteePubKeysAndSigsFlags =
-        map
+        fmap
           ( \sidechainPrvKey ->
               [ "--committee-pub-key-and-signature"
               , OffChain.showScPubKeyAndSig
@@ -223,19 +223,19 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
           )
           cuchCurrentCommitteePrvKeys
       newCommitteeFlags =
-        map
+        fmap
           ( \pubKey ->
               [ "--new-committee-pub-key"
               , OffChain.showScPubKey pubKey
               ]
           )
           cuchNewCommitteePubKeys
-   in map List.unwords $
+   in fmap List.unwords $
         [["committee-hash"]]
-          ++ currentCommitteePubKeysAndSigsFlags
-          ++ newCommitteeFlags
-          ++ [["--sidechain-epoch", show cuchSidechainEpoch]]
-          ++ maybe
+          <> currentCommitteePubKeysAndSigsFlags
+          <> newCommitteeFlags
+          <> [["--sidechain-epoch", show cuchSidechainEpoch]]
+          <> maybe
             []
             (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS $ unRootHash bs]])
             cuchPreviousMerkleRoot
@@ -243,7 +243,7 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
 {- | 'ctlSaveRootFlags' generates the CLI flags that corresponds to the
  save root command
 -}
-ctlSaveRootFlags :: SidechainParams -> CtlSaveRoot -> [String]
+ctlSaveRootFlags :: SidechainParams -> CtlSaveRoot -> [HString.String]
 ctlSaveRootFlags scParams CtlSaveRoot {..} =
   let msg =
         MerkleRootInsertionMessage
@@ -252,7 +252,7 @@ ctlSaveRootFlags scParams CtlSaveRoot {..} =
           , mrimPreviousMerkleRoot = fmap unRootHash csrPreviousMerkleRoot
           }
       currentCommitteePubKeysAndSigsFlags =
-        map
+        fmap
           ( \sidechainPrvKey ->
               [ "--committee-pub-key-and-signature"
               , OffChain.showScPubKeyAndSig
@@ -261,18 +261,18 @@ ctlSaveRootFlags scParams CtlSaveRoot {..} =
               ]
           )
           csrCurrentCommitteePrivKeys
-   in map List.unwords $
+   in fmap List.unwords $
         [["save-root"]]
-          ++ currentCommitteePubKeysAndSigsFlags
-          ++ [["--merkle-root", OffChain.showBuiltinBS $ unRootHash csrMerkleRoot]]
-          ++ maybe [] (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS $ unRootHash bs]]) csrPreviousMerkleRoot
+          <> currentCommitteePubKeysAndSigsFlags
+          <> [["--merkle-root", OffChain.showBuiltinBS $ unRootHash csrMerkleRoot]]
+          <> maybe [] (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS $ unRootHash bs]]) csrPreviousMerkleRoot
 
 {- | 'ctlClaimFlags' generates the CLI flags that corresponds to the
  claim command (minting FUEL)
 -}
-ctlClaimFlags :: CtlClaim -> [String]
+ctlClaimFlags :: CtlClaim -> [HString.String]
 ctlClaimFlags CtlClaim {..} =
-  map
+  fmap
     List.unwords
     [ ["claim"]
     , ["--combined-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
@@ -297,4 +297,4 @@ ctlClaimFlags CtlClaim {..} =
 generateFreshCommittee :: MonadIO m => Int -> m [(SECP.SecKey, SidechainPubKey)]
 generateFreshCommittee n = IO.Class.liftIO $ do
   prvKeys <- Monad.replicateM n OffChain.generateRandomSecpPrivKey
-  return $ map (\prvKey -> (prvKey, OffChain.toSidechainPubKey prvKey)) prvKeys
+  pure $ fmap (\prvKey -> (prvKey, OffChain.toSidechainPubKey prvKey)) prvKeys

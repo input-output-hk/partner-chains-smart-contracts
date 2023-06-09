@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -18,10 +17,10 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Prelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   FUELMint (fmDsKeyCurrencySymbol, fmMptRootTokenCurrencySymbol),
   FUELRedeemer (MainToSide, SideToMain),

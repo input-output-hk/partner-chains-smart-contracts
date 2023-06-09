@@ -25,6 +25,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([435](https://github.com/mlabs-haskell/trustless-sidechain/issues/435),
   [444](https://github.com/mlabs-haskell/trustless-sidechain/pull/444),
   onchain)
+* Added a QuickCheck guide
+  ([449](https://github.com/mlabs-haskell/trustless-sidechain/issues/449),
+  [468](https://github.com/mlabs-haskell/trustless-sidechain/pull/468),
+  onchain)
 
 ## Changed
 
@@ -37,6 +41,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   offchain)
 * Refactored configuration file parser
   ([460](https://github.com/mlabs-haskell/trustless-sidechain/issues/460),
+* New Haskell standards document and compliance
+  ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
+   [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
+   onchain)
 
 ## Fixed
 * Deregistration fail after multiple registrations with the same SPO public key

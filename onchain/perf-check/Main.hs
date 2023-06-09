@@ -1,23 +1,20 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
 
 import Data.Kind (Type)
+import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
 import PlutusTx.Code (CompiledCode, sizePlc)
-import PlutusTx.Prelude
 import PlutusTx.TH (compile)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Providers (IsTest (run, testOptions), singleTest, testFailed, testPassed)
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Utils (verifyMultisig)
 import Type.Reflection (Typeable)
-import Prelude qualified
 
-main :: Prelude.IO ()
+main :: TSPrelude.IO ()
 main =
   defaultMain . testGroup "Size" $
     [ fitsUnder "verifyMultisig" ("new", newVerify) ("old", oldVerify)
@@ -28,59 +25,59 @@ main =
 fitsUnder ::
   forall (a :: Type).
   (Typeable a) =>
-  Prelude.String ->
-  (Prelude.String, CompiledCode a) ->
-  (Prelude.String, CompiledCode a) ->
+  HString.String ->
+  (HString.String, CompiledCode a) ->
+  (HString.String, CompiledCode a) ->
   TestTree
 fitsUnder name test target = singleTest name $ SizeComparisonTest test target
 
 data SizeComparisonTest (a :: Type)
   = SizeComparisonTest
-      (Prelude.String, CompiledCode a)
-      (Prelude.String, CompiledCode a)
+      (HString.String, CompiledCode a)
+      (HString.String, CompiledCode a)
 
 instance (Typeable a) => IsTest (SizeComparisonTest a) where
   run _ (SizeComparisonTest (mName, mCode) (tName, tCode)) _ = do
     let tEstimate = sizePlc tCode
     let mEstimate = sizePlc mCode
     let diff = tEstimate - mEstimate
-    Prelude.pure $ case Prelude.signum diff of
+    TSPrelude.pure $ case TSPrelude.signum diff of
       (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
       0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
       _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
   testOptions = Tagged []
 
 renderFailed ::
-  (Prelude.String, Integer) ->
-  (Prelude.String, Integer) ->
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
   Integer ->
-  Prelude.String
+  HString.String
 renderFailed tData mData diff =
   renderEstimates tData mData
     <> "Exceeded by: "
-    <> Prelude.show diff
+    <> TSPrelude.show diff
 
 renderEstimates ::
-  (Prelude.String, Integer) ->
-  (Prelude.String, Integer) ->
-  Prelude.String
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
+  HString.String
 renderEstimates (tName, tEstimate) (mName, mEstimate) =
-  "Target: " <> tName <> "; size " <> Prelude.show tEstimate <> "\n"
+  "Target: " <> tName <> "; size " <> TSPrelude.show tEstimate <> "\n"
     <> "Measured: "
     <> mName
     <> "; size "
-    <> Prelude.show mEstimate
+    <> TSPrelude.show mEstimate
     <> "\n"
 
 renderExcess ::
-  (Prelude.String, Integer) ->
-  (Prelude.String, Integer) ->
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
   Integer ->
-  Prelude.String
+  HString.String
 renderExcess tData mData diff =
   renderEstimates tData mData
     <> "Remaining headroom: "
-    <> Prelude.show diff
+    <> TSPrelude.show diff
 
 {-# INLINEABLE originalVerifyMultisig #-}
 originalVerifyMultisig ::

@@ -1,6 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
--- Validate enough signatures are signed by legit pubkeys
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Utils (
@@ -10,7 +7,7 @@ module TrustlessSidechain.Utils (
 ) where
 
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
 
 {- | @'verifyMultisig' pubKeys threshold message signatures@ checks if at least

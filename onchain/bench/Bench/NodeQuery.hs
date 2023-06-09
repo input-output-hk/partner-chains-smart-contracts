@@ -22,13 +22,12 @@ import Data.Aeson.Key qualified as Aeson.Key
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.List qualified as List
+import Data.String qualified as HString
 import Data.Traversable qualified as Traversable
-import Plutus.V2.Ledger.Api (
-  TxOutRef,
- )
+import Plutus.V2.Ledger.Api (TxOutRef)
 import System.Process qualified as Process
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.OffChain qualified as OffChain
-import Prelude
 
 {- | @'queryNodeUtxoAddress' cardanoCli testNetMagic address@ returns the keys
  - from the
@@ -74,7 +73,11 @@ import Prelude
  Purposely, this API is left rather empty since we don't really need anything
  fancy.
 -}
-queryNodeUtxoAddress :: String -> Int -> String -> IO [TxOutRef]
+queryNodeUtxoAddress ::
+  HString.String ->
+  Int ->
+  HString.String ->
+  IO [TxOutRef]
 queryNodeUtxoAddress cardanoCli testnetMagic bech32Address = do
   let cmd =
         List.unwords
@@ -88,14 +91,14 @@ queryNodeUtxoAddress cardanoCli testnetMagic bech32Address = do
   -- Awkward, this uses string..
   stdout <- Process.readCreateProcess (Process.shell cmd) ""
   decodeResult <- case Aeson.eitherDecodeStrict $ ByteString.Char8.pack stdout of
-    Right res -> return (res :: Value)
+    Right res -> pure (res :: Value)
     Left err ->
       Exception.throwIO $
         NodeQueryError $
           "`queryNodeUtxoAddress` internal error malformed JSON: "
-            ++ err
-            ++ ". Failed parsing: "
-            ++ stdout
+            <> err
+            <> ". Failed parsing: "
+            <> stdout
   case decodeResult of
     Object keyMap ->
       case Traversable.traverse (OffChain.txOutRefFromText . Aeson.Key.toText) $
@@ -103,8 +106,8 @@ queryNodeUtxoAddress cardanoCli testnetMagic bech32Address = do
         Left err ->
           Exception.throwIO $
             NodeQueryError $
-              "`queryNodeUtxoAddress` internal error bad parse: " ++ err
-        Right res -> return res
+              "`queryNodeUtxoAddress` internal error bad parse: " <> err
+        Right res -> pure res
     _ ->
       Exception.throwIO $
         NodeQueryError
@@ -112,7 +115,7 @@ queryNodeUtxoAddress cardanoCli testnetMagic bech32Address = do
 
 --  | 'NodeQueryError' is an error message relating to a node query. This is
 --  used to throw internal exceptions.
-newtype NodeQueryError = NodeQueryError String
+newtype NodeQueryError = NodeQueryError HString.String
   deriving (Show)
 
 instance Exception NodeQueryError

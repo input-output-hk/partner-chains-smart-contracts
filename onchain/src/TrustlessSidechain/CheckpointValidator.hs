@@ -1,6 +1,4 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -42,7 +40,8 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude as PlutusPrelude
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   CheckpointDatum (
     checkpointBlockHash,
@@ -72,7 +71,6 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
  )
 import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
-import Prelude qualified
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
@@ -164,7 +162,13 @@ newtype InitCheckpointMint = InitCheckpointMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
     icTxOutRef :: TxOutRef
   }
-  deriving newtype (Prelude.Show, Prelude.Eq, Prelude.Ord, Generic, PlutusTx.UnsafeFromData)
+  deriving newtype
+    ( TSPrelude.Show
+    , TSPrelude.Eq
+    , TSPrelude.Ord
+    , Generic
+    , PlutusTx.UnsafeFromData
+    )
   deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''InitCheckpointMint
