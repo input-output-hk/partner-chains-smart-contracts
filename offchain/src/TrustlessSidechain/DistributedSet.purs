@@ -44,11 +44,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash
-  )
+import Contract.Scripts (MintingPolicy, Validator, ValidatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionInput
@@ -58,7 +54,7 @@ import Contract.Transaction
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
-import Control.Monad.Maybe.Trans (MaybeT(MaybeT), lift, runMaybeT)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
@@ -517,27 +513,28 @@ slowFindDsOutput ds tn = do
 
   netId ← getNetworkId
   scriptAddr ← insertAddress netId ds
-  utxos ← Utxos.utxosAt scriptAddr
-  go $ Map.toUnfoldable utxos
+  utxos ← Map.toUnfoldable <$> Utxos.utxosAt scriptAddr
+  dskm ← dsToDsKeyMint ds
+  policy ← dsKeyPolicy dskm
+
+  dsKeyCurSym ← liftContractM "Cannot get currency symbol" $
+    Value.scriptCurrencySymbol policy
+
+  go dsKeyCurSym utxos
 
   where
 
-  go utxos' =
+  go dsKeyCurSym utxos' =
     case Array.uncons utxos' of
       Nothing → pure Nothing
       Just { head: ref /\ TransactionOutputWithRefScript o, tail } →
-        let
-          c = runMaybeT do
-            dskm ← lift $ dsToDsKeyMint ds
-            policy ← lift $ dsKeyPolicy dskm
-
-            currencySymbol ← hoistMaybe $ Value.scriptCurrencySymbol policy
-
+        do
+          dsKey ← runMaybeT do
             dat ← hoistMaybe $ outputDatumDatum (unwrap o.output).datum >>=
               (fromData <<< unwrap)
 
             tns ←
-              hoistMaybe $ AssocMap.lookup currencySymbol
+              hoistMaybe $ AssocMap.lookup dsKeyCurSym
                 $ getValue (unwrap o.output).amount
 
             tn' ← hoistMaybe $ Array.head $ AssocMap.keys tns
@@ -552,10 +549,8 @@ slowFindDsOutput ds tn = do
                     { nodeRef: ref, oNode: wrap o, datNode: dat, tnNode: tn' }
                 , nodes
                 }
-        in
-          c >>= case _ of
-            Nothing → go tail
-            Just r → pure $ r
+
+          maybe (go dsKeyCurSym tail) pure dsKey
 
 hoistMaybe ∷
   ∀ (m ∷ Type → Type) (b ∷ Type).
