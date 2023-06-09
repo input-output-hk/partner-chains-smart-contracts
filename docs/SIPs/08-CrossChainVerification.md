@@ -15,7 +15,7 @@ sidechains, where sidechain A will require both its own committee and the
 committee of sidechain B to sign sidechain certificates. If there are more
 than two sidechains involved, all of them will create certificates.
 
-![Certificates](./07-CrossChainVerification/Certificates.svg)
+![Certificates](./08-CrossChainVerification/Certificates.svg)
 
 ## Assumptions
 
@@ -48,7 +48,7 @@ As a summary, we could distinguish three different actors in the same network:
 - _Sidechain only node_ following mainchain and sidechain
 - _Cross-verifier node_ following mainchain and both sidechains
 
-![Network](./07-CrossChainVerification/Network.svg)
+![Network](./08-CrossChainVerification/Network.svg)
 
 As sidechains participating in a cross-chain verification configuration might
 be completely different blockchains (as long as they are compatible with the
@@ -56,7 +56,7 @@ trustless-sidechain protocol), ideally we want to minimise the direct
 interaction required between the two bridges. This design relies on the
 mainchain to trigger events between the sidechains.
 
-![Chain relationship](./07-CrossChainVerification/Relationship.svg)
+![Chain relationship](./08-CrossChainVerification/Relationship.svg)
 
 The workflow of regular certificate creation and verification is as follows:
 1. Merkle tree is built, and Merkle root insertion message is generated
@@ -117,7 +117,7 @@ It's important to note, that `scriptId`s are local identifiers of sidechains:
 Sidechain A will use scriptId 100 and 110 to refer to Sidechain B, while
 Sidechain B could use the same 100 and 110 to refer to Sidechain A.
 
-![VersionOracle](./07-CrossChainVerification/VersionOracle.svg)
+![VersionOracle](./08-CrossChainVerification/VersionOracle.svg)
 
 At initialisation or protocol update, the above mentioned reference scripts of
 the verifier chain will be deployed, with a special version of
@@ -183,7 +183,7 @@ One important detail is that `FinalMerkleRootToken` will take scriptId of
 `MerkeRootToken` so there's no need to change the implementation of
 `FUELMintingPolicy`.
 
-![TokenAggregation](./07-CrossChainVerification/TokenAggregation.svg)
+![TokenAggregation](./08-CrossChainVerification/TokenAggregation.svg)
 
 Although this is a relatively light-weight operation, the amount of tokens to be
 aggregrated could be limited due to transaction size limits. To mitigate
