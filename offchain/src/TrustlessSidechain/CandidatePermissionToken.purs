@@ -12,7 +12,7 @@ module TrustlessSidechain.CandidatePermissionToken
 import Contract.Prelude
 
 import Contract.Log (logInfo')
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftedE)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr))
@@ -36,12 +36,11 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
-import Data.Bifunctor as Bifunctor
+import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 --------------------------------
@@ -76,11 +75,11 @@ getCandidatePermissionMintingPolicy ∷
     }
 getCandidatePermissionMintingPolicy cpm = do
   let
-    msg = report "getCandidatePermissionMintingPolicy"
+    mkErr = report "getCandidatePermissionMintingPolicy"
 
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
   candidatePermissionCurrencySymbol ← Monad.liftContractM
-    (msg "Failed to get candidate permission CurrencySymbol")
+    (mkErr "Failed to get candidate permission CurrencySymbol")
     (Value.scriptCurrencySymbol candidatePermissionPolicy)
   pure
     { candidatePermissionPolicy
@@ -143,14 +142,14 @@ candidatePermissionTokenLookupsAndConstraints
       { candidateMintPermissionMint, candidatePermissionTokenName, amount }
   ) = do
   let
-    msg = report "candidatePermissionTokenLookupsAndConstraints"
+    mkErr = report "candidatePermissionTokenLookupsAndConstraints"
   { candidatePermissionPolicy
   , candidatePermissionCurrencySymbol
   } ← getCandidatePermissionMintingPolicy
     candidateMintPermissionMint
 
   let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
-  txOut ← Monad.liftedM (msg "Cannot find genesis UTxO") $ Utxos.getUtxo txIn
+  txOut ← Monad.liftedM (mkErr "Cannot find genesis UTxO") $ Utxos.getUtxo txIn
 
   let
     value = Value.singleton
@@ -190,24 +189,23 @@ runCandidatePermissionToken
     ( CandidatePermissionMintParams
         { candidateMintPermissionMint }
     ) = do
-  let
-    msg = report "runCandidatePermissionToken"
+  let mkErr = report "runCandidatePermissionToken"
   { candidatePermissionCurrencySymbol } ← getCandidatePermissionMintingPolicy
     candidateMintPermissionMint
 
   { lookups, constraints } ← candidatePermissionTokenLookupsAndConstraints cpmp
 
-  ubTx ← Monad.liftedE
-    (Bifunctor.lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← Monad.liftedE (Bifunctor.lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' $ msg ("Submitted Tx: " <> show txId)
+  logInfo' $ mkErr ("Submitted Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' $ msg "Tx submitted successfully!"
+  logInfo' $ mkErr "Tx submitted successfully!"
 
   pure { transactionId: txId, candidatePermissionCurrencySymbol }
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = Utils.Logging.mkReport <<< { mod: "CandidatePermissionToken", fun: _ }
+report ∷ String → String → String
+report = Utils.Logging.mkReport "CandidatePermissionToken"
