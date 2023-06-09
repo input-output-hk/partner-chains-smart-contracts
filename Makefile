@@ -95,6 +95,7 @@ format-nix-staged: requires_nix_shell
 		| xargs -0 -r nixpkgs-fmt
 
 FOURMOLU_EXTENSIONS := \
+	-o -XBangPatterns \
 	-o -XTypeApplications \
 	-o -XTemplateHaskell \
 	-o -XImportQualifiedPost \
