@@ -1,14 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Test.TrustlessSidechain.UpdateCommitteeHashMessage (test) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Ledger (TxId (TxId), TxOutRef (TxOutRef))
 import PlutusTx.Builtins (blake2b_256)
-import PlutusTx.Prelude
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   GenesisHash (GenesisHash),
   SidechainParams (SidechainParams),

@@ -21,8 +21,9 @@ import Ctl (
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
+import System.IO qualified as SystemIO
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Types (SidechainParams (..))
-import Prelude
 
 updateCommitteeHashBench :: Bench ()
 updateCommitteeHashBench = do
@@ -33,7 +34,7 @@ updateCommitteeHashBench = do
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
   -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ readFile "payment.addr"
+  addr <- IO.Class.liftIO $ SystemIO.readFile "payment.addr"
 
   -- Benchmark suite
   --------------------
@@ -53,7 +54,7 @@ updateCommitteeHashBench = do
                   , ccSidechainParams = sidechainParams
                   }
            in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
-                ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
+                <> List.unwords (flags <> Ctl.ctlCommonFlags ctlCommon)
 
         sidechainParams =
           SidechainParams
@@ -75,14 +76,14 @@ updateCommitteeHashBench = do
         ctlCommand $
           Ctl.ctlInitSidechainFlags
             CtlInitSidechain
-              { cisInitCommitteePubKeys = map snd initCommittee
+              { cisInitCommitteePubKeys = fmap snd initCommittee
               , cisSidechainEpoch = 0
               }
 
     -- Updating the committee hash
 
     -- First, we build the committees / next committee
-    let currentAndNextCommittees = zip3 [1 ..] committees $ tail committees
+    let currentAndNextCommittees = List.zip3 [1 ..] committees $ List.tail committees
 
     Monad.void $ do
       Foldable.for_ currentAndNextCommittees $ \(ix, currentCommittee, nextCommittee) ->
@@ -92,8 +93,8 @@ updateCommitteeHashBench = do
                 Ctl.ctlUpdateCommitteeHash
                   sidechainParams
                   CtlUpdateCommitteeHash
-                    { cuchCurrentCommitteePrvKeys = map fst currentCommittee
-                    , cuchNewCommitteePubKeys = map snd nextCommittee
+                    { cuchCurrentCommitteePrvKeys = fmap fst currentCommittee
+                    , cuchNewCommitteePubKeys = fmap snd nextCommittee
                     , cuchSidechainEpoch = sidechainEpoch
                     , cuchPreviousMerkleRoot = Nothing
                     }
@@ -108,4 +109,4 @@ updateCommitteeHashBench = do
     "UpdateCommitteeHashLoveLacePlot.svg"
     "UpdateCommitteeHash"
 
-  return ()
+  pure ()

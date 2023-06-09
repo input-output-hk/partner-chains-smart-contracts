@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -20,7 +19,7 @@ import Plutus.V2.Ledger.Contexts (
   txSignedBy,
  )
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,

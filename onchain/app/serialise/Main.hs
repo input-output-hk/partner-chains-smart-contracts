@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 -- Functions to serialise plutus scripts into a purescript readable TextEnvelope.textEnvelope
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
@@ -15,6 +13,7 @@ import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
 import Data.ByteString.Short (toShort)
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
+import Data.String qualified as HString
 import Ledger (Script, Versioned (unversioned), scriptHash)
 import Plutonomy.UPLC qualified
 import System.Console.GetOpt (
@@ -25,7 +24,7 @@ import System.Console.GetOpt (
 import System.Console.GetOpt qualified as GetOpt
 import System.Environment qualified as Environment
 import System.FilePath qualified as FilePath
-import System.IO (Handle)
+import System.IO (FilePath, Handle, print)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
@@ -33,6 +32,7 @@ import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
@@ -41,7 +41,6 @@ import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import Prelude
 
 -- * CLI parsing
 
@@ -78,12 +77,12 @@ getOpts =
               , "[OPTION...]"
               ]
        in case GetOpt.getOpt RequireOrder options argv of
-            ([o], [], []) -> return o
+            ([o], [], []) -> pure o
             (_, _nonOptions, errs) ->
               Error.ioError $
                 Error.userError $
                   concat errs
-                    ++ GetOpt.usageInfo header options
+                    <> GetOpt.usageInfo header options
   where
     options :: [OptDescr Options]
     options =
@@ -126,17 +125,17 @@ serialiseScript outputDir name script =
       out = versionedScriptToPlutusScript script
       file = outputDir FilePath.</> name
    in do
-        putStrLn $ "serialising " <> file <> ",\thash = " <> show (scriptHash script)
+        IO.putStrLn $ "serialising " <> file <> ",\thash = " <> show (scriptHash script)
         writeFileTextEnvelope file Nothing out >>= either print pure
 
 --
 serialiseScriptsToPurescript ::
   -- | Purescript module name
-  String ->
+  HString.String ->
   -- | Name of the script, and the associated script
   -- Entries should be unique w.r.t the name; and the name should be
   -- characters for a valid purescript identifier
-  [(String, Versioned Script)] ->
+  [(HString.String, Versioned Script)] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.
@@ -146,8 +145,8 @@ serialiseScriptsToPurescript moduleName plutusScripts handle = do
   let -- prepends the the prefix @raw@ to a given string.
       -- This is just the convention that is used for purescript function
       -- names.
-      prependPrefix :: String -> String
-      prependPrefix = ("raw" ++)
+      prependPrefix :: HString.String -> HString.String
+      prependPrefix = ("raw" <>)
 
   -- Put the purescript module header i.e., put something like
   --
@@ -167,20 +166,20 @@ serialiseScriptsToPurescript moduleName plutusScripts handle = do
   IO.hPutStrLn handle "-- `src/TrustlessSidechain/RawScripts.purs`, then run `make clean` before"
   IO.hPutStrLn handle "-- running `make update-scripts`."
 
-  IO.hPutStrLn handle $ "module " ++ moduleName
+  IO.hPutStrLn handle $ "module " <> moduleName
   IO.hPutStr handle "  ( "
-  case map fst plutusScripts of
-    [] -> return ()
+  case fmap fst plutusScripts of
+    [] -> pure ()
     p : ps -> do
       IO.hPutStrLn handle $ prependPrefix p
-      Foldable.for_ ps $ \name -> IO.hPutStrLn handle $ "  , " ++ prependPrefix name
+      Foldable.for_ ps $ \name -> IO.hPutStrLn handle $ "  , " <> prependPrefix name
 
   IO.hPutStrLn handle "  ) where"
 
   Foldable.for_ plutusScripts $ \(name, script) -> do
     IO.hPutStrLn handle ""
-    IO.hPutStrLn handle $ prependPrefix name ++ " ∷ String"
-    IO.hPutStrLn handle $ prependPrefix name ++ " ="
+    IO.hPutStrLn handle $ prependPrefix name <> " ∷ String"
+    IO.hPutStrLn handle $ prependPrefix name <> " ="
     ByteString.Lazy.Char8.hPutStrLn handle $
       ByteString.Lazy.Char8.concat
         [ "  "
@@ -217,13 +216,13 @@ main =
           , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
           ]
-        plutusScriptsDotPlutus = map (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
+        plutusScriptsDotPlutus = fmap (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
      in case options of
           GenPlutusScripts {gsOutputDir = outputDir} ->
             Foldable.traverse_
               (uncurry (serialiseScript outputDir))
               plutusScriptsDotPlutus
-          PlutusScriptTargets -> putStrLn $ List.unwords $ map fst plutusScriptsDotPlutus
+          PlutusScriptTargets -> IO.putStrLn $ List.unwords $ fmap fst plutusScriptsDotPlutus
           GenPureScriptRawScripts {gpsrsOutputFile = outputFile} ->
             let moduleName = "TrustlessSidechain.RawScripts"
              in case outputFile of
