@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script
@@ -33,7 +32,7 @@ import Plutus.V2.Ledger.Tx (
  )
 import PlutusTx qualified
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 
 {- | 'mkPoCInlineDatumValidator'
  A script which verifies that its inline datum is the redeemer.

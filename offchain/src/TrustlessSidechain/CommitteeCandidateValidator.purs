@@ -69,7 +69,7 @@ import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import TrustlessSidechain.Utils.Logging (class Display, mkReport)
+import TrustlessSidechain.Utils.Logging (mkReport)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -159,15 +159,16 @@ register
       , permissionToken
       }
   ) = do
-  let msg = report "register"
+  let mkErr = report "register"
   netId ← getNetworkId
 
-  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
+  ownPkh ← liftedM (mkErr "Cannot get own pubkey") ownPaymentPubKeyHash
+  ownAddr ← liftedM (mkErr "Cannot get own address") getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
+  valAddr ← liftContractM
+    (mkErr "Failed to convert validator hash to an address")
     (validatorHashEnterpriseAddress netId valHash)
 
   ownUtxos ← utxosAt ownAddr
@@ -233,28 +234,30 @@ register
               ownRegistrations
           )
 
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' $ msg ("Submitted committeeCandidate register Tx: " <> show txId)
+  logInfo' $ mkErr ("Submitted committeeCandidate register Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' $ msg "Register Tx submitted successfully!"
+  logInfo' $ mkErr "Register Tx submitted successfully!"
 
   pure txId
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  let msg = report "deregister"
+  let mkErr = report "deregister"
 
   netId ← getNetworkId
 
-  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
+  ownPkh ← liftedM (mkErr "Cannot get own pubkey") ownPaymentPubKeyHash
+  ownAddr ← liftedM (mkErr "Cannot get own address") getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM (msg "Failed to convert validator hash to an address")
+  valAddr ← liftContractM
+    (mkErr "Failed to convert validator hash to an address")
     (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
@@ -262,7 +265,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
   when (null ownRegistrations)
-    $ throwContractError (msg "Registration utxo cannot be found")
+    $ throwContractError (mkErr "Registration utxo cannot be found")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
@@ -275,18 +278,19 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       <> mconcat
         (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
 
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' $ msg ("Submitted committee deregister Tx: " <> show txId)
+  logInfo' $ mkErr ("Submitted committee deregister Tx: " <> show txId)
   awaitTxConfirmed txId
-  logInfo' $ msg "Deregister submitted successfully!"
+  logInfo' $ mkErr "Deregister submitted successfully!"
 
   pure txId
 
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }
+report ∷ String → String → String
+report = mkReport "CommitteeCandidateValidator"
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate

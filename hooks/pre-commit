@@ -34,6 +34,7 @@ flake=$(grep '^flake\.nix$' <<< $changed)
 ! [ "$cabal" ] || check cabal-fmt --check $cabal
 ! [ "$haskell" ] || {
 	FOURMOLU_EXTENSIONS='
+    -o -XBangPatterns
 		-o -XTypeApplications
 		-o -XTemplateHaskell
 		-o -XImportQualifiedPost

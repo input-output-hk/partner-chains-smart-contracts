@@ -1,8 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- | Module: Test.QuickCheck.Extra
  Description: Some improved versions and helpers for QuickCheck functions
@@ -22,17 +18,16 @@ module Test.QuickCheck.Extra (
   sublistOf,
 ) where
 
-import Control.Category ((>>>))
 import Data.Bits (
   countTrailingZeros,
   finiteBitSize,
   unsafeShiftR,
  )
-import Data.Kind (Type)
-import Data.Word (Word64)
+import Data.List (drop)
+import GHC.Err (undefined)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen (Gen, elements, resize, sized)
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 {- | Same as 'Test.QuickCheck.Gen.suchThat', but has a retry limit of 100; if it
  fails to generate a satisfactory @a@ within that many attempts, the

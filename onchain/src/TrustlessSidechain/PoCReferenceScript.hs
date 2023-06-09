@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | A module for a trivial proof of concept (abbr. PoC) on chain script
@@ -37,7 +36,7 @@ import Plutus.V2.Ledger.Contexts (
   TxOut (txOutReferenceScript),
  )
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 
 -- * To Reference
 

@@ -5,10 +5,10 @@ import Test.TrustlessSidechain.MerkleProofSerialisation qualified as MerkleProof
 import Test.TrustlessSidechain.MerkleTree qualified as MerkleTree
 import Test.TrustlessSidechain.MultiSig qualified as MultiSig
 import Test.TrustlessSidechain.UpdateCommitteeHashMessage qualified as UpdateCommitteeHashMessage
-import Prelude qualified as Haskell
+import TrustlessSidechain.HaskellPrelude
 
 -- | @since 0.1
-main :: Haskell.IO ()
+main :: IO ()
 main = defaultMain tests
 
 {- | Project wide tests
