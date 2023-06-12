@@ -1,12 +1,10 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Legacy (verifyMultisigCode) where
 
 import PlutusTx.Code (CompiledCode)
-import PlutusTx.Prelude
 import PlutusTx.TH (compile)
+import TrustlessSidechain.PlutusPrelude
 
 verifyMultisigCode ::
   CompiledCode

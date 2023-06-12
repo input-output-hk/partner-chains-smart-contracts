@@ -69,7 +69,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
@@ -84,12 +83,12 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
     sidechainParams
 
-  let msg = report "getMerkleRootTokenMintingPolicy"
+  let mkErr = report "getMerkleRootTokenMintingPolicy"
   updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
-      (msg "Failed to get updateCommitteeHash CurrencySymbol")
+      (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
   policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
@@ -97,7 +96,7 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
     , merkleRootValidatorHash
     }
   merkleRootTokenCurrencySymbol ←
-    liftContractM (msg "Cannot get currency symbol") $
+    liftContractM (mkErr "Cannot get currency symbol") $
       Value.scriptCurrencySymbol policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
@@ -113,7 +112,7 @@ runSaveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
   ) = do
-  let msg = report "runSaveRoot"
+  let mkErr = report "runSaveRoot"
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
@@ -121,7 +120,7 @@ runSaveRoot
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
-      (msg "Failed to get updateCommitteeHash CurrencySymbol")
+      (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
       $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
 
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
@@ -136,12 +135,12 @@ runSaveRoot
   rootTokenMP ← merkleRootTokenMintingPolicy smrm
   rootTokenCS ←
     liftContractM
-      (msg "Cannot get CurrencySymbol of merkleRootTokenMintingPolicy")
+      (mkErr "Cannot get CurrencySymbol of merkleRootTokenMintingPolicy")
       $ Value.scriptCurrencySymbol rootTokenMP
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
-      (msg "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
+      (mkErr "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
       $ Value.mkTokenName
       $ MerkleTree.unRootHash merkleRoot
 
@@ -165,7 +164,7 @@ runSaveRoot
   { index: committeeHashTxIn
   , value: committeeHashTxOut
   } ←
-    liftedM (msg "Failed to find committee hash utxo") $
+    liftedM (mkErr "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
   let
@@ -177,13 +176,14 @@ runSaveRoot
 
   -- Verifying the signature is valid
   void do
-    mrimHash ← liftContractM (msg "Failed to create MerkleRootInsertionMessage")
-      $ serialiseMrimHash
-      $ MerkleRootInsertionMessage
-          { sidechainParams
-          , merkleRoot
-          , previousMerkleRoot
-          }
+    mrimHash ←
+      liftContractM (mkErr "Failed to create MerkleRootInsertionMessage")
+        $ serialiseMrimHash
+        $ MerkleRootInsertionMessage
+            { sidechainParams
+            , merkleRoot
+            , previousMerkleRoot
+            }
     unless
       ( Utils.Crypto.verifyMultiSignature
           ((unwrap sidechainParams).thresholdNumerator)
@@ -193,7 +193,7 @@ runSaveRoot
           signatures
       )
       $ throwContractError
-      $ msg "Invalid committee signatures for MerkleRootInsertionMessage"
+      $ mkErr "Invalid committee signatures for MerkleRootInsertionMessage"
 
   -- Verifying the provided committee is actually the committee stored on chain
   void do
@@ -203,10 +203,10 @@ runSaveRoot
 
       committeeHash = Utils.Crypto.aggregateKeys committeePubKeys
     rawDatum ←
-      liftContractM (msg "Update committee hash UTxO is missing inline datum")
+      liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
         $ outputDatumDatum tOut.datum
     UpdateCommitteeHashDatum datum ← liftContractM
-      (msg "Datum at update committee hash UTxO fromData failed")
+      (mkErr "Datum at update committee hash UTxO fromData failed")
       (fromData $ unwrap rawDatum)
 
     when (datum.committeeHash /= committeeHash)
@@ -243,16 +243,17 @@ runSaveRoot
 
   -- Submitting the transaction
   ---------------------------------------------------------
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
-  logInfo' (msg ("Submitted save root Tx: " <> show txId))
+  logInfo' (mkErr ("Submitted save root Tx: " <> show txId))
   awaitTxConfirmed txId
-  logInfo' (msg "Save root Tx submitted successfully!")
+  logInfo' (mkErr "Save root Tx submitted successfully!")
 
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = Utils.Logging.mkReport <<< { mod: "MerkleRoot", fun: _ }
+report ∷ String → String → String
+report = Utils.Logging.mkReport "MerkleRoot"

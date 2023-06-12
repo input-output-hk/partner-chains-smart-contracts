@@ -19,48 +19,63 @@ source-repository head
   type:     git
   location: https://github.com/mlabs-haskell/trustless-sidechain
 
-flag defer-plugin-errors
-  description:
-    Defer errors from the plugin, useful for things like Haddock that can't handle it.
-
-  default:     False
-  manual:      True
-
 -- Common sections
 
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints -fobject-code
-    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fplugin-opt PlutusTx.Plugin:defer-errors -Werror
-
-  if flag(defer-plugin-errors)
-    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
 
   build-depends:      base ^>=4.14
   default-extensions:
-    NoImplicitPrelude
-    DeriveFunctor
-    DerivingStrategies
+    NoStarIsType
+    BangPatterns
+    BinaryLiterals
+    DataKinds
+    DeriveTraversable
+    DerivingVia
     EmptyCase
     FlexibleContexts
     FlexibleInstances
     GeneralizedNewtypeDeriving
+    HexFloatLiterals
     ImportQualifiedPost
     InstanceSigs
+    KindSignatures
     LambdaCase
     MultiParamTypeClasses
-    OverloadedLabels
+    NumericUnderscores
     OverloadedStrings
+    PackageImports
+    RebindableSyntax
+    ScopedTypeVariables
+    StandaloneDeriving
     TupleSections
+    TypeApplications
 
   default-language:   Haskell2010
+
+common common-script-lang
+  build-depends:
+    , plutus-tx
+    , plutus-tx-plugin
+
+  ghc-options:
+    -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas -fplugin-opt
+    PlutusTx.Plugin:defer-errors
+
+common common-optimized
+  ghc-options: -O2
+
+common common-optimized-parallel
+  import:      common-optimized
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
 -- Libraries
 
 library
-  import:          common-lang
+  import:          common-lang, common-script-lang
   exposed-modules:
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CheckpointValidator
@@ -81,11 +96,11 @@ library
     TrustlessSidechain.Utils
 
   build-depends:
-    , aeson                 ^>=1.5.0.0
+    , aeson                        ^>=1.5.0.0
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring            ^>=0.10.12.0
+    , bytestring                   ^>=0.10.12.0
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -99,26 +114,50 @@ library
     , plutus-ledger
     , plutus-ledger-api
     , plutus-script-utils
-    , plutus-tx
-    , plutus-tx-plugin
+    , plutus-shim-prelude
     , secp256k1-haskell
     , serialise
     , text
+    , trustless-sidechain-prelude
 
-  -- Needed for the `TrustlessSidechain.OffChain` module
   hs-source-dirs:  src
 
-library quickcheck-extra
+library trustless-sidechain-prelude
   import:          common-lang
+  exposed-modules: TrustlessSidechain.HaskellPrelude
+  build-depends:
+    , bytestring
+    , containers
+    , indexed-traversable
+    , integer-gmp
+    , semialign
+    , semirings
+    , tasty-quickcheck
+    , text
+    , these
+    , vector
+    , witherable
+
+  hs-source-dirs:  prelude
+
+library plutus-shim-prelude
+  import:          common-lang, common-script-lang
+  exposed-modules: TrustlessSidechain.PlutusPrelude
+  hs-source-dirs:  prelude
+
+library quickcheck-extra
+  import:          common-lang, common-optimized
   exposed-modules: Test.QuickCheck.Extra
-  build-depends:   QuickCheck
-  ghc-options:     -O2
+  build-depends:
+    , QuickCheck
+    , trustless-sidechain-prelude
+
   hs-source-dirs:  src
 
 -- Executables
 
 executable trustless-sidechain-gen-signatures
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel, common-script-lang
   main-is:        Main.hs
   other-modules:
     GenOutput
@@ -139,16 +178,16 @@ executable trustless-sidechain-gen-signatures
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-tx
     , secp256k1-haskell
     , serialise
     , text
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/gen-signatures
 
 executable trustless-sidechain-serialise
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel
   main-is:        Main.hs
   build-depends:
     , aeson
@@ -159,26 +198,29 @@ executable trustless-sidechain-serialise
     , plutus-ledger
     , serialise
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/serialise
 
 executable trustless-sidechain-merkle-tree
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel, common-script-lang
   main-is:        Main.hs
   build-depends:
     , bytestring
     , optparse-applicative
     , plutus-ledger
-    , plutus-tx
     , serialise
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/merkle-tree
 
 -- Tests
 
 test-suite script-size
-  import:         common-lang
+  import:
+    common-lang , common-optimized-parallel , common-script-lang
+
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -189,17 +231,18 @@ test-suite script-size
   build-depends:
     , plutus-core
     , plutus-ledger-api
+    , plutus-shim-prelude
     , plutus-tx
     , plutus-tx-plugin
     , tagged
     , tasty
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs: test/script-size
 
 test-suite trustless-sidechain-test
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -208,14 +251,13 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.MultiSig
     Test.TrustlessSidechain.UpdateCommitteeHashMessage
 
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base16-bytestring
     , bytestring
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-tx
+    , plutus-shim-prelude
     , QuickCheck
     , quickcheck-extra
     , secp256k1-haskell
@@ -223,27 +265,29 @@ test-suite trustless-sidechain-test
     , tasty-hunit
     , tasty-quickcheck
     , trustless-sidechain
+    , trustless-sidechain-prelude
 
   hs-source-dirs: test
 
 test-suite quickcheck-extra-test
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , QuickCheck
     , quickcheck-extra
     , tasty
     , tasty-quickcheck
+    , trustless-sidechain-prelude
 
   hs-source-dirs: test/quickcheck-extra-test
 
 -- Benchmarks
 
 benchmark bench-ctl
-  import:           common-lang
-  main-is:          Main.hs
+  import:         common-lang, common-optimized-parallel, common-script-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
   other-modules:
     Bench
     Bench.BenchResults
@@ -258,8 +302,6 @@ benchmark bench-ctl
     Cases.UpdateCommitteeHash
     Ctl
 
-  ghc-options:      -Wall -threaded -rtsopts
-  type:             exitcode-stdio-1.0
   build-depends:
     , aeson
     , base
@@ -276,27 +318,28 @@ benchmark bench-ctl
     , network
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-tx
     , process
     , secp256k1-haskell
+    , semirings
     , statistics
     , text
     , trustless-sidechain
+    , trustless-sidechain-prelude
     , vector
     , websockets
 
-  default-language: Haskell2010
-  hs-source-dirs:   bench/
+  hs-source-dirs: bench/
 
 benchmark quickcheck-extra-bench
-  import:         common-lang
+  import:         common-lang, common-optimized
   main-is:        Main.hs
-  ghc-options:    -O2 -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
+  ghc-options:    -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
   type:           exitcode-stdio-1.0
   build-depends:
     , QuickCheck
     , quickcheck-extra
     , tasty
     , tasty-bench
+    , trustless-sidechain-prelude
 
   hs-source-dirs: bench/quickcheck-extra-bench

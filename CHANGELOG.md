@@ -32,6 +32,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Size measurements for exported scripts
   ([426](https://github.com/mlabs-haskell/trustless-sidechain/issues/426),
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
+* `abs` for absolute value in Haskell prelude, with the same usage caveats as
+  `signum`.
 
 ## Changed
 
@@ -44,6 +46,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   offchain)
 * Refactored configuration file parser
   ([460](https://github.com/mlabs-haskell/trustless-sidechain/issues/460),
+* New Haskell standards document and compliance
+  ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
+   [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
+   onchain)
 
 ## Fixed
 * Deregistration fail after multiple registrations with the same SPO public key

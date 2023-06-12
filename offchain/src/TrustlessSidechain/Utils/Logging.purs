@@ -1,8 +1,5 @@
 module TrustlessSidechain.Utils.Logging
   ( Environment
-  , Location
-  , class Display
-  , display
   , environment
   , fileLogger
   , mkReport
@@ -16,28 +13,16 @@ import Node.Encoding (Encoding(UTF8))
 import Node.FS.Aff (appendTextFile)
 import Node.Process (stdoutIsTTY)
 
--- | This class overrides `Show` in order to remove quoting from strings
-class Display (a ∷ Type) where
-  display ∷ a → String
-
-instance Display String where
-  display = identity
-
-else instance Show default ⇒ Display default where
-  display = show
-
--- | Used to parametrize `mkReport`
-type Location = { mod ∷ String, fun ∷ String }
-
 -- | builds a unified look for error messages by giving them more structure.
 -- | this function is used to instantiate a message formatter as so:
 -- | ```purescript
--- | myformatter ∷ ∀ e. Display e ⇒ e → String
--- | myformatter = mkReport { mod : "MyModule", fun : "myFunction" }
--- | myformatter "this is an error message."
+-- | mkErr ∷ String -> String
+-- | mkErr = mkReport "MyModule" "myFunction"
+-- |
+-- | mkErr "this is an error message."
 -- | ```
-mkReport ∷ Location → (∀ (e ∷ Type). Display e ⇒ e → String)
-mkReport { mod, fun } msg = mod <> "." <> fun <> ": " <> display msg
+mkReport ∷ String → String → String → String
+mkReport mod fun errMsg = mod <> "." <> fun <> ": " <> errMsg
 
 -- | The logging environment, may be used to parametrize functions and override
 -- | their logging behaviour at runtime.

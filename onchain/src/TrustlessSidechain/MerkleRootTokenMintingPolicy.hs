@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -35,7 +34,7 @@ import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   MerkleTreeEntry,

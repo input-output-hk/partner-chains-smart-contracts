@@ -16,6 +16,8 @@ import Ctl (
 import Ctl qualified
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
+import System.IO qualified as SystemIO
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Types (
   SidechainParams (SidechainParams),
   chainId,
@@ -24,7 +26,6 @@ import TrustlessSidechain.Types (
   thresholdDenominator,
   thresholdNumerator,
  )
-import Prelude
 
 initSidechainBench :: Bench ()
 initSidechainBench = do
@@ -34,7 +35,7 @@ initSidechainBench = do
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
   -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ readFile "payment.addr"
+  addr <- IO.Class.liftIO $ SystemIO.readFile "payment.addr"
 
   -- Benchmark suite
   --------------------
@@ -55,7 +56,7 @@ initSidechainBench = do
                     , ccSidechainParams = sidechainParams
                     }
              in "echo \"import('./output/Main/index.js').then(m => m.main())\"  | node - "
-                  ++ List.unwords (flags ++ Ctl.ctlCommonFlags ctlCommon)
+                  <> List.unwords (flags <> Ctl.ctlCommonFlags ctlCommon)
 
           sidechainParams =
             SidechainParams
@@ -75,7 +76,7 @@ initSidechainBench = do
           ctlCommand $
             Ctl.ctlInitSidechainFlags
               CtlInitSidechain
-                { cisInitCommitteePubKeys = map snd initCommittee
+                { cisInitCommitteePubKeys = fmap snd initCommittee
                 , cisSidechainEpoch = 0
                 }
 
@@ -85,4 +86,4 @@ initSidechainBench = do
   Bench.plotOffChainWithLinearRegression "InitSidechainPlot.svg" "InitSidechain"
   Bench.plotOnChainWithLinearRegression "InitSidechainLoveLacePlot.svg" "InitSidechain"
 
-  return ()
+  pure ()

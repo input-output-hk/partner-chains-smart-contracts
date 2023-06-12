@@ -1,9 +1,6 @@
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Sizer (fitsUnder, fitsInto) where
 
-import Data.Kind (Type)
+import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
 import PlutusTx.Code (CompiledCode, sizePlc)
 import Test.Tasty (TestTree)
@@ -13,22 +10,22 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
+import TrustlessSidechain.HaskellPrelude
 import Type.Reflection (Typeable)
-import Prelude
 
 fitsUnder ::
   forall (a :: Type).
   Typeable a =>
-  String ->
-  (String, CompiledCode a) ->
-  (String, CompiledCode a) ->
+  HString.String ->
+  (HString.String, CompiledCode a) ->
+  (HString.String, CompiledCode a) ->
   TestTree
 fitsUnder name test target = singleTest name $ SizeComparison test target
 
 fitsInto ::
   forall (a :: Type).
   Typeable a =>
-  String ->
+  HString.String ->
   CompiledCode a ->
   Integer ->
   TestTree
@@ -38,7 +35,7 @@ fitsInto name code limit = singleTest name $ SizeBound code limit
 
 data SizeTest (a :: Type)
   = SizeBound (CompiledCode a) Integer
-  | SizeComparison (String, CompiledCode a) (String, CompiledCode a)
+  | SizeComparison (HString.String, CompiledCode a) (HString.String, CompiledCode a)
 
 instance Typeable a => IsTest (SizeTest a) where
   testOptions = Tagged []
@@ -60,19 +57,19 @@ instance Typeable a => IsTest (SizeTest a) where
         _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
 
 renderFailed ::
-  (String, Integer) ->
-  (String, Integer) ->
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
   Integer ->
-  String
+  HString.String
 renderFailed tData mData diff =
   renderEstimates tData mData
     <> "Exceeded by: "
     <> show diff
 
 renderEstimates ::
-  (String, Integer) ->
-  (String, Integer) ->
-  String
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
+  HString.String
 renderEstimates (tName, tEstimate) (mName, mEstimate) =
   "Target: " <> tName <> "; size " <> show tEstimate <> "\n"
     <> "Measured: "
@@ -82,10 +79,10 @@ renderEstimates (tName, tEstimate) (mName, mEstimate) =
     <> "\n"
 
 renderExcess ::
-  (String, Integer) ->
-  (String, Integer) ->
+  (HString.String, Integer) ->
+  (HString.String, Integer) ->
   Integer ->
-  String
+  HString.String
 renderExcess tData mData diff =
   renderEstimates tData mData
     <> "Remaining headroom: "

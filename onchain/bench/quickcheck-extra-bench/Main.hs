@@ -1,10 +1,8 @@
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Main (main) where
 
-import Data.Kind (Type)
-import Numeric.Natural (Natural)
+import Data.List (replicate)
+import Data.String qualified as HaskellString
+import GHC.Num qualified as GHCNum
 import Test.QuickCheck (Arbitrary (arbitrary))
 import Test.QuickCheck.Extra (
   sublistOf,
@@ -23,7 +21,7 @@ import Test.Tasty.Bench (
   nfIO,
  )
 import Test.Tasty.Patterns.Printer (printAwkExpr)
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 main :: IO ()
 main =
@@ -85,13 +83,13 @@ sublistOfBenches sizes =
 
 -- Helpers
 
-findBench :: String -> String
+findBench :: HaskellString.String -> HaskellString.String
 findBench = printAwkExpr . locateBenchmark . (: [])
 
 toNat :: Integer -> Maybe Natural
 toNat x
   | x < 0 = Nothing
-  | otherwise = Just . fromIntegral $ x
+  | otherwise = Just . GHCNum.fromInteger $ x
 
 make42s :: Int -> [Integer]
 make42s count = replicate count 42

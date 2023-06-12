@@ -1,9 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fexpose-all-unfoldings #-}
@@ -55,6 +52,7 @@ module TrustlessSidechain.DistributedSet (
 ) where
 
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts (
@@ -80,12 +78,11 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Prelude
-import Prelude qualified
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import TrustlessSidechain.PlutusPrelude
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
  for the distributed set. (See Note [How This All Works]. Moreover, this
@@ -97,14 +94,14 @@ newtype Ds = Ds
     -- with 'DsConfDatum'.
     dsConf :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
@@ -114,7 +111,7 @@ data Node = Node
   { nKey :: BuiltinByteString
   , nNext :: BuiltinByteString
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
@@ -137,11 +134,11 @@ instance Eq DsConfDatum where
  generated after inserting into a node.
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
-instance Prelude.Foldable Ib where
-  foldMap f (Ib (a, b)) = f a Prelude.<> f b
+instance TSPrelude.Foldable Ib where
+  foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
@@ -165,7 +162,7 @@ data DsKeyMint = DsKeyMint
   , -- | 'dskmConfCurrencySymbol' is the currency symbol to identify a utxo with 'DsConfDatum'
     dskmConfCurrencySymbol :: CurrencySymbol
   }
-  deriving stock (Prelude.Show, Prelude.Eq, PlutusPrelude.Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.

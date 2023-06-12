@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 {- | "Bench.Process" provides utility functions for calling a process and
  timing its output.
 -}
@@ -13,13 +11,13 @@ module Bench.Process (
 
 import Control.Exception qualified as Exception
 import Control.Monad qualified as Monad
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.Char qualified as Char
-import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe (fromJust)
+import Data.String qualified as HString
+import GHC.Enum (fromEnum)
 import GHC.IO.FD qualified as FD
 import GHC.IO.Handle.FD qualified as Handle.FD
 import System.Environment qualified as Environment
@@ -27,7 +25,7 @@ import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 import System.IO qualified as IO
 import System.IO.Error qualified as IO.Error
 import System.Process qualified as Process
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 {- | @'timedReadCommand' cmd cmdArgs@ calls @cmd@ with @cmdArgs@ seperated by
  spaces (so the usual bash quoting rules apply); and times this with the bash
@@ -46,7 +44,7 @@ import Prelude
  sockets, so this *should* really measure how long the application is taking
  NOT including all the time spent waiting on awaiting txs confirmed.
 -}
-timedReadCommand :: String -> IO (ByteString, Int64)
+timedReadCommand :: HString.String -> IO (ByteString, Int64)
 timedReadCommand cmd = Exception.bracket
   -- Warning: mostly duplicated code from 'timedCallCommand'
   Process.createPipe
@@ -62,7 +60,7 @@ timedReadCommand cmd = Exception.bracket
     --  - the command we are interested in benchmarking's output is piped to @3@
     --  - the time command's stderr is piped ot @writeFd@
     --  - then, @3@ is brought back to stderr
-    let timedCmd :: String
+    let timedCmd :: HString.String
         timedCmd =
           List.unwords
             [ "{"
@@ -72,7 +70,7 @@ timedReadCommand cmd = Exception.bracket
             , ";"
             , "}"
             , "3>&2"
-            , "2>&" ++ show (FD.fdFD writeFd) -- this makes `time`'s output go to our pipe
+            , "2>&" <> show (FD.fdFD writeFd) -- this makes `time`'s output go to our pipe
             ]
 
         shellCmd =
@@ -103,7 +101,7 @@ timedReadCommand cmd = Exception.bracket
                 Nothing -> Exception.throwIO $ IO.Error.userError "internal error time output failed to parse"
                 Just timeOutput -> pure (stdout, timeOutput)
             ExitFailure k ->
-              Exception.throwIO $ IO.Error.userError $ "`timedReadCommand` failed with exit code: " ++ show k
+              Exception.throwIO $ IO.Error.userError $ "`timedReadCommand` failed with exit code: " <> show k
 
 {- | 'parseTimeOutput' parses the output of the @time@ keyword in bash with
  environment variable @TIMEFORMAT@ as @%R@ i.e.,
@@ -141,10 +139,10 @@ parseTimeOutput = go
       (dot, input'') <- ByteString.Char8.uncons input'
       Monad.guard $ dot == '.'
       (acc', input''') <- foldDigits acc input''
-      return (acc', skipWs input''')
+      pure (acc', skipWs input''')
 
     go input = do
       (userCpuTime, input') <- lexDigits input
       (kernelCpuTime, _input'') <- lexDigits input'
 
-      return $ userCpuTime + kernelCpuTime
+      pure $ userCpuTime + kernelCpuTime

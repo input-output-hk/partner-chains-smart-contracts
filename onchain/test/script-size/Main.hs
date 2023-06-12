@@ -1,13 +1,10 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NumericUnderscores #-}
-
 module Main (main) where
 
 import Compiled qualified
 import Legacy qualified
 import Sizer (fitsInto, fitsUnder)
 import Test.Tasty (defaultMain, testGroup)
-import Prelude
+import TrustlessSidechain.HaskellPrelude
 
 -- Process for adding a new script to measurements:
 --

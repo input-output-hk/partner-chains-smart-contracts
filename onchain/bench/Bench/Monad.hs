@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 {- | "Bench.Monad" provides the main monad for benchmarking the system. In
  particular, it provides:
 -}
@@ -56,12 +54,12 @@ import Data.Aeson (Value (String))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 import Data.ByteString.Char8 qualified as ByteString.Char8
+import Data.Foldable (maximum)
 import Data.Foldable qualified as Foldable
 import Data.Function qualified as Function
-import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
-import Data.Text (Text)
+import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Vector.Unboxed qualified as Vector.Unboxed
 import Graphics.Rendering.Chart.Backend.Diagrams qualified as Graphics.Backend
@@ -72,8 +70,11 @@ import Plutus.V2.Ledger.Api (
  )
 import Statistics.Regression qualified as Regression
 import System.Environment qualified as Environment
+import System.FilePath (FilePath)
 import System.FilePath qualified as FilePath
-import Prelude
+import System.IO qualified as SystemIO
+import Text.Read (read)
+import TrustlessSidechain.HaskellPrelude
 
 -- | 'BenchConfig' is the static configuration used for benchmarking
 data BenchConfig = BenchConfig
@@ -87,7 +88,7 @@ data BenchConfig = BenchConfig
   , -- | 'bcfgTestNetMagic' is the test net magic that we are using.
     bcfgTestNetMagic :: Int
   , -- | 'bcfgCtlCmd' is the command to run ctl
-    bcfgCtlCmd :: String
+    bcfgCtlCmd :: HString.String
   , -- | 'bcfgOdcConnection' is the websocket to ogmios datum cache
     bcfgOdcConnection :: Connection
   , -- | 'bcfgCardanoCliCmd' is the command to call @cardano-cli@. It's most likely going to be
@@ -99,7 +100,7 @@ data BenchConfig = BenchConfig
     --  @
     --  docker exec -t -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1
     --  @
-    bcfgCardanoCliCmd :: String
+    bcfgCardanoCliCmd :: HString.String
   , -- | 'bcfgOutputDir' is the output directory for files (namely, plots)
     bcfgOutputDir :: FilePath
   }
@@ -112,10 +113,10 @@ data BenchConfigPaths = BenchConfigPaths
   , bcfgpSigningKeyFilePath :: FilePath
   , bcfgpAddressFilePath :: FilePath
   , bcfgpTestNetMagic :: Int
-  , bcfgpCtlCmd :: String
-  , bcfgpOdcHost :: String
+  , bcfgpCtlCmd :: HString.String
+  , bcfgpOdcHost :: HString.String
   , bcfgpOdcPort :: Int
-  , bcfgpCardanoCliCmd :: String
+  , bcfgpCardanoCliCmd :: HString.String
   , bcfgpOutputDir :: FilePath
   }
 
@@ -187,7 +188,7 @@ runBenchWith benchCfgPaths bench =
 runBenchSuiteN :: Int -> BenchSuite () -> Bench ()
 runBenchSuiteN n benchSuite =
   let go !k
-        | k > n = return ()
+        | k > n = pure ()
         | otherwise = do
           Logger.logInfo $
             List.unwords
@@ -217,14 +218,14 @@ runBenchSuiteN n benchSuite =
  Moreover, it also records internally that this is the @k@th time we have
  executed this @description@ for the given trial.
 -}
-benchCtl :: Text -> Int64 -> String -> BenchSuite ()
+benchCtl :: Text -> Int64 -> HString.String -> BenchSuite ()
 benchCtl description independentVarIx cmd = do
   trialIx <- Reader.ask
   benchResults <- liftBenchSuite $ Reader.asks bcfgBenchResults
   odcConnection <- liftBenchSuite $ Reader.asks bcfgOdcConnection
 
   IO.Class.liftIO $ do
-    Logger.logInfo $ "Benchmarking: " ++ cmd
+    Logger.logInfo $ "Benchmarking: " <> cmd
     (stdout, ms) <- Process.timedReadCommand cmd
     ByteString.Char8.putStrLn stdout -- duplicate the output to this process's stdout
 
@@ -243,7 +244,7 @@ benchCtl description independentVarIx cmd = do
                       Exception.throwIO $
                         GetTxFeeError $
                           "`benchCtl` cannot find transaction from given transaction hash: "
-                            ++ Text.unpack txHash
+                            <> Text.unpack txHash
                     Just tx -> do
                       -- tedious unwrapping of types to get the fee
                       let Cardano.TxBody txBodyContent = Cardano.getTxBody tx
@@ -259,15 +260,15 @@ benchCtl description independentVarIx cmd = do
                                 GetTxFeeError "TODO: unsupported tx fee calculation for Byron era transaction"
                             Cardano.TxFeeExplicit _ (Cardano.Lovelace lovelace) -> lovelace
 
-                      return $ fromInteger lovelaceFee
+                      pure $ fromInteger lovelaceFee
               _ ->
                 Exception.throwIO $
                   GetTxFeeError $
-                    "`benchCtl` json missing `transactionId` field: " ++ ByteString.Char8.unpack stdout
+                    "`benchCtl` json missing `transactionId` field: " <> ByteString.Char8.unpack stdout
             Left err ->
               Exception.throwIO $
                 GetTxFeeError $
-                  "`benchCtl` internal error stdout json parse from ctl: " ++ err
+                  "`benchCtl` internal error stdout json parse from ctl: " <> err
 
     (fee, txHash) <- getFeeAndTxHash
 
@@ -284,7 +285,7 @@ benchCtl description independentVarIx cmd = do
       benchResults
 
 -- | 'GetTxFeeError' thin newtype wrapper for getting a transaction fee.
-newtype GetTxFeeError = GetTxFeeError String
+newtype GetTxFeeError = GetTxFeeError HString.String
   deriving (Show)
 
 instance Exception GetTxFeeError
@@ -303,7 +304,7 @@ plotOffChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
     description
-    ("OffChain Performance of a sequence of calls of " ++ Text.unpack description)
+    ("OffChain Performance of a sequence of calls of " <> Text.unpack description)
     "Nth execution"
     "Time (ms)"
     tMs
@@ -322,13 +323,19 @@ plotOnChainWithLinearRegression filePath description = do
   plotXYWithLinearRegression
     filePath
     description
-    ("OnChain Performance of a Sequence of calls of " ++ Text.unpack description)
+    ("OnChain Performance of a Sequence of calls of " <> Text.unpack description)
     "Nth execution"
     "Lovelace"
     tLovelaceFee
 
 plotXYWithLinearRegression ::
-  FilePath -> Text -> String -> String -> String -> (Trial -> Int64) -> Bench ()
+  FilePath ->
+  Text ->
+  HString.String ->
+  HString.String ->
+  HString.String ->
+  (Trial -> Int64) ->
+  Bench ()
 plotXYWithLinearRegression
   filePath
   description
@@ -361,12 +368,12 @@ plotXYWithLinearRegression
 
           dataSetByTrialIx =
             -- pattern match is safe by defn. of 'Data.List.groupBy'
-            map (\x -> (tTrialIx . head $ x, map toXY x)) $
+            fmap (\x -> (tTrialIx . List.head $ x, fmap toXY x)) $
               -- map (\(~(o : os)) -> (tTrialIx o, map toXY $ o : os)) $
               List.groupBy ((==) `Function.on` tTrialIx) trials
 
-          maxIndependentVarIx = maximum $ map fst dataSet
-          dataSet = map toXY trials
+          maxIndependentVarIx = maximum $ fmap fst dataSet
+          dataSet = fmap toXY trials
           -- safe use of 'fromJust' from the documentation: it returns the
           -- coefficient + the y intercept and that's it.
           coefficient, yintercept, rSq :: Double
@@ -374,18 +381,18 @@ plotXYWithLinearRegression
             -- quick helper for converting to @Vector.Unboxed.Vector Double@ as required by the stats library
             let listToStatsVector = Vector.Unboxed.fromList
                 (coefficients, r) =
-                  Regression.olsRegress [listToStatsVector $ map fst dataSet] $
+                  Regression.olsRegress [listToStatsVector $ fmap fst dataSet] $
                     listToStatsVector $
-                      map snd dataSet
+                      fmap snd dataSet
             (m, coefficients') <- Vector.Unboxed.uncons coefficients
             (b, _) <- Vector.Unboxed.uncons coefficients'
-            return ((m, b), r)
+            pure ((m, b), r)
 
       let linearRegressionMsg =
             List.unwords
               [ "Linear regression (y = mx + b) results:"
-              , "m=" ++ show coefficient ++ ","
-              , "b=" ++ show yintercept ++ ","
+              , "m=" <> show coefficient <> ","
+              , "b=" <> show yintercept <> ","
               , "with R^2="
               , show rSq
               ]
@@ -401,15 +408,15 @@ plotXYWithLinearRegression
 
           -- Plotting the data
           Foldable.for_ dataSetByTrialIx $ \(oIx, oDataSet) ->
-            Graphics.plot $ Graphics.points ("Trial " ++ show oIx) oDataSet
+            Graphics.plot $ Graphics.points ("Trial " <> show oIx) oDataSet
 
           Graphics.plot $
             Graphics.line
               linearRegressionMsg
-              [map (\x -> (x, coefficient * x + yintercept)) [0, 0.5 .. maxIndependentVarIx]]
+              [fmap (\x -> (x, coefficient * x + yintercept)) [0, 0.5 .. maxIndependentVarIx]]
 
 -- | 'queryAddrUtxos' queries utxos from the configured signing key file.
-queryAddrUtxos :: String -> Bench [TxOutRef]
+queryAddrUtxos :: HString.String -> Bench [TxOutRef]
 queryAddrUtxos addressBech32 = do
   -- TODO: add a queryAddrUtxos from myAddress derived from the signing key
   -- signingKeyFilePath <- Reader.asks bcfgSigningKeyFilePath
@@ -418,8 +425,8 @@ queryAddrUtxos addressBech32 = do
   IO.Class.liftIO $ NodeQuery.queryNodeUtxoAddress cardanoCliCmd magic addressBech32
 
 -- | 'readAddr' reads the addresss given from the file 'bcfgAddressFilePath'
-readAddr :: Bench String
-readAddr = Reader.asks bcfgAddressFilePath >>= IO.Class.liftIO . readFile
+readAddr :: Bench HString.String
+readAddr = Reader.asks bcfgAddressFilePath >>= IO.Class.liftIO . SystemIO.readFile
 
 {- | 'overrideBenchConfigPathFromEnv' scans the environment variables, and if
  the environment variable exists, replaces the given values with the
@@ -452,7 +459,7 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
     Maybe.fromMaybe (bcfgpOutputDir benchConfigPaths)
       <$> Environment.lookupEnv "BENCH_OUTPUT_DIRECTORY"
 
-  return
+  pure
     BenchConfigPaths
       { bcfgpBenchResults = benchResults
       , bcfgpSigningKeyFilePath = signingKeyFilePath

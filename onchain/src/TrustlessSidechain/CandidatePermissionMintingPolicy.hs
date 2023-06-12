@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -17,7 +16,7 @@ import Plutus.V2.Ledger.Contexts (
   TxOutRef,
  )
 import PlutusTx qualified
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (CandidatePermissionMint, cpmUtxo)
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
