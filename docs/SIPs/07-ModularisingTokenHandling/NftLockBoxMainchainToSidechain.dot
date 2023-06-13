@@ -1,0 +1,16 @@
+strict digraph {
+  node [shape=record]
+  // graph [nodesep="1", ranksep="1"]
+
+  UserWallet [ label = "Participant's wallet with k `MCToken`s\nwith token name `tn`"];
+  LockBoxValidator1 [ label = "LockBoxValidator parameterized by the currency symbol of `MCToken` and token name `tn`,\nuniquely identified by `LockBoxOracleMintingPolicy`,\nwith `ki` `MCToken`s with token name `tn`"];
+  Transaction [ shape=diamond ];
+
+  LockBoxValidator2 [ label = "LockBoxValidator parameterized by the currency symbol of `MCToken` and token name `tn`,\nuniquely identified by `LockBoxOracleMintingPolicy`,\nwith `k + ki` `MCToken`s with token name `tn`"];
+
+  UserWallet -> Transaction [ label = "input" ];
+  LockBoxValidator1 -> Transaction [ label = "input"];
+  Transaction -> LockBoxValidator2 [ label = "output"];
+  UserWallet -> LockBoxValidator2 [ label = "pays `k` `MCToken`s with\ntoken name `tn` to", style=dashed ];
+  LockBoxValidator1 -> LockBoxValidator2 [ label = "pays `LockBoxOracleMintingPolicy` to", style=dashed];
+}
