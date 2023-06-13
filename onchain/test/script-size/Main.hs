@@ -1,10 +1,18 @@
 module Main (main) where
 
 import Compiled qualified
+import Ledger.Scripts (unversioned)
 import Legacy qualified
-import Sizer (fitsInto, fitsUnder)
+import Sizer (fitsInto, fitsUnder, scriptFitsInto)
 import Test.Tasty (defaultMain, testGroup)
+import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
+import TrustlessSidechain.CheckpointValidator qualified as CV
+import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
+import TrustlessSidechain.DistributedSet qualified as DS
+import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
+import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRoot
+import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
 
 -- Process for adding a new script to measurements:
 --
@@ -40,50 +48,94 @@ main =
         [ fitsInto
             "mkMintingPolicy (FUEL)"
             Compiled.mkMPFuelCode
-            1_039
+            1_049
+        , scriptFitsInto
+            "mkMintingPolicy (FUEL) serialized"
+            (unversioned FUEL.serialisableMintingPolicy)
+            3_980
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_505
+            1_549
+        , scriptFitsInto
+            "mkMintingPolicy (MerkleRoot) serialized"
+            (unversioned MerkleRoot.serialisableMintingPolicy)
+            4_174
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
             201
+        , scriptFitsInto
+            "mkCommitteeCandidateValidator (serialized)"
+            (unversioned CCV.serialisableValidator)
+            2_854
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
-            147
+            155
+        , scriptFitsInto
+            "mkCandidatePermissionMintingPolicy (serialized)"
+            (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
+            2_785
         , fitsInto
             "mkCommitteeHashPolicy"
             Compiled.mkCommitteeHashPolicyCode
-            400
+            458
+        , scriptFitsInto
+            "mkCommitteeHashPolicy (serialized)"
+            (unversioned UCH.serialisableCommitteeHashPolicy)
+            2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_805
+            1_869
+        , scriptFitsInto
+            "mkUpdateCommitteeHashValidator (serialized)"
+            (unversioned UCH.serialisableCommitteeHashValidator)
+            4_594
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_836
+            1_866
+        , scriptFitsInto
+            "mkCheckpointValidator (serialized)"
+            (unversioned CV.serialisableCheckpointValidator)
+            4_608
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
-            400
+            458
+        , scriptFitsInto
+            "mkCheckpointPolicy (serialized)"
+            (unversioned CV.serialisableCheckpointPolicy)
+            2_853
         ]
     , testGroup
         "Distributed set"
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_686
+            1_739
+        , scriptFitsInto
+            "mkInsertValidator (serialized)"
+            (unversioned DS.serialisableInsertValidator)
+            4_098
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
             457
+        , scriptFitsInto
+            "mkDsConfPolicy (serialized)"
+            (unversioned DS.serialisableDsConfPolicy)
+            2_884
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode
-            1_228
+            1_278
+        , scriptFitsInto
+            "mkDsKeyPolicy (serialized)"
+            (unversioned DS.serialisableDsKeyPolicy)
+            3_667
         ]
     , testGroup
         "Other"

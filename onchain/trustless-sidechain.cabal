@@ -230,6 +230,7 @@ test-suite script-size
 
   build-depends:
     , plutus-core
+    , plutus-ledger
     , plutus-ledger-api
     , plutus-shim-prelude
     , plutus-tx

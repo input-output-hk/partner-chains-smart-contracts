@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Compiled (
@@ -18,7 +17,6 @@ module Compiled (
 
 import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx.Code (CompiledCode)
-import PlutusTx.Prelude
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (
   mkCandidatePermissionMintingPolicy,
@@ -42,6 +40,7 @@ import TrustlessSidechain.DistributedSet (
  )
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   CandidatePermissionMint,
