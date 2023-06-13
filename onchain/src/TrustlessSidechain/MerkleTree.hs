@@ -72,7 +72,6 @@ module TrustlessSidechain.MerkleTree (
   pureScriptShowMerkleTree,
 ) where
 
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.ByteString.Base16 qualified as Base16
 import Data.List qualified as List
 import Data.String qualified as HaskellString
@@ -120,8 +119,6 @@ pureScriptShowRootHash RootHash {unRootHash = rh} =
         BuiltinByteString bs -> Base16.encode bs
     , ")"
     ]
-
-deriveJSON defaultOptions ''RootHash
 
 instance Eq RootHash where
   RootHash l == RootHash r = l == r
@@ -190,8 +187,6 @@ instance UnsafeFromData Side where
           (\i -> if i == 0 then L else if i == 1 then R else fallthrough) -- integer case
           (const fallthrough) -- bytestring case
 
-deriveJSON defaultOptions ''Side
-
 {- | Internal data type. 'Up' is a single step up from a leaf of a 'MerkleTree' to recompute the
  root hash. In particular, this data type recovers information of the
  sibling.
@@ -230,7 +225,6 @@ pureScriptShowUp (Up ss s) =
     ]
 
 makeIsDataIndexed ''Up [('Up, 0)]
-deriveJSON defaultOptions ''Up
 
 {- | 'MerkleProof' is the proof to decide whether a 'BuiltinByteString' was
  included in a 'RootHash'.
@@ -253,8 +247,6 @@ pureScriptShowMerkleProof (MerkleProof proof) =
     , "]"
     , ")"
     ]
-
-deriveJSON defaultOptions ''MerkleProof
 
 -- | 'hash' is an internal function which is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}

@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -49,8 +47,6 @@ module TrustlessSidechain.DistributedSet (
   serialisableDsKeyPolicy,
 ) where
 
-import Data.Aeson.TH (defaultOptions, deriveJSON)
-import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger.Address (scriptHashAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts (
@@ -92,14 +88,14 @@ newtype Ds = Ds
     -- with 'DsConfDatum'.
     dsConf :: CurrencySymbol
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
@@ -109,7 +105,7 @@ data Node = Node
   { nKey :: BuiltinByteString
   , nNext :: BuiltinByteString
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
@@ -132,7 +128,7 @@ instance Eq DsConfDatum where
  generated after inserting into a node.
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
 
 instance TSPrelude.Foldable Ib where
@@ -160,7 +156,7 @@ data DsKeyMint = DsKeyMint
   , -- | 'dskmConfCurrencySymbol' is the currency symbol to identify a utxo with 'DsConfDatum'
     dskmConfCurrencySymbol :: CurrencySymbol
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
@@ -191,27 +187,14 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
-deriveJSON defaultOptions ''Ds
-PlutusTx.makeLift ''Ds
-
-deriveJSON defaultOptions ''DsDatum
-PlutusTx.makeLift ''DsDatum
-
 makeIsDataIndexed ''Node [('Node, 0)]
-deriveJSON defaultOptions ''Node
 
 makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
-deriveJSON defaultOptions ''DsKeyMint
+
 PlutusTx.makeLift ''DsKeyMint
 
-deriveJSON defaultOptions ''DsConfMint
-PlutusTx.makeLift ''DsConfMint
-
-deriveJSON defaultOptions ''Ib
-PlutusTx.makeLift ''Ib
-
 makeIsDataIndexed ''DsConfDatum [('DsConfDatum, 0)]
-deriveJSON defaultOptions ''DsConfDatum
+
 PlutusTx.makeLift ''DsConfDatum
 
 {- Note [How This all Works]

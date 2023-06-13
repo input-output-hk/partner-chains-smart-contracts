@@ -1,12 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module TrustlessSidechain.UpdateCommitteeHash where
 
-import Data.Aeson (FromJSON, ToJSON)
-import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value qualified as Value
@@ -197,10 +194,8 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
     ( TSPrelude.Show
     , TSPrelude.Eq
     , TSPrelude.Ord
-    , Generic
     , PlutusTx.UnsafeFromData
     )
-  deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''InitCommitteeHashMint
 
