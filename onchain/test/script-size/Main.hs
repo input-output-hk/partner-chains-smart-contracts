@@ -48,15 +48,15 @@ main =
         [ fitsInto
             "mkMintingPolicy (FUEL)"
             Compiled.mkMPFuelCode
-            1_049
+            1_039
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             (unversioned FUEL.serialisableMintingPolicy)
-            3_980
+            4_009
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_549
+            1_505
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
@@ -72,7 +72,7 @@ main =
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
-            155
+            147
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
@@ -80,7 +80,7 @@ main =
         , fitsInto
             "mkCommitteeHashPolicy"
             Compiled.mkCommitteeHashPolicyCode
-            458
+            400
         , scriptFitsInto
             "mkCommitteeHashPolicy (serialized)"
             (unversioned UCH.serialisableCommitteeHashPolicy)
@@ -88,7 +88,7 @@ main =
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_869
+            1_805
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
@@ -96,7 +96,7 @@ main =
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_866
+            1_836
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
@@ -104,7 +104,7 @@ main =
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
-            458
+            400
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             (unversioned CV.serialisableCheckpointPolicy)
@@ -115,7 +115,7 @@ main =
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_739
+            1_690
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             (unversioned DS.serialisableInsertValidator)
@@ -131,7 +131,7 @@ main =
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode
-            1_278
+            1_228
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             (unversioned DS.serialisableDsKeyPolicy)
