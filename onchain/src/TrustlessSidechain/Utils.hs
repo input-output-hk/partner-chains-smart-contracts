@@ -8,7 +8,7 @@ module TrustlessSidechain.Utils (
 
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
+import TrustlessSidechain.Types (ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey), SidechainPubKey (getSidechainPubKey))
 
 {- | @'verifyMultisig' pubKeys threshold message signatures@ checks if at least
  @threshold@ of @pubKeys@ have signed @message@ with @signatures@.
@@ -42,8 +42,8 @@ verifyMultisig pubKeys enough message signatures = go pubKeys signatures 0
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
-aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
+aggregateKeys :: [SidechainPubKey] -> ATMSPlainAggregatePubKey
+aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat . map getSidechainPubKey
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could
@@ -55,5 +55,5 @@ aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
+aggregateCheck :: [SidechainPubKey] -> ATMSPlainAggregatePubKey -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk

@@ -232,16 +232,21 @@ PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
 
 -- * Update Committee Hash data
 
-{- | Datum for the committee hash. This /committee hash/ is used to verify
- signatures for sidechain to mainchain transfers. This is a hash of
- concatenated public key hashes of the committee members
+{- | Datum for the committee. This is used to verify
+ signatures for sidechain to mainchain transfers.
+
+ The actual representation of the committee's public key depends on the ATMS
+ implementation.
 -}
-data UpdateCommitteeDatum = UpdateCommitteeDatum
-  { committeeHash :: BuiltinByteString
+data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
+  { aggregateCommitteePubKeys :: aggregatePubKeys
   , sidechainEpoch :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeDatum [('UpdateCommitteeDatum, 0)]
+
+newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey BuiltinByteString
+  deriving newtype (FromData, ToData, UnsafeFromData, Eq, Ord)
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee

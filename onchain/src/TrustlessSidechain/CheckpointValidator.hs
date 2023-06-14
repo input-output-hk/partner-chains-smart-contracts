@@ -40,6 +40,7 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
   CheckpointDatum (
     checkpointBlockHash,
     checkpointBlockNumber
@@ -65,7 +66,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
  )
 import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 
@@ -104,7 +105,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
        in Value.assetClassValueOf outputValue (committeeHashAssetClass checkpointParam) == 1
 
     -- Extract the UpdateCommitteeDatum from the list of input transactions
-    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum
+    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
     extractCommitteeDatum [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
     extractCommitteeDatum (txIn : txIns)
       | containsCommitteeNft txIn = case txOutDatum (txInInfoResolved txIn) of
@@ -112,7 +113,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
         _ -> extractCommitteeDatum txIns
       | otherwise = extractCommitteeDatum txIns
 
-    committeeDatum :: UpdateCommitteeDatum
+    committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum = extractCommitteeDatum (txInfoReferenceInputs info)
 
     ownOutput :: TxOut
@@ -152,7 +153,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
             (checkpointCommitteeSignatures red)
 
     isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (checkpointCommitteePubKeys red) $ committeeHash committeeDatum
+    isCurrentCommittee = aggregateCheck (checkpointCommitteePubKeys red) $ aggregateCommitteePubKeys committeeDatum
 
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint

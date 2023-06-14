@@ -29,12 +29,13 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
@@ -73,7 +74,7 @@ little optimization.
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
-  UpdateCommitteeDatum ->
+  UpdateCommitteeDatum ATMSPlainAggregatePubKey ->
   UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
@@ -86,7 +87,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       referencesPreviousMerkleRoot
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': expected different new committee"
-      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
+      (aggregateCommitteePubKeys outputDatum == aggregateKeys (newCommitteePubKeys red))
     -- Note: we only need to check if the new committee is "as signed
     -- by the committee", since we already know that the sidechainEpoch in
     -- the datum was "as signed by the committee" -- see how we constructed
@@ -103,7 +104,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
       _ -> traceError "Expected exactly one committee output"
-    outputDatum :: UpdateCommitteeDatum
+    outputDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     outputDatum = case txOutDatum ownOutput of
       -- Note [Committee Hash Inline Datum]
       -- We only accept the committtee has to be given as inline datum, so
@@ -163,7 +164,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
             (Builtins.blake2b_256 (serialiseUchm message))
             (committeeSignatures red)
     isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
+    isCurrentCommittee = aggregateCheck (committeePubKeys red) $ aggregateCommitteePubKeys dat
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
       -- Either we want to reference the previous merkle root or we don't (note

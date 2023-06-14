@@ -27,6 +27,7 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
   CommitteeSignedTokenMint (
     cstmSidechainParams,
     cstmUpdateCommitteeHashCurrencySymbol
@@ -38,7 +39,7 @@ import TrustlessSidechain.Types (
   ),
   SidechainParams (thresholdDenominator, thresholdNumerator),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeDatum (committeeHash),
+  UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
@@ -72,7 +73,7 @@ mkMintingPolicy cstm cstr ctx =
 
     -- 1.
     isCurrentCommittee :: Bool
-    isCurrentCommittee = Utils.aggregateCheck (cstrCurrentCommittee cstr) $ committeeHash committeeDatum
+    isCurrentCommittee = Utils.aggregateCheck (cstrCurrentCommittee cstr) $ aggregateCommitteePubKeys committeeDatum
 
     -- 2.
     signedByCurrentCommittee :: Bool
@@ -104,9 +105,9 @@ mkMintingPolicy cstm cstr ctx =
       )
         + 1
 
-    committeeDatum :: UpdateCommitteeDatum
+    committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum =
-      let go :: [TxInInfo] -> UpdateCommitteeDatum
+      let go :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
           go (t : ts)
             | o <- txInInfoResolved t
               , amt <-

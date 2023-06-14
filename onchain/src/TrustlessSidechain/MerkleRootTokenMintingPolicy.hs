@@ -36,6 +36,7 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   MerkleTreeEntry,
   SidechainParams (
@@ -45,7 +46,7 @@ import TrustlessSidechain.Types (
   SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
   SignedMerkleRootMint,
-  UpdateCommitteeDatum (committeeHash),
+  UpdateCommitteeDatum (aggregateCommitteePubKeys),
   merkleRoot,
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
@@ -114,9 +115,9 @@ mkMintingPolicy
       ownTokenName = Value.TokenName merkleRoot
       sc :: SidechainParams
       sc = smrmSidechainParams smrm
-      committeeDatum :: UpdateCommitteeDatum
+      committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
       committeeDatum =
-        let go :: [TxInInfo] -> UpdateCommitteeDatum
+        let go :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
             go (t : ts)
               | o <- txInInfoResolved t
                 , amt <-
@@ -174,7 +175,7 @@ mkMintingPolicy
                 }
           )
           signatures
-      p3 = Utils.aggregateCheck committeePubKeys $ committeeHash committeeDatum
+      p3 = Utils.aggregateCheck committeePubKeys $ aggregateCommitteePubKeys committeeDatum
       p4 = case flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName
         -- There's no need to verify the following condition
