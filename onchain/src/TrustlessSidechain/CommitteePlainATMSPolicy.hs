@@ -25,19 +25,19 @@ import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
-  CommitteeSignedTokenMint (
-    cstmSidechainParams,
-    cstmUpdateCommitteeHashCurrencySymbol
+  ATMSPlainMultisignature (
+    atmspmsPublicKeys,
+    atmspmsSignatures
   ),
-  CommitteeSignedTokenRedeemer (
-    cstrCurrentCommittee,
-    cstrCurrentCommitteeSignatures,
-    cstrMessageHash
+  CommitteeCertificateMint (
+    ccmCommitteeOraclePolicy,
+    ccmThresholdDenominator,
+    ccmThresholdNumerator
   ),
-  SidechainParams (thresholdDenominator, thresholdNumerator),
   SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
@@ -50,58 +50,63 @@ import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultis
       1. the provided committee in the redeemer matches the current committee
       stored onchain
 
-      2. the message provided is signed by the current committee
-
-      3. the only currency symbol of this token that is minted has the
-      provided 'cstrMessageHash' as its token name
-
-      TODO: we could generalize this to mint multiple tokens to show that the
-      committee has signed multiple things in the same transaction by:
-          - storing all the message hashes sorted alphabetically in a list
-          [as token names are stored alphabetically -- TODO check this]
-          - storing all signatures corresponding to the previous messages
-      in the redeemer, and its straightforward to modify this.
+      2. the only currency symbol of this token that is minted has the
+      token name that is signed by the current committee
 -}
-mkMintingPolicy :: CommitteeSignedTokenMint -> CommitteeSignedTokenRedeemer -> ScriptContext -> Bool
-mkMintingPolicy cstm cstr ctx =
+mkMintingPolicy :: CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool
+mkMintingPolicy ccm atmspms ctx =
   traceIfFalse "error 'CommitteePlainATMSPolicy': current committee mismatch" isCurrentCommittee
     && traceIfFalse "error 'CommitteePlainATMSPolicy': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'CommitteePlainATMSPolicy': invalid mint" mintingChecks
   where
-    sc = cstmSidechainParams cstm
     info = scriptContextTxInfo ctx
 
     -- 1.
     isCurrentCommittee :: Bool
-    isCurrentCommittee = Utils.aggregateCheck (cstrCurrentCommittee cstr) $ aggregateCommitteePubKeys committeeDatum
+    isCurrentCommittee =
+      Utils.aggregateCheck (atmspmsPublicKeys atmspms) $
+        aggregateCommitteePubKeys committeeDatum
 
     -- 2.
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       Utils.verifyMultisig
-        (getSidechainPubKey <$> cstrCurrentCommittee cstr)
+        (getSidechainPubKey <$> atmspmsPublicKeys atmspms)
         threshold
-        (unTokenName $ cstrMessageHash cstr)
-        (cstrCurrentCommitteeSignatures cstr)
-
-    -- 3.
-    mintingChecks :: Bool
-    mintingChecks
-      | Just tns <- AssocMap.lookup ownCurSymb $ Value.getValue (txInfoMint info)
-        , [(tn, amt)] <- AssocMap.toList tns
-        , tn == cstrMessageHash cstr
-        , amt > 0 =
-        True
-      | otherwise = False
+        (unTokenName uniqueMintedTokenName)
+        (atmspmsSignatures atmspms)
 
     threshold :: Integer
     threshold =
-      -- See
-      --    Note [Threshold of Strictly More than Threshold Majority]
-      -- in the module "TrustlessSidechain.UpdateCommitteeHash"
-      ( length (cstrCurrentCommittee cstr)
-          `Builtins.multiplyInteger` thresholdNumerator sc
-          `Builtins.divideInteger` thresholdDenominator sc
+      -- Note [Threshold of Strictly More than Threshold Majority]
+      --
+      -- The spec wants us to have strictly more than numerator/denominator majority of the
+      -- committee size. Let @n@ denote the committee size. To have strictly
+      -- more than numerator/denominator majority, we are interested in the smallest integer that
+      -- is strictly greater than @numerator/denominator*n@ which is either:
+      --    1. if @numerator/denominator * n@ is an integer, then the smallest
+      --    integer strictly greater than @numerator/denominator * n@ is
+      --    @numerator/denominator * n + 1@.
+      --
+      --    2. if @numerator/denominator * n@ is not an integer, then the
+      --    smallest integer is @ceil(numerator/denominator * n)@
+      --
+      -- We can capture both cases with the expression @floor((numerator * n)/denominator) + 1@
+      -- via distinguishing cases (again) if @numerator/denominator * n@ is an integer.
+      --
+      --    1.  if @numerator/denominator * n@ is an integer, then
+      --    @floor((numerator * n)/denominator) + 1 = (numerator *
+      --    n)/denominator + 1@ is the smallest integer strictly greater than
+      --    @numerator/denominator * n@ as required.
+      --
+      --    2.  if @numerator/denominator * n@ is not an integer, then
+      --    @floor((numerator * n)/denominator)@ is the largest integer
+      --    strictly smaller than @numerator/denominator *n@, but adding @+1@
+      --    makes this smallest integer that is strictly larger than
+      --    @numerator/denominator *n@ i.e., we have
+      --    @ceil(numerator/denominator * n)@ as required.
+      ( length (atmspmsPublicKeys atmspms)
+          `Builtins.multiplyInteger` ccmThresholdNumerator ccm
+          `Builtins.divideInteger` ccmThresholdDenominator ccm
       )
         + 1
 
@@ -113,7 +118,7 @@ mkMintingPolicy cstm cstr ctx =
               , amt <-
                   Value.valueOf
                     (txOutValue o)
-                    (cstmUpdateCommitteeHashCurrencySymbol cstm)
+                    (ccmCommitteeOraclePolicy ccm)
                     UpdateCommitteeHash.initCommitteeHashMintTn
               , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
               , -- See Note [Committee Hash Inline Datum] in
@@ -126,6 +131,16 @@ mkMintingPolicy cstm cstr ctx =
 
     ownCurSymb :: CurrencySymbol
     ownCurSymb = Contexts.ownCurrencySymbol ctx
+
+    -- Grabs the unique token name (fails if this is not the case) of the this
+    -- currency symbol that is minted.
+    uniqueMintedTokenName :: TokenName
+    uniqueMintedTokenName
+      | Just tns <- AssocMap.lookup ownCurSymb $ Value.getValue (txInfoMint info)
+        , [(tn, amt)] <- AssocMap.toList tns
+        , amt > 0 =
+        tn
+      | otherwise = Trace.traceError "error 'CommitteePlainATMSPolicy': bad mint"
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

@@ -6,7 +6,7 @@
 module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
-import Ledger.Value (AssetClass, CurrencySymbol, TokenName)
+import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
@@ -297,32 +297,28 @@ data CheckpointDatum = CheckpointDatum
 
 PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
 
-{- | 'CommitteeSignedTokenMint' is used to parameterize the committee signed
- token minting policy
-
- This includes the committee hash NFT to uniquely identify the current
- committee
+{- | 'CommitteeCertificateMint' is the type to parameterize committee
+ certificate verification minting policies.
+ See SIP05 in @docs/SIPs/@ for details.
 -}
-data CommitteeSignedTokenMint = CommitteeSignedTokenMint
-  { cstmSidechainParams :: SidechainParams
-  , cstmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
+data CommitteeCertificateMint = CommitteeCertificateMint
+  { ccmCommitteeOraclePolicy :: CurrencySymbol
+  , ccmThresholdNumerator :: Integer
+  , ccmThresholdDenominator :: Integer
   }
 
-PlutusTx.makeIsDataIndexed ''CommitteeSignedTokenMint [('CommitteeSignedTokenMint, 0)]
+PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
 
--- | 'CommitteeSignedTokenRedeemer' is the redeemer used to
-data CommitteeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
-  { cstrCurrentCommittee :: [SidechainPubKey]
-  , cstrCurrentCommitteeSignatures :: [BuiltinByteString]
-  , -- the hash of the message that the committee signs.
-    --
-    -- INVARIANT: this is subject to the size of a 'TokenName' [it is a token
-    -- name!], so the easiest way to ensure this in a cryptographically secure
-    -- way is to just make it the hash of a serialised message.
-    cstrMessageHash :: TokenName
+{- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
+ This is used as redeemer for the
+ "TrustlessSidechain.CommitteePlainATMSPolicy".
+-}
+data ATMSPlainMultisignature = ATMSPlainMultisignature
+  { atmspmsPublicKeys :: [SidechainPubKey]
+  , atmspmsSignatures :: [BuiltinByteString]
   }
 
-PlutusTx.makeIsDataIndexed ''CommitteeSignedTokenRedeemer [('CommitteeSignedTokenRedeemer, 0)]
+PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint
