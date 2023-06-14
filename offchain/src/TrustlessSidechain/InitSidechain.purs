@@ -91,8 +91,8 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -360,7 +360,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       }
     committeeHashDatum = Datum
       $ PlutusData.toData
-      $ UpdateCommitteeHashDatum
+      $ UpdateCommitteeDatum
           { committeeHash: aggregatedKeys
           , sidechainEpoch: isp.initSidechainEpoch
           }

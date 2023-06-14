@@ -37,15 +37,15 @@ import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
@@ -178,7 +178,7 @@ runUpdateCommitteeHash
   rawDatum ←
     liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
-  UpdateCommitteeHashDatum datum ← liftContractM
+  UpdateCommitteeDatum datum ← liftContractM
     (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
@@ -194,7 +194,7 @@ runUpdateCommitteeHash
   -------------------------------------------------------------
   let
     newDatum = Datum $ toData
-      ( UpdateCommitteeHashDatum
+      ( UpdateCommitteeDatum
           { committeeHash: newCommitteeHash, sidechainEpoch }
       )
     value = assetClassValue (unwrap uch).uchAssetClass one

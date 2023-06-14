@@ -51,8 +51,8 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
@@ -211,7 +211,7 @@ mustMintCommitteeSignedToken cstm cstr = do
     Monad.liftContractM
       (msg "Update committee hash UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
-  UpdateCommitteeHashDatum datum ← Monad.liftContractM
+  UpdateCommitteeDatum datum ← Monad.liftContractM
     (msg "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap comitteeHashDatum)
 

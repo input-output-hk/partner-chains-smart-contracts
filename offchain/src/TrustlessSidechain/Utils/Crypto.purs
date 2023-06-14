@@ -338,7 +338,7 @@ isSorted xss = case Array.tail xss of
   Nothing → false
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
--- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
+-- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
 -- | For this to be truly compatible with the onchain function, you need to ensure
 -- | that the input list is sorted
 aggregateKeys ∷ Array SidechainPublicKey → ByteArray

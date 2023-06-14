@@ -34,8 +34,8 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
+  UpdateCommitteeDatum (committeeHash, sidechainEpoch),
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
   UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
  )
@@ -73,7 +73,7 @@ little optimization.
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
-  UpdateCommitteeHashDatum ->
+  UpdateCommitteeDatum ->
   UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
@@ -103,7 +103,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
       _ -> traceError "Expected exactly one committee output"
-    outputDatum :: UpdateCommitteeHashDatum
+    outputDatum :: UpdateCommitteeDatum
     outputDatum = case txOutDatum ownOutput of
       -- Note [Committee Hash Inline Datum]
       -- We only accept the committtee has to be given as inline datum, so

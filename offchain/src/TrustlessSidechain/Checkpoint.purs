@@ -72,8 +72,8 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( getCommitteeHashPolicy
   )
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
@@ -195,7 +195,7 @@ runSaveCheckpoint
   comitteeHashDatum ←
     liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
-  UpdateCommitteeHashDatum datum ← liftContractM
+  UpdateCommitteeDatum datum ← liftContractM
     (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap comitteeHashDatum)
   when (datum.committeeHash /= curCommitteeHash)

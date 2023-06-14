@@ -65,7 +65,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeDatum (committeeHash, sidechainEpoch),
  )
 import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 
@@ -103,8 +103,8 @@ mkCheckpointValidator checkpointParam datum red ctx =
           outputValue = txOutValue resolvedOutput
        in Value.assetClassValueOf outputValue (committeeHashAssetClass checkpointParam) == 1
 
-    -- Extract the UpdateCommitteeHashDatum from the list of input transactions
-    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeHashDatum
+    -- Extract the UpdateCommitteeDatum from the list of input transactions
+    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum
     extractCommitteeDatum [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
     extractCommitteeDatum (txIn : txIns)
       | containsCommitteeNft txIn = case txOutDatum (txInInfoResolved txIn) of
@@ -112,7 +112,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
         _ -> extractCommitteeDatum txIns
       | otherwise = extractCommitteeDatum txIns
 
-    committeeDatum :: UpdateCommitteeHashDatum
+    committeeDatum :: UpdateCommitteeDatum
     committeeDatum = extractCommitteeDatum (txInfoReferenceInputs info)
 
     ownOutput :: TxOut

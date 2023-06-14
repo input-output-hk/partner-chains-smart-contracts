@@ -38,7 +38,7 @@ import TrustlessSidechain.Types (
   ),
   SidechainParams (thresholdDenominator, thresholdNumerator),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHashDatum (committeeHash),
+  UpdateCommitteeDatum (committeeHash),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
@@ -104,9 +104,9 @@ mkMintingPolicy cstm cstr ctx =
       )
         + 1
 
-    committeeDatum :: UpdateCommitteeHashDatum
+    committeeDatum :: UpdateCommitteeDatum
     committeeDatum =
-      let go :: [TxInInfo] -> UpdateCommitteeHashDatum
+      let go :: [TxInInfo] -> UpdateCommitteeDatum
           go (t : ts)
             | o <- txInInfoResolved t
               , amt <-

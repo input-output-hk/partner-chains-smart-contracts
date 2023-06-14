@@ -160,7 +160,7 @@ data SignedMerkleRootMint = SignedMerkleRootMint
   { -- | 'smrmSidechainParams' includes the 'SidechainParams'
     smrmSidechainParams :: SidechainParams
   , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
+    -- identifies the utxo for which the 'UpdateCommitteeDatum'
     -- resides.
     smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
   , -- | 'smrmValidatorHash' is the validator hash corresponding to
@@ -236,12 +236,12 @@ PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
  signatures for sidechain to mainchain transfers. This is a hash of
  concatenated public key hashes of the committee members
 -}
-data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
+data UpdateCommitteeDatum = UpdateCommitteeDatum
   { committeeHash :: BuiltinByteString
   , sidechainEpoch :: Integer
   }
 
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
+PlutusTx.makeIsDataIndexed ''UpdateCommitteeDatum [('UpdateCommitteeDatum, 0)]
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee

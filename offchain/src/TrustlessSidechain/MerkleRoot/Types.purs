@@ -58,7 +58,7 @@ newtype SignedMerkleRootMint = SignedMerkleRootMint
   { -- | `sidechainParams` includes the `SidechainParams`
     sidechainParams ∷ SidechainParams
   , -- | `updateCommitteeHashCurrencySymbol` is the `CurrencySymbol` which
-    -- (uniquely) identifies the utxo for which the `UpdateCommitteeHashDatum`
+    -- (uniquely) identifies the utxo for which the `UpdateCommitteeDatum`
     -- resides.
     updateCommitteeHashCurrencySymbol ∷ CurrencySymbol
   , -- | `merkleRootValidatorHash` is used to ensure that the token is paid to

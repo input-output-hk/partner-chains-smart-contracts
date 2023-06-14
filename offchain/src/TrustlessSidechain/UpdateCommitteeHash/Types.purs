@@ -4,7 +4,7 @@
 -- | Note: the reason for the existence of this module is because without this
 -- | there are some cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash`
 module TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
@@ -31,26 +31,26 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
--- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
+-- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
-newtype UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
+newtype UpdateCommitteeDatum = UpdateCommitteeDatum
   { committeeHash ∷ ByteArray
   , sidechainEpoch ∷ BigInt
   }
 
-derive instance Generic UpdateCommitteeHashDatum _
+derive instance Generic UpdateCommitteeDatum _
 
-derive instance Newtype UpdateCommitteeHashDatum _
+derive instance Newtype UpdateCommitteeDatum _
 
-instance ToData UpdateCommitteeHashDatum where
-  toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) = Constr
+instance ToData UpdateCommitteeDatum where
+  toData (UpdateCommitteeDatum { committeeHash, sidechainEpoch }) = Constr
     (BigNum.fromInt 0)
     [ toData committeeHash, toData sidechainEpoch ]
 
-instance FromData UpdateCommitteeHashDatum where
+instance FromData UpdateCommitteeDatum where
   fromData (Constr n [ a, b ])
     | n == BigNum.fromInt 0 =
-        UpdateCommitteeHashDatum <$>
+        UpdateCommitteeDatum <$>
           ( { committeeHash: _, sidechainEpoch: _ }
               <$> fromData a
               <*> fromData b

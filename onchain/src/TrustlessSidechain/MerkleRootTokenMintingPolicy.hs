@@ -45,7 +45,7 @@ import TrustlessSidechain.Types (
   SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
   SignedMerkleRootMint,
-  UpdateCommitteeHashDatum (committeeHash),
+  UpdateCommitteeDatum (committeeHash),
   merkleRoot,
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
@@ -114,9 +114,9 @@ mkMintingPolicy
       ownTokenName = Value.TokenName merkleRoot
       sc :: SidechainParams
       sc = smrmSidechainParams smrm
-      committeeDatum :: UpdateCommitteeHashDatum
+      committeeDatum :: UpdateCommitteeDatum
       committeeDatum =
-        let go :: [TxInInfo] -> UpdateCommitteeHashDatum
+        let go :: [TxInInfo] -> UpdateCommitteeDatum
             go (t : ts)
               | o <- txInInfoResolved t
                 , amt <-

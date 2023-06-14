@@ -64,8 +64,8 @@ import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
   ( InitCommitteeHashMint(InitCommitteeHashMint)
+  , UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -205,7 +205,7 @@ runSaveRoot
     rawDatum ←
       liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
         $ outputDatumDatum tOut.datum
-    UpdateCommitteeHashDatum datum ← liftContractM
+    UpdateCommitteeDatum datum ← liftContractM
       (mkErr "Datum at update committee hash UTxO fromData failed")
       (fromData $ unwrap rawDatum)
 
