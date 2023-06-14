@@ -125,10 +125,19 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             , sidechainMessage: sidechainMessage
             }
 
-        Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000) =<<
-          CommitteeSignedToken.runCommitteeSignedToken
-            committeeSignedTokenMint
-            committeeSignedTokenRedeemer
+        -- TODO: CTL updates removed the required functions for `assertMaxFee`,
+        -- so this function no longer exists... but perhaps one day we should
+        -- get this back. Boo hoo!
+        -- ```
+        -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000) =<<
+        -- CommitteeSignedToken.runCommitteeSignedToken
+        --     committeeSignedTokenMint
+        --     committeeSignedTokenRedeemer
+        -- ```
+
+        _ ← CommitteeSignedToken.runCommitteeSignedToken
+          committeeSignedTokenMint
+          committeeSignedTokenRedeemer
 
         Test.Utils.assertIHaveOutputWithAsset committeeSignedTokenCurrencySymbol
           sidechainMessageTokenName

@@ -10,10 +10,11 @@ import Contract.Prelude
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
-  , PlutusData(..)
-  , Redeemer(..)
+  , PlutusData(Constr)
+  , Redeemer(Redeemer)
   , fromData
   , toData
   )
@@ -27,8 +28,8 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
 import Contract.Transaction as Transaction
@@ -50,13 +51,12 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHash(..)
-  , UpdateCommitteeHashDatum(..)
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashDatum(UpdateCommitteeHashDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
 
 newtype CommitteeSignedTokenMint = CommitteeSignedTokenMint
@@ -71,7 +71,7 @@ instance ToData CommitteeSignedTokenMint where
     ( CommitteeSignedTokenMint
         { sidechainParams, updateCommitteeHashCurrencySymbol }
     ) =
-    Constr zero
+    Constr (BigNum.fromInt 0)
       [ toData sidechainParams
       , toData updateCommitteeHashCurrencySymbol
       ]
@@ -88,7 +88,7 @@ instance ToData CommitteeSignedTokenRedeemer where
   toData
     ( CommitteeSignedTokenRedeemer
         { currentCommittee, currentCommitteeSignatures, messageHash }
-    ) = Constr zero
+    ) = Constr (BigNum.fromInt 0)
     [ toData currentCommittee
     , toData currentCommitteeSignatures
     , toData messageHash
@@ -96,7 +96,7 @@ instance ToData CommitteeSignedTokenRedeemer where
 
 -- | `committeeSignedToken` grabs the minting polciy for the committee signed
 -- | token
-committeeSignedToken ∷ CommitteeSignedTokenMint → Contract () MintingPolicy
+committeeSignedToken ∷ CommitteeSignedTokenMint → Contract MintingPolicy
 committeeSignedToken param = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteeSignedToken >>=
@@ -110,14 +110,13 @@ committeeSignedToken param = do
 -- | and policy
 getCommitteeSignedToken ∷
   CommitteeSignedTokenMint →
-  Contract ()
+  Contract
     { committeeSignedTokenPolicy ∷ MintingPolicy
     , committeeSignedTokenCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteeSignedToken param = do
   let
-    msg = Logging.mkReport
-      { mod: "CommitteeSignedToken", fun: "getCommitteeSignedToken" }
+    msg = report "getCommitteeSignedToken"
   committeeSignedTokenPolicy ← committeeSignedToken param
   committeeSignedTokenCurrencySymbol ← Monad.liftContractM
     (msg "Failed to get committee signed token currency symbol")
@@ -128,7 +127,7 @@ getCommitteeSignedToken param = do
 -- | `committeeSignedTokenMintFromSidechainParams` grabs the `CommitteeSignedToken`
 -- | parameter that corresponds to the given `SidechainParams`
 committeeSignedTokenMintFromSidechainParams ∷
-  SidechainParams → Contract () CommitteeSignedTokenMint
+  SidechainParams → Contract CommitteeSignedTokenMint
 committeeSignedTokenMintFromSidechainParams sidechainParams = do
   { committeeHashCurrencySymbol
   } ← UpdateCommitteeHash.getCommitteeHashPolicy sidechainParams
@@ -143,7 +142,7 @@ committeeSignedTokenMintFromSidechainParams sidechainParams = do
 mustMintCommitteeSignedToken ∷
   CommitteeSignedTokenMint →
   CommitteeSignedTokenRedeemer →
-  Contract ()
+  Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteeSignedToken cstm cstr = do
   let
@@ -255,22 +254,24 @@ mustMintCommitteeSignedToken cstm cstr = do
 -- | `runCommitteeSignedToken` provides a convenient way to submit a
 -- | transaction with the constraints given in `mustMintCommitteeSignedToken`
 -- |
--- | This is mainly just used for testing as one woudln't want to just call
+-- | This is mainly just used for testing as one wouldn't want to just call
 -- | this in isolation.
 runCommitteeSignedToken ∷
   CommitteeSignedTokenMint →
   CommitteeSignedTokenRedeemer →
-  Contract () TransactionHash
+  Contract TransactionHash
 runCommitteeSignedToken cstm cstr = do
   let
-    msg = Logging.mkReport
-      { mod: "CommitteeSignedToken", fun: "runCommitteeSignedToken" }
+    msg = report "runCommitteeSignedToken"
 
   { lookups, constraints } ← mustMintCommitteeSignedToken cstm cstr
 
   ubTx ← Monad.liftedE
-    (Bifunctor.lmap msg <$> ScriptLookups.mkUnbalancedTx lookups constraints)
-  bsTx ← Monad.liftedE (Bifunctor.lmap msg <$> Transaction.balanceTx ubTx)
+    ( Bifunctor.lmap (msg <<< show) <$> ScriptLookups.mkUnbalancedTx lookups
+        constraints
+    )
+  bsTx ← Monad.liftedE
+    (Bifunctor.lmap (msg <<< show) <$> Transaction.balanceTx ubTx)
   signedTx ← Transaction.signTransaction bsTx
   txId ← Transaction.submit signedTx
   Log.logInfo'
@@ -281,5 +282,5 @@ runCommitteeSignedToken cstm cstr = do
   pure txId
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → ∀ e. Display e ⇒ e → String
-report = Logging.mkReport <<< { mod: "CommitteeSignedToken", fun: _ }
+report ∷ String → String → String
+report = Logging.mkReport "CommitteeSignedToken"

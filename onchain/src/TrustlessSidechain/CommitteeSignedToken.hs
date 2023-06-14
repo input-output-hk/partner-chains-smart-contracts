@@ -6,8 +6,6 @@
 -}
 module TrustlessSidechain.CommitteeSignedToken where
 
-import PlutusTx.Prelude
-
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value (CurrencySymbol, TokenName (..))
@@ -17,7 +15,7 @@ import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
-  ScriptContext (..),
+  ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
@@ -27,12 +25,20 @@ import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  CommitteeSignedTokenMint (..),
-  CommitteeSignedTokenRedeemer (..),
-  SidechainParams (..),
+  CommitteeSignedTokenMint (
+    cstmSidechainParams,
+    cstmUpdateCommitteeHashCurrencySymbol
+  ),
+  CommitteeSignedTokenRedeemer (
+    cstrCurrentCommittee,
+    cstrCurrentCommitteeSignatures,
+    cstrMessageHash
+  ),
+  SidechainParams (thresholdDenominator, thresholdNumerator),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHashDatum (..),
+  UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
