@@ -1,18 +1,18 @@
 # 1 Discussion on the internal testing tool `trustless-sidechain-gen-signatures`
 This document outlines using the CLI interface of the CTL project with the internal tool, `trustless-sidechain-gen-signatures`, to assist in generating CLI commands / signatures.
 
-We will discuss:
+Topics discussed:
 - [Starting the runtime dependencies](#2-starting-the-runtime-dependencies)
 - [High level overview of the workflow](#3-High-level-overview-of-the-workflow)
 - [More environment setup](#4-More-environment-setup)
-- [Initialising the sidechain](#5-Initialising-the-sidechain)
-- [Saving a merkle root](#6-Saving-a-merkle-root)
+- [Initializing the sidechain](#5-Initializing-the-sidechain)
+- [Saving a Merkle root](#6-Saving-a-Merkle-root)
 - [Claiming FUEL tokens](#7-Claiming-FUEL-tokens)
 - [Updating the committee hash](#8-Updating-the-committee-hash)
 - [Registering a committee candidate](#9-Registering-a-committee-candidate)
 
 # 2 Starting the runtime dependencies
-In order to run the system, we require the following runtime dependencies.
+Running the system requires the following runtime dependencies.
 
 - `cardano-node`
 - `ogmios` which provides a WebSocket interface to interact with the `cardano-node`
@@ -22,7 +22,7 @@ In order to run the system, we require the following runtime dependencies.
 
 [^1]: The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
 
-We have provided a convenient way to launch the runtime dependencies in `docker` images for you.
+This a convenient way to launch the runtime dependencies in `docker` images.
 In a separate terminal window in the project's root directory, execute the following command to launch the runtime dependences in `docker` images for the preview test net.
 ```
 $ nix run .#ctl-runtime-preview
@@ -37,50 +37,50 @@ This will run
 An interested reader can find details in the [CTL project documentation](https://github.com/Plutonomicon/cardano-transaction-lib/blob/87233da45b7c433c243c539cb4d05258e551e9a1/doc/runtime.md).
 
 # 3 High level overview of the workflow
-We give a high level overview of the workflow. Consider the following state machine[^2].
+Consider the following state machine[^2].
 
-[^2]: We ignore some technicalities for ensuring "uniqueness" of the sidechain.
+[^2]: Ignoring some technicalities for ensuring "uniqueness" of the sidechain.
 
 ![State machine of workflow](./StateMachineWorkflow.svg)
 
 The notation needs some explanation[^3]. The arrows indicate the transition from one state to another.
-The event and preconditions causing the transition is shown above the horizontal line labeling the transition, and actions taken and side effects executed when the event occurs are shown below the line.
-We assume that there are 4 global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root` a representation of the previous merkle root (if it exists), `onchain-epoch` an integer, and `onchain-merkleroots` a collection storing merkle roots supporting an insertion and membership test operation.
-Moreover, we assume that there are some public functions `committee-hash-msg` and `save-root-msg` which are used to help generate signatures.
+The event and preconditions causing the transition are shown above the horizontal line labeling the transition, and actions taken and side effects executed when the event occurs are shown below the line.
+Assume that there are four global variables stored onchain called `onchain-committee` a representation of the committee, `onchain-previous-merkle-root` a representation of the previous Merkle root (if it exists), `onchain-epoch` an integer, and `onchain-merkleroots` a collection storing Merkle roots supporting an insertion and membership test operation.
+Moreover, assume that there are some public functions `committee-hash-msg` and `save-root-msg` used to help generate signatures.
 
 [^3]: This notation is loosely based off of pp.218 of _Computer Networking: A Top-Down Approach (5th Edition)_ by James F. Kurose and Keith W. Ross.
 
-We discuss the state transitions.
+**State transitions**
 
 - `register` (not included in the state machine) allows one to register as a committee candidate.
 
-- `init` initialises the sidechain. In particular this determines the `initial committee` stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initialises internal data structures used for the `claim` endpoint that will not be further discussed.
+- `init` initializes the sidechain. In particular this determines the `initial committee` stored onchain which has authority over what Merkle roots get saved in the `save-root` command, along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initializes internal data structures used for the `claim` endpoint that will not be further discussed.
 
 - `committee-hash` allows the `current committee` to sign off a `new committee` to replace them.
 
-- `save-root` allows the `current committee` to sign a merkle root of transactions from the sidechain which may be claimed with the `claim` command.
+- `save-root` allows the `current committee` to sign a Merkle root of transactions from the sidechain which may be claimed with the `claim` command.
 
-- `claim` allows an individual who is the recipient of a transaction included in a merkle root from `save-root` to claim their tokens.
+- `claim` allows an individual who is the recipient of a transaction included in a Merkle root from `save-root` to claim their tokens.
 
 In the following sections, we will demonstrate how one may go through this workflow on the preview testnet.
 
 # 4 More environment setup
-We will assume that we have our own secret and public key on the preview testnet. We will also assume that we are in a `nix develop` shell in the project root i.e., we executed
+Assuming that you have your own secret and public key on the preview testnet, and also that you are in a `nix develop` shell in the project root ie, you executed
 ```
 nix develop
 ```
 in the project root.
 
-We will set the environment variable `PUBLIC_KEY` to our public key e.g., I have
+Set the environment variable `PUBLIC_KEY` to your public key eg, you will have
 ```
 PUBLIC_KEY="addr_test1vq9m0ma46xzspaq2jwdefuurt2zm2ct9yj495t22578p6xc7kgt8y"
 ```
-Moreover, we will also assume that we have set the environment variable `SIGNING_KEY` to the absolute path of our secret key e.g., I have the following.
+Moreover, assume that you have set the environment variable `SIGNING_KEY` to the absolute path of your secret key eg, you have the following.
 ```
 SIGNING_KEY=/home/jared/Documents/Work/cnode/address/test.skey
 ```
 
-Also, we will need to interact with the `cardano-node` in the `docker` image which was launched in [#2](#2-Starting-the-runtime-dependencies). So, to identify the `docker` image, run
+Also, you will need to interact with the `cardano-node` in the `docker` image which was launched in [#2](#2-Starting-the-runtime-dependencies). So, to identify the `docker` image, run
 ```
 $ docker ps
 CONTAINER ID   IMAGE                                                 COMMAND                  CREATED      STATUS          PORTS                                       NAMES
@@ -92,11 +92,11 @@ b430e7900e12   ctl-server:iskx1y6l3nfab5bv6sdhl13csc756rax           "/nix/store
 ```
 and make note of the docker image `store_cardano_node_1`.
 
-# 5 Initialising the sidechain
-We describe initialisation of the sidechain. As an overview, we will
-- Generate an initial committee
-- Find a UTxO a distinguished UTxO to spend (which is used to ensure that this sidechain is unique)
-- Initialising the sidechain
+# 5 Initializing the sidechain
+The steps involved are:
+- Generating an initial committee
+- Finding a distinguished UTXO to spend (which is used to ensure that this sidechain is unique)
+- Initializing the sidechain
 
 1. Generating the initial committee using the `trustless-sidechain-gen-signatures`. In the root of the project directory, run
 ```
@@ -104,7 +104,7 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- fresh-sidechain-committee 
 ```
 which will create a JSON file of a fresh committee called `COMMITTEE1`. This may take some time if this is the first time running `trustless-sidechain-gen-signatures` as it may need to compile the project.
 
-2. Finding a distinguished UTxO to spend. We can query the `cardano-node` for UTxOs we may spend with the following command
+2. Finding a distinguished UTXO to spend. You can query the `cardano-node` for UTXOs you may spend with the following command
 
 ```
 $ docker exec \
@@ -119,15 +119,15 @@ b39b82f56be9f55af4d3b501ac084c2d2c5be3af8665f7a5bba53c63b0740021     3        13
 f06b5829a9e02f341e3267fe10bc97a5b9df095713102e4276f957c863213dd1     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 ```
 
-I can choose any of these UTxOs to spend. In particular, I will choose the first one.
+You can choose any of these UTXOs to spend. This shows choosing the first one.
 
-Then, for convenience, set the environment variable `GENESIS_UTXO` to the UTxO you choose to spend. For example, I will do
+Then, for convenience, set the environment variable `GENESIS_UTXO` to the UTXO you choose to spend. For example, 
 ```
 GENESIS_UTXO="211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0"
 ```
-where we note that we use the notation `TxHash#TxIx`.
+Note the use of the notation `TxHash#TxIx`.
 
-3. Initialising the sidechain. We will use `trustless-sidechain-gen-signatures` to help us generate the CLI command in order to initialise the committee.
+3. Initializing the sidechain. Use `trustless-sidechain-gen-signatures` to help generate the CLI command to initialize the committee.
 
 Execute the following command
 ```
@@ -161,7 +161,7 @@ nix run .#ctl-main -- init \
 --sidechain-epoch 0
 ```
 
-It will tell us the command to execute with `ctl-main` to submit the transaction. Let's do what it says and execute that.
+It will give the command to execute with `ctl-main` to submit the transaction. So, do what it says and execute that.
 ```
 $ nix run .#ctl-main -- init \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
@@ -184,14 +184,14 @@ $ nix run .#ctl-main -- init \
 [INFO] 2022-12-06T01:38:50.220Z InitSidechain.initSidechain: Initialise sidechain tokens transaction submitted successfully.
 {"endpoint":"Init","transactionId":"29de898e78ad97e64e9e6d04332bee424e3d910ab10303fd8c3008c2346c798b","sidechainParams":{"chainId":69,"genesisHash":"112233","genesisMint":null,"genesisUtxo":"211a00e3ac8bebb1545f4d6855c5bbe281357ad8e580d72b1385080bc21445be#0","thresholdDenominator":3,"thresholdNumerator":2},"addresses":{"CommitteCandidateValidator":"addr_test1wrrj2c8hy023zgz92hsufk6ea3jdycu3g0lxp7j83947wcc3spekz"},"mintingPolicies":{"FuelMintingPolicyId":"e1869d5ce721db9e6b9ae21678ea15bc2630640728f345a46832c9da","MPTRootTokenMintingPolicyId":"eea539a42de0f2916e6f0df8fbf8542a2f2e61ce9f42031609177c10"}}
 ```
-Hopefully, it will succeed -- meaning that we have initialised the sidechain. Note that it also outputs various addresses / minting policies related to the sidechain in JSON format. We can ignore this for now.
+Hopefully, it will succeed -- meaning that you have initialized the sidechain. Note that it also outputs various addresses / minting policies related to the sidechain in JSON format. Ignore this for now.
 
-# 6 Saving a merkle root
-We will demonstrate how to save a merkle root with the sidechain we have just initialised. As an overview, we will
-- Create a merkle tree / merkle root of some transactions
-- Save the merkle root.
+# 6 Saving a Merkle root
+This will demonstrate how to save a Merkle root with the newly initialized sidechain. The steps are:
+- Create a Merkle tree / Merkle root of some transactions
+- Save the Merkle root.
 
-1. Create a merkle tree / merkle root of some transactions. We will use `trustless-sidechain-gen-signatures` for this. Run the following commands to create a merkle tree.
+1. Create a Merkle tree / Merkle root of some transactions. Use `trustless-sidechain-gen-signatures` for this. Run the following commands to create a Merkle tree.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
     --merkle-tree-entry="{\"index\":1 , \"amount\": 69,  \"recipient\":\"$PUBLIC_KEY\", \"previousMerkleRoot\": null }" \
@@ -199,12 +199,12 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
 $ MERKLE_TREE_1_1=$(!!)
 $ MERKLE_ROOT_1_1=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-hash --merkle-tree $MERKLE_TREE_1_1)
 ```
-Note we use `!!` to run the last command and store it to an environment variable. This merkle tree includes transactions to
+Note the use of `!!` to run the last command and store it to an environment variable. This Merkle tree includes transactions to
 
-- Pay 69 FUEL to myself, and
-- Pay 420 FUEL to myself
+- Pay 69 FUEL to yourself, and
+- Pay 420 FUEL to yourself
 
-We can also save another merkle root as follows.
+You can also save another Merkle root as follows.
 
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- merkle-tree \
@@ -215,12 +215,12 @@ $ MERKLE_ROOT_1_2=$(cabal run -v0 trustless-sidechain-gen-signatures -- root-has
 ```
 which has transactions to
 
-- Pay 169 FUEL to myself, and
-- Pay 1420 FUEL to myself
+- Pay 169 FUEL to yourself, and
+- Pay 1420 FUEL to yourself
 
 Note that the `previousMerkleRoot` field was changed from `null` to `MERKLE_ROOT_1_1` -- this is for technical reasons.
 
-2. Save a merkle root. We will use `trustless-sidechain-gen-signatures` to create the command to save the merkle root. Run the following command.
+2. Save a Merkle root. Use `trustless-sidechain-gen-signatures` to create the command to save the Merkle root. Run the following command.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- save-root \
   `# Sidechain parameters` \
@@ -253,7 +253,7 @@ nix run .#ctl-main -- save-root \
 --committee-pub-key-and-signature 020c79d665e45ae0c9c7e7c192d47b7953679bc5a95f52e2052fb59d23e60005f6:3fe4a2a859ce2a8247ae0da03b4ef0bcffe012880b8d08635a9a825edd036c405ac2d08348a3872c001750f4385b7e174269eff7497de05be2667787605c80af \
 --merkle-root eed04d5f8c29240d92325f887a9d53883dfea50d364ae1633c651533b87a896f
 ```
-It'll tell us how to call `ctl-main`. Let's do as it says
+It'll show how to call `ctl-main`. So, do as it says
 ```
 $ nix run .#ctl-main -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
@@ -277,7 +277,7 @@ $ nix run .#ctl-main -- save-root \
 {"endpoint":"SaveRoot","transactionId":"54200455ada3ed561d01b07c3cb3572b360202b4d07b2484b74ae0e8245d9cba"}
 ```
 
-Now, let's save the other merkle root.
+Now, save the other Merkle root.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- save-root \
   `# Sidechain parameters` \
@@ -311,9 +311,9 @@ nix run .#ctl-main -- save-root \
 --merkle-root fa43e2b2d66e4c4db3be723eb5a4e1ba718aca4a375139600b6f53de258e2bb3 \
 --previous-merkle-root eed04d5f8c29240d92325f887a9d53883dfea50d364ae1633c651533b87a896f
 ```
-Note that we include the flag `--previous-merkle-root` with `$MERKLE_ROOT_1_1`.
+Note the inclusion of the flag `--previous-merkle-root` with `$MERKLE_ROOT_1_1`.
 
-Then, let's do what it says and call `ctl-main` as given.
+So, do what it says and call `ctl-main` as given.
 ```
 $ nix run .#ctl-main -- save-root \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
@@ -340,12 +340,12 @@ $ nix run .#ctl-main -- save-root \
 ```
 
 # 7 Claiming FUEL tokens
-We will demonstrate how to claim FUEL tokens. As an overview, here's what we will discuss
+The steps are:
 
 - Finding out what the Currency Symbol of FUEL tokens are.
 - Claiming FUEL tokens.
 
-1. Finding out what the Currency Symbol of FUEL tokens are. This will help us verify that we have actually received FUEL tokens in our wallet. Conveniently, `ctl-main` provides a command to gather all addresses related to the sidechain for us as follows.
+1. Finding out what the Currency Symbol of FUEL tokens are. This will help to verify that you have actually received FUEL tokens in your wallet. Conveniently, `ctl-main` provides a command to gather all addresses related to the sidechain as follows.
 ```
 $ nix run .#ctl-main -- addresses \
 --payment-signing-key-file $SIGNING_KEY \
@@ -365,18 +365,18 @@ $ nix run .#ctl-main -- addresses \
 }
 
 ```
-Note that we pipe the output to `jq` for easier JSON file viewing, but this is optional. In particular, we are interested in
+Note that the output is piped to `jq` for easier JSON file viewing, but this is optional. In particular, notice
 ```
     "FuelMintingPolicyId": "e1869d5ce721db9e6b9ae21678ea15bc2630640728f345a46832c9da"
 ```
 which identifies the FUEL minting policy.
 
 
-2. Claiming FUEL tokens. We will try to claim
+2. Claiming FUEL tokens. Trying to claim
 ```
     --merkle-tree-entry="{\"index\":1 , \"amount\": 69,  \"recipient\":\"$PUBLIC_KEY\", \"previousMerkleRoot\": null }" \
 ```
-from `MERKLE_TREE_1_1`. We first need to generate the `CombinedMerkleProof` -- we do this with `trustless-sidechain-gen-signatures` as follows.
+from `MERKLE_TREE_1_1`. First, you need to generate the `CombinedMerkleProof` -- do this with `trustless-sidechain-gen-signatures` as follows.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- combined-merkle-proof \
     --merkle-tree $MERKLE_TREE_1_1 \
@@ -384,7 +384,7 @@ $ cabal run -v0 trustless-sidechain-gen-signatures -- combined-merkle-proof \
 $ COMBINED_MERKLE_PROOF_1_1_1=$(!!)
 ```
 
-Then, we can claim our FUEL as follows. But before doing this, let's peek at our wallet now:
+Then, you can claim your FUEL as follows. But before doing this, here's a peek at the wallet now:
 ```
 $ docker exec \
     -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1 \
@@ -396,9 +396,9 @@ $ docker exec \
 b39b82f56be9f55af4d3b501ac084c2d2c5be3af8665f7a5bba53c63b0740021     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 f06b5829a9e02f341e3267fe10bc97a5b9df095713102e4276f957c863213dd1     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 ```
-and it's easy to see that we have no FUEL tokens.
+and it's easy to see that there are no FUEL tokens.
 
-Now, we claim our FUEL as follows.
+Now, claim your FUEL as follows.
 ```
 $ nix run .#ctl-main -- claim \
   `# Sidechain parameters` \
@@ -414,7 +414,7 @@ $ nix run .#ctl-main -- claim \
 {"endpoint":"ClaimAct","transactionId":"0989c38f40b6f490fbcb5bdedc0e8c40192b81ae82b3be6f45d05c42e93a3bfa"}
 ```
 
-Then, we can verify that we have received FUEL by checking our wallet as follows.
+Then, verify that you have received FUEL by checking your wallet as follows.
 ```
 $ docker exec \
     -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1 \
@@ -426,22 +426,22 @@ $ docker exec \
 b39b82f56be9f55af4d3b501ac084c2d2c5be3af8665f7a5bba53c63b0740021     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 f06b5829a9e02f341e3267fe10bc97a5b9df095713102e4276f957c863213dd1     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 ```
-Where we observe that the 2nd entry in the table is indeed our FUEL.
+Observe that the second entry in the table is indeed your FUEL.
 
 # 8 Updating the committee hash
-We will demonstrate how to update the committee hash. As an overview, we will discuss
+The steps are:
 - Generating a new committee
 - Updating the current committee
 
 Recall that the current committee (as stored on chain) is in the file `./COMMITTEE1`.
 
-1. Generating a new committee. This is the same procedure as given in [#5](#5-Initialising-the-sidechain). Recall the procedure was as follows.
+1. Generating a new committee. This is the same procedure as given in [#5](#5-Initializing-the-sidechain). Recall the procedure was as follows.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- fresh-sidechain-committee --size 10 > COMMITTEE2
 ```
-where we note that we save this new committee to the file `COMMITTEE2`.
+Note that this new committee is saved to the file `COMMITTEE2`.
 
-2. Updating the committee hash. We will use `trustless-sidechain-gen-signatures` to generate the `ctl-main` command. Run the following command
+2. Updating the committee hash. Use `trustless-sidechain-gen-signatures` to generate the `ctl-main` command. Run the following command
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- committee-hash \
   `# Sidechain parameters` \
@@ -487,7 +487,7 @@ nix run .#ctl-main -- committee-hash \
 ```
 Note that the `--sidechain-epoch` is `1` which is greater than `0` (the current sidechain epoch stored on chain).
 
-Let's do what it says and execute that command.
+So, do what it says and execute that command.
 ```
 $ nix run .#ctl-main -- committee-hash \
 --payment-signing-key-file /home/jared/Documents/Work/cnode/address/test.skey \
@@ -525,13 +525,13 @@ which indicates that the committee was updated successfully.
 
 
 # 9 Registering a committee candidate
-We describe how one may register a committee candidate. As an overview, we will
-- Find a UTxO that we may spend to register a committee candidate
+The steps are:
+- Find a UTXO to spend to register a committee candidate
 - Register the committee candidate
 
-Recall this may occur at any time and is not dependent on initialisation happening prior to this contract.
+Recall this may occur at any time and is not dependent on initialization happening prior to this contract.
 
-1. Find a UTxO that we may spend to register a committee candidate. Run the following command to query the cardano-node what UTxOs we may spend.
+1. Find a UTXO to spend to register a committee candidate. Run the following command to query the cardano-node what UTXOs are available.
 ```
 $ docker exec \
     -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" store_cardano-node_1 \
@@ -543,12 +543,12 @@ $ docker exec \
 b39b82f56be9f55af4d3b501ac084c2d2c5be3af8665f7a5bba53c63b0740021     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 f06b5829a9e02f341e3267fe10bc97a5b9df095713102e4276f957c863213dd1     3        1344720 lovelace + 69 c5ae7e4af4502074687c642f9a6dd97e0ec328ec862d4b40cd87eeac.4655454c + TxOutDatumNone
 ```
-In particular, we will consider spending the second transaction.
+Consider spending the second transaction.
 ```
 9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0
 ```
 
-2. Registering a committee candidate. We will use `trustless-sidechain-gen-signatures` to aid in doing this. Run the following command.
+2. Registering a committee candidate. Use `trustless-sidechain-gen-signatures` to aid in doing this. Run the following command.
 ```
 $ cabal run -v0 trustless-sidechain-gen-signatures -- register \
   `# Sidechain parameters` \
@@ -575,11 +575,11 @@ nix run .#ctl-main -- register \
 --registration-utxo 9903ad6e0aa7c49a9692eaf53d62b37d673dbf759de4e8513192a8d337294782#0
 ```
 Some notes:
-- `--spo-signing-key` is used to generate a key for Cardano. TODO: perhaps we should allow inputting a key.
-- `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](#5-Initialising-the-sidechain), and looking at the outputted file.
-- `--registration-utxo` was the UTxO that we found just above.
+- `--spo-signing-key` is used to generate a key for Cardano. 
+- `--sidechain-signing-key` is an arbitrary signing key for someone on the sidechain. This can be generated as in [#5](#5-Initializing-the-sidechain), and looking at the outputted file.
+- `--registration-utxo` was the UTXO found just above.
 
-Let's do what it says.
+So, do what it says.
 
 ```
 $ nix run .#ctl-main -- register \

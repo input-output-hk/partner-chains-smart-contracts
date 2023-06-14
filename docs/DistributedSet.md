@@ -72,7 +72,7 @@ set, it suffices to find a node `a` with an edge to `b` satisfying `a < str`
 and `str < b`. Note that otherwise this is inconclusive.
 
 ## 2. Insertion Operation
-To insert a string `str` (not already in the set) in the set, we need to find
+To insert a string `str` (not already in the set) in the set, it is necessary to find
 the greatest lower bound of `str` of the keys already stored (think [infimum](https://www.collinsdictionary.com/us/dictionary/english/infimum)).
 Graphically, nodes `str'` and `str''` with an edge can be found as follows.
 
@@ -107,7 +107,7 @@ To implement this in the block chain, consider the following
 slogan.
 
 _Slogan._
-There is a graph `Node` iff we have a UTXO with `Node` stored at the UTXO.
+There is a graph `Node` iff  there is a UTXO with `Node` stored at the UTXO.
 
 The rest of this document is merely technicalities to ensure adversaries can't
 cheat and prove that a node is not in the set when it already is.
@@ -229,7 +229,7 @@ the onchain code verifies the following.
 - The `FUELMintingPolicy` (stored in the datum of `DsConfValidator`) has minted
   a token.
 - Exactly one `DsKeyPolicy` is minted with token name as `str` ie, the minted
-  `DsKeyPolicy`'s token name is the string we wish to insert.
+  `DsKeyPolicy`'s token name is the string to insert.
 - There are exactly two outputs at the `DsInsertValidator` address, say `s` and
   `t`, for which `s` contains exactly one `DsKeyPolicy` token and similarly for
   `t`. Without loss of generality, let `s` denote the UTXO with a smaller token
@@ -250,7 +250,7 @@ the onchain code verifies the following.
   it appears that this problem exists there as well (but was never resolved).
 
 
-We'll discuss some minor details here.
+Some minor details are discussed here.
 
 
 Graphically, the last 4 steps are verifying that as input to the transaction,
@@ -261,7 +261,7 @@ like this:
 ```
 where `str'` is the token name of the `DsKeyPolicy` identifying the node, and
 the `str''` above the arrow represents an edge from `str'` to `str''` which is
-the `dsNext` field of `DsDatum`. Then, as output to the transaction, we have
+the `dsNext` field of `DsDatum`. Then, as output to the transaction, there is
 ```
                str          str''
 ... --> str' -------> str -------> ...
