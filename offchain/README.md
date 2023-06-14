@@ -14,7 +14,7 @@ To run CTL you need to set up the runtime dependencies:
 - ogmios
 - kupo
 
-Luckily, we have a dockerised setup, that spins up all these easily with a preset test network. Just run:
+Luckily, there is a dockerised setup, that spins up all these easily with a preset test network. Just run:
 
 ```
 nix run .#ctl-runtime
@@ -83,7 +83,7 @@ node main.js --help
 
 Notes:
 
-- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we have to add an arbitrary UTXO here.
+- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so it is necessary to add an arbitrary UTXO here.
 
 - before running the contracts, it may be desirable to have available your signing key in the environment. Example:
 
@@ -175,7 +175,7 @@ nix run .#sidechain-main-cli -- init \
 
 #### 3.1.2. Get script addresses of a sidechain
 
-Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
+Script addresses depend on the sidechain parameters, so you get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
 
 ```
 nix run .#sidechain-main-cli -- addresses \
