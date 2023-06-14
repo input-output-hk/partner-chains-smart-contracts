@@ -6,7 +6,7 @@ import Mote.Monad (group)
 import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.Checkpoint as Checkpoint
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
-import Test.CommitteeSignedToken as CommitteeSignedToken
+import Test.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import Test.ConfigFile as ConfigFile
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
@@ -48,7 +48,7 @@ main = do
 
         group "Plutip integration tests" do
           InitSidechain.tests
-          CommitteeSignedToken.tests
+          CommitteePlainATMSPolicy.tests
           CommitteeCandidateValidator.tests
           CandidatePermissionToken.tests
           FUELMintingPolicy.tests

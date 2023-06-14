@@ -1,4 +1,4 @@
-module Test.CommitteeSignedToken
+module Test.CommitteePlainATMSPolicy
   ( tests
   ) where
 
@@ -17,10 +17,10 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CommitteeSignedToken
+import TrustlessSidechain.CommitteePlainATMSPolicy
   ( CommitteeSignedTokenRedeemer(..)
   )
-import TrustlessSidechain.CommitteeSignedToken as CommitteeSignedToken
+import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
@@ -93,15 +93,16 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
       -- Grabbing the committee signed token on chain parameters / minting policy
       -------------------------
       committeeSignedTokenMint ←
-        CommitteeSignedToken.committeeSignedTokenMintFromSidechainParams
+        CommitteePlainATMSPolicy.committeeSignedTokenMintFromSidechainParams
           sidechainParams
 
       { committeeSignedTokenCurrencySymbol } ←
-        CommitteeSignedToken.getCommitteeSignedToken committeeSignedTokenMint
+        CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
+          committeeSignedTokenMint
 
       -- Running the tests
       -------------------------
-      logInfo' "CommitteeSignedToken a successful mint from the committee"
+      logInfo' "CommitteePlainATMSPolicy a successful mint from the committee"
       void do
         let
           sidechainMessageByteArray =
@@ -130,12 +131,12 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
         -- get this back. Boo hoo!
         -- ```
         -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000) =<<
-        -- CommitteeSignedToken.runCommitteeSignedToken
+        -- CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
         --     committeeSignedTokenMint
         --     committeeSignedTokenRedeemer
         -- ```
 
-        _ ← CommitteeSignedToken.runCommitteeSignedToken
+        _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
           committeeSignedTokenMint
           committeeSignedTokenRedeemer
 
@@ -145,7 +146,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
       -- the following test cases are mostly duplicated code with slight
       -- variations for the testing
       logInfo'
-        "CommitteeSignedToken a successful mint from the committee with only 20/25 of the committee members"
+        "CommitteePlainATMSPolicy a successful mint from the committee with only 20/25 of the committee members"
       void do
         let
           sidechainMessageByteArray =
@@ -170,7 +171,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             , sidechainMessage: sidechainMessage
             }
 
-        _ ← CommitteeSignedToken.runCommitteeSignedToken
+        _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
           committeeSignedTokenMint
           committeeSignedTokenRedeemer
 
@@ -178,7 +179,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName
 
       logInfo'
-        "CommitteeSignedToken an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
+        "CommitteePlainATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
       void do
         let
           sidechainMessageByteArray =
@@ -206,14 +207,14 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             }
 
         void
-          ( CommitteeSignedToken.runCommitteeSignedToken
+          ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
               committeeSignedTokenMint
               committeeSignedTokenRedeemer
           )
           # Test.Utils.fails
 
       logInfo'
-        "CommitteeSignedToken an unsuccessful mint where we use wrong committee"
+        "CommitteePlainATMSPolicy an unsuccessful mint where we use wrong committee"
       void do
         wrongCommittee ← sequence $ Array.replicate keyCount
           Utils.Crypto.generatePrivKey
@@ -242,7 +243,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             }
 
         void
-          ( CommitteeSignedToken.runCommitteeSignedToken
+          ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
               committeeSignedTokenMint
               committeeSignedTokenRedeemer
           )

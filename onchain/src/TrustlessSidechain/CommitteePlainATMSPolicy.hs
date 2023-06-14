@@ -1,10 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | "TrustlessSidechain.CommitteeSignedToken" provides a token which verifies
+{- | "TrustlessSidechain.CommitteePlainATMSPolicy" provides a token which verifies
  that the current committee has signed a given message hash.
 -}
-module TrustlessSidechain.CommitteeSignedToken where
+module TrustlessSidechain.CommitteePlainATMSPolicy where
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
@@ -64,9 +64,9 @@ import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultis
 -}
 mkMintingPolicy :: CommitteeSignedTokenMint -> CommitteeSignedTokenRedeemer -> ScriptContext -> Bool
 mkMintingPolicy cstm cstr ctx =
-  traceIfFalse "error 'CommitteeSignedTokenMint': current committee mismatch" isCurrentCommittee
-    && traceIfFalse "error 'CommitteeSignedTokenMint': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'CommitteeSignedTokenMint': invalid mint" mintingChecks
+  traceIfFalse "error 'CommitteePlainATMSPolicy': current committee mismatch" isCurrentCommittee
+    && traceIfFalse "error 'CommitteePlainATMSPolicy': committee signature invalid" signedByCurrentCommittee
+    && traceIfFalse "error 'CommitteePlainATMSPolicy': invalid mint" mintingChecks
   where
     sc = cstmSidechainParams cstm
     info = scriptContextTxInfo ctx
@@ -121,7 +121,7 @@ mkMintingPolicy cstm cstr ctx =
                 OutputDatum d <- txOutDatum o =
               IsData.unsafeFromBuiltinData $ getDatum d
             | otherwise = go ts
-          go [] = traceError "error 'CommitteeSignedTokenMint' no committee utxo given as reference input"
+          go [] = traceError "error 'CommitteePlainATMSPolicy' no committee utxo given as reference input"
        in go $ txInfoReferenceInputs info
 
     ownCurSymb :: CurrencySymbol

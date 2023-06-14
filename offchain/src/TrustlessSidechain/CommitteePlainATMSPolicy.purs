@@ -1,9 +1,9 @@
--- | `TrustlessSidechain.CommitteeSignedToken` provides functionality to
+-- | `TrustlessSidechain.CommitteePlainATMSPolicy` provides functionality to
 -- | replicate the onchain code data types, and grab its minting policies and
 -- | currency symbols.
 -- | Also, we provide mechanisms for creating the lookups and constraints to
 -- | build the transaction.
-module TrustlessSidechain.CommitteeSignedToken where
+module TrustlessSidechain.CommitteePlainATMSPolicy where
 
 import Contract.Prelude
 
@@ -99,24 +99,24 @@ instance ToData CommitteeSignedTokenRedeemer where
 committeeSignedToken ∷ CommitteeSignedTokenMint → Contract MintingPolicy
 committeeSignedToken param = do
   let
-    script = decodeTextEnvelope RawScripts.rawCommitteeSignedToken >>=
+    script = decodeTextEnvelope RawScripts.rawCommitteePlainATMSPolicy >>=
       plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied [ toData param ]
   pure $ PlutusMintingPolicy applied
 
--- | `getCommitteeSignedToken` grabs the committee signed token currency symbol
+-- | `getCommitteePlainATMSPolicy` grabs the committee signed token currency symbol
 -- | and policy
-getCommitteeSignedToken ∷
+getCommitteePlainATMSPolicy ∷
   CommitteeSignedTokenMint →
   Contract
     { committeeSignedTokenPolicy ∷ MintingPolicy
     , committeeSignedTokenCurrencySymbol ∷ CurrencySymbol
     }
-getCommitteeSignedToken param = do
+getCommitteePlainATMSPolicy param = do
   let
-    msg = report "getCommitteeSignedToken"
+    msg = report "getCommitteePlainATMSPolicy"
   committeeSignedTokenPolicy ← committeeSignedToken param
   committeeSignedTokenCurrencySymbol ← Monad.liftContractM
     (msg "Failed to get committee signed token currency symbol")
@@ -124,7 +124,7 @@ getCommitteeSignedToken param = do
   pure
     { committeeSignedTokenPolicy, committeeSignedTokenCurrencySymbol }
 
--- | `committeeSignedTokenMintFromSidechainParams` grabs the `CommitteeSignedToken`
+-- | `committeeSignedTokenMintFromSidechainParams` grabs the `CommitteePlainATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
 committeeSignedTokenMintFromSidechainParams ∷
   SidechainParams → Contract CommitteeSignedTokenMint
@@ -166,7 +166,7 @@ mustMintCommitteeSignedToken cstm cstr = do
   -- Grabbing the committee signed token currency symbol / minting policy
   -------------------------------------------------------------
   { committeeSignedTokenPolicy
-  } ← getCommitteeSignedToken $ CommitteeSignedTokenMint
+  } ← getCommitteePlainATMSPolicy $ CommitteeSignedTokenMint
     { sidechainParams
     , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
     }
@@ -251,18 +251,18 @@ mustMintCommitteeSignedToken cstm cstr = do
             one
     }
 
--- | `runCommitteeSignedToken` provides a convenient way to submit a
+-- | `runCommitteePlainATMSPolicy` provides a convenient way to submit a
 -- | transaction with the constraints given in `mustMintCommitteeSignedToken`
 -- |
 -- | This is mainly just used for testing as one wouldn't want to just call
 -- | this in isolation.
-runCommitteeSignedToken ∷
+runCommitteePlainATMSPolicy ∷
   CommitteeSignedTokenMint →
   CommitteeSignedTokenRedeemer →
   Contract TransactionHash
-runCommitteeSignedToken cstm cstr = do
+runCommitteePlainATMSPolicy cstm cstr = do
   let
-    msg = report "runCommitteeSignedToken"
+    msg = report "runCommitteePlainATMSPolicy"
 
   { lookups, constraints } ← mustMintCommitteeSignedToken cstm cstr
 
@@ -283,4 +283,4 @@ runCommitteeSignedToken cstm cstr = do
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → String → String
-report = Logging.mkReport "CommitteeSignedToken"
+report = Logging.mkReport "CommitteePlainATMSPolicy"
