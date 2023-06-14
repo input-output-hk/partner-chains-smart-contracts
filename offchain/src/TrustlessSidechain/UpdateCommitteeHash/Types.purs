@@ -33,21 +33,25 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
-newtype UpdateCommitteeDatum = UpdateCommitteeDatum
-  { committeeHash ∷ ByteArray
+newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
+  { committeeHash ∷ aggregatePubKeys
   , sidechainEpoch ∷ BigInt
   }
 
-derive instance Generic UpdateCommitteeDatum _
+derive instance Generic (UpdateCommitteeDatum aggregatePubKeys) _
 
-derive instance Newtype UpdateCommitteeDatum _
+derive instance Newtype (UpdateCommitteeDatum aggregatePubKeys) _
 
-instance ToData UpdateCommitteeDatum where
+instance
+  ToData aggregatePubKeys ⇒
+  ToData (UpdateCommitteeDatum aggregatePubKeys) where
   toData (UpdateCommitteeDatum { committeeHash, sidechainEpoch }) = Constr
     (BigNum.fromInt 0)
     [ toData committeeHash, toData sidechainEpoch ]
 
-instance FromData UpdateCommitteeDatum where
+instance
+  FromData aggregatePubKeys ⇒
+  FromData (UpdateCommitteeDatum aggregatePubKeys) where
   fromData (Constr n [ a, b ])
     | n == BigNum.fromInt 0 =
         UpdateCommitteeDatum <$>
