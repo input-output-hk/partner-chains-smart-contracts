@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fexpose-all-unfoldings #-}
 
 module TrustlessSidechain.CheckpointValidator (
   InitCheckpointMint (..),

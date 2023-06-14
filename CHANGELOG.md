@@ -30,7 +30,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [468](https://github.com/mlabs-haskell/trustless-sidechain/pull/468),
   onchain)
 * `toEncoding` for `SidechainCommitteeMember`
-* Standards note about `toEncoding`
+* Size measurements for exported scripts
+  ([426](https://github.com/mlabs-haskell/trustless-sidechain/issues/426),
+  [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
+* `abs` for absolute value in Haskell prelude, with the same usage caveats as
+  `signum`.
 
 ## Changed
 

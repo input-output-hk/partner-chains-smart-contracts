@@ -12,7 +12,7 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
-import Ledger.Value (TokenName (TokenName))
+import Ledger.Value (TokenName (TokenName), getValue)
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
@@ -31,6 +31,7 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (compile)
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
@@ -174,7 +175,7 @@ mkMintingPolicy
           )
           signatures
       p3 = Utils.aggregateCheck committeePubKeys $ committeeHash committeeDatum
-      p4 = case Value.flattenValue minted of
+      p4 = case flattenValue minted of
         [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName
         -- There's no need to verify the following condition
         -- > sym == Contexts.ownCurrencySymbol ctx
@@ -203,3 +204,27 @@ mkMintingPolicyUntyped =
 serialisableMintingPolicy :: Versioned Script
 serialisableMintingPolicy =
   Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+
+-- Helpers
+
+{-# INLINE flattenValue #-}
+flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
+flattenValue = go . AssocMap.toList . getValue
+  where
+    go ::
+      [(CurrencySymbol, AssocMap.Map TokenName Integer)] ->
+      [(CurrencySymbol, TokenName, Integer)]
+    go = \case
+      [] -> []
+      ((cs, innerMap) : xs) -> goInner cs xs . AssocMap.toList $ innerMap
+    goInner ::
+      CurrencySymbol ->
+      [(CurrencySymbol, AssocMap.Map TokenName Integer)] ->
+      [(TokenName, Integer)] ->
+      [(CurrencySymbol, TokenName, Integer)]
+    goInner cs carryBack = \case
+      [] -> go carryBack
+      ((tn, i) : xs) ->
+        if i == 0
+          then goInner cs carryBack xs
+          else (cs, tn, i) : goInner cs carryBack xs

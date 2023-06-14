@@ -217,19 +217,30 @@ executable trustless-sidechain-merkle-tree
 
 -- Tests
 
-test-suite perf-check
-  import:         common-lang, common-optimized-parallel, common-script-lang
+test-suite script-size
+  import:
+    common-lang , common-optimized-parallel , common-script-lang
+
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
+  other-modules:
+    Compiled
+    Legacy
+    Sizer
+
   build-depends:
     , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
     , plutus-shim-prelude
+    , plutus-tx
+    , plutus-tx-plugin
     , tagged
     , tasty
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-  hs-source-dirs: perf-check
+  hs-source-dirs: test/script-size
 
 test-suite trustless-sidechain-test
   import:         common-lang, common-optimized-parallel, common-script-lang
@@ -260,10 +271,9 @@ test-suite trustless-sidechain-test
   hs-source-dirs: test
 
 test-suite quickcheck-extra-test
-  import:         common-lang
+  import:         common-lang, common-optimized-parallel
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  ghc-options:    -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , QuickCheck
     , quickcheck-extra
@@ -322,9 +332,9 @@ benchmark bench-ctl
   hs-source-dirs: bench/
 
 benchmark quickcheck-extra-bench
-  import:         common-lang
+  import:         common-lang, common-optimized
   main-is:        Main.hs
-  ghc-options:    -O2 -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
+  ghc-options:    -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
   type:           exitcode-stdio-1.0
   build-depends:
     , QuickCheck

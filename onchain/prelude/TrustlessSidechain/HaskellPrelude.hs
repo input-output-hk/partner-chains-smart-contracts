@@ -1,4 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- compat for tasty-quickcheck
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -144,6 +145,7 @@ module TrustlessSidechain.HaskellPrelude (
   odd,
   Field.fromRational,
   Field.recip,
+  abs,
 
   -- ** Functor
   (Functor.$>),
@@ -281,7 +283,7 @@ import Control.Category qualified as Category
 import Control.Monad qualified as Monad
 import Control.Monad.IO.Class qualified as MonadIO
 import Data.Bifunctor qualified as Bifunctor
-import Data.Bool (Bool (False, True))
+import Data.Bool (Bool (False, True), otherwise)
 import Data.Bool qualified as Bool
 import Data.ByteString qualified as ByteString
 import Data.Char qualified as Char
@@ -455,11 +457,12 @@ odd x = (x `rem` 2) /= 0
  'zero', @'negate' 'one'@ when given an argument less than 'zero', and 'one'
  otherwise.
 
- = Note
+ = Note for mathematical pedants
 
- This is designed for fairly 'standard' numerical types. This will not work
- correctly on something like a Gaussian integer, but for all numerical types
- we support, this should work.
+ Technically, this definition of signum will only work for things that
+ \'look like integers\', as it presumes there are only three signa. Thus, for
+ something like a Gaussian integer (which have five signa) this will not work.
+ However, we are unlikely to ever need such a type, so this works well enough.
 
  @since Unreleased
 -}
@@ -468,6 +471,22 @@ signum x = case compare x zero of
   LT -> negate one
   EQ -> zero
   GT -> one
+
+{- | Absolute value.
+
+ = Note for mathematical pedants
+
+ This has the same caveats on use as 'signum'.
+
+ @since Unreleased
+-}
+abs :: forall (a :: Type). (Ord a, Ring a) => a -> a
+abs x =
+  let sig = signum x
+   in if
+          | sig == zero -> x
+          | sig == one -> x
+          | otherwise -> negate x
 
 -- Orphan instances
 
