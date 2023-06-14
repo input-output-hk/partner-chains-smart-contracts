@@ -30,6 +30,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [468](https://github.com/mlabs-haskell/trustless-sidechain/pull/468),
   onchain)
 * `toEncoding` for `SidechainCommitteeMember`
+* Standards note about `toEncoding`
 
 ## Changed
 

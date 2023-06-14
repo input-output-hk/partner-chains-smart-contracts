@@ -7,6 +7,13 @@ to evolve as our needs change.
 
 # Changelog
 
+## 14/06/23
+
+### Added
+
+* Requirement to define `toEncoding` in addition to `toJSON` for instances of
+  `ToJSON`.
+
 ## 23/05/23
 
 ### Added
@@ -1455,6 +1462,42 @@ be older than the version you want to use, which can lead to [unpleasant
 surprised](https://github.com/UnkindPartition/tasty/issues/208) together with
 `tasty-quickcheck`'s loose bound. To avoid this issue, we require any
 QuickCheck-provided identifiers to come from QuickCheck itself.
+
+## Define both `toEncoding` and `toJSON` for instances of `ToJSON`
+
+For any type with a manually specified (that is, not derived via Template
+Haskell or `Generic`) `ToJSON` instance, its `toEncoding` method MUST be
+defined. Additionally, it MUST be the case that `toEncoding = toEncoding .
+toJSON`: that is, the type's encoding must be the same, regardless of method
+used.
+
+### Justification
+
+Aeson is a library prone to performance issues. In particular, in older
+versions, its serialization routine required first converting a type to `Value`
+(essentially a runtime representation of a JSON document), followed by
+serializing it. While this approach has advantages, it is extremely inefficient:
+an intermediate `Value` gets constructed, only to immediately throw it away. To
+avoid this problem, more recent versions of Aeson provide a method for direct
+encoding into (effectively) a `ByteString` builder: `toEncoding`, which is part
+of the `ToJSON` type class.
+
+Unfortunately, for reasons of backwards compatibility, `toEncoding` is not a
+mandatory method. Thus, unless we explicitly define `toEncoding` for every
+instance, we don't receive its benefits. Worse, the problem is transitive: if
+any type `a` is composite, and includes a value of type `b`, if `b`'s `ToJSON`
+instance does not define `toEncoding`, we don't benefit from defining
+`toEncoding` for `a`! This is a subtle, but significant performance issue, which
+can be significant, in a way that's difficult to detect or pinpoint.
+
+While we cannot ensure that types we don't control define `toEncoding`, we
+should ensure that any type we define does. Fortunately, we only need to define
+`toEncoding` when we write a manual instance: instances derived via
+TemplateHaskell or `Generic` will define `toEncoding` correctly, and 'borrowing'
+instances via something like via-derivation will also have a `toEncoding` if the
+'underlying' type has it. When we define `toEncoding`, we must ensure that it is
+consistent with `toJSON`: it shouldn't matter whether we use the intermediate
+`Value` or not.
 
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman
