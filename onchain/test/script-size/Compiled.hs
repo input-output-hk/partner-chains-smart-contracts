@@ -13,6 +13,7 @@ module Compiled (
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
   mkDsKeyPolicyCode,
+  mkCommitteePlainATMSPolicyCode,
 ) where
 
 import Plutus.V2.Ledger.Contexts (ScriptContext)
@@ -29,6 +30,7 @@ import TrustlessSidechain.CheckpointValidator (
 import TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
  )
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.DistributedSet (
   Ds,
   DsConfMint,
@@ -42,18 +44,21 @@ import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
+  ATMSPlainMultisignature,
   BlockProducerRegistration,
   CandidatePermissionMint,
   CheckpointDatum,
   CheckpointParameter,
   CheckpointRedeemer,
+  CommitteeCertificateMint,
   FUELMint,
   FUELRedeemer,
   SidechainParams,
   SignedMerkleRoot,
   SignedMerkleRootMint,
+  UpdateCommitteeDatum,
   UpdateCommitteeHash,
-  UpdateCommitteeHashDatum,
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
@@ -118,7 +123,7 @@ mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
-      UpdateCommitteeHashDatum ->
+      UpdateCommitteeDatum ATMSPlainAggregatePubKey ->
       UpdateCommitteeHashRedeemer ->
       ScriptContext ->
       Bool
@@ -154,3 +159,7 @@ mkDsConfPolicyCode = $$(compile [||mkDsConfPolicy||])
 mkDsKeyPolicyCode ::
   CompiledCode (DsKeyMint -> () -> ScriptContext -> Bool)
 mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
+
+mkCommitteePlainATMSPolicyCode ::
+  CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+mkCommitteePlainATMSPolicyCode = $$(compile [||CommitteePlainATMSPolicy.mkMintingPolicy||])

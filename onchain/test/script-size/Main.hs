@@ -8,6 +8,7 @@ import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CPATMSP
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
@@ -92,7 +93,7 @@ main =
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_594
+            4_605
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
@@ -109,6 +110,14 @@ main =
             "mkCheckpointPolicy (serialized)"
             (unversioned CV.serialisableCheckpointPolicy)
             2_853
+        , fitsInto
+            "mkMintingPolicy (CommitteePlainATMSPolicy)"
+            Compiled.mkCommitteePlainATMSPolicyCode
+            1_043
+        , scriptFitsInto
+            "mkMintingPolicy (CommitteePlainATMSPolicy) serialized"
+            (unversioned CPATMSP.serialisableMintingPolicy)
+            3_575
         ]
     , testGroup
         "Distributed set"
