@@ -90,6 +90,7 @@ newtype CommitteePlainATMSParams = CommitteePlainATMSParams
   }
 
 derive instance Generic CommitteePlainATMSParams _
+
 derive instance Newtype CommitteePlainATMSParams _
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
@@ -112,6 +113,7 @@ instance ToData CommitteeCertificateMint where
       ]
 
 derive instance Generic CommitteeCertificateMint _
+
 derive instance Newtype CommitteeCertificateMint _
 
 -- | `ATMSPlainMultisignature` corresponds to the onchain type
@@ -121,7 +123,9 @@ newtype ATMSPlainMultisignature = ATMSPlainMultisignature
   }
 
 derive instance Generic ATMSPlainMultisignature _
+
 derive instance Newtype ATMSPlainMultisignature _
+
 instance ToData ATMSPlainMultisignature where
   toData
     ( ATMSPlainMultisignature
