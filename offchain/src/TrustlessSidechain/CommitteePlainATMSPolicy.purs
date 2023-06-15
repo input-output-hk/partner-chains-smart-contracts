@@ -2,8 +2,19 @@
 -- | replicate the onchain code data types, and grab its minting policies and
 -- | currency symbols.
 -- | Also, we provide mechanisms for creating the lookups and constraints to
--- | build the transaction.
-module TrustlessSidechain.CommitteePlainATMSPolicy where
+-- | build / submit the transaction.
+module TrustlessSidechain.CommitteePlainATMSPolicy
+  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  , ATMSPlainMultisignature(ATMSPlainMultisignature)
+  , committeePlainATMSMintFromSidechainParams
+
+  , committeePlainATMS
+  , getCommitteePlainATMSPolicy
+
+  , mustMintCommitteePlainATMSPolicy
+  , runCommitteePlainATMSPolicy
+  ) where
 
 import Contract.Prelude
 
@@ -57,7 +68,7 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
 -- | `CommitteePlainATMSParams` is a type to bundle up all the required data
--- | when building the transaction (this is only used offchain)
+-- | when building the transaction (this is used only as a offchain parameter)
 newtype CommitteePlainATMSParams = CommitteePlainATMSParams
   {
     -- UTxO for the current committee as stored onchain (which should be
@@ -77,6 +88,9 @@ newtype CommitteePlainATMSParams = CommitteePlainATMSParams
     -- probably want this to be the hash of the message you wish to sign)
     message ∷ TokenName
   }
+
+derive instance Generic CommitteePlainATMSParams _
+derive instance Newtype CommitteePlainATMSParams _
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
 -- | parameterize a committee certificate verification minting policy.
@@ -161,8 +175,10 @@ committeePlainATMSMintFromSidechainParams sidechainParams = do
     }
 
 -- | `mustMintCommitteePlainATMSPolicy` provides the constraints to mint a
--- | committee signed token (including: the script lookups for this, and the UTxO
--- | for the committee reference input)
+-- | committee signed token.
+-- | Note: this does NOT include a constraint to reference or spend the UTxO
+-- | which contains the current committee in, so you MUST provide this yourself
+-- | afterwards.
 mustMintCommitteePlainATMSPolicy ∷
   CommitteePlainATMSParams →
   Contract
@@ -192,21 +208,22 @@ mustMintCommitteePlainATMSPolicy
   { committeePlainATMSPolicy
   } ← getCommitteePlainATMSPolicy committeeCertificateMint
 
-  -- Grabbing the current committee as stored onchain
+  -- Grabbing the current committee as stored onchain / fail offchain early if
+  -- the current committee isn't as expected.
   -------------------------------------------------------------
   let
-    { index: committeeHashORef
+    { index: committeeORef
     , value:
-        committeeHashTxOut@
+        committeeTxOut@
           (TransactionOutputWithRefScript { output: TransactionOutput tOut })
     } = currentCommitteeUtxo
 
   comitteeHashDatum ←
     Monad.liftContractM
-      (msg "Update committee hash UTxO is missing inline datum")
+      (msg "Update committee UTxO is missing inline datum")
       $ outputDatumDatum tOut.datum
   UpdateCommitteeDatum datum ← Monad.liftContractM
-    (msg "Datum at update committee hash UTxO fromData failed")
+    (msg "Datum at update committee UTxO fromData failed")
     (fromData $ unwrap comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
@@ -233,23 +250,35 @@ mustMintCommitteePlainATMSPolicy
   pure
     { lookups:
         ScriptLookups.unspentOutputs
-          (Map.singleton committeeHashORef committeeHashTxOut)
+          (Map.singleton committeeORef committeeTxOut)
           <> ScriptLookups.mintingPolicy committeePlainATMSPolicy
     , constraints:
-        TxConstraints.mustReferenceOutput
-          committeeHashORef
-          <> TxConstraints.mustMintCurrencyWithRedeemer
-            (Scripts.mintingPolicyHash committeePlainATMSPolicy)
-            redeemer
-            message
-            one
+        TxConstraints.mustMintCurrencyWithRedeemer
+          (Scripts.mintingPolicyHash committeePlainATMSPolicy)
+          redeemer
+          message
+          one
+    -- Note: we used to include the current committee as reference input
+    -- every time, but there are times when one wants to spend the output
+    -- with the current committee and hence must provide a redeemer (and
+    -- perhaps much more in the transaction!).
+    -- So, instead of forcing you to pipe all the data down here, we force
+    -- the person calling this function to either include the current committee
+    -- as a reference output, or spending the output themselves.
+    -- ```
+    -- <> TxConstraints.mustReferenceOutput
+    -- committeeORef
+    -- ```
     }
 
 -- | `runCommitteePlainATMSPolicy` provides a convenient way to submit a
--- | transaction with the constraints given in `mustMintCommitteePlainATMSPolicy`
+-- | transaction with the constraints given in `mustMintCommitteePlainATMSPolicy`.
 -- |
 -- | This is mainly just used for testing as one wouldn't want to just call
 -- | this in isolation.
+-- |
+-- | Note: this assumes that the current committee should be given as reference
+-- | input (instead of spending it) to make testing a bit more terse.
 runCommitteePlainATMSPolicy ∷
   CommitteePlainATMSParams →
   Contract TransactionHash
@@ -257,7 +286,19 @@ runCommitteePlainATMSPolicy params = do
   let
     msg = report "runCommitteePlainATMSPolicy"
 
-  { lookups, constraints } ← mustMintCommitteePlainATMSPolicy params
+  mustMintCommitteeATMSPolicyLookupsAndConstraints ←
+    mustMintCommitteePlainATMSPolicy params
+
+  let
+    extraLookupsAndContraints =
+      { lookups: mempty
+      , constraints:
+          TxConstraints.mustReferenceOutput
+            (unwrap params).currentCommitteeUtxo.index
+      }
+
+    { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
+      <> extraLookupsAndContraints
 
   ubTx ← Monad.liftedE
     ( Bifunctor.lmap (msg <<< show) <$> ScriptLookups.mkUnbalancedTx lookups
