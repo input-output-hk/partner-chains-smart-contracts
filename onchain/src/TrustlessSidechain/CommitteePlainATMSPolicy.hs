@@ -2,7 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | "TrustlessSidechain.CommitteePlainATMSPolicy" provides a token which verifies
- that the current committee has signed a given message hash.
+ that the current committee has signed its token name with the plain (simply
+ public key and signature concatenation) ATMS scheme.
 -}
 module TrustlessSidechain.CommitteePlainATMSPolicy where
 
@@ -50,8 +51,8 @@ import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultis
       1. the provided committee in the redeemer matches the current committee
       stored onchain
 
-      2. the only currency symbol of this token that is minted has the
-      token name that is signed by the current committee
+      2. the token name of this token that is minted minted has been signed by
+      the current committee
 -}
 mkMintingPolicy :: CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool
 mkMintingPolicy ccm atmspms ctx =

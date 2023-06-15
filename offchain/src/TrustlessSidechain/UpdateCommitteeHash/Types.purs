@@ -32,6 +32,9 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
+-- | This corresponds to the onchain type. In the future, the
+-- | `aggregatePubKeys` type that this is instantiated with may change as we
+-- | implement different ATMS schemes.
 newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
   { committeeHash ∷ aggregatePubKeys
   , sidechainEpoch ∷ BigInt

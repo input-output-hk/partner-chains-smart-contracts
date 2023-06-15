@@ -143,8 +143,8 @@ committeePlainATMS param = do
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied [ toData param ]
   pure $ PlutusMintingPolicy applied
 
--- | `getCommitteePlainATMSPolicy` grabs the committee signed token currency symbol
--- | and policy
+-- | `getCommitteePlainATMSPolicy` grabs the committee plain ATMS currency
+-- | symbol and policy
 getCommitteePlainATMSPolicy ∷
   CommitteeCertificateMint →
   Contract
@@ -194,8 +194,6 @@ mustMintCommitteePlainATMSPolicy
   let
     msg = report "mustMintCommitteePlainATMSPolicy"
 
-  -- Unwrapping the provided parameters
-  -------------------------------------------------------------
   let
     messageByteArray = Value.getTokenName message
 
@@ -246,8 +244,8 @@ mustMintCommitteePlainATMSPolicy
         ((unwrap committeeCertificateMint).thresholdDenominator)
         curCommitteePubKeys
         (Utils.Crypto.byteArrayToSidechainMessageUnsafe messageByteArray)
-        -- this is actually safe because TokenName and  the
-        -- SidechainMessage have the same invariants (fortunately!)
+        -- this is actually safe because TokenName and SidechainMessage have
+        -- the same invariants
         curCommitteeSignatures
     )
     $ Monad.throwContractError
