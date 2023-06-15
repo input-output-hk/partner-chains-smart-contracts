@@ -16,12 +16,13 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
-  TxOut (txOutDatum, txOutValue),
+  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
+  TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
+import PlutusTx (ToData)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -29,142 +30,114 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey,
-  SidechainParams (
-    thresholdDenominator,
-    thresholdNumerator
-  ),
-  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
-  UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
+  UpdateCommitteeHash (
+    cCommitteeCertificateVerificationCurrencySymbol,
+    cCommitteeOracleCurrencySymbol,
+    cMptRootTokenCurrencySymbol
+  ),
+  UpdateCommitteeHashMessage (
+    uchmNewAggregateCommitteePubKeys,
+    uchmPreviousMerkleRoot,
+    uchmSidechainEpoch,
+    uchmValidatorAddress
+  ),
  )
-import TrustlessSidechain.Utils (aggregateCheck, aggregateKeys, verifyMultisig)
 
 -- * Updating the committee hash
 
 {- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
  to the Plutus data representation, then encoding it to cbor via the builtin.
 -}
-serialiseUchm :: UpdateCommitteeHashMessage -> BuiltinByteString
+serialiseUchm :: ToData aggregatePubKeys => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
+{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
+ the utxo which contains the committee hash. We use an empty bytestring for
+ this because the name really doesn't matter, so we mighaswell save a few
+ bytes by giving it the empty name.
+-}
+{-# INLINEABLE initCommitteeHashMintTn #-}
+initCommitteeHashMintTn :: TokenName
+initCommitteeHashMintTn = TokenName Builtins.emptyByteString
+
+{- | 'initCommitteeHashMintAmount' is the amount of the currency to mint which
+ is 1.
+-}
+{-# INLINEABLE initCommitteeHashMintAmount #-}
+initCommitteeHashMintAmount :: Integer
+initCommitteeHashMintAmount = 1
+
 {- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
-  1. The native token is in both the input and output.
-  2. The new committee hash is signed by the current committee
-  3. The committee provided really is the current committee
-  4. The new output transaction contains the new committee hash
-TODO an optimization. Instead of putting the new committee hash in the
-redeemer, we could just:
-    1. check if the committee hash is included in the datum (we already do
-    this)
-    2. check if what is in the datum is signed by the current committee
-Note [Committee hash in output datum]:
-Normally, the producer of a utxo is only required to include the datum hash,
-and not the datum itself (but can optionally do so). In this case, we rely on
-the fact that the producer actually does include the datum; and enforce this
-with 'outputDatum'.
-Note [Input has Token and Output has Token]:
-In an older iteration, we used to check if the tx's input has the token, but
-this is implicitly covered when checking if the output spends the token. Hence,
-we don't need to check if the input tx's spends the token which is a nice
-little optimization.
+  1. The redeemer is signed by the current committee
+
+  2. We reference the last merkle root (as understood by the signed redeemer)
+
+  3. the sidechain epoch (as understood by the redeemer) is strictly increasing
+  from the current sidechain epoch in the datum
+
+  4. There is an output which satisfies
+
+    - it has the new aggregated committee public keys
+
+    - it has the new sidechain epoch
+
+    - it is at the new address (as understood from the redeemer)
+
+    - the Sidechain parameters are the same? TODO
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
-  UpdateCommitteeDatum ATMSPlainAggregatePubKey ->
-  UpdateCommitteeHashRedeemer ->
+  UpdateCommitteeDatum BuiltinData ->
+  UpdateCommitteeHashMessage BuiltinData ->
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "error 'mkUpdateCommitteeHashValidator': output missing NFT" outputHasToken
-    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': current committee mismatch" isCurrentCommittee
+  traceIfFalse "error 'mkUpdateCommitteeHashValidator': invalid committee output" committeeOutputIsValid
+    && traceIfFalse
+      "error 'mkUpdateCommitteeHashValidator': message not signed by commitee"
+      signedByCurrentCommittee
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
       referencesPreviousMerkleRoot
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': expected different new committee"
-      (aggregateCommitteePubKeys outputDatum == aggregateKeys (newCommitteePubKeys red))
-    -- Note: we only need to check if the new committee is "as signed
-    -- by the committee", since we already know that the sidechainEpoch in
-    -- the datum was "as signed by the committee" -- see how we constructed
-    -- the 'UpdateCommitteeHashMessage'
-    && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
-      (sidechainEpoch dat < sidechainEpoch outputDatum)
+      "error 'mkUpdateCommitteeHashValidator': sidechain epoch must be strictly increasing"
+      (sidechainEpoch dat < uchmSidechainEpoch red)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-    sc :: SidechainParams
-    sc = cSidechainParams uch
-    ownOutput :: TxOut
-    ownOutput = case Contexts.getContinuingOutputs ctx of
-      [o] -> o
-      _ -> traceError "Expected exactly one committee output"
-    outputDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
-    outputDatum = case txOutDatum ownOutput of
-      -- Note [Committee Hash Inline Datum]
-      -- We only accept the committtee has to be given as inline datum, so
-      -- all other scripts which rely on this script can safely assume that
-      -- the datum is given inline.
-      OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
-      _ -> traceError "error 'mkUpdateCommitteeHashValidator': no output inline datum missing"
-    outputHasToken :: Bool
-    outputHasToken = hasNft (txOutValue ownOutput)
-    hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (cToken uch) == 1
-    threshold :: Integer
-    threshold =
-      -- Note [Threshold of Strictly More than Threshold Majority]
-      -- The spec wants us to have strictly more than numerator/denominator majority of the
-      -- committee size. Let @n@ denote the committee size. To have strictly
-      -- more than numerator/denominator majority, we are interested in the smallest integer that
-      -- is strictly greater than @numerator/denominator*n@ which is either:
-      --    1. if @numerator/denominator * n@ is an integer, then the smallest
-      --    integer strictly greater than @numerator/denominator * n@ is
-      --    @numerator/denominator * n + 1@.
-      --
-      --    2. if @numerator/denominator * n@ is not an integer, then the
-      --    smallest integer is @ceil(numerator/denominator * n)@
-      --
-      -- We can capture both cases with the expression @floor((numerator * n)/denominator) + 1@
-      -- via distinguishing cases (again) if @numerator/denominator * n@ is an integer.
-      --
-      --    1.  if @numerator/denominator * n@ is an integer, then
-      --    @floor((numerator * n)/denominator) + 1 = (numerator *
-      --    n)/denominator + 1@ is the smallest integer strictly greater than
-      --    @numerator/denominator * n@ as required.
-      --
-      --    2.  if @numerator/denominator * n@ is not an integer, then
-      --    @floor((numerator * n)/denominator)@ is the largest integer
-      --    strictly smaller than @numerator/denominator *n@, but adding @+1@
-      --    makes this smallest integer that is strictly larger than
-      --    @numerator/denominator *n@ i.e., we have
-      --    @ceil(numerator/denominator * n)@ as required.
-      ( length (committeePubKeys red)
-          `Builtins.multiplyInteger` thresholdNumerator sc
-          `Builtins.divideInteger` thresholdDenominator sc
-      )
-        + 1
+
+    committeeOutputIsValid :: Bool
+    committeeOutputIsValid =
+      let go :: [TxOut] -> Bool
+          go [] = False
+          go (o : os)
+            | -- verify that the new committee is at the correct address.
+              txOutAddress o == uchmValidatorAddress red
+              , -- recall that 'cCommitteeOracleCurrencySymbol' should be
+                -- an NFT, so  (> 0) ==> exactly one.
+                Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeHashMintTn > 0
+              , OutputDatum d <- txOutDatum o
+              , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d)
+              , -- check that thew datum at the new address is the new committee.
+                aggregateCommitteePubKeys ucd == uchmNewAggregateCommitteePubKeys red
+              , -- check that the sidechain epoch is corresponds to the signed message
+                uchmSidechainEpoch red == sidechainEpoch ucd =
+              True
+            | otherwise = go os
+       in go (txInfoOutputs info)
+
+    -- delegates the work of checking that the current committee has signed the
+    -- message to the 'cCommitteeCertificateVerificationCurrencySymbol'
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      let message =
-            UpdateCommitteeHashMessage
-              { uchmSidechainParams = sc
-              , uchmNewCommitteePubKeys = newCommitteePubKeys red
-              , uchmPreviousMerkleRoot = previousMerkleRoot red
-              , uchmSidechainEpoch = sidechainEpoch outputDatum
-              }
-       in verifyMultisig
-            (getSidechainPubKey <$> committeePubKeys red)
-            threshold
-            (Builtins.blake2b_256 (serialiseUchm message))
-            (committeeSignatures red)
-    isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (committeePubKeys red) $ aggregateCommitteePubKeys dat
+      Value.valueOf
+        (txInfoMint info)
+        (cCommitteeCertificateVerificationCurrencySymbol uch)
+        (TokenName (Builtins.blake2b_256 (serialiseUchm red)))
+        > 0
+
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
       -- Either we want to reference the previous merkle root or we don't (note
@@ -173,7 +146,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case previousMerkleRoot red of
+      case uchmPreviousMerkleRoot red of
         Nothing -> True
         Just tn ->
           let go :: [TxInInfo] -> Bool
@@ -199,22 +172,6 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
     )
 
 PlutusTx.makeLift ''InitCommitteeHashMint
-
-{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
- the utxo which contains the committee hash. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
-{-# INLINEABLE initCommitteeHashMintTn #-}
-initCommitteeHashMintTn :: TokenName
-initCommitteeHashMintTn = TokenName Builtins.emptyByteString
-
-{- | 'initCommitteeHashMintAmount' is the amount of the currency to mint which
- is 1.
--}
-{-# INLINEABLE initCommitteeHashMintAmount #-}
-initCommitteeHashMintAmount :: Integer
-initCommitteeHashMintAmount = 1
 
 {- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
  the committee hash.

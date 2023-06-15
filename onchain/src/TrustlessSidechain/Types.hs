@@ -7,7 +7,7 @@ module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (ValidatorHash)
+import Plutus.V2.Ledger.Api (Address, ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
@@ -248,28 +248,17 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeDatum [('UpdateCommitteeDatum, 0)]
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey BuiltinByteString
   deriving newtype (FromData, ToData, UnsafeFromData, Eq, Ord)
 
-{- | The Redeemer that is passed to the on-chain validator to update the
- committee
--}
-data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
-    committeeSignatures :: [BuiltinByteString]
-  , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [SidechainPubKey]
-  , -- | 'newCommitteePubKeys' is the hash of the new committee
-    newCommitteePubKeys :: [SidechainPubKey]
-  , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
-  }
-
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
-
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
   { cSidechainParams :: SidechainParams
-  , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
-    -- identify the transaction.
-    cToken :: AssetClass
+  , -- | 'cCommitteeOracleCurrencySymbol' is the 'CurrencySymbol' of the NFT that is used to
+    -- identify the transaction the current committee.
+    cCommitteeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'cCommitteeCertificateVerificationCurrencySymbol' is the currency
+    -- symbol for the committee certificate verification policy i.e., the
+    -- currency symbol whose minted token name indicates that the current
+    -- committee has signed the token name.
+    cCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
     -- root token. This is needed for verifying that the previous merkle root is verified.
     cMptRootTokenCurrencySymbol :: CurrencySymbol
@@ -277,14 +266,13 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
-data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
+data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { uchmSidechainParams :: SidechainParams
-  , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
-    -- be sorted lexicographically (recall that we can trust the bridge, so it
-    -- should do this for us
-    uchmNewCommitteePubKeys :: [SidechainPubKey]
+  , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
+    uchmNewAggregateCommitteePubKeys :: aggregatePubKeys
   , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
   , uchmSidechainEpoch :: Integer
+  , uchmValidatorAddress :: Address
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]

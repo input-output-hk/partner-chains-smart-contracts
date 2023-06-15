@@ -44,7 +44,6 @@ import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey,
   ATMSPlainMultisignature,
   BlockProducerRegistration,
   CandidatePermissionMint,
@@ -59,7 +58,7 @@ import TrustlessSidechain.Types (
   SignedMerkleRootMint,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
-  UpdateCommitteeHashRedeemer,
+  UpdateCommitteeHashMessage,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
@@ -123,8 +122,8 @@ mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
-      UpdateCommitteeDatum ATMSPlainAggregatePubKey ->
-      UpdateCommitteeHashRedeemer ->
+      UpdateCommitteeDatum BuiltinData ->
+      UpdateCommitteeHashMessage BuiltinData ->
       ScriptContext ->
       Bool
     )
