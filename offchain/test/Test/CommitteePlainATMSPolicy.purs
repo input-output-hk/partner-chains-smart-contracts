@@ -116,16 +116,13 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeePlainATMSRedeemer = ATMSPlainMultisignature
-            { currentCommittee: map fst committeeSignatures
-            , currentCommitteeSignatures: map snd committeeSignatures
-            }
-
-          committeeSignatures = generateSignatures
+          allPubKeysAndSignatures = generateSignatures
             { -- the current committee stored on chain
               currentCommitteePrvKeys: initCommitteePrvKeys
             , sidechainMessage: sidechainMessage
             }
+          committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+            allPubKeysAndSignatures
 
         -- TODO: CTL updates removed the required functions for `assertMaxFee`,
         -- so this function no longer exists... but perhaps one day we should
@@ -140,7 +137,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           CommitteePlainATMSParams
             { currentCommitteeUtxo: utxo
             , committeeCertificateMint: committeePlainATMSMint
-            , atmsPlainMultisignature: committeePlainATMSRedeemer
+            , signatures: committeeSignatures
             , message: sidechainMessageTokenName
             }
 
@@ -150,7 +147,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
       -- the following test cases are mostly duplicated code with slight
       -- variations for the testing
       logInfo'
-        "CommitteePlainATMSPolicy a successful mint from the committee with only 20/25 of the committee members"
+        "CommitteePlainATMSPolicy a successful mint from the committee with only 17/25 of the committee members"
       void do
         let
           sidechainMessageByteArray =
@@ -162,17 +159,21 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeePlainATMSRedeemer = ATMSPlainMultisignature
-            { currentCommittee: map fst committeeSignatures
-            , currentCommitteeSignatures: Array.drop 5 $ map snd
-                committeeSignatures
-            }
-
-          committeeSignatures = generateSignatures
-            { -- the current committee stored on chain
-              currentCommitteePrvKeys: initCommitteePrvKeys
+          allPubKeysAndSignatures = generateSignatures
+            { currentCommitteePrvKeys: initCommitteePrvKeys
             , sidechainMessage: sidechainMessage
             }
+
+          committeeSignatures =
+            ( Array.take 8
+                (map (\(pubKey /\ sig) → pubKey /\ Nothing) allPubKeysAndSignatures)
+            ) <>
+              ( Array.drop 8
+                  ( map (\(pubKey /\ sig) → pubKey /\ Just sig)
+                      allPubKeysAndSignatures
+                  )
+              )
+        -- note that we have 5 less signatures.
 
         utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
           sidechainParams
@@ -180,7 +181,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           $ CommitteePlainATMSParams
               { currentCommitteeUtxo: utxo
               , committeeCertificateMint: committeePlainATMSMint
-              , atmsPlainMultisignature: committeePlainATMSRedeemer
+              , signatures: committeeSignatures
               , message: sidechainMessageTokenName
               }
 
@@ -203,16 +204,14 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ ByteArray.byteArrayFromIntArrayUnsafe
             $ Array.replicate 32 3
 
-          committeePlainATMSRedeemer = ATMSPlainMultisignature
-            { currentCommittee: map fst committeeSignatures
-            , currentCommitteeSignatures: map snd committeeSignatures
-            }
-
-          committeeSignatures = generateSignatures
+          allPubKeysAndSignatures = generateSignatures
             { -- the current committee stored on chain
               currentCommitteePrvKeys: initCommitteePrvKeys
-            , sidechainMessage
+            , sidechainMessage: sidechainMessage
             }
+
+          committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+            allPubKeysAndSignatures
 
         utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
           sidechainParams
@@ -221,7 +220,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
               $ CommitteePlainATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainATMSMint
-                  , atmsPlainMultisignature: committeePlainATMSRedeemer
+                  , signatures: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
           )
@@ -244,16 +243,14 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ Value.mkTokenName
             $ sidechainMessageByteArray
 
-          committeePlainATMSRedeemer = ATMSPlainMultisignature
-            { currentCommittee: map fst committeeSignatures
-            , currentCommitteeSignatures: map snd committeeSignatures
-            }
-
-          committeeSignatures = generateSignatures
+          allPubKeysAndSignatures = generateSignatures
             { -- the current committee stored on chain
               currentCommitteePrvKeys: wrongCommittee
             , sidechainMessage: sidechainMessage
             }
+
+          committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+            allPubKeysAndSignatures
 
         utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
           sidechainParams
@@ -262,7 +259,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
               $ CommitteePlainATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainATMSMint
-                  , atmsPlainMultisignature: committeePlainATMSRedeemer
+                  , signatures: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
           )

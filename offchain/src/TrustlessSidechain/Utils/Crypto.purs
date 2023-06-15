@@ -242,14 +242,17 @@ unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 -- | `countEnoughSignatures` counts the minimum number of signatures needed for
 -- | the onchain code to verify successfully.
 countEnoughSignatures ∷
-  SidechainParams →
+  -- numerator
+  BigInt →
+  -- denominator (ensure this is non-zero)
+  BigInt →
   Array SidechainPublicKey →
   BigInt
-countEnoughSignatures (SidechainParams params) arr =
+countEnoughSignatures numerator denominator arr =
   let
     len = BigInt.fromInt $ Array.length arr
   in
-    one + ((params.thresholdNumerator * len) / params.thresholdDenominator)
+    one + ((numerator * len) / denominator)
 
 -- | `takeExactlyEnoughSignatures` takes exactly enough signatures (if it
 -- | or less than if it cannot) for committee certificate verification as a
@@ -257,10 +260,13 @@ countEnoughSignatures (SidechainParams params) arr =
 -- | minimum amount of
 -- | signatures needed.
 takeExactlyEnoughSignatures ∷
-  SidechainParams →
+  -- numerator
+  BigInt →
+  -- denominator (ensure this is non-zero)
+  BigInt →
   Array SidechainPublicKey /\ Array SidechainSignature →
   Array SidechainPublicKey /\ Array SidechainSignature
-takeExactlyEnoughSignatures sc (pks /\ sigs) =
+takeExactlyEnoughSignatures numerator denominator (pks /\ sigs) =
   pks /\
     Array.take
       -- It should be big enough to fit in a plain old int as this
@@ -268,7 +274,7 @@ takeExactlyEnoughSignatures sc (pks /\ sigs) =
       -- length)
       -- TODO
       ( Unsafe.unsafePartial $ Maybe.fromJust $ BigInt.toInt
-          (countEnoughSignatures sc pks)
+          (countEnoughSignatures numerator denominator pks)
       )
       sigs
 

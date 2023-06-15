@@ -171,7 +171,8 @@ runSaveRoot
     committeePubKeys /\ allSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
     _ /\ signatures = Utils.Crypto.takeExactlyEnoughSignatures
-      sidechainParams
+      (unwrap sidechainParams).thresholdNumerator
+      (unwrap sidechainParams).thresholdDenominator
       (committeePubKeys /\ allSignatures)
 
   -- Verifying the signature is valid

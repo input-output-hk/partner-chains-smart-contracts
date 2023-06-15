@@ -113,7 +113,8 @@ runSaveCheckpoint
       Utils.Crypto.unzipCommitteePubKeysAndSignatures
         committeeSignatures
     _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
-      sidechainParams
+      (unwrap sidechainParams).thresholdNumerator
+      (unwrap sidechainParams).thresholdDenominator
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
 
   checkpointMessage ← liftContractM (mkErr "Failed to get checkpoint message")

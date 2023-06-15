@@ -136,7 +136,8 @@ runUpdateCommitteeHash
     curCommitteePubKeys /\ allCurCommitteeSignatures =
       Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
     _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
-      sidechainParams
+      (unwrap sidechainParams).thresholdNumerator
+      (unwrap sidechainParams).thresholdDenominator
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 

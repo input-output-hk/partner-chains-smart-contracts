@@ -81,7 +81,7 @@ newtype CommitteePlainATMSParams = CommitteePlainATMSParams
   , -- parameter for the onchain code
     committeeCertificateMint ∷ CommitteeCertificateMint
   , -- signatures for the below message
-    atmsPlainMultisignature ∷ ATMSPlainMultisignature
+    signatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
   ,
     -- the message that should be signed (note: this *must* be a token name
     -- so we have the usual size restrictions of a token name i.e., you
@@ -177,7 +177,7 @@ committeePlainATMSMintFromSidechainParams sidechainParams = do
 -- | `mustMintCommitteePlainATMSPolicy` provides the constraints to mint a
 -- | committee signed token.
 -- | Note: this does NOT include a constraint to reference or spend the UTxO
--- | which contains the current committee in, so you MUST provide this yourself
+-- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
 mustMintCommitteePlainATMSPolicy ∷
   CommitteePlainATMSParams →
@@ -187,7 +187,7 @@ mustMintCommitteePlainATMSPolicy
   ( CommitteePlainATMSParams
       { currentCommitteeUtxo
       , committeeCertificateMint
-      , atmsPlainMultisignature
+      , signatures
       , message
       }
   ) = do
@@ -197,10 +197,19 @@ mustMintCommitteePlainATMSPolicy
   -- Unwrapping the provided parameters
   -------------------------------------------------------------
   let
-    curCommitteePubKeys = (unwrap atmsPlainMultisignature).currentCommittee
-    msgHash = Value.getTokenName message
-    curCommitteeSignatures =
-      (unwrap atmsPlainMultisignature).currentCommitteeSignatures
+    messageByteArray = Value.getTokenName message
+
+    -- ensure that the signatures provided are sorted, and do an optimization
+    -- to only provide the minimum number of signatures for the onchain code to
+    -- validate
+    normalizedSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
+      signatures
+    curCommitteePubKeys /\ allCurCommitteeSignatures =
+      Utils.Crypto.unzipCommitteePubKeysAndSignatures signatures
+    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
+      (unwrap committeeCertificateMint).thresholdNumerator
+      (unwrap committeeCertificateMint).thresholdDenominator
+      (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
   -- Grabbing CommitteePlainATMSPolicy
@@ -236,7 +245,7 @@ mustMintCommitteePlainATMSPolicy
         ((unwrap committeeCertificateMint).thresholdNumerator)
         ((unwrap committeeCertificateMint).thresholdDenominator)
         curCommitteePubKeys
-        (Utils.Crypto.byteArrayToSidechainMessageUnsafe msgHash)
+        (Utils.Crypto.byteArrayToSidechainMessageUnsafe messageByteArray)
         -- this is actually safe because TokenName and  the
         -- SidechainMessage have the same invariants (fortunately!)
         curCommitteeSignatures
@@ -245,7 +254,12 @@ mustMintCommitteePlainATMSPolicy
     $ msg
         "Invalid committee signatures for the sidechain message"
 
-  let redeemer = Redeemer $ toData atmsPlainMultisignature
+  let
+    redeemer = Redeemer $ toData $
+      ATMSPlainMultisignature
+        { currentCommittee: curCommitteePubKeys
+        , currentCommitteeSignatures: curCommitteeSignatures
+        }
 
   pure
     { lookups:
