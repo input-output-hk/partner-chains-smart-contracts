@@ -78,7 +78,7 @@ testScenario1 =
     $ \alice → Wallet.withKeyWallet alice do
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         let
-          keyCount = 25
+          keyCount = 80
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount
           Utils.Crypto.generatePrivKey
         let
@@ -153,7 +153,7 @@ testScenario1 =
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
         logInfo'
-          "CommitteePlainATMSPolicy a successful mint from the committee with only 17/25 of the committee members"
+          "CommitteePlainATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
         void do
           let
             sidechainMessageByteArray =
@@ -171,17 +171,59 @@ testScenario1 =
               }
 
             committeeSignatures =
-              ( Array.take 8
+              ( Array.take 26
                   ( map (\(pubKey /\ _sig) → pubKey /\ Nothing)
                       allPubKeysAndSignatures
                   )
               ) <>
-                ( Array.drop 8
+                ( Array.drop 26
                     ( map (\(pubKey /\ sig) → pubKey /\ Just sig)
                         allPubKeysAndSignatures
                     )
                 )
-          -- note that we have 8 less signatures.
+          -- note that we have 26 less signatures, so 80 - 26 = 54 out of the
+          -- 80 committee members total
+
+          utxo ←
+            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+              sidechainParams
+          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
+            $ CommitteePlainATMSParams
+                { currentCommitteeUtxo: utxo
+                , committeeCertificateMint: committeePlainATMSMint
+                , signatures: committeeSignatures
+                , message: sidechainMessageTokenName
+                }
+
+          Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
+            sidechainMessageTokenName
+
+        logInfo'
+          "CommitteePlainATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
+        void do
+          let
+            sidechainMessageByteArray =
+              -- byte array of 32 bytes which are all 1s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
+
+            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+              sidechainMessageByteArray
+            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
+              Value.mkTokenName sidechainMessageByteArray
+
+            allPubKeysAndSignatures = generateSignatures
+              { currentCommitteePrvKeys: initCommitteePrvKeys
+              , sidechainMessage: sidechainMessage
+              }
+
+            committeeSignatures =
+              let
+                allPubKeysAndJustSignatures = map
+                  (\(pubKey /\ sig) → pubKey /\ Just sig)
+                  allPubKeysAndSignatures
+              in
+                Array.drop 40 allPubKeysAndJustSignatures <> Array.take 40
+                  allPubKeysAndJustSignatures
 
           utxo ←
             UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
