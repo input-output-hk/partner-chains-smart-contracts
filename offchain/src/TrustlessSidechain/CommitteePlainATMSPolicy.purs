@@ -32,6 +32,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( TxConstraints
@@ -43,6 +44,7 @@ import Contract.Value
   )
 import Contract.Value as Value
 import Data.Bifunctor as Bifunctor
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleRoot.Types
@@ -59,44 +61,70 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
-newtype CommitteeSignedTokenMint = CommitteeSignedTokenMint
-  { sidechainParams ∷ SidechainParams
-  , updateCommitteeHashCurrencySymbol ∷ CurrencySymbol
+-- | `CommitteePlainATMSParams` is a type to bundle up all the required data
+-- | when building the transaction (this is only used offchain)
+newtype CommitteePlainATMSParams = CommitteePlainATMSParams
+  {
+    -- UTxO for the current committee as stored onchain (which should be
+    -- uniquely identified by the token
+    -- `CommitteeCertificateMint.committeeOraclePolicy`).
+    currentCommitteeUtxo ∷
+      { index ∷ TransactionInput
+      , value ∷ TransactionOutputWithRefScript
+      }
+  , -- parameter for the onchain code
+    committeeCertificateMint ∷ CommitteeCertificateMint
+  , -- signatures for the below message
+    atmsPlainMultisignature ∷ ATMSPlainMultisignature
+  ,
+    -- the message that should be signed (note: this *must* be a token name
+    -- so we have the usual size restrictions of a token name i.e., you
+    -- probably want this to be the hash of the message you wish to sign)
+    message ∷ TokenName
   }
 
-derive instance Generic CommitteeSignedTokenMint _
-derive instance Newtype CommitteeSignedTokenMint _
-instance ToData CommitteeSignedTokenMint where
+-- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
+-- | parameterize a committee certificate verification minting policy.
+newtype CommitteeCertificateMint = CommitteeCertificateMint
+  { committeeOraclePolicy ∷ CurrencySymbol
+  , thresholdNumerator ∷ BigInt
+  , thresholdDenominator ∷ BigInt
+  }
+
+instance ToData CommitteeCertificateMint where
   toData
-    ( CommitteeSignedTokenMint
-        { sidechainParams, updateCommitteeHashCurrencySymbol }
+    ( CommitteeCertificateMint
+        { committeeOraclePolicy, thresholdNumerator, thresholdDenominator }
     ) =
     Constr (BigNum.fromInt 0)
-      [ toData sidechainParams
-      , toData updateCommitteeHashCurrencySymbol
+      [ toData committeeOraclePolicy
+      , toData thresholdNumerator
+      , toData thresholdDenominator
       ]
 
-newtype CommitteeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+derive instance Generic CommitteeCertificateMint _
+derive instance Newtype CommitteeCertificateMint _
+
+-- | `ATMSPlainMultisignature` corresponds to the onchain type
+newtype ATMSPlainMultisignature = ATMSPlainMultisignature
   { currentCommittee ∷ Array SidechainPublicKey
   , currentCommitteeSignatures ∷ Array SidechainSignature
-  , messageHash ∷ TokenName
   }
 
-derive instance Generic CommitteeSignedTokenRedeemer _
-derive instance Newtype CommitteeSignedTokenRedeemer _
-instance ToData CommitteeSignedTokenRedeemer where
+derive instance Generic ATMSPlainMultisignature _
+derive instance Newtype ATMSPlainMultisignature _
+instance ToData ATMSPlainMultisignature where
   toData
-    ( CommitteeSignedTokenRedeemer
-        { currentCommittee, currentCommitteeSignatures, messageHash }
+    ( ATMSPlainMultisignature
+        { currentCommittee, currentCommitteeSignatures }
     ) = Constr (BigNum.fromInt 0)
     [ toData currentCommittee
     , toData currentCommitteeSignatures
-    , toData messageHash
     ]
 
 -- | `committeeSignedToken` grabs the minting polciy for the committee signed
 -- | token
-committeeSignedToken ∷ CommitteeSignedTokenMint → Contract MintingPolicy
+committeeSignedToken ∷ CommitteeCertificateMint → Contract MintingPolicy
 committeeSignedToken param = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteePlainATMSPolicy >>=
@@ -109,7 +137,7 @@ committeeSignedToken param = do
 -- | `getCommitteePlainATMSPolicy` grabs the committee signed token currency symbol
 -- | and policy
 getCommitteePlainATMSPolicy ∷
-  CommitteeSignedTokenMint →
+  CommitteeCertificateMint →
   Contract
     { committeeSignedTokenPolicy ∷ MintingPolicy
     , committeeSignedTokenCurrencySymbol ∷ CurrencySymbol
@@ -127,85 +155,57 @@ getCommitteePlainATMSPolicy param = do
 -- | `committeeSignedTokenMintFromSidechainParams` grabs the `CommitteePlainATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
 committeeSignedTokenMintFromSidechainParams ∷
-  SidechainParams → Contract CommitteeSignedTokenMint
+  SidechainParams → Contract CommitteeCertificateMint
 committeeSignedTokenMintFromSidechainParams sidechainParams = do
   { committeeHashCurrencySymbol
   } ← UpdateCommitteeHash.getCommitteeHashPolicy sidechainParams
-  pure $ CommitteeSignedTokenMint
-    { sidechainParams
-    , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+  pure $ CommitteeCertificateMint
+    { committeeOraclePolicy: committeeHashCurrencySymbol
+    , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+    , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
     }
 
--- | `mustMintCommitteeSignedToken` provides the constraints to mint a
--- | committee signed token [including: the script lookups for this, and the UTxO
--- | for the committee reference input]
-mustMintCommitteeSignedToken ∷
-  CommitteeSignedTokenMint →
-  CommitteeSignedTokenRedeemer →
+-- | `mustMintCommitteePlainATMSPolicy` provides the constraints to mint a
+-- | committee signed token (including: the script lookups for this, and the UTxO
+-- | for the committee reference input)
+mustMintCommitteePlainATMSPolicy ∷
+  CommitteePlainATMSParams →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-mustMintCommitteeSignedToken cstm cstr = do
+mustMintCommitteePlainATMSPolicy
+  ( CommitteePlainATMSParams
+      { currentCommitteeUtxo
+      , committeeCertificateMint
+      , atmsPlainMultisignature
+      , message
+      }
+  ) = do
   let
-    msg = report "mustMintCommitteeSignedToken"
+    msg = report "mustMintCommitteePlainATMSPolicy"
 
   -- Unwrapping the provided parameters
   -------------------------------------------------------------
   let
-    sidechainParams = (unwrap cstm).sidechainParams
-    curCommitteePubKeys = (unwrap cstr).currentCommittee
-    msgHash = Value.getTokenName $ (unwrap cstr).messageHash
-    curCommitteeSignatures = (unwrap cstr).currentCommitteeSignatures
+    curCommitteePubKeys = (unwrap atmsPlainMultisignature).currentCommittee
+    msgHash = Value.getTokenName message
+    curCommitteeSignatures =
+      (unwrap atmsPlainMultisignature).currentCommitteeSignatures
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
-  -- Grabbing the committee hash currency symbol
-  -------------------------------------------------------------
-  { committeeHashCurrencySymbol
-  , committeeHashTokenName
-  } ← UpdateCommitteeHash.getCommitteeHashPolicy sidechainParams
-
-  -- Grabbing the committee signed token currency symbol / minting policy
+  -- Grabbing CommitteePlainATMSPolicy
   -------------------------------------------------------------
   { committeeSignedTokenPolicy
-  } ← getCommitteePlainATMSPolicy $ CommitteeSignedTokenMint
-    { sidechainParams
-    , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-    }
-
-  -- Getting the validator / minting policy for the merkle root token
-  -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    Monad.liftContractM
-      (msg "Failed to get merkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , uchAssetClass: committeeHashCurrencySymbol /\ committeeHashTokenName
-      , merkleRootTokenCurrencySymbol
-      }
+  , committeeSignedTokenCurrencySymbol
+  } ← getCommitteePlainATMSPolicy committeeCertificateMint
 
   -- Grabbing the current committee as stored onchain
   -------------------------------------------------------------
-  lkup ← UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
-
-  { index: committeeHashORef
-  , value:
-      committeeHashTxOut@
-        (TransactionOutputWithRefScript { output: TransactionOutput tOut })
-  } ←
-    Monad.liftContractM (msg "Failed to find update committee hash UTxO") $ lkup
+  let
+    { index: committeeHashORef
+    , value:
+        committeeHashTxOut@
+          (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+    } = currentCommitteeUtxo
 
   comitteeHashDatum ←
     Monad.liftContractM
@@ -222,8 +222,8 @@ mustMintCommitteeSignedToken cstm cstr = do
 
   unless
     ( Utils.Crypto.verifyMultiSignature
-        ((unwrap sidechainParams).thresholdNumerator)
-        ((unwrap sidechainParams).thresholdDenominator)
+        ((unwrap committeeCertificateMint).thresholdNumerator)
+        ((unwrap committeeCertificateMint).thresholdDenominator)
         curCommitteePubKeys
         (Utils.Crypto.byteArrayToSidechainMessageUnsafe msgHash)
         -- this is actually safe because TokenName and  the
@@ -234,7 +234,7 @@ mustMintCommitteeSignedToken cstm cstr = do
     $ msg
         "Invalid committee signatures for the sidechain message"
 
-  let redeemer = Redeemer $ toData cstr
+  let redeemer = Redeemer $ toData atmsPlainMultisignature
 
   pure
     { lookups:
@@ -247,24 +247,23 @@ mustMintCommitteeSignedToken cstm cstr = do
           <> TxConstraints.mustMintCurrencyWithRedeemer
             (Scripts.mintingPolicyHash committeeSignedTokenPolicy)
             redeemer
-            (unwrap cstr).messageHash
+            message
             one
     }
 
 -- | `runCommitteePlainATMSPolicy` provides a convenient way to submit a
--- | transaction with the constraints given in `mustMintCommitteeSignedToken`
+-- | transaction with the constraints given in `mustMintCommitteePlainATMSPolicy`
 -- |
 -- | This is mainly just used for testing as one wouldn't want to just call
 -- | this in isolation.
 runCommitteePlainATMSPolicy ∷
-  CommitteeSignedTokenMint →
-  CommitteeSignedTokenRedeemer →
+  CommitteePlainATMSParams →
   Contract TransactionHash
-runCommitteePlainATMSPolicy cstm cstr = do
+runCommitteePlainATMSPolicy params = do
   let
     msg = report "runCommitteePlainATMSPolicy"
 
-  { lookups, constraints } ← mustMintCommitteeSignedToken cstm cstr
+  { lookups, constraints } ← mustMintCommitteePlainATMSPolicy params
 
   ubTx ← Monad.liftedE
     ( Bifunctor.lmap (msg <<< show) <$> ScriptLookups.mkUnbalancedTx lookups

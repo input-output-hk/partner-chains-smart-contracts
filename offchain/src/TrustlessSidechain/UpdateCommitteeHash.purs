@@ -3,18 +3,26 @@ module TrustlessSidechain.UpdateCommitteeHash
   , module ExportUtils
   , updateCommitteeHash
   , getCommitteeHashPolicy
+  , findUpdateCommitteeHashUtxoFromSidechainParams
   ) where
 
 import Contract.Prelude
 
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
+import Contract.Monad
+  ( Contract
+  , liftContractM
+  , liftedE
+  , liftedM
+  , throwContractError
+  )
 import Contract.PlutusData (Datum(..), Redeemer(..), fromData, toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
   , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
   , awaitTxConfirmed
@@ -233,6 +241,57 @@ runUpdateCommitteeHash
   logInfo' (mkErr "Update committee hash transaction submitted successfully")
 
   pure txId
+
+-- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
+-- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but
+-- | does the tricky work of grabbing the required currency symbols for you.
+findUpdateCommitteeHashUtxoFromSidechainParams ∷
+  SidechainParams →
+  Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
+findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
+  let -- `mkErr` is used to help generate log messages
+    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
+
+  -- Getting the minting policy / currency symbol / token name for update
+  -- committee hash
+  -------------------------------------------------------------
+  { committeeHashCurrencySymbol
+  , committeeHashTokenName
+  } ← getCommitteeHashPolicy sidechainParams
+
+  -- Getting the validator / minting policy for the merkle root token
+  -------------------------------------------------------------
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+
+  -- Build the UpdateCommitteeHash parameter
+  -------------------------------------------------------------
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , uchAssetClass: assetClass committeeHashCurrencySymbol
+          committeeHashTokenName
+      , merkleRootTokenCurrencySymbol
+      }
+
+  -- Finding the current committee
+  -------------------------------------------------------------
+  lkup ← liftedM (mkErr "current committee not found") $
+    findUpdateCommitteeHashUtxo uch
+  pure lkup
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → String → String

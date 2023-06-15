@@ -18,10 +18,12 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteeSignedTokenRedeemer(..)
+  ( ATMSPlainMultisignature(ATMSPlainMultisignature)
+  , CommitteePlainATMSParams(CommitteePlainATMSParams)
   )
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
   , SidechainPrivateKey
@@ -114,10 +116,9 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+          committeeSignedTokenRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
-            , messageHash: sidechainMessageTokenName
             }
 
           committeeSignatures = generateSignatures
@@ -130,15 +131,18 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
         -- so this function no longer exists... but perhaps one day we should
         -- get this back. Boo hoo!
         -- ```
-        -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000) =<<
-        -- CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-        --     committeeSignedTokenMint
-        --     committeeSignedTokenRedeemer
+        -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000)
         -- ```
 
-        _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-          committeeSignedTokenMint
-          committeeSignedTokenRedeemer
+        utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+          sidechainParams
+        _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy $
+          CommitteePlainATMSParams
+            { currentCommitteeUtxo: utxo
+            , committeeCertificateMint: committeeSignedTokenMint
+            , atmsPlainMultisignature: committeeSignedTokenRedeemer
+            , message: sidechainMessageTokenName
+            }
 
         Test.Utils.assertIHaveOutputWithAsset committeeSignedTokenCurrencySymbol
           sidechainMessageTokenName
@@ -158,11 +162,10 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+          committeeSignedTokenRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: Array.drop 5 $ map snd
                 committeeSignatures
-            , messageHash: sidechainMessageTokenName
             }
 
           committeeSignatures = generateSignatures
@@ -171,9 +174,15 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             , sidechainMessage: sidechainMessage
             }
 
+        utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+          sidechainParams
         _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-          committeeSignedTokenMint
-          committeeSignedTokenRedeemer
+          $ CommitteePlainATMSParams
+              { currentCommitteeUtxo: utxo
+              , committeeCertificateMint: committeeSignedTokenMint
+              , atmsPlainMultisignature: committeeSignedTokenRedeemer
+              , message: sidechainMessageTokenName
+              }
 
         Test.Utils.assertIHaveOutputWithAsset committeeSignedTokenCurrencySymbol
           sidechainMessageTokenName
@@ -194,22 +203,27 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ ByteArray.byteArrayFromIntArrayUnsafe
             $ Array.replicate 32 3
 
-          committeeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+          committeeSignedTokenRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
-            , messageHash: sidechainMessageTokenName
             }
 
           committeeSignatures = generateSignatures
             { -- the current committee stored on chain
               currentCommitteePrvKeys: initCommitteePrvKeys
-            , sidechainMessage: sidechainMessage
+            , sidechainMessage
             }
 
+        utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+          sidechainParams
         void
           ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-              committeeSignedTokenMint
-              committeeSignedTokenRedeemer
+              $ CommitteePlainATMSParams
+                  { currentCommitteeUtxo: utxo
+                  , committeeCertificateMint: committeeSignedTokenMint
+                  , atmsPlainMultisignature: committeeSignedTokenRedeemer
+                  , message: sidechainMessageTokenName
+                  }
           )
           # Test.Utils.fails
 
@@ -230,10 +244,9 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ Value.mkTokenName
             $ sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = CommitteeSignedTokenRedeemer
+          committeeSignedTokenRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
-            , messageHash: sidechainMessageTokenName
             }
 
           committeeSignatures = generateSignatures
@@ -242,10 +255,16 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             , sidechainMessage: sidechainMessage
             }
 
+        utxo ← UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+          sidechainParams
         void
           ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-              committeeSignedTokenMint
-              committeeSignedTokenRedeemer
+              $ CommitteePlainATMSParams
+                  { currentCommitteeUtxo: utxo
+                  , committeeCertificateMint: committeeSignedTokenMint
+                  , atmsPlainMultisignature: committeeSignedTokenRedeemer
+                  , message: sidechainMessageTokenName
+                  }
           )
           # Test.Utils.fails
 
