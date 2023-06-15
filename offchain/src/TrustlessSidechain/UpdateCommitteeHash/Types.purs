@@ -22,7 +22,6 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)

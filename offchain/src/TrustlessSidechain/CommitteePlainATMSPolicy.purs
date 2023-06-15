@@ -28,11 +28,11 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( TxConstraints
@@ -46,15 +46,10 @@ import Contract.Value as Value
 import Data.Bifunctor as Bifunctor
 import Data.BigInt (BigInt)
 import Data.Map as Map
-import TrustlessSidechain.MerkleRoot as MerkleRoot
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
@@ -122,10 +117,10 @@ instance ToData ATMSPlainMultisignature where
     , toData currentCommitteeSignatures
     ]
 
--- | `committeeSignedToken` grabs the minting polciy for the committee signed
--- | token
-committeeSignedToken ∷ CommitteeCertificateMint → Contract MintingPolicy
-committeeSignedToken param = do
+-- | `committeePlainATMS` grabs the minting policy for the committee plain ATMS
+-- | policy
+committeePlainATMS ∷ CommitteeCertificateMint → Contract MintingPolicy
+committeePlainATMS param = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteePlainATMSPolicy >>=
       plutusScriptV2FromEnvelope
@@ -139,24 +134,24 @@ committeeSignedToken param = do
 getCommitteePlainATMSPolicy ∷
   CommitteeCertificateMint →
   Contract
-    { committeeSignedTokenPolicy ∷ MintingPolicy
-    , committeeSignedTokenCurrencySymbol ∷ CurrencySymbol
+    { committeePlainATMSPolicy ∷ MintingPolicy
+    , committeePlainATMSCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteePlainATMSPolicy param = do
   let
     msg = report "getCommitteePlainATMSPolicy"
-  committeeSignedTokenPolicy ← committeeSignedToken param
-  committeeSignedTokenCurrencySymbol ← Monad.liftContractM
+  committeePlainATMSPolicy ← committeePlainATMS param
+  committeePlainATMSCurrencySymbol ← Monad.liftContractM
     (msg "Failed to get committee signed token currency symbol")
-    (Value.scriptCurrencySymbol committeeSignedTokenPolicy)
+    (Value.scriptCurrencySymbol committeePlainATMSPolicy)
   pure
-    { committeeSignedTokenPolicy, committeeSignedTokenCurrencySymbol }
+    { committeePlainATMSPolicy, committeePlainATMSCurrencySymbol }
 
--- | `committeeSignedTokenMintFromSidechainParams` grabs the `CommitteePlainATMSPolicy`
+-- | `committeePlainATMSMintFromSidechainParams` grabs the `CommitteePlainATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
-committeeSignedTokenMintFromSidechainParams ∷
+committeePlainATMSMintFromSidechainParams ∷
   SidechainParams → Contract CommitteeCertificateMint
-committeeSignedTokenMintFromSidechainParams sidechainParams = do
+committeePlainATMSMintFromSidechainParams sidechainParams = do
   { committeeHashCurrencySymbol
   } ← UpdateCommitteeHash.getCommitteeHashPolicy sidechainParams
   pure $ CommitteeCertificateMint
@@ -194,8 +189,7 @@ mustMintCommitteePlainATMSPolicy
 
   -- Grabbing CommitteePlainATMSPolicy
   -------------------------------------------------------------
-  { committeeSignedTokenPolicy
-  , committeeSignedTokenCurrencySymbol
+  { committeePlainATMSPolicy
   } ← getCommitteePlainATMSPolicy committeeCertificateMint
 
   -- Grabbing the current committee as stored onchain
@@ -240,12 +234,12 @@ mustMintCommitteePlainATMSPolicy
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeHashORef committeeHashTxOut)
-          <> ScriptLookups.mintingPolicy committeeSignedTokenPolicy
+          <> ScriptLookups.mintingPolicy committeePlainATMSPolicy
     , constraints:
         TxConstraints.mustReferenceOutput
           committeeHashORef
           <> TxConstraints.mustMintCurrencyWithRedeemer
-            (Scripts.mintingPolicyHash committeeSignedTokenPolicy)
+            (Scripts.mintingPolicyHash committeePlainATMSPolicy)
             redeemer
             message
             one

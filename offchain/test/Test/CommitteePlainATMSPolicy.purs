@@ -94,13 +94,13 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
 
       -- Grabbing the committee signed token on chain parameters / minting policy
       -------------------------
-      committeeSignedTokenMint ←
-        CommitteePlainATMSPolicy.committeeSignedTokenMintFromSidechainParams
+      committeePlainATMSMint ←
+        CommitteePlainATMSPolicy.committeePlainATMSMintFromSidechainParams
           sidechainParams
 
-      { committeeSignedTokenCurrencySymbol } ←
+      { committeePlainATMSCurrencySymbol } ←
         CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-          committeeSignedTokenMint
+          committeePlainATMSMint
 
       -- Running the tests
       -------------------------
@@ -116,7 +116,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = ATMSPlainMultisignature
+          committeePlainATMSRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
             }
@@ -139,12 +139,12 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
         _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy $
           CommitteePlainATMSParams
             { currentCommitteeUtxo: utxo
-            , committeeCertificateMint: committeeSignedTokenMint
-            , atmsPlainMultisignature: committeeSignedTokenRedeemer
+            , committeeCertificateMint: committeePlainATMSMint
+            , atmsPlainMultisignature: committeePlainATMSRedeemer
             , message: sidechainMessageTokenName
             }
 
-        Test.Utils.assertIHaveOutputWithAsset committeeSignedTokenCurrencySymbol
+        Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
           sidechainMessageTokenName
 
       -- the following test cases are mostly duplicated code with slight
@@ -162,7 +162,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
             Value.mkTokenName sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = ATMSPlainMultisignature
+          committeePlainATMSRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: Array.drop 5 $ map snd
                 committeeSignatures
@@ -179,12 +179,12 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
         _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
           $ CommitteePlainATMSParams
               { currentCommitteeUtxo: utxo
-              , committeeCertificateMint: committeeSignedTokenMint
-              , atmsPlainMultisignature: committeeSignedTokenRedeemer
+              , committeeCertificateMint: committeePlainATMSMint
+              , atmsPlainMultisignature: committeePlainATMSRedeemer
               , message: sidechainMessageTokenName
               }
 
-        Test.Utils.assertIHaveOutputWithAsset committeeSignedTokenCurrencySymbol
+        Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
           sidechainMessageTokenName
 
       logInfo'
@@ -203,7 +203,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ ByteArray.byteArrayFromIntArrayUnsafe
             $ Array.replicate 32 3
 
-          committeeSignedTokenRedeemer = ATMSPlainMultisignature
+          committeePlainATMSRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
             }
@@ -220,8 +220,8 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
               $ CommitteePlainATMSParams
                   { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeeSignedTokenMint
-                  , atmsPlainMultisignature: committeeSignedTokenRedeemer
+                  , committeeCertificateMint: committeePlainATMSMint
+                  , atmsPlainMultisignature: committeePlainATMSRedeemer
                   , message: sidechainMessageTokenName
                   }
           )
@@ -244,7 +244,7 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
             $ Value.mkTokenName
             $ sidechainMessageByteArray
 
-          committeeSignedTokenRedeemer = ATMSPlainMultisignature
+          committeePlainATMSRedeemer = ATMSPlainMultisignature
             { currentCommittee: map fst committeeSignatures
             , currentCommitteeSignatures: map snd committeeSignatures
             }
@@ -261,8 +261,8 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
           ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
               $ CommitteePlainATMSParams
                   { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeeSignedTokenMint
-                  , atmsPlainMultisignature: committeeSignedTokenRedeemer
+                  , committeeCertificateMint: committeePlainATMSMint
+                  , atmsPlainMultisignature: committeePlainATMSRedeemer
                   , message: sidechainMessageTokenName
                   }
           )
