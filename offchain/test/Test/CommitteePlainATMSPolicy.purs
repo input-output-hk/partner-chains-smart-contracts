@@ -18,8 +18,7 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( ATMSPlainMultisignature(ATMSPlainMultisignature)
-  , CommitteePlainATMSParams(CommitteePlainATMSParams)
+  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
   )
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -166,7 +165,9 @@ testScenario1 = Mote.Monad.test "Various tests for the committee signed token"
 
           committeeSignatures =
             ( Array.take 8
-                (map (\(pubKey /\ sig) → pubKey /\ Nothing) allPubKeysAndSignatures)
+                ( map (\(pubKey /\ _sig) → pubKey /\ Nothing)
+                    allPubKeysAndSignatures
+                )
             ) <>
               ( Array.drop 8
                   ( map (\(pubKey /\ sig) → pubKey /\ Just sig)

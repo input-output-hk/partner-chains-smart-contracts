@@ -43,7 +43,6 @@ import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | Invariant: ∀ x : SidechainPublicKey. length x = 33
 -- | Format: Compressed & Serialized as per secp256k1 implementation

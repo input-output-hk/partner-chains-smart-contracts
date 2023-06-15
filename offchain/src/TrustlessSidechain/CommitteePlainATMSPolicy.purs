@@ -205,7 +205,7 @@ mustMintCommitteePlainATMSPolicy
     normalizedSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
       signatures
     curCommitteePubKeys /\ allCurCommitteeSignatures =
-      Utils.Crypto.unzipCommitteePubKeysAndSignatures signatures
+      Utils.Crypto.unzipCommitteePubKeysAndSignatures normalizedSignatures
     _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
       (unwrap committeeCertificateMint).thresholdNumerator
       (unwrap committeeCertificateMint).thresholdDenominator
