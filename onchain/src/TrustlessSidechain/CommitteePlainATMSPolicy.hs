@@ -18,7 +18,7 @@ import Plutus.V2.Ledger.Api (
   Script,
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
+  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -122,13 +122,14 @@ mkMintingPolicy ccm atmspms ctx =
                     (ccmCommitteeOraclePolicy ccm)
                     UpdateCommitteeHash.initCommitteeHashMintTn
               , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
-              , -- See Note [Committee Hash Inline Datum] in
-                -- "TrustlessSidechain.UpdateCommitteeHash"
+              , -- We always expect this to be given as inline datum
                 OutputDatum d <- txOutDatum o =
               IsData.unsafeFromBuiltinData $ getDatum d
             | otherwise = go ts
           go [] = traceError "error 'CommitteePlainATMSPolicy' no committee utxo given as reference input"
-       in go $ txInfoReferenceInputs info
+       in go $ txInfoReferenceInputs info ++ txInfoInputs info
+    -- TODO probably should pass as redeemer whether we should look in
+    -- reference inputs or regular inputs
 
     ownCurSymb :: CurrencySymbol
     ownCurSymb = Contexts.ownCurrencySymbol ctx

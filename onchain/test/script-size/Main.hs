@@ -113,11 +113,11 @@ main =
         , fitsInto
             "mkMintingPolicy (CommitteePlainATMSPolicy)"
             Compiled.mkCommitteePlainATMSPolicyCode
-            1_043
+            1_056
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainATMSPolicy) serialized"
             (unversioned CPATMSP.serialisableMintingPolicy)
-            3_575
+            3_604
         ]
     , testGroup
         "Distributed set"
