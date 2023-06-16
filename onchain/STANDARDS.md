@@ -7,6 +7,12 @@ to evolve as our needs change.
 
 # Changelog
 
+## 15/05/23
+
+### Added
+
+* `-fexpose-all-unfoldings` is now a mandatory GHC flag.
+
 ## 23/05/23
 
 ### Added
@@ -123,6 +129,7 @@ of the Cabal file:
 * ``-Wincomplete-uni-patterns``
 * ``-Wredundant-constraints``
 * ``-Werror``
+* ``-fexpose-all-unfoldings``
 
 Additionally, ``-Wredundant-constraints`` SHOULD be enabled for all stanzas, in
 the `ghc-options` section. Exceptions are allowed when the additional
@@ -168,6 +175,15 @@ Plutus script definitions (due to how they are compiled) require some additional
 flags to be set, which produce confusing error messages if not present. We set
 these to ensure that we don't have such issues; the ``-fplugin-opt`` avoids
 problems with Haddock specifically.
+
+``-fexpose-all-unfoldings`` is a bruteforce hammer of an optimization option: we
+mostly enforce its use due to Plutus scripts needing it in some cases to avoid
+compilation issues revolving around type class methods. It also helps offchain
+Haskell code, especially in cases revolving around type class dictionaries.
+While it does increase compile time somewhat, the alternative would be to use it
+piecemeal in only those modules whose Plutus scripts require it, which is a
+tedious task and leads to confusion as to why this flag is on in some modules,
+and not others. Therefore, we enable it globally.
 
 It benefits everyone if tests run as fast as possible: since parallel
 capabilities are available (and can be used automatically with Tasty), we should
