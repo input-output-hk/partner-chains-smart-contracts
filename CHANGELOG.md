@@ -11,24 +11,25 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   coprimality
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
    [378](https://github.com/mlabs-haskell/trustless-sidechain/pull/378) offchain).
-* Added an optional flag `--distributed-set-utxo` to the `claim` CLI subcommand
+* Optional flag `--distributed-set-utxo` to the `claim` CLI subcommand
   to avoid the linear scan through the UTxO set
   ([412](https://github.com/mlabs-haskell/trustless-sidechain/issues/412),
   [414](https://github.com/mlabs-haskell/trustless-sidechain/pull/414)
   offchain)
-* Added a warning when the optional flag `--distributed-set-utxo` in the
+* Warning when the optional flag `--distributed-set-utxo` in the
   `claim` CLI endpoint is *not* used
   ([412](https://github.com/mlabs-haskell/trustless-sidechain/issues/412),
   [414](https://github.com/mlabs-haskell/trustless-sidechain/pull/414)
   offchain)
-* Added new sublibrary `quickcheck-extra` with some QuickCheck helpers
+* New sublibrary `quickcheck-extra` with some QuickCheck helpers
   ([435](https://github.com/mlabs-haskell/trustless-sidechain/issues/435),
   [444](https://github.com/mlabs-haskell/trustless-sidechain/pull/444),
   onchain)
-* Added a QuickCheck guide
+* QuickCheck guide
   ([449](https://github.com/mlabs-haskell/trustless-sidechain/issues/449),
   [468](https://github.com/mlabs-haskell/trustless-sidechain/pull/468),
   onchain)
+* `toEncoding` for `SidechainCommitteeMember`
 * Size measurements for exported scripts
   ([426](https://github.com/mlabs-haskell/trustless-sidechain/issues/426),
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
@@ -52,8 +53,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
    onchain)
 
 ## Fixed
+
 * Deregistration fail after multiple registrations with the same SPO public key
   ([236](https://github.com/mlabs-haskell/trustless-sidechain/issues/236)
+
+## Removed
+
+* Aeson-related instances for onchain types (not needed).
+* `Generic` derivations for those types where they were only used for
+  Aeson-related instances.
 
 # v2.0.0
 

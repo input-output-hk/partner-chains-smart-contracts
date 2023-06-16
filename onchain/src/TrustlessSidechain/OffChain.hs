@@ -194,12 +194,18 @@ instance FromJSON SidechainCommitteeMember where
           <$> Aeson.Types.explicitParseField pPrivKey v "private-key"
           <*> Aeson.Types.explicitParseField pPubKey v "public-key"
 
+-- | @since Unreleased
 instance ToJSON SidechainCommitteeMember where
   toJSON (SidechainCommitteeMember {..}) =
     Aeson.object
       [ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
       , "public-key" Aeson..= showScPubKey scmPublicKey
       ]
+  toEncoding (SidechainCommitteeMember {..}) =
+    Aeson.pairs
+      ( "private-key" Aeson..= showSecpPrivKey scmPrivateKey
+          <> "public-key" Aeson..= showScPubKey scmPublicKey
+      )
 
 -- | Parses a hex encoded string into a sidechain private key
 strToSecpPrivKey ::

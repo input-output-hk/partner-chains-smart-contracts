@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,8 +15,6 @@ module TrustlessSidechain.CheckpointValidator (
   serialisableCheckpointValidator,
 ) where
 
-import Data.Aeson (FromJSON, ToJSON)
-import GHC.Generics (Generic)
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
 import Ledger.Value qualified as Value
@@ -166,10 +163,8 @@ newtype InitCheckpointMint = InitCheckpointMint
     ( TSPrelude.Show
     , TSPrelude.Eq
     , TSPrelude.Ord
-    , Generic
     , PlutusTx.UnsafeFromData
     )
-  deriving anyclass (FromJSON, ToJSON)
 
 PlutusTx.makeLift ''InitCheckpointMint
 
