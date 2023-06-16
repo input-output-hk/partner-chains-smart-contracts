@@ -17,7 +17,6 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
   , committeeHashAssetClass
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
-  , normalizeCommitteeHashParams
   ) where
 
 import Contract.Prelude
@@ -27,6 +26,9 @@ import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.PlutusData
+  ( class ToData
+  )
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
@@ -79,21 +81,6 @@ updateCommitteeHashValidator sp = do
     [ PlutusData.toData sp ]
   pure $ Validator applied
 
--- | `normalizeCommitteeHashParams` modifies the following fields in
--- | `UpdateCommitteeHashParams` fields to satisfy the following properties
--- |    - `newCommitteePubKeys` is sorted (lexicographically), and
--- |    - `committeeSignatures` is sorted (lexicographically) by the
--- |    `SidechainPublicKey`.
-normalizeCommitteeHashParams ∷
-  UpdateCommitteeHashParams → UpdateCommitteeHashParams
-normalizeCommitteeHashParams (UpdateCommitteeHashParams p) =
-  UpdateCommitteeHashParams
-    p
-      { newCommitteePubKeys = Array.sort p.newCommitteePubKeys
-      , committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-          p.committeeSignatures
-      }
-
 -- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
@@ -118,7 +105,11 @@ committeeHashAssetClass ichm = do
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
-serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe SidechainMessage
+serialiseUchmHash ∷
+  ∀ aggregatePubKeys.
+  ToData aggregatePubKeys ⇒
+  UpdateCommitteeHashMessage aggregatePubKeys →
+  Maybe SidechainMessage
 serialiseUchmHash = Utils.Crypto.sidechainMessage
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray

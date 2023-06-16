@@ -126,35 +126,41 @@ instance ToData UpdateCommitteeHashRedeemer where
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
-newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array SidechainPublicKey
-  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
-  , previousMerkleRoot ∷ Maybe RootHash
-  , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
-  }
+newtype UpdateCommitteeHashParams newAggregatePubKeys =
+  UpdateCommitteeHashParams
+    { sidechainParams ∷ SidechainParams
+    , newCommitteePubKeys ∷ newAggregatePubKeys
+    , committeeSignatures ∷
+        Array (SidechainPublicKey /\ Maybe SidechainSignature)
+    , previousMerkleRoot ∷ Maybe RootHash
+    , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
+    }
 
-derive newtype instance Show UpdateCommitteeHashParams
+derive newtype instance
+  Show newAggregatePubKeys ⇒
+  Show (UpdateCommitteeHashParams newAggregatePubKeys)
 
-derive instance Newtype UpdateCommitteeHashParams _
+derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
 -- | signed by the committee (technically, if `uchm` is an
 -- | `UpdateCommitteeHashMessage`, then the committee signs
 -- | `blake2b256Hash(serialiseToData (toBuiltinData uchm))`)
-newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
+newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { sidechainParams ∷ SidechainParams
   , -- `newCommitteePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    newCommitteePubKeys ∷ Array SidechainPublicKey
+    -- newCommitteePubKeys ∷ Array SidechainPublicKey
+    -- TODO: fix the documentation here
+    newCommitteePubKeys ∷ aggregatePubKeys
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   }
 
-derive instance Generic UpdateCommitteeHashMessage _
-
-instance ToData UpdateCommitteeHashMessage where
+instance
+  ToData aggregatePubKeys ⇒
+  ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
   toData
     ( UpdateCommitteeHashMessage
         { sidechainParams

@@ -128,7 +128,9 @@ updateCommitteeHashWith ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
-  (UpdateCommitteeHashParams → Contract UpdateCommitteeHashParams) →
+  ( UpdateCommitteeHashParams (Array SidechainPublicKey) →
+    Contract (UpdateCommitteeHashParams (Array SidechainPublicKey))
+  ) →
   Contract Unit
 updateCommitteeHashWith params f = void do
   committeeSignatures ←
@@ -296,7 +298,8 @@ testScenario3 =
 
         let
           reverseSignaturesAndNewCommittee ∷
-            UpdateCommitteeHashParams → UpdateCommitteeHashParams
+            UpdateCommitteeHashParams (Array SidechainPublicKey) →
+            UpdateCommitteeHashParams (Array SidechainPublicKey)
           reverseSignaturesAndNewCommittee uchp =
             wrap
               ( (unwrap uchp)

@@ -16,7 +16,15 @@ import Contract.Monad
   , liftedM
   , throwContractError
   )
-import Contract.PlutusData (Datum(..), Redeemer(..), fromData, toData)
+import Contract.PlutusData
+  ( class ToData
+  , Datum(..)
+  , PlutusData
+  , Redeemer(..)
+  , fromData
+  , toData
+  )
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
@@ -31,7 +39,7 @@ import Contract.Transaction
   , signTransaction
   , submit
   )
-import Contract.TxConstraints (DatumPresence(..))
+import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
@@ -62,7 +70,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( committeeHashPolicy
   , findUpdateCommitteeHashUtxo
   , initCommitteeHashMintTn
-  , normalizeCommitteeHashParams
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
@@ -73,20 +80,173 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
-updateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
-updateCommitteeHash = runUpdateCommitteeHash <<< normalizeCommitteeHashParams
+updateCommitteeHash ∷
+  UpdateCommitteeHashParams (Array SidechainPublicKey) → Contract TransactionHash
+updateCommitteeHash params = do
+  let -- `mkErr` is used to help generate log messages
+    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
+  -- runUpdateCommitteeHash params
+
+  { lookupsAndConstraints: updateCommitteeHashLookupsAndConstraints
+  , currentCommitteeUtxo
+  } ← updateCommitteeHashLookupsAndConstraints params
+  -- tODO pick up from here
+
+  let { lookups, constraints } = updateCommitteeHashLookupsAndConstraints
+
+  ubTx ← liftedE
+    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
+  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
+  logInfo' (mkErr "Submitted update committee hash transaction: " <> show txId)
+  awaitTxConfirmed txId
+  logInfo' (mkErr "Update committee hash transaction submitted successfully")
+
+  pure txId
+
+-- | `updateCommitteeHashLookupsAndConstraints` grabs the lookups and
+-- | constraints for updating the committee hash, and returns the current
+-- | committee UTxO.
+-- | In particular, it creates lookups for:
+-- |    - the current committee UTxO
+-- |    - the update committee hash validator
+-- |    - the UTxO with the previous merkle root (if it exists)
+-- | and creates constraints for:
+-- |    - spending the current committee UTxO
+-- |    - paying the committee oracle NFT (committee hash policy) to the same
+-- |    committee hash validator
+-- |    - referencing the merkle root UTxO (if it exists)
+updateCommitteeHashLookupsAndConstraints ∷
+  ∀ newAggregatePubKeys.
+  ToData newAggregatePubKeys ⇒
+  UpdateCommitteeHashParams newAggregatePubKeys →
+  Contract
+    { lookupsAndConstraints ∷
+        { constraints ∷ TxConstraints Void Void
+        , lookups ∷ ScriptLookups Void
+        }
+    , currentCommitteeUtxo ∷
+        { index ∷ TransactionInput
+        , value ∷ TransactionOutputWithRefScript
+        }
+    }
+updateCommitteeHashLookupsAndConstraints
+  ( UpdateCommitteeHashParams
+      { sidechainParams
+      , newCommitteePubKeys
+      , committeeSignatures
+      , previousMerkleRoot
+      , sidechainEpoch
+      }
+  ) = do
+  let -- `mkErr` is used to help generate log messages
+    mkErr = report "runUpdateCommitteeHash"
+
+  -- Getting the minting policy / currency symbol / token name for update
+  -- committee hash
+  -------------------------------------------------------------
+  { committeeHashCurrencySymbol
+  , committeeHashTokenName
+  } ← getCommitteeHashPolicy sidechainParams
+
+  -- Getting the validator / minting policy for the merkle root token
+  -------------------------------------------------------------
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+
+  -- Getting the validator / building the validator hash
+  -------------------------------------------------------------
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , uchAssetClass: assetClass committeeHashCurrencySymbol
+          committeeHashTokenName
+      , merkleRootTokenCurrencySymbol
+      }
+  updateValidator ← updateCommitteeHashValidator uch
+  let valHash = Scripts.validatorHash updateValidator
+
+  -- Get the UTxO with the current committee
+  ------------------------------------------------------
+  lkup ← findUpdateCommitteeHashUtxo uch
+  currentCommitteeUtxo@
+    { index: oref
+    , value:
+        committeeHashTxOut@
+          (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+    } ←
+    liftContractM (mkErr "Failed to find committee UTxO") $ lkup
+
+  -- Grabbing the last merkle root reference
+  -------------------------------------------------------------
+  maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
+    previousMerkleRoot
+    smrm
+
+  -- Building the transaction.
+  -------------------------------------------------------------
+  let
+    newDatum = Datum $ toData
+      ( UpdateCommitteeDatum
+          { committeeHash: toData newCommitteePubKeys, sidechainEpoch }
+      )
+    value = assetClassValue (unwrap uch).uchAssetClass one
+    redeemer = Redeemer $ toData
+      ( UpdateCommitteeHashMessage
+          { sidechainParams
+          , newCommitteePubKeys: toData newCommitteePubKeys
+          , previousMerkleRoot
+          , sidechainEpoch
+          }
+      )
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      Lookups.unspentOutputs (Map.singleton oref committeeHashTxOut)
+        <> Lookups.validator updateValidator
+        <> case maybePreviousMerkleRoot of
+          Nothing → mempty
+          Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+            (Map.singleton txORef txOut)
+    constraints = TxConstraints.mustSpendScriptOutput oref redeemer
+      <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
+      <> case maybePreviousMerkleRoot of
+        Nothing → mempty
+        Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
+          previousMerkleRootORef
+
+  pure
+    { lookupsAndConstraints: { lookups, constraints }
+    , currentCommitteeUtxo
+    }
 
 -- | `runUpdateCommitteeHash` is the main worker function of the
 -- | `updateCommitteeHash` endpoint.
 -- | Preconditions:
 -- |    - `UpdateCommitteeHashParams` has been normalized via
 -- |    `UpdateCommitteeHash.Utils.normalizeCommitteeHashParams`
-runUpdateCommitteeHash ∷ UpdateCommitteeHashParams → Contract TransactionHash
+runUpdateCommitteeHash ∷
+  UpdateCommitteeHashParams (Array SidechainPublicKey) → Contract TransactionHash
 runUpdateCommitteeHash
   ( UpdateCommitteeHashParams
       { sidechainParams
