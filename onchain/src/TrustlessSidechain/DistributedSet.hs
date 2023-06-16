@@ -1,7 +1,6 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -fexpose-all-unfoldings #-}
 
 {- | Implementation of a set for on-chain proof of not in a set membership.
  We call this a *distributed set* since the set structure is distributed over

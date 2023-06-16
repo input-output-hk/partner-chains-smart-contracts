@@ -75,14 +75,20 @@ bits, and so the hash can be signed instead.
 More precisely, a _committee certificate verification minting policy_ is a
 minting policy with the following workflow.
 
-1. The system is initialized by minting an NFT, `CommitteeHashPolicy`, and
+1. The system is initialized by minting an NFT, `CommitteeOraclePolicy`, and
    paying the NFT to some validator script which as datum holds a
    representation of the current committee as some abstract type
    `aggregatePubKeys` (indeed, the datum may store more than just the current
    committee such as a sidechain epoch).
 
+   Note that in the old specification we had `CommitteeHashPolicy` that served
+   the same purpose. In this specification, we replace `CommitteeHashPolicy`
+   with `CommitteeOraclePolicy` to more accurately reflect its purpose to
+   uniquely identify the committee onchain (which may or may not necessarily
+   be a hash).
+
 2. The committee certificate verification minting policy is parameterized
-   by: the currency symbol of the previous `CommitteeHashPolicy`, and some
+   by: the currency symbol of the previous `CommitteeOraclePolicy`, and some
    fraction `n/d` that denotes the ratio of how many committee members are
    needed to sign a message (more details below).
 
@@ -95,7 +101,7 @@ minting policy with the following workflow.
       members that have verified `tn` from the provided multisignature (as a
       redeemer) of some abstract type `multisignature` where the current
       committee's `aggregatePubKeys` is identified by the NFT
-      `CommitteeHashPolicy` (in a reference input or
+      `CommitteeOraclePolicy` (in a reference input or
       input[^inputOrReferenceInput]).
 
       The number of *enough* committee members that have verified `tn` is
@@ -171,7 +177,7 @@ For the former drawback, one can store a [reference script](https://cips.cardano
 certificate verification minting policy and reference it in every transaction it is
 used in.
 Indeed, one may consider putting the reference script in the UTxO identified by
-the `CommitteeHashPolicy` since this UTxO will always be present in a
+the `CommitteeOraclePolicy` since this UTxO will always be present in a
 transaction for which the committee certificate verification minting policy
 mints.
 As for the latter drawback, it is the hope that this will be negligible and
@@ -193,7 +199,7 @@ See
 for the original specification.
 
 Like the previous specification, we will have a validator script uniquely
-identified by the `CommitteeHashPolicy` which as datum holds the current
+identified by the `CommitteeOraclePolicy` which as datum holds the current
 committee and sidechain epoch.
 We will call this validator `UpdateCommitteeValidator`.
 
@@ -223,7 +229,7 @@ data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
     -- ^ the sidechain epoch of the new committee
   , newValidatorAddress :: Address
     -- ^ the validator address where the new committee will reside (this allows
-    -- one to reuse the `CommitteeHashPolicy` when one changes the
+    -- one to reuse the `CommitteeOraclePolicy` when one changes the
     -- committee certificate verification minting policy)
   }
 ```
@@ -235,12 +241,12 @@ satisfied:
   `tn` for which `tn` satisfies `tn == blake2b(cbor(UpdateCommitteeMessage))`
   where `UpdateCommitteeMessage` is as provided in the redeemer
 
-- The NFT `CommitteeHashPolicy` is output at a validator address
-  `newValidatorAddress` from the redeemer.
-  This validator address must also have as datum `UpdateCommitteeHashDatum` for
-  which its `aggregateCommitteePubKeys` is the `newAggregateCommitteePubKeys`
-  from the redeemer, and its `sidechainEpoch` is `newSidechainEpoch` from the
-  redeemer.
+- The NFT `CommitteeOraclePolicy` is output at a validator address
+  `newValidatorAddress` from the redeemer. This validator address must also
+  have as datum `UpdateCommitteeDatum aggregatePubKeys` for which its
+  `aggregateCommitteePubKeys :: aggregatePubKeys` is the
+  `newAggregateCommitteePubKeys :: aggregatePubKeys` from the redeemer, and its
+  `sidechainEpoch` is `newSidechainEpoch` from the redeemer.
 
 - The `sidechainEpoch` in the current datum is strictly smaller than
   `newSidechainEpoch` as provided in the redeemer (this is to prevent replay
@@ -359,7 +365,7 @@ policy.
 
 The steps all implementations will follow will be:
 
-1. Instantiating `UpdateCommitteeHashDatum aggregatePubKeys` with a specific
+1. Instantiating `UpdateCommitteeDatum aggregatePubKeys` with a specific
    type for `aggregatePubKeys`, and choosing a specific type for
    `multisignature` as the redeemer for the committee certificate verification
    minting policy.
@@ -429,10 +435,10 @@ sorted and `atmsSignature` is a subsequence of the corresponding signatures of
 `atmsPublicKeys` for a given message.
 
 Then, `CommitteePlainATMSPolicy` takes as redeemer an `ATMSPlainMultisignature`, and
-is parameterized by the currency symbol of `CommitteeHashPolicy` and a
+is parameterized by the currency symbol of `CommitteeOraclePolicy` and a
 threshold `n/d`; and mints only if the following are all satisfied:
 
-- there is a reference input (or input) with the `CommitteeHashPolicy` NFT with
+- there is a reference input (or input) with the `CommitteeOraclePolicy` NFT with
   datum `UpdateCommitteeDatum ATMSPlainAggregatePubKey`;
 
 - the concatenated hash of the public keys `atmsPublicKeys` of the redeemer
@@ -585,10 +591,10 @@ easily -- later we will see why this is desired).
   [lessThanByteString](https://github.com/input-output-hk/plutus/blob/1af96af28f45030c94e11138a2f13869e9e63b79/doc/read-the-docs-site/reference/cardano/builtin-parameters.csv#L71).
 
 Then, `CommitteeMultisignatureATMSPolicy` takes as redeemer an `ATMSMultisignatureSignature`, and
-is parameterized by the currency symbol of `CommitteeHashPolicy` and a
+is parameterized by the currency symbol of `CommitteeOraclePolicy` and a
 threshold `n/d`; and mints only if the following are satisfied.
 
-- There is a reference input (or input) with the `CommitteeHashPolicy` NFT with
+- There is a reference input (or input) with the `CommitteeOraclePolicy` NFT with
   datum `UpdateCommitteeDatum ATMSMultisignatureAggregatePubKey`.
 
 - `length atmsNonSigningPubKeys == length atmsNonSigningPubKeysMerkleProofs` is true,
