@@ -50,7 +50,6 @@ import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
-  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto

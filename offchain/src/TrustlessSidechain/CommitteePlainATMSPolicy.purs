@@ -57,9 +57,9 @@ import Contract.Value as Value
 import Data.Bifunctor as Bifunctor
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
@@ -170,10 +170,10 @@ getCommitteePlainATMSPolicy param = do
 committeePlainATMSMintFromSidechainParams ∷
   SidechainParams → Contract CommitteeCertificateMint
 committeePlainATMSMintFromSidechainParams sidechainParams = do
-  { committeeHashCurrencySymbol
-  } ← UpdateCommitteeHash.getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
   pure $ CommitteeCertificateMint
-    { committeeOraclePolicy: committeeHashCurrencySymbol
+    { committeeOraclePolicy: committeeOracleCurrencySymbol
     , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
     , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
     }

@@ -63,6 +63,7 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import TrustlessSidechain.CommitteeOraclePolicy (getCommitteeOraclePolicy)
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.MerkleRoot
   ( SignedMerkleRootMint(..)
@@ -72,7 +73,6 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash (getCommitteeHashPolicy)
 import TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , addressFromBech32Bytes
@@ -455,7 +455,7 @@ findMerkleRootTokenUtxoByRootHash ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol } ← getCommitteeOraclePolicy sidechainParams
 
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
@@ -465,7 +465,7 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
       "findMerkleRootTokenUtxoByRootHash"
     smrm = SignedMerkleRootMint
       { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash
       }
   merkleRootTokenName ←

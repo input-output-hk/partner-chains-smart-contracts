@@ -2,7 +2,7 @@ module TrustlessSidechain.UpdateCommitteeHash
   ( module ExportTypes
   , module ExportUtils
   , updateCommitteeHash
-  , getCommitteeHashPolicy
+  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , findUpdateCommitteeHashUtxoFromSidechainParams
   ) where
 
@@ -44,6 +44,7 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
@@ -52,23 +53,23 @@ import TrustlessSidechain.CommitteeOraclePolicy
   ( committeeOraclePolicy
   , committeeOracleTn
   )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
-  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
-  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
@@ -81,9 +82,27 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
+
+-- | `UpdateCommitteeHashParams` is the offchain parameter for the update
+-- | committee hash endpoint.
+newtype UpdateCommitteeHashParams newAggregatePubKeys =
+  UpdateCommitteeHashParams
+    { sidechainParams ∷ SidechainParams
+    , newCommitteePubKeys ∷ newAggregatePubKeys
+    , committeeSignatures ∷
+        Array (SidechainPublicKey /\ Maybe SidechainSignature)
+    , previousMerkleRoot ∷ Maybe RootHash
+    , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
+    }
+
+derive newtype instance
+  Show newAggregatePubKeys ⇒
+  Show (UpdateCommitteeHashParams newAggregatePubKeys)
+
+derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
@@ -153,9 +172,9 @@ updateCommitteeHashLookupsAndConstraints
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
-  { committeeHashCurrencySymbol
-  , committeeHashTokenName
-  } ← getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol
+  , committeeOracleTokenName
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
@@ -165,7 +184,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
@@ -180,7 +199,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -192,7 +211,7 @@ updateCommitteeHashLookupsAndConstraints
   currentCommitteeUtxo@
     { index: oref
     , value:
-        committeeHashTxOut@
+        committeeOracleTxOut@
           (TransactionOutputWithRefScript { output: TransactionOutput tOut })
     } ←
     liftContractM (mkErr "Failed to find committee UTxO") $ lkup
@@ -226,7 +245,7 @@ updateCommitteeHashLookupsAndConstraints
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
-      Lookups.unspentOutputs (Map.singleton oref committeeHashTxOut)
+      Lookups.unspentOutputs (Map.singleton oref committeeOracleTxOut)
         <> Lookups.validator updateValidator
         <> case maybePreviousMerkleRoot of
           Nothing → mempty
@@ -266,9 +285,9 @@ runUpdateCommitteeHash
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
-  { committeeHashCurrencySymbol
-  , committeeHashTokenName
-  } ← getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol
+  , committeeOracleTokenName
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
@@ -278,7 +297,7 @@ runUpdateCommitteeHash
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
@@ -331,7 +350,7 @@ runUpdateCommitteeHash
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -342,7 +361,7 @@ runUpdateCommitteeHash
   lkup ← findUpdateCommitteeHashUtxo uch
   { index: oref
   , value:
-      committeeHashTxOut@
+      committeeOracleTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
     liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
@@ -384,7 +403,7 @@ runUpdateCommitteeHash
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs
-        (Map.singleton oref committeeHashTxOut)
+        (Map.singleton oref committeeOracleTxOut)
         <> Lookups.validator updateValidator
         <> case maybePreviousMerkleRoot of
           Nothing → mempty
@@ -421,9 +440,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
-  { committeeHashCurrencySymbol
-  , committeeHashTokenName
-  } ← getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol
+  , committeeOracleTokenName
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
@@ -433,7 +452,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
@@ -448,7 +467,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
 
@@ -461,27 +480,3 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → String → String
 report = Logging.mkReport "UpdateCommitteeHash"
-
--- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
--- | (potentially throwing an error in the case that it is not possible).
-getCommitteeHashPolicy ∷
-  SidechainParams →
-  Contract
-    { committeeOraclePolicy ∷ MintingPolicy
-    , committeeHashCurrencySymbol ∷ CurrencySymbol
-    , committeeHashTokenName ∷ TokenName
-    }
-getCommitteeHashPolicy (SidechainParams sp) = do
-  let
-    mkErr = report "getCommitteeHashPolicy"
-  committeeOraclePolicy ← committeeOraclePolicy $
-    InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
-  committeeHashCurrencySymbol ← liftContractM
-    (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeOraclePolicy)
-  let committeeHashTokenName = committeeOracleTn
-  pure
-    { committeeOraclePolicy
-    , committeeHashCurrencySymbol
-    , committeeHashTokenName
-    }

@@ -62,15 +62,13 @@ import TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
-import TrustlessSidechain.UpdateCommitteeHash
-  ( getCommitteeHashPolicy
-  )
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -102,8 +100,8 @@ runSaveCheckpoint
   { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
     sidechainParams
 
-  { committeeHashCurrencySymbol, committeeHashTokenName } ←
-    getCommitteeHashPolicy sidechainParams
+  { committeeOracleCurrencySymbol, committeeOracleTokenName } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   when (null committeeSignatures)
     (throwContractError $ mkErr "No signatures provided")
@@ -144,8 +142,8 @@ runSaveCheckpoint
       { sidechainParams
       , checkpointAssetClass: assetClass checkpointCurrencySymbol
           checkpointTokenName
-      , committeeOracleAssetClass: assetClass committeeHashCurrencySymbol
-          committeeHashTokenName
+      , committeeOracleAssetClass: assetClass committeeOracleCurrencySymbol
+          committeeOracleTokenName
       }
   validator ← checkpointValidator checkpointParam
   let checkpointValidatorHash = Scripts.validatorHash validator
@@ -165,7 +163,7 @@ runSaveCheckpoint
   let
     smrm = SignedMerkleRootMint
       { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
@@ -179,7 +177,7 @@ runSaveCheckpoint
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
 
@@ -187,7 +185,7 @@ runSaveCheckpoint
   lkup ← findUpdateCommitteeHashUtxo uch
   { index: committeeOref
   , value:
-      committeeHashTxOut@
+      committeeOracleTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
     liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
@@ -222,7 +220,8 @@ runSaveCheckpoint
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
-        <> Lookups.unspentOutputs (Map.singleton committeeOref committeeHashTxOut)
+        <> Lookups.unspentOutputs
+          (Map.singleton committeeOref committeeOracleTxOut)
         <> Lookups.validator validator
 
     constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer

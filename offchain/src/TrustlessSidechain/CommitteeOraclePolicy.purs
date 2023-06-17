@@ -3,6 +3,7 @@ module TrustlessSidechain.CommitteeOraclePolicy
   , committeeOraclePolicy
   , committeeOracleAssetClass
   , committeeOracleTn
+  , getCommitteeOraclePolicy
   ) where
 
 import Contract.Prelude
@@ -23,10 +24,13 @@ import Contract.TextEnvelope
   , plutusScriptV2FromEnvelope
   )
 import Contract.Transaction (TransactionInput)
+import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
+import TrustlessSidechain.Utils.Logging as Logging
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
 -- | the utxo with the update committee hash validator script.
@@ -58,7 +62,7 @@ committeeOraclePolicy sp = do
 committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
 committeeOracleAssetClass ichm = do
   cp ← committeeOraclePolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get committeeHash currency symbol"
+  curSym ← Monad.liftContractM "Couldn't get committee oracle currency symbol"
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym committeeOracleTn
@@ -70,3 +74,31 @@ committeeOracleAssetClass ichm = do
 committeeOracleTn ∷ Value.TokenName
 committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
+
+-- | `getCommitteeOraclePolicy` grabs the committee hash policy, currency symbol and token name
+-- | (potentially throwing an error in the case that it is not possible).
+getCommitteeOraclePolicy ∷
+  SidechainParams →
+  Contract
+    { committeeOraclePolicy ∷ MintingPolicy
+    , committeeOracleCurrencySymbol ∷ CurrencySymbol
+    , committeeOracleTokenName ∷ TokenName
+    }
+getCommitteeOraclePolicy (SidechainParams sp) = do
+  let
+    mkErr = report "getCommitteeOraclePolicy"
+  committeeOraclePolicy ← committeeOraclePolicy $
+    InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
+  committeeOracleCurrencySymbol ← Monad.liftContractM
+    (mkErr "Failed to get committee oracle CurrencySymbol")
+    (Value.scriptCurrencySymbol committeeOraclePolicy)
+  let committeeOracleTokenName = committeeOracleTn
+  pure
+    { committeeOraclePolicy
+    , committeeOracleCurrencySymbol
+    , committeeOracleTokenName
+    }
+
+-- | `report` is an internal function used for helping writing log messages.
+report ∷ String → String → String
+report = Logging.mkReport "CommitteeOraclePolicy"

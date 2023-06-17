@@ -7,7 +7,6 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
-  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   ) where
 
@@ -28,8 +27,6 @@ import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
-
--- import TrustlessSidechain.CommitteeATMSSchemes (ATMSSchemeParams)
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
@@ -114,24 +111,6 @@ instance ToData UpdateCommitteeHashRedeemer where
     , toData newCommitteePubKeys
     , toData previousMerkleRoot
     ]
-
--- | `UpdateCommitteeHashParams` is the offchain parameter for the update
--- | committee hash endpoint.
-newtype UpdateCommitteeHashParams newAggregatePubKeys =
-  UpdateCommitteeHashParams
-    { sidechainParams ∷ SidechainParams
-    , newCommitteePubKeys ∷ newAggregatePubKeys
-    , committeeSignatures ∷
-        Array (SidechainPublicKey /\ Maybe SidechainSignature)
-    , previousMerkleRoot ∷ Maybe RootHash
-    , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
-    }
-
-derive newtype instance
-  Show newAggregatePubKeys ⇒
-  Show (UpdateCommitteeHashParams newAggregatePubKeys)
-
-derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
 -- | signed by the committee (technically, if `uchm` is an

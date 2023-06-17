@@ -21,6 +21,7 @@ import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -69,9 +70,9 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     merkleRootTokenMintingPolicyId = currencySymbolToHex
       merkleRootTokenCurrencySymbol
 
-  { committeeHashCurrencySymbol, committeeHashTokenName } ←
-    UpdateCommitteeHash.getCommitteeHashPolicy scParams
-  let committeeNftPolicyId = currencySymbolToHex committeeHashCurrencySymbol
+  { committeeOracleCurrencySymbol, committeeOracleTokenName } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
+  let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
@@ -103,12 +104,12 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← merkleRootTokenValidator scParams
     getAddr validator
 
-  committeeHashValidatorAddr ←
+  committeeOracleValidatorAddr ←
     do
       let
         uch = UpdateCommitteeHash
           { sidechainParams: scParams
-          , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
           , merkleRootTokenCurrencySymbol
           }
       validator ← updateCommitteeHashValidator uch
@@ -138,7 +139,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     addresses =
       [ "CommitteeCandidateValidator" /\ committeeCandidateValidatorAddr
       , "MerkleRootTokenValidator" /\ merkleRootTokenValidatorAddr
-      , "CommitteeHashValidator" /\ committeeHashValidatorAddr
+      , "CommitteeHashValidator" /\ committeeOracleValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
 
