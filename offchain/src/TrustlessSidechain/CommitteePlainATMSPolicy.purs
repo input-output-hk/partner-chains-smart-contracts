@@ -238,7 +238,7 @@ mustMintCommitteePlainATMSPolicy
     (fromData $ unwrap comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
-  when (datum.committeeHash /= curCommitteeHash)
+  when (datum.aggregatePubKeys /= curCommitteeHash)
     $ Monad.throwContractError
     $ msg "Incorrect committee provided"
 

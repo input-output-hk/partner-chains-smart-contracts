@@ -363,7 +363,7 @@ initCommitteeHashLookupsAndConstraints isp = do
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeDatum
-          { committeeHash: aggregatedKeys
+          { aggregatePubKeys: aggregatedKeys
           , sidechainEpoch: isp.initSidechainEpoch
           }
     committeeHashValue =

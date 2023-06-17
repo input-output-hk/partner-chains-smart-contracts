@@ -163,8 +163,8 @@ runSaveRoot
       , committeeOracleCurrencySymbol: updateCommitteeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol: rootTokenCS
       }
-  { index: committeeHashTxIn
-  , value: committeeHashTxOut
+  { index: committeeOracleTxIn
+  , value: committeeOracleTxOut
   } ←
     liftedM (mkErr "Failed to find committee hash utxo") $
       UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
@@ -202,7 +202,7 @@ runSaveRoot
   void do
     let
       TransactionOutputWithRefScript { output: TransactionOutput tOut } =
-        committeeHashTxOut
+        committeeOracleTxOut
 
       committeeHash = Utils.Crypto.aggregateKeys committeePubKeys
     rawDatum ←
@@ -212,7 +212,7 @@ runSaveRoot
       (mkErr "Datum at update committee hash UTxO fromData failed")
       (fromData $ unwrap rawDatum)
 
-    when (datum.committeeHash /= committeeHash)
+    when (datum.aggregatePubKeys /= committeeHash)
       $ throwContractError "Incorrect committee provided"
 
   -- Building the transaction
@@ -230,7 +230,7 @@ runSaveRoot
           unitDatum
           TxConstraints.DatumWitness
           value
-        <> TxConstraints.mustReferenceOutput committeeHashTxIn
+        <> TxConstraints.mustReferenceOutput committeeOracleTxIn
         <> case maybePreviousMerkleRootUtxo of
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
@@ -238,7 +238,7 @@ runSaveRoot
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
       <> Lookups.unspentOutputs
-        (Map.singleton committeeHashTxIn committeeHashTxOut)
+        (Map.singleton committeeOracleTxIn committeeOracleTxOut)
       <> case maybePreviousMerkleRootUtxo of
         Nothing → mempty
         Just { index: txORef, value: txOut } → Lookups.unspentOutputs

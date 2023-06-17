@@ -196,7 +196,7 @@ runSaveCheckpoint
   UpdateCommitteeDatum datum ← liftContractM
     (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap comitteeHashDatum)
-  when (datum.committeeHash /= curCommitteeHash)
+  when (datum.aggregatePubKeys /= curCommitteeHash)
     (throwContractError "Incorrect committee provided")
 
   -- Building / submitting the transaction.

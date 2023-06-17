@@ -34,7 +34,7 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 -- | `aggregatePubKeys` type that this is instantiated with may change as we
 -- | implement different ATMS schemes.
 newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
-  { committeeHash ∷ aggregatePubKeys
+  { aggregatePubKeys ∷ aggregatePubKeys
   , sidechainEpoch ∷ BigInt
   }
 
@@ -45,9 +45,9 @@ derive instance Newtype (UpdateCommitteeDatum aggregatePubKeys) _
 instance
   ToData aggregatePubKeys ⇒
   ToData (UpdateCommitteeDatum aggregatePubKeys) where
-  toData (UpdateCommitteeDatum { committeeHash, sidechainEpoch }) = Constr
+  toData (UpdateCommitteeDatum { aggregatePubKeys, sidechainEpoch }) = Constr
     (BigNum.fromInt 0)
-    [ toData committeeHash, toData sidechainEpoch ]
+    [ toData aggregatePubKeys, toData sidechainEpoch ]
 
 instance
   FromData aggregatePubKeys ⇒
@@ -55,7 +55,7 @@ instance
   fromData (Constr n [ a, b ])
     | n == BigNum.fromInt 0 =
         UpdateCommitteeDatum <$>
-          ( { committeeHash: _, sidechainEpoch: _ }
+          ( { aggregatePubKeys: _, sidechainEpoch: _ }
               <$> fromData a
               <*> fromData b
           )

@@ -46,6 +46,7 @@ import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeATMSSchemes (ATMSSchemeParams)
 import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   )
@@ -227,7 +228,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     newDatum = Datum $ toData
       ( UpdateCommitteeDatum
-          { committeeHash: toData newCommitteePubKeys, sidechainEpoch }
+          { aggregatePubKeys: toData newCommitteePubKeys, sidechainEpoch }
       )
     value =
       Value.singleton
@@ -372,7 +373,7 @@ runUpdateCommitteeHash
   UpdateCommitteeDatum datum ← liftContractM
     (mkErr "Datum at update committee hash UTxO fromData failed")
     (fromData $ unwrap rawDatum)
-  when (datum.committeeHash /= curCommitteeHash)
+  when (datum.aggregatePubKeys /= curCommitteeHash)
     (throwContractError "Incorrect committee provided")
 
   -- Grabbing the last merkle root reference
@@ -386,7 +387,7 @@ runUpdateCommitteeHash
   let
     newDatum = Datum $ toData
       ( UpdateCommitteeDatum
-          { committeeHash: newCommitteeHash, sidechainEpoch }
+          { aggregatePubKeys: newCommitteeHash, sidechainEpoch }
       )
     value = Value.singleton (unwrap uch).committeeOracleCurrencySymbol
       committeeOracleTn
