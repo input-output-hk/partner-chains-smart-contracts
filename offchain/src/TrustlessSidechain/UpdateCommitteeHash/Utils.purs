@@ -44,7 +44,7 @@ import Contract.Transaction
 import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.CommitteeOraclePolicy (initCommitteeHashMintTn)
+import TrustlessSidechain.CommitteeOraclePolicy (committeeOracleTn)
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -103,5 +103,5 @@ findUpdateCommitteeHashUtxo uch = do
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
     Value.valueOf value ((unwrap uch).committeeOracleCurrencySymbol)
-      initCommitteeHashMintTn
+      committeeOracleTn
       /= zero

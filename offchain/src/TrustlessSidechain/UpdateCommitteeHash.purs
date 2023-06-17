@@ -49,8 +49,8 @@ import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy
-  ( committeeHashPolicy
-  , initCommitteeHashMintTn
+  ( committeeOraclePolicy
+  , committeeOracleTn
   )
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -213,7 +213,7 @@ updateCommitteeHashLookupsAndConstraints
     value =
       Value.singleton
         (unwrap uch).committeeOracleCurrencySymbol
-        initCommitteeHashMintTn
+        committeeOracleTn
         one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashMessage
@@ -370,7 +370,7 @@ runUpdateCommitteeHash
           { committeeHash: newCommitteeHash, sidechainEpoch }
       )
     value = Value.singleton (unwrap uch).committeeOracleCurrencySymbol
-      initCommitteeHashMintTn
+      committeeOracleTn
       one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
@@ -467,18 +467,21 @@ report = Logging.mkReport "UpdateCommitteeHash"
 getCommitteeHashPolicy ∷
   SidechainParams →
   Contract
-    { committeeHashPolicy ∷ MintingPolicy
+    { committeeOraclePolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     , committeeHashTokenName ∷ TokenName
     }
 getCommitteeHashPolicy (SidechainParams sp) = do
   let
     mkErr = report "getCommitteeHashPolicy"
-  committeeHashPolicy ← committeeHashPolicy $
+  committeeOraclePolicy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeHashCurrencySymbol ← liftContractM
     (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeHashPolicy)
-  let committeeHashTokenName = initCommitteeHashMintTn
+    (Value.scriptCurrencySymbol committeeOraclePolicy)
+  let committeeHashTokenName = committeeOracleTn
   pure
-    { committeeHashPolicy, committeeHashCurrencySymbol, committeeHashTokenName }
+    { committeeOraclePolicy
+    , committeeHashCurrencySymbol
+    , committeeHashTokenName
+    }

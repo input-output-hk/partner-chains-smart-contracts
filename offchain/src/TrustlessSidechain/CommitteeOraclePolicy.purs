@@ -1,8 +1,8 @@
 module TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , committeeHashPolicy
-  , committeeHashAssetClass
-  , initCommitteeHashMintTn
+  , committeeOraclePolicy
+  , committeeOracleAssetClass
+  , committeeOracleTn
   ) where
 
 import Contract.Prelude
@@ -41,8 +41,8 @@ instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
 
-committeeHashPolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
-committeeHashPolicy sp = do
+committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
+committeeOraclePolicy sp = do
   let
     script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
       >>= plutusScriptV2FromEnvelope
@@ -52,21 +52,21 @@ committeeHashPolicy sp = do
     [ PlutusData.toData sp ]
   pure $ PlutusMintingPolicy applied
 
--- | `committeeHashAssetClass` is the asset class. See `initCommitteeHashMintTn`
+-- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name
-{-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
-committeeHashAssetClass ichm = do
-  cp ← committeeHashPolicy ichm
+{-# INLINEABLE committeeOracleAssetClass #-}
+committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
+committeeOracleAssetClass ichm = do
+  cp ← committeeOraclePolicy ichm
   curSym ← Monad.liftContractM "Couldn't get committeeHash currency symbol"
     (Value.scriptCurrencySymbol cp)
 
-  pure $ assetClass curSym initCommitteeHashMintTn
+  pure $ assetClass curSym committeeOracleTn
 
--- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
+-- | `committeeOracleTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
-initCommitteeHashMintTn ∷ Value.TokenName
-initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
+committeeOracleTn ∷ Value.TokenName
+committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""

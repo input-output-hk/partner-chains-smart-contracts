@@ -183,20 +183,20 @@ initCommitteeHashMintLookupsAndConstraints ∷
 initCommitteeHashMintLookupsAndConstraints isp = do
   -- Get committee hash / associated values
   -----------------------------------
-  { committeeHashPolicy, committeeHashCurrencySymbol } ←
+  { committeeOraclePolicy, committeeHashCurrencySymbol } ←
     getCommitteeHashPolicy isp
   let
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol
-        CommitteeOraclePolicy.initCommitteeHashMintTn
+        CommitteeOraclePolicy.committeeOracleTn
         one
 
   -- Building the transaction
   -----------------------------------
   let
     lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy committeeHashPolicy
+    lookups = Lookups.mintingPolicy committeeOraclePolicy
 
     constraints ∷ TxConstraints Void Void
     constraints = Constraints.mustMintValue committeeHashValue
@@ -282,11 +282,11 @@ initCheckpointLookupsAndConstraints inp = do
   -----------------------------------
   { checkpointCurrencySymbol } ← getCheckpointPolicy inp
 
-  committeeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy $
+  committeeOraclePolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
     (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeHashPolicy)
+    (Value.scriptCurrencySymbol committeeOraclePolicy)
 
   let
     sc = toSidechainParams inp
@@ -294,8 +294,8 @@ initCheckpointLookupsAndConstraints inp = do
       { sidechainParams: sc
       , checkpointAssetClass: checkpointCurrencySymbol /\
           Checkpoint.initCheckpointMintTn
-      , committeeHashAssetClass: committeeHashCurrencySymbol /\
-          CommitteeOraclePolicy.initCommitteeHashMintTn
+      , committeeOracleAssetClass: committeeHashCurrencySymbol /\
+          CommitteeOraclePolicy.committeeOracleTn
       }
     checkpointDatum = Datum
       $ PlutusData.toData
@@ -369,7 +369,7 @@ initCommitteeHashLookupsAndConstraints isp = do
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol
-        CommitteeOraclePolicy.initCommitteeHashMintTn
+        CommitteeOraclePolicy.committeeOracleTn
         one
 
   committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
@@ -770,18 +770,18 @@ getCommitteeHashPolicy ∷
   ∀ (r ∷ Row Type).
   InitTokensParams r →
   Contract
-    { committeeHashPolicy ∷ MintingPolicy
+    { committeeOraclePolicy ∷ MintingPolicy
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteeHashPolicy isp = do
   let
     mkErr = report "getCommitteeHashPolicy"
-  committeeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy $
+  committeeOraclePolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
     (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeHashPolicy)
-  pure { committeeHashPolicy, committeeHashCurrencySymbol }
+    (Value.scriptCurrencySymbol committeeOraclePolicy)
+  pure { committeeOraclePolicy, committeeHashCurrencySymbol }
 
 -- | `getMerkleRootTokenPolicy` grabs the merkle root token policy and currency
 -- | symbol (potentially throwing an error if this is not possible).

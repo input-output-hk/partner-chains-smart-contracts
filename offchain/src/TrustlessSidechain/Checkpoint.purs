@@ -144,7 +144,7 @@ runSaveCheckpoint
       { sidechainParams
       , checkpointAssetClass: assetClass checkpointCurrencySymbol
           checkpointTokenName
-      , committeeHashAssetClass: assetClass committeeHashCurrencySymbol
+      , committeeOracleAssetClass: assetClass committeeHashCurrencySymbol
           committeeHashTokenName
       }
   validator ← checkpointValidator checkpointParam

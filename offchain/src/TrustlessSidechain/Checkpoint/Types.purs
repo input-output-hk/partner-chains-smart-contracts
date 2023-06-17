@@ -51,7 +51,7 @@ instance FromData CheckpointDatum where
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
   , checkpointAssetClass ∷ AssetClass
-  , committeeHashAssetClass ∷ AssetClass
+  , committeeOracleAssetClass ∷ AssetClass
   }
 
 derive instance Generic CheckpointParameter _
@@ -61,11 +61,11 @@ derive instance Newtype CheckpointParameter _
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
-        { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
+        { sidechainParams, checkpointAssetClass, committeeOracleAssetClass }
     ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData checkpointAssetClass
-    , toData committeeHashAssetClass
+    , toData committeeOracleAssetClass
     ]
 
 derive newtype instance Show CheckpointParameter

@@ -87,7 +87,7 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
     sidechainParams
 
   let mkErr = report "getMerkleRootTokenMintingPolicy"
-  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy
+  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeOraclePolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
@@ -119,7 +119,7 @@ runSaveRoot
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy
+  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeOraclePolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
