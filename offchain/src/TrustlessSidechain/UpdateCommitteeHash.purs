@@ -45,6 +45,13 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeOraclePolicy
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy
+  ( committeeHashPolicy
+  , initCommitteeHashMintTn
+  )
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
@@ -52,31 +59,25 @@ import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , UpdateCommitteeDatum(UpdateCommitteeDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , UpdateCommitteeDatum(UpdateCommitteeDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( committeeHashPolicy
-  , findUpdateCommitteeHashUtxo
-  , initCommitteeHashMintTn
+  ( findUpdateCommitteeHashUtxo
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( committeeHashPolicy
-  , findUpdateCommitteeHashUtxo
-  , initCommitteeHashMintTn
+  ( findUpdateCommitteeHashUtxo
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
@@ -96,7 +97,7 @@ updateCommitteeHash params = do
   { lookupsAndConstraints: updateCommitteeHashLookupsAndConstraints
   , currentCommitteeUtxo
   } ← updateCommitteeHashLookupsAndConstraints params
-  -- tODO pick up from here
+  -- TODO pick up from here
 
   let { lookups, constraints } = updateCommitteeHashLookupsAndConstraints
 
@@ -179,8 +180,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: assetClass committeeHashCurrencySymbol
-          committeeHashTokenName
+      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -210,7 +210,11 @@ updateCommitteeHashLookupsAndConstraints
       ( UpdateCommitteeDatum
           { committeeHash: toData newCommitteePubKeys, sidechainEpoch }
       )
-    value = assetClassValue (unwrap uch).uchAssetClass one
+    value =
+      Value.singleton
+        (unwrap uch).committeeOracleCurrencySymbol
+        initCommitteeHashMintTn
+        one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashMessage
           { sidechainParams
@@ -327,8 +331,7 @@ runUpdateCommitteeHash
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: assetClass committeeHashCurrencySymbol
-          committeeHashTokenName
+      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -366,7 +369,9 @@ runUpdateCommitteeHash
       ( UpdateCommitteeDatum
           { committeeHash: newCommitteeHash, sidechainEpoch }
       )
-    value = assetClassValue (unwrap uch).uchAssetClass one
+    value = Value.singleton (unwrap uch).committeeOracleCurrencySymbol
+      initCommitteeHashMintTn
+      one
     redeemer = Redeemer $ toData
       ( UpdateCommitteeHashRedeemer
           { committeeSignatures: curCommitteeSignatures
@@ -443,8 +448,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: assetClass committeeHashCurrencySymbol
-          committeeHashTokenName
+      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
 

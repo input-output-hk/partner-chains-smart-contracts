@@ -72,6 +72,10 @@ import TrustlessSidechain.Checkpoint
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
+import TrustlessSidechain.CommitteeOraclePolicy
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -90,8 +94,7 @@ import TrustlessSidechain.MerkleRoot
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , UpdateCommitteeDatum(UpdateCommitteeDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
@@ -186,7 +189,7 @@ initCommitteeHashMintLookupsAndConstraints isp = do
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol
-        UpdateCommitteeHash.initCommitteeHashMintTn
+        CommitteeOraclePolicy.initCommitteeHashMintTn
         one
 
   -- Building the transaction
@@ -279,7 +282,7 @@ initCheckpointLookupsAndConstraints inp = do
   -----------------------------------
   { checkpointCurrencySymbol } ← getCheckpointPolicy inp
 
-  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
+  committeeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
     (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
@@ -292,7 +295,7 @@ initCheckpointLookupsAndConstraints inp = do
       , checkpointAssetClass: checkpointCurrencySymbol /\
           Checkpoint.initCheckpointMintTn
       , committeeHashAssetClass: committeeHashCurrencySymbol /\
-          UpdateCommitteeHash.initCommitteeHashMintTn
+          CommitteeOraclePolicy.initCommitteeHashMintTn
       }
     checkpointDatum = Datum
       $ PlutusData.toData
@@ -354,8 +357,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       isp.initCommittee
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
-      , uchAssetClass: committeeHashCurrencySymbol /\
-          UpdateCommitteeHash.initCommitteeHashMintTn
+      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol: merkleRootTokenMintingPolicyCurrencySymbol
       }
     committeeHashDatum = Datum
@@ -367,7 +369,7 @@ initCommitteeHashLookupsAndConstraints isp = do
     committeeHashValue =
       Value.singleton
         committeeHashCurrencySymbol
-        UpdateCommitteeHash.initCommitteeHashMintTn
+        CommitteeOraclePolicy.initCommitteeHashMintTn
         one
 
   committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
@@ -774,7 +776,7 @@ getCommitteeHashPolicy ∷
 getCommitteeHashPolicy isp = do
   let
     mkErr = report "getCommitteeHashPolicy"
-  committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
+  committeeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
     (mkErr "Failed to get updateCommitteeHash CurrencySymbol")

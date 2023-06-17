@@ -36,6 +36,10 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeOraclePolicy
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -63,8 +67,7 @@ import TrustlessSidechain.MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , UpdateCommitteeDatum(UpdateCommitteeDatum)
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
@@ -84,7 +87,7 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
     sidechainParams
 
   let mkErr = report "getMerkleRootTokenMintingPolicy"
-  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
+  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
@@ -116,7 +119,7 @@ runSaveRoot
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
+  updateCommitteeHashPolicy ← CommitteeOraclePolicy.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
@@ -157,8 +160,7 @@ runSaveRoot
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: updateCommitteeHashCurrencySymbol /\
-          UpdateCommitteeHash.initCommitteeHashMintTn
+      , committeeOracleCurrencySymbol: updateCommitteeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol: rootTokenCS
       }
   { index: committeeHashTxIn

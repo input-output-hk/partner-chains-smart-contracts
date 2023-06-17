@@ -179,8 +179,7 @@ runSaveCheckpoint
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
     uch = UpdateCommitteeHash
       { sidechainParams
-      , uchAssetClass: assetClass committeeHashCurrencySymbol
-          committeeHashTokenName
+      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
 

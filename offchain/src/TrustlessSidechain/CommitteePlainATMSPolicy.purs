@@ -59,10 +59,10 @@ import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging

@@ -6,7 +6,6 @@
 module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , InitCommitteeHashMint(InitCommitteeHashMint)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
@@ -29,6 +28,8 @@ import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+
+-- import TrustlessSidechain.CommitteeATMSSchemes (ATMSSchemeParams)
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
@@ -67,7 +68,7 @@ instance
 -- | committee hash policy.
 newtype UpdateCommitteeHash = UpdateCommitteeHash
   { sidechainParams ∷ SidechainParams
-  , uchAssetClass ∷ AssetClass
+  , committeeOracleCurrencySymbol ∷ CurrencySymbol
   , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
   }
 
@@ -78,25 +79,15 @@ derive instance Newtype UpdateCommitteeHash _
 instance ToData UpdateCommitteeHash where
   toData
     ( UpdateCommitteeHash
-        { sidechainParams, uchAssetClass, merkleRootTokenCurrencySymbol }
+        { sidechainParams
+        , committeeOracleCurrencySymbol
+        , merkleRootTokenCurrencySymbol
+        }
     ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
-    , toData uchAssetClass
+    , toData committeeOracleCurrencySymbol
     , toData merkleRootTokenCurrencySymbol
     ]
-
--- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
--- | the utxo with the update committee hash validator script.
-newtype InitCommitteeHashMint = InitCommitteeHashMint
-  { icTxOutRef ∷ TransactionInput }
-
-derive instance Generic InitCommitteeHashMint _
-
-derive instance Newtype InitCommitteeHashMint _
-
-instance ToData InitCommitteeHashMint where
-  toData (InitCommitteeHashMint { icTxOutRef }) =
-    toData icTxOutRef
 
 -- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee
 -- | hash validator.

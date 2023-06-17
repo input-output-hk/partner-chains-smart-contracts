@@ -103,15 +103,12 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← merkleRootTokenValidator scParams
     getAddr validator
 
-  let
-    updateCommittHashParams = assetClass committeeHashCurrencySymbol
-      committeeHashTokenName
   committeeHashValidatorAddr ←
     do
       let
         uch = UpdateCommitteeHash
           { sidechainParams: scParams
-          , uchAssetClass: updateCommittHashParams
+          , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
           , merkleRootTokenCurrencySymbol
           }
       validator ← updateCommitteeHashValidator uch

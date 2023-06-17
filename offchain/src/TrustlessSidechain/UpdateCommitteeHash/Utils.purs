@@ -11,10 +11,7 @@
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( committeeHashPolicy
-  , updateCommitteeHashValidator
-  , initCommitteeHashMintTn
-  , committeeHashAssetClass
+  ( updateCommitteeHashValidator
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
   ) where
@@ -47,28 +44,17 @@ import Contract.Transaction
 import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
+import TrustlessSidechain.CommitteeOraclePolicy (initCommitteeHashMintTn)
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( InitCommitteeHashMint
-  , UpdateCommitteeHash
+  ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
-
-committeeHashPolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
-committeeHashPolicy sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ PlutusMintingPolicy applied
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
 updateCommitteeHashValidator sp = do
@@ -80,25 +66,6 @@ updateCommitteeHashValidator sp = do
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
     [ PlutusData.toData sp ]
   pure $ Validator applied
-
--- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
--- | the utxo which contains the committee hash. We use an empty bytestring for
--- | this because the name really doesn't matter, so we mighaswell save a few
--- | bytes by giving it the empty name.
-initCommitteeHashMintTn ∷ Value.TokenName
-initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
-  ByteArray.hexToByteArrayUnsafe ""
-
--- | `committeeHashCurSymbol` is the asset class. See `initCommitteeHashMintTn`
--- | for details on the token name
-{-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
-committeeHashAssetClass ichm = do
-  cp ← committeeHashPolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get committeeHash currency symbol"
-    (Value.scriptCurrencySymbol cp)
-
-  pure $ assetClass curSym initCommitteeHashMintTn
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```
@@ -135,5 +102,6 @@ findUpdateCommitteeHashUtxo uch = do
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
-    Value.valueOf value (fst (unwrap uch).uchAssetClass) initCommitteeHashMintTn
+    Value.valueOf value ((unwrap uch).committeeOracleCurrencySymbol)
+      initCommitteeHashMintTn
       /= zero
