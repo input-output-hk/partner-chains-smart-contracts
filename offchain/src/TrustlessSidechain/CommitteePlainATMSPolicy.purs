@@ -5,12 +5,13 @@
 -- | build / submit the transaction.
 module TrustlessSidechain.CommitteePlainATMSPolicy
   ( CommitteePlainATMSParams(CommitteePlainATMSParams)
-  , CommitteeCertificateMint(CommitteeCertificateMint)
   , ATMSPlainMultisignature(ATMSPlainMultisignature)
   , committeePlainATMSMintFromSidechainParams
 
   , committeePlainATMS
   , getCommitteePlainATMSPolicy
+
+  , findUpdateCommitteeHashUtxoFromSidechainParams
 
   , mustMintCommitteePlainATMSPolicy
   , runCommitteePlainATMSPolicy
@@ -57,12 +58,22 @@ import Contract.Value as Value
 import Data.Bifunctor as Bifunctor
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( CommitteeATMSParams(CommitteeATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
+  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
+import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
@@ -70,51 +81,11 @@ import TrustlessSidechain.Utils.Logging as Logging
 -- | `CommitteePlainATMSParams` is a type to bundle up all the required data
 -- | when building the transaction (this is used only as a offchain parameter)
 newtype CommitteePlainATMSParams = CommitteePlainATMSParams
-  {
-    -- UTxO for the current committee as stored onchain (which should be
-    -- uniquely identified by the token
-    -- `CommitteeCertificateMint.committeeOraclePolicy`).
-    currentCommitteeUtxo ∷
-      { index ∷ TransactionInput
-      , value ∷ TransactionOutputWithRefScript
-      }
-  , -- parameter for the onchain code
-    committeeCertificateMint ∷ CommitteeCertificateMint
-  , -- signatures for the below message
-    signatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
-  ,
-    -- the message that should be signed (note: this *must* be a token name
-    -- so we have the usual size restrictions of a token name i.e., you
-    -- probably want this to be the hash of the message you wish to sign)
-    message ∷ TokenName
-  }
+  (CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)))
 
 derive instance Generic CommitteePlainATMSParams _
 
 derive instance Newtype CommitteePlainATMSParams _
-
--- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
--- | parameterize a committee certificate verification minting policy.
-newtype CommitteeCertificateMint = CommitteeCertificateMint
-  { committeeOraclePolicy ∷ CurrencySymbol
-  , thresholdNumerator ∷ BigInt
-  , thresholdDenominator ∷ BigInt
-  }
-
-instance ToData CommitteeCertificateMint where
-  toData
-    ( CommitteeCertificateMint
-        { committeeOraclePolicy, thresholdNumerator, thresholdDenominator }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData committeeOraclePolicy
-      , toData thresholdNumerator
-      , toData thresholdDenominator
-      ]
-
-derive instance Generic CommitteeCertificateMint _
-
-derive instance Newtype CommitteeCertificateMint _
 
 -- | `ATMSPlainMultisignature` corresponds to the onchain type
 newtype ATMSPlainMultisignature = ATMSPlainMultisignature
@@ -189,11 +160,13 @@ mustMintCommitteePlainATMSPolicy ∷
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteePlainATMSPolicy
   ( CommitteePlainATMSParams
-      { currentCommitteeUtxo
-      , committeeCertificateMint
-      , signatures
-      , message
-      }
+      ( CommitteeATMSParams
+          { currentCommitteeUtxo
+          , committeeCertificateMint
+          , aggregateSignature: signatures
+          , message
+          }
+      )
   ) = do
   let
     msg = report "mustMintCommitteePlainATMSPolicy"
@@ -310,7 +283,7 @@ runCommitteePlainATMSPolicy params = do
       { lookups: mempty
       , constraints:
           TxConstraints.mustReferenceOutput
-            (unwrap params).currentCommitteeUtxo.index
+            (unwrap (unwrap params)).currentCommitteeUtxo.index
       }
 
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
@@ -330,6 +303,74 @@ runCommitteePlainATMSPolicy params = do
   Log.logInfo' (msg "Committee signed token transaction submitted successfully")
 
   pure txId
+
+-- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
+-- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but
+-- | does the tricky work of grabbing the required currency symbols for you.
+findUpdateCommitteeHashUtxoFromSidechainParams ∷
+  SidechainParams →
+  Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
+findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
+  let -- `mkErr` is used to help generate log messages
+    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
+
+  -- Set up for the committee ATMS schemes
+  ------------------------------------
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy
+      sidechainParams
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+
+  { committeePlainATMSCurrencySymbol } ← getCommitteePlainATMSPolicy
+    committeeCertificateMint
+
+  -- Getting the minting policy / currency symbol / token name for update
+  -- committee hash
+  -------------------------------------------------------------
+  { committeeOracleCurrencySymbol
+  , committeeOracleTokenName
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+  -- Getting the validator / minting policy for the merkle root token
+  -------------------------------------------------------------
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    Monad.liftContractM
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+
+  -- Build the UpdateCommitteeHash parameter
+  -------------------------------------------------------------
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , merkleRootTokenCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol:
+          committeePlainATMSCurrencySymbol
+      }
+
+  -- Finding the current committee
+  -------------------------------------------------------------
+  lkup ← Monad.liftedM (mkErr "current committee not found") $
+    UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch
+  pure lkup
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → String → String

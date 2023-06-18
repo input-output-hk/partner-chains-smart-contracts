@@ -20,6 +20,11 @@ import Contract.Value as Value
 import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
@@ -106,11 +111,24 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
 
   committeeOracleValidatorAddr ←
     do
+      -- TODO: this is going to get all replaced soon?
+      let
+        committeeCertificateMint =
+          CommitteeCertificateMint
+            { thresholdNumerator: (unwrap scParams).thresholdNumerator
+            , thresholdDenominator: (unwrap scParams).thresholdDenominator
+            , committeeOraclePolicy: committeeOracleCurrencySymbol
+            }
+      { committeeCertificateVerificationCurrencySymbol } ←
+        CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+          committeeCertificateMint
+          (Plain mempty)
       let
         uch = UpdateCommitteeHash
           { sidechainParams: scParams
           , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
           , merkleRootTokenCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
           }
       validator ← updateCommitteeHashValidator uch
       getAddr validator

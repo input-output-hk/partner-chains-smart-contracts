@@ -18,6 +18,9 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(Plain)
+  )
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.UpdateCommitteeHash
@@ -258,7 +261,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage
               { sidechainParams: sidechainParams
-              , newCommitteePubKeys: committee3PubKeys
+              , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
               ,
                 -- Note: since we can trust the committee will sign the "correct" root,
                 -- we necessarily know that the message that they sign should be
@@ -273,12 +276,14 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         $
           UpdateCommitteeHashParams
             { sidechainParams
-            , newCommitteePubKeys: committee3PubKeys
-            , committeeSignatures: Array.zip
-                committee1PubKeys
-                ( Just <$> Utils.Crypto.multiSign committee1PrvKeys
-                    committee1Message
-                )
+            , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
+            , aggregateSignature:
+                Plain $
+                  Array.zip
+                    committee1PubKeys
+                    ( Just <$> Utils.Crypto.multiSign committee1PrvKeys
+                        committee1Message
+                    )
             ,
               -- Note: this is the EVIL thing -- we try to update the
               -- committee hash without really putting in the previous merkle

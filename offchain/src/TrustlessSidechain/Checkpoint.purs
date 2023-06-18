@@ -62,6 +62,11 @@ import TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
+import TrustlessSidechain.CommitteeATMSSchemes (ATMSAggregateSignatures(Plain))
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -174,11 +179,26 @@ runSaveCheckpoint
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
+
+  -- TODO: this is going to get all replaced soon
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+
+  let
     uch = UpdateCommitteeHash
       { sidechainParams
       , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
 
   -- Grabbing the current committee

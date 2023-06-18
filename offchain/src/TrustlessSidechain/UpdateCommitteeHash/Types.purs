@@ -6,7 +6,6 @@
 module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   ) where
 
@@ -66,6 +65,7 @@ instance
 newtype UpdateCommitteeHash = UpdateCommitteeHash
   { sidechainParams ∷ SidechainParams
   , committeeOracleCurrencySymbol ∷ CurrencySymbol
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
   }
 
@@ -78,38 +78,14 @@ instance ToData UpdateCommitteeHash where
     ( UpdateCommitteeHash
         { sidechainParams
         , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
         , merkleRootTokenCurrencySymbol
         }
     ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData committeeOracleCurrencySymbol
+    , toData committeeCertificateVerificationCurrencySymbol
     , toData merkleRootTokenCurrencySymbol
-    ]
-
--- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee
--- | hash validator.
-data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array SidechainSignature
-  , committeePubKeys ∷ Array SidechainPublicKey
-  , newCommitteePubKeys ∷ Array SidechainPublicKey
-  , previousMerkleRoot ∷ Maybe RootHash
-  }
-
-derive instance Generic UpdateCommitteeHashRedeemer _
-
-instance ToData UpdateCommitteeHashRedeemer where
-  toData
-    ( UpdateCommitteeHashRedeemer
-        { committeeSignatures
-        , committeePubKeys
-        , newCommitteePubKeys
-        , previousMerkleRoot
-        }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteePubKeys
-    , toData previousMerkleRoot
     ]
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
@@ -118,12 +94,12 @@ instance ToData UpdateCommitteeHashRedeemer where
 -- | `blake2b256Hash(serialiseToData (toBuiltinData uchm))`)
 newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { sidechainParams ∷ SidechainParams
-  , -- `newCommitteePubKeys` is the new committee public keys and _should_
+  , -- `newAggregatePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    -- newCommitteePubKeys ∷ Array SidechainPublicKey
+    -- newAggregatePubKeys ∷ Array SidechainPublicKey
     -- TODO: fix the documentation here
-    newCommitteePubKeys ∷ aggregatePubKeys
+    newAggregatePubKeys ∷ aggregatePubKeys
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   }
@@ -134,13 +110,13 @@ instance
   toData
     ( UpdateCommitteeHashMessage
         { sidechainParams
-        , newCommitteePubKeys
+        , newAggregatePubKeys
         , previousMerkleRoot
         , sidechainEpoch
         }
     ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
-    , toData newCommitteePubKeys
+    , toData newAggregatePubKeys
     , toData previousMerkleRoot
     , toData sidechainEpoch
     ]

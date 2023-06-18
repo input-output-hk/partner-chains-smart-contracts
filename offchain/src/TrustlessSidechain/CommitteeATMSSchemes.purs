@@ -6,15 +6,11 @@
 -- |
 -- |    - (and more to come!)
 module TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSSchemeParams
-      ( Plain
-      , Multisignature
-      , Dummy
-      , PoK
-      )
-  , atmsSchemeLookupsAndConstraints
+  ( atmsSchemeLookupsAndConstraints
+  , atmsCommitteeCertificateVerificationMintingPolicy
 
   , module ExportCommitteePlainATMSPolicy
+  , module ExportCommitteeATMSSchemesTypes
   ) where
 
 import Contract.Prelude
@@ -22,36 +18,71 @@ import Contract.Prelude
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.ScriptLookups (ScriptLookups)
+import Contract.Scripts (MintingPolicy)
 import Contract.TxConstraints (TxConstraints)
-import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteeCertificateMint(CommitteeCertificateMint)
-  , CommitteePlainATMSParams(CommitteePlainATMSParams)
-  ) as ExportCommitteePlainATMSPolicy
+import Contract.Value
+  ( CurrencySymbol
+  )
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  , CommitteeATMSParams(CommitteeATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  , CommitteeATMSParams(CommitteeATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainATMSPolicy (CommitteePlainATMSParams)
+import TrustlessSidechain.CommitteePlainATMSPolicy
+  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
+  )
+import TrustlessSidechain.CommitteePlainATMSPolicy
+  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
+  ) as ExportCommitteePlainATMSPolicy
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
--- | `ATMSSchemeParams` is an offchain type which contains all the information
--- | to build transactions for an ATMS scheme.
-data ATMSSchemeParams
-  = Plain CommitteePlainATMSParams
-  | Multisignature -- TODO not implemented yet.
-  | Dummy -- TODO not implemented yet
-  | PoK -- TODO not implemented yet
-
---  | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
+-- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
 atmsSchemeLookupsAndConstraints ∷
-  ATMSSchemeParams →
+  CommitteeATMSParams ATMSAggregateSignatures →
   Contract
     { constraints ∷ TxConstraints Void Void
     , lookups ∷ ScriptLookups Void
     }
-atmsSchemeLookupsAndConstraints atmsScheme = case atmsScheme of
-  Plain param → do
-    CommitteePlainATMSPolicy.mustMintCommitteePlainATMSPolicy param
+atmsSchemeLookupsAndConstraints atmsParams =
+  case (unwrap atmsParams).aggregateSignature of
+    Plain param → do
+      CommitteePlainATMSPolicy.mustMintCommitteePlainATMSPolicy
+        $ CommitteePlainATMSParams
+        $ CommitteeATMSParams
+            ((unwrap atmsParams) { aggregateSignature = param })
+    -- TODO: fill these in later :^)
+    Dummy → Monad.throwContractError "ATMS dummy not implemented yet"
+    PoK → Monad.throwContractError "ATMS PoK not implemented yet"
+    Multisignature → Monad.throwContractError
+      "ATMS multisignature not implemented yet"
 
-  -- TODO: fill these in later :^)
+-- | `atmsCommitteeCertificateVerificationMintingPolicyCurrencySymbol` grabs
+-- | the currency symbol / minting policy associated with the aggregate signature.
+atmsCommitteeCertificateVerificationMintingPolicy ∷
+  CommitteeCertificateMint →
+  ATMSAggregateSignatures →
+  Contract
+    { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
+    , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+    }
+atmsCommitteeCertificateVerificationMintingPolicy ccm = case _ of
+  Plain _ → do
+    { committeePlainATMSPolicy
+    , committeePlainATMSCurrencySymbol
+    } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy ccm
+    pure
+      { committeeCertificateVerificationMintingPolicy: committeePlainATMSPolicy
+      , committeeCertificateVerificationCurrencySymbol:
+          committeePlainATMSCurrencySymbol
+      }
   Dummy → Monad.throwContractError "ATMS dummy not implemented yet"
   PoK → Monad.throwContractError "ATMS PoK not implemented yet"
   Multisignature → Monad.throwContractError

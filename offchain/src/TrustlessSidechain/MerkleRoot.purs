@@ -36,6 +36,11 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   )
@@ -158,10 +163,23 @@ runSaveRoot
   -- verifying that this really is the old committee
   ---------------------------------------------------------
   let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: updateCommitteeHashCurrencySymbol
+        }
+  -- TODO: this is going to get all replaced soon
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+  let
     uch = UpdateCommitteeHash
       { sidechainParams
       , committeeOracleCurrencySymbol: updateCommitteeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol: rootTokenCS
+      , committeeCertificateVerificationCurrencySymbol
       }
   { index: committeeOracleTxIn
   , value: committeeOracleTxOut

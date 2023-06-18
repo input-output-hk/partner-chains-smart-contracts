@@ -13,6 +13,7 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -24,6 +25,9 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(Plain)
+  )
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -36,6 +40,7 @@ import TrustlessSidechain.Utils.Crypto
   ( SidechainPrivateKey
   , SidechainPublicKey
   , SidechainSignature
+  , aggregateKeys
   , byteArrayToSidechainPrivateKeyUnsafe
   , byteArrayToSidechainPublicKeyUnsafe
   , generatePrivKey
@@ -75,13 +80,14 @@ generateUchmSignatures
         $ Array.sortWith fst
         $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
 
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
+    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe
+      newCommitteePrvKeys
 
   committeeMessage ←
     UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
           { sidechainParams: sidechainParams
-          , newCommitteePubKeys
+          , newAggregatePubKeys
           , previousMerkleRoot
           , sidechainEpoch
           }
@@ -128,8 +134,8 @@ updateCommitteeHashWith ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
-  ( UpdateCommitteeHashParams (Array SidechainPublicKey) →
-    Contract (UpdateCommitteeHashParams (Array SidechainPublicKey))
+  ( UpdateCommitteeHashParams PlutusData →
+    Contract (UpdateCommitteeHashParams PlutusData)
   ) →
   Contract Unit
 updateCommitteeHashWith params f = void do
@@ -139,14 +145,14 @@ updateCommitteeHashWith params f = void do
       $ generateUchmSignatures params
 
   let
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe $
+    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe $
       params.newCommitteePrvKeys
     uchp =
       UpdateCommitteeHashParams
         { sidechainParams: params.sidechainParams
-        , newCommitteePubKeys
-        , committeeSignatures:
-            map (Just <$> _) committeeSignatures
+        , newAggregatePubKeys: toData newAggregatePubKeys
+        , aggregateSignature:
+            Plain (map (Just <$> _) committeeSignatures)
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
@@ -245,16 +251,15 @@ testScenario2 =
               pure
                 $ UpdateCommitteeHashParams
                 $ params
-                    { committeeSignatures =
-                        Unsafe.unsafePartial
-                          ( case params.committeeSignatures of
-                              [ c1 /\ _s1
-                              , c2 /\ s2
-                              ] →
-                                [ c1 /\ Nothing
-                                , c2 /\ s2
-                                ]
-                          )
+                    { aggregateSignature =
+                        ( Unsafe.unsafePartial $
+                            case params.aggregateSignature of
+                              Plain [ c1 /\ _s1, c2 /\ s2 ] →
+                                Plain
+                                  [ c1 /\ Nothing
+                                  , c2 /\ s2
+                                  ]
+                        )
                     }
 
 -- | `testScenario3` initialises the committee with an out of order committee
@@ -298,15 +303,15 @@ testScenario3 =
 
         let
           reverseSignaturesAndNewCommittee ∷
-            UpdateCommitteeHashParams (Array SidechainPublicKey) →
-            UpdateCommitteeHashParams (Array SidechainPublicKey)
+            UpdateCommitteeHashParams PlutusData →
+            UpdateCommitteeHashParams PlutusData
           reverseSignaturesAndNewCommittee uchp =
             wrap
               ( (unwrap uchp)
-                  { committeeSignatures = Array.reverse
-                      ((unwrap uchp).committeeSignatures)
-                  , newCommitteePubKeys = Array.reverse
-                      ((unwrap uchp).newCommitteePubKeys)
+                  { aggregateSignature =
+                      Unsafe.unsafePartial $
+                        case (unwrap uchp).aggregateSignature of
+                          Plain sigs → Plain $ Array.reverse sigs
                   }
               )
 
@@ -389,7 +394,7 @@ testScenario4 =
           }
           \uchp →
             pure $ wrap $ (unwrap uchp)
-              { newCommitteePubKeys =
+              { newAggregatePubKeys = toData $ aggregateKeys
                   [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                       "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
                   , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
@@ -397,7 +402,7 @@ testScenario4 =
                   , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                       "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
                   ]
-              -- the signatures from the issue arne't quite right (since it
+              -- the signatures from the issue aren't quite right (since it
               -- didn't order the committee), so we won't include those
               -- signatures
               }
@@ -444,14 +449,15 @@ testScenario5 =
               pure
                 $ UpdateCommitteeHashParams
                 $ params
-                    { committeeSignatures =
+                    { aggregateSignature =
                         Unsafe.unsafePartial
-                          ( case params.committeeSignatures of
-                              [ c1 /\ _s1
-                              , c2 /\ s2
-                              , c3 /\ s3
-                              , c4 /\ s4
-                              ] →
+                          ( case params.aggregateSignature of
+                              Plain
+                                [ c1 /\ _s1
+                                , c2 /\ s2
+                                , c3 /\ s3
+                                , c4 /\ s4
+                                ] → Plain
                                 [ c1 /\ Nothing
                                 , c2 /\ s2
                                 , c3 /\ s3

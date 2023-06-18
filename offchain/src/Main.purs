@@ -15,6 +15,9 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(Plain)
+  )
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp
@@ -65,6 +68,8 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -203,8 +208,9 @@ runEndpoint scParams =
       let
         params = UpdateCommitteeHashParams
           { sidechainParams: scParams
-          , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
-          , committeeSignatures: List.toUnfoldable committeeSignatures
+          , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
+              newCommitteePubKeys
+          , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
           , previousMerkleRoot
           , sidechainEpoch
           }
@@ -333,8 +339,9 @@ runEndpoint scParams =
           }
         uchParams = UpdateCommitteeHashParams
           { sidechainParams: scParams
-          , newCommitteePubKeys: List.toUnfoldable newCommitteePubKeys
-          , committeeSignatures: List.toUnfoldable newCommitteeSignatures
+          , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
+              newCommitteePubKeys
+          , aggregateSignature: Plain $ List.toUnfoldable newCommitteeSignatures
           , -- the previous merkle root is the merkle root we just saved..
             previousMerkleRoot: Just merkleRoot
           , sidechainEpoch

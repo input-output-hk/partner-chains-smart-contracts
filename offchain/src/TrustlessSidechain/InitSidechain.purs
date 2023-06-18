@@ -72,6 +72,11 @@ import TrustlessSidechain.Checkpoint
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   )
@@ -352,6 +357,22 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Setting up the update committee hash validator
   -----------------------------------
+
+  -- TODO: this is going to get all replaced soon
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: isp.initThresholdNumerator
+        , thresholdDenominator: isp.initThresholdDenominator
+        , committeeOraclePolicy: committeeHashCurrencySymbol
+        }
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+  -- END OF TODO
+
   let
     aggregatedKeys = Utils.Crypto.aggregateKeys $ Array.sort
       isp.initCommittee
@@ -359,6 +380,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       { sidechainParams: sc
       , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
       , merkleRootTokenCurrencySymbol: merkleRootTokenMintingPolicyCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
     committeeHashDatum = Datum
       $ PlutusData.toData

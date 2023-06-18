@@ -3,7 +3,6 @@ module TrustlessSidechain.UpdateCommitteeHash
   , module ExportUtils
   , updateCommitteeHash
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
-  , findUpdateCommitteeHashUtxoFromSidechainParams
   ) where
 
 import Contract.Prelude
@@ -46,7 +45,12 @@ import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSSchemeParams)
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures
+  , CommitteeATMSParams(CommitteeATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
 import TrustlessSidechain.CommitteeOraclePolicy
   ( InitCommitteeHashMint(InitCommitteeHashMint)
   )
@@ -66,13 +70,12 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
-  ) as ExportTypes
+  )
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
-  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
-  )
+  ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
   , serialiseUchmHash
@@ -92,35 +95,75 @@ import TrustlessSidechain.Utils.Logging as Logging
 newtype UpdateCommitteeHashParams newAggregatePubKeys =
   UpdateCommitteeHashParams
     { sidechainParams ∷ SidechainParams
-    , newCommitteePubKeys ∷ newAggregatePubKeys
-    , committeeSignatures ∷
-        Array (SidechainPublicKey /\ Maybe SidechainSignature)
+    , newAggregatePubKeys ∷ newAggregatePubKeys
+    , aggregateSignature ∷ ATMSAggregateSignatures
     , previousMerkleRoot ∷ Maybe RootHash
     , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
     }
-
-derive newtype instance
-  Show newAggregatePubKeys ⇒
-  Show (UpdateCommitteeHashParams newAggregatePubKeys)
 
 derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
 updateCommitteeHash ∷
-  UpdateCommitteeHashParams (Array SidechainPublicKey) → Contract TransactionHash
+  ∀ newAggregatePubKeys.
+  ToData newAggregatePubKeys ⇒
+  UpdateCommitteeHashParams newAggregatePubKeys →
+  Contract TransactionHash
 updateCommitteeHash params = do
   let -- `mkErr` is used to help generate log messages
-    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
-  -- runUpdateCommitteeHash params
+    mkErr = report "updateCommitteeHash"
 
+  -- Set up for the committee ATMS schemes
+  ------------------------------------
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy
+      (unwrap params).sidechainParams
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator:
+            (unwrap ((unwrap params).sidechainParams)).thresholdNumerator
+        , thresholdDenominator:
+            (unwrap (unwrap params).sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (unwrap params).aggregateSignature
+
+  -- Update comittee lookups and constraints
+  ------------------------------------
   { lookupsAndConstraints: updateCommitteeHashLookupsAndConstraints
   , currentCommitteeUtxo
-  } ← updateCommitteeHashLookupsAndConstraints params
-  -- TODO pick up from here
+  , updateCommitteeHashMessage
+  } ← updateCommitteeHashLookupsAndConstraints
+    { sidechainParams: (unwrap params).sidechainParams
+    , previousMerkleRoot: (unwrap params).previousMerkleRoot
+    , sidechainEpoch: (unwrap params).sidechainEpoch
+    , newAggregatePubKeys: (unwrap params).newAggregatePubKeys
+    , committeeCertificateVerificationCurrencySymbol
+    }
 
-  let { lookups, constraints } = updateCommitteeHashLookupsAndConstraints
+  -- Committee ATMS scheme lookups and constraints
+  ------------------------------------
 
+  scMsg ← liftContractM (mkErr "bad UpdateCommitteeHashMessage serialization")
+    $ serialiseUchmHash
+    $
+      updateCommitteeHashMessage
+  committeeATMSLookupsAndConstraints ←
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints $ CommitteeATMSParams
+      { currentCommitteeUtxo
+      , committeeCertificateMint
+      , aggregateSignature: (unwrap params).aggregateSignature
+      , message: Utils.Crypto.sidechainMessageToTokenName scMsg
+      }
+
+  let
+    { lookups, constraints } = updateCommitteeHashLookupsAndConstraints
+      <> committeeATMSLookupsAndConstraints
   ubTx ← liftedE
     (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
@@ -147,7 +190,12 @@ updateCommitteeHash params = do
 updateCommitteeHashLookupsAndConstraints ∷
   ∀ newAggregatePubKeys.
   ToData newAggregatePubKeys ⇒
-  UpdateCommitteeHashParams newAggregatePubKeys →
+  { sidechainParams ∷ SidechainParams
+  , previousMerkleRoot ∷ Maybe RootHash
+  , sidechainEpoch ∷ BigInt
+  , newAggregatePubKeys ∷ newAggregatePubKeys
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  } →
   Contract
     { lookupsAndConstraints ∷
         { constraints ∷ TxConstraints Void Void
@@ -157,18 +205,17 @@ updateCommitteeHashLookupsAndConstraints ∷
         { index ∷ TransactionInput
         , value ∷ TransactionOutputWithRefScript
         }
+    , updateCommitteeHashMessage ∷ UpdateCommitteeHashMessage PlutusData
     }
 updateCommitteeHashLookupsAndConstraints
-  ( UpdateCommitteeHashParams
-      { sidechainParams
-      , newCommitteePubKeys
-      , committeeSignatures
-      , previousMerkleRoot
-      , sidechainEpoch
-      }
-  ) = do
+  { sidechainParams
+  , newAggregatePubKeys
+  , previousMerkleRoot
+  , sidechainEpoch
+  , committeeCertificateVerificationCurrencySymbol
+  } = do
   let -- `mkErr` is used to help generate log messages
-    mkErr = report "runUpdateCommitteeHash"
+    mkErr = report "updateCommitteeHashLookupsAndConstraints"
 
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
@@ -201,6 +248,7 @@ updateCommitteeHashLookupsAndConstraints
     uch = UpdateCommitteeHash
       { sidechainParams
       , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
   updateValidator ← updateCommitteeHashValidator uch
@@ -228,21 +276,20 @@ updateCommitteeHashLookupsAndConstraints
   let
     newDatum = Datum $ toData
       ( UpdateCommitteeDatum
-          { aggregatePubKeys: toData newCommitteePubKeys, sidechainEpoch }
+          { aggregatePubKeys: toData newAggregatePubKeys, sidechainEpoch }
       )
     value =
       Value.singleton
         (unwrap uch).committeeOracleCurrencySymbol
         committeeOracleTn
         one
-    redeemer = Redeemer $ toData
-      ( UpdateCommitteeHashMessage
-          { sidechainParams
-          , newCommitteePubKeys: toData newCommitteePubKeys
-          , previousMerkleRoot
-          , sidechainEpoch
-          }
-      )
+    uchm = UpdateCommitteeHashMessage
+      { sidechainParams
+      , newAggregatePubKeys: toData newAggregatePubKeys
+      , previousMerkleRoot
+      , sidechainEpoch
+      }
+    redeemer = Redeemer $ toData uchm
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
@@ -262,221 +309,8 @@ updateCommitteeHashLookupsAndConstraints
   pure
     { lookupsAndConstraints: { lookups, constraints }
     , currentCommitteeUtxo
+    , updateCommitteeHashMessage: uchm
     }
-
--- | `runUpdateCommitteeHash` is the main worker function of the
--- | `updateCommitteeHash` endpoint.
--- | Preconditions:
--- |    - `UpdateCommitteeHashParams` has been normalized via
--- |    `UpdateCommitteeHash.Utils.normalizeCommitteeHashParams`
-runUpdateCommitteeHash ∷
-  UpdateCommitteeHashParams (Array SidechainPublicKey) → Contract TransactionHash
-runUpdateCommitteeHash
-  ( UpdateCommitteeHashParams
-      { sidechainParams
-      , newCommitteePubKeys
-      , committeeSignatures
-      , previousMerkleRoot
-      , sidechainEpoch
-      }
-  ) = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "runUpdateCommitteeHash"
-
-  -- Getting the minting policy / currency symbol / token name for update
-  -- committee hash
-  -------------------------------------------------------------
-  { committeeOracleCurrencySymbol
-  , committeeOracleTokenName
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
-
-  -- Getting the validator / minting policy for the merkle root token
-  -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  -- Building the new committee hash / verifying that the new committee was
-  -- signed (doing this offchain makes error messages better)...
-  -------------------------------------------------------------
-  when (null committeeSignatures)
-    (throwContractError $ mkErr "Empty Committee")
-
-  let
-    newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
-
-    curCommitteePubKeys /\ allCurCommitteeSignatures =
-      Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
-    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
-      (unwrap sidechainParams).thresholdNumerator
-      (unwrap sidechainParams).thresholdDenominator
-      (curCommitteePubKeys /\ allCurCommitteeSignatures)
-    curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
-
-  uchmsg ← liftContractM (mkErr "Failed to get update committee hash message")
-    $ serialiseUchmHash
-    $ UpdateCommitteeHashMessage
-        { sidechainParams: sidechainParams
-        , newCommitteePubKeys: newCommitteePubKeys
-        , previousMerkleRoot: previousMerkleRoot
-        , sidechainEpoch: sidechainEpoch
-        }
-
-  unless
-    ( Utils.Crypto.verifyMultiSignature
-        ((unwrap sidechainParams).thresholdNumerator)
-        ((unwrap sidechainParams).thresholdDenominator)
-        curCommitteePubKeys
-        uchmsg
-        curCommitteeSignatures
-    )
-    ( throwContractError $ mkErr
-        "Invalid committee signatures for UpdateCommitteeHashMessage"
-    )
-
-  -- Getting the validator / building the validator hash
-  -------------------------------------------------------------
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      }
-  updateValidator ← updateCommitteeHashValidator uch
-  let valHash = Scripts.validatorHash updateValidator
-
-  -- Grabbing the old committee / verifying that it really is the old committee
-  -------------------------------------------------------------
-  lkup ← findUpdateCommitteeHashUtxo uch
-  { index: oref
-  , value:
-      committeeOracleTxOut@
-        (TransactionOutputWithRefScript { output: TransactionOutput tOut })
-  } ←
-    liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
-
-  rawDatum ←
-    liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
-      $ outputDatumDatum tOut.datum
-  UpdateCommitteeDatum datum ← liftContractM
-    (mkErr "Datum at update committee hash UTxO fromData failed")
-    (fromData $ unwrap rawDatum)
-  when (datum.aggregatePubKeys /= curCommitteeHash)
-    (throwContractError "Incorrect committee provided")
-
-  -- Grabbing the last merkle root reference
-  -------------------------------------------------------------
-  maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
-    previousMerkleRoot
-    smrm
-
-  -- Building / submitting the transaction.
-  -------------------------------------------------------------
-  let
-    newDatum = Datum $ toData
-      ( UpdateCommitteeDatum
-          { aggregatePubKeys: newCommitteeHash, sidechainEpoch }
-      )
-    value = Value.singleton (unwrap uch).committeeOracleCurrencySymbol
-      committeeOracleTn
-      one
-    redeemer = Redeemer $ toData
-      ( UpdateCommitteeHashRedeemer
-          { committeeSignatures: curCommitteeSignatures
-          , committeePubKeys: curCommitteePubKeys
-          , newCommitteePubKeys
-          , previousMerkleRoot
-          }
-      )
-
-    lookups ∷ Lookups.ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        (Map.singleton oref committeeOracleTxOut)
-        <> Lookups.validator updateValidator
-        <> case maybePreviousMerkleRoot of
-          Nothing → mempty
-          Just { index: txORef, value: txOut } → Lookups.unspentOutputs
-            (Map.singleton txORef txOut)
-    constraints = TxConstraints.mustSpendScriptOutput oref redeemer
-      <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
-      <> case maybePreviousMerkleRoot of
-        Nothing → mempty
-        Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
-          previousMerkleRootORef
-
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' (mkErr "Submitted update committee hash transaction: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' (mkErr "Update committee hash transaction submitted successfully")
-
-  pure txId
-
--- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
--- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but
--- | does the tricky work of grabbing the required currency symbols for you.
-findUpdateCommitteeHashUtxoFromSidechainParams ∷
-  SidechainParams →
-  Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
-findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
-
-  -- Getting the minting policy / currency symbol / token name for update
-  -- committee hash
-  -------------------------------------------------------------
-  { committeeOracleCurrencySymbol
-  , committeeOracleTokenName
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
-
-  -- Getting the validator / minting policy for the merkle root token
-  -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  -- Build the UpdateCommitteeHash parameter
-  -------------------------------------------------------------
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      }
-
-  -- Finding the current committee
-  -------------------------------------------------------------
-  lkup ← liftedM (mkErr "current committee not found") $
-    findUpdateCommitteeHashUtxo uch
-  pure lkup
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → String → String
