@@ -218,31 +218,6 @@ executable trustless-sidechain-merkle-tree
 
 -- Tests
 
-test-suite script-size
-  import:
-    common-lang , common-optimized-parallel , common-script-lang
-
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
-  other-modules:
-    Compiled
-    Legacy
-    Sizer
-
-  build-depends:
-    , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-shim-prelude
-    , plutus-tx
-    , plutus-tx-plugin
-    , tagged
-    , tasty
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: test/script-size
-
 test-suite trustless-sidechain-test
   import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
@@ -270,6 +245,31 @@ test-suite trustless-sidechain-test
     , trustless-sidechain-prelude
 
   hs-source-dirs: test
+
+test-suite script-size
+  import:
+    common-lang , common-optimized-parallel , common-script-lang
+
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    Compiled
+    Legacy
+    Sizer
+
+  build-depends:
+    , plutus-core
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , plutus-tx
+    , plutus-tx-plugin
+    , tagged
+    , tasty
+    , trustless-sidechain
+    , trustless-sidechain-prelude
+
+  hs-source-dirs: test/script-size
 
 test-suite quickcheck-extra-test
   import:         common-lang, common-optimized-parallel

@@ -3,6 +3,15 @@ cradle:
     - path: "./src"
       component: "lib:trustless-sidechain"
 
+    - path: "./prelude"
+      component: "lib:trustless-sidechain-prelude"
+
+    - path: "./prelude"
+      component: "lib:plutus-shim-prelude"
+
+    - path: "./src"
+      component: "lib:quickcheck-extra"
+
     - path: "./app/gen-signatures"
       component: "exe:trustless-sidechain-gen-signatures"
 
@@ -14,3 +23,15 @@ cradle:
 
     - path: "./test"
       component: "test:trustless-sidechain-test"
+
+    - path: "./test/script-size"
+      component: "test:script-size"
+
+    - path: "./test/quickcheck-extra-test"
+      component: "test:quickcheck-extra-test"
+
+    - path: "./bench"
+      component: "bench:bench-ctl"
+
+    - path: "./bench/quickcheck-extra-bench"
+      component: "bench:quickcheck-extra-bench"
