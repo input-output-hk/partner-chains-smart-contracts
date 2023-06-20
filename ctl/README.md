@@ -2,20 +2,20 @@
 
 ## 1. Development
 
-If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.  
+If you want to develop for this submodule, please consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) before setting up an environment.  
 
 The term 'FUEL' is used widely in this repository. It refers to a test token used as an example of a sidechain token. It has no real-world value.  
 
 ## 2. Environment setup
 
-In order to run CTL you need to setup the runtime dependencies:
+To run CTL you need to set up the runtime dependencies:
 
 - cardano-node
 - ogmios
 - ogmios-datum-cache
 - ctl-server
 
-Luckily, we have a dockerised setup, that spins up all these easily with a preset test network. Just run:
+Luckily, there is a dockerised setup, that spins up all these easily with a preset test network. Just run:
 
 ```
 nix run .#ctl-runtime
@@ -36,9 +36,9 @@ You can also run these components directly without using Docker, more about thes
 
 ### 2.1. Configuring hosted runtime dependencies
 
-In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and ctlServer) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
+In case you are running the runtime dependencies (ogmios, ogmiosDatumCache and ctlServer) on a hosted environment, or anything other than the default settings, you can either configure it via CLI arguments or set these in the configuration.
 
-The arguments for each service are using the following scheme:
+The arguments for each service use the following scheme:
 
 ```
   --ogmios-host localhost  Address host of ogmios (default: "localhost")
@@ -47,7 +47,7 @@ The arguments for each service are using the following scheme:
   --ogmios-secure          Whether ogmios is using an HTTPS connection
 ```
 
-So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
+So if you want to use a remote ogmios service on `https://1.2.3.4:5678`, use the following arguments:
 
 ```
 nix run .#ctl-main -- mint --amount 100 --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
@@ -82,14 +82,14 @@ node main.js --help
 
 ### 3.1. Using the CLI commands
 
-Below are some examples for running the Passive Bridge endpoints.
+Below are some examples of running the Passive Bridge endpoints.
 Notes:
 
-- `genesis-committee-hash-utxo` is not used in the Passive Bridge, but it is pinned to the sidechain parameters, so we have to add an arbitrary utxo here. It can be the same as the mint utxo
+- `genesis-committee-hash-utxo` is not used in the Passive Bridge, but it is pinned to the sidechain parameters, so it is necessary to add an arbitrary UTXO here. It can be the same as the mint UTXO.
 
-- `genesis-mint-utxo` is not a required argument. If omitted from the sidechain parameters, we can mint multiple times
+- `genesis-mint-utxo` is not a required argument. If it is omitted from the sidechain parameters, You can mint multiple times
 
-- prior to running the contracts - it may be desirable to have available your signing key in the environment. Example:
+- before running the contracts, it may be desirable to have available your signing key in the environment. Example:
 
 ```bash
 export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
@@ -98,7 +98,7 @@ export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
 Available commands:
 
 ```
-  init                     Initialise sidechain
+  init                     Initialize sidechain
   addresses                Get the script addresses for a given sidechain
   mint                     Mint a certain amount of FUEL tokens
   burn                     Burn a certain amount of FUEL tokens
@@ -108,9 +108,9 @@ Available commands:
 
 #### 3.1.1. Initialising the sidechain (Active Bridge only)
 
-Before we can start claiming tokens, we must set our initial committee, and initialise the sidechain. Only after this step will we be able to obtain the validator addresses (in the future, there will be a way to obtain the sidechain parameters and validator addressses before setting the first committee).
+Before claiming tokens, you must set your initial committee, and initialize the sidechain. Only after this step will you be able to obtain the validator addresses (in the future, there will be a way to obtain the sidechain parameters and validator addresses before setting the first committee).
 
-At this step, the genesis committee hash utxo will be spent.
+At this step, the genesis committee hash UTXO will be spent.
 
 ```
 nix run .#ctl-main -- init \
@@ -126,7 +126,7 @@ nix run .#ctl-main -- init \
 
 #### 3.1.2. Get script addresses of a sidechain
 
-Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
+Script addresses depend on the sidechain parameters, so you get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
 
 ```
 nix run .#ctl-main -- addresses \
@@ -151,7 +151,7 @@ nix run .#ctl-main -- mint \
   --amount 5
 ```
 
-#### 3.1.4. Burn user owned FUEL tokens
+#### 3.1.4. Burn user-owned FUEL tokens
 
 ```
 nix run .#ctl-main -- burn \
@@ -167,7 +167,7 @@ nix run .#ctl-main -- burn \
 
 #### 3.1.5. Register committee candidate
 
-In order to generate the signatures, you can use the signature generator tool:
+To generate the signatures, you can use the signature generator tool:
 
 ```
 cabal run trustless-sidechain-gen-signatures -- \
@@ -181,7 +181,7 @@ cabal run trustless-sidechain-gen-signatures -- \
   --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
 ```
 
-And use it's output for the registration:
+And use its output for the registration:
 
 ```
 nix run .#ctl-main -- register \
@@ -233,7 +233,7 @@ nix run .#ctl-main -- committee-hash \
   --previous-merkle-root abcdef
 ```
 
-#### 3.1.6. Save merkle root
+#### 3.1.6. Save Merkle root
 
 ```
 nix run .#ctl-main -- save-root \
@@ -302,11 +302,11 @@ nix run .#ctl-main -- mint --amount 5
 
 You can find a sample configuration file in `ctl/config.example.json`.
 
-When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null, if you don't want to set a default value for that property.
+When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null if you don't want to set a default value for that property.
 
 ### 3.3. Configuring hosted runtime dependencies
 
-You can set the network configuration of the runtime dependecies in the configuration file using the following format:
+You can set the network configuration of the runtime dependencies in the configuration file using the following format:
 
 _$CWD/config.json_
 
@@ -333,4 +333,4 @@ _$CWD/config.json_
 }
 ```
 
-Any service where no configuration is defined will fallback to its default value (localhost).
+Any service where no configuration is defined will fall back to its default value (localhost).
