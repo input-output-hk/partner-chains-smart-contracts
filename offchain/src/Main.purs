@@ -209,7 +209,8 @@ runEndpoint scParams =
           { sidechainParams: scParams
           , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
               newCommitteePubKeys
-          , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
+          , -- TODO: change the CLI to accept different signature types.
+            aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
           , previousMerkleRoot
           , sidechainEpoch
           }
@@ -338,8 +339,10 @@ runEndpoint scParams =
           }
         uchParams = UpdateCommitteeHashParams
           { sidechainParams: scParams
-          , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
-              newCommitteePubKeys
+          , newAggregatePubKeys:
+              -- TODO: change the CLI to accept different signature types.
+              Utils.Crypto.aggregateKeys $ List.toUnfoldable
+                newCommitteePubKeys
           , aggregateSignature: Plain $ List.toUnfoldable newCommitteeSignatures
           , -- the previous merkle root is the merkle root we just saved..
             previousMerkleRoot: Just merkleRoot

@@ -187,7 +187,8 @@ runSaveCheckpoint
         }
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
-  -- TODO: this is going to get all replaced soon
+  -- TODO: the hard coded committee certificate verifications will be replaced
+  -- soon in a seperate PR.
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       committeeCertificateMint

@@ -77,9 +77,6 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
-import TrustlessSidechain.CommitteeOraclePolicy
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -188,12 +185,12 @@ initCommitteeHashMintLookupsAndConstraints ∷
 initCommitteeHashMintLookupsAndConstraints isp = do
   -- Get committee hash / associated values
   -----------------------------------
-  { committeeOraclePolicy, committeeHashCurrencySymbol } ←
-    getCommitteeHashPolicy isp
+  { committeeOraclePolicy, committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
   let
     committeeHashValue =
       Value.singleton
-        committeeHashCurrencySymbol
+        committeeOracleCurrencySymbol
         CommitteeOraclePolicy.committeeOracleTn
         one
 
@@ -281,25 +278,21 @@ initCheckpointLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCheckpointLookupsAndConstraints inp = do
-  let
-    mkErr = report "initCheckpointLookupsAndConstraints"
   -- Get checkpoint / associated values
   -----------------------------------
-  { checkpointCurrencySymbol } ← getCheckpointPolicy inp
-
-  committeeOraclePolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
-    InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
-  committeeHashCurrencySymbol ← Monad.liftContractM
-    (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeOraclePolicy)
-
   let
     sc = toSidechainParams inp
+  { checkpointCurrencySymbol } ← getCheckpointPolicy inp
+
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sc
+
+  let
     checkpointParameter = Checkpoint.Types.CheckpointParameter
       { sidechainParams: sc
       , checkpointAssetClass: checkpointCurrencySymbol /\
           Checkpoint.initCheckpointMintTn
-      , committeeOracleAssetClass: committeeHashCurrencySymbol /\
+      , committeeOracleAssetClass: committeeOracleCurrencySymbol /\
           CommitteeOraclePolicy.committeeOracleTn
       }
     checkpointDatum = Datum
@@ -349,7 +342,8 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Getting the update committee hash policy
   -----------------------------------
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
 
   -- Getting the merkle root token minting policy
   -----------------------------------
@@ -364,7 +358,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       CommitteeCertificateMint
         { thresholdNumerator: isp.initThresholdNumerator
         , thresholdDenominator: isp.initThresholdDenominator
-        , committeeOraclePolicy: committeeHashCurrencySymbol
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
@@ -378,7 +372,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       isp.initCommittee
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
-      , committeeOracleCurrencySymbol: committeeHashCurrencySymbol
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol: merkleRootTokenMintingPolicyCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       }
@@ -390,7 +384,7 @@ initCommitteeHashLookupsAndConstraints isp = do
           }
     committeeHashValue =
       Value.singleton
-        committeeHashCurrencySymbol
+        committeeOracleCurrencySymbol
         CommitteeOraclePolicy.committeeOracleTn
         one
 
@@ -786,25 +780,6 @@ initSidechain (InitSidechainParams isp) = do
     , sidechainAddresses
     }
 
--- | `getCommitteeHashPolicy` grabs the committee hash policy and currency symbol
--- | (potentially throwing an error in the case that it is not possible).
-getCommitteeHashPolicy ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
-  Contract
-    { committeeOraclePolicy ∷ MintingPolicy
-    , committeeHashCurrencySymbol ∷ CurrencySymbol
-    }
-getCommitteeHashPolicy isp = do
-  let
-    mkErr = report "getCommitteeHashPolicy"
-  committeeOraclePolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
-    InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
-  committeeHashCurrencySymbol ← Monad.liftContractM
-    (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeOraclePolicy)
-  pure { committeeOraclePolicy, committeeHashCurrencySymbol }
-
 -- | `getMerkleRootTokenPolicy` grabs the merkle root token policy and currency
 -- | symbol (potentially throwing an error if this is not possible).
 getMerkleRootTokenPolicy ∷
@@ -820,7 +795,8 @@ getMerkleRootTokenPolicy isp = do
     mkErr = report "getMerkleRootTokenPolicy"
 
   -- some awkwardness that we need the committee hash policy first.
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
 
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
@@ -828,7 +804,7 @@ getMerkleRootTokenPolicy isp = do
   merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
     SignedMerkleRootMint
       { sidechainParams: sc
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootValidatorHash
       }
   merkleRootTokenMintingPolicyCurrencySymbol ←
