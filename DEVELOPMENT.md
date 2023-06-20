@@ -14,7 +14,6 @@ To run CTL you need to set up the runtime dependencies:
 
 - cardano-node
 - ogmios
-- ogmios-datum-cache
 - kupo
 
 Luckily, there is a dockerised setup, that spins up all these easily with a preset test network. Just run:
