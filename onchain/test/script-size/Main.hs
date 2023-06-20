@@ -1,9 +1,9 @@
 module Main (main) where
 
 import Compiled qualified
-import Ledger.Scripts (unversioned)
+import Ledger.Scripts (fromCompiledCode, unversioned)
 import Legacy qualified
-import Sizer (fitsInto, fitsUnder, scriptFitsInto)
+import Sizer (fitsInto, fitsUnder, scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
@@ -143,5 +143,12 @@ main =
             "verifyMultisig"
             ("new", Compiled.newVerify)
             ("old", Legacy.verifyMultisigCode)
+        ]
+    , testGroup
+        "Data rep"
+        [ scriptFitsUnder
+            "toBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
+            ("generated", fromCompiledCode Compiled.toDataGenerated)
         ]
     ]

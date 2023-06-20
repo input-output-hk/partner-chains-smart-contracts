@@ -13,9 +13,14 @@ module Compiled (
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
   mkDsKeyPolicyCode,
+  toDataGenerated,
+  toDataHandwritten,
 ) where
 
+import Data.Generated qualified as Generated
+import Data.Handwritten qualified as Handwritten
 import Plutus.V2.Ledger.Contexts (ScriptContext)
+import PlutusTx (toBuiltinData)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -62,6 +67,12 @@ import TrustlessSidechain.UpdateCommitteeHash (
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
+
+toDataGenerated :: CompiledCode (Generated.Foo -> BuiltinData)
+toDataGenerated = $$(compile [||toBuiltinData||])
+
+toDataHandwritten :: CompiledCode (Handwritten.Foo -> BuiltinData)
+toDataHandwritten = $$(compile [||toBuiltinData||])
 
 newVerify ::
   CompiledCode
