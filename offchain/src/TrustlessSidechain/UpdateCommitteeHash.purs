@@ -78,11 +78,13 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
+  , getUpdateCommitteeHashValidator
   , serialiseUchmHash
   , updateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
+  , getUpdateCommitteeHashValidator
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
@@ -251,8 +253,11 @@ updateCommitteeHashLookupsAndConstraints
       , committeeCertificateVerificationCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
-  updateValidator ← updateCommitteeHashValidator uch
-  let valHash = Scripts.validatorHash updateValidator
+
+  { validator: updateValidator
+  , validatorHash: valHash
+  , address: updateValidatorAddress
+  } ← getUpdateCommitteeHashValidator uch
 
   -- Get the UTxO with the current committee
   ------------------------------------------------------
@@ -288,6 +293,7 @@ updateCommitteeHashLookupsAndConstraints
       , newAggregatePubKeys: toData newAggregatePubKeys
       , previousMerkleRoot
       , sidechainEpoch
+      , validatorAddress: updateValidatorAddress
       }
     redeemer = Redeemer $ toData uchm
 

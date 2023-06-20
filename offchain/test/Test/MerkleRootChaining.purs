@@ -8,6 +8,8 @@ import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (liftContractM, liftedM)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.Scripts as Scripts
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -21,10 +23,20 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
   )
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
@@ -255,6 +267,49 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         committee1PubKeys = map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
         committee3PubKeys = map Utils.Crypto.toPubKeyUnsafe committee3PrvKeys
       -- the message updates committee1 to be committee3
+
+      -- quickly (it's not that quick) grab the address of the validator for
+      -- the update committee hash
+      { committeeOracleCurrencySymbol
+      , committeeOracleTokenName
+      } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+      merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+        sidechainParams
+
+      let
+        smrm = SignedMerkleRootMint
+          { sidechainParams: sidechainParams
+          , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+          , merkleRootValidatorHash: Scripts.validatorHash
+              merkleRootTokenValidator
+          }
+      merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+        smrm
+      merkleRootTokenCurrencySymbol ←
+        liftContractM
+          "Failed to get merkleRootTokenCurrencySymbol"
+          $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+      { committeePlainATMSCurrencySymbol:
+          committeeCertificateVerificationCurrencySymbol
+      } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
+        $ CommitteeCertificateMint
+            { committeeOraclePolicy: committeeOracleCurrencySymbol
+            , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+            , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+            }
+
+      let
+        uch = UpdateCommitteeHash
+          { sidechainParams
+          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          , merkleRootTokenCurrencySymbol
+          }
+      { address: updateCommitteeHashValidator } ←
+        UpdateCommitteeHash.getUpdateCommitteeHashValidator uch
+
+      -- finally, build the message
       committee1Message ←
         liftContractM
           "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
@@ -268,6 +323,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
                 -- the previousMerkleRoot which is `merkleRoot2` in this case.
                 previousMerkleRoot: Just merkleRoot2
               , sidechainEpoch: BigInt.fromInt 1
+              , validatorAddress: updateCommitteeHashValidator
               }
 
       Test.Utils.fails

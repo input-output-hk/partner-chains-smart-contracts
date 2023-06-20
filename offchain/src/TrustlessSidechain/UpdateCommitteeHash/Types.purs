@@ -11,6 +11,7 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -102,6 +103,7 @@ newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     newAggregatePubKeys ∷ aggregatePubKeys
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
+  , validatorAddress ∷ Address
   }
 
 instance
@@ -113,10 +115,12 @@ instance
         , newAggregatePubKeys
         , previousMerkleRoot
         , sidechainEpoch
+        , validatorAddress
         }
     ) = Constr (BigNum.fromInt 0)
     [ toData sidechainParams
     , toData newAggregatePubKeys
     , toData previousMerkleRoot
     , toData sidechainEpoch
+    , toData validatorAddress
     ]

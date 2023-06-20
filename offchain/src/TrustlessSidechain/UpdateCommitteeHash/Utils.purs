@@ -14,10 +14,12 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
   ( updateCommitteeHashValidator
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
+  , getUpdateCommitteeHashValidator
   ) where
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
@@ -31,6 +33,7 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
   ( MintingPolicy(PlutusMintingPolicy)
   , Validator(Validator)
+  , ValidatorHash
   )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope
@@ -45,10 +48,16 @@ import Contract.Value as Value
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeOraclePolicy (committeeOracleTn)
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage
   )
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
@@ -65,6 +74,25 @@ updateCommitteeHashValidator sp = do
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
     [ PlutusData.toData sp ]
   pure $ Validator applied
+
+-- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
+-- | also returns the hash and address
+getUpdateCommitteeHashValidator ∷
+  UpdateCommitteeHash →
+  Contract
+    { validator ∷ Validator
+    , validatorHash ∷ ValidatorHash
+    , address ∷ Address
+    }
+getUpdateCommitteeHashValidator uch = do
+  netId ← Address.getNetworkId
+  validator ← updateCommitteeHashValidator uch
+  let validatorHash = Scripts.validatorHash validator
+
+  address ← Monad.liftContractM
+    "error 'getUpdateCommitteeHashValidator': failed to get validator address"
+    (Address.validatorHashEnterpriseAddress netId validatorHash)
+  pure { validator, validatorHash, address }
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```

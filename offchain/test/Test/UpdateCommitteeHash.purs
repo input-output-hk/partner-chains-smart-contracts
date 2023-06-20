@@ -15,6 +15,8 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Scripts as Scripts
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt (BigInt)
@@ -28,12 +30,23 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
   )
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
+  , getUpdateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
@@ -64,7 +77,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple SidechainPublicKey SidechainSignature))
+  Contract (Array (Tuple SidechainPublicKey SidechainSignature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys
@@ -83,13 +96,58 @@ generateUchmSignatures
     newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe
       newCommitteePrvKeys
 
+  -- Creating the update committee hash validator (since we want to pay the
+  -- committee oracle back to the same address)
+  ---------------------------
+  { committeeOracleCurrencySymbol
+  , committeeOracleTokenName
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      "Failed to get merkleRootTokenCurrencySymbol"
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+  { committeePlainATMSCurrencySymbol:
+      committeeCertificateVerificationCurrencySymbol
+  } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
+    $ CommitteeCertificateMint
+        { committeeOraclePolicy: committeeOracleCurrencySymbol
+        , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+        }
+
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootTokenCurrencySymbol
+      }
+
+  { address: updateCommitteeHashValidator } ← getUpdateCommitteeHashValidator uch
+
+  -- Building the message to sign
+  ---------------------------
   committeeMessage ←
-    UpdateCommitteeHash.serialiseUchmHash
+    liftContractM "Failed to serialise update committee hash message"
+      $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams: sidechainParams
+          { sidechainParams
           , newAggregatePubKeys
           , previousMerkleRoot
           , sidechainEpoch
+          , validatorAddress: updateCommitteeHashValidator
           }
   let
     committeeSignatures = Array.zip
@@ -139,10 +197,7 @@ updateCommitteeHashWith ∷
   ) →
   Contract Unit
 updateCommitteeHashWith params f = void do
-  committeeSignatures ←
-    liftContractM
-      "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to generate the committee signatures for the committee hash message"
-      $ generateUchmSignatures params
+  committeeSignatures ← generateUchmSignatures params
 
   let
     newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe $
