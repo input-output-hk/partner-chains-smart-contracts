@@ -51,6 +51,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
    [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
    onchain)
+* `UpdateCommitteeHashMessage` has a new format so committee signatures *must*
+  be generated differently.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain/onchain)
 
 ## Fixed
 
