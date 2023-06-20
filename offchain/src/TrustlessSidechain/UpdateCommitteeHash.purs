@@ -12,35 +12,29 @@ import Contract.Monad
   ( Contract
   , liftContractM
   , liftedE
-  , liftedM
-  , throwContractError
   )
 import Contract.PlutusData
   ( class ToData
   , Datum(..)
   , PlutusData
   , Redeemer(..)
-  , fromData
   , toData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript
   , awaitTxConfirmed
   , balanceTx
-  , outputDatumDatum
   , signTransaction
   , submit
   )
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
@@ -51,21 +45,13 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeOraclePolicy
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  )
-import TrustlessSidechain.CommitteeOraclePolicy
-  ( committeeOraclePolicy
-  , committeeOracleTn
-  )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
@@ -80,7 +66,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
   , getUpdateCommitteeHashValidator
   , serialiseUchmHash
-  , updateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
@@ -88,7 +73,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
@@ -137,7 +121,7 @@ updateCommitteeHash params = do
 
   -- Update comittee lookups and constraints
   ------------------------------------
-  { lookupsAndConstraints: updateCommitteeHashLookupsAndConstraints
+  { lookupsAndConstraints
   , currentCommitteeUtxo
   , updateCommitteeHashMessage
   } ← updateCommitteeHashLookupsAndConstraints
@@ -164,7 +148,7 @@ updateCommitteeHash params = do
       }
 
   let
-    { lookups, constraints } = updateCommitteeHashLookupsAndConstraints
+    { lookups, constraints } = lookupsAndConstraints
       <> committeeATMSLookupsAndConstraints
   ubTx ← liftedE
     (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
@@ -223,7 +207,6 @@ updateCommitteeHashLookupsAndConstraints
   -- committee hash
   -------------------------------------------------------------
   { committeeOracleCurrencySymbol
-  , committeeOracleTokenName
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
@@ -265,8 +248,7 @@ updateCommitteeHashLookupsAndConstraints
   currentCommitteeUtxo@
     { index: oref
     , value:
-        committeeOracleTxOut@
-          (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+        committeeOracleTxOut
     } ←
     liftContractM (mkErr "Failed to find committee UTxO") $ lkup
 
@@ -286,7 +268,7 @@ updateCommitteeHashLookupsAndConstraints
     value =
       Value.singleton
         (unwrap uch).committeeOracleCurrencySymbol
-        committeeOracleTn
+        CommitteeOraclePolicy.committeeOracleTn
         one
     uchm = UpdateCommitteeHashMessage
       { sidechainParams

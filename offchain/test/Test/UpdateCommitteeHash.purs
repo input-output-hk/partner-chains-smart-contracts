@@ -29,9 +29,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
-  )
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
@@ -100,7 +98,6 @@ generateUchmSignatures
   -- committee oracle back to the same address)
   ---------------------------
   { committeeOracleCurrencySymbol
-  , committeeOracleTokenName
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator

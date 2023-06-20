@@ -32,8 +32,6 @@ import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClass)
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( updateCommitteeHashValidator
@@ -75,7 +73,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     merkleRootTokenMintingPolicyId = currencySymbolToHex
       merkleRootTokenCurrencySymbol
 
-  { committeeOracleCurrencySymbol, committeeOracleTokenName } ←
+  { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
   let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 

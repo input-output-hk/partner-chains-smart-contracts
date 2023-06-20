@@ -24,16 +24,15 @@ import Contract.Value
   ( CurrencySymbol
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, Plain)
   , CommitteeATMSParams(CommitteeATMSParams)
-  , CommitteeCertificateMint(CommitteeCertificateMint)
+  , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
-import TrustlessSidechain.CommitteePlainATMSPolicy (CommitteePlainATMSParams)
 import TrustlessSidechain.CommitteePlainATMSPolicy
   ( CommitteePlainATMSParams(CommitteePlainATMSParams)
   )
@@ -41,7 +40,6 @@ import TrustlessSidechain.CommitteePlainATMSPolicy
   ( CommitteePlainATMSParams(CommitteePlainATMSParams)
   ) as ExportCommitteePlainATMSPolicy
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`

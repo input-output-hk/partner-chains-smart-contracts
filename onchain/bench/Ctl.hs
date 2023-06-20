@@ -50,11 +50,13 @@ import TrustlessSidechain.Types (
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
-  uchmNewCommitteePubKeys,
+  uchmNewAggregateCommitteePubKeys,
   uchmPreviousMerkleRoot,
   uchmSidechainEpoch,
   uchmSidechainParams,
+  uchmValidatorAddress,
  )
+import TrustlessSidechain.Utils qualified as Utils
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
@@ -206,9 +208,15 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
           { uchmSidechainParams = scParams
-          , uchmNewCommitteePubKeys = List.sort cuchNewCommitteePubKeys
+          , -- Old message that's no longer used..
+            -- , uchmNewCommitteePubKeys = Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+            uchmNewAggregateCommitteePubKeys =
+              Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
           , uchmPreviousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
           , uchmSidechainEpoch = cuchSidechainEpoch
+          , uchmValidatorAddress =
+              error "unimplemented validator address for UpdateCommitteeHashMessage"
+              -- TODO: put in the actual validator address.
           }
       currentCommitteePubKeysAndSigsFlags =
         fmap

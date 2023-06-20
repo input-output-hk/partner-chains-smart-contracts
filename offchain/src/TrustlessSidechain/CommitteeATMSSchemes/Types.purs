@@ -16,8 +16,7 @@ import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
   )
-import Contract.Value (CurrencySymbol)
-import Contract.Value (TokenName)
+import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 

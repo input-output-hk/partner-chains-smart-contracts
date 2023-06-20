@@ -52,11 +52,9 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
   )
 import Contract.Value as Value
 import Data.Bifunctor as Bifunctor
-import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
@@ -329,13 +327,6 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
 
   { committeePlainATMSCurrencySymbol } ← getCommitteePlainATMSPolicy
     committeeCertificateMint
-
-  -- Getting the minting policy / currency symbol / token name for update
-  -- committee hash
-  -------------------------------------------------------------
-  { committeeOracleCurrencySymbol
-  , committeeOracleTokenName
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------

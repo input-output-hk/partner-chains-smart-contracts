@@ -15,7 +15,6 @@ import Contract.PlutusData
   , toData
   )
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
@@ -87,14 +86,14 @@ getCommitteeOraclePolicy ∷
 getCommitteeOraclePolicy (SidechainParams sp) = do
   let
     mkErr = report "getCommitteeOraclePolicy"
-  committeeOraclePolicy ← committeeOraclePolicy $
+  policy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeOracleCurrencySymbol ← Monad.liftContractM
     (mkErr "Failed to get committee oracle CurrencySymbol")
-    (Value.scriptCurrencySymbol committeeOraclePolicy)
+    (Value.scriptCurrencySymbol policy)
   let committeeOracleTokenName = committeeOracleTn
   pure
-    { committeeOraclePolicy
+    { committeeOraclePolicy: policy
     , committeeOracleCurrencySymbol
     , committeeOracleTokenName
     }

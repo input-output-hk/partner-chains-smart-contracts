@@ -20,13 +20,10 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator

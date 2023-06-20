@@ -28,7 +28,6 @@ import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
   , SidechainPrivateKey

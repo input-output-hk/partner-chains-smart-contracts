@@ -62,9 +62,9 @@ import TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSAggregateSignatures(Plain))
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  ( ATMSAggregateSignatures(Plain)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy

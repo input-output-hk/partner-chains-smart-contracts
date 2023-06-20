@@ -29,10 +29,8 @@ import Contract.PlutusData
   ( class ToData
   )
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , Validator(Validator)
+  ( Validator(Validator)
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
@@ -45,19 +43,10 @@ import Contract.Transaction
   , TransactionOutputWithRefScript
   )
 import Contract.Value as Value
-import Data.Array as Array
-import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.CommitteeOraclePolicy (committeeOracleTn)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   )
 import TrustlessSidechain.Utils.Crypto (SidechainMessage)
@@ -130,5 +119,5 @@ findUpdateCommitteeHashUtxo uch = do
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
     Value.valueOf value ((unwrap uch).committeeOracleCurrencySymbol)
-      committeeOracleTn
+      CommitteeOraclePolicy.committeeOracleTn
       /= zero

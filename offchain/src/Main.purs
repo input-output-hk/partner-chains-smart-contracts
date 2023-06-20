@@ -68,7 +68,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | Main entrypoint for the CTL CLI

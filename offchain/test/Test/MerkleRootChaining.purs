@@ -22,9 +22,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
-  )
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( CommitteeCertificateMint(CommitteeCertificateMint)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
@@ -271,7 +269,6 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       -- quickly (it's not that quick) grab the address of the validator for
       -- the update committee hash
       { committeeOracleCurrencySymbol
-      , committeeOracleTokenName
       } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
       merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
