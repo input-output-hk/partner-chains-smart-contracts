@@ -141,28 +141,14 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
--- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
-data SignedMerkleRoot = SignedMerkleRoot
-  { -- | New merkle root to insert.
-    merkleRoot :: BuiltinByteString
-  , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
-  , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [BuiltinByteString]
-  , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
-  }
-
-PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
-
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
   { -- | 'smrmSidechainParams' includes the 'SidechainParams'
     smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
+  , -- | 'smrmCommitteeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
     -- identifies the utxo for which the 'UpdateCommitteeDatum'
     -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
+    smrmCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   , -- | 'smrmValidatorHash' is the validator hash corresponding to
     -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
     -- to ensure that this token gets minted to the "right" place.
