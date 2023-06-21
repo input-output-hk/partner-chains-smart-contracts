@@ -227,7 +227,7 @@ runEndpoint scParams =
           { sidechainParams: scParams
           , merkleRoot
           , previousMerkleRoot
-          , committeeSignatures: List.toUnfoldable committeeSignatures
+          , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
           }
       MerkleRoot.saveRoot params
         <#> unwrap
@@ -335,7 +335,7 @@ runEndpoint scParams =
           { sidechainParams: scParams
           , merkleRoot
           , previousMerkleRoot
-          , committeeSignatures: List.toUnfoldable newMerkleRootSignatures
+          , aggregateSignature: Plain $ List.toUnfoldable newMerkleRootSignatures
           }
         uchParams = UpdateCommitteeHashParams
           { sidechainParams: scParams

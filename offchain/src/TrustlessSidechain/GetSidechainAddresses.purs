@@ -74,14 +74,33 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     scParams
   let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
 
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
+
+  -- TODO: we would really like to include the committee certificate signing
+  -- method here
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: (unwrap scParams).thresholdNumerator
+        , thresholdDenominator: (unwrap scParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+  -- END OF TODO
+
   { merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.getMerkleRootTokenMintingPolicy scParams
+    MerkleRoot.getMerkleRootTokenMintingPolicy
+      { sidechainParams: scParams
+      , committeeCertificateVerificationCurrencySymbol
+      }
   let
     merkleRootTokenMintingPolicyId = currencySymbolToHex
       merkleRootTokenCurrencySymbol
 
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
   let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
@@ -116,18 +135,6 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
 
   { committeeHashValidatorAddr, committeeHashValidatorCborAddress } ←
     do
-      -- TODO: this is going to get all replaced soon?
-      let
-        committeeCertificateMint =
-          CommitteeCertificateMint
-            { thresholdNumerator: (unwrap scParams).thresholdNumerator
-            , thresholdDenominator: (unwrap scParams).thresholdDenominator
-            , committeeOraclePolicy: committeeOracleCurrencySymbol
-            }
-      { committeeCertificateVerificationCurrencySymbol } ←
-        CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-          committeeCertificateMint
-          (Plain mempty)
       let
         uch = UpdateCommitteeHash
           { sidechainParams: scParams

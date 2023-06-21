@@ -63,6 +63,11 @@ import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy (getCommitteeOraclePolicy)
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.MerkleRoot
@@ -232,8 +237,24 @@ getFuelMintingPolicy ∷
     }
 getFuelMintingPolicy sidechainParams = do
   let mkErr = Logging.mkReport "FUELMintingPolicy" "getFuelMintingPolicy"
+
+  -- TODO: we need to pass in the committee certificate verification policy in
+  -- this first instead of just hardcoding it in here.
+  { committeeOracleCurrencySymbol } ← getCommitteeOraclePolicy sidechainParams
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      ( CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
+      )
+      $ Plain mempty
+
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sidechainParams
+    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+
   ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
@@ -457,6 +478,18 @@ findMerkleRootTokenUtxoByRootHash ∷
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   { committeeOracleCurrencySymbol } ← getCommitteeOraclePolicy sidechainParams
 
+  -- TODO: the actual committee certificate verification currency symbol should
+  -- be passed down here.
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      ( CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
+      )
+      $ Plain mempty
+
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
     MerkleRoot.merkleRootTokenValidator sidechainParams
@@ -465,7 +498,7 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
       "findMerkleRootTokenUtxoByRootHash"
     smrm = SignedMerkleRootMint
       { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootValidatorHash
       }
   merkleRootTokenName ←

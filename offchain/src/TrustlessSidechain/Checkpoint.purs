@@ -166,19 +166,6 @@ runSaveCheckpoint
     sidechainParams
 
   let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  let
     committeeCertificateMint =
       CommitteeCertificateMint
         { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
@@ -193,6 +180,19 @@ runSaveCheckpoint
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       committeeCertificateMint
       (Plain mempty)
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
     uch = UpdateCommitteeHash

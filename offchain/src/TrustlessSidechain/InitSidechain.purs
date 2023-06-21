@@ -798,13 +798,28 @@ getMerkleRootTokenPolicy isp = do
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
 
+  -- TODO: this is going to get all replaced soon
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: isp.initThresholdNumerator
+        , thresholdDenominator: isp.initThresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+  -- END OF TODO
+
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
     MerkleRoot.merkleRootTokenValidator sc
   merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
     SignedMerkleRootMint
       { sidechainParams: sc
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootValidatorHash
       }
   merkleRootTokenMintingPolicyCurrencySymbol ←

@@ -22,6 +22,7 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes (ATMSAggregateSignatures(Plain))
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -121,7 +122,7 @@ saveRoot
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
-    , committeeSignatures
+    , aggregateSignature: Plain committeeSignatures
     }
   pure
     { merkleRoot
@@ -222,7 +223,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         , merkleRoot
         , previousMerkleRoot: Nothing
 
-        , committeeSignatures
+        , aggregateSignature: Plain committeeSignatures
         }
 
       pure unit

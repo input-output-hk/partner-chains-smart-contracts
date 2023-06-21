@@ -271,13 +271,22 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       { committeeOracleCurrencySymbol
       } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
+      { committeePlainATMSCurrencySymbol:
+          committeeCertificateVerificationCurrencySymbol
+      } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
+        $ CommitteeCertificateMint
+            { committeeOraclePolicy: committeeOracleCurrencySymbol
+            , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+            , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+            }
+
       merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
         sidechainParams
 
       let
         smrm = SignedMerkleRootMint
           { sidechainParams: sidechainParams
-          , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
           , merkleRootValidatorHash: Scripts.validatorHash
               merkleRootTokenValidator
           }
@@ -287,14 +296,6 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         liftContractM
           "Failed to get merkleRootTokenCurrencySymbol"
           $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-      { committeePlainATMSCurrencySymbol:
-          committeeCertificateVerificationCurrencySymbol
-      } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-        $ CommitteeCertificateMint
-            { committeeOraclePolicy: committeeOracleCurrencySymbol
-            , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-            , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-            }
 
       let
         uch = UpdateCommitteeHash

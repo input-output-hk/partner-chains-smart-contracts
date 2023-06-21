@@ -226,7 +226,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy

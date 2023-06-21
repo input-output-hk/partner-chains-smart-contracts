@@ -100,21 +100,6 @@ generateUchmSignatures
   { committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      "Failed to get merkleRootTokenCurrencySymbol"
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
   { committeePlainATMSCurrencySymbol:
       committeeCertificateVerificationCurrencySymbol
   } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
@@ -123,6 +108,22 @@ generateUchmSignatures
         , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
         }
+
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      "Failed to get merkleRootTokenCurrencySymbol"
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
     uch = UpdateCommitteeHash
