@@ -173,14 +173,14 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
 
 PlutusTx.makeLift ''InitCommitteeHashMint
 
-{- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
+{- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
-{-# INLINEABLE mkCommitteeHashPolicy #-}
-mkCommitteeHashPolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
-mkCommitteeHashPolicy ichm _red ctx =
-  traceIfFalse "error 'mkCommitteeHashPolicy' UTxO not consumed" hasUtxo
-    && traceIfFalse "error 'mkCommitteeHashPolicy' wrong amount minted" checkMintedAmount
+{-# INLINEABLE mkCommitteeOraclePolicy #-}
+mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
+mkCommitteeOraclePolicy ichm _red ctx =
+  traceIfFalse "error 'mkCommitteeOraclePolicy' UTxO not consumed" hasUtxo
+    && traceIfFalse "error 'mkCommitteeOraclePolicy' wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -196,13 +196,13 @@ mkCommitteeHashPolicy ichm _red ctx =
         _ -> False
 
 -- CTL hack
-mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeHashPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeOraclePolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeOraclePolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeHashPolicy :: Versioned Ledger.Script
-serialisableCommitteeHashPolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])) PlutusV2
+serialisableCommitteeOraclePolicy :: Versioned Ledger.Script
+serialisableCommitteeOraclePolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])) PlutusV2
 
 mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeHashValidatorUntyped =

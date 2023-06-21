@@ -47,7 +47,7 @@ instance ToData InitCommitteeHashMint where
 committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
 committeeOraclePolicy sp = do
   let
-    script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
+    script = decodeTextEnvelope RawScripts.rawCommitteeOraclePolicy
       >>= plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script

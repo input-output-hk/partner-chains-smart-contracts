@@ -79,12 +79,12 @@ main =
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
             2_785
         , fitsInto
-            "mkCommitteeHashPolicy"
-            Compiled.mkCommitteeHashPolicyCode
+            "mkCommitteeOraclePolicy"
+            Compiled.mkCommitteeOraclePolicyCode
             400
         , scriptFitsInto
-            "mkCommitteeHashPolicy (serialized)"
-            (unversioned UCH.serialisableCommitteeHashPolicy)
+            "mkCommitteeOraclePolicy (serialized)"
+            (unversioned UCH.serialisableCommitteeOraclePolicy)
             2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"

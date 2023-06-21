@@ -8,7 +8,7 @@ module Compiled (
   mkMPFuelCode,
   mkMPMerkleRootCode,
   mkUPCVCode,
-  mkCommitteeHashPolicyCode,
+  mkCommitteeOraclePolicyCode,
   mkCPCode,
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
@@ -62,7 +62,7 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
-  mkCommitteeHashPolicy,
+  mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
@@ -129,14 +129,14 @@ mkUPCVCode ::
     )
 mkUPCVCode = $$(compile [||mkUpdateCommitteeHashValidator||])
 
-mkCommitteeHashPolicyCode ::
+mkCommitteeOraclePolicyCode ::
   CompiledCode
     ( InitCommitteeHashMint ->
       () ->
       ScriptContext ->
       Bool
     )
-mkCommitteeHashPolicyCode = $$(compile [||mkCommitteeHashPolicy||])
+mkCommitteeOraclePolicyCode = $$(compile [||mkCommitteeOraclePolicy||])
 
 mkCPCode ::
   CompiledCode
