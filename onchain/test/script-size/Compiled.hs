@@ -15,12 +15,16 @@ module Compiled (
   mkDsKeyPolicyCode,
   toDataGenerated,
   toDataHandwritten,
+  fromDataGenerated,
+  fromDataHandwritten,
+  unsafeFromDataGenerated,
+  unsafeFromDataHandwritten,
 ) where
 
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
 import Plutus.V2.Ledger.Contexts (ScriptContext)
-import PlutusTx (toBuiltinData)
+import PlutusTx (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -68,11 +72,23 @@ import TrustlessSidechain.UpdateCommitteeHash (
  )
 import TrustlessSidechain.Utils (verifyMultisig)
 
+fromDataGenerated :: CompiledCode (BuiltinData -> Maybe Generated.Foo)
+fromDataGenerated = $$(compile [||fromBuiltinData||])
+
+fromDataHandwritten :: CompiledCode (BuiltinData -> Maybe Handwritten.Foo)
+fromDataHandwritten = $$(compile [||fromBuiltinData||])
+
 toDataGenerated :: CompiledCode (Generated.Foo -> BuiltinData)
 toDataGenerated = $$(compile [||toBuiltinData||])
 
 toDataHandwritten :: CompiledCode (Handwritten.Foo -> BuiltinData)
 toDataHandwritten = $$(compile [||toBuiltinData||])
+
+unsafeFromDataGenerated :: CompiledCode (BuiltinData -> Generated.Foo)
+unsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])
+
+unsafeFromDataHandwritten :: CompiledCode (BuiltinData -> Handwritten.Foo)
+unsafeFromDataHandwritten = $$(compile [||unsafeFromBuiltinData||])
 
 newVerify ::
   CompiledCode

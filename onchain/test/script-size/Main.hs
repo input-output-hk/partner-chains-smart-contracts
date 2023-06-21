@@ -150,5 +150,13 @@ main =
             "toBuiltinData"
             ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
             ("generated", fromCompiledCode Compiled.toDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.fromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.fromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
         ]
     ]
