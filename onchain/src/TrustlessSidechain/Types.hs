@@ -318,9 +318,7 @@ PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature,
  checkpoint
 -}
 data CheckpointRedeemer = CheckpointRedeemer
-  { checkpointCommitteeSignatures :: [BuiltinByteString]
-  , checkpointCommitteePubKeys :: [SidechainPubKey]
-  , newCheckpointBlockHash :: BuiltinByteString
+  { newCheckpointBlockHash :: BuiltinByteString
   , newCheckpointBlockNumber :: Integer
   }
 
@@ -332,9 +330,13 @@ data CheckpointParameter = CheckpointParameter
   , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     checkpointAssetClass :: AssetClass
-  , -- | 'committeeHashAssetClass' is the 'AssetClass' of the NFT that is used to
-    -- | identify the current committee
-    committeeHashAssetClass :: AssetClass
+  , -- | 'checkpointCommitteeOracleCurrencySymbol' is the
+    -- currency symbol of the currency symbol which uniquely identifies the
+    -- current committee.
+    checkpointCommitteeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'checkpointCommitteeCertificateVerificationCurrencySymbol' is the
+    -- currency symbol of the committee certificate verification minting policy
+    checkpointCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
