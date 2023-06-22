@@ -19,7 +19,7 @@ import Node.Process (stdoutIsTTY)
 
 -- | Error raised from the off-chain code of the application
 data OffchainError
-  -- | Error type for internal errors, with error information to developers and maintainers
+  -- | Error type for internal errors, with information to developers and maintainers
   = InternalError InternalError
   -- | Error occured because of an invalid input, with informaton to the end-user
   | InvalidInputError String
@@ -31,14 +31,21 @@ instance Show OffchainError where
 
 -- | Error type for internal errors, with error information to developers and maintainers
 data InternalError
-  = NotFoundAddress String
-  | NotFoundUtxo String
+  -- | A UTxO that should exist (not given as user input) could not be found
+  = NotFoundUtxo String
+  -- | Own payment public key hashes cannot be found
   | NotFoundOwnPubKeyHash
+  -- | Own address cannot be found
   | NotFoundOwnAddress
+  -- | Invalid policy or validator script, conversion to currency symbol / validator hash failed
   | InvalidScript String
-  | ConversionError String
+  -- | Invalid datum or redeemer, decoding errors
   | InvalidData String
+  -- | Conversion of any data type (excluding datums and redeemers, use InvalidData for those)
+  | ConversionError String
+  -- | Error while building a transaction from lookups and constraints
   | BuildTxError ScriptLookups.MkUnbalancedTxError
+  -- | Error while attempting to balance a transaction
   | BalanceTxError Transaction.BalanceTxError
   | Other String
 
