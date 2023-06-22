@@ -1,4 +1,5 @@
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -76,6 +77,8 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins (matchList)
+import PlutusTx.Builtins.Internal qualified as Unsafe
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 
@@ -112,6 +115,49 @@ instance Eq Node where
   {-# INLINEABLE (==) #-}
   a == b = nKey a == nKey b && nNext a == nNext b
 
+-- | @since Unreleased
+instance PlutusTx.ToData Node where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Node {..}) =
+    Unsafe.mkList
+      ( Unsafe.mkCons
+          (PlutusTx.toBuiltinData nKey)
+          ( Unsafe.mkCons
+              (PlutusTx.toBuiltinData nNext)
+              (Unsafe.mkNilData Unsafe.unitval)
+          )
+      )
+
+-- | @since Unreleased
+instance PlutusTx.FromData Node where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+    where
+      go :: Maybe Node
+      go =
+        let ell0 = Unsafe.unsafeDataAsList dat
+         in matchList ell0 Nothing $ \k ell1 ->
+              case PlutusTx.fromBuiltinData k of
+                Nothing -> Nothing
+                Just k' -> matchList ell1 Nothing $ \n ell2 ->
+                  case PlutusTx.fromBuiltinData n of
+                    Nothing -> Nothing
+                    Just n' ->
+                      matchList
+                        ell2
+                        (Just (Node k' n'))
+                        (\_ _ -> Nothing)
+
+-- | @since Unreleased
+instance PlutusTx.UnsafeFromData Node where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData dat =
+    let ell0 = Unsafe.unsafeDataAsList dat
+        k = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
+        ell1 = Unsafe.tail ell0
+        n = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
+     in Node k n
+
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
 -}
@@ -124,16 +170,102 @@ instance Eq DsConfDatum where
   {-# INLINEABLE (==) #-}
   a == b = dscKeyPolicy a == dscKeyPolicy b && dscFUELPolicy a == dscFUELPolicy b
 
+-- | @since Unreleased
+instance PlutusTx.ToData DsConfDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (DsConfDatum {..}) =
+    Unsafe.mkList
+      ( Unsafe.mkCons
+          (PlutusTx.toBuiltinData dscKeyPolicy)
+          ( Unsafe.mkCons
+              (PlutusTx.toBuiltinData dscFUELPolicy)
+              (Unsafe.mkNilData Unsafe.unitval)
+          )
+      )
+
+-- | @since Unreleased
+instance PlutusTx.FromData DsConfDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+    where
+      go :: Maybe DsConfDatum
+      go =
+        let ell0 = Unsafe.unsafeDataAsList dat
+         in matchList ell0 Nothing $ \kp ell1 ->
+              case PlutusTx.fromBuiltinData kp of
+                Nothing -> Nothing
+                Just kp' -> matchList ell1 Nothing $ \fp ell2 ->
+                  case PlutusTx.fromBuiltinData fp of
+                    Nothing -> Nothing
+                    Just fp' ->
+                      matchList
+                        ell2
+                        (Just (DsConfDatum kp' fp'))
+                        (\_ _ -> Nothing)
+
+-- | @since Unreleased
+instance PlutusTx.UnsafeFromData DsConfDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData dat =
+    let ell0 = Unsafe.unsafeDataAsList dat
+        kp = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
+        ell1 = Unsafe.tail ell0
+        fp = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
+     in DsConfDatum kp fp
+
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
  length "array" of how many new nodes (this is always 2, see 'lengthIb') are
  generated after inserting into a node.
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (Eq)
 
 instance TSPrelude.Foldable Ib where
   foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
+
+-- | @since Unreleased
+instance (PlutusTx.ToData a) => PlutusTx.ToData (Ib a) where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Ib (x, y)) =
+    Unsafe.mkList
+      ( Unsafe.mkCons
+          (PlutusTx.toBuiltinData x)
+          ( Unsafe.mkCons
+              (PlutusTx.toBuiltinData y)
+              (Unsafe.mkNilData Unsafe.unitval)
+          )
+      )
+
+-- | @since Unreleased
+instance (PlutusTx.FromData a) => PlutusTx.FromData (Ib a) where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+    where
+      go :: Maybe (Ib a)
+      go =
+        let ell0 = Unsafe.unsafeDataAsList dat
+         in matchList ell0 Nothing $ \x ell1 ->
+              case PlutusTx.fromBuiltinData x of
+                Nothing -> Nothing
+                Just x' -> matchList ell1 Nothing $ \y ell2 ->
+                  case PlutusTx.fromBuiltinData y of
+                    Nothing -> Nothing
+                    Just y' ->
+                      matchList
+                        ell2
+                        (Just (Ib (x', y')))
+                        (\_ _ -> Nothing)
+
+-- | @since Unreleased
+instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData dat =
+    let ell0 = Unsafe.unsafeDataAsList dat
+        x = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
+        ell1 = Unsafe.tail ell0
+        y = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
+     in Ib (x, y)
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
@@ -188,13 +320,9 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
-makeIsDataIndexed ''Node [('Node, 0)]
-
 makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
 
 PlutusTx.makeLift ''DsKeyMint
-
-makeIsDataIndexed ''DsConfDatum [('DsConfDatum, 0)]
 
 PlutusTx.makeLift ''DsConfDatum
 
