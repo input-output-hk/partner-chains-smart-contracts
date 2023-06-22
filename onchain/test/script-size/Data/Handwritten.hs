@@ -31,11 +31,16 @@ instance ToData Foo where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (Foo {..}) =
     mkList
-      . mkCons (toBuiltinData tcs)
-      . mkCons (toBuiltinData sp)
-      . mkCons (toBuiltinData kcs)
-      . mkNilData
-      $ unitval
+      ( mkCons
+          (toBuiltinData tcs)
+          ( mkCons
+              (toBuiltinData sp)
+              ( mkCons
+                  (toBuiltinData kcs)
+                  (mkNilData unitval)
+              )
+          )
+      )
 
 instance FromData Foo where
   {-# INLINEABLE fromBuiltinData #-}
