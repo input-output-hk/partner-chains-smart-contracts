@@ -287,13 +287,28 @@ initCheckpointLookupsAndConstraints inp = do
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sc
 
+  -- TODO: this is going to get all replaced soon
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: inp.initThresholdNumerator
+        , thresholdDenominator: inp.initThresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      (Plain mempty)
+  -- END OF TODO
+
   let
     checkpointParameter = Checkpoint.Types.CheckpointParameter
       { sidechainParams: sc
       , checkpointAssetClass: checkpointCurrencySymbol /\
           Checkpoint.initCheckpointMintTn
-      , committeeOracleAssetClass: committeeOracleCurrencySymbol /\
-          CommitteeOraclePolicy.committeeOracleTn
+      , committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
     checkpointDatum = Datum
       $ PlutusData.toData

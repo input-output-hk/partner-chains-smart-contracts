@@ -8,31 +8,26 @@ module TrustlessSidechain.Checkpoint
 import Contract.Prelude
 
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
-import Contract.PlutusData
-  ( Datum(Datum)
-  , Redeemer(Redeemer)
-  , fromData
-  , toData
-  )
+import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
+import Contract.Prim.ByteArray (ByteArray)
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTx
-  , outputDatumDatum
   , signTransaction
   , submit
   )
-import Contract.TxConstraints (DatumPresence(DatumInline))
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
@@ -53,7 +48,6 @@ import TrustlessSidechain.Checkpoint.Utils
   , checkpointValidator
   , findCheckpointUtxo
   , initCheckpointMintTn
-  , normalizeSignatures
   , serialiseCheckpointMessage
   )
 import TrustlessSidechain.Checkpoint.Utils
@@ -63,193 +57,107 @@ import TrustlessSidechain.Checkpoint.Utils
   , serialiseCheckpointMessage
   ) as ExportUtils
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
-  )
-import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( findUpdateCommitteeHashUtxo
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
-saveCheckpoint = runSaveCheckpoint <<< normalizeSignatures
-
-runSaveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
-runSaveCheckpoint
+saveCheckpoint
   ( CheckpointEndpointParam
       { sidechainParams
-      , committeeSignatures
+      , aggregateSignature
       , newCheckpointBlockHash
       , newCheckpointBlockNumber
       , sidechainEpoch
       }
   ) = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = Logging.mkReport "Checkpoint" "runSaveCheckpoint"
-
-  -- Getting the minting policy / currency symbol / token name for checkpointing
-  -------------------------------------------------------------
-  { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
-    sidechainParams
-
-  { committeeOracleCurrencySymbol, committeeOracleTokenName } ←
+  let mkErr = Logging.mkReport "Checkpoint" "saveCheckpoint"
+  -- Set up for the committee ATMS schemes
+  ------------------------------------
+  { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
-
-  when (null committeeSignatures)
-    (throwContractError $ mkErr "No signatures provided")
-
-  let
-    curCommitteePubKeys /\ allCurCommitteeSignatures =
-      Utils.Crypto.unzipCommitteePubKeysAndSignatures
-        committeeSignatures
-    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
-      (unwrap sidechainParams).thresholdNumerator
-      (unwrap sidechainParams).thresholdDenominator
-      (curCommitteePubKeys /\ allCurCommitteeSignatures)
-
-  checkpointMessage ← liftContractM (mkErr "Failed to get checkpoint message")
-    $ serialiseCheckpointMessage
-    $ CheckpointMessage
-        { sidechainParams
-        , checkpointBlockHash: newCheckpointBlockHash
-        , checkpointBlockNumber: newCheckpointBlockNumber
-        , sidechainEpoch
-        }
-
-  unless
-    ( Utils.Crypto.verifyMultiSignature
-        ((unwrap sidechainParams).thresholdNumerator)
-        ((unwrap sidechainParams).thresholdDenominator)
-        curCommitteePubKeys
-        checkpointMessage
-        curCommitteeSignatures
-    )
-    ( throwContractError $ mkErr
-        "Invalid committee signatures for CheckpointMessage"
-    )
-
-  -- Getting checkpoint validator
-  let
-    checkpointParam = CheckpointParameter
-      { sidechainParams
-      , checkpointAssetClass: assetClass checkpointCurrencySymbol
-          checkpointTokenName
-      , committeeOracleAssetClass: assetClass committeeOracleCurrencySymbol
-          committeeOracleTokenName
-      }
-  validator ← checkpointValidator checkpointParam
-  let checkpointValidatorHash = Scripts.validatorHash validator
-
-  -- Getting the checkpoint utxo
-  checkpointUtxoLookup ← findCheckpointUtxo checkpointParam
-  { index: checkpointOref
-  , value: checkpointTxOut
-  } ←
-    liftContractM (mkErr "Failed to find checkpoint UTxO") checkpointUtxoLookup
-
-  -- Getting the validator / minting policy for the merkle root token.
-  -- This is needed to get the committee hash utxo.
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
 
   let
     committeeCertificateMint =
       CommitteeCertificateMint
-        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+        { thresholdNumerator:
+            (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator:
+            (unwrap sidechainParams).thresholdDenominator
         , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
-    curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
-
-  -- TODO: the hard coded committee certificate verifications will be replaced
-  -- soon in a seperate PR.
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       committeeCertificateMint
-      (Plain mempty)
+      aggregateSignature
 
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      }
-
-  -- Grabbing the current committee
-  lkup ← findUpdateCommitteeHashUtxo uch
-  { index: committeeOref
-  , value:
-      committeeOracleTxOut@
-        (TransactionOutputWithRefScript { output: TransactionOutput tOut })
-  } ←
-    liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
-
-  comitteeHashDatum ←
-    liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
-      $ outputDatumDatum tOut.datum
-  UpdateCommitteeDatum datum ← liftContractM
-    (mkErr "Datum at update committee hash UTxO fromData failed")
-    (fromData $ unwrap comitteeHashDatum)
-  when (datum.aggregatePubKeys /= curCommitteeHash)
-    (throwContractError "Incorrect committee provided")
-
-  -- Building / submitting the transaction.
-  let
-    newCheckpointDatum = Datum $ toData
-      ( CheckpointDatum
-          { blockHash: newCheckpointBlockHash
-          , blockNumber: newCheckpointBlockNumber
+  -- Find the UTxO with the current committee.
+  ------------------------------------
+  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
+    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+  currentCommitteeUtxo ←
+    liftedM (mkErr "failed to find current committee UTxO")
+      $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
+      $ UpdateCommitteeHash
+          { sidechainParams
+          , committeeOracleCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          , merkleRootTokenCurrencySymbol
           }
-      )
-    value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
-    redeemer = Redeemer $ toData
-      ( CheckpointRedeemer
-          { committeeSignatures: curCommitteeSignatures
-          , committeePubKeys: curCommitteePubKeys
-          , newCheckpointBlockHash
-          , newCheckpointBlockNumber
+
+  -- Grab the lookups + constraints for saving a merkle root
+  ------------------------------------
+  { lookupsAndConstraints
+  , checkpointMessage
+  } ← saveCheckpointLookupsAndConstraints
+    { sidechainParams
+    , newCheckpointBlockHash
+    , newCheckpointBlockNumber
+    , sidechainEpoch
+    , committeeCertificateVerificationCurrencySymbol
+    }
+
+  -- Grab the lookups + constraints for the committee certificate
+  -- verification
+  ------------------------------------
+  scMsg ← liftContractM "failed serializing the MerkleRootInsertionMessage"
+    $ serialiseCheckpointMessage checkpointMessage
+
+  atmsLookupsAndConstraints ←
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
+      $ CommitteeATMSParams
+          { currentCommitteeUtxo
+          , committeeCertificateMint
+          , aggregateSignature
+          , message: Utils.Crypto.sidechainMessageToTokenName scMsg
           }
-      )
 
-    lookups ∷ Lookups.ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
-        <> Lookups.unspentOutputs
-          (Map.singleton committeeOref committeeOracleTxOut)
-        <> Lookups.validator validator
-
-    constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
-      <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
-        DatumInline
-        value
-      <> TxConstraints.mustReferenceOutput committeeOref
+  -- Build / submit the transaction
+  ------------------------------------
+  let
+    { lookups, constraints } = atmsLookupsAndConstraints
+      <> lookupsAndConstraints
+      <>
+        -- include the current committee UTxO  in this transaction
+        { lookups:
+            Lookups.unspentOutputs
+              ( Map.singleton currentCommitteeUtxo.index
+                  currentCommitteeUtxo.value
+              )
+        , constraints:
+            TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
+        }
 
   ubTx ← liftedE
     (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
@@ -262,7 +170,102 @@ runSaveCheckpoint
 
   pure txId
 
--- | `getCheckpointPolicy` grabs the checkpoint hash policy, currency symbol and token name
+saveCheckpointLookupsAndConstraints ∷
+  { sidechainParams ∷ SidechainParams
+  , newCheckpointBlockHash ∷ ByteArray
+  , newCheckpointBlockNumber ∷ BigInt
+  , sidechainEpoch ∷ BigInt
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  } →
+  Contract
+    { lookupsAndConstraints ∷
+        { constraints ∷ TxConstraints Void Void
+        , lookups ∷ ScriptLookups Void
+        }
+    , checkpointMessage ∷ CheckpointMessage
+    }
+saveCheckpointLookupsAndConstraints
+  { sidechainParams
+  , newCheckpointBlockHash
+  , newCheckpointBlockNumber
+  , committeeCertificateVerificationCurrencySymbol
+  , sidechainEpoch
+  } = do
+  let -- `mkErr` is used to help generate log messages
+    mkErr = Logging.mkReport "Checkpoint" "saveCheckpointLookupsAndConstraints"
+
+  -- Create the message to be signed
+  -------------------------------------------------------------
+  let
+    checkpointMessage = CheckpointMessage
+      { sidechainParams
+      , checkpointBlockHash: newCheckpointBlockHash
+      , checkpointBlockNumber: newCheckpointBlockNumber
+      , sidechainEpoch
+      }
+
+  -- Getting the associated plutus scripts / UTXOs for checkpointing
+  -------------------------------------------------------------
+  { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
+    sidechainParams
+
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+  -- Getting checkpoint validator
+  let
+    checkpointParam = CheckpointParameter
+      { sidechainParams
+      , checkpointAssetClass: assetClass checkpointCurrencySymbol
+          checkpointTokenName
+      , committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
+      }
+  validator ← checkpointValidator checkpointParam
+  let checkpointValidatorHash = Scripts.validatorHash validator
+
+  -- Getting the checkpoint utxo
+  checkpointUtxoLookup ← findCheckpointUtxo checkpointParam
+  { index: checkpointOref
+  , value: checkpointTxOut
+  } ←
+    liftContractM (mkErr "Failed to find checkpoint UTxO") checkpointUtxoLookup
+
+  -- Building / submitting the transaction.
+  let
+    newCheckpointDatum = Datum $ toData
+      ( CheckpointDatum
+          { blockHash: newCheckpointBlockHash
+          , blockNumber: newCheckpointBlockNumber
+          }
+      )
+    value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
+    redeemer = Redeemer $ toData
+      ( CheckpointRedeemer
+          { newCheckpointBlockHash
+          , newCheckpointBlockNumber
+          }
+      )
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
+        -- <> Lookups.unspentOutputs
+        --   (Map.singleton committeeOref committeeOracleTxOut)
+        <> Lookups.validator validator
+
+    constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
+      <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
+        DatumInline
+        value
+  -- <> TxConstraints.mustReferenceOutput committeeOref
+
+  pure
+    { lookupsAndConstraints: { constraints, lookups }
+    , checkpointMessage
+    }
+
+-- | `getCheckpointPolicy` grabs the checkpoint policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCheckpointPolicy ∷
   SidechainParams →

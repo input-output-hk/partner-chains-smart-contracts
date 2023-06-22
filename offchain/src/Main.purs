@@ -365,7 +365,7 @@ runEndpoint scParams =
       let
         params = Checkpoint.CheckpointEndpointParam
           { sidechainParams: scParams
-          , committeeSignatures: List.toUnfoldable committeeSignatures
+          , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
           , newCheckpointBlockHash
           , newCheckpointBlockNumber
           , sidechainEpoch
