@@ -7,8 +7,7 @@ module TrustlessSidechain.UpdateCommitteeHash
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, throwContractError)
+import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.PlutusData (Datum(..), Redeemer(..), fromData, toData)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
@@ -17,17 +16,12 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionOutput(..)
   , TransactionOutputWithRefScript(..)
-  , awaitTxConfirmed
-  , balanceTx
   , outputDatumDatum
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints (DatumPresence(..))
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.Map as Map
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -66,7 +60,12 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
@@ -113,14 +112,14 @@ runUpdateCommitteeHash
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      (mkErr (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Building the new committee hash / verifying that the new committee was
   -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
   when (null committeeSignatures)
-    (throwContractError $ mkErr "Empty Committee")
+    (throwContractError $ mkErr (InvalidInputError "Empty Committee"))
 
   let
     newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
@@ -132,14 +131,20 @@ runUpdateCommitteeHash
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
-  uchmsg ← liftContractM (mkErr "Failed to get update committee hash message")
-    $ serialiseUchmHash
-    $ UpdateCommitteeHashMessage
-        { sidechainParams: sidechainParams
-        , newCommitteePubKeys: newCommitteePubKeys
-        , previousMerkleRoot: previousMerkleRoot
-        , sidechainEpoch: sidechainEpoch
-        }
+  uchmsg ←
+    liftContractM
+      ( mkErr
+          ( InternalError
+              (ConversionError "Failed to get update committee hash message")
+          )
+      )
+      $ serialiseUchmHash
+      $ UpdateCommitteeHashMessage
+          { sidechainParams: sidechainParams
+          , newCommitteePubKeys: newCommitteePubKeys
+          , previousMerkleRoot: previousMerkleRoot
+          , sidechainEpoch: sidechainEpoch
+          }
 
   unless
     ( Utils.Crypto.verifyMultiSignature
@@ -150,7 +155,9 @@ runUpdateCommitteeHash
         curCommitteeSignatures
     )
     ( throwContractError $ mkErr
-        "Invalid committee signatures for UpdateCommitteeHashMessage"
+        ( InvalidInputError
+            "Invalid committee signatures for UpdateCommitteeHashMessage"
+        )
     )
 
   -- Getting the validator / building the validator hash
@@ -173,16 +180,30 @@ runUpdateCommitteeHash
       committeeHashTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
-    liftContractM (mkErr "Failed to find update committee hash UTxO") $ lkup
+    liftContractM
+      ( mkErr
+          ( InternalError
+              (NotFoundUtxo "Failed to find update committee hash UTxO")
+          )
+      ) $ lkup
 
   rawDatum ←
-    liftContractM (mkErr "Update committee hash UTxO is missing inline datum")
+    liftContractM
+      ( mkErr
+          ( InternalError
+              (NotFoundUtxo "Committee hash UTxO is missing inline datum")
+          )
+      )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeHashDatum datum ← liftContractM
-    (mkErr "Datum at update committee hash UTxO fromData failed")
+    ( mkErr
+        ( InternalError
+            (ConversionError "Decoding datum at committee hash UTxO failed")
+        )
+    )
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
-    (throwContractError "Incorrect committee provided")
+    (throwContractError (InvalidInputError "Incorrect committee provided"))
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
@@ -223,19 +244,10 @@ runUpdateCommitteeHash
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
           previousMerkleRootORef
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' (mkErr "Submitted update committee hash transaction: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' (mkErr "Update committee hash transaction submitted successfully")
-
-  pure txId
+  balanceSignAndSubmit "Update CommiteeHash" lookups constraints
 
 -- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
+report ∷ String → OffchainError → String
 report = Logging.mkReport "UpdateCommitteeHash"
 
 -- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
@@ -253,7 +265,7 @@ getCommitteeHashPolicy (SidechainParams sp) = do
   committeeHashPolicy ← committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeHashCurrencySymbol ← liftContractM
-    (mkErr "Failed to get updateCommitteeHash CurrencySymbol")
+    (mkErr (InternalError (InvalidScript "CommitteeHashPolicy")))
     (Value.scriptCurrencySymbol committeeHashPolicy)
   let committeeHashTokenName = initCommitteeHashMintTn
   pure

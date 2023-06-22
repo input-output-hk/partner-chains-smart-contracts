@@ -60,6 +60,10 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -315,7 +319,7 @@ getDs txInput = do
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get dsConfPolicy CurrencySymbol")
+      (mkErr (InternalError (InvalidScript "DsConfPolicy")))
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
@@ -343,7 +347,7 @@ getDsKeyPolicy ds = do
 
   currencySymbol ←
     liftContractM
-      (mkErr "Failed to get dsKeyPolicy CurrencySymbol")
+      (mkErr (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
@@ -371,7 +375,13 @@ findDsConfOutput ds = do
 
   out ←
     liftContractM
-      (mkErr "Distributed Set config utxo does not contain oneshot token")
+      ( mkErr
+          ( InternalError
+              ( NotFoundUtxo
+                  "Distributed Set config utxo does not contain oneshot token"
+              )
+          )
+      )
       $ Array.find
           ( \(_ /\ TransactionOutputWithRefScript o) → not $ null
               $ AssocMap.lookup (dsConf ds)
@@ -381,7 +391,12 @@ findDsConfOutput ds = do
       $ Map.toUnfoldable utxos
 
   confDat ←
-    liftContractM (mkErr "Couldn't find Distributed Set configuration datum")
+    liftContractM
+      ( mkErr
+          ( InternalError
+              (NotFoundUtxo "Distributed Set config utxo does not contain datum")
+          )
+      )
       $ outputDatumDatum (unwrap (unwrap (snd out)).output).datum
       >>= (fromData <<< unwrap)
   pure
@@ -419,15 +434,22 @@ findDsOutput ∷
 findDsOutput ds tn txInput = do
   let mkErr = Logging.mkReport "DistributedSet" "findDsOutput"
 
-  txOut ← Monad.liftedM (mkErr "failed to find provided distributed set UTxO") $
-    Utxos.getUtxo txInput
+  txOut ←
+    Monad.liftedM
+      ( mkErr (InvalidInputError "Failed to find provided distributed set UTxO")
+      ) $
+      Utxos.getUtxo txInput
 
   { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
 
   --  Grab the datum
-  dat ← liftContractM (mkErr "datum not a distributed set node")
-    $ outputDatumDatum (unwrap txOut).datum
-    >>= (fromData <<< unwrap)
+  dat ←
+    liftContractM
+      ( mkErr
+          (InternalError (ConversionError "datum not a distributed set node"))
+      )
+      $ outputDatumDatum (unwrap txOut).datum
+      >>= (fromData <<< unwrap)
 
   --  Validate that this is a distributed set node / grab the necessary
   -- information about it
@@ -439,10 +461,17 @@ findDsOutput ds tn txInput = do
     unless
       (scriptAddr == (unwrap txOut).address)
       $ Monad.throwContractError
-      $ mkErr "provided transaction is not at distributed set node address"
+      $ mkErr
+          ( InvalidInputError
+              "provided transaction is not at distributed set node address"
+          )
 
     keyNodeTn ← liftContractM
-      (mkErr "missing token name in distributed set node")
+      ( mkErr
+          ( InternalError
+              (InvalidData "missing token name in distributed set node")
+          )
+      )
       do
         tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
           (unwrap txOut).amount
@@ -453,15 +482,18 @@ findDsOutput ds tn txInput = do
   nodes ←
     Monad.liftContractM
       ( mkErr
-          "invalid distributed set node provided \
-          \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
-          \but got `providedNode` "
-          <> show (getTokenName tn')
+          ( InvalidInputError
+              ( "invalid distributed set node provided \
+                \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+                \but got `providedNode` "
+                  <> show (getTokenName tn')
 
-          <> ", `newNode` "
-          <> show (getTokenName tn)
-          <> ", and `next` "
-          <> show (unwrap dat)
+                  <> ", `newNode` "
+                  <> show (getTokenName tn)
+                  <> ", and `next` "
+                  <> show (unwrap dat)
+              )
+          )
       ) $ insertNode (getTokenName tn) $ mkNode
       (getTokenName tn')
       dat
