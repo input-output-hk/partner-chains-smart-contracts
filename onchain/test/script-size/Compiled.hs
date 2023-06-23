@@ -19,6 +19,18 @@ module Compiled (
   fromDataHandwritten,
   unsafeFromDataGenerated,
   unsafeFromDataHandwritten,
+  pairToDataGenerated,
+  pairToDataHandwritten,
+  pairFromDataGenerated,
+  pairFromDataHandwritten,
+  pairUnsafeFromDataGenerated,
+  pairUnsafeFromDataHandwritten,
+  listToDataGenerated,
+  listToDataHandwritten,
+  listFromDataHandwritten,
+  listFromDataGenerated,
+  listUnsafeFromDataGenerated,
+  listUnsafeFromDataHandwritten,
 ) where
 
 import Data.Generated qualified as Generated
@@ -71,6 +83,42 @@ import TrustlessSidechain.UpdateCommitteeHash (
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
+
+listUnsafeFromDataGenerated :: CompiledCode (BuiltinData -> [Integer])
+listUnsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])
+
+listUnsafeFromDataHandwritten :: CompiledCode (BuiltinData -> [Integer])
+listUnsafeFromDataHandwritten = $$(compile [||Handwritten.listUnsafeFromData||])
+
+listFromDataGenerated :: CompiledCode (BuiltinData -> Maybe [Integer])
+listFromDataGenerated = $$(compile [||fromBuiltinData||])
+
+listFromDataHandwritten :: CompiledCode (BuiltinData -> Maybe [Integer])
+listFromDataHandwritten = $$(compile [||Handwritten.listFromData||])
+
+listToDataGenerated :: CompiledCode ([Integer] -> BuiltinData)
+listToDataGenerated = $$(compile [||toBuiltinData||])
+
+listToDataHandwritten :: CompiledCode ([Integer] -> BuiltinData)
+listToDataHandwritten = $$(compile [||Handwritten.listToData||])
+
+pairUnsafeFromDataGenerated :: CompiledCode (BuiltinData -> (Integer, Integer))
+pairUnsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])
+
+pairUnsafeFromDataHandwritten :: CompiledCode (BuiltinData -> (Integer, Integer))
+pairUnsafeFromDataHandwritten = $$(compile [||Handwritten.pairUnsafeFromData||])
+
+pairFromDataGenerated :: CompiledCode (BuiltinData -> Maybe (Integer, Integer))
+pairFromDataGenerated = $$(compile [||fromBuiltinData||])
+
+pairFromDataHandwritten :: CompiledCode (BuiltinData -> Maybe (Integer, Integer))
+pairFromDataHandwritten = $$(compile [||Handwritten.pairFromData||])
+
+pairToDataGenerated :: CompiledCode ((Integer, Integer) -> BuiltinData)
+pairToDataGenerated = $$(compile [||toBuiltinData||])
+
+pairToDataHandwritten :: CompiledCode ((Integer, Integer) -> BuiltinData)
+pairToDataHandwritten = $$(compile [||Handwritten.pairToData||])
 
 fromDataGenerated :: CompiledCode (BuiltinData -> Maybe Generated.Foo)
 fromDataGenerated = $$(compile [||fromBuiltinData||])

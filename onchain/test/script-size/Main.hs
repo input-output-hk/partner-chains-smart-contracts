@@ -158,5 +158,29 @@ main =
             "unsafeFromBuiltinData"
             ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
             ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairToDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairFromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairUnsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listToDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listFromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
         ]
     ]

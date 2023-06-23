@@ -1,7 +1,16 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Data.Handwritten (Foo (..)) where
+module Data.Handwritten (
+  Foo (..),
+  pairToData,
+  pairFromData,
+  pairUnsafeFromData,
+  listToData,
+  listFromData,
+  listUnsafeFromData,
+) where
 
+import Data.Kind (Type)
 import Ledger.Value (CurrencySymbol)
 import PlutusTx (
   FromData (fromBuiltinData),
@@ -10,6 +19,7 @@ import PlutusTx (
  )
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
+  BuiltinList,
   chooseData,
   mkCons,
   mkList,
@@ -74,3 +84,93 @@ instance UnsafeFromData Foo where
         ell'' = Unsafe.tail ell'
         kcs = unsafeFromBuiltinData (Unsafe.head ell'')
      in Foo tcs sp kcs
+
+{-# INLINE pairToData #-}
+pairToData ::
+  forall (a :: Type) (b :: Type).
+  (ToData a, ToData b) =>
+  (a, b) ->
+  BuiltinData
+pairToData (x, y) =
+  Unsafe.mkList
+    ( Unsafe.mkCons
+        (toBuiltinData x)
+        (Unsafe.mkCons (toBuiltinData y) (Unsafe.mkNilData Unsafe.unitval))
+    )
+
+{-# INLINE pairFromData #-}
+pairFromData ::
+  forall (a :: Type) (b :: Type).
+  (FromData a, FromData b) =>
+  BuiltinData ->
+  Maybe (a, b)
+pairFromData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+  where
+    go :: Maybe (a, b)
+    go =
+      let ell0 = unsafeDataAsList dat
+       in matchList ell0 Nothing $ \x ell1 ->
+            case fromBuiltinData x of
+              Nothing -> Nothing
+              Just x' -> matchList ell1 Nothing $ \y ell2 ->
+                case fromBuiltinData y of
+                  Nothing -> Nothing
+                  Just y' ->
+                    matchList
+                      ell2
+                      (Just (x', y'))
+                      (\_ _ -> Nothing)
+
+{-# INLINE pairUnsafeFromData #-}
+pairUnsafeFromData ::
+  forall (a :: Type) (b :: Type).
+  (UnsafeFromData a, UnsafeFromData b) =>
+  BuiltinData ->
+  (a, b)
+pairUnsafeFromData dat =
+  let ell0 = unsafeDataAsList dat
+      x = unsafeFromBuiltinData (Unsafe.head ell0)
+      ell1 = Unsafe.tail ell0
+      y = unsafeFromBuiltinData (Unsafe.head ell1)
+   in (x, y)
+
+{-# INLINE listToData #-}
+listToData ::
+  forall (a :: Type).
+  (ToData a) =>
+  [a] ->
+  BuiltinData
+listToData ell = Unsafe.mkList (go ell)
+  where
+    go :: [a] -> BuiltinList BuiltinData
+    go = \case
+      [] -> Unsafe.mkNilData Unsafe.unitval
+      (x : xs) -> Unsafe.mkCons (toBuiltinData x) (go xs)
+
+{-# INLINE listFromData #-}
+listFromData ::
+  forall (a :: Type).
+  (FromData a) =>
+  BuiltinData ->
+  Maybe [a]
+listFromData dat = Unsafe.chooseData dat Nothing Nothing (go (unsafeDataAsList dat)) Nothing Nothing
+  where
+    go :: BuiltinList BuiltinData -> Maybe [a]
+    go ell = matchList ell (Just []) $ \x xs ->
+      case fromBuiltinData x of
+        Nothing -> Nothing
+        Just x' -> case go xs of
+          Nothing -> Nothing
+          Just xs' -> Just (x' : xs')
+
+{-# INLINE listUnsafeFromData #-}
+listUnsafeFromData ::
+  forall (a :: Type).
+  (UnsafeFromData a) =>
+  BuiltinData ->
+  [a]
+listUnsafeFromData dat = go (unsafeDataAsList dat)
+  where
+    go :: BuiltinList BuiltinData -> [a]
+    go ell = matchList ell [] $ \x xs ->
+      unsafeFromBuiltinData x : go xs
