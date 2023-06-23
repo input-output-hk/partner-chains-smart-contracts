@@ -15,7 +15,8 @@ import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.SidechainParams (SidechainParams, scParamsCodec)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Codecs (scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp

@@ -20,6 +20,7 @@ import Data.UInt as UInt
 import Effect.Exception as Exception
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readTextFile)
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds(ATMSPlain))
 import TrustlessSidechain.ConfigFile.Codecs
   ( committeeCodec
   , committeeSignaturesCodec
@@ -44,6 +45,7 @@ optExample =
           { numerator: 2
           , denominator: 3
           }
+      , atmsKind: Just ATMSPlain
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

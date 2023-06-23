@@ -4,6 +4,7 @@ module TrustlessSidechain.Options.Types
   , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
+  , SidechainEndpointParams(..)
   , CandidatePermissionTokenMintInit
   ) where
 
@@ -21,15 +22,26 @@ import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenInfo
   , CandidatePermissionTokenMintInfo
   )
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
+-- | `SidechainEndpointParams` is an offchain type for grabbing information
+-- | related to the sidechain.
+-- | This is essentially `SidechainParams` with a little bit more information.
+newtype SidechainEndpointParams = SidechainEndpointParams
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  }
+
+derive instance Newtype SidechainEndpointParams _
+
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
-  { scParams ∷ SidechainParams
+  { sidechainEndpointParams ∷ SidechainEndpointParams
   , endpoint ∷ Endpoint
   , contractParams ∷ ContractParams
   }
@@ -48,6 +60,7 @@ type Config =
               { numerator ∷ Int
               , denominator ∷ Int
               }
+        , atmsKind ∷ Maybe ATMSKinds
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath

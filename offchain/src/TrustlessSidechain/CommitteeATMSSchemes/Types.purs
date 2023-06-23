@@ -2,6 +2,12 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeCertificateMint(CommitteeCertificateMint)
   , CommitteeATMSParams(CommitteeATMSParams)
   , ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  , ATMSKinds
+      ( ATMSPlain
+      , ATMSMultisignature
+      , ATMSPoK
+      , ATMSDummy
+      )
   ) where
 
 import Contract.Prelude
@@ -18,6 +24,7 @@ import Contract.Transaction
   )
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
+import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
@@ -75,3 +82,29 @@ data ATMSAggregateSignatures
   | Multisignature
   | PoK
   | Dummy
+
+-- | `ATMSKinds` denotes all the kinds of ATMS schemes that
+-- | will be hopefully supported  in the system.
+-- | Note that these correspond to `ATMSAggregateSignatures`.
+-- |
+-- | Notes:
+-- |    - this is a type used only offchain, and is used for users to give
+-- |    the ATMS mechanisms of the sidechain they are interacting with
+-- |
+-- |    - If we change this data type, then `TrustlessSidechain.Utils.Codecs`,
+-- |    `TrustlessSidechain.Options.Parsers`, `TrustlessSidechain.Options.Specs`
+-- |    all have user facing documentation that must be updated as well.
+data ATMSKinds
+  = ATMSPlain
+  | ATMSMultisignature
+  | ATMSPoK
+  | ATMSDummy
+
+derive instance Generic ATMSKinds _
+
+derive instance Eq ATMSKinds
+
+derive instance Ord ATMSKinds
+
+instance Show ATMSKinds where
+  show = genericShow

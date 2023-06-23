@@ -14,6 +14,9 @@ import Mote.Monad (Mote, test)
 import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds(ATMSPlain)
+  )
 import TrustlessSidechain.ConfigFile (readConfigJson)
 
 type ConfigFileTest = Mote (Const Void) Test Unit
@@ -63,6 +66,7 @@ test1 =
                               )
                           )
                       , threshold: (Just { denominator: 3, numerator: 2 })
+                      , atmsKind: Just ATMSPlain
                       }
                   )
               , stakeSigningKeyFile: Nothing

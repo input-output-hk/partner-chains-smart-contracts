@@ -16,9 +16,18 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
 import Data.UInt as UInt
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds
+      ( ATMSPlain
+      , ATMSDummy
+      , ATMSPoK
+      , ATMSMultisignature
+      )
+  )
 import TrustlessSidechain.Options.Types (Config)
 import TrustlessSidechain.Utils.Codecs
-  ( byteArrayCodec
+  ( atmsKindCodec
+  , byteArrayCodec
   , thresholdCodec
   , transactionInputCodec
   )
@@ -51,6 +60,7 @@ configCodec =
             { denominator ∷ Int
             , numerator ∷ Int
             }
+      , atmsKind ∷ Maybe ATMSKinds
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
@@ -58,6 +68,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
+        , atmsKind: CAC.maybe atmsKindCodec
         }
     )
 

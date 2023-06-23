@@ -65,6 +65,7 @@ import TrustlessSidechain.Options.Parsers
   , transactionInput
   , uint
   )
+import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
   , Config
@@ -84,6 +85,7 @@ import TrustlessSidechain.Options.Types
       )
   , InputArgOrFile(InputFromArg, InputFromFile)
   , Options
+  , SidechainEndpointParams(SidechainEndpointParams)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
@@ -158,7 +160,7 @@ withCommonOpts ∷ Maybe Config → Parser Endpoint → Parser Options
 withCommonOpts maybeConfig endpointParser = ado
   pSkey ← pSkeySpec maybeConfig
   stSkey ← stSKeySpec maybeConfig
-  scParams ← scParamsSpec maybeConfig
+  sidechainEndpointParams ← sidechainEndpointParamsSpec maybeConfig
   endpoint ← endpointParser
 
   ogmiosConfig ← serverConfigSpec "ogmios" $
@@ -170,7 +172,7 @@ withCommonOpts maybeConfig endpointParser = ado
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
   in
-    { scParams
+    { sidechainEndpointParams
     , endpoint
     , contractParams: testnetConfig
         { logLevel = environment.logLevel
@@ -257,8 +259,8 @@ serverConfigSpec
   in { host, path, port, secure: secure || defSecure }
 
 -- | SidechainParams CLI parser
-scParamsSpec ∷ Maybe Config → Parser SidechainParams
-scParamsSpec maybeConfig = ado
+sidechainEndpointParamsSpec ∷ Maybe Config → Parser SidechainEndpointParams
+sidechainEndpointParamsSpec maybeConfig = ado
   chainId ← option int $ fold
     [ short 'i'
     , long "sidechain-id"
@@ -284,6 +286,16 @@ scParamsSpec maybeConfig = ado
     , help "Input UTxO to be spent with the first committee hash setup"
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
+    ]
+
+  atmsKind ← option Parsers.atmsKind $ fold
+    [ short 'm'
+    , long "atms-kind"
+    , metavar "ATMS_KIND"
+    , help
+        "ATMS kind for the sidechain -- either 'plain', 'multisignature', 'pok', or 'dummy'"
+    , maybe mempty value
+        (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]
 
   { thresholdNumerator, thresholdDenominator } ←
@@ -313,12 +325,16 @@ scParamsSpec maybeConfig = ado
     in
       thresholdNumeratorDenominatorOption
   in
-    SidechainParams
-      { chainId: BigInt.fromInt chainId
-      , genesisHash
-      , genesisUtxo
-      , thresholdNumerator
-      , thresholdDenominator
+    SidechainEndpointParams
+      { sidechainParams:
+          SidechainParams
+            { chainId: BigInt.fromInt chainId
+            , genesisHash
+            , genesisUtxo
+            , thresholdNumerator
+            , thresholdDenominator
+            }
+      , atmsKind
       }
 
 -- | Parse all parameters for the `claim` endpoint

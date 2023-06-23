@@ -1,6 +1,8 @@
 module TrustlessSidechain.Options.Parsers
   ( parsePubKeyAndSignature
   , transactionInput
+  , atmsKind
+  , parseATMSKind
   , combinedMerkleProofParser
   , committeeSignature
   , sidechainSignature
@@ -36,12 +38,34 @@ import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds
+      ( ATMSPlain
+      , ATMSDummy
+      , ATMSPoK
+      , ATMSMultisignature
+      )
+  )
 import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+
+-- | Wraps `parseATMSKind`
+atmsKind ∷ ReadM ATMSKinds
+atmsKind = eitherReader parseATMSKind
+
+-- | Parses one of the possible kinds of committee certificate verifications
+parseATMSKind ∷ String → Either String ATMSKinds
+parseATMSKind str = case str of
+  "plain" → Right ATMSPlain
+  "pok" → Right ATMSPoK
+  "dummy" → Right ATMSDummy
+  "multisignature" → Right ATMSMultisignature
+  _ → Left
+    "invalid ATMS kind expected either 'plain', 'multisignature', 'pok', or 'dummy'"
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput

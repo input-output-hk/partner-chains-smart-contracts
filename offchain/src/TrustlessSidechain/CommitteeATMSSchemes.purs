@@ -8,6 +8,7 @@
 module TrustlessSidechain.CommitteeATMSSchemes
   ( atmsSchemeLookupsAndConstraints
   , atmsCommitteeCertificateVerificationMintingPolicy
+  , atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
 
   , module ExportCommitteeATMSSchemesTypes
   ) where
@@ -24,11 +25,13 @@ import Contract.Value
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, Plain)
+  , ATMSKinds(ATMSPlain, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  , ATMSKinds(ATMSPlain, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
@@ -54,7 +57,7 @@ atmsSchemeLookupsAndConstraints atmsParams =
     Multisignature → Monad.throwContractError
       "ATMS multisignature not implemented yet"
 
--- | `atmsCommitteeCertificateVerificationMintingPolicyCurrencySymbol` grabs
+-- | `atmsCommitteeCertificateVerificationMintingPolicy` grabs
 -- | the currency symbol / minting policy associated with the aggregate signature.
 atmsCommitteeCertificateVerificationMintingPolicy ∷
   CommitteeCertificateMint →
@@ -63,8 +66,25 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
     { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
-atmsCommitteeCertificateVerificationMintingPolicy ccm = case _ of
-  Plain _ → do
+atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
+  atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm $ case sig of
+    Plain _ → ATMSPlain
+    Dummy → ATMSDummy
+    PoK → ATMSPoK
+    Multisignature → ATMSMultisignature
+
+-- | `atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind` is
+-- | essentially `atmsCommitteeCertificateVerificationMintingPolicy` but with
+-- | `ATMSKinds`.
+atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
+  CommitteeCertificateMint →
+  ATMSKinds →
+  Contract
+    { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
+    , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+    }
+atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
+  ATMSPlain → do
     { committeePlainATMSPolicy
     , committeePlainATMSCurrencySymbol
     } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy ccm
@@ -73,7 +93,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ccm = case _ of
       , committeeCertificateVerificationCurrencySymbol:
           committeePlainATMSCurrencySymbol
       }
-  Dummy → Monad.throwContractError "ATMS dummy not implemented yet"
-  PoK → Monad.throwContractError "ATMS PoK not implemented yet"
-  Multisignature → Monad.throwContractError
+  ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
+  ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"
+  ATMSMultisignature → Monad.throwContractError
     "ATMS multisignature not implemented yet"
