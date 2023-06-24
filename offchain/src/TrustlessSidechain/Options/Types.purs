@@ -23,7 +23,6 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
-import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -97,7 +96,7 @@ data Endpoint
   | CommitteeHash
       { newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
@@ -105,7 +104,7 @@ data Endpoint
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -115,13 +114,14 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe RootHash
       , newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , newCommitteeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , newMerkleRootSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
-      SidechainAddressesExtra
+      { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+      }
   | InitTokens
       { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
@@ -135,7 +135,7 @@ data Endpoint
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt

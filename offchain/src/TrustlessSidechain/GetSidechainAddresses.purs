@@ -2,7 +2,7 @@
 -- | identifying its associated hex encoded validator and currency symbol.
 module TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
-  , SidechainAddressesExtra
+  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   , getSidechainAddresses
   , currencySymbolToHex
   ) where
@@ -24,7 +24,7 @@ import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -55,30 +55,37 @@ type SidechainAddresses =
     cborEncodedAddresses ∷ Array (Tuple String String)
   }
 
--- | `SidechainAddressesExtra` provides extra information for creating more
--- | addresses related to the sidechain.
--- | In particular, this allows us to optionally grab the minting policy of the
--- | candidate permission token.
-type SidechainAddressesExtra =
-  { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput }
+-- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
+-- bundling the required data to grab all the sidechain addresses.
+newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  , -- Used to optionally grab the minting policy of candidate permission
+    -- token.
+    mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+
+  }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
 -- | the given `SidechainParams` which contains related addresses and currency
 -- | symbols. Moreover, it returns the currency symbol of the candidate
 -- | permission token provided the `permissionTokenUtxo` is given.
 getSidechainAddresses ∷
-  SidechainParams → SidechainAddressesExtra → Contract SidechainAddresses
-getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
+  SidechainAddressesEndpointParams → Contract SidechainAddresses
+getSidechainAddresses
+  ( SidechainAddressesEndpointParams
+      { sidechainParams: scParams, atmsKind, mCandidatePermissionTokenUtxo }
+  ) = do
   -- Minting policies
   { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
-    scParams
+    { atmsKind
+    , sidechainParams: scParams
+    }
   let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
 
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
 
-  -- TODO: we would really like to include the committee certificate signing
-  -- method here
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -87,10 +94,9 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
         , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       committeeCertificateMint
-      (Plain mempty)
-  -- END OF TODO
+      atmsKind
 
   { merkleRootTokenCurrencySymbol } ←
     MerkleRoot.getMerkleRootTokenMintingPolicy

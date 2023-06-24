@@ -25,7 +25,10 @@ import Test.UpdateCommitteeHash (updateCommitteeHash)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSAggregateSignatures(Plain))
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , ATMSKinds(ATMSPlain)
+  )
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
@@ -111,6 +114,7 @@ saveCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -167,6 +171,7 @@ notEnoughSignaturesTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -232,6 +237,7 @@ outOfOrderCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -289,6 +295,7 @@ invalidCheckpointBlockHashTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -348,6 +355,7 @@ signedByUnknownCommitteeTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -410,6 +418,7 @@ committeeChangeCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams

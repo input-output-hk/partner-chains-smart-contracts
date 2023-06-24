@@ -54,9 +54,9 @@ import TrustlessSidechain.Options.Parsers
   , blockHash
   , byteArray
   , combinedMerkleProofParserWithPkh
-  , committeeSignature
   , denominator
   , numerator
+  , pubKeyBytesAndSignatureBytes
   , rootHash
   , sidechainAddress
   , sidechainPublicKey
@@ -88,7 +88,7 @@ import TrustlessSidechain.Options.Types
   , SidechainEndpointParams(SidechainEndpointParams)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -587,11 +587,11 @@ parseCommitteeSignatures ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)))
+  Parser (InputArgOrFile (List (ByteArray /\ Maybe ByteArray)))
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
-        ( option committeeSignature
+        ( option pubKeyBytesAndSignatureBytes
             ( fold
                 [ long longflag
                 , metavar "PUBLIC_KEY[:[SIGNATURE]]"

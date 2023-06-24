@@ -5,6 +5,8 @@ module TrustlessSidechain.Options.Parsers
   , parseATMSKind
   , combinedMerkleProofParser
   , committeeSignature
+  , parsePubKeyBytesAndSignatureBytes
+  , pubKeyBytesAndSignatureBytes
   , sidechainSignature
   , sidechainPublicKey
   , sidechainAddress
@@ -180,6 +182,9 @@ committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
+-- | subject to the hex strings satisfying some conditions about whether the
+-- | public key  / signature could be a `SidechainPublicKey` or a
+-- | `SidechainSignature`
 -- Note: should we make this more strict and disallow `aa:`? in a sense:
 -- `aa` denotes a pubkey without a signature
 -- `aa:bb` denotes a pubkey and a signature
@@ -196,6 +201,31 @@ parsePubKeyAndSignature str =
         pure $ l' /\ Just r'
     [ l ] → ado
       l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      in l' /\ Nothing
+    _ → Nothing
+
+-- | `pubKeyBytesAndSignatureBytes` is a the CLI parser for `parsePubKeyBytesAndSignatureBytes`.
+pubKeyBytesAndSignatureBytes ∷ ReadM (ByteArray /\ Maybe ByteArray)
+pubKeyBytesAndSignatureBytes = maybeReader parsePubKeyBytesAndSignatureBytes
+
+-- | `parsePubKeyBytesAndSignatureBytes` parses the following format
+-- | `hexStr[:[hexStr]]`
+-- Note: should we make this more strict and disallow `aa:`? in a sense:
+-- `aa` denotes a pubkey without a signature
+-- `aa:bb` denotes a pubkey and a signature
+-- anything else is likely an error, and should be treated as malformed input
+parsePubKeyBytesAndSignatureBytes ∷
+  String → Maybe (ByteArray /\ Maybe ByteArray)
+parsePubKeyBytesAndSignatureBytes str =
+  case split (Pattern ":") str of
+    [ l, r ] | l /= "" → do
+      l' ← hexToByteArray $ l
+      if r == "" then pure $ l' /\ Nothing
+      else do
+        r' ← hexToByteArray $ r
+        pure $ l' /\ Just r'
+    [ l ] → ado
+      l' ← hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
 

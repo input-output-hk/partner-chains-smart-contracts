@@ -22,6 +22,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
+  , ATMSKinds(ATMSPlain)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
@@ -90,6 +91,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlain
           }
 
       -- 2. Saving a merkle root.
@@ -234,6 +236,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlain
           }
 
       -- 2. Saving a merkle root

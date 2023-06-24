@@ -2,7 +2,7 @@ module Main (main) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, launchAff_, runContract)
+import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
 import Control.Monad.Error.Class (throwError)
 import Data.BigInt as BigInt
 import Data.List as List
@@ -15,9 +15,7 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain)
-  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp
@@ -36,7 +34,14 @@ import TrustlessSidechain.EndpointResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
+import TrustlessSidechain.FUELMintingPolicy
+  ( FuelMintOrFuelBurnParams(Burn, Mint)
+  , FuelParams(FuelParams)
+  , runFuelMP
+  )
+import TrustlessSidechain.GetSidechainAddresses
+  ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
+  )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( initSidechain
@@ -64,7 +69,6 @@ import TrustlessSidechain.Options.Types
   , Options
   , SidechainEndpointParams
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
@@ -116,19 +120,24 @@ runEndpoint ∷ SidechainEndpointParams → Endpoint → Contract EndpointResp
 runEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
+    atmsKind = (unwrap sidechainEndpointParams).atmsKind
   in
     case endpoint of
       ClaimAct
         { amount, recipient, merkleProof, index, previousMerkleRoot, dsUtxo } →
-        runFuelMP scParams
-          ( Mint
-              { amount
-              , recipient
-              , sidechainParams: scParams
-              , merkleProof
-              , index
-              , previousMerkleRoot
-              , dsUtxo
+        runFuelMP
+          ( FuelParams
+              { sidechainParams: scParams
+              , atmsKind
+              , fuelMintOrFuelBurnParams:
+                  Mint
+                    { amount
+                    , recipient
+                    , merkleProof
+                    , index
+                    , previousMerkleRoot
+                    , dsUtxo
+                    }
               }
           )
           <#> unwrap
@@ -136,9 +145,17 @@ runEndpoint sidechainEndpointParams endpoint =
           >>> ClaimActResp
 
       BurnAct { amount, recipient } →
-        runFuelMP scParams
-          (Burn { amount, recipient }) <#> unwrap >>> { transactionId: _ } >>>
-          BurnActResp
+        runFuelMP
+          ( FuelParams
+              { sidechainParams: scParams
+              , atmsKind
+              , fuelMintOrFuelBurnParams: Burn { amount, recipient }
+              }
+          )
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>>
+            BurnActResp
 
       CommitteeCandidateReg
         { spoPubKey
@@ -202,8 +219,12 @@ runEndpoint sidechainEndpointParams endpoint =
             >>> CommitteeCandidateDeregResp
       GetAddrs extraInfo → do
         sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
-          scParams
-          extraInfo
+          $ SidechainAddressesEndpointParams
+              { sidechainParams: scParams
+              , atmsKind
+              , mCandidatePermissionTokenUtxo:
+                  extraInfo.mCandidatePermissionTokenUtxo
+              }
         pure $ GetAddrsResp { sidechainAddresses }
 
       CommitteeHash
@@ -214,6 +235,12 @@ runEndpoint sidechainEndpointParams endpoint =
         } → do
         committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
+        aggregateSignature ← liftContractE $
+          CommitteeATMSSchemes.toATMSAggregateSignatures
+            { atmsKind
+            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            }
+
         newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           newCommitteePubKeysInput
         let
@@ -221,8 +248,7 @@ runEndpoint sidechainEndpointParams endpoint =
             { sidechainParams: scParams
             , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
                 newCommitteePubKeys
-            , -- TODO: change the CLI to accept different signature types.
-              aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
+            , aggregateSignature
             , previousMerkleRoot
             , sidechainEpoch
             }
@@ -234,12 +260,17 @@ runEndpoint sidechainEndpointParams endpoint =
       SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput } → do
         committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
+        aggregateSignature ← liftContractE $
+          CommitteeATMSSchemes.toATMSAggregateSignatures
+            { atmsKind
+            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            }
         let
           params = SaveRootParams
             { sidechainParams: scParams
             , merkleRoot
             , previousMerkleRoot
-            , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
+            , aggregateSignature
             }
         MerkleRoot.saveRoot params
           <#> unwrap
@@ -255,6 +286,7 @@ runEndpoint sidechainEndpointParams endpoint =
             , initUtxo: sc.genesisUtxo
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator
+            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
             , initCandidatePermissionTokenMintInfo:
                 case initCandidatePermissionTokenMintInfo of
                   Nothing → Nothing
@@ -294,6 +326,7 @@ runEndpoint sidechainEndpointParams endpoint =
             { initChainId: sc.chainId
             , initGenesisHash: sc.genesisHash
             , initUtxo: sc.genesisUtxo
+            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
             , initCommittee: List.toUnfoldable committeePubKeys
 
             , -- duplicated from the `InitTokens` case
@@ -336,10 +369,23 @@ runEndpoint sidechainEndpointParams endpoint =
         , newMerkleRootSignaturesInput
         , sidechainEpoch
         } → do
+
         newCommitteeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           newCommitteeSignaturesInput
+        newCommitteeAggregateSignature ← liftContractE $
+          CommitteeATMSSchemes.toATMSAggregateSignatures
+            { atmsKind
+            , committeePubKeyAndSigs: List.toUnfoldable newCommitteeSignatures
+            }
+
         newMerkleRootSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           newMerkleRootSignaturesInput
+        newMerkleRootAggregateSignature ← liftContractE $
+          CommitteeATMSSchemes.toATMSAggregateSignatures
+            { atmsKind
+            , committeePubKeyAndSigs: List.toUnfoldable newMerkleRootSignatures
+            }
+
         newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           newCommitteePubKeysInput
         let
@@ -347,15 +393,14 @@ runEndpoint sidechainEndpointParams endpoint =
             { sidechainParams: scParams
             , merkleRoot
             , previousMerkleRoot
-            , aggregateSignature: Plain $ List.toUnfoldable newMerkleRootSignatures
+            , aggregateSignature: newMerkleRootAggregateSignature
             }
           uchParams = UpdateCommitteeHashParams
             { sidechainParams: scParams
             , newAggregatePubKeys:
-                -- TODO: change the CLI to accept different signature types.
                 Utils.Crypto.aggregateKeys $ List.toUnfoldable
                   newCommitteePubKeys
-            , aggregateSignature: Plain $ List.toUnfoldable newCommitteeSignatures
+            , aggregateSignature: newCommitteeAggregateSignature
             , -- the previous merkle root is the merkle root we just saved..
               previousMerkleRoot: Just merkleRoot
             , sidechainEpoch
@@ -372,12 +417,18 @@ runEndpoint sidechainEndpointParams endpoint =
         , newCheckpointBlockNumber
         , sidechainEpoch
         } → do
+
         committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
+        aggregateSignature ← liftContractE $
+          CommitteeATMSSchemes.toATMSAggregateSignatures
+            { atmsKind
+            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            }
         let
           params = Checkpoint.CheckpointEndpointParam
             { sidechainParams: scParams
-            , aggregateSignature: Plain $ List.toUnfoldable committeeSignatures
+            , aggregateSignature
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch

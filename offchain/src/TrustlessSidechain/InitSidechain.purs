@@ -73,7 +73,7 @@ import TrustlessSidechain.Checkpoint
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -88,7 +88,10 @@ import TrustlessSidechain.DistributedSet
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy (FUELMint(FUELMint))
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
-import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
+import TrustlessSidechain.GetSidechainAddresses
+  ( SidechainAddresses
+  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
+  )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.MerkleRoot
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -116,6 +119,7 @@ type InitTokensParams r =
   , initCandidatePermissionTokenMintInfo ∷
       Maybe
         CandidatePermissionTokenMintInfo
+  , initATMSKind ∷ ATMSKinds
   | r
   }
 
@@ -287,7 +291,6 @@ initCheckpointLookupsAndConstraints inp = do
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sc
 
-  -- TODO: this is going to get all replaced soon
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -297,10 +300,9 @@ initCheckpointLookupsAndConstraints inp = do
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       committeeCertificateMint
-      (Plain mempty)
-  -- END OF TODO
+      inp.initATMSKind
 
   let
     checkpointParameter = Checkpoint.Types.CheckpointParameter
@@ -366,8 +368,6 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Setting up the update committee hash validator
   -----------------------------------
-
-  -- TODO: this is going to get all replaced soon
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -377,10 +377,9 @@ initCommitteeHashLookupsAndConstraints isp = do
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       committeeCertificateMint
-      (Plain mempty)
-  -- END OF TODO
+      isp.initATMSKind
 
   let
     aggregatedKeys = Utils.Crypto.aggregateKeys $ Array.sort
@@ -640,11 +639,16 @@ initSidechainTokens isp = do
 
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses sidechainParams
-      $ case isp.initCandidatePermissionTokenMintInfo of
-          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
-          Just { permissionToken: { candidatePermissionTokenUtxo } } →
-            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
+    GetSidechainAddresses.getSidechainAddresses $
+      SidechainAddressesEndpointParams
+        { sidechainParams
+        , atmsKind: isp.initATMSKind
+        , mCandidatePermissionTokenUtxo:
+            case isp.initCandidatePermissionTokenMintInfo of
+              Nothing → Nothing
+              Just { permissionToken: { candidatePermissionTokenUtxo } } →
+                Just candidatePermissionTokenUtxo
+        }
   pure
     { transactionId: txId
     , sidechainParams
@@ -688,13 +692,18 @@ paySidechainTokens isp = do
   awaitTxConfirmed txId
 
   let sidechainParams = toSidechainParams isp
+
   sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses
-      sidechainParams
-      $ case isp.initCandidatePermissionTokenMintInfo of
-          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
-          Just { permissionToken: { candidatePermissionTokenUtxo } } →
-            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
+    GetSidechainAddresses.getSidechainAddresses $
+      SidechainAddressesEndpointParams
+        { sidechainParams
+        , atmsKind: isp.initATMSKind
+        , mCandidatePermissionTokenUtxo:
+            case isp.initCandidatePermissionTokenMintInfo of
+              Nothing → Nothing
+              Just { permissionToken: { candidatePermissionTokenUtxo } } →
+                Just candidatePermissionTokenUtxo
+        }
   pure
     { transactionId: txId
     , sidechainParams
@@ -784,11 +793,17 @@ initSidechain (InitSidechainParams isp) = do
   -----------------------------------------
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses sidechainParams
-      $ case isp.initCandidatePermissionTokenMintInfo of
-          Nothing → { mCandidatePermissionTokenUtxo: Nothing }
-          Just { permissionToken: { candidatePermissionTokenUtxo } } →
-            { mCandidatePermissionTokenUtxo: Just candidatePermissionTokenUtxo }
+    GetSidechainAddresses.getSidechainAddresses
+      $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: isp.initATMSKind
+          , mCandidatePermissionTokenUtxo:
+              case isp.initCandidatePermissionTokenMintInfo of
+                Nothing → Nothing
+                Just { permissionToken: { candidatePermissionTokenUtxo } } →
+                  Just candidatePermissionTokenUtxo
+          }
   pure
     { transactionId: txId
     , sidechainParams
@@ -813,7 +828,6 @@ getMerkleRootTokenPolicy isp = do
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
 
-  -- TODO: this is going to get all replaced soon
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -823,10 +837,9 @@ getMerkleRootTokenPolicy isp = do
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       committeeCertificateMint
-      (Plain mempty)
-  -- END OF TODO
+      isp.initATMSKind
 
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
