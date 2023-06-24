@@ -9,9 +9,12 @@ module TrustlessSidechain.GetSidechainAddresses
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Address as Address
+import Contract.CborBytes as CborBytes
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Transaction (TransactionInput)
@@ -34,7 +37,7 @@ import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( updateCommitteeHashValidator
+  ( getUpdateCommitteeHashValidator
   )
 import TrustlessSidechain.Utils.Logging as Utils.Logging
 
@@ -44,8 +47,12 @@ import TrustlessSidechain.Utils.Logging as Utils.Logging
 -- |
 -- | See `getSidechainAddresses` for more details.
 type SidechainAddresses =
-  { addresses ∷ Array (Tuple String String)
-  , mintingPolicies ∷ Array (Tuple String String)
+  { -- bech32 addresses
+    addresses ∷ Array (Tuple String String)
+  , --  currency symbols
+    mintingPolicies ∷ Array (Tuple String String)
+  , -- cbor of the Plutus Address type.
+    plutusDataAddresses ∷ Array (Tuple String String)
   }
 
 -- | `SidechainAddressesExtra` provides extra information for creating more
@@ -107,7 +114,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← merkleRootTokenValidator scParams
     getAddr validator
 
-  committeeOracleValidatorAddr ←
+  { committeeHashValidatorAddr, committeeHashValidatorAddrPlutus } ←
     do
       -- TODO: this is going to get all replaced soon?
       let
@@ -128,8 +135,13 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
           , merkleRootTokenCurrencySymbol
           , committeeCertificateVerificationCurrencySymbol
           }
-      validator ← updateCommitteeHashValidator uch
-      getAddr validator
+      { validator, address } ← getUpdateCommitteeHashValidator uch
+      bech32Addr ← getAddr validator
+
+      pure
+        { committeeHashValidatorAddr: bech32Addr
+        , committeeHashValidatorAddrPlutus: getPlutusAddr address
+        }
 
   dsInsertValidatorAddr ← do
     validator ← DistributedSet.insertValidator ds
@@ -155,14 +167,19 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     addresses =
       [ "CommitteeCandidateValidator" /\ committeeCandidateValidatorAddr
       , "MerkleRootTokenValidator" /\ merkleRootTokenValidatorAddr
-      , "CommitteeHashValidator" /\ committeeOracleValidatorAddr
+      , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
-
       ]
+
+    plutusDataAddresses =
+      [ "CommitteeHashValidator" /\ committeeHashValidatorAddrPlutus
+      ]
+
   pure
     { addresses
     , mintingPolicies
+    , plutusDataAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
@@ -175,6 +192,13 @@ getAddr v = do
       (validatorHash v)
   serialised ← Address.addressToBech32 addr
   pure serialised
+
+-- | Gets the hex encoded string of the cbor representation of an Address
+getPlutusAddr ∷ Address → String
+getPlutusAddr =
+  ByteArray.byteArrayToHex
+    <<< CborBytes.cborBytesToByteArray
+    <<< PlutusData.serializeData
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol

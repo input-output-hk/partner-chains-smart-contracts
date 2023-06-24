@@ -99,6 +99,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             ( Object.fromFoldable
                 (map (rmap J.fromString) sidechainAddresses.addresses)
             )
+        , "plutusDataAddresses" /\ J.fromObject
+            ( Object.fromFoldable
+                (map (rmap J.fromString) sidechainAddresses.plutusDataAddresses)
+            )
         , "mintingPolicies" /\ J.fromObject
             ( Object.fromFoldable
                 (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
@@ -132,6 +136,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               ( Object.fromFoldable
                   (map (rmap J.fromString) sidechainAddresses.addresses)
               )
+          , "plutusDataAddresses" /\ J.fromObject
+              ( Object.fromFoldable
+                  (map (rmap J.fromString) sidechainAddresses.plutusDataAddresses)
+              )
           , "mintingPolicies" /\ J.fromObject
               ( Object.fromFoldable
                   (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
@@ -146,6 +154,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , "addresses" /\ J.fromObject
               ( Object.fromFoldable
                   (map (rmap J.fromString) sidechainAddresses.addresses)
+              )
+          , "plutusDataAddresses" /\ J.fromObject
+              ( Object.fromFoldable
+                  (map (rmap J.fromString) sidechainAddresses.plutusDataAddresses)
               )
           , "mintingPolicies" /\ J.fromObject
               ( Object.fromFoldable
