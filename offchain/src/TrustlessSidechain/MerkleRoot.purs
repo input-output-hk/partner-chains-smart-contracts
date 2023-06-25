@@ -43,11 +43,13 @@ import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint(SignedMerkleRootMint)
+  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint(SignedMerkleRootMint)
+  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
@@ -254,10 +256,14 @@ saveRootLookupsAndConstraints
   let
     value = Value.singleton rootTokenCS merkleRootTokenName one
 
-    redeemer = MerkleRootInsertionMessage
+    msg = MerkleRootInsertionMessage
       { sidechainParams
       , merkleRoot
       , previousMerkleRoot
+      }
+
+    redeemer = SignedMerkleRootRedeemer
+      { previousMerkleRoot
       }
 
     constraints ∷ TxConstraints Void Void
@@ -267,16 +273,12 @@ saveRootLookupsAndConstraints
           unitDatum
           TxConstraints.DatumWitness
           value
-        -- TODO: remove
-        -- <> TxConstraints.mustReferenceOutput committeeOracleTxIn
         <> case maybePreviousMerkleRootUtxo of
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
-      -- TODO: remove
-      -- <> Lookups.unspentOutputs (Map.singleton committeeOracleTxIn committeeOracleTxOut)
       <> case maybePreviousMerkleRootUtxo of
         Nothing → mempty
         Just { index: txORef, value: txOut } → Lookups.unspentOutputs
@@ -284,7 +286,7 @@ saveRootLookupsAndConstraints
 
   pure
     { lookupsAndConstraints: { lookups, constraints }
-    , merkleRootInsertionMessage: redeemer
+    , merkleRootInsertionMessage: msg
     }
 
 -- | `report` is an internal function used for helping writing log messages.

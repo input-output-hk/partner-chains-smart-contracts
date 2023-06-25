@@ -12,7 +12,7 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
-import Ledger.Value (TokenName (TokenName), Value (getValue))
+import Ledger.Value (TokenName (TokenName, unTokenName), Value (getValue))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
@@ -33,11 +33,15 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    mrimMerkleRoot,
+    mrimPreviousMerkleRoot,
+    mrimSidechainParams
+  ),
   MerkleTreeEntry,
-  SignedMerkleRootMint,
-  mrimMerkleRoot,
-  mrimPreviousMerkleRoot,
+  SignedMerkleRootMint (smrmSidechainParams),
+  SignedMerkleRootRedeemer (smrrPreviousMerkleRoot),
   smrmCommitteeCertificateVerificationCurrencySymbol,
   smrmValidatorHash,
  )
@@ -59,28 +63,21 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
       1. UTXO with the last Merkle root is referenced in the transaction.
 
       2.  the committee certificate verification minting policy asserts that
-      `MerkleRootInsertionMessage` has been signed
-
-      3. Exactly one token is minted
-
-      TODO: the spec doesn't say this, but this is what the implementation
-      does. Fairly certain this is what we want...
-
-      4. At least one token is paid to 'smrmValidatorHash'
+      `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
+      and At least one token is paid to 'smrmValidatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SignedMerkleRootMint -> MerkleRootInsertionMessage -> ScriptContext -> Bool
+mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
   smrm
-  mrim@MerkleRootInsertionMessage
-    { mrimMerkleRoot
-    , mrimPreviousMerkleRoot
-    }
+  smrr
+  -- mrim@MerkleRootInsertionMessage
+  --   { mrimMerkleRoot
+  --   , mrimPreviousMerkleRoot
+  --   }
   ctx =
     traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed" p2
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p3
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' must pay to validator hash" p4
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p2
     where
       info :: TxInfo
       info = scriptContextTxInfo ctx
@@ -88,13 +85,11 @@ mkMintingPolicy
       minted = txInfoMint info
       ownCurrencySymbol :: CurrencySymbol
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
-      ownTokenName :: TokenName
-      ownTokenName = Value.TokenName mrimMerkleRoot
 
       -- Checks:
       -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3.,
       -- 4. resp. in the documentation of this function.
-      p1 = case mrimPreviousMerkleRoot of
+      p1 = case smrrPreviousMerkleRoot smrr of
         Nothing -> True
         Just tn ->
           -- Checks if any of the reference inputs have at least 1 of the last
@@ -110,32 +105,38 @@ mkMintingPolicy
               go [] = False
            in go (txInfoReferenceInputs info)
 
-      p2 =
-        case AssocMap.lookup (smrmCommitteeCertificateVerificationCurrencySymbol smrm) $
-          getValue minted of
-          Nothing -> False
-          Just tns -> case AssocMap.lookup
-            (TokenName $ serialiseMrimHash mrim)
-            tns of
-            Just v | v > 0 -> True
-            _ -> False
-
-      p3 = case AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue minted of
+      p2 = case AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue minted of
         Nothing -> False
         Just tns -> case AssocMap.toList tns of
-          [(tn, amount)] | tn == ownTokenName && amount == 1 -> True
+          [(tn, amount)]
+            | amount == 1 ->
+              let msg =
+                    MerkleRootInsertionMessage
+                      { mrimSidechainParams = smrmSidechainParams smrm
+                      , mrimMerkleRoot = unTokenName tn
+                      , mrimPreviousMerkleRoot = smrrPreviousMerkleRoot smrr
+                      }
+               in traceIfFalse
+                    "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
+                    ( Value.valueOf
+                        minted
+                        (smrmCommitteeCertificateVerificationCurrencySymbol smrm)
+                        (TokenName (serialiseMrimHash msg))
+                        > 0
+                    )
+                    && traceIfFalse
+                      "error 'MerkleRootTokenMintingPolicy' token not paid to correct validator address"
+                      ( let go [] = False
+                            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
+                              ScriptCredential vh
+                                | vh == smrmValidatorHash smrm
+                                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
+                                    > 0 ->
+                                  True
+                              _ -> go txOuts
+                         in go $ txInfoOutputs info
+                      )
           _ -> False
-
-      p4 =
-        let go [] = False
-            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
-              ScriptCredential vh
-                | vh == smrmValidatorHash smrm
-                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
-                    > 0 ->
-                  True
-              _ -> go txOuts
-         in go $ txInfoOutputs info
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

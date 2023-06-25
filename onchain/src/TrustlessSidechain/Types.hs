@@ -141,6 +141,18 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
+{- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
+ minting policy
+-}
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { smrrPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+  deriving newtype
+    ( ToData
+    , FromData
+    , UnsafeFromData
+    )
+
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
   { -- | 'smrmSidechainParams' includes the 'SidechainParams'

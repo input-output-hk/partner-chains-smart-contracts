@@ -7,6 +7,7 @@ module TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
   , SaveRootParams(SaveRootParams)
   , MerkleRootInsertionMessage(MerkleRootInsertionMessage)
+  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   ) where
 
 import Contract.Prelude
@@ -53,6 +54,21 @@ instance ToData SignedMerkleRootMint where
       , toData committeeCertificateVerificationCurrencySymbol
       , toData merkleRootValidatorHash
       ]
+
+-- | `SignedMerkleRootRedeemer` is the redeemer for the update committee hash
+-- | validator
+-- | This corresponds to the onchain type.
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { previousMerkleRoot ∷ Maybe RootHash
+  }
+
+derive instance Generic SignedMerkleRootRedeemer _
+
+derive instance Newtype SignedMerkleRootRedeemer _
+
+instance ToData SignedMerkleRootRedeemer where
+  toData (SignedMerkleRootRedeemer { previousMerkleRoot }) = toData
+    previousMerkleRoot
 
 -- | `SaveRootParams` is the offchain parameter for MerkleRoot (`MerkleRoot.saveRoot`)
 -- | endpoint.
