@@ -250,15 +250,12 @@ saveCheckpointLookupsAndConstraints
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
-        -- <> Lookups.unspentOutputs
-        --   (Map.singleton committeeOref committeeOracleTxOut)
         <> Lookups.validator validator
 
     constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
       <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
         DatumInline
         value
-  -- <> TxConstraints.mustReferenceOutput committeeOref
 
   pure
     { lookupsAndConstraints: { constraints, lookups }
