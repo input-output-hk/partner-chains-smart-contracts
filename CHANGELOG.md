@@ -61,6 +61,13 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
    [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
    offchain)
+* the flag `--atms-kind` with value `plain` (in preparation for more signature
+  schemes to come) *must* be added to all CLI calls to specify which committee
+  certificate verification is being used. Alternatively, one can put
+  `"atmsKind": "plain"` in the config JSON file.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
 
 ## Fixed
 
