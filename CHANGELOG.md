@@ -52,10 +52,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
    [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
    onchain)
 * `UpdateCommitteeHashMessage` has a new format so committee signatures *must*
-  be generated differently.
+  be generated differently for this endpoint.
   ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
    [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
    offchain/onchain)
+* the subcommand `addresses` for the offchain CLI interface outputs the
+  `cbor(plutusData(Address))` of the committee hash validator.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain)
 
 ## Fixed
 
