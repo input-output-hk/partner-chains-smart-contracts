@@ -56,11 +56,13 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   ) as ExportTypes
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( findUpdateCommitteeHashUtxo
@@ -277,7 +279,9 @@ updateCommitteeHashLookupsAndConstraints
       , sidechainEpoch
       , validatorAddress: updateValidatorAddress
       }
-    redeemer = Redeemer $ toData uchm
+
+    redeemer = Redeemer $ toData $ UpdateCommitteeHashRedeemer
+      { previousMerkleRoot }
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =

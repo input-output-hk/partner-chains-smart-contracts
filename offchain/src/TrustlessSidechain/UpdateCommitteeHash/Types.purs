@@ -7,6 +7,7 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   ) where
 
 import Contract.Prelude
@@ -35,10 +36,6 @@ newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
   , sidechainEpoch ∷ BigInt
   }
 
-derive instance Generic (UpdateCommitteeDatum aggregatePubKeys) _
-
-derive instance Newtype (UpdateCommitteeDatum aggregatePubKeys) _
-
 instance
   ToData aggregatePubKeys ⇒
   ToData (UpdateCommitteeDatum aggregatePubKeys) where
@@ -57,6 +54,25 @@ instance
               <*> fromData b
           )
   fromData _ = Nothing
+
+-- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee hash
+-- | validator
+-- | This corresponds to the onchain type.
+newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
+  { previousMerkleRoot ∷ Maybe RootHash
+  }
+
+derive instance Generic UpdateCommitteeHashRedeemer _
+
+derive instance Newtype UpdateCommitteeHashRedeemer _
+
+instance ToData UpdateCommitteeHashRedeemer where
+  toData (UpdateCommitteeHashRedeemer { previousMerkleRoot }) = toData
+    previousMerkleRoot
+
+instance FromData UpdateCommitteeHashRedeemer where
+  fromData d = UpdateCommitteeHashRedeemer <$>
+    ({ previousMerkleRoot: _ } <$> fromData d)
 
 -- | `UpdateCommitteeHash` paramaterizes the the validator for the update
 -- | committee hash policy.

@@ -34,14 +34,18 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHash (
     cCommitteeCertificateVerificationCurrencySymbol,
     cCommitteeOracleCurrencySymbol,
-    cMptRootTokenCurrencySymbol
+    cMptRootTokenCurrencySymbol,
+    cSidechainParams
   ),
   UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
     uchmNewAggregateCommitteePubKeys,
     uchmPreviousMerkleRoot,
     uchmSidechainEpoch,
+    uchmSidechainParams,
     uchmValidatorAddress
   ),
+  UpdateCommitteeHashRedeemer (uchrPreviousMerkleRoot),
  )
 
 -- * Updating the committee hash
@@ -90,20 +94,14 @@ initCommitteeHashMintAmount = 1
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
   UpdateCommitteeDatum BuiltinData ->
-  UpdateCommitteeHashMessage BuiltinData ->
+  UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
   traceIfFalse "error 'mkUpdateCommitteeHashValidator': invalid committee output" committeeOutputIsValid
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': message not signed by commitee"
-      signedByCurrentCommittee
-    && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
+      "error 'mkUpdateCommitteeHashValidator': tx doesn't reference previous merkle root"
       referencesPreviousMerkleRoot
-    && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': sidechain epoch must be strictly increasing"
-      (sidechainEpoch dat < uchmSidechainEpoch red)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -113,30 +111,36 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       let go :: [TxOut] -> Bool
           go [] = False
           go (o : os)
-            | -- verify that the new committee is at the correct address.
-              txOutAddress o == uchmValidatorAddress red
-              , -- recall that 'cCommitteeOracleCurrencySymbol' should be
-                -- an NFT, so  (> 0) ==> exactly one.
-                Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeHashMintTn > 0
+            | -- recall that 'cCommitteeOracleCurrencySymbol' should be
+              -- an NFT, so  (> 0) ==> exactly one.
+              Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeHashMintTn > 0
               , OutputDatum d <- txOutDatum o
-              , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d)
-              , -- check that thew datum at the new address is the new committee.
-                aggregateCommitteePubKeys ucd == uchmNewAggregateCommitteePubKeys red
-              , -- check that the sidechain epoch is corresponds to the signed message
-                uchmSidechainEpoch red == sidechainEpoch ucd =
-              True
+              , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
+              -- Note that we build the @msg@ that we check is signed
+              -- with the data in this transaction directly... so in a sense,
+              -- checking if this message is signed is checking if the
+              -- transaction corresponds to the message
+              let msg =
+                    UpdateCommitteeHashMessage
+                      { uchmSidechainParams = cSidechainParams uch
+                      , uchmNewAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
+                      , uchmPreviousMerkleRoot = uchrPreviousMerkleRoot red
+                      , uchmSidechainEpoch = sidechainEpoch ucd
+                      , uchmValidatorAddress = txOutAddress o
+                      }
+               in traceIfFalse
+                    "error 'mkUpdateCommitteeHashValidator': tx not signed by committee"
+                    ( Value.valueOf
+                        (txInfoMint info)
+                        (cCommitteeCertificateVerificationCurrencySymbol uch)
+                        (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
+                        > 0
+                    )
+                    && traceIfFalse
+                      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+                      (sidechainEpoch dat < sidechainEpoch ucd)
             | otherwise = go os
        in go (txInfoOutputs info)
-
-    -- delegates the work of checking that the current committee has signed the
-    -- message to the 'cCommitteeCertificateVerificationCurrencySymbol'
-    signedByCurrentCommittee :: Bool
-    signedByCurrentCommittee =
-      Value.valueOf
-        (txInfoMint info)
-        (cCommitteeCertificateVerificationCurrencySymbol uch)
-        (TokenName (Builtins.blake2b_256 (serialiseUchm red)))
-        > 0
 
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
@@ -146,7 +150,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case uchmPreviousMerkleRoot red of
+      case uchrPreviousMerkleRoot red of
         Nothing -> True
         Just tn ->
           let go :: [TxInInfo] -> Bool

@@ -277,6 +277,15 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
+newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
+  { uchrPreviousMerkleRoot :: Maybe BuiltinByteString
+  }
+  deriving newtype
+    ( ToData
+    , FromData
+    , UnsafeFromData
+    )
+
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
   { checkpointBlockHash :: BuiltinByteString

@@ -58,7 +58,8 @@ import TrustlessSidechain.Types (
   SignedMerkleRootMint,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
-  UpdateCommitteeHashMessage,
+  -- UpdateCommitteeHashMessage,
+  UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
@@ -123,7 +124,7 @@ mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
       UpdateCommitteeDatum BuiltinData ->
-      UpdateCommitteeHashMessage BuiltinData ->
+      UpdateCommitteeHashRedeemer ->
       ScriptContext ->
       Bool
     )
