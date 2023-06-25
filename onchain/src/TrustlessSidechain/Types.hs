@@ -158,8 +158,7 @@ data SignedMerkleRootMint = SignedMerkleRootMint
   { -- | 'smrmSidechainParams' includes the 'SidechainParams'
     smrmSidechainParams :: SidechainParams
   , -- | 'smrmCommitteeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeDatum'
-    -- resides.
+    -- provides a committee certificate for a message.
     smrmCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   , -- | 'smrmValidatorHash' is the validator hash corresponding to
     -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'

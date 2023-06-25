@@ -71,10 +71,6 @@ mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRootRedeemer -> ScriptCon
 mkMintingPolicy
   smrm
   smrr
-  -- mrim@MerkleRootInsertionMessage
-  --   { mrimMerkleRoot
-  --   , mrimPreviousMerkleRoot
-  --   }
   ctx =
     traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
       && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p2
@@ -87,8 +83,8 @@ mkMintingPolicy
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
 
       -- Checks:
-      -- @p1@, @p2@, @p3@, @p4@ correspond to verifications 1., 2., 3.,
-      -- 4. resp. in the documentation of this function.
+      -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
+      -- documentation of this function.
       p1 = case smrrPreviousMerkleRoot smrr of
         Nothing -> True
         Just tn ->
@@ -108,6 +104,8 @@ mkMintingPolicy
       p2 = case AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue minted of
         Nothing -> False
         Just tns -> case AssocMap.toList tns of
+          -- assert that there is a unique token name (and only one) minted of
+          -- this currency symbol
           [(tn, amount)]
             | amount == 1 ->
               let msg =
