@@ -29,6 +29,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Extras (tryDecode)
 import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
+import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Lazy qualified as ByteString.Lazy
@@ -56,7 +57,9 @@ import Options.Applicative (
  )
 import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
+  Address,
   BuiltinByteString,
+  BuiltinData,
   FromData (fromBuiltinData),
   TxId (TxId),
   TxOutRef (TxOutRef),
@@ -172,6 +175,7 @@ data GenCliCommand
       , -- | previous merkle root that was just stored on chain.
         -- This is needed to create the message we wish to sign
         uchcPreviousMerkleRoot :: Maybe BuiltinByteString
+      , uchcValidatorAddress :: Address
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
@@ -487,6 +491,25 @@ newCommitteePublicKeysParser =
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
+{- | Parser for parsing a hex encoded CBOR encoded
+ 'Plutus.V2.Ledger.Api.Address'
+-}
+parseAddress :: OptParse.ReadM Address
+parseAddress = eitherReader $ \(str :: HString.String) -> do
+  decoded <-
+    Bifunctor.first ("Invalid hex: " <>)
+      . Base16.decode
+      . Char8.pack
+      $ str
+  builtinData :: BuiltinData <-
+    fmap Builtins.dataToBuiltinData $
+      Bifunctor.first show $
+        Codec.Serialise.deserialiseOrFail $
+          ByteString.Lazy.fromStrict decoded
+  case fromBuiltinData builtinData of
+    Nothing -> Left "Invalid `Address`"
+    Just addr -> return addr
+
 {- | 'initCommitteePublicKeysParser' is essentially identical to
  'newCommitteePublicKeysParser' except the help strings / command line flag
  is changed to reflect that this is the inital committee.
@@ -703,6 +726,13 @@ updateCommitteeHashCommand =
                 , metavar "PREVIOUS_MERKLE_ROOT"
                 , help "Hex encoded previous merkle root (if it exists)"
                 ]
+        uchcValidatorAddress <-
+          option parseAddress $
+            mconcat
+              [ long "address"
+              , metavar "ADDRESS"
+              , help "Hex encoded CBOR encoded BuiltinData of `Address`"
+              ]
         pure $ do
           uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
           uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys

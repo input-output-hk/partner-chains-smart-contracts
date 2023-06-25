@@ -52,6 +52,7 @@ import GetOpts (
   uchcNewCommitteePubKeys,
   uchcPreviousMerkleRoot,
   uchcSidechainEpoch,
+  uchcValidatorAddress,
  )
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
@@ -168,7 +169,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                     , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
                     , uchmSidechainEpoch = uchcSidechainEpoch
                     , uchmValidatorAddress =
-                        error "unimplemented validator address for update committee hash message"
+                        uchcValidatorAddress
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
