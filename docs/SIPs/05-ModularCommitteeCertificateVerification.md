@@ -347,9 +347,7 @@ changes to the Bridge.
 As redeemer, the `CheckpointValidator` will take the following data type.
 ```haskell
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ [SidechainSignature]
-  , committeePubKeys ∷ [SidechainPublicKey]
-  , newCheckpointBlockHash ∷ ByteString
+  { newCheckpointBlockHash ∷ ByteString
   , newCheckpointBlockNumber ∷ Integer
   }
 ```
