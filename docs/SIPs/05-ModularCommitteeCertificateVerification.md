@@ -251,11 +251,10 @@ Finally, `UpdateCommitteeValidator` validates only if the following are all
 satisfied:
 
 - The committee certificate verification minting policy mints with token name
-  `tn` for which `tn` satisfies `tn == blake2b(cbor(UpdateCommitteeMessage))`
-  and this transaction corresponds to the signed `UpdateCommitteeMessage BuiltinData`.
-  In other words, if the script verifies that some
-  `msg :: UpdateCommitteeMessage BuiltinData` is signed, then the following
-  must be true of this transaction:
+  `tn` for which `tn` satisfies `tn == blake2b(cbor(msg))` for some
+   `msg :: UpdateCommitteeMessage BuiltinData`, and this transaction corresponds to the signed `msg`.
+  In other words, if the script verifies that `blake2b(cbor(msg))` is signed
+  then the following must be true for this transaction:
 
     - The `sidechainParams` in the signed `msg` are the same
       sidechain parameters that the validator is parameterized by

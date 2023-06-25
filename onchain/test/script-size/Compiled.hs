@@ -58,7 +58,6 @@ import TrustlessSidechain.Types (
   SignedMerkleRootMint,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
-  -- UpdateCommitteeHashMessage,
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (

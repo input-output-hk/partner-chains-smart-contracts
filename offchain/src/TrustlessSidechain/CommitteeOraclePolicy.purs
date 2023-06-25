@@ -74,7 +74,7 @@ committeeOracleTn ∷ Value.TokenName
 committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
--- | `getCommitteeOraclePolicy` grabs the committee hash policy, currency symbol and token name
+-- | `getCommitteeOraclePolicy` grabs the committee oracle policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeOraclePolicy ∷
   SidechainParams →

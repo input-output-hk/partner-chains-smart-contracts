@@ -124,8 +124,8 @@ mkMintingPolicy
                     Value.valueOf
                       (txOutValue o)
                       (smrmUpdateCommitteeHashCurrencySymbol smrm)
-                      UpdateCommitteeHash.initCommitteeHashMintTn
-                , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
+                      UpdateCommitteeHash.initCommitteeOracleTn
+                , UpdateCommitteeHash.initCommitteeOracleMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
                   -- 'TrustlessSidechain.UpdateCommitteeHash'
                   OutputDatum d <- txOutDatum o =

@@ -56,39 +56,26 @@ import TrustlessSidechain.Types (
 serialiseUchm :: ToData aggregatePubKeys => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
+{- | 'initCommitteeOracleTn'  is the token name of the NFT which identifies
  the utxo which contains the committee hash. We use an empty bytestring for
  this because the name really doesn't matter, so we mighaswell save a few
  bytes by giving it the empty name.
 -}
-{-# INLINEABLE initCommitteeHashMintTn #-}
-initCommitteeHashMintTn :: TokenName
-initCommitteeHashMintTn = TokenName Builtins.emptyByteString
+{-# INLINEABLE initCommitteeOracleTn #-}
+initCommitteeOracleTn :: TokenName
+initCommitteeOracleTn = TokenName Builtins.emptyByteString
 
-{- | 'initCommitteeHashMintAmount' is the amount of the currency to mint which
+{- | 'initCommitteeOracleMintAmount' is the amount of the currency to mint which
  is 1.
 -}
-{-# INLINEABLE initCommitteeHashMintAmount #-}
-initCommitteeHashMintAmount :: Integer
-initCommitteeHashMintAmount = 1
+{-# INLINEABLE initCommitteeOracleMintAmount #-}
+initCommitteeOracleMintAmount :: Integer
+initCommitteeOracleMintAmount = 1
 
-{- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
-  1. The redeemer is signed by the current committee
-
-  2. We reference the last merkle root (as understood by the signed redeemer)
-
-  3. the sidechain epoch (as understood by the redeemer) is strictly increasing
-  from the current sidechain epoch in the datum
-
-  4. There is an output which satisfies
-
-    - it has the new aggregated committee public keys
-
-    - it has the new sidechain epoch
-
-    - it is at the new address (as understood from the redeemer)
-
-    - the Sidechain parameters are the same? TODO
+{- | 'mkUpdateCommitteeHashValidator' is the on-chain validator.
+ See the specification for what is verified, but as a summary: we verify that
+ the transaction corresponds to the signed update committee message in a
+ reasonable sense.
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
@@ -113,7 +100,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
           go (o : os)
             | -- recall that 'cCommitteeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
-              Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeHashMintTn > 0
+              Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeOracleTn > 0
               , OutputDatum d <- txOutDatum o
               , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
               -- Note that we build the @msg@ that we check is signed
@@ -196,7 +183,7 @@ mkCommitteeOraclePolicy ichm _red ctx =
     checkMintedAmount :: Bool
     checkMintedAmount =
       case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
-        Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
+        Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 
 -- CTL hack

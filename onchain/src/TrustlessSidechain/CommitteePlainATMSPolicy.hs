@@ -120,7 +120,7 @@ mkMintingPolicy ccm atmspms ctx =
                   Value.valueOf
                     (txOutValue o)
                     (committeeOraclePolicy ccm)
-                    UpdateCommitteeHash.initCommitteeHashMintTn
+                    UpdateCommitteeHash.initCommitteeOracleMintTn
               , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
               , -- We always expect this to be given as inline datum
                 OutputDatum d <- txOutDatum o =

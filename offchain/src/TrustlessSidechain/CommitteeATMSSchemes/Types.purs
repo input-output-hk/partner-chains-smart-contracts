@@ -69,7 +69,7 @@ newtype CommitteeATMSParams aggregateSignature = CommitteeATMSParams
 derive instance Newtype (CommitteeATMSParams aggregateSignature) _
 
 -- | `ATMSAggregateSignatures` is a sumtype which defines all the possible ATMS
--- | aggregate keys possible
+-- | aggregate keys + signatures
 data ATMSAggregateSignatures
   = Plain (Array (SidechainPublicKey /\ Maybe SidechainSignature))
   | Multisignature
