@@ -74,7 +74,6 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (matchList)
@@ -291,6 +290,49 @@ data DsKeyMint = DsKeyMint
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
+-- | @since Unreleased
+instance PlutusTx.ToData DsKeyMint where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (DsKeyMint {..}) =
+    Unsafe.mkList
+      ( Unsafe.mkCons
+          (PlutusTx.toBuiltinData dskmValidatorHash)
+          ( Unsafe.mkCons
+              (PlutusTx.toBuiltinData dskmConfCurrencySymbol)
+              (Unsafe.mkNilData Unsafe.unitval)
+          )
+      )
+
+-- | @since Unreleased
+instance PlutusTx.FromData DsKeyMint where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+    where
+      go :: Maybe DsKeyMint
+      go =
+        let ell0 = Unsafe.unsafeDataAsList dat
+         in matchList ell0 Nothing $ \vh ell1 ->
+              case PlutusTx.fromBuiltinData vh of
+                Nothing -> Nothing
+                Just vh' -> matchList ell1 Nothing $ \cs ell2 ->
+                  case PlutusTx.fromBuiltinData cs of
+                    Nothing -> Nothing
+                    Just cs' ->
+                      matchList
+                        ell2
+                        (Just (DsKeyMint vh' cs'))
+                        (\_ _ -> Nothing)
+
+-- | @since Unreleased
+instance PlutusTx.UnsafeFromData DsKeyMint where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData dat =
+    let ell0 = Unsafe.unsafeDataAsList dat
+        vh = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
+        ell1 = Unsafe.tail ell0
+        cs = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
+     in DsKeyMint vh cs
+
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
 -}
@@ -319,8 +361,6 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
           Just _ -> unsafeGetDatum info o
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
-
-makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
 
 PlutusTx.makeLift ''DsKeyMint
 
