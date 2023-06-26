@@ -70,7 +70,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, InvalidData, NotFoundUtxo)
   , OffchainError(InvalidInputError, InternalError)
   )
-import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
@@ -86,8 +85,6 @@ runSaveCheckpoint
       , sidechainEpoch
       }
   ) = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = Logging.mkReport "Checkpoint" "runSaveCheckpoint"
 
   -- Getting the minting policy / currency symbol / token name for checkpointing
   -------------------------------------------------------------
@@ -98,7 +95,7 @@ runSaveCheckpoint
     getCommitteeHashPolicy sidechainParams
 
   when (null committeeSignatures)
-    (throwContractError $ mkErr (InvalidInputError "No signatures provided"))
+    (throwContractError $ show (InvalidInputError "No signatures provided"))
 
   let
     curCommitteePubKeys /\ allCurCommitteeSignatures =
@@ -110,7 +107,7 @@ runSaveCheckpoint
 
   checkpointMessage ←
     liftContractM
-      (mkErr (InternalError (InvalidData "CheckpointMessage")))
+      (show (InternalError (InvalidData "CheckpointMessage")))
       $ serialiseCheckpointMessage
       $ CheckpointMessage
           { sidechainParams
@@ -127,9 +124,8 @@ runSaveCheckpoint
         checkpointMessage
         curCommitteeSignatures
     )
-    ( throwContractError $ mkErr
+    ( throwContractError
         (InvalidInputError "Invalid committee signatures for CheckpointMessage")
-
     )
 
   -- Getting checkpoint validator
@@ -149,7 +145,7 @@ runSaveCheckpoint
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
-    liftContractM (mkErr (InternalError (NotFoundUtxo "Checkpoint UTxO")))
+    liftContractM (show (InternalError (NotFoundUtxo "Checkpoint UTxO")))
       checkpointUtxoLookup
 
   -- Getting the validator / minting policy for the merkle root token.
@@ -167,7 +163,7 @@ runSaveCheckpoint
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (mkErr (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
+      (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   let
@@ -186,19 +182,19 @@ runSaveCheckpoint
       committeeHashTxOut@
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
-    liftContractM (mkErr (InternalError (NotFoundUtxo "Committee Hash UTxO")))
+    liftContractM (show (InternalError (NotFoundUtxo "Committee Hash UTxO")))
       lkup
 
   comitteeHashDatum ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (InvalidData "Committee Hash UTxO is missing inline datum")
           )
       )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeHashDatum datum ← liftContractM
-    ( mkErr
+    ( show
         ( InternalError
             (InvalidData "Decoding datum at Committee Hash UTxO failed")
         )
@@ -249,12 +245,10 @@ getCheckpointPolicy ∷
     , checkpointTokenName ∷ TokenName
     }
 getCheckpointPolicy (SidechainParams sp) = do
-  let
-    mkErr = Logging.mkReport "CheckpointPolicy" "getCheckpointPolicy"
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
   checkpointCurrencySymbol ← liftContractM
-    ( mkErr
+    ( show
         (InternalError (InvalidScript "Failed to get checkpoint CurrencySymbol"))
     )
     (Value.scriptCurrencySymbol checkpointPolicy)

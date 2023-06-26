@@ -39,7 +39,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError)
   )
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 --------------------------------
@@ -73,12 +72,10 @@ getCandidatePermissionMintingPolicy ∷
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
 getCandidatePermissionMintingPolicy cpm = do
-  let
-    mkErr = report "getCandidatePermissionMintingPolicy"
 
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
   candidatePermissionCurrencySymbol ← Monad.liftContractM
-    (mkErr (InternalError (InvalidScript "CandidatePermissionToken")))
+    (show (InternalError (InvalidScript "CandidatePermissionToken")))
     (Value.scriptCurrencySymbol candidatePermissionPolicy)
   pure
     { candidatePermissionPolicy
@@ -140,15 +137,13 @@ candidatePermissionTokenLookupsAndConstraints
   ( CandidatePermissionMintParams
       { candidateMintPermissionMint, candidatePermissionTokenName, amount }
   ) = do
-  let
-    mkErr = report "candidatePermissionTokenLookupsAndConstraints"
   { candidatePermissionPolicy
   , candidatePermissionCurrencySymbol
   } ← getCandidatePermissionMintingPolicy
     candidateMintPermissionMint
 
   let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
-  txOut ← Monad.liftedM (mkErr (InternalError (NotFoundUtxo "Genesis UTxO"))) $
+  txOut ← Monad.liftedM (show (InternalError (NotFoundUtxo "Genesis UTxO"))) $
     Utxos.getUtxo
       txIn
 
@@ -198,7 +193,3 @@ runCandidatePermissionToken
     constraints
 
   pure { transactionId: txId, candidatePermissionCurrencySymbol }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → OffchainError → String
-report = Utils.Logging.mkReport "CandidatePermissionToken"

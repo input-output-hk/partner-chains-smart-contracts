@@ -32,8 +32,7 @@ import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Log as Log
-import Contract.Monad (Contract, liftContractM)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -64,7 +63,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
   , OffchainError(InternalError, InvalidInputError)
   )
-import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -313,13 +311,10 @@ insertNode str (Node node)
 -- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
 getDs ∷ TransactionInput → Contract Ds
 getDs txInput = do
-  let
-    mkErr = Logging.mkReport "DistributedSet" "getDs"
-
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (mkErr (InternalError (InvalidScript "DsConfPolicy")))
+    liftContractM
+      (show (InternalError (InvalidScript "DsConfPolicy")))
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
@@ -332,9 +327,6 @@ getDsKeyPolicy ∷
   Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy ds = do
-  let
-    mkErr = Logging.mkReport "DistributedSet" "getDsKeyPolicy"
-
   insertValidator' ← insertValidator ds
 
   let
@@ -347,7 +339,7 @@ getDsKeyPolicy ds = do
 
   currencySymbol ←
     liftContractM
-      (mkErr (InternalError (InvalidScript "DsKeyPolicy")))
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
@@ -362,8 +354,6 @@ findDsConfOutput ∷
     , confDat ∷ DsConfDatum
     }
 findDsConfOutput ds = do
-  let mkErr = Logging.mkReport "DistributedSet" "findDsConfOutput"
-
   netId ← getNetworkId
   v ← dsConfValidator ds
   scriptAddr ←
@@ -375,7 +365,7 @@ findDsConfOutput ds = do
 
   out ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               ( NotFoundUtxo
                   "Distributed Set config utxo does not contain oneshot token"
@@ -392,7 +382,7 @@ findDsConfOutput ds = do
 
   confDat ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (NotFoundUtxo "Distributed Set config utxo does not contain datum")
           )
@@ -432,11 +422,9 @@ findDsOutput ∷
     , nodes ∷ Ib Node
     }
 findDsOutput ds tn txInput = do
-  let mkErr = Logging.mkReport "DistributedSet" "findDsOutput"
-
   txOut ←
-    Monad.liftedM
-      ( mkErr (InvalidInputError "Failed to find provided distributed set UTxO")
+    liftedM
+      ( show (InvalidInputError "Failed to find provided distributed set UTxO")
       ) $
       Utxos.getUtxo txInput
 
@@ -445,7 +433,7 @@ findDsOutput ds tn txInput = do
   --  Grab the datum
   dat ←
     liftContractM
-      ( mkErr
+      ( show
           (InternalError (ConversionError "datum not a distributed set node"))
       )
       $ outputDatumDatum (unwrap txOut).datum
@@ -460,14 +448,12 @@ findDsOutput ds tn txInput = do
 
     unless
       (scriptAddr == (unwrap txOut).address)
-      $ Monad.throwContractError
-      $ mkErr
-          ( InvalidInputError
-              "provided transaction is not at distributed set node address"
-          )
+      $ throwContractError
+      $ InvalidInputError
+          "provided transaction is not at distributed set node address"
 
     keyNodeTn ← liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (InvalidData "missing token name in distributed set node")
           )
@@ -480,8 +466,8 @@ findDsOutput ds tn txInput = do
     pure keyNodeTn
 
   nodes ←
-    Monad.liftContractM
-      ( mkErr
+    liftContractM
+      ( show
           ( InvalidInputError
               ( "invalid distributed set node provided \
                 \(the provided node must satisfy `providedNode` < `newNode` < `next`) \

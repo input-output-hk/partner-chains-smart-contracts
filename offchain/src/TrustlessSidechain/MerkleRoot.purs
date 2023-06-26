@@ -66,7 +66,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, NotFoundUtxo, InvalidData)
   , OffchainError(InvalidInputError, InternalError)
   )
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
@@ -81,12 +80,11 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
     sidechainParams
 
-  let mkErr = report "getMerkleRootTokenMintingPolicy"
   updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (InvalidScript "CommitteeHashPolicy")
           )
@@ -98,7 +96,7 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
     , merkleRootValidatorHash
     }
   merkleRootTokenCurrencySymbol ←
-    liftContractM (mkErr (InternalError (InvalidScript "MerkleRootPolicy"))) $
+    liftContractM (show (InternalError (InvalidScript "MerkleRootPolicy"))) $
       Value.scriptCurrencySymbol policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
@@ -114,7 +112,6 @@ runSaveRoot
   ( SaveRootParams
       { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
   ) = do
-  let mkErr = report "runSaveRoot"
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
@@ -122,7 +119,7 @@ runSaveRoot
     $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
   updateCommitteeHashCurrencySymbol ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (InvalidScript "CommitteeHashPolicy")
           )
@@ -141,12 +138,12 @@ runSaveRoot
   rootTokenMP ← merkleRootTokenMintingPolicy smrm
   rootTokenCS ←
     liftContractM
-      (mkErr (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
+      (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
       $ Value.scriptCurrencySymbol rootTokenMP
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               ( InvalidData
                   "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
@@ -177,7 +174,7 @@ runSaveRoot
   , value: committeeHashTxOut
   } ←
     liftedM
-      (mkErr (InternalError (NotFoundUtxo "Failed to find committee hash utxo")))
+      (show (InternalError (NotFoundUtxo "Failed to find committee hash utxo")))
       $
         UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
 
@@ -192,7 +189,7 @@ runSaveRoot
   void do
     mrimHash ←
       liftContractM
-        ( mkErr
+        ( show
             ( InternalError
                 (InvalidData "Failed to create MerkleRootInsertionMessage")
             )
@@ -212,10 +209,8 @@ runSaveRoot
           signatures
       )
       $ throwContractError
-      $ mkErr
-          ( InvalidInputError
-              "Invalid committee signatures for MerkleRootInsertionMessage"
-          )
+      $ InvalidInputError
+          "Invalid committee signatures for MerkleRootInsertionMessage"
 
   -- Verifying the provided committee is actually the committee stored on chain
   void do
@@ -226,14 +221,14 @@ runSaveRoot
       committeeHash = Utils.Crypto.aggregateKeys committeePubKeys
     rawDatum ←
       liftContractM
-        ( mkErr
+        ( show
             ( InternalError
                 (NotFoundUtxo "Committee hash UTxO is missing inline datum")
             )
         )
         $ outputDatumDatum tOut.datum
     UpdateCommitteeHashDatum datum ← liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (InvalidData "Decoding datum at committee hash UTxO failed")
           )
@@ -273,7 +268,3 @@ runSaveRoot
           (Map.singleton txORef txOut)
 
   balanceSignAndSubmit "Save Merkle root" lookups constraints
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → OffchainError → String
-report = Utils.Logging.mkReport "MerkleRoot"

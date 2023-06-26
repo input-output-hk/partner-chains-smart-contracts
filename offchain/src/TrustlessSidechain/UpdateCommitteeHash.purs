@@ -64,7 +64,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
   , OffchainError(InternalError, InvalidInputError)
   )
-import TrustlessSidechain.Utils.Logging as Logging
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
@@ -87,9 +86,6 @@ runUpdateCommitteeHash
       , sidechainEpoch
       }
   ) = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "runUpdateCommitteeHash"
-
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
@@ -112,14 +108,14 @@ runUpdateCommitteeHash
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (mkErr (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
+      (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Building the new committee hash / verifying that the new committee was
   -- signed (doing this offchain makes error messages better)...
   -------------------------------------------------------------
   when (null committeeSignatures)
-    (throwContractError $ mkErr (InvalidInputError "Empty Committee"))
+    (throwContractError $ InvalidInputError "Empty Committee")
 
   let
     newCommitteeHash = Utils.Crypto.aggregateKeys newCommitteePubKeys
@@ -133,7 +129,7 @@ runUpdateCommitteeHash
 
   uchmsg ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (ConversionError "Failed to get update committee hash message")
           )
@@ -154,10 +150,10 @@ runUpdateCommitteeHash
         uchmsg
         curCommitteeSignatures
     )
-    ( throwContractError $ mkErr
-        ( InvalidInputError
-            "Invalid committee signatures for UpdateCommitteeHashMessage"
-        )
+    ( throwContractError $
+        InvalidInputError
+          "Invalid committee signatures for UpdateCommitteeHashMessage"
+
     )
 
   -- Getting the validator / building the validator hash
@@ -181,7 +177,7 @@ runUpdateCommitteeHash
         (TransactionOutputWithRefScript { output: TransactionOutput tOut })
   } ←
     liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               (NotFoundUtxo "Failed to find update committee hash UTxO")
           )
@@ -189,17 +185,16 @@ runUpdateCommitteeHash
 
   rawDatum ←
     liftContractM
-      ( mkErr
-          ( InternalError
-              (NotFoundUtxo "Committee hash UTxO is missing inline datum")
-          )
+      ( show
+          $ InternalError
+          $ NotFoundUtxo "Committee hash UTxO is missing inline datum"
       )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeHashDatum datum ← liftContractM
-    ( mkErr
-        ( InternalError
-            (ConversionError "Decoding datum at committee hash UTxO failed")
-        )
+    ( show
+        $ InternalError
+        $ ConversionError "Decoding datum at committee hash UTxO failed"
+
     )
     (fromData $ unwrap rawDatum)
   when (datum.committeeHash /= curCommitteeHash)
@@ -246,10 +241,6 @@ runUpdateCommitteeHash
 
   balanceSignAndSubmit "Update CommiteeHash" lookups constraints
 
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → OffchainError → String
-report = Logging.mkReport "UpdateCommitteeHash"
-
 -- | `getCommitteeHashPolicy` grabs the committee hash policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeHashPolicy ∷
@@ -260,12 +251,10 @@ getCommitteeHashPolicy ∷
     , committeeHashTokenName ∷ TokenName
     }
 getCommitteeHashPolicy (SidechainParams sp) = do
-  let
-    mkErr = report "getCommitteeHashPolicy"
   committeeHashPolicy ← committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeHashCurrencySymbol ← liftContractM
-    (mkErr (InternalError (InvalidScript "CommitteeHashPolicy")))
+    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
     (Value.scriptCurrencySymbol committeeHashPolicy)
   let committeeHashTokenName = initCommitteeHashMintTn
   pure

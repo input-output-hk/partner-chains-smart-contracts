@@ -65,7 +65,6 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
-  , mkReport
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
@@ -157,17 +156,16 @@ register
       , permissionToken
       }
   ) = do
-  let mkErr = report "register"
   netId ← getNetworkId
 
-  ownPkh ← liftedM (mkErr (InternalError NotFoundOwnPubKeyHash))
+  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
     ownPaymentPubKeyHash
-  ownAddr ← liftedM (mkErr (InternalError NotFoundOwnAddress)) getWalletAddress
+  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    ( mkErr
+    ( show
         ( InternalError
             (InvalidScript "Couldn't convert validator hash to address")
         )
@@ -241,18 +239,17 @@ register
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  let mkErr = report "deregister"
 
   netId ← getNetworkId
 
-  ownPkh ← liftedM (mkErr (InternalError NotFoundOwnPubKeyHash))
+  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
     ownPaymentPubKeyHash
-  ownAddr ← liftedM (mkErr (InternalError NotFoundOwnAddress)) getWalletAddress
+  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    ( mkErr
+    ( show
         ( InternalError
             (InvalidScript "Couldn't convert validator hash to address")
         )
@@ -265,7 +262,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   when (null ownRegistrations)
     $ throwContractError
-        (mkErr (InvalidInputError "Couldn't find registration UTxO"))
+        (InvalidInputError "Couldn't find registration UTxO")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
@@ -279,9 +276,6 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
         (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
 
   balanceSignAndSubmit "Deregister Committee Candidate" lookups constraints
-
-report ∷ String → OffchainError → String
-report = mkReport "CommitteeCandidateValidator"
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate

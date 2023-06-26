@@ -94,7 +94,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(ConversionError, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
   )
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
@@ -272,8 +271,6 @@ initCheckpointLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCheckpointLookupsAndConstraints inp = do
-  let
-    mkErr = report "initCheckpointLookupsAndConstraints"
   -- Get checkpoint / associated values
   -----------------------------------
   { checkpointCurrencySymbol } ← getCheckpointPolicy inp
@@ -281,7 +278,7 @@ initCheckpointLookupsAndConstraints inp = do
   committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: inp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
-    (mkErr (InternalError (InvalidScript "CommitteeHashPolicy")))
+    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
     (Value.scriptCurrencySymbol committeeHashPolicy)
 
   let
@@ -414,9 +411,6 @@ initDistributedSetLookupsAndContraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initDistributedSetLookupsAndContraints isp = do
-  let
-    mkErr = report "initDistributedSetLookupsAndContraints"
-
   -- Sidechain parameters
   -----------------------------------
   let
@@ -432,7 +426,7 @@ initDistributedSetLookupsAndContraints isp = do
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr (InternalError (InvalidScript "DsConfPolicy")))
+      (show (InternalError (InvalidScript "DsConfPolicy")))
       $ Value.scriptCurrencySymbol dsConfPolicy
 
   -- Validator for insertion of the distributed set / the associated datum and
@@ -449,11 +443,11 @@ initDistributedSetLookupsAndContraints isp = do
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
   dsKeyPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr (InternalError (InvalidScript "DsKeyPolicy")))
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
-      ( mkErr
+      ( show
           ( InternalError
               ( ConversionError
                   "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
@@ -484,7 +478,7 @@ initDistributedSetLookupsAndContraints isp = do
 
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr (InternalError (InvalidScript "FuelMintingPolicy")))
+      (show (InternalError (InvalidScript "FuelMintingPolicy")))
       $ Value.scriptCurrencySymbol fuelMintingPolicy
 
   -- Validator for the configuration of the distributed set / the associated
@@ -561,17 +555,12 @@ initSidechainTokens ∷
     , sidechainAddresses ∷ SidechainAddresses
     }
 initSidechainTokens isp = do
-  -- Logging
-  ----------------------------------------
-  let
-    mkErr = report "initSidechainTokens"
-
   -- Querying the dstinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (mkErr (InvalidInputError "Cannot find genesis UTxO")) $
+  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
     getUtxo
       txIn
 
@@ -684,17 +673,12 @@ initSidechain (InitSidechainParams isp) = do
   -- Warning: this code is essentially duplicated code from
   -- `initSidechainTokens` and `paySidechainTokens`....
 
-  -- Logging
-  ----------------------------------------
-  let
-    mkErr = report "initSidechain"
-
-  -- Querying the dstinguished 'InitSidechainParams.initUtxo'
+  -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (mkErr (InvalidInputError "Cannot find genesis UTxO")) $
+  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
     getUtxo
       txIn
 
@@ -750,12 +734,10 @@ getCommitteeHashPolicy ∷
     , committeeHashCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteeHashPolicy isp = do
-  let
-    mkErr = report "getCommitteeHashPolicy"
   committeeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy $
     InitCommitteeHashMint { icTxOutRef: isp.initUtxo }
   committeeHashCurrencySymbol ← Monad.liftContractM
-    (mkErr (InternalError (InvalidScript "CommitteeHashPolicy")))
+    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
     (Value.scriptCurrencySymbol committeeHashPolicy)
   pure { committeeHashPolicy, committeeHashCurrencySymbol }
 
@@ -771,7 +753,6 @@ getMerkleRootTokenPolicy ∷
 getMerkleRootTokenPolicy isp = do
   let
     sc = toSidechainParams isp
-    mkErr = report "getMerkleRootTokenPolicy"
 
   -- some awkwardness that we need the committee hash policy first.
   { committeeHashCurrencySymbol } ← getCommitteeHashPolicy isp
@@ -787,7 +768,7 @@ getMerkleRootTokenPolicy isp = do
       }
   merkleRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr (InternalError (InvalidScript "DsKeyPolicy")))
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   pure
@@ -801,15 +782,9 @@ getCheckpointPolicy ∷
     , checkpointCurrencySymbol ∷ CurrencySymbol
     }
 getCheckpointPolicy isp = do
-  let
-    mkErr = report "getCheckpointPolicy"
   checkpointPolicy ← Checkpoint.checkpointPolicy $
     InitCheckpointMint { icTxOutRef: isp.initUtxo }
   checkpointCurrencySymbol ← Monad.liftContractM
-    (mkErr (InternalError (InvalidScript "CheckpointPolicy")))
+    (show (InternalError (InvalidScript "CheckpointPolicy")))
     (Value.scriptCurrencySymbol checkpointPolicy)
   pure { checkpointPolicy, checkpointCurrencySymbol }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → OffchainError → String
-report = Utils.Logging.mkReport "InitSidechain"

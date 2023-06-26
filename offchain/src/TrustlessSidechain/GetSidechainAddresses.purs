@@ -36,7 +36,6 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )
-import TrustlessSidechain.Utils.Logging as Utils.Logging
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a
@@ -170,8 +169,7 @@ getAddr v = do
 -- | currency symbol
 getCurrencySymbolHex ∷ MintingPolicy → Contract String
 getCurrencySymbolHex mp = do
-  let msg = report "getCurrencySymbolHex"
-  cs ← Monad.liftContractM (msg (InternalError (InvalidScript ""))) $
+  cs ← Monad.liftContractM (show (InternalError (InvalidScript ""))) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
 
@@ -179,7 +177,3 @@ getCurrencySymbolHex mp = do
 currencySymbolToHex ∷ CurrencySymbol → String
 currencySymbolToHex =
   ByteArray.byteArrayToHex <<< Value.getCurrencySymbol
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → OffchainError → String
-report = Utils.Logging.mkReport "GetSidechainAddresses"

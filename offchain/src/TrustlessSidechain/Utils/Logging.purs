@@ -2,7 +2,6 @@ module TrustlessSidechain.Utils.Logging
   ( Environment
   , environment
   , fileLogger
-  , mkReport
   , OffchainError(..)
   , InternalError(..)
   ) where
@@ -53,19 +52,6 @@ derive instance Generic InternalError _
 
 instance Show InternalError where
   show = genericShow
-
--- | builds a unified look for error messages by giving them more structure.
--- | this function is used to instantiate a message formatter as so:
--- | ```purescript
--- | mkErr ∷ String -> String
--- | mkErr = mkReport "MyModule" "myFunction"
--- |
--- | mkErr "this is an error message."
--- | ```
--- TODO: Remove this whole thing once we can trace the errors better in PureScript (CTL v6?)
---       https://github.com/Plutonomicon/cardano-transaction-lib/pull/1507
-mkReport ∷ String → String → OffchainError → String
-mkReport mod fun appErr = mod <> "." <> fun <> ": " <> show appErr
 
 -- | The logging environment, may be used to parametrize functions and override
 -- | their logging behaviour at runtime.
