@@ -31,6 +31,12 @@ module Compiled (
   listFromDataGenerated,
   listUnsafeFromDataGenerated,
   listUnsafeFromDataHandwritten,
+  toDataWrapper,
+  toDataDirect,
+  fromDataWrapper,
+  fromDataDirect,
+  unsafeFromDataWrapper,
+  unsafeFromDataDirect,
 ) where
 
 import Data.Generated qualified as Generated
@@ -83,6 +89,24 @@ import TrustlessSidechain.UpdateCommitteeHash (
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
+
+toDataDirect :: CompiledCode (Handwritten.Bar -> BuiltinData)
+toDataDirect = $$(compile [||toBuiltinData||])
+
+toDataWrapper :: CompiledCode (Generated.Bar -> BuiltinData)
+toDataWrapper = $$(compile [||toBuiltinData||])
+
+fromDataDirect :: CompiledCode (BuiltinData -> Maybe Handwritten.Bar)
+fromDataDirect = $$(compile [||fromBuiltinData||])
+
+fromDataWrapper :: CompiledCode (BuiltinData -> Maybe Generated.Bar)
+fromDataWrapper = $$(compile [||fromBuiltinData||])
+
+unsafeFromDataDirect :: CompiledCode (BuiltinData -> Handwritten.Bar)
+unsafeFromDataDirect = $$(compile [||unsafeFromBuiltinData||])
+
+unsafeFromDataWrapper :: CompiledCode (BuiltinData -> Generated.Bar)
+unsafeFromDataWrapper = $$(compile [||unsafeFromBuiltinData||])
 
 listUnsafeFromDataGenerated :: CompiledCode (BuiltinData -> [Integer])
 listUnsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])

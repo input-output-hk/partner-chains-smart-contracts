@@ -182,5 +182,17 @@ main =
             "unsafeFromBuiltinData (list)"
             ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
             ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.toDataWrapper)
+            ("direct", fromCompiledCode Compiled.toDataDirect)
+        , scriptFitsUnder
+            "fromBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.fromDataWrapper)
+            ("direct", fromCompiledCode Compiled.fromDataDirect)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
+            ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
         ]
     ]

@@ -2,6 +2,7 @@
 
 module Data.Handwritten (
   Foo (..),
+  Bar (..),
   pairToData,
   pairFromData,
   pairUnsafeFromData,
@@ -174,3 +175,41 @@ listUnsafeFromData dat = go (unsafeDataAsList dat)
     go :: BuiltinList BuiltinData -> [a]
     go ell = matchList ell [] $ \x xs ->
       unsafeFromBuiltinData x : go xs
+
+data Bar = Bar Integer BuiltinByteString
+
+instance ToData Bar where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Bar x y) =
+    Unsafe.mkList
+      ( Unsafe.mkCons
+          (toBuiltinData x)
+          ( Unsafe.mkCons
+              (toBuiltinData y)
+              (Unsafe.mkNilData Unsafe.unitval)
+          )
+      )
+
+instance FromData Bar where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
+    where
+      go :: Maybe Bar
+      go =
+        let ell0 = Unsafe.unsafeDataAsList dat
+         in matchList ell0 Nothing $ \x ell1 ->
+              case fromBuiltinData x of
+                Nothing -> Nothing
+                Just x' -> matchList ell1 Nothing $ \y ell2 ->
+                  case fromBuiltinData y of
+                    Nothing -> Nothing
+                    Just y' -> matchList ell2 (Just (Bar x' y')) (\_ _ -> Nothing)
+
+instance UnsafeFromData Bar where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData dat =
+    let ell0 = Unsafe.unsafeDataAsList dat
+        x = unsafeFromBuiltinData (Unsafe.head ell0)
+        ell1 = Unsafe.tail ell0
+        y = unsafeFromBuiltinData (Unsafe.head ell1)
+     in Bar x y

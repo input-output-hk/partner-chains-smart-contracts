@@ -1,9 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Data.Generated (Foo (..)) where
+module Data.Generated (Foo (..), Bar (..)) where
 
+import Data.Wrappers (productFromData2, productToData2, productUnsafeFromData2)
 import Ledger.Value (CurrencySymbol)
-import PlutusTx (makeIsDataIndexed)
+import PlutusTx (
+  FromData (fromBuiltinData),
+  ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
+  makeIsDataIndexed,
+ )
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 
@@ -14,3 +20,17 @@ data Foo = Foo
   }
 
 makeIsDataIndexed ''Foo [('Foo, 0)]
+
+data Bar = Bar Integer BuiltinByteString
+
+instance ToData Bar where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Bar x y) = productToData2 x y
+
+instance FromData Bar where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 (\x y -> Just (Bar x y))
+
+instance UnsafeFromData Bar where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 Bar
