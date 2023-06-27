@@ -16,6 +16,7 @@ module TrustlessSidechain.Options.Parsers
   , uint
   , bigInt
   , byteArray
+  , cborEncodedAddressParser
   , rootHash
   , numerator
   , denominator
@@ -82,6 +83,11 @@ transactionInput = maybeReader \txIn →
           , index
           }
     _ → Nothing
+
+cborEncodedAddressParser ∷ ReadM Address
+cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
+  maybe (readerError "Error while parsing supplied CBOR as Address.")
+    pure
 
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
 combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>

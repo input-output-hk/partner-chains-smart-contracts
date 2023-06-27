@@ -35,6 +35,22 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
 * `abs` for absolute value in Haskell prelude, with the same usage caveats as
   `signum`.
+* the flag `--atms-kind` with value `plain` (in preparation for more signature
+  schemes to come) *must* be added to all CLI calls to specify which committee
+  certificate verification is being used. Alternatively, one can put
+  `"atmsKind": "plain"` in the config JSON file.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
+* the flag `--new-committee-validator-cbor-encoded-address` to the `committee-hash`
+  endpoint for the offchain CLI interface which takes the hex encoded cbor of a
+  Plutus address of a validator script of where the committee oracle should be
+  sent to.
+  This desired address can be found in the `addresses` CLI endpoint under the
+  JSON keys `cborEncodedAddresses.CommitteeHashValidator`.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
 
 ## Changed
 
@@ -60,13 +76,6 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   `cbor(plutusData(Address))` of the committee hash validator.
   ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
    [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
-   offchain)
-* the flag `--atms-kind` with value `plain` (in preparation for more signature
-  schemes to come) *must* be added to all CLI calls to specify which committee
-  certificate verification is being used. Alternatively, one can put
-  `"atmsKind": "plain"` in the config JSON file.
-  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
-   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
    offchain)
 
 ## Fixed

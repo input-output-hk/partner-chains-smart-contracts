@@ -2,6 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -53,6 +54,7 @@ import TrustlessSidechain.Options.Parsers
   ( bigInt
   , blockHash
   , byteArray
+  , cborEncodedAddressParser
   , combinedMerkleProofParserWithPkh
   , denominator
   , numerator
@@ -104,7 +106,7 @@ optSpec maybeConfig =
   hsubparser $ fold
     [ command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensSpec)
-            (progDesc "Pre-mint tokens without setting the inital committee")
+            (progDesc "Pre-mint tokens without setting the initial committee")
         )
     , command "init"
         ( info (withCommonOpts maybeConfig initSpec)
@@ -464,13 +466,28 @@ committeeHashSpec = ado
     )
   previousMerkleRoot ← parsePreviousMerkleRoot
   sidechainEpoch ← parseSidechainEpoch
+  mNewCommitteeAddress ← parseNewCommitteeAddress
   in
     CommitteeHash
       { newCommitteePubKeysInput
       , committeeSignaturesInput
       , previousMerkleRoot
       , sidechainEpoch
+      , mNewCommitteeAddress
       }
+
+parseNewCommitteeAddress ∷ Parser (Maybe Address)
+parseNewCommitteeAddress =
+  optional
+    ( option
+        cborEncodedAddressParser
+        ( fold
+            [ long "new-committee-validator-cbor-encoded-address"
+            , metavar "CBOR_PLUTUS_ADDRESS"
+            , help "Hex encoded cbor of a Plutus validator address"
+            ]
+        )
+    )
 
 -- | Parse all parameters for the `save-root` endpoint
 saveRootSpec ∷ Parser Endpoint
@@ -505,6 +522,7 @@ committeeHandoverSpec = ado
     "Filepath of a JSON file containing public keys and associated\
     \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
   sidechainEpoch ← parseSidechainEpoch
+  mNewCommitteeAddress ← parseNewCommitteeAddress
   in
     CommitteeHandover
       { merkleRoot
@@ -513,6 +531,7 @@ committeeHandoverSpec = ado
       , newCommitteeSignaturesInput
       , newMerkleRootSignaturesInput
       , sidechainEpoch
+      , mNewCommitteeAddress
       }
 
 -- | Parse all parameters for the `save-checkpoint` endpoint

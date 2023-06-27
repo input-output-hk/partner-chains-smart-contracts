@@ -210,6 +210,7 @@ updateCommitteeHashWith params f = void do
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
+        , mNewCommitteeAddress: Nothing
         }
 
   uchp' ← f uchp

@@ -347,4 +347,5 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
               -- root
               previousMerkleRoot: Nothing
             , sidechainEpoch: BigInt.fromInt 1
+            , mNewCommitteeAddress: Nothing
             }

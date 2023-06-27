@@ -232,6 +232,7 @@ runEndpoint sidechainEndpointParams endpoint =
         , committeeSignaturesInput
         , previousMerkleRoot
         , sidechainEpoch
+        , mNewCommitteeAddress
         } → do
         committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
@@ -251,6 +252,7 @@ runEndpoint sidechainEndpointParams endpoint =
             , aggregateSignature
             , previousMerkleRoot
             , sidechainEpoch
+            , mNewCommitteeAddress
             }
         UpdateCommitteeHash.updateCommitteeHash params
           <#> unwrap
@@ -368,6 +370,7 @@ runEndpoint sidechainEndpointParams endpoint =
         , newCommitteeSignaturesInput
         , newMerkleRootSignaturesInput
         , sidechainEpoch
+        , mNewCommitteeAddress
         } → do
 
         newCommitteeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
@@ -404,6 +407,7 @@ runEndpoint sidechainEndpointParams endpoint =
             , -- the previous merkle root is the merkle root we just saved..
               previousMerkleRoot: Just merkleRoot
             , sidechainEpoch
+            , mNewCommitteeAddress
             }
         saveRootTransactionId ← unwrap <$> MerkleRoot.saveRoot saveRootParams
         committeeHashTransactionId ← unwrap <$>

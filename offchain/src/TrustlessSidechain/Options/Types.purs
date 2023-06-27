@@ -99,6 +99,7 @@ data Endpoint
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
+      , mNewCommitteeAddress ∷ Maybe Address
       }
   | SaveRoot
       { merkleRoot ∷ RootHash
@@ -118,6 +119,7 @@ data Endpoint
       , newMerkleRootSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , sidechainEpoch ∷ BigInt
+      , mNewCommitteeAddress ∷ Maybe Address
       }
   | GetAddrs
       { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput

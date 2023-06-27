@@ -7,6 +7,8 @@ module TrustlessSidechain.UpdateCommitteeHash
 
 import Contract.Prelude
 
+import Contract.Address (Address)
+import Contract.Address as Address
 import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
@@ -87,6 +89,9 @@ newtype UpdateCommitteeHashParams newAggregatePubKeys =
     , aggregateSignature ∷ ATMSAggregateSignatures
     , previousMerkleRoot ∷ Maybe RootHash
     , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
+    , mNewCommitteeAddress ∷ Maybe Address
+    -- the address of the new committee (if it isn't provided, it will
+    -- reuse the current committee address)
     }
 
 derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
@@ -105,6 +110,7 @@ updateCommitteeHash
       , sidechainEpoch
       , newAggregatePubKeys
       , aggregateSignature
+      , mNewCommitteeAddress
       }
   ) = do
   let -- `mkErr` is used to help generate log messages
@@ -139,6 +145,7 @@ updateCommitteeHash
     , sidechainEpoch
     , newAggregatePubKeys
     , committeeCertificateVerificationCurrencySymbol
+    , mNewCommitteeAddress
     }
 
   -- Committee ATMS scheme lookups and constraints
@@ -190,6 +197,7 @@ updateCommitteeHashLookupsAndConstraints ∷
   , sidechainEpoch ∷ BigInt
   , newAggregatePubKeys ∷ newAggregatePubKeys
   , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  , mNewCommitteeAddress ∷ Maybe Address
   } →
   Contract
     { lookupsAndConstraints ∷
@@ -208,6 +216,7 @@ updateCommitteeHashLookupsAndConstraints
   , previousMerkleRoot
   , sidechainEpoch
   , committeeCertificateVerificationCurrencySymbol
+  , mNewCommitteeAddress
   } = do
   let -- `mkErr` is used to help generate log messages
     mkErr = report "updateCommitteeHashLookupsAndConstraints"
@@ -247,9 +256,26 @@ updateCommitteeHashLookupsAndConstraints
       }
 
   { validator: updateValidator
-  , validatorHash: valHash
+  , validatorHash: _valHash
   , address: updateValidatorAddress
   } ← getUpdateCommitteeHashValidator uch
+
+  -- if we have provided a new validator address to upgrade to, then move
+  -- the NFT to the new validator address -- otherwise; assume that we are paying
+  -- back to the original validator address.
+  { newValidatorHash, newValidatorAddress } ← do
+    let
+      newValidatorAddress = case mNewCommitteeAddress of
+        Nothing → updateValidatorAddress
+        Just x → x
+    newValidatorHash ←
+      liftContractM
+        (mkErr "Failed to get validator hash from provided new address")
+        $ Address.addressPaymentValidatorHash newValidatorAddress
+    pure
+      { newValidatorAddress
+      , newValidatorHash
+      }
 
   -- Get the UTxO with the current committee
   ------------------------------------------------------
@@ -284,7 +310,7 @@ updateCommitteeHashLookupsAndConstraints
       , newAggregatePubKeys: toData newAggregatePubKeys
       , previousMerkleRoot
       , sidechainEpoch
-      , validatorAddress: updateValidatorAddress
+      , validatorAddress: newValidatorAddress
       }
 
     redeemer = Redeemer $ toData $ UpdateCommitteeHashRedeemer
@@ -299,7 +325,7 @@ updateCommitteeHashLookupsAndConstraints
           Just { index: txORef, value: txOut } → Lookups.unspentOutputs
             (Map.singleton txORef txOut)
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
-      <> TxConstraints.mustPayToScript valHash newDatum DatumInline value
+      <> TxConstraints.mustPayToScript newValidatorHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
         Nothing → mempty
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
