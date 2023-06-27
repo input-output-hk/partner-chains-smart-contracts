@@ -97,11 +97,11 @@ main =
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_836
+            1_632
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_608
+            4_394
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
