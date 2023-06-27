@@ -83,7 +83,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
 
   dsConfPolicy ← DistributedSet.dsConfPolicy
     (wrap (unwrap scParams).genesisUtxo)
-  dsConfPolicyId ← getCurrencySymbolHex dsConfPolicy
+  dsConfPolicyId ← getCurrencySymbolHex "DsConfPolicy" dsConfPolicy
 
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
     Nothing → pure Nothing
@@ -94,7 +94,9 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
               { sidechainParams: scParams
               , candidatePermissionTokenUtxo: permissionTokenUtxo
               }
-      candidatePermissionPolicyId ← getCurrencySymbolHex candidatePermissionPolicy
+      candidatePermissionPolicyId ← getCurrencySymbolHex
+        "CandidatePermissionPolicy"
+        candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
   -- Validators
@@ -167,9 +169,9 @@ getAddr v = do
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
-getCurrencySymbolHex ∷ MintingPolicy → Contract String
-getCurrencySymbolHex mp = do
-  cs ← Monad.liftContractM (show (InternalError (InvalidScript ""))) $
+getCurrencySymbolHex ∷ String → MintingPolicy → Contract String
+getCurrencySymbolHex name mp = do
+  cs ← Monad.liftContractM (show (InternalError (InvalidScript name))) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
 
