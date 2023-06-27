@@ -452,7 +452,7 @@ handover](#committee-handover-changes), the Bridge must generate signatures as f
 msg =
     UpdateCommitteeMessage ATMSPlainAggregatePubKey
   { sidechainParams = {- .. -}
-  , newAggregateCommitteePubKeys = blake2b(concat [key1, key2, ..., keyN])
+  , newAggregateCommitteePubKeys = committeePubKeysHash
   , previousMerkleRoot = {- .. -}
   , newSidechainEpoch = {- .. -}
   , newValidatorAddress = {- .. -}
