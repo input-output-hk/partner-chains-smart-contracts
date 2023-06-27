@@ -56,7 +56,7 @@ type SidechainAddresses =
   }
 
 -- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
--- bundling the required data to grab all the sidechain addresses.
+-- | bundling the required data to grab all the sidechain addresses.
 newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
@@ -67,9 +67,10 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainParams` which contains related addresses and currency
--- | symbols. Moreover, it returns the currency symbol of the candidate
--- | permission token provided the `permissionTokenUtxo` is given.
+-- | the given `SidechainAddressesEndpointParams` which contains related
+-- | addresses and currency symbols. Moreover, it returns the currency symbol
+-- | of the candidate permission token provided the `permissionTokenUtxo` is
+-- | given.
 getSidechainAddresses ∷
   SidechainAddressesEndpointParams → Contract SidechainAddresses
 getSidechainAddresses

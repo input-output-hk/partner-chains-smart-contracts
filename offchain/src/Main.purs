@@ -306,7 +306,7 @@ runEndpoint sidechainEndpointParams endpoint =
         { transactionId, sidechainParams, sidechainAddresses } ←
           initSidechainTokens isc
 
-        pure $ InitResp -- TODO
+        pure $ InitResp
           { transactionId: unwrap transactionId
           , sidechainParams
           , sidechainAddresses

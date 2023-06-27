@@ -85,7 +85,8 @@ data ATMSAggregateSignatures
 
 -- | `ATMSKinds` denotes all the kinds of ATMS schemes that
 -- | will be hopefully supported  in the system.
--- | Note that these correspond to `ATMSAggregateSignatures`.
+-- | Note that these "correspond" in the obvious sense to
+-- | `ATMSAggregateSignatures`.
 -- |
 -- | Notes:
 -- |    - this is a type used only offchain, and is used for users to give
