@@ -1,4 +1,4 @@
-module TrustlessSidechain.Utils.Transaction where
+module TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit) where
 
 import Contract.Prelude
 

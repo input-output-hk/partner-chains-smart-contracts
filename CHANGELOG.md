@@ -8,7 +8,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Added
 
 * Improved error handling with an application-wide error type
-  ([492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+   [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
