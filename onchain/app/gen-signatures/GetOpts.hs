@@ -49,6 +49,7 @@ import Options.Applicative (
   helper,
   info,
   long,
+  maybeReader,
   metavar,
   option,
   progDesc,
@@ -72,6 +73,7 @@ import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
 import TrustlessSidechain.OffChain (
+  ATMSKind,
   Bech32Recipient (bech32RecipientBytes),
   SidechainCommittee (SidechainCommittee),
   SidechainCommitteeMember (..),
@@ -102,6 +104,9 @@ data Command
   = GenCliCommand
       { gccSigningKeyFile :: FilePath
       , gccSidechainParams :: SidechainParams
+      , -- | The 'String' which identifies the ATMS kind used by the sidechain.
+        -- Note that this 'String' is simply forwarded to Purescript CLI.
+        gccATMSKind :: ATMSKind
       , gccCliCommand :: GenCliCommand
       }
   | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
@@ -597,11 +602,19 @@ signingKeyFileParser =
 genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
+  atmsKind <-
+    option (maybeReader OffChain.parseATMSKind) $
+      mconcat
+        [ long "atms-kind"
+        , metavar "ATMS_KIND"
+        , help "ATMS kind of the sidechain"
+        ]
   signingKeyFile <- signingKeyFileParser
   pure $ \cmd ->
     GenCliCommand
       { gccSidechainParams = scParams
       , gccSigningKeyFile = signingKeyFile
+      , gccATMSKind = atmsKind
       , gccCliCommand = cmd
       }
 
@@ -729,7 +742,7 @@ updateCommitteeHashCommand =
         uchcValidatorAddress <-
           option parseAddress $
             mconcat
-              [ long "address"
+              [ long "--new-committee-validator-cbor-encoded-address"
               , metavar "ADDRESS"
               , help "Hex encoded CBOR encoded BuiltinData of `Address`"
               ]
@@ -916,7 +929,7 @@ freshSidechainCommittee = do
                 -- we know the next "iteration" will multiply by 10,
                 -- and add at most 9, so if `acc'` is greater or equal to this, then
                 -- we know for sure that we'll go out of bounds..
-                | acc' >= (maxBound :: Int) `quot` 10 -> Left "Committee size too large"
+                | acc' >= ((maxBound :: Int) `quot` 10) + 9 -> Left "Committee size too large"
                 --  do the usual C magic trick (subtract by ascii value
                 --  of @0@) to figure out what int that a digit is.
                 | Char.isDigit a -> Right (acc' * 10 + (Char.ord a - Char.ord '0'))
