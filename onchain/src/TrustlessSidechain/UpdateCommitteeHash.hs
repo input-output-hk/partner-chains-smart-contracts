@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -32,20 +33,20 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
   UpdateCommitteeHash (
-    cCommitteeCertificateVerificationCurrencySymbol,
-    cCommitteeOracleCurrencySymbol,
-    cMptRootTokenCurrencySymbol,
-    cSidechainParams
+    committeeCertificateVerificationCurrencySymbol,
+    committeeOracleCurrencySymbol,
+    mptRootTokenCurrencySymbol,
+    sidechainParams
   ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewAggregateCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams,
-    uchmValidatorAddress
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
   ),
-  UpdateCommitteeHashRedeemer (uchrPreviousMerkleRoot),
+  UpdateCommitteeHashRedeemer (previousMerkleRoot),
  )
 
 -- * Updating the committee hash
@@ -98,9 +99,9 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       let go :: [TxOut] -> Bool
           go [] = False
           go (o : os)
-            | -- recall that 'cCommitteeOracleCurrencySymbol' should be
+            | -- recall that 'committeeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
-              Value.valueOf (txOutValue o) (cCommitteeOracleCurrencySymbol uch) initCommitteeOracleTn > 0
+              Value.valueOf (txOutValue o) (committeeOracleCurrencySymbol uch) initCommitteeOracleTn > 0
               , OutputDatum d <- txOutDatum o
               , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
               -- Note that we build the @msg@ that we check is signed
@@ -109,23 +110,25 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               -- transaction corresponds to the message
               let msg =
                     UpdateCommitteeHashMessage
-                      { uchmSidechainParams = cSidechainParams uch
-                      , uchmNewAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
-                      , uchmPreviousMerkleRoot = uchrPreviousMerkleRoot red
-                      , uchmSidechainEpoch = sidechainEpoch ucd
-                      , uchmValidatorAddress = txOutAddress o
+                      { sidechainParams = sidechainParams (uch :: UpdateCommitteeHash)
+                      , newAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
+                      , previousMerkleRoot = previousMerkleRoot (red :: UpdateCommitteeHashRedeemer)
+                      , sidechainEpoch = sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
+                      , validatorAddress = txOutAddress o
                       }
                in traceIfFalse
                     "error 'mkUpdateCommitteeHashValidator': tx not signed by committee"
                     ( Value.valueOf
                         (txInfoMint info)
-                        (cCommitteeCertificateVerificationCurrencySymbol uch)
+                        (committeeCertificateVerificationCurrencySymbol uch)
                         (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
                         > 0
                     )
                     && traceIfFalse
                       "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
-                      (sidechainEpoch dat < sidechainEpoch ucd)
+                      ( sidechainEpoch (dat :: UpdateCommitteeDatum BuiltinData)
+                          < sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
+                      )
             | otherwise = go os
        in go (txInfoOutputs info)
 
@@ -137,12 +140,12 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case uchrPreviousMerkleRoot red of
+      case previousMerkleRoot (red :: UpdateCommitteeHashRedeemer) of
         Nothing -> True
         Just tn ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
+                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (mptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
                     || go rest
                 )
               go [] = False

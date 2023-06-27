@@ -40,7 +40,14 @@ import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   SidechainParams (SidechainParams, thresholdDenominator, thresholdNumerator),
   SidechainPubKey,
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
+  ),
   bprmInputUtxo,
   bprmSidechainParams,
   bprmSidechainPubKey,
@@ -50,11 +57,6 @@ import TrustlessSidechain.Types (
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
-  uchmNewAggregateCommitteePubKeys,
-  uchmPreviousMerkleRoot,
-  uchmSidechainEpoch,
-  uchmSidechainParams,
-  uchmValidatorAddress,
  )
 import TrustlessSidechain.Utils qualified as Utils
 
@@ -207,14 +209,14 @@ ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
-          { uchmSidechainParams = scParams
+          { sidechainParams = scParams
           , -- Old message that's no longer used..
             -- , uchmNewCommitteePubKeys = Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
-            uchmNewAggregateCommitteePubKeys =
+            newAggregateCommitteePubKeys =
               Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
-          , uchmPreviousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
-          , uchmSidechainEpoch = cuchSidechainEpoch
-          , uchmValidatorAddress =
+          , previousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
+          , sidechainEpoch = cuchSidechainEpoch
+          , validatorAddress =
               error "unimplemented validator address for UpdateCommitteeHashMessage"
               -- TODO: put in the actual validator address.
           }

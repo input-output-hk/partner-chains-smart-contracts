@@ -250,35 +250,35 @@ newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey BuiltinByteString
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { cSidechainParams :: SidechainParams
-  , -- | 'cCommitteeOracleCurrencySymbol' is the 'CurrencySymbol' of the NFT that is used to
+  { sidechainParams :: SidechainParams
+  , -- | 'committeeOracleCurrencySymbol' is the 'CurrencySymbol' of the NFT that is used to
     -- identify the transaction the current committee.
-    cCommitteeOracleCurrencySymbol :: CurrencySymbol
-  , -- | 'cCommitteeCertificateVerificationCurrencySymbol' is the currency
+    committeeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'committeeCertificateVerificationCurrencySymbol' is the currency
     -- symbol for the committee certificate verification policy i.e., the
     -- currency symbol whose minted token name indicates that the current
     -- committee has signed the token name.
-    cCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
-  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+  , -- | 'mptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
     -- root token. This is needed for verifying that the previous merkle root is verified.
-    cMptRootTokenCurrencySymbol :: CurrencySymbol
+    mptRootTokenCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
 data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
-  { uchmSidechainParams :: SidechainParams
+  { sidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
-    uchmNewAggregateCommitteePubKeys :: aggregatePubKeys
-  , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
-  , uchmSidechainEpoch :: Integer
-  , uchmValidatorAddress :: Address
+    newAggregateCommitteePubKeys :: aggregatePubKeys
+  , previousMerkleRoot :: Maybe BuiltinByteString
+  , sidechainEpoch :: Integer
+  , validatorAddress :: Address
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
 
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { uchrPreviousMerkleRoot :: Maybe BuiltinByteString
+  { previousMerkleRoot :: Maybe BuiltinByteString
   }
   deriving newtype
     ( ToData

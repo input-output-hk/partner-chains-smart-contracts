@@ -85,11 +85,11 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewAggregateCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams,
-    uchmValidatorAddress
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
   ),
  )
 
@@ -161,14 +161,14 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
-                    { uchmSidechainParams = scParams
+                    { sidechainParams = scParams
                     , -- Old version that isn't used anymore
                       -- , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
-                      uchmNewAggregateCommitteePubKeys =
+                      newAggregateCommitteePubKeys =
                         error "unimplemented aggregate keys for update committee hash message" :: ()
-                    , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
-                    , uchmSidechainEpoch = uchcSidechainEpoch
-                    , uchmValidatorAddress =
+                    , previousMerkleRoot = uchcPreviousMerkleRoot
+                    , sidechainEpoch = uchcSidechainEpoch
+                    , validatorAddress =
                         uchcValidatorAddress
                     }
                 currentCommitteePubKeysAndSigsFlags =
