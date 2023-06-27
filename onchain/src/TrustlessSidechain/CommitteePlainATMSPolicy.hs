@@ -31,13 +31,13 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
   ATMSPlainMultisignature (
-    atmspmsPublicKeys,
-    atmspmsSignatures
+    plainPublicKeys,
+    plainSignatures
   ),
   CommitteeCertificateMint (
-    ccmCommitteeOraclePolicy,
-    ccmThresholdDenominator,
-    ccmThresholdNumerator
+    committeeOraclePolicy,
+    thresholdDenominator,
+    thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
@@ -64,17 +64,17 @@ mkMintingPolicy ccm atmspms ctx =
     -- 1.
     isCurrentCommittee :: Bool
     isCurrentCommittee =
-      Utils.aggregateCheck (atmspmsPublicKeys atmspms) $
+      Utils.aggregateCheck (plainPublicKeys atmspms) $
         aggregateCommitteePubKeys committeeDatum
 
     -- 2.
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       Utils.verifyMultisig
-        (getSidechainPubKey <$> atmspmsPublicKeys atmspms)
+        (getSidechainPubKey <$> plainPublicKeys atmspms)
         threshold
         (unTokenName uniqueMintedTokenName)
-        (atmspmsSignatures atmspms)
+        (plainSignatures atmspms)
 
     threshold :: Integer
     threshold =
@@ -105,9 +105,9 @@ mkMintingPolicy ccm atmspms ctx =
       --    makes this smallest integer that is strictly larger than
       --    @numerator/denominator *n@ i.e., we have
       --    @ceil(numerator/denominator * n)@ as required.
-      ( length (atmspmsPublicKeys atmspms)
-          `Builtins.multiplyInteger` ccmThresholdNumerator ccm
-          `Builtins.divideInteger` ccmThresholdDenominator ccm
+      ( length (plainPublicKeys atmspms)
+          `Builtins.multiplyInteger` thresholdNumerator ccm
+          `Builtins.divideInteger` thresholdDenominator ccm
       )
         + 1
 
@@ -119,7 +119,7 @@ mkMintingPolicy ccm atmspms ctx =
               , amt <-
                   Value.valueOf
                     (txOutValue o)
-                    (ccmCommitteeOraclePolicy ccm)
+                    (committeeOraclePolicy ccm)
                     UpdateCommitteeHash.initCommitteeHashMintTn
               , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
               , -- We always expect this to be given as inline datum

@@ -302,9 +302,9 @@ PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
  See SIP05 in @docs/SIPs/@ for details.
 -}
 data CommitteeCertificateMint = CommitteeCertificateMint
-  { ccmCommitteeOraclePolicy :: CurrencySymbol
-  , ccmThresholdNumerator :: Integer
-  , ccmThresholdDenominator :: Integer
+  { committeeOraclePolicy :: CurrencySymbol
+  , thresholdNumerator :: Integer
+  , thresholdDenominator :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
@@ -314,8 +314,8 @@ PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMin
  "TrustlessSidechain.CommitteePlainATMSPolicy".
 -}
 data ATMSPlainMultisignature = ATMSPlainMultisignature
-  { atmspmsPublicKeys :: [SidechainPubKey]
-  , atmspmsSignatures :: [BuiltinByteString]
+  { plainPublicKeys :: [SidechainPubKey]
+  , plainSignatures :: [BuiltinByteString]
   }
 
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]

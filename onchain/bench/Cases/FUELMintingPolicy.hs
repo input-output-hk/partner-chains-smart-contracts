@@ -37,18 +37,20 @@ import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   CombinedMerkleProof (CombinedMerkleProof),
   MerkleTreeEntry (MerkleTreeEntry),
-  SidechainParams (SidechainParams),
-  chainId,
+  SidechainParams (
+    SidechainParams,
+    chainId,
+    genesisHash,
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
   cmpMerkleProof,
   cmpTransaction,
-  genesisHash,
-  genesisUtxo,
   mteAmount,
   mteIndex,
   mtePreviousMerkleRoot,
   mteRecipient,
-  thresholdDenominator,
-  thresholdNumerator,
  )
 
 {- | Returns the corresponding merkle proofs for a merkle tree of the given

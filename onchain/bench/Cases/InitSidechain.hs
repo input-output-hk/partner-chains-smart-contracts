@@ -19,12 +19,14 @@ import Data.List qualified as List
 import System.IO qualified as SystemIO
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Types (
-  SidechainParams (SidechainParams),
-  chainId,
-  genesisHash,
-  genesisUtxo,
-  thresholdDenominator,
-  thresholdNumerator,
+  SidechainParams (
+    SidechainParams,
+    chainId,
+    genesisHash,
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
  )
 
 initSidechainBench :: Bench ()

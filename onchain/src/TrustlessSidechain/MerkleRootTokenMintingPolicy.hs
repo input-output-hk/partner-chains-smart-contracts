@@ -44,7 +44,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
+  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot, signatures),
   SignedMerkleRootMint,
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
   merkleRoot,
