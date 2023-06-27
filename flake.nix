@@ -7,7 +7,7 @@
   };
 
   inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v5.0.0";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=9c8d5dd1a2b5ad4ac2bc4b74473fec3a11b24a8e";
 
     plutip.follows = "cardano-transaction-lib/plutip";
     haskell-nix.follows = "cardano-transaction-lib/plutip/haskell-nix";
