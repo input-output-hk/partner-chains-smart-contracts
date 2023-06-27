@@ -123,17 +123,13 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
     ATMSPlain → map Plain $ flip traverse committeePubKeyAndSigs $
       \(pk /\ mSig) → do
         pk' ← case Utils.Crypto.sidechainPublicKey pk of
-          -- TODO: perhaps it would be good to show the user the bad
-          -- public key
-          Nothing → Left "invalid ECDSA SECP256k1 public key"
+          Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
           Just pk' → Right pk'
 
         sig' ← case mSig of
           Nothing → Right Nothing
           Just sig → case Utils.Crypto.sidechainSignature sig of
-            -- TODO: same as before. Perhaps it would be a good idea to
-            -- tell the user which signature is bad?
-            Nothing → Left "invalid ECDSA SECP256k1 signature"
+            Nothing → Left $ "invalid ECDSA SECP256k1 signature: " <> show sig
             Just sig' → Right $ Just sig'
 
         pure $ pk' /\ sig'
