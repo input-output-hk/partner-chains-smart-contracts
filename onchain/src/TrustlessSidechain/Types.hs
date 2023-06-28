@@ -145,7 +145,7 @@ PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMe
  minting policy
 -}
 newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
-  { smrrPreviousMerkleRoot :: Maybe BuiltinByteString
+  { previousMerkleRoot :: Maybe BuiltinByteString
   }
   deriving newtype
     ( ToData
@@ -155,15 +155,15 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmCommitteeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
+  { -- | 'sidechainParams' includes the 'SidechainParams'
+    sidechainParams :: SidechainParams
+  , -- | 'committeeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
     -- provides a committee certificate for a message.
-    smrmCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
-  , -- | 'smrmValidatorHash' is the validator hash corresponding to
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+  , -- | 'validatorHash' is the validator hash corresponding to
     -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
     -- to ensure that this token gets minted to the "right" place.
-    smrmValidatorHash :: ValidatorHash
+    validatorHash :: ValidatorHash
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]

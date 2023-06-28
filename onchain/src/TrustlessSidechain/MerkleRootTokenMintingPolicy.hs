@@ -40,10 +40,9 @@ import TrustlessSidechain.Types (
     mrimSidechainParams
   ),
   MerkleTreeEntry,
-  SignedMerkleRootMint (smrmSidechainParams),
-  SignedMerkleRootRedeemer (smrrPreviousMerkleRoot),
-  smrmCommitteeCertificateVerificationCurrencySymbol,
-  smrmValidatorHash,
+  SignedMerkleRootMint (committeeCertificateVerificationCurrencySymbol, sidechainParams),
+  SignedMerkleRootRedeemer (previousMerkleRoot),
+  validatorHash,
  )
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
@@ -64,7 +63,7 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
 
       2.  the committee certificate verification minting policy asserts that
       `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
-      and At least one token is paid to 'smrmValidatorHash'
+      and At least one token is paid to 'validatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
@@ -85,7 +84,7 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
       -- documentation of this function.
-      p1 = case smrrPreviousMerkleRoot smrr of
+      p1 = case previousMerkleRoot smrr of
         Nothing -> True
         Just tn ->
           -- Checks if any of the reference inputs have at least 1 of the last
@@ -110,15 +109,15 @@ mkMintingPolicy
             | amount == 1 ->
               let msg =
                     MerkleRootInsertionMessage
-                      { mrimSidechainParams = smrmSidechainParams smrm
+                      { mrimSidechainParams = sidechainParams smrm
                       , mrimMerkleRoot = unTokenName tn
-                      , mrimPreviousMerkleRoot = smrrPreviousMerkleRoot smrr
+                      , mrimPreviousMerkleRoot = previousMerkleRoot smrr
                       }
                in traceIfFalse
                     "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
                     ( Value.valueOf
                         minted
-                        (smrmCommitteeCertificateVerificationCurrencySymbol smrm)
+                        (committeeCertificateVerificationCurrencySymbol smrm)
                         (TokenName (serialiseMrimHash msg))
                         > 0
                     )
@@ -127,7 +126,7 @@ mkMintingPolicy
                       ( let go [] = False
                             go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
                               ScriptCredential vh
-                                | vh == smrmValidatorHash smrm
+                                | vh == validatorHash smrm
                                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
                                     > 0 ->
                                   True
