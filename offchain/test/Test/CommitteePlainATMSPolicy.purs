@@ -20,9 +20,6 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
   )
-import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
-  )
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -142,7 +139,6 @@ testScenario1 =
             CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteePlainATMSParams
             $ CommitteeATMSParams
                 { currentCommitteeUtxo: utxo
                 , committeeCertificateMint: committeePlainATMSMint
@@ -191,7 +187,6 @@ testScenario1 =
             CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteePlainATMSParams
             $ CommitteeATMSParams
                 { currentCommitteeUtxo: utxo
                 , committeeCertificateMint: committeePlainATMSMint
@@ -233,7 +228,6 @@ testScenario1 =
             CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteePlainATMSParams
             $ CommitteeATMSParams
                 { currentCommitteeUtxo: utxo
                 , committeeCertificateMint: committeePlainATMSMint
@@ -274,7 +268,6 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-                $ CommitteePlainATMSParams
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainATMSMint
@@ -315,7 +308,6 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-                $ CommitteePlainATMSParams
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainATMSMint

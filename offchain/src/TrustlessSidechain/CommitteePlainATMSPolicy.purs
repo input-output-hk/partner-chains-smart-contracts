@@ -4,8 +4,7 @@
 -- | Also, we provide mechanisms for creating the lookups and constraints to
 -- | build / submit the transaction.
 module TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
-  , ATMSPlainMultisignature(ATMSPlainMultisignature)
+  ( ATMSPlainMultisignature(ATMSPlainMultisignature)
   , committeePlainATMSMintFromSidechainParams
 
   , committeePlainATMS
@@ -76,15 +75,6 @@ import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging as Logging
 
--- | `CommitteePlainATMSParams` is a type to bundle up all the required data
--- | when building the transaction (this is used only as a offchain parameter)
-newtype CommitteePlainATMSParams = CommitteePlainATMSParams
-  (CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)))
-
-derive instance Generic CommitteePlainATMSParams _
-
-derive instance Newtype CommitteePlainATMSParams _
-
 -- | `ATMSPlainMultisignature` corresponds to the onchain type
 newtype ATMSPlainMultisignature = ATMSPlainMultisignature
   { currentCommittee ∷ Array SidechainPublicKey
@@ -153,18 +143,16 @@ committeePlainATMSMintFromSidechainParams sidechainParams = do
 -- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
 mustMintCommitteePlainATMSPolicy ∷
-  CommitteePlainATMSParams →
+  CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams
-      ( CommitteeATMSParams
-          { currentCommitteeUtxo
-          , committeeCertificateMint
-          , aggregateSignature: signatures
-          , message
-          }
-      )
+  ( CommitteeATMSParams
+      { currentCommitteeUtxo
+      , committeeCertificateMint
+      , aggregateSignature: signatures
+      , message
+      }
   ) = do
   let
     msg = report "mustMintCommitteePlainATMSPolicy"
@@ -267,7 +255,7 @@ mustMintCommitteePlainATMSPolicy
 -- | Note: this assumes that the current committee should be given as reference
 -- | input (instead of spending it) to make testing a bit more terse.
 runCommitteePlainATMSPolicy ∷
-  CommitteePlainATMSParams →
+  CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
   Contract TransactionHash
 runCommitteePlainATMSPolicy params = do
   let
@@ -281,7 +269,7 @@ runCommitteePlainATMSPolicy params = do
       { lookups: mempty
       , constraints:
           TxConstraints.mustReferenceOutput
-            (unwrap (unwrap params)).currentCommitteeUtxo.index
+            (unwrap params).currentCommitteeUtxo.index
       }
 
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints

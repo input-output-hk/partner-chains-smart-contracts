@@ -9,7 +9,6 @@ module TrustlessSidechain.CommitteeATMSSchemes
   ( atmsSchemeLookupsAndConstraints
   , atmsCommitteeCertificateVerificationMintingPolicy
 
-  , module ExportCommitteePlainATMSPolicy
   , module ExportCommitteeATMSSchemesTypes
   ) where
 
@@ -33,12 +32,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
-import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
-  )
-import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
-  ) as ExportCommitteePlainATMSPolicy
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
@@ -53,7 +46,6 @@ atmsSchemeLookupsAndConstraints atmsParams =
   case (unwrap atmsParams).aggregateSignature of
     Plain param → do
       CommitteePlainATMSPolicy.mustMintCommitteePlainATMSPolicy
-        $ CommitteePlainATMSParams
         $ CommitteeATMSParams
             ((unwrap atmsParams) { aggregateSignature = param })
     -- TODO: fill these in later :^)
