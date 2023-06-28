@@ -11,5 +11,5 @@ jobs:
     steps:
       - uses: actions/add-to-project@v0.5.0
         with:
-          project-url: https://github.com/orgs/mlabs-haskell/projects/11
+          project-url: https://github.com/orgs/input-output-hk/projects/81
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
