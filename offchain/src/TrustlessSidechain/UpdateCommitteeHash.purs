@@ -98,28 +98,35 @@ updateCommitteeHash ∷
   ToData newAggregatePubKeys ⇒
   UpdateCommitteeHashParams newAggregatePubKeys →
   Contract TransactionHash
-updateCommitteeHash params = do
+updateCommitteeHash
+  ( UpdateCommitteeHashParams
+      { sidechainParams
+      , previousMerkleRoot
+      , sidechainEpoch
+      , newAggregatePubKeys
+      , aggregateSignature
+      }
+  ) = do
   let -- `mkErr` is used to help generate log messages
     mkErr = report "updateCommitteeHash"
 
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy
-      (unwrap params).sidechainParams
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
   let
     committeeCertificateMint =
       CommitteeCertificateMint
         { thresholdNumerator:
-            (unwrap ((unwrap params).sidechainParams)).thresholdNumerator
+            (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator:
-            (unwrap (unwrap params).sidechainParams).thresholdDenominator
+            (unwrap sidechainParams).thresholdDenominator
         , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       committeeCertificateMint
-      (unwrap params).aggregateSignature
+      aggregateSignature
 
   -- Update comittee lookups and constraints
   ------------------------------------
@@ -127,10 +134,10 @@ updateCommitteeHash params = do
   , currentCommitteeUtxo
   , updateCommitteeHashMessage
   } ← updateCommitteeHashLookupsAndConstraints
-    { sidechainParams: (unwrap params).sidechainParams
-    , previousMerkleRoot: (unwrap params).previousMerkleRoot
-    , sidechainEpoch: (unwrap params).sidechainEpoch
-    , newAggregatePubKeys: (unwrap params).newAggregatePubKeys
+    { sidechainParams
+    , previousMerkleRoot
+    , sidechainEpoch
+    , newAggregatePubKeys
     , committeeCertificateVerificationCurrencySymbol
     }
 
@@ -145,7 +152,7 @@ updateCommitteeHash params = do
     CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints $ CommitteeATMSParams
       { currentCommitteeUtxo
       , committeeCertificateMint
-      , aggregateSignature: (unwrap params).aggregateSignature
+      , aggregateSignature
       , message: Utils.Crypto.sidechainMessageToTokenName scMsg
       }
 
