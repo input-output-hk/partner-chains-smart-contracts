@@ -84,7 +84,7 @@ data ATMSAggregateSignatures
   | Dummy
 
 -- | `ATMSKinds` denotes all the kinds of ATMS schemes that
--- | will be hopefully supported  in the system.
+-- | will be hopefully supported in the system.
 -- | Note that these "correspond" in the obvious sense to
 -- | `ATMSAggregateSignatures`.
 -- |
