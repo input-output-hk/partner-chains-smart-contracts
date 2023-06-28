@@ -52,7 +52,7 @@ type SidechainAddresses =
   , --  currency symbols
     mintingPolicies ∷ Array (Tuple String String)
   , -- cbor of the Plutus Address type.
-    plutusDataAddresses ∷ Array (Tuple String String)
+    cborEncodedAddresses ∷ Array (Tuple String String)
   }
 
 -- | `SidechainAddressesExtra` provides extra information for creating more
@@ -114,7 +114,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← merkleRootTokenValidator scParams
     getAddr validator
 
-  { committeeHashValidatorAddr, committeeHashValidatorAddrPlutus } ←
+  { committeeHashValidatorAddr, committeeHashValidatorCborAddress } ←
     do
       -- TODO: this is going to get all replaced soon?
       let
@@ -140,7 +140,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
 
       pure
         { committeeHashValidatorAddr: bech32Addr
-        , committeeHashValidatorAddrPlutus: getPlutusAddr address
+        , committeeHashValidatorCborAddress: getCborEncodedAddress address
         }
 
   dsInsertValidatorAddr ← do
@@ -172,14 +172,14 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
       , "DSInsertValidator" /\ dsInsertValidatorAddr
       ]
 
-    plutusDataAddresses =
-      [ "CommitteeHashValidator" /\ committeeHashValidatorAddrPlutus
+    cborEncodedAddresses =
+      [ "CommitteeHashValidator" /\ committeeHashValidatorCborAddress
       ]
 
   pure
     { addresses
     , mintingPolicies
-    , plutusDataAddresses
+    , cborEncodedAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
@@ -194,8 +194,8 @@ getAddr v = do
   pure serialised
 
 -- | Gets the hex encoded string of the cbor representation of an Address
-getPlutusAddr ∷ Address → String
-getPlutusAddr =
+getCborEncodedAddress ∷ Address → String
+getCborEncodedAddress =
   ByteArray.byteArrayToHex
     <<< CborBytes.cborBytesToByteArray
     <<< PlutusData.serializeData
