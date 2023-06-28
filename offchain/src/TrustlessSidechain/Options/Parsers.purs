@@ -9,6 +9,7 @@ module TrustlessSidechain.Options.Parsers
   , pubKeyBytesAndSignatureBytes
   , sidechainSignature
   , sidechainPublicKey
+  , bech32AddressParser
   , sidechainAddress
   , combinedMerkleProofParserWithPkh
   , parseTokenName
@@ -35,6 +36,8 @@ import Contract.Transaction
   )
 import Contract.Value (TokenName)
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
+import Ctl.Internal.Serialization.Address as Serialization.Address
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
@@ -88,6 +91,21 @@ cborEncodedAddressParser ∷ ReadM Address
 cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
   maybe (readerError "Error while parsing supplied CBOR as Address.")
     pure
+
+-- | `bech32AddressParser` parses a bech32 address
+-- TODO: this does *not* check if the network of the address coincides with the
+-- network that CTL is running on.
+bech32AddressParser ∷ ReadM Address
+bech32AddressParser = eitherReader \str → do
+  addr ← case (Serialization.Address.addressFromBech32 str) of
+    Just x → Right x
+    Nothing → Left "bech32 address deserialization failed."
+
+  addr' ← case Conversion.Address.toPlutusAddress addr of
+    Just x → Right x
+    Nothing → Left "bech32 address conversion to plutus address failed"
+
+  pure addr'
 
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
 combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>

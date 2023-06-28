@@ -51,7 +51,8 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
-  ( bigInt
+  ( bech32AddressParser
+  , bigInt
   , blockHash
   , byteArray
   , cborEncodedAddressParser
@@ -478,16 +479,28 @@ committeeHashSpec = ado
 
 parseNewCommitteeAddress ∷ Parser (Maybe Address)
 parseNewCommitteeAddress =
-  optional
+  optional $
     ( option
         cborEncodedAddressParser
         ( fold
             [ long "new-committee-validator-cbor-encoded-address"
-            , metavar "CBOR_PLUTUS_ADDRESS"
-            , help "Hex encoded cbor of a Plutus validator address"
+            , metavar "CBOR_ENCODED_ADDRESS"
+            , help
+                "Hex encoded cbor of a validator address to send the committee oracle to"
             ]
         )
     )
+    <|>
+      ( option
+          bech32AddressParser
+          ( fold
+              [ long "new-committee-validator-bech32-address"
+              , metavar "BECH32_ADDRESS"
+              , help
+                  "bech32 of a validator address to send the committee oracle to"
+              ]
+          )
+      )
 
 -- | Parse all parameters for the `save-root` endpoint
 saveRootSpec ∷ Parser Endpoint
