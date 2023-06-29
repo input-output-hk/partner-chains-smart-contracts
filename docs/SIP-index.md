@@ -16,3 +16,4 @@ The status of an improvement proposal can be `In Progress` `Accepted` or `Implem
 | [06: Flexible Initialisation](./SIPs/06-FlexibleInitialisation.md)                                     | `In Progress` |
 | [07: Modularising Token Handling](./SIPs/07-ModularisingTokenHandling.md)                              | `In Progerss` |
 | [08: Cross-Chain Verification](./SIPs/08-CrossChainVerification.md)                                    | `In Progress` |
+| [09: General Data Bridge](./SIPs/09-GeneralDataBridge.md)                                              | `In Progress` |
