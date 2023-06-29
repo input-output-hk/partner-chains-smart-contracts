@@ -18,7 +18,6 @@ module TrustlessSidechain.CommitteePlainATMSPolicy
 
 import Contract.Prelude
 
-import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
@@ -44,7 +43,6 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
-import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( TxConstraints
   )
@@ -54,7 +52,6 @@ import Contract.Value
   , TokenName
   )
 import Contract.Value as Value
-import Data.Bifunctor as Bifunctor
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
@@ -65,7 +62,11 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 
 -- | `CommitteePlainATMSParams` is a type to bundle up all the required data
 -- | when building the transaction (this is used only as a offchain parameter)
@@ -156,11 +157,11 @@ getCommitteePlainATMSPolicy ∷
     , committeePlainATMSCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteePlainATMSPolicy param = do
-  let
-    msg = report "getCommitteePlainATMSPolicy"
   committeePlainATMSPolicy ← committeePlainATMS param
   committeePlainATMSCurrencySymbol ← Monad.liftContractM
-    (msg "Failed to get committee signed token currency symbol")
+    ( show $ InternalError $ InvalidScript
+        "Failed to get committee signed token currency symbol"
+    )
     (Value.scriptCurrencySymbol committeePlainATMSPolicy)
   pure
     { committeePlainATMSPolicy, committeePlainATMSCurrencySymbol }
@@ -196,9 +197,6 @@ mustMintCommitteePlainATMSPolicy
       }
   ) = do
   let
-    msg = report "mustMintCommitteePlainATMSPolicy"
-
-  let
     messageByteArray = Value.getTokenName message
 
     -- ensure that the signatures provided are sorted, and do an optimization
@@ -231,16 +229,21 @@ mustMintCommitteePlainATMSPolicy
 
   comitteeHashDatum ←
     Monad.liftContractM
-      (msg "Update committee UTxO is missing inline datum")
+      ( show $ InternalError $ InvalidData
+          "Update committee UTxO is missing inline datum"
+      )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeDatum datum ← Monad.liftContractM
-    (msg "Datum at update committee UTxO fromData failed")
+    ( show $ InternalError $ InvalidData
+        "Datum at update committee UTxO fromData failed"
+    )
     (fromData $ unwrap comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
   when (datum.committeeHash /= curCommitteeHash)
     $ Monad.throwContractError
-    $ msg "Incorrect committee provided"
+    $ show
+    $ InvalidInputError "Incorrect committee provided"
 
   unless
     ( Utils.Crypto.verifyMultiSignature
@@ -253,7 +256,8 @@ mustMintCommitteePlainATMSPolicy
         curCommitteeSignatures
     )
     $ Monad.throwContractError
-    $ msg
+    $ show
+    $ InvalidInputError
         "Invalid committee signatures for the sidechain message"
 
   let
@@ -299,9 +303,6 @@ runCommitteePlainATMSPolicy ∷
   CommitteePlainATMSParams →
   Contract TransactionHash
 runCommitteePlainATMSPolicy params = do
-  let
-    msg = report "runCommitteePlainATMSPolicy"
-
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
     mustMintCommitteePlainATMSPolicy params
 
@@ -316,21 +317,5 @@ runCommitteePlainATMSPolicy params = do
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
       <> extraLookupsAndContraints
 
-  ubTx ← Monad.liftedE
-    ( Bifunctor.lmap (msg <<< show) <$> ScriptLookups.mkUnbalancedTx lookups
-        constraints
-    )
-  bsTx ← Monad.liftedE
-    (Bifunctor.lmap (msg <<< show) <$> Transaction.balanceTx ubTx)
-  signedTx ← Transaction.signTransaction bsTx
-  txId ← Transaction.submit signedTx
-  Log.logInfo'
-    (msg "Submitted committee signed token transaction: " <> show txId)
-  Transaction.awaitTxConfirmed txId
-  Log.logInfo' (msg "Committee signed token transaction submitted successfully")
-
-  pure txId
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Logging.mkReport "CommitteePlainATMSPolicy"
+  Utils.Transaction.balanceSignAndSubmit "CommitteePlainATMSPolicy" lookups
+    constraints
