@@ -182,7 +182,8 @@ Minting verifies the following:
   otherwise it is sent to the `PostBoxValidator`
 - if the payload is `FullMessage(data)` then `tokenName = blake2b(data)`,
   if `HashedMessage(dataHash)` `tokenName = dataHash`
-- sender `SidechainRef` is the same as the parameter of the current minting policy
+- `sender` field in `BroadcastMessage` is the same as the parameter of the
+  current minting policy
 
 ### Sideways (Sidechain A to Sidechain B)
 
@@ -190,6 +191,10 @@ Sideways transfers will use the exact same mechanism as Upwards transfer.
 The only difference is that `targetAddress` is set to the `PostBoxValidator`
 of the target chain (off-chain code can find the address using the
 VersionOracles as described in [SIP8][crosschainver]).
+
+Sidechain B contract will be able to observe the new UTxO in the
+Sidechain B's `PostBoxValidator`, with the `sender` field pointing to
+Sidechain A.
 
 [modulartokens]: ./07-ModularisingTokenHandling.md
 [crosschainver]: ./08-CrossChainVerification.md
