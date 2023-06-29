@@ -21,8 +21,7 @@ import Contract.Address
   )
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractE, liftContractM, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -44,10 +43,6 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionInput
   , TransactionOutputWithRefScript
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
@@ -59,7 +54,6 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -78,7 +72,16 @@ import TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , bech32BytesFromAddress
   )
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError
+      ( NotFoundOwnPubKeyHash
+      , InvalidScript
+      , InvalidData
+      , NotFoundUtxo
+      )
+  , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `FUELMint` is the data type to parameterize the minting policy.
 -- | Note: this matches the haskell onchain data type.
@@ -231,7 +234,6 @@ getFuelMintingPolicy ∷
     , fuelMintingPolicyCurrencySymbol ∷ CurrencySymbol
     }
 getFuelMintingPolicy sidechainParams = do
-  let mkErr = Logging.mkReport "FUELMintingPolicy" "getFuelMintingPolicy"
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     sidechainParams
   ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
@@ -245,7 +247,7 @@ getFuelMintingPolicy sidechainParams = do
       , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
   fuelMintingPolicyCurrencySymbol ←
-    liftContractM (mkErr "Cannot get currency symbol") $
+    liftContractM (show (InternalError (InvalidScript ""))) $
       Value.scriptCurrencySymbol policy
   pure
     { fuelMintingPolicy: policy
@@ -268,25 +270,20 @@ data FuelParams
 -- | `runFuelMP` executes the FUEL mint / burn endpoint.
 runFuelMP ∷ SidechainParams → FuelParams → Contract TransactionHash
 runFuelMP sp fp = do
-  let mkErr = Logging.mkReport "FUELMintingPolicy" "runFuelMP"
-
   { fuelMintingPolicy: fuelMP } ← getFuelMintingPolicy sp
 
   { lookups, constraints } ← case fp of
     Burn params →
       burnFUEL fuelMP params
-    Mint params → claimFUEL fuelMP params
+    Mint params →
+      claimFUEL fuelMP params
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr ("Submitted Tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' $ mkErr "Tx submitted successfully!"
+  let
+    txName = case fp of
+      Burn _ → "FUEL token burn"
+      Mint _ → "FUEL token mint"
 
-  pure txId
+  balanceSignAndSubmit txName lookups constraints
 
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
@@ -313,15 +310,18 @@ claimFUEL
   , dsUtxo
   } =
   do
-    let mkErr = Logging.mkReport "FUELMintingPolicy" "claimFUEL"
-    ownPkh ← liftedM (mkErr "Cannot get own pubkey") ownPaymentPubKeyHash
+    ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
+      ownPaymentPubKeyHash
 
     cs /\ tn ← getFuelAssetClass fuelMP
 
     ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
     bech32BytesRecipient ←
-      liftContractM (mkErr "Cannot convert address to bech 32 bytes")
+      liftContractM
+        ( show
+            (InternalError (InvalidData "Cannot convert address to bech 32 bytes"))
+        )
         $ bech32BytesFromAddress recipient
     let
       merkleTreeEntry =
@@ -337,14 +337,18 @@ claimFUEL
       cborMteHashed = blake2b256Hash entryBytes
       rootHash = rootMp entryBytes merkleProof
 
-    cborMteHashedTn ← liftContractM (mkErr "Token name exceeds size limit")
-      $ mkTokenName
-      $ cborMteHashed
+    cborMteHashedTn ←
+      liftContractM
+        (show (InternalError (InvalidData "Token name exceeds size limit")))
+        $ mkTokenName
+        $ cborMteHashed
 
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
-        ( mkErr
-            "Couldn't find the parent Merkle tree root hash of the transaction"
+        ( show
+            ( InvalidInputError
+                "Couldn't find the parent Merkle tree root hash of the transaction"
+            )
         )
         =<< findMerkleRootTokenUtxoByRootHash sidechainParams rootHash
 
@@ -356,8 +360,12 @@ claimFUEL
         }
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
     } ← case dsUtxo of
-      Nothing → liftedM (mkErr "Couldn't find distributed set nodes") $
-        DistributedSet.slowFindDsOutput ds cborMteHashedTn
+      Nothing →
+        liftedM
+          ( show
+              (InternalError (NotFoundUtxo "Couldn't find distributed set nodes"))
+          ) $
+          DistributedSet.slowFindDsOutput ds cborMteHashedTn
       Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
@@ -368,7 +376,12 @@ claimFUEL
     { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
-      liftContractM (mkErr "Couldn't derive payment public key hash from address")
+      liftContractM
+        ( show
+            ( InternalError
+                (InvalidData "Couldn't convert recipient to public key hash")
+            )
+        )
         $ PaymentPubKeyHash
         <$> toPubKeyHash recipient
 
@@ -461,8 +474,6 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   merkleRootValidatorHash ← map Scripts.validatorHash $
     MerkleRoot.merkleRootTokenValidator sidechainParams
   let
-    mkErr = Logging.mkReport "FUELMintingPolicy"
-      "findMerkleRootTokenUtxoByRootHash"
     smrm = SignedMerkleRootMint
       { sidechainParams
       , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
@@ -470,7 +481,13 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
       }
   merkleRootTokenName ←
     liftContractM
-      (mkErr "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
+      ( show
+          ( InternalError
+              ( InvalidData
+                  "Invalid Merkle root TokenName for MerkleRootTokenMintingPolicy"
+              )
+          )
+      )
       $ Value.mkTokenName
       $ unRootHash rootHash
   findMerkleRootTokenUtxo merkleRootTokenName smrm
