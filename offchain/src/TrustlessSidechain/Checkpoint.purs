@@ -7,26 +7,18 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionHash
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
-  )
+import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint.Types
@@ -70,7 +62,11 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
+  , OffchainError(InternalError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 saveCheckpoint
@@ -82,7 +78,6 @@ saveCheckpoint
       , sidechainEpoch
       }
   ) = do
-  let mkErr = Logging.mkReport "Checkpoint" "saveCheckpoint"
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { committeeOracleCurrencySymbol } ←
@@ -107,7 +102,10 @@ saveCheckpoint
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
     { sidechainParams, committeeCertificateVerificationCurrencySymbol }
   currentCommitteeUtxo ←
-    liftedM (mkErr "failed to find current committee UTxO")
+    liftedM
+      ( show $ InternalError $ NotFoundUtxo
+          "failed to find current committee UTxO"
+      )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
       $ UpdateCommitteeHash
           { sidechainParams
@@ -131,8 +129,12 @@ saveCheckpoint
   -- Grab the lookups + constraints for the committee certificate
   -- verification
   ------------------------------------
-  scMsg ← liftContractM "failed serializing the MerkleRootInsertionMessage"
-    $ serialiseCheckpointMessage checkpointMessage
+  scMsg ←
+    liftContractM
+      ( show $ InternalError $ ConversionError
+          "failed serializing the MerkleRootInsertionMessage"
+      )
+      $ serialiseCheckpointMessage checkpointMessage
 
   atmsLookupsAndConstraints ←
     CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
@@ -159,16 +161,7 @@ saveCheckpoint
             TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
         }
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' (mkErr "Submitted checkpoint transaction: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' (mkErr "Checkpoint transaction submitted successfully")
-
-  pure txId
+  balanceSignAndSubmit "Save Checkpoint" lookups constraints
 
 saveCheckpointLookupsAndConstraints ∷
   { sidechainParams ∷ SidechainParams
@@ -191,9 +184,6 @@ saveCheckpointLookupsAndConstraints
   , committeeCertificateVerificationCurrencySymbol
   , sidechainEpoch
   } = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = Logging.mkReport "Checkpoint" "saveCheckpointLookupsAndConstraints"
-
   -- Create the message to be signed
   -------------------------------------------------------------
   let
@@ -229,7 +219,9 @@ saveCheckpointLookupsAndConstraints
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
-    liftContractM (mkErr "Failed to find checkpoint UTxO") checkpointUtxoLookup
+    liftContractM
+      (show $ InternalError $ NotFoundUtxo "Failed to find checkpoint UTxO")
+      checkpointUtxoLookup
 
   -- Building / submitting the transaction.
   let
@@ -272,12 +264,12 @@ getCheckpointPolicy ∷
     , checkpointTokenName ∷ TokenName
     }
 getCheckpointPolicy (SidechainParams sp) = do
-  let
-    mkErr = Logging.mkReport "CheckpointPolicy" "getCheckpointPolicy"
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
   checkpointCurrencySymbol ← liftContractM
-    (mkErr "Failed to get checkpoint CurrencySymbol")
+    ( show
+        (InternalError (InvalidScript "Failed to get checkpoint CurrencySymbol"))
+    )
     (Value.scriptCurrencySymbol checkpointPolicy)
   let checkpointTokenName = initCheckpointMintTn
   pure

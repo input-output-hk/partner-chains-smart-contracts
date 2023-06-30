@@ -8,11 +8,9 @@ module TrustlessSidechain.MerkleRoot
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractM
-  , liftedE
   , liftedM
   )
 import Contract.PlutusData (toData, unitDatum)
@@ -20,18 +18,11 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionHash
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
-  )
+import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
@@ -71,7 +62,11 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Utils.Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidData, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷ SaveRootParams → Contract TransactionHash
@@ -83,7 +78,6 @@ saveRoot
       , aggregateSignature
       }
   ) = do
-  let mkErr = report "saveRoot"
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { committeeOracleCurrencySymbol } ←
@@ -108,7 +102,10 @@ saveRoot
   { merkleRootTokenCurrencySymbol } ← getMerkleRootTokenMintingPolicy
     { sidechainParams, committeeCertificateVerificationCurrencySymbol }
   currentCommitteeUtxo ←
-    liftedM (mkErr "failed to find current committee UTxO")
+    liftedM
+      ( show $ InternalError $ NotFoundUtxo
+          "failed to find current committee UTxO"
+      )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
       $ UpdateCommitteeHash
           { sidechainParams
@@ -161,16 +158,7 @@ saveRoot
               TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
           }
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' (mkErr ("Submitted save root Tx: " <> show txId))
-  awaitTxConfirmed txId
-  logInfo' (mkErr "Save root Tx submitted successfully!")
-
-  pure txId
+  balanceSignAndSubmit "Save Merkle root" lookups constraints
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters
@@ -187,15 +175,13 @@ getMerkleRootTokenMintingPolicy
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
     sidechainParams
 
-  let mkErr = report "getMerkleRootTokenMintingPolicy"
-
   policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
     , committeeCertificateVerificationCurrencySymbol
     , merkleRootValidatorHash
     }
   merkleRootTokenCurrencySymbol ←
-    liftContractM (mkErr "Cannot get currency symbol") $
+    liftContractM (show (InternalError (InvalidScript "MerkleRootPolicy"))) $
       Value.scriptCurrencySymbol policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
@@ -220,7 +206,6 @@ saveRootLookupsAndConstraints
   , previousMerkleRoot
   , committeeCertificateVerificationCurrencySymbol
   } = do
-  let mkErr = report "saveRootLookupsAndConstraints"
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
@@ -236,12 +221,18 @@ saveRootLookupsAndConstraints
   rootTokenMP ← merkleRootTokenMintingPolicy smrm
   rootTokenCS ←
     liftContractM
-      (mkErr "Cannot get CurrencySymbol of merkleRootTokenMintingPolicy")
+      (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
       $ Value.scriptCurrencySymbol rootTokenMP
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
-      (mkErr "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
+      ( show
+          ( InternalError
+              ( InvalidData
+                  "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
+              )
+          )
+      )
       $ Value.mkTokenName
       $ MerkleTree.unRootHash merkleRoot
 
@@ -288,7 +279,3 @@ saveRootLookupsAndConstraints
     { lookupsAndConstraints: { lookups, constraints }
     , merkleRootInsertionMessage: msg
     }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Utils.Logging.mkReport "MerkleRoot"

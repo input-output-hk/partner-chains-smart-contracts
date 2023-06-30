@@ -9,11 +9,9 @@ import Contract.Prelude
 
 import Contract.Address (Address)
 import Contract.Address as Address
-import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractM
-  , liftedE
   )
 import Contract.PlutusData
   ( class ToData
@@ -29,16 +27,11 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionInput
   , TransactionOutputWithRefScript
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -78,7 +71,11 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -113,9 +110,6 @@ updateCommitteeHash
       , mNewCommitteeAddress
       }
   ) = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "updateCommitteeHash"
-
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { committeeOracleCurrencySymbol } ←
@@ -151,10 +145,14 @@ updateCommitteeHash
   -- Committee ATMS scheme lookups and constraints
   ------------------------------------
 
-  scMsg ← liftContractM (mkErr "bad UpdateCommitteeHashMessage serialization")
-    $ serialiseUchmHash
-    $
-      updateCommitteeHashMessage
+  scMsg ←
+    liftContractM
+      ( show $ InternalError $ ConversionError
+          "bad UpdateCommitteeHashMessage serialization"
+      )
+      $ serialiseUchmHash
+      $
+        updateCommitteeHashMessage
   committeeATMSLookupsAndConstraints ←
     CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints $ CommitteeATMSParams
       { currentCommitteeUtxo
@@ -166,16 +164,8 @@ updateCommitteeHash
   let
     { lookups, constraints } = lookupsAndConstraints
       <> committeeATMSLookupsAndConstraints
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' (mkErr "Submitted update committee hash transaction: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' (mkErr "Update committee hash transaction submitted successfully")
 
-  pure txId
+  balanceSignAndSubmit "Update CommiteeHash" lookups constraints
 
 -- | `updateCommitteeHashLookupsAndConstraints` grabs the lookups and
 -- | constraints for updating the committee hash, and returns the current
@@ -218,9 +208,6 @@ updateCommitteeHashLookupsAndConstraints
   , committeeCertificateVerificationCurrencySymbol
   , mNewCommitteeAddress
   } = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "updateCommitteeHashLookupsAndConstraints"
-
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
@@ -242,7 +229,7 @@ updateCommitteeHashLookupsAndConstraints
     smrm
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Getting the validator / building the validator hash
@@ -270,7 +257,11 @@ updateCommitteeHashLookupsAndConstraints
         Just x → x
     newValidatorHash ←
       liftContractM
-        (mkErr "Failed to get validator hash from provided new address")
+        ( show
+            $ InternalError
+            $ InvalidScript
+                "Failed to get validator hash from provided new address"
+        )
         $ Address.addressPaymentValidatorHash newValidatorAddress
     pure
       { newValidatorAddress
@@ -285,7 +276,8 @@ updateCommitteeHashLookupsAndConstraints
     , value:
         committeeOracleTxOut
     } ←
-    liftContractM (mkErr "Failed to find committee UTxO") $ lkup
+    liftContractM
+      (show $ InternalError $ NotFoundUtxo "Failed to find committee UTxO") $ lkup
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
@@ -336,7 +328,3 @@ updateCommitteeHashLookupsAndConstraints
     , currentCommitteeUtxo
     , updateCommitteeHashMessage: uchm
     }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Logging.mkReport "UpdateCommitteeHash"

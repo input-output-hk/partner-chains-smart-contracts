@@ -39,7 +39,10 @@ import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Utils.Logging as Utils.Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError)
+  )
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a
@@ -117,7 +120,7 @@ getSidechainAddresses
 
   dsConfPolicy ← DistributedSet.dsConfPolicy
     (wrap (unwrap scParams).genesisUtxo)
-  dsConfPolicyId ← getCurrencySymbolHex dsConfPolicy
+  dsConfPolicyId ← getCurrencySymbolHex "DsConfPolicy" dsConfPolicy
 
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
     Nothing → pure Nothing
@@ -128,7 +131,9 @@ getSidechainAddresses
               { sidechainParams: scParams
               , candidatePermissionTokenUtxo: permissionTokenUtxo
               }
-      candidatePermissionPolicyId ← getCurrencySymbolHex candidatePermissionPolicy
+      candidatePermissionPolicyId ← getCurrencySymbolHex
+        "CandidatePermissionPolicy"
+        candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
   -- Validators
@@ -216,10 +221,9 @@ getCborEncodedAddress =
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
-getCurrencySymbolHex ∷ MintingPolicy → Contract String
-getCurrencySymbolHex mp = do
-  let msg = report "getCurrencySymbolHex"
-  cs ← Monad.liftContractM (msg "Cannot get currency symbol") $
+getCurrencySymbolHex ∷ String → MintingPolicy → Contract String
+getCurrencySymbolHex name mp = do
+  cs ← Monad.liftContractM (show (InternalError (InvalidScript name))) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
 
@@ -227,7 +231,3 @@ getCurrencySymbolHex mp = do
 currencySymbolToHex ∷ CurrencySymbol → String
 currencySymbolToHex =
   ByteArray.byteArrayToHex <<< Value.getCurrencySymbol
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Utils.Logging.mkReport "GetSidechainAddresses"

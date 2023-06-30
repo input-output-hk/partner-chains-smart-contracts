@@ -17,12 +17,10 @@ import Contract.Address
   , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
-import Contract.Log (logInfo')
 import Contract.Monad
   ( Contract
   , liftContractE
   , liftContractM
-  , liftedE
   , liftedM
   , throwContractError
   )
@@ -44,11 +42,7 @@ import Contract.Transaction
   , TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , awaitTxConfirmed
-  , balanceTx
   , outputDatumDatum
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap, utxosAt)
@@ -56,7 +50,6 @@ import Contract.Value as Value
 import Control.Alternative (guard)
 import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)
-import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Record as Record
@@ -69,7 +62,11 @@ import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import TrustlessSidechain.Utils.Logging (mkReport)
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
+  , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -159,16 +156,20 @@ register
       , permissionToken
       }
   ) = do
-  let mkErr = report "register"
   netId ← getNetworkId
 
-  ownPkh ← liftedM (mkErr "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (mkErr "Cannot get own address") getWalletAddress
+  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
+    ownPaymentPubKeyHash
+  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    (mkErr "Failed to convert validator hash to an address")
+    ( show
+        ( InternalError
+            (InvalidScript "Couldn't convert validator hash to address")
+        )
+    )
     (validatorHashEnterpriseAddress netId valHash)
 
   ownUtxos ← utxosAt ownAddr
@@ -234,30 +235,25 @@ register
               ownRegistrations
           )
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr ("Submitted committeeCandidate register Tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' $ mkErr "Register Tx submitted successfully!"
-
-  pure txId
+  balanceSignAndSubmit "Registers Committee Candidate" lookups constraints
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  let mkErr = report "deregister"
 
   netId ← getNetworkId
 
-  ownPkh ← liftedM (mkErr "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (mkErr "Cannot get own address") getWalletAddress
+  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
+    ownPaymentPubKeyHash
+  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    (mkErr "Failed to convert validator hash to an address")
+    ( show
+        ( InternalError
+            (InvalidScript "Couldn't convert validator hash to address")
+        )
+    )
     (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
@@ -265,7 +261,8 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
   when (null ownRegistrations)
-    $ throwContractError (mkErr "Registration utxo cannot be found")
+    $ throwContractError
+        (InvalidInputError "Couldn't find registration UTxO")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
@@ -278,19 +275,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       <> mconcat
         (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
 
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr ("Submitted committee deregister Tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' $ mkErr "Deregister submitted successfully!"
-
-  pure txId
-
-report ∷ String → String → String
-report = mkReport "CommitteeCandidateValidator"
+  balanceSignAndSubmit "Deregister Committee Candidate" lookups constraints
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate

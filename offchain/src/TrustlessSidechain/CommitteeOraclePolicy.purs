@@ -29,7 +29,10 @@ import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError)
+  )
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
 -- | the utxo with the update committee hash validator script.
@@ -84,12 +87,10 @@ getCommitteeOraclePolicy ∷
     , committeeOracleTokenName ∷ TokenName
     }
 getCommitteeOraclePolicy (SidechainParams sp) = do
-  let
-    mkErr = report "getCommitteeOraclePolicy"
   policy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeOracleCurrencySymbol ← Monad.liftContractM
-    (mkErr "Failed to get committee oracle CurrencySymbol")
+    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
     (Value.scriptCurrencySymbol policy)
   let committeeOracleTokenName = committeeOracleTn
   pure
@@ -97,7 +98,3 @@ getCommitteeOraclePolicy (SidechainParams sp) = do
     , committeeOracleCurrencySymbol
     , committeeOracleTokenName
     }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Logging.mkReport "CommitteeOraclePolicy"
