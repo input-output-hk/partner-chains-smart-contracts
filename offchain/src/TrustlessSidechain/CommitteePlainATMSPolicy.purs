@@ -18,7 +18,6 @@ module TrustlessSidechain.CommitteePlainATMSPolicy
 
 import Contract.Prelude
 
-import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
@@ -44,7 +43,6 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
-import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( TxConstraints
   )
@@ -53,7 +51,6 @@ import Contract.Value
   ( CurrencySymbol
   )
 import Contract.Value as Value
-import Data.Bifunctor as Bifunctor
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
@@ -73,7 +70,11 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 
 -- | `ATMSPlainMultisignature` corresponds to the onchain type
 newtype ATMSPlainMultisignature = ATMSPlainMultisignature
@@ -115,11 +116,11 @@ getCommitteePlainATMSPolicy ∷
     , committeePlainATMSCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteePlainATMSPolicy param = do
-  let
-    msg = report "getCommitteePlainATMSPolicy"
   committeePlainATMSPolicy ← committeePlainATMS param
   committeePlainATMSCurrencySymbol ← Monad.liftContractM
-    (msg "Failed to get committee signed token currency symbol")
+    ( show $ InternalError $ InvalidScript
+        "Failed to get committee plain ATMS currency symbol"
+    )
     (Value.scriptCurrencySymbol committeePlainATMSPolicy)
   pure
     { committeePlainATMSPolicy, committeePlainATMSCurrencySymbol }
@@ -155,9 +156,6 @@ mustMintCommitteePlainATMSPolicy
       }
   ) = do
   let
-    msg = report "mustMintCommitteePlainATMSPolicy"
-
-  let
     messageByteArray = Value.getTokenName message
 
     -- ensure that the signatures provided are sorted, and do an optimization
@@ -190,16 +188,21 @@ mustMintCommitteePlainATMSPolicy
 
   comitteeHashDatum ←
     Monad.liftContractM
-      (msg "Update committee UTxO is missing inline datum")
+      ( show $ InternalError $ InvalidData
+          "Update committee UTxO is missing inline datum"
+      )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeDatum datum ← Monad.liftContractM
-    (msg "Datum at update committee UTxO fromData failed")
+    ( show $ InternalError $ InvalidData
+        "Datum at update committee UTxO fromData failed"
+    )
     (fromData $ unwrap comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
   when (datum.aggregatePubKeys /= curCommitteeHash)
     $ Monad.throwContractError
-    $ msg "Incorrect committee provided"
+    $ show
+    $ InvalidInputError "Incorrect committee provided"
 
   unless
     ( Utils.Crypto.verifyMultiSignature
@@ -212,7 +215,8 @@ mustMintCommitteePlainATMSPolicy
         curCommitteeSignatures
     )
     $ Monad.throwContractError
-    $ msg
+    $ show
+    $ InvalidInputError
         "Invalid committee signatures for the sidechain message"
 
   let
@@ -258,9 +262,6 @@ runCommitteePlainATMSPolicy ∷
   CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
   Contract TransactionHash
 runCommitteePlainATMSPolicy params = do
-  let
-    msg = report "runCommitteePlainATMSPolicy"
-
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
     mustMintCommitteePlainATMSPolicy params
 
@@ -275,20 +276,8 @@ runCommitteePlainATMSPolicy params = do
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
       <> extraLookupsAndContraints
 
-  ubTx ← Monad.liftedE
-    ( Bifunctor.lmap (msg <<< show) <$> ScriptLookups.mkUnbalancedTx lookups
-        constraints
-    )
-  bsTx ← Monad.liftedE
-    (Bifunctor.lmap (msg <<< show) <$> Transaction.balanceTx ubTx)
-  signedTx ← Transaction.signTransaction bsTx
-  txId ← Transaction.submit signedTx
-  Log.logInfo'
-    (msg "Submitted committee signed token transaction: " <> show txId)
-  Transaction.awaitTxConfirmed txId
-  Log.logInfo' (msg "Committee signed token transaction submitted successfully")
-
-  pure txId
+  Utils.Transaction.balanceSignAndSubmit "CommitteePlainATMSPolicy" lookups
+    constraints
 
 -- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
 -- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but
@@ -297,9 +286,6 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
   SidechainParams →
   Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
-  let -- `mkErr` is used to help generate log messages
-    mkErr = report "findUpdateCommitteeHashUtxoFromSidechainParams"
-
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { committeeOracleCurrencySymbol } ←
@@ -331,7 +317,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
     smrm
   merkleRootTokenCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get merkleRootTokenCurrencySymbol")
+      ( show $ InternalError $ InvalidScript
+          "Failed to get merkleRootTokenCurrencySymbol"
+      )
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Build the UpdateCommitteeHash parameter
@@ -347,10 +335,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
 
   -- Finding the current committee
   -------------------------------------------------------------
-  lkup ← Monad.liftedM (mkErr "current committee not found") $
-    UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch
+  lkup ← Monad.liftedM (show $ InvalidInputError $ "current committee not found")
+    $
+      UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch
   pure lkup
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Logging.mkReport "CommitteePlainATMSPolicy"
