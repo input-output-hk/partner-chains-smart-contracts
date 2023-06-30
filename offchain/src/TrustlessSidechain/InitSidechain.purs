@@ -25,8 +25,7 @@ module TrustlessSidechain.InitSidechain
 
 import Contract.Prelude
 
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedE, liftedM)
+import Contract.Monad (Contract, liftedM)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -45,10 +44,6 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionInput
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
@@ -56,7 +51,6 @@ import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
-import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -101,7 +95,11 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging as Utils.Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(ConversionError, InvalidScript)
+  , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -448,9 +446,6 @@ initDistributedSetLookupsAndContraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initDistributedSetLookupsAndContraints isp = do
-  let
-    mkErr = report "initDistributedSetLookupsAndContraints"
-
   -- Sidechain parameters
   -----------------------------------
   let
@@ -466,7 +461,7 @@ initDistributedSetLookupsAndContraints isp = do
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get dsConfPolicy CurrencySymbol")
+      (show (InternalError (InvalidScript "DsConfPolicy")))
       $ Value.scriptCurrencySymbol dsConfPolicy
 
   -- Validator for insertion of the distributed set / the associated datum and
@@ -483,11 +478,17 @@ initDistributedSetLookupsAndContraints isp = do
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
   dsKeyPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get dsKeyPolicy CurrencySymbol")
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
-      (mkErr "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName")
+      ( show
+          ( InternalError
+              ( ConversionError
+                  "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
+              )
+          )
+      )
       $ Value.mkTokenName
       $ (unwrap DistributedSet.rootNode).nKey
 
@@ -512,7 +513,7 @@ initDistributedSetLookupsAndContraints isp = do
 
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get fuelMintingPolicy CurrencySymbol")
+      (show (InternalError (InvalidScript "FuelMintingPolicy")))
       $ Value.scriptCurrencySymbol fuelMintingPolicy
 
   -- Validator for the configuration of the distributed set / the associated
@@ -589,18 +590,14 @@ initSidechainTokens ∷
     , sidechainAddresses ∷ SidechainAddresses
     }
 initSidechainTokens isp = do
-  -- Logging
-  ----------------------------------------
-  let
-    mkErr = report "initSidechainTokens"
-
   -- Querying the dstinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (mkErr "Cannot find genesis UTxO") $ getUtxo
-    txIn
+  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
+    getUtxo
+      txIn
 
   -- Grabbing the distributed set / update committee hash / candidate
   -- permission token constraints and lookups.
@@ -628,15 +625,7 @@ initSidechainTokens isp = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr $ "Submitted initialise sidechain tokens Tx: " <> show txId
-  awaitTxConfirmed txId
-  logInfo' $ mkErr
-    "Initialise sidechain tokens transaction submitted successfully."
+  txId ← balanceSignAndSubmit "Init Sidechain tokens" lookups constraints
 
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
@@ -666,11 +655,6 @@ paySidechainTokens ∷
     , sidechainAddresses ∷ SidechainAddresses
     }
 paySidechainTokens isp = do
-  -- Logging
-  ----------------------------------------
-  let
-    mkErr = report "paySidechainTokens"
-
   -- Grabbing the constraints / lookups for paying
   ----------------------------------------
   { constraints, lookups } ←
@@ -679,13 +663,7 @@ paySidechainTokens isp = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr $ "Submitted pay sidechain tokens Tx: " <> show txId
-  awaitTxConfirmed txId
+  txId ← balanceSignAndSubmit "Pay Sidechain tokens" lookups constraints
 
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
@@ -730,18 +708,14 @@ initSidechain (InitSidechainParams isp) = do
   -- Warning: this code is essentially duplicated code from
   -- `initSidechainTokens` and `paySidechainTokens`....
 
-  -- Logging
-  ----------------------------------------
-  let
-    mkErr = report "initSidechain"
-
-  -- Querying the dstinguished 'InitSidechainParams.initUtxo'
+  -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (mkErr "Cannot find genesis UTxO") $ getUtxo
-    txIn
+  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
+    getUtxo
+      txIn
 
   -- Grabbing all contraints for initialising the committee hash
   -- and distributed set.
@@ -767,17 +741,7 @@ initSidechain (InitSidechainParams isp) = do
           }
     ) isp
 
-  -- Building / submitting / awaiting the transaction.
-  ----------------------------------------
-  ubTx ← liftedE
-    (lmap (show >>> mkErr) <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap (show >>> mkErr) <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ mkErr $ "Submitted initialise sidechain tokens Tx: " <> show txId
-  awaitTxConfirmed txId
-  logInfo' $ mkErr
-    "Initialise sidechain tokens transaction submitted successfully."
+  txId ← balanceSignAndSubmit "Initialise Sidechain" lookups constraints
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224
@@ -807,7 +771,6 @@ getMerkleRootTokenPolicy ∷
 getMerkleRootTokenPolicy isp = do
   let
     sc = toSidechainParams isp
-    mkErr = report "getMerkleRootTokenPolicy"
 
   -- some awkwardness that we need the committee hash policy first.
   { committeeOracleCurrencySymbol } ←
@@ -839,7 +802,7 @@ getMerkleRootTokenPolicy isp = do
       }
   merkleRootTokenMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      (mkErr "Failed to get dsKeyPolicy CurrencySymbol")
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   pure
@@ -853,15 +816,9 @@ getCheckpointPolicy ∷
     , checkpointCurrencySymbol ∷ CurrencySymbol
     }
 getCheckpointPolicy isp = do
-  let
-    mkErr = report "getCheckpointPolicy"
   checkpointPolicy ← Checkpoint.checkpointPolicy $
     InitCheckpointMint { icTxOutRef: isp.initUtxo }
   checkpointCurrencySymbol ← Monad.liftContractM
-    (mkErr "Failed to get checkpoint CurrencySymbol")
+    (show (InternalError (InvalidScript "CheckpointPolicy")))
     (Value.scriptCurrencySymbol checkpointPolicy)
   pure { checkpointPolicy, checkpointCurrencySymbol }
-
--- | `report` is an internal function used for helping writing log messages.
-report ∷ String → String → String
-report = Utils.Logging.mkReport "InitSidechain"
