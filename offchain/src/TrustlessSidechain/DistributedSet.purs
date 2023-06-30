@@ -32,8 +32,7 @@ import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Log as Log
-import Contract.Monad (Contract, liftContractM)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -60,7 +59,10 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -309,13 +311,10 @@ insertNode str (Node node)
 -- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
 getDs ∷ TransactionInput → Contract Ds
 getDs txInput = do
-  let
-    mkErr = Logging.mkReport "DistributedSet" "getDs"
-
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (mkErr "Failed to get dsConfPolicy CurrencySymbol")
+    liftContractM
+      (show (InternalError (InvalidScript "DsConfPolicy")))
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
@@ -328,9 +327,6 @@ getDsKeyPolicy ∷
   Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy ds = do
-  let
-    mkErr = Logging.mkReport "DistributedSet" "getDsKeyPolicy"
-
   insertValidator' ← insertValidator ds
 
   let
@@ -343,7 +339,7 @@ getDsKeyPolicy ds = do
 
   currencySymbol ←
     liftContractM
-      (mkErr "Failed to get dsKeyPolicy CurrencySymbol")
+      (show (InternalError (InvalidScript "DsKeyPolicy")))
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
@@ -358,8 +354,6 @@ findDsConfOutput ∷
     , confDat ∷ DsConfDatum
     }
 findDsConfOutput ds = do
-  let mkErr = Logging.mkReport "DistributedSet" "findDsConfOutput"
-
   netId ← getNetworkId
   v ← dsConfValidator ds
   scriptAddr ←
@@ -371,7 +365,13 @@ findDsConfOutput ds = do
 
   out ←
     liftContractM
-      (mkErr "Distributed Set config utxo does not contain oneshot token")
+      ( show
+          ( InternalError
+              ( NotFoundUtxo
+                  "Distributed Set config utxo does not contain oneshot token"
+              )
+          )
+      )
       $ Array.find
           ( \(_ /\ TransactionOutputWithRefScript o) → not $ null
               $ AssocMap.lookup (dsConf ds)
@@ -381,7 +381,12 @@ findDsConfOutput ds = do
       $ Map.toUnfoldable utxos
 
   confDat ←
-    liftContractM (mkErr "Couldn't find Distributed Set configuration datum")
+    liftContractM
+      ( show
+          ( InternalError
+              (NotFoundUtxo "Distributed Set config utxo does not contain datum")
+          )
+      )
       $ outputDatumDatum (unwrap (unwrap (snd out)).output).datum
       >>= (fromData <<< unwrap)
   pure
@@ -417,17 +422,22 @@ findDsOutput ∷
     , nodes ∷ Ib Node
     }
 findDsOutput ds tn txInput = do
-  let mkErr = Logging.mkReport "DistributedSet" "findDsOutput"
-
-  txOut ← Monad.liftedM (mkErr "failed to find provided distributed set UTxO") $
-    Utxos.getUtxo txInput
+  txOut ←
+    liftedM
+      ( show (InvalidInputError "Failed to find provided distributed set UTxO")
+      ) $
+      Utxos.getUtxo txInput
 
   { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
 
   --  Grab the datum
-  dat ← liftContractM (mkErr "datum not a distributed set node")
-    $ outputDatumDatum (unwrap txOut).datum
-    >>= (fromData <<< unwrap)
+  dat ←
+    liftContractM
+      ( show
+          (InternalError (ConversionError "datum not a distributed set node"))
+      )
+      $ outputDatumDatum (unwrap txOut).datum
+      >>= (fromData <<< unwrap)
 
   --  Validate that this is a distributed set node / grab the necessary
   -- information about it
@@ -438,11 +448,16 @@ findDsOutput ds tn txInput = do
 
     unless
       (scriptAddr == (unwrap txOut).address)
-      $ Monad.throwContractError
-      $ mkErr "provided transaction is not at distributed set node address"
+      $ throwContractError
+      $ InvalidInputError
+          "provided transaction is not at distributed set node address"
 
     keyNodeTn ← liftContractM
-      (mkErr "missing token name in distributed set node")
+      ( show
+          ( InternalError
+              (InvalidData "missing token name in distributed set node")
+          )
+      )
       do
         tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
           (unwrap txOut).amount
@@ -451,17 +466,20 @@ findDsOutput ds tn txInput = do
     pure keyNodeTn
 
   nodes ←
-    Monad.liftContractM
-      ( mkErr
-          "invalid distributed set node provided \
-          \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
-          \but got `providedNode` "
-          <> show (getTokenName tn')
+    liftContractM
+      ( show
+          ( InvalidInputError
+              ( "invalid distributed set node provided \
+                \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+                \but got `providedNode` "
+                  <> show (getTokenName tn')
 
-          <> ", `newNode` "
-          <> show (getTokenName tn)
-          <> ", and `next` "
-          <> show (unwrap dat)
+                  <> ", `newNode` "
+                  <> show (getTokenName tn)
+                  <> ", and `next` "
+                  <> show (unwrap dat)
+              )
+          )
       ) $ insertNode (getTokenName tn) $ mkNode
       (getTokenName tn')
       dat
