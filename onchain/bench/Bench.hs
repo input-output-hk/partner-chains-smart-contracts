@@ -14,6 +14,7 @@ module Bench (
   Monad.plotXYWithLinearRegression,
   Monad.queryAddrUtxos,
   Monad.readAddr,
+  Monad.readGovernanceAuthority,
   Monad.overrideBenchConfigPathFromEnv,
   BenchResults.BenchResults (..),
   BenchResults.openBenchResults,

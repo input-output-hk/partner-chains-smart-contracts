@@ -1,22 +1,29 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Types where
 
 import Data.String (IsString)
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
-import PlutusTx.Prelude
+import PlutusTx.Prelude hiding (Semigroup ((<>)))
+import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import Prelude qualified
 
 -- * Sidechain Parametrization and general data
+
+newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData, IsString)
+
+PlutusTx.makeLift ''GenesisHash
 
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
@@ -31,11 +38,13 @@ data SidechainParams = SidechainParams
   , -- | 'thresholdDenominator' is the denominator for the ratio of the
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
+  , -- | 'governanceAuthority' stores credentials of a governing body allowed to
+    -- make updates to versioned scripts.  For now we just use a master public
+    -- key, whose owner is allowed to make any decisions about script versions.
+    governanceAuthority :: Governance.GovernanceAuthority
   }
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
-  deriving newtype (Prelude.Show, ToData, FromData, UnsafeFromData, IsString)
-
+PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
@@ -142,22 +151,6 @@ data SignedMerkleRoot = SignedMerkleRoot
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
--- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
-data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
-    -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
-  , -- | 'smrmValidatorHash' is the validator hash corresponding to
-    -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
-    -- to ensure that this token gets minted to the "right" place.
-    smrmValidatorHash :: ValidatorHash
-  }
-
-PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
-
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
 
@@ -172,50 +165,14 @@ PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
 -- * FUEL Minting Policy data
 
--- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
-data FUELRedeemer
-  = MainToSide BuiltinByteString -- Recipient's sidechain address
-  | -- | 'SideToMain' indicates that we wish to mint FUEL on the mainchain.
-    -- So, this includes which transaction in the sidechain we are
-    -- transferring over to the main chain (hence the 'MerkleTreeEntry'), and
-    -- the proof tha this actually happened on the sidechain (hence the
-    -- 'MerkleProof')
-    SideToMain MerkleTreeEntry MerkleProof
-
--- Recipient address is in FUELRedeemer just for reference on the mainchain,
--- it's actually useful (and verified) on the sidechain, so it needs to be
--- recorded in the mainchain.
-
-PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
-
-{- | 'FUELMint' is the data type to parameterize the minting policy. See
- 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
+{- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
+ So, this includes which transaction in the sidechain we are transferring over
+ to the main chain (hence the 'MerkleTreeEntry'), and the proof tha this
+ actually happened on the sidechain (hence the 'MerkleProof')
 -}
-data FUELMint = FUELMint
-  { -- 'fmMptRootTokenValidator' is the hash of the validator script
-    -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.MerkleRootTokenValidator' for
-    -- details.
-    -- > fmMptRootTokenValidator :: ValidatorHash
-    -- N.B. We don't need this! We're really only interested in the token,
-    -- and indeed; anyone can pay a token to this script so there really
-    -- isn't a reason to use this validator script as the "identifier" for
-    -- MerkleRootTokens.
+data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
 
-    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
-    -- which contains a merkle root in the 'TokenName'. See
-    -- 'TrustlessSidechain.MerkleRootTokenMintingPolicy' for details.
-    fmMptRootTokenCurrencySymbol :: CurrencySymbol
-  , -- | 'fmSidechainParams' is the sidechain parameters
-    fmSidechainParams :: SidechainParams
-  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
-    -- hold the key for the distributed set. In particular, this allows the
-    -- FUEL minting policy to verify if a string has /just been inserted/ into
-    -- the distributed set.
-    fmDsKeyCurrencySymbol :: CurrencySymbol
-  }
-
-PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
+PlutusTx.makeIsDataIndexed ''FUELMintingRedeemer [('FUELMintingRedeemer, 0)]
 
 -- * Update Committee Hash data
 

@@ -13,8 +13,6 @@ import Contract.Prelude
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
-  , getWalletAddress
-  , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
 import Contract.Log (logInfo')
@@ -23,7 +21,6 @@ import Contract.Monad
   , liftContractE
   , liftContractM
   , liftedE
-  , liftedM
   , throwContractError
   )
 import Contract.Numeric.BigNum as BigNum
@@ -75,8 +72,12 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.Utils.Address
+  ( getOwnPaymentPubKeyHash
+  , getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import TrustlessSidechain.Utils.Logging (class Display, mkReport)
+import TrustlessSidechain.Utils.Logging (Location, mkReport)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -166,9 +167,12 @@ register
       , permissionToken
       }
   ) = do
-  let msg = report "register"
-  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
+  let
+    loc = mkLoc "register"
+    msg = mkReport loc
+
+  ownPkh ← getOwnPaymentPubKeyHash loc
+  ownAddr ← getOwnWalletAddress loc
 
   ownUtxos ← utxosAt ownAddr
   validator ← getCommitteeCandidateValidator sidechainParams
@@ -235,9 +239,12 @@ register
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  let msg = report "deregister"
-  ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
-  ownAddr ← liftedM (msg "Cannot get own address") getWalletAddress
+  let
+    loc = mkLoc "deregister"
+    msg = mkReport loc
+
+  ownPkh ← getOwnPaymentPubKeyHash loc
+  ownAddr ← getOwnWalletAddress loc
   netId ← getNetworkId
 
   validator ← getCommitteeCandidateValidator sidechainParams
@@ -279,5 +286,5 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   pure txId
 
-report ∷ String → (∀ (e ∷ Type). Display e ⇒ e → String)
-report = mkReport <<< { mod: "CommitteeCandidateValidator", fun: _ }
+mkLoc ∷ String → Location
+mkLoc fun = { mod: "CommitteeCandidateValidator", fun }

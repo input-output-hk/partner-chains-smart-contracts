@@ -28,11 +28,13 @@ import System.FilePath qualified as FilePath
 import System.IO (Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
+import Test.TrustlessSidechain.DummyMintingPolicy as DummyMintingPolicy
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
+import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
@@ -40,7 +42,9 @@ import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
+import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.Versioning qualified as Versioning
 import Prelude
 
 -- * CLI parsing
@@ -195,6 +199,7 @@ main =
   getOpts >>= \options ->
     let plutusScripts =
           [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
+          , ("FUELBurningPolicy", FUELMintingPolicy.serialisableBurningPolicy)
           , ("MerkleRootTokenValidator", MerkleRootTokenValidator.serialisableValidator)
           , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
           , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
@@ -203,6 +208,10 @@ main =
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
+          , ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)
+          , ("VersionOracleValidator", Versioning.serialisableVersionOracleValidator)
+          , ("FUELProxyPolicy", FUELProxyPolicy.serialisableFuelProxyPolicy)
+          , ("ScriptCache", ScriptCache.serialisableScriptCache)
           , -- Distributed set validators / minting policies
             ("InsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)
@@ -216,6 +225,8 @@ main =
           , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
           , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
+          , -- Validators for FUEL Proxy tests
+            ("DummyMintingPolicy", DummyMintingPolicy.serialisableDummyMintingPolicy)
           ]
         plutusScriptsDotPlutus = map (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
      in case options of

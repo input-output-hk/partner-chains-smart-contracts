@@ -13,7 +13,7 @@ import Test.Unit (Test)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.FUELMintingPolicy
+import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
   )

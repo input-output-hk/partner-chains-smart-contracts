@@ -1,3 +1,7 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cases.FUELMintingPolicy (
   fuelMintingBench,
   replicateMerkleTree,
@@ -42,6 +46,7 @@ import TrustlessSidechain.Types (
   cmpTransaction,
   genesisHash,
   genesisUtxo,
+  governanceAuthority,
   mteAmount,
   mteIndex,
   mtePreviousMerkleRoot,
@@ -114,6 +119,7 @@ fuelMintingBench = do
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
   addr <- Bench.readAddr
+  governanceAuthority <- Bench.readGovernanceAuthority
 
   -- Benchmark suite
   --------------------
@@ -142,6 +148,7 @@ fuelMintingBench = do
             , genesisUtxo = txOutRef
             , thresholdNumerator = 2
             , thresholdDenominator = 3
+            , governanceAuthority
             }
 
     -- Iniatialising the sidechain:

@@ -29,9 +29,6 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.Bifunctor (lmap)
 import Data.Map as Map
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
@@ -99,19 +96,11 @@ runUpdateCommitteeHash
   , committeeHashTokenName
   } ← getCommitteeHashPolicy sidechainParams
 
-  -- Getting the validator / minting policy for the merkle root token
+  -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
 
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
+    sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
       (msg "Failed to get merkleRootTokenCurrencySymbol")
@@ -189,7 +178,7 @@ runUpdateCommitteeHash
   -------------------------------------------------------------
   maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
     previousMerkleRoot
-    smrm
+    sidechainParams
 
   -- Building / submitting the transaction.
   -------------------------------------------------------------

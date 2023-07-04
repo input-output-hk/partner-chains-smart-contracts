@@ -2,10 +2,12 @@ module TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
   , thresholdCodec
+  , pubKeyHashCodec
   ) where
 
 import Contract.Prelude
 
+import Contract.Address (PubKeyHash)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -13,6 +15,10 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Contract.Transaction (TransactionHash(TransactionHash))
+import Ctl.Internal.Serialization.Hash
+  ( ed25519KeyHashFromBytes
+  , ed25519KeyHashToBytes
+  )
 import Ctl.Internal.Types.Transaction (TransactionInput(TransactionInput))
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
@@ -60,3 +66,10 @@ thresholdCodec = CA.object "threshold" $
     { numerator: CA.int
     , denominator: CA.int
     }
+
+-- | JSON codec for PubKeyHash.
+pubKeyHashCodec ∷ CA.JsonCodec PubKeyHash
+pubKeyHashCodec = CA.prismaticCodec "PubKeyHash"
+  (ed25519KeyHashFromBytes >=> wrap >>> pure)
+  (unwrap <<< ed25519KeyHashToBytes <<< unwrap)
+  byteArrayCodec

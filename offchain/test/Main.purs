@@ -6,7 +6,8 @@ import Mote.Monad (group)
 import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.Checkpoint as Checkpoint
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
-import Test.FUELMintingPolicy as FUELMintingPolicy
+import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
+import Test.FUELProxyPolicy as FUELProxyPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
@@ -22,6 +23,7 @@ import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
 import Test.Utils (interpretWrappedTest, plutipGroup)
 import Test.Utils.Address as AddressUtils
+import Test.Versioning as Versioning
 
 -- | `main` runs all tests.
 -- Note. it is necessary to be running a `plutip-server` somewhere for this
@@ -47,11 +49,13 @@ main = do
           InitSidechain.tests
           CommitteeCandidateValidator.tests
           CandidatePermissionToken.tests
-          FUELMintingPolicy.tests
+          FUELMintingPolicy.V1.tests
+          FUELProxyPolicy.tests
           UpdateCommitteeHash.tests
           MerkleRoot.tests
           MerkleRootChaining.tests
           Checkpoint.tests
+          Versioning.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

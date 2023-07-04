@@ -67,6 +67,8 @@ library
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy
+    TrustlessSidechain.FUELProxyPolicy
+    TrustlessSidechain.Governance
     TrustlessSidechain.MerkleRootTokenMintingPolicy
     TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
@@ -76,16 +78,18 @@ library
     TrustlessSidechain.PoCReferenceInput
     TrustlessSidechain.PoCReferenceScript
     TrustlessSidechain.PoCSerialiseData
+    TrustlessSidechain.ScriptCache
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
     TrustlessSidechain.Utils
+    TrustlessSidechain.Versioning
 
   build-depends:
-    , aeson                 ^>=1.5.0.0
+    , aeson                      ^>=1.5.0.0
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring            ^>=0.10.12.0
+    , bytestring                 ^>=0.10.12.0
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -98,6 +102,7 @@ library
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-tx
     , plutus-tx-plugin
@@ -148,10 +153,15 @@ executable trustless-sidechain-serialise
     , filepath
     , plutonomy
     , plutus-ledger
+    , plutus-ledger-api
+    , plutus-script-utils
+    , plutus-tx
+    , plutus-tx-plugin
     , serialise
     , trustless-sidechain
 
-  hs-source-dirs: app/serialise
+  other-modules:  Test.TrustlessSidechain.DummyMintingPolicy
+  hs-source-dirs: app/serialise test
 
 executable trustless-sidechain-merkle-tree
   import:         common-lang
@@ -186,6 +196,7 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Test.TrustlessSidechain.DummyMintingPolicy
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
@@ -198,7 +209,9 @@ test-suite trustless-sidechain-test
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-script-utils
     , plutus-tx
+    , plutus-tx-plugin
     , QuickCheck
     , secp256k1-haskell
     , tasty
@@ -225,7 +238,7 @@ benchmark bench-ctl
     Cases.UpdateCommitteeHash
     Ctl
 
-  ghc-options:      -Wall -threaded -rtsopts
+  ghc-options:      -Wall -threaded -rtsopts -Werror
   type:             exitcode-stdio-1.0
   build-depends:
     , aeson

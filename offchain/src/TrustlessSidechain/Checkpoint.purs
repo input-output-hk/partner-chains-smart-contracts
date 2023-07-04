@@ -62,9 +62,6 @@ import TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
@@ -157,19 +154,8 @@ runSaveCheckpoint
   } ←
     liftContractM (msg "Failed to find checkpoint UTxO") checkpointUtxoLookup
 
-  -- Getting the validator / minting policy for the merkle root token.
-  -- This is needed to get the committee hash utxo.
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
+    sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
       (msg "Failed to get merkleRootTokenCurrencySymbol")

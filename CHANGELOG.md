@@ -7,6 +7,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+* Added script versioning system with three new commands: `insert-version`,
+  `invalidate-version`, and `update-version`.  First two require `--version`
+  followed by a positive integer as an argument.  `update-version` requires
+  `--old-version` and `--new-version` options, each followed by a positive
+  integer.
+
+* Added `claim-v2` and `burn-v2` commands for claiming and burning fuel using
+  version 2 of the scripts.
+
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
@@ -25,6 +34,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   offchain)
 
 ## Changed
+
+* Commands `claim` and `burn` have been renamed to `claim-v1` and `burn-v1`,
+  respectively.
 
 * `--threshold` is no longer used: `--threshold-numerator` and
   `--threshold-denominator` now behave correctly and are no longer deprecated

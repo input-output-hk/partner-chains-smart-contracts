@@ -61,10 +61,12 @@ import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
   BuiltinByteString,
   FromData (fromBuiltinData),
+  PubKeyHash (PubKeyHash),
   TxId (TxId),
   TxOutRef (TxOutRef),
  )
 import PlutusTx.Builtins qualified as Builtins
+import TrustlessSidechain.Governance (GovernanceAuthority, mkGovernanceAuthority)
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
@@ -359,6 +361,16 @@ parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
 parseSidechainPubKey :: OptParse.ReadM SidechainPubKey
 parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
+-- | Parse pub key hash.
+parseGovernanceAuthority :: OptParse.ReadM GovernanceAuthority
+parseGovernanceAuthority =
+  eitherReader
+    ( fmap (mkGovernanceAuthority . PubKeyHash . Builtins.toBuiltin)
+        . mapLeft ("Invalid public key hash: " <>)
+        . Base16.decode
+        . Char8.pack
+    )
+
 -- | parses the previous merkle root as a hex encoded string
 parsePreviousMerkleRoot :: OptParse.ReadM BuiltinByteString
 parsePreviousMerkleRoot =
@@ -550,6 +562,16 @@ sidechainParamsParser = do
         , metavar "TX_ID#TX_IDX"
         , help "Input UTxO to be spent with the first committee hash setup"
         ]
+
+  governanceAuthority <-
+    option parseGovernanceAuthority $
+      mconcat
+        [ short 'g'
+        , long "governance-authority"
+        , metavar "PUB_KEY_HASH"
+        , help "Public key hash of governance authority"
+        ]
+
   (thresholdNumerator, thresholdDenominator) <-
     option parseThreshold $
       mconcat
@@ -557,6 +579,7 @@ sidechainParamsParser = do
         , metavar "UINT/UINT"
         , help "Threshold ratio for the required number of signatures"
         ]
+
   pure SidechainParams {..}
 
 signingKeyFileParser :: OptParse.Parser FilePath

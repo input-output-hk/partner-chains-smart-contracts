@@ -23,6 +23,7 @@ module Bench.Monad (
   -- * Utilities for working the blockchain
   queryAddrUtxos,
   readAddr,
+  readGovernanceAuthority,
 
   -- * Utilities for making a 'BenchConfig'.
   overrideBenchConfigPathFromEnv,
@@ -58,14 +59,17 @@ import Data.Aeson.KeyMap qualified as Aeson.KeyMap
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.Foldable qualified as Foldable
 import Data.Function qualified as Function
+import Data.Functor ((<&>))
 import Data.Int (Int64)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
+import Data.String (fromString)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Vector.Unboxed qualified as Vector.Unboxed
 import Graphics.Rendering.Chart.Backend.Diagrams qualified as Graphics.Backend
 import Graphics.Rendering.Chart.Easy qualified as Graphics
+import Ledger (PubKeyHash (PubKeyHash))
 import Network.WebSockets (Connection)
 import Plutus.V2.Ledger.Api (
   TxOutRef,
@@ -73,6 +77,7 @@ import Plutus.V2.Ledger.Api (
 import Statistics.Regression qualified as Regression
 import System.Environment qualified as Environment
 import System.FilePath qualified as FilePath
+import TrustlessSidechain.Governance (GovernanceAuthority, mkGovernanceAuthority)
 import Prelude
 
 -- | 'BenchConfig' is the static configuration used for benchmarking
@@ -84,6 +89,9 @@ data BenchConfig = BenchConfig
   , -- | 'bcfgAddressFilePath' is the filepath to the address (bech32 human
     -- readable) of the signing key in 'bcfgSigningKeyFilePath'
     bcfgAddressFilePath :: FilePath
+  , -- | 'bcfgGovernanceAuthorityFilePath' is the file path to the file
+    -- containing public key hash of governance authority.
+    bcfgGovernanceAuthorityFilePath :: FilePath
   , -- | 'bcfgTestNetMagic' is the test net magic that we are using.
     bcfgTestNetMagic :: Int
   , -- | 'bcfgCtlCmd' is the command to run ctl
@@ -111,6 +119,7 @@ data BenchConfigPaths = BenchConfigPaths
   { bcfgpBenchResults :: FilePath
   , bcfgpSigningKeyFilePath :: FilePath
   , bcfgpAddressFilePath :: FilePath
+  , bcfgpGovernanceAuthorityFilePath :: FilePath
   , bcfgpTestNetMagic :: Int
   , bcfgpCtlCmd :: String
   , bcfgpOdcHost :: String
@@ -172,6 +181,7 @@ runBenchWith benchCfgPaths bench =
               { bcfgBenchResults = benchResults
               , bcfgSigningKeyFilePath = bcfgpSigningKeyFilePath benchCfgPaths
               , bcfgAddressFilePath = bcfgpAddressFilePath benchCfgPaths
+              , bcfgGovernanceAuthorityFilePath = bcfgpGovernanceAuthorityFilePath benchCfgPaths
               , bcfgTestNetMagic = bcfgpTestNetMagic benchCfgPaths
               , bcfgCtlCmd = bcfgpCtlCmd benchCfgPaths
               , bcfgOdcConnection = conn
@@ -421,6 +431,13 @@ queryAddrUtxos addressBech32 = do
 readAddr :: Bench String
 readAddr = Reader.asks bcfgAddressFilePath >>= IO.Class.liftIO . readFile
 
+{- | 'readGovernanceAuthority' reads governance authority public key hash from
+ the file 'bcfgGovernanceAuthorityFilePath'.
+-}
+readGovernanceAuthority :: Bench GovernanceAuthority
+readGovernanceAuthority =
+  Reader.asks bcfgGovernanceAuthorityFilePath >>= IO.Class.liftIO . readFile <&> mkGovernanceAuthority . PubKeyHash . fromString
+
 {- | 'overrideBenchConfigPathFromEnv' scans the environment variables, and if
  the environment variable exists, replaces the given values with the
  environment variable values.
@@ -433,6 +450,8 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
     Maybe.fromMaybe (bcfgpSigningKeyFilePath benchConfigPaths) <$> Environment.lookupEnv "SIGNING_KEY"
   addressFilePath <-
     Maybe.fromMaybe (bcfgpAddressFilePath benchConfigPaths) <$> Environment.lookupEnv "ADDRESS"
+  governanceAuthorityFilePath <-
+    Maybe.fromMaybe (bcfgpGovernanceAuthorityFilePath benchConfigPaths) <$> Environment.lookupEnv "GOVERNANCE_PUBKEYHASH"
   testnetMagic <-
     Maybe.maybe (bcfgpTestNetMagic benchConfigPaths) read
       <$> Environment.lookupEnv "TESTNET_MAGIC"
@@ -457,6 +476,7 @@ overrideBenchConfigPathFromEnv benchConfigPaths = do
       { bcfgpBenchResults = benchResults
       , bcfgpSigningKeyFilePath = signingKeyFilePath
       , bcfgpAddressFilePath = addressFilePath
+      , bcfgpGovernanceAuthorityFilePath = governanceAuthorityFilePath
       , bcfgpTestNetMagic = testnetMagic
       , bcfgpCtlCmd = ctlCmd
       , bcfgpOdcHost = odcHost

@@ -17,8 +17,6 @@ import Ledger.Value (TokenName (TokenName))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
-  Address (addressCredential),
-  Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
@@ -44,19 +42,16 @@ import TrustlessSidechain.Types (
   ),
   SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
-  SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
   merkleRoot,
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
   signatures,
-  smrmSidechainParams,
-  smrmUpdateCommitteeHashCurrencySymbol,
-  smrmValidatorHash,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils
+import TrustlessSidechain.Versioning qualified as Versioning
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -88,9 +83,10 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
       5. At least one token is paid to 'smrmValidatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRoot -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> Versioning.VersionOracleConfig -> SignedMerkleRoot -> ScriptContext -> Bool
 mkMintingPolicy
-  smrm
+  sp
+  versionOracleConfig
   SignedMerkleRoot
     { merkleRoot
     , signatures
@@ -112,8 +108,6 @@ mkMintingPolicy
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
       ownTokenName :: TokenName
       ownTokenName = Value.TokenName merkleRoot
-      sc :: SidechainParams
-      sc = smrmSidechainParams smrm
       committeeDatum :: UpdateCommitteeHashDatum
       committeeDatum =
         let go :: [TxInInfo] -> UpdateCommitteeHashDatum
@@ -122,7 +116,7 @@ mkMintingPolicy
                 , amt <-
                     Value.valueOf
                       (txOutValue o)
-                      (smrmUpdateCommitteeHashCurrencySymbol smrm)
+                      updateCommitteeHashCurrencySymbol
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
@@ -132,15 +126,18 @@ mkMintingPolicy
               | otherwise = go ts
             go [] = traceError "error 'MerkleRootTokenMintingPolicy' no committee utxo given as reference input"
          in go (txInfoReferenceInputs info)
-
+      (_, merkleRootTokenValidatorAddress) =
+        Versioning.getVersionedValidatorAddress versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 2}) ctx
+      (_, updateCommitteeHashCurrencySymbol) =
+        Versioning.getVersionedCurrencySymbol versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 6}) ctx
       threshold :: Integer
       threshold =
         -- See Note [Threshold of Strictly More than Threshold Majority] in
         -- 'TrustlessSidechain.UpdateCommitteeHash' (this is mostly
         -- duplicated from there)
         ( length committeePubKeys
-            `Builtins.multiplyInteger` thresholdNumerator sc
-            `Builtins.divideInteger` thresholdDenominator sc
+            `Builtins.multiplyInteger` thresholdNumerator sp
+            `Builtins.divideInteger` thresholdDenominator sp
         )
           + 1
 
@@ -168,7 +165,7 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { mrimSidechainParams = smrmSidechainParams smrm
+                { mrimSidechainParams = sp
                 , mrimMerkleRoot = merkleRoot
                 , mrimPreviousMerkleRoot = previousMerkleRoot
                 }
@@ -185,21 +182,19 @@ mkMintingPolicy
         _ -> False
       p5 =
         let go [] = False
-            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
-              ScriptCredential vh
-                | vh == smrmValidatorHash smrm
+            go (txOut : txOuts) =
+              ( ( txOutAddress txOut == merkleRootTokenValidatorAddress
                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
-                    > 0 ->
-                  True
-              _ -> go txOuts
+                    > 0
+                )
+                  || go txOuts
+              )
          in go $ txInfoOutputs info
 
 -- CTL hack
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy
-    . mkMintingPolicy
-    . IsData.unsafeFromBuiltinData
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped sp versioningConfig =
+  ScriptUtils.mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
 serialisableMintingPolicy :: Versioned Script
 serialisableMintingPolicy =

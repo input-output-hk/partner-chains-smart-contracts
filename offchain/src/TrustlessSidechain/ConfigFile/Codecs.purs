@@ -51,6 +51,7 @@ configCodec =
             { denominator ∷ Int
             , numerator ∷ Int
             }
+      , governanceAuthority ∷ Maybe ByteArray
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
@@ -58,6 +59,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
+        , governanceAuthority: CAC.maybe byteArrayCodec
         }
     )
 

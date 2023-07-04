@@ -1,11 +1,9 @@
-module TrustlessSidechain.FUELMintingPolicy
-  ( CombinedMerkleProof(..)
-  , FUELMint(..)
-  , FuelParams(..)
-  , MerkleTreeEntry(..)
-  , fuelMintingPolicy
+module TrustlessSidechain.FUELMintingPolicy.V1
+  ( MerkleTreeEntry(..)
+  , CombinedMerkleProof(..)
+  , FuelMintParams(..)
+  , mkMintFuelLookupAndConstraints
   , getFuelMintingPolicy
-  , runFuelMP
   , combinedMerkleProofToFuelParams
   ) where
 
@@ -15,14 +13,12 @@ import Contract.Address
   ( Address
   , PaymentPubKeyHash(..)
   , StakePubKeyHash(..)
-  , ownPaymentPubKeyHash
   , toPubKeyHash
   , toStakingCredential
   )
 import Contract.Credential (Credential(..), StakingCredential(..))
 import Contract.Hashing (blake2b256Hash)
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractE, liftContractM, liftedE, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -34,22 +30,22 @@ import Contract.PlutusData
   , unitRedeemer
   )
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
+  ( TransactionInput
   , TransactionOutputWithRefScript
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
+  , mkTxUnspentOut
   )
-import Contract.TxConstraints (DatumPresence(..), TxConstraints)
+import Contract.TxConstraints
+  ( DatumPresence(..)
+  , InputWithScriptRef(..)
+  , TxConstraints
+  )
 import Contract.TxConstraints as Constraints
 import Contract.Value
   ( CurrencySymbol
@@ -59,48 +55,41 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Data.Maybe as Maybe
+import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.MerkleRoot
-  ( SignedMerkleRootMint(..)
-  , findMerkleRootTokenUtxo
+  ( findMerkleRootTokenUtxo
   )
-import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash (getCommitteeHashPolicy)
 import TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , addressFromBech32Bytes
   , bech32BytesFromAddress
+  , getOwnPaymentPubKeyHash
   )
 import TrustlessSidechain.Utils.Logging (class Display)
 import TrustlessSidechain.Utils.Logging as Logging
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( FUELMintingPolicy
+      , MerkleRootTokenPolicy
+      , DSKeyPolicy
+      )
+  , VersionOracle(..)
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
--- | `FUELMint` is the data type to parameterize the minting policy.
--- | Note: this matches the haskell onchain data type.
-newtype FUELMint = FUELMint
-  { merkleRootTokenCurrencySymbol ∷ CurrencySymbol
-  , sidechainParams ∷ SidechainParams
-  , dsKeyCurrencySymbol ∷ CurrencySymbol
-  }
-
-derive instance Generic FUELMint _
-derive instance Newtype FUELMint _
-instance ToData FUELMint where
-  toData
-    ( FUELMint
-        { merkleRootTokenCurrencySymbol, sidechainParams, dsKeyCurrencySymbol }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData merkleRootTokenCurrencySymbol
-      , toData sidechainParams
-      , toData dsKeyCurrencySymbol
-      ]
+fuelTokenName ∷ TokenName
+fuelTokenName =
+  Unsafe.unsafePartial $ Maybe.fromJust
+    $ Value.mkTokenName
+    =<< byteArrayFromAscii "FUEL"
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:
@@ -158,14 +147,14 @@ newtype CombinedMerkleProof = CombinedMerkleProof
 -- | This is a modestly convenient wrapper to help call the `runFuelMP `
 -- | endpoint for internal tests.
 combinedMerkleProofToFuelParams ∷
-  SidechainParams → CombinedMerkleProof → Maybe FuelParams
+  SidechainParams → CombinedMerkleProof → Maybe FuelMintParams
 combinedMerkleProofToFuelParams
   sidechainParams
   (CombinedMerkleProof { transaction, merkleProof }) = do
   let transaction' = unwrap transaction
 
   recipient ← addressFromBech32Bytes transaction'.recipient
-  pure $ Mint
+  pure $ FuelMintParams
     { amount: transaction'.amount
     , recipient
     , merkleProof
@@ -197,28 +186,26 @@ instance FromData CombinedMerkleProof where
     in CombinedMerkleProof { transaction, merkleProof }
   fromData _ = Nothing
 
-data FUELRedeemer
-  = MainToSide ByteArray -- recipient sidechain (addr , signature)
-  | SideToMain MerkleTreeEntry MerkleProof
+data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
 
-derive instance Generic FUELRedeemer _
-instance ToData FUELRedeemer where
-  toData (MainToSide s1) = Constr (BigNum.fromInt 0) [ toData s1 ]
-  toData (SideToMain s1 s2) = Constr (BigNum.fromInt 1)
+derive instance Generic FUELMintingRedeemer _
+instance ToData FUELMintingRedeemer where
+  toData (FUELMintingRedeemer s1 s2) = Constr (BigNum.fromInt 0)
     [ toData s1
     , toData s2
     ]
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
-fuelMintingPolicy ∷ FUELMint → Contract MintingPolicy
-fuelMintingPolicy fm = do
+decodeFuelMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelMintingPolicy sp = do
   let
     script = decodeTextEnvelope rawFUELMintingPolicy >>=
       plutusScriptV2FromEnvelope
-
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
   unapplied ← liftContractM "Decoding text envelope failed." script
-  applied ← liftContractE $ Scripts.applyArgs unapplied [ toData fm ]
+  applied ← liftContractE $ Scripts.applyArgs unapplied
+    [ toData sp, toData versionOracleConfig ]
   pure $ PlutusMintingPolicy applied
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
@@ -229,69 +216,32 @@ getFuelMintingPolicy ∷
   SidechainParams →
   Contract
     { fuelMintingPolicy ∷ MintingPolicy
-    , fuelMintingPolicyCurrencySymbol ∷ CurrencySymbol
+    , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
 getFuelMintingPolicy sidechainParams = do
   let msg = report "getFuelMintingPolicy"
-  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sidechainParams
-  ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
-
-  policy ← fuelMintingPolicy $
-    FUELMint
-      { sidechainParams
-      , merkleRootTokenCurrencySymbol
-      , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
-      }
-  fuelMintingPolicyCurrencySymbol ←
+  fuelMintingPolicy ← decodeFuelMintingPolicy sidechainParams
+  fuelMintingCurrencySymbol ←
     liftContractM (msg "Cannot get currency symbol") $
-      Value.scriptCurrencySymbol policy
-  pure
-    { fuelMintingPolicy: policy
-    , fuelMintingPolicyCurrencySymbol
-    }
+      Value.scriptCurrencySymbol fuelMintingPolicy
+  pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
--- | `FuelParams` is the data for the FUEL mint / burn endpoint.
-data FuelParams
-  = Mint
-      { amount ∷ BigInt
-      , recipient ∷ Address
-      , merkleProof ∷ MerkleProof
-      , sidechainParams ∷ SidechainParams
-      , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe RootHash
-      , dsUtxo ∷ Maybe TransactionInput
-      }
-  | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
-
--- | `runFuelMP` executes the FUEL mint / burn endpoint.
-runFuelMP ∷ SidechainParams → FuelParams → Contract TransactionHash
-runFuelMP sp fp = do
-  let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "runFuelMP" }
-
-  { fuelMintingPolicy: fuelMP } ← getFuelMintingPolicy sp
-
-  { lookups, constraints } ← case fp of
-    Burn params →
-      burnFUEL fuelMP params
-    Mint params → claimFUEL fuelMP params
-
-  ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
-  bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ msg ("Submitted Tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' $ msg "Tx submitted successfully!"
-
-  pure txId
+-- | `FuelMintParams` is the data for the FUEL mint endpoint.
+data FuelMintParams = FuelMintParams
+  { amount ∷ BigInt
+  , recipient ∷ Address
+  , merkleProof ∷ MerkleProof
+  , sidechainParams ∷ SidechainParams
+  , index ∷ BigInt
+  , previousMerkleRoot ∷ Maybe RootHash
+  , dsUtxo ∷ Maybe TransactionInput
+  }
 
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
-claimFUEL ∷
-  MintingPolicy →
+mkMintFuelLookupAndConstraints ∷
+  SidechainParams →
   { amount ∷ BigInt
   , recipient ∷ Address
   , merkleProof ∷ MerkleProof
@@ -302,8 +252,8 @@ claimFUEL ∷
   } →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-claimFUEL
-  fuelMP
+mkMintFuelLookupAndConstraints
+  sp
   { amount
   , recipient
   , merkleProof
@@ -313,10 +263,12 @@ claimFUEL
   , dsUtxo
   } =
   do
-    let msg = Logging.mkReport { mod: "FUELMintingPolicy", fun: "claimFUEL" }
-    ownPkh ← liftedM (msg "Cannot get own pubkey") ownPaymentPubKeyHash
+    let
+      loc = { mod: "FUELMintingPolicy", fun: "claimFUEL" }
+      msg = Logging.mkReport loc
+    ownPkh ← getOwnPaymentPubKeyHash loc
 
-    cs /\ tn ← getFuelAssetClass fuelMP
+    { fuelMintingPolicy, fuelMintingCurrencySymbol } ← getFuelMintingPolicy sp
 
     ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
@@ -374,10 +326,31 @@ claimFUEL
 
     let
       node = DistributedSet.mkNode (getTokenName tnNode) datNode
-      value = Value.singleton cs tn amount
-      redeemer = wrap (toData (SideToMain merkleTreeEntry merkleProof))
-      -- silence missing stake key warning
+      value = Value.singleton fuelMintingCurrencySymbol fuelTokenName amount
+      redeemer = wrap (toData (FUELMintingRedeemer merkleTreeEntry merkleProof))
 
+    (scriptRefTxInput /\ scriptRefTxOutput) ←
+      Versioning.getVersionedScriptRefUtxo
+        sidechainParams
+        ( VersionOracle
+            { version: BigInt.fromInt 1, scriptId: FUELMintingPolicy }
+        )
+
+    (merkleRootVersioningInput /\ merkleRootVersioningOutput) ←
+      Versioning.getVersionedScriptRefUtxo
+        sidechainParams
+        ( VersionOracle
+            { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+        )
+
+    (dsKeyVersioningInput /\ dsKeyVersioningOutput) ←
+      Versioning.getVersionedScriptRefUtxo
+        sidechainParams
+        ( VersionOracle
+            { version: BigInt.fromInt 1, scriptId: DSKeyPolicy }
+        )
+
+    let
       mkNodeConstraints n = do
         nTn ← liftContractM "Couldn't convert node token name"
           $ mkTokenName
@@ -397,23 +370,36 @@ claimFUEL
                 (Datum (toData (DistributedSet.nodeToDatum n)))
                 DatumInline
                 val
-            <> Constraints.mustMintValue val
+            <> Constraints.mustMintCurrencyUsingScriptRef
+              (Scripts.mintingPolicyHash dsKeyPolicy)
+              nTn
+              (BigInt.fromInt 1)
+              ( RefInput $ mkTxUnspentOut dsKeyVersioningInput
+                  dsKeyVersioningOutput
+              )
 
     mustAddDSNodeA ← mkNodeConstraints nodeA
     mustAddDSNodeB ← mkNodeConstraints nodeB
 
     pure
       { lookups:
-          Lookups.mintingPolicy fuelMP
-            <> Lookups.mintingPolicy dsKeyPolicy
+          Lookups.mintingPolicy dsKeyPolicy
             <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton mptUtxo mptTxOut)
             <> Lookups.unspentOutputs (Map.singleton confRef confO)
             <> Lookups.unspentOutputs (Map.singleton nodeRef oNode)
-
+            <> Lookups.unspentOutputs
+              (Map.singleton merkleRootVersioningInput merkleRootVersioningOutput)
+            <> Lookups.unspentOutputs
+              (Map.singleton dsKeyVersioningInput dsKeyVersioningOutput)
       , constraints:
           -- Minting the FUEL tokens
-          Constraints.mustMintValueWithRedeemer redeemer value
+          Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+            (Scripts.mintingPolicyHash fuelMintingPolicy)
+            redeemer
+            fuelTokenName
+            amount
+            (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
             <> mustPayToPubKeyAddress' recipientPkh recipientSt value
             <> Constraints.mustBeSignedBy ownPkh
 
@@ -425,24 +411,11 @@ claimFUEL
             <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
             <> mustAddDSNodeA
             <> mustAddDSNodeB
+
+            -- Referencing versioning utxos
+            <> Constraints.mustReferenceOutput merkleRootVersioningInput
+            <> Constraints.mustReferenceOutput dsKeyVersioningInput
       }
-
--- | `burnFUEL` burns the given FUEL amount.
-burnFUEL ∷
-  MintingPolicy →
-  { amount ∷ BigInt, recipient ∷ ByteArray } →
-  Contract
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-burnFUEL fuelMP { amount, recipient } = do
-  cs /\ tn ← getFuelAssetClass fuelMP
-
-  let
-    value = Value.singleton cs tn (-amount)
-    redeemer = wrap (toData (MainToSide recipient))
-  pure
-    { lookups: Lookups.mintingPolicy fuelMP
-    , constraints: Constraints.mustMintValueWithRedeemer redeemer value
-    }
 
 -- | `findMerkleRootTokenUtxoByRootHash` attempts to find a UTxO with MerkleRootToken
 -- | as given by the `RootHash`
@@ -453,25 +426,16 @@ findMerkleRootTokenUtxoByRootHash ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
-
-  -- Then, we get the merkle root token validator hash / minting policy..
-  merkleRootValidatorHash ← map Scripts.validatorHash $
-    MerkleRoot.merkleRootTokenValidator sidechainParams
   let
     msg = Logging.mkReport
       { mod: "FUELMintingPolicy", fun: "findMerkleRootTokenUtxoByRootHash" }
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
-      , merkleRootValidatorHash
-      }
+
   merkleRootTokenName ←
     liftContractM
       (msg "Invalid merkle root TokenName for merkleRootTokenMintingPolicy")
       $ Value.mkTokenName
       $ unRootHash rootHash
-  findMerkleRootTokenUtxo merkleRootTokenName smrm
+  findMerkleRootTokenUtxo merkleRootTokenName sidechainParams
 
 -- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
@@ -486,16 +450,6 @@ mustPayToPubKeyAddress' ∷
 mustPayToPubKeyAddress' pkh = case _ of
   Just skh → Constraints.mustPayToPubKeyAddress pkh skh
   Nothing → Constraints.mustPayToPubKey pkh
-
--- | Return the currency symbol and token name of the FUEL token
-getFuelAssetClass ∷ MintingPolicy → Contract (CurrencySymbol /\ TokenName)
-getFuelAssetClass fuelMP = do
-  cs ← liftContractM "Cannot get FUEL currency symbol" $
-    Value.scriptCurrencySymbol fuelMP
-  tn ← liftContractM "Cannot get FUEL token name"
-    (Value.mkTokenName =<< byteArrayFromAscii "FUEL")
-
-  pure (cs /\ tn)
 
 -- | `report` is an internal function used for helping writing log messages.
 report ∷ String → ∀ e. Display e ⇒ e → String

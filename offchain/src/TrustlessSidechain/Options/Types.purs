@@ -50,6 +50,10 @@ type Config =
               { numerator ∷ Int
               , denominator ∷ Int
               }
+        -- governanceAuthority should really be a PubKeyHash but there's no
+        -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
+        -- TrustlessSidechain.ConfigFile.optExample
+        , governanceAuthority ∷ Maybe ByteArray
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath
@@ -61,7 +65,7 @@ type Config =
 
 -- | CLI arguments including required data to run each individual endpoint
 data Endpoint
-  = ClaimAct
+  = ClaimActV1
       { amount ∷ BigInt
       , recipient ∷ Address
       , merkleProof ∷ MerkleProof
@@ -69,7 +73,11 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe RootHash
       , dsUtxo ∷ Maybe TransactionInput
       }
-  | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
+  | BurnActV1 { amount ∷ BigInt, recipient ∷ ByteArray }
+  | ClaimActV2
+      { amount ∷ BigInt
+      }
+  | BurnActV2 { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ SidechainPublicKey
@@ -119,12 +127,24 @@ data Endpoint
       , useInitTokens ∷ Boolean
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
+      , version ∷ Int
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷ CommitteeSignaturesInput
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt
+      }
+
+  | InsertVersion
+      { version ∷ Int
+      }
+  | UpdateVersion
+      { oldVersion ∷ Int
+      , newVersion ∷ Int
+      }
+  | InvalidateVersion
+      { version ∷ Int
       }
 
 derive instance Generic Endpoint _

@@ -51,6 +51,7 @@ optExample =
           { numerator: 2
           , denominator: 3
           }
+      , governanceAuthority: Just $ hexToByteArrayUnsafe "pubKeyHash"
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

@@ -1,3 +1,7 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cases.UpdateCommitteeHash (updateCommitteeHashBench) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
@@ -32,8 +36,8 @@ updateCommitteeHashBench = do
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
-  -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ readFile "payment.addr"
+  addr <- Bench.readAddr
+  governanceAuthority <- Bench.readGovernanceAuthority
 
   -- Benchmark suite
   --------------------
@@ -62,6 +66,7 @@ updateCommitteeHashBench = do
             , genesisUtxo = txOutRef
             , thresholdNumerator = 2
             , thresholdDenominator = 3
+            , governanceAuthority
             }
 
     --  Building all the committees:

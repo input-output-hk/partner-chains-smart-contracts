@@ -4,9 +4,8 @@ module Test.MerkleRootChaining (tests) where
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (liftContractM, liftedM)
+import Contract.Monad (liftContractM)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -18,13 +17,17 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
+import TrustlessSidechain.FUELMintingPolicy.V1
+  ( MerkleTreeEntry(MerkleTreeEntry)
+  )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `tests` aggregates all MerkleRootChaining tests together conveniently
@@ -49,9 +52,10 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      ownPaymentPubKeyHash ← liftedM
-        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+      let
+        loc = { mod: "Test.MerkleRootChaining", fun: "testScenario1" }
+
+      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash loc
       ownRecipient ←
         liftContractM "Could not convert pub key hash to bech 32 bytes" $
           Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
@@ -66,18 +70,21 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       let keyCount = 80
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-
-      { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69_420
-          , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          }
+      let
+        isp =
+          InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69_420
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                ownPaymentPubKeyHash
+            }
+      { sidechainParams } ← InitSidechain.initSidechain isp 1
 
       -- 2. Saving a merkle root.
       -------------------------------
@@ -193,9 +200,10 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
-      ownPaymentPubKeyHash ← liftedM
-        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+      let
+        loc = { mod: "Test.MerkleRootChaining", fun: "testScenario2" }
+
+      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash loc
       ownRecipient ←
         liftContractM "Could not convert pub key hash to bech 32 bytes" $
           Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
@@ -210,18 +218,21 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       let keyCount = 80
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-
-      { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69_420
-          , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          }
+      let
+        isp =
+          InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69_420
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                ownPaymentPubKeyHash
+            }
+      { sidechainParams } ← InitSidechain.initSidechain isp 1
 
       -- 2. Saving a merkle root
       -------------------------------

@@ -6,6 +6,7 @@ import Bench (
   bcfgpBenchResults,
   bcfgpCardanoCliCmd,
   bcfgpCtlCmd,
+  bcfgpGovernanceAuthorityFilePath,
   bcfgpOdcHost,
   bcfgpOdcPort,
   bcfgpOutputDir,
@@ -38,6 +39,7 @@ defaultBenchConfigPaths =
     { bcfgpBenchResults = "tmp.db"
     , bcfgpSigningKeyFilePath = "./payment.skey"
     , bcfgpAddressFilePath = "./payment.addr"
+    , bcfgpGovernanceAuthorityFilePath = "./governance.pkh"
     , bcfgpTestNetMagic = 2
     , -- The command to call ctl:
       -- Note: this assumes that we have @./output/Main/index.js@ (i.e., the output

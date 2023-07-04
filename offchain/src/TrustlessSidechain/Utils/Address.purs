@@ -1,14 +1,23 @@
+-- | `Utils.Address` provides some utility functions for handling addresses.
 module TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , getBech32BytesByteArray
   , bech32BytesFromAddress
   , addressFromBech32Bytes
   , byteArrayToBech32BytesUnsafe
+  , getOwnPaymentPubKeyHash
+  , getOwnWalletAddress
   ) where
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash
+  , getWalletAddresses
+  , ownPaymentPubKeysHashes
+  )
+import Contract.Monad (Contract, liftedM)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(..))
 import Control.Alternative ((<|>))
@@ -32,6 +41,8 @@ import Ctl.Internal.Serialization.Address
   , rewardAddressFromBytes
   , rewardAddressToAddress
   )
+import Data.Array as Array
+import TrustlessSidechain.Utils.Logging (Location, mkReport)
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
 -- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
@@ -93,3 +104,19 @@ addressFromBech32Bytes bechBytes = do
       <|> (rewardAddressToAddress <$> rewardAddressFromBytes cborBytes)
 
   toPlutusAddress enterpriseAddr
+
+-- | Return a single own payment pub key hash without generating warnings.
+getOwnPaymentPubKeyHash ∷
+  Location →
+  Contract PaymentPubKeyHash
+getOwnPaymentPubKeyHash loc =
+  liftedM (mkReport loc "Cannot get own pubkey")
+    (ownPaymentPubKeysHashes >>= pure <<< Array.head)
+
+-- | Return a single own wallet address without generating warnings.
+getOwnWalletAddress ∷
+  Location →
+  Contract Address
+getOwnWalletAddress loc =
+  liftedM (mkReport loc "Cannot get own address")
+    (getWalletAddresses >>= pure <<< Array.head)

@@ -1,6 +1,8 @@
 module TrustlessSidechain.Options.Parsers
   ( parsePubKeyAndSignature
   , transactionInput
+  , pubKeyHash
+  , governanceAuthority
   , combinedMerkleProofParser
   , committeeSignature
   , sidechainSignature
@@ -20,7 +22,7 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address (Address, PubKeyHash(..))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
@@ -30,13 +32,15 @@ import Contract.Transaction
   )
 import Contract.Value (TokenName)
 import Contract.Value as Value
+import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
-import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
+import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
@@ -93,6 +97,20 @@ sidechainSignature ∷ ReadM SidechainSignature
 sidechainSignature = maybeReader
   $ Utils.Crypto.sidechainSignature
   <=< hexToByteArray
+
+-- | Parses a PubKeyHash from hexadecimal representation.
+pubKeyHash ∷ ReadM PubKeyHash
+pubKeyHash = maybeReader
+  $ hexToByteArray
+  >=> ed25519KeyHashFromBytes
+  >=> PubKeyHash
+  >>> pure
+
+-- | Parses a GovernanceAuthority from hexadecimal representation.
+governanceAuthority ∷ ReadM Governance.GovernanceAuthority
+governanceAuthority = do
+  pkh ← pubKeyHash
+  pure $ Governance.mkGovernanceAuthority pkh
 
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise
