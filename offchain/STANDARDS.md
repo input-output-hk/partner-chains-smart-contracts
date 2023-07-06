@@ -198,9 +198,18 @@ TitleCase MUST be used. Acronyms used as part of a naming identifier (such as
 ``fromHttpService`` are correct. Exceptions are allowed for external libraries
 (Aeson's ``parseJSON`` for example).
 
+Imported JavaScript foreign functions may be prefixed with `js_` as an
+exception to the camelCase rule. For example,
+
+```
+foreign import js_someForeignFunction ∷ String -> String
+```
+
+is allowed.
+
 ### Justification
 
-cameCase for non-type, non-data-constructor names is a convention in PureScript
+camelCase for non-type, non-data-constructor names is a convention in PureScript
 and JavaScript; TitleCase for type names or data constructors in _mandatory_ in
 PureScript. Following these conventions reduces cognitive load, as it is common
 practice in the entire ecosystem. There is no particular standard regarding
