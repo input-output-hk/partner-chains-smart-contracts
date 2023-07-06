@@ -10,11 +10,6 @@ import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
-import PlutusTx (
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
-  UnsafeFromData (unsafeFromBuiltinData),
- )
 import PlutusTx qualified
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
@@ -156,44 +151,17 @@ data CandidatePermissionMint = CandidatePermissionMint
 instance ToData CandidatePermissionMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CandidatePermissionMint {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData cpmSidechainParams)
-          ( Unsafe.mkCons
-              (toBuiltinData cpmUtxo)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+    productToData2 cpmSidechainParams cpmUtxo
 
 -- | @since Unreleased
 instance FromData CandidatePermissionMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe CandidatePermissionMint
-      go =
-        let ell = Unsafe.unsafeDataAsList dat
-         in matchList ell Nothing $ \sp ell' ->
-              case fromBuiltinData sp of
-                Nothing -> Nothing
-                Just sp' -> matchList ell' Nothing $ \utxo ell'' ->
-                  case fromBuiltinData utxo of
-                    Nothing -> Nothing
-                    Just utxo' ->
-                      matchList
-                        ell''
-                        (Just (CandidatePermissionMint sp' utxo'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 (\x y -> Just (CandidatePermissionMint x y))
 
 -- | @since Unreleased
 instance UnsafeFromData CandidatePermissionMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell = Unsafe.unsafeDataAsList dat
-        sp = unsafeFromBuiltinData (Unsafe.head ell)
-        ell' = Unsafe.tail ell
-        utxo = unsafeFromBuiltinData (Unsafe.head ell')
-     in CandidatePermissionMint sp utxo
+  unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
@@ -623,44 +591,17 @@ data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
 instance ToData UpdateCommitteeHashDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHashDatum {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData committeeHash)
-          ( Unsafe.mkCons
-              (toBuiltinData sidechainEpoch)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+    productToData2 committeeHash sidechainEpoch
 
 -- | @since Unreleased
 instance FromData UpdateCommitteeHashDatum where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe UpdateCommitteeHashDatum
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \ch ell1 ->
-              case fromBuiltinData ch of
-                Nothing -> Nothing
-                Just ch' -> matchList ell1 Nothing $ \se ell2 ->
-                  case fromBuiltinData se of
-                    Nothing -> Nothing
-                    Just se' ->
-                      matchList
-                        ell2
-                        (Just (UpdateCommitteeHashDatum ch' se'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 (\x y -> Just (UpdateCommitteeHashDatum x y))
 
 -- | @since Unreleased
 instance UnsafeFromData UpdateCommitteeHashDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        ch = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        se = unsafeFromBuiltinData (Unsafe.head ell1)
-     in UpdateCommitteeHashDatum ch se
+  unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeHashDatum
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee
@@ -836,44 +777,17 @@ data CheckpointDatum = CheckpointDatum
 instance ToData CheckpointDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointDatum {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData checkpointBlockHash)
-          ( Unsafe.mkCons
-              (toBuiltinData checkpointBlockNumber)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+    productToData2 checkpointBlockHash checkpointBlockNumber
 
 -- | @since Unreleased
 instance FromData CheckpointDatum where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe CheckpointDatum
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \bh ell1 ->
-              case fromBuiltinData bh of
-                Nothing -> Nothing
-                Just bh' -> matchList ell1 Nothing $ \bn ell2 ->
-                  case fromBuiltinData bn of
-                    Nothing -> Nothing
-                    Just bn' ->
-                      matchList
-                        ell2
-                        (Just (CheckpointDatum bh' bn'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 (\x y -> Just (CheckpointDatum x y))
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        bh = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        bn = unsafeFromBuiltinData (Unsafe.head ell1)
-     in CheckpointDatum bh bn
+  unsafeFromBuiltinData = productUnsafeFromData2 CheckpointDatum
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint

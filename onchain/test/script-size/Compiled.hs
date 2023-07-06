@@ -42,7 +42,6 @@ module Compiled (
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
 import Plutus.V2.Ledger.Contexts (ScriptContext)
-import PlutusTx (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (

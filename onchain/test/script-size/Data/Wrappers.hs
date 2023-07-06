@@ -5,14 +5,13 @@ module Data.Wrappers (
 ) where
 
 import Data.Kind (Type)
-import PlutusTx (
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
-  UnsafeFromData (unsafeFromBuiltinData),
- )
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
-import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.PlutusPrelude hiding (
+  productFromData2,
+  productToData2,
+  productUnsafeFromData2,
+ )
 
 {-# INLINE productToData2 #-}
 productToData2 ::

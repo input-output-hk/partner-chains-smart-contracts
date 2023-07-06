@@ -13,11 +13,6 @@ module Data.Handwritten (
 
 import Data.Kind (Type)
 import Ledger.Value (CurrencySymbol)
-import PlutusTx (
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
-  UnsafeFromData (unsafeFromBuiltinData),
- )
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
   BuiltinList,

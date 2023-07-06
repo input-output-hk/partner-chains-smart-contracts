@@ -4,13 +4,12 @@ module Data.Generated (Foo (..), Bar (..)) where
 
 import Data.Wrappers (productFromData2, productToData2, productUnsafeFromData2)
 import Ledger.Value (CurrencySymbol)
-import PlutusTx (
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
-  UnsafeFromData (unsafeFromBuiltinData),
-  makeIsDataIndexed,
+import PlutusTx (makeIsDataIndexed)
+import TrustlessSidechain.PlutusPrelude hiding (
+  productFromData2,
+  productToData2,
+  productUnsafeFromData2,
  )
-import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 
 data Foo = Foo

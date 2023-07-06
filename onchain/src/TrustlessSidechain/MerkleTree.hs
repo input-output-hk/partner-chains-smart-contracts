@@ -65,14 +65,6 @@ import PlutusTx (makeIsDataIndexed)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.ErrorCodes qualified
-import PlutusTx.IsData.Class (
-  FromData,
-  ToData,
-  UnsafeFromData,
-  fromBuiltinData,
-  toBuiltinData,
-  unsafeFromBuiltinData,
- )
 import PlutusTx.Trace qualified as Trace
 import Schema qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
