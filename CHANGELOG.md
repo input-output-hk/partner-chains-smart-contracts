@@ -7,10 +7,13 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+* Improved error handling with an application-wide error type
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+   [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
   ([317](https://github.com/mlabs-haskell/trustless-sidechain/issues/317),
-   [378](https://github.com/mlabs-haskell/trustless-sidechain/pull/378) offchain).
+   [378](https://github.com/mlabs-haskell/trustless-sidechain/pull/378) offchain)
 * Optional flag `--distributed-set-utxo` to the `claim` CLI subcommand
   to avoid the linear scan through the UTxO set
   ([412](https://github.com/mlabs-haskell/trustless-sidechain/issues/412),
