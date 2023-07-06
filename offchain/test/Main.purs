@@ -55,6 +55,7 @@ main = do
           MerkleRoot.tests
           MerkleRootChaining.tests
           Checkpoint.tests
+
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests
           PoCReferenceInput.tests

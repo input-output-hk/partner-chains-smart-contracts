@@ -1,3 +1,17 @@
+-- | `Test.PoCSchnorr` provides offchain code for a minting policy which mints
+-- | only if the data in its redeemer (which contains a schnorr public key,
+-- | schnorr signature, and a message) is a valid schnorr signature.
+-- |
+-- | This is to verify assumptions that schnorr signatures onchain "works"
+-- | with schnorr signatures offchain.
+-- |
+-- | In particular, we provide tests which
+-- |    - verify that schnorr signatures work onchain with `testScenario1`
+-- |
+-- |    - verify that schnorr signatures fail onchain with `testScenario2`
+-- |
+-- |    - verify that parsing / deserializing valid schnorr signatures still
+-- |    works with `testScenario3`
 module Test.PoCSchnorr (tests) where
 
 import Contract.Prelude
@@ -60,6 +74,8 @@ getPoCSchnorrMintingPolicy = do
     $ Value.scriptCurrencySymbol mintingPolicy
   pure { mintingPolicy, currencySymbol }
 
+-- | `mustMintPocSchnorr` provides the lookups + constraints for minting the
+-- | `TrustlessSidechain.RawScripts.rawPoCSchnorr` minting policy.
 mustMintPocSchnorr ∷
   SchnorrRedeemer →
   Contract
@@ -84,7 +100,7 @@ mustMintPocSchnorr schnorrRedeemer = do
         value
   pure { lookups, constraints }
 
--- | `tests` aggregates all the PoCInlineDatums together conveniently
+-- | `tests` aggregates all the PoCSchnorr tests together conveniently
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSchnorr tests" do
   testScenario1

@@ -71,10 +71,9 @@
   claiming it should be 64 bytes?
   Hm, that's strange.
 
-  Is this a typo? _insert butterfly meme_ I believe it is a typo in the
-  Haskell documentation... Even reading the implementation, it actually
-  verifies that the public key is 32 bytes long [3]. Later Haskell versions
-  correct this typo.
+  Is this a typo? I believe it is a typo in the Haskell documentation... Even
+  reading the implementation, it actually verifies that the public key is 32
+  bytes long [3]. Later Haskell versions correct this typo.
 
   - So, we conclude:
       - Public keys are 32 bytes long (contrary to the Haskell
@@ -137,6 +136,9 @@ data SchnorrRedeemer = SchnorrRedeemer
 
 PlutusTx.makeIsDataIndexed ''SchnorrRedeemer [('SchnorrRedeemer, 0)]
 
+{- | a simple minting policy which mints only if the data provided in the
+ redeemer is a valid schnorr signature.
+-}
 {-# INLINEABLE mkPolicy #-}
 mkPolicy :: SchnorrRedeemer -> ScriptContext -> Bool
 mkPolicy redeemer _context =
@@ -144,6 +146,7 @@ mkPolicy redeemer _context =
     . verifySchnorrSecp256k1Signature (publicKey redeemer) (message redeemer)
     $ signature redeemer
 
+-- CTL hack
 untypedPolicy :: BuiltinData -> BuiltinData -> ()
 untypedPolicy = ScriptUtils.mkUntypedMintingPolicy mkPolicy
 
