@@ -22,6 +22,7 @@ import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Semiring as Semiring
+import Data.String as String
 import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
@@ -88,6 +89,7 @@ tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSchnorr tests" do
   testScenario1
   testScenario2
+  testScenario3
 
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCSchnorr: valid test scenario"
@@ -141,3 +143,59 @@ testScenario2 = Mote.Monad.test "PoCSchnorr: invalid test scenario"
         lookups
         constraints
       pure unit
+
+testScenario3 ∷ PlutipTest
+testScenario3 =
+  Mote.Monad.test
+    "PoCSchnorr: valid test scenario which includes parsing / serialization of keys"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+        privateKey ← Effect.Class.liftEffect $
+          Utils.Schnorr.generateRandomPrivateKey
+
+        let
+          message = ByteArray.hexToByteArrayUnsafe "6D616C74657365"
+          signature = Utils.Schnorr.sign message privateKey
+          publicKey = Utils.Schnorr.toPubKey privateKey
+
+          serializedPublicKey ∷ String
+          serializedPublicKey = Utils.Schnorr.serializePublicKey publicKey
+
+          serializedSignature ∷ String
+          serializedSignature = Utils.Schnorr.serializeSignature signature
+
+        -- Verify length assumptions
+        ----------------------------
+        unless (String.length serializedPublicKey == 32 * 2)
+          $ Monad.throwContractError
+              "serialized public keys should be 32 bytes (32 * 2 = 64 hex characters)"
+
+        unless (String.length serializedSignature == 64 * 2)
+          $ Monad.throwContractError
+              "serialized public keys should be 64 bytes (64 * 2 = 64 hex characters)"
+
+        -- Reparse the signatures
+        ----------------------------
+        parsedPublicKey ← Monad.liftContractM "bad public key parse"
+          $ Utils.Schnorr.parsePublicKey
+          $ ByteArray.hexToByteArrayUnsafe serializedPublicKey
+        parsedSignature ← Monad.liftContractM "bad signature parse"
+          $ Utils.Schnorr.parseSignature
+          $ ByteArray.hexToByteArrayUnsafe serializedSignature
+
+        -- Running the test
+        ----------------------------
+        let
+          redeemer = SchnorrRedeemer
+            { message
+            , signature: unwrap parsedSignature
+            , publicKey: unwrap parsedPublicKey
+            }
+        { lookups, constraints } ← mustMintPocSchnorr redeemer
+
+        void $ Utils.Transaction.balanceSignAndSubmit
+          "PoCSchnorr"
+          lookups
+          constraints
+        pure unit

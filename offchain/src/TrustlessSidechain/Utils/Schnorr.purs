@@ -5,6 +5,9 @@ module TrustlessSidechain.Utils.Schnorr
 
   , parsePublicKey
   , parseSignature
+  , serializePublicKey
+  , serializeSignature
+
   , generateRandomPrivateKey
   , toPubKey
   , sign
@@ -58,6 +61,29 @@ parsePublicKey ∷ ByteArray → Maybe SchnorrPublicKey
 parsePublicKey byteArray
   | ByteArray.byteLength byteArray == 32 = Just $ SchnorrPublicKey byteArray
   | otherwise = Nothing
+
+-- | `serializePublicKey` shows the raw bytes hex encoded
+-- Warning: it's a bit unclear if the js library follows the C library exactly
+-- which requires a little bit more work to serialize public keys i.e., does it
+-- do all the checks for
+-- [this](https://github.com/bitcoin-core/secp256k1/blob/afd7eb4a55606bff640e30bb64bc3c43d1bb5b1c/src/modules/extrakeys/main_impl.h#L44-L57)
+-- function?
+-- Note: this follows the
+-- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
+-- which also decides that it would be a good idea to print out the hex of
+-- the serialization.
+serializePublicKey ∷ SchnorrPublicKey → String
+serializePublicKey (SchnorrPublicKey publicKey) = ByteArray.byteArrayToHex
+  publicKey
+
+-- | `serializeSignature` shows the raw bytes hex encoded
+-- Note: this follows the
+-- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
+-- which also decides that it would be a good idea to print out the hex of
+-- the serialization.
+serializeSignature ∷ SchnorrSignature → String
+serializeSignature (SchnorrSignature publicKey) = ByteArray.byteArrayToHex
+  publicKey
 
 -- | `parseSignature` converts an array of bytes into a schnorr signature by
 -- | testing if the length is 64 bytes.
