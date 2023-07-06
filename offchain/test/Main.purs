@@ -18,6 +18,7 @@ import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
+import Test.PoCSchnorr as PoCSchnorr
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
@@ -54,10 +55,10 @@ main = do
           MerkleRoot.tests
           MerkleRootChaining.tests
           Checkpoint.tests
-
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests
           PoCReferenceInput.tests
           PoCReferenceScript.tests
           PoCSerialiseData.tests
           PoCECDSA.testScenario
+          PoCSchnorr.tests
