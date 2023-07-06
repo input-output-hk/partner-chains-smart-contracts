@@ -1,8 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Data.Generated (Foo (..), Bar (..)) where
+module Data.Generated (
+  Foo (..),
+  Bar (..),
+  Baz (..),
+) where
 
-import Data.Wrappers (productFromData2, productToData2, productUnsafeFromData2)
+import Data.Wrappers (
+  cpsProductFromData3,
+  cpsProductUnsafeFromData3,
+  productFromData2,
+  productToData2,
+  productUnsafeFromData2,
+ )
 import Ledger.Value (CurrencySymbol)
 import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.PlutusPrelude hiding (
@@ -33,3 +43,13 @@ instance FromData Bar where
 instance UnsafeFromData Bar where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 Bar
+
+data Baz = Baz Integer BuiltinByteString Integer
+
+instance FromData Baz where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = cpsProductFromData3 (\x y z -> Just (Baz x y z))
+
+instance UnsafeFromData Baz where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = cpsProductUnsafeFromData3 Baz

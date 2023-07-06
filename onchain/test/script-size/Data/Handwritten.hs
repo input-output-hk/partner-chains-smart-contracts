@@ -3,6 +3,7 @@
 module Data.Handwritten (
   Foo (..),
   Bar (..),
+  Baz (..),
   pairToData,
   pairFromData,
   pairUnsafeFromData,
@@ -12,6 +13,7 @@ module Data.Handwritten (
 ) where
 
 import Data.Kind (Type)
+import Data.Wrappers (directProductFromData3, directProductUnsafeFromData3)
 import Ledger.Value (CurrencySymbol)
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
@@ -208,3 +210,13 @@ instance UnsafeFromData Bar where
         ell1 = Unsafe.tail ell0
         y = unsafeFromBuiltinData (Unsafe.head ell1)
      in Bar x y
+
+data Baz = Baz Integer BuiltinByteString Integer
+
+instance FromData Baz where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = directProductFromData3 (\x y z -> Just (Baz x y z))
+
+instance UnsafeFromData Baz where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = directProductUnsafeFromData3 Baz

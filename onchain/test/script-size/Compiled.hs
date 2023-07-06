@@ -37,6 +37,10 @@ module Compiled (
   fromDataDirect,
   unsafeFromDataWrapper,
   unsafeFromDataDirect,
+  fromData3CPS,
+  fromData3Direct,
+  unsafeFromData3CPS,
+  unsafeFromData3Direct,
 ) where
 
 import Data.Generated qualified as Generated
@@ -88,6 +92,18 @@ import TrustlessSidechain.UpdateCommitteeHash (
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
+
+fromData3CPS :: CompiledCode (BuiltinData -> Maybe Generated.Baz)
+fromData3CPS = $$(compile [||fromBuiltinData||])
+
+fromData3Direct :: CompiledCode (BuiltinData -> Maybe Handwritten.Baz)
+fromData3Direct = $$(compile [||fromBuiltinData||])
+
+unsafeFromData3CPS :: CompiledCode (BuiltinData -> Generated.Baz)
+unsafeFromData3CPS = $$(compile [||unsafeFromBuiltinData||])
+
+unsafeFromData3Direct :: CompiledCode (BuiltinData -> Handwritten.Baz)
+unsafeFromData3Direct = $$(compile [||unsafeFromBuiltinData||])
 
 toDataDirect :: CompiledCode (Handwritten.Bar -> BuiltinData)
 toDataDirect = $$(compile [||toBuiltinData||])

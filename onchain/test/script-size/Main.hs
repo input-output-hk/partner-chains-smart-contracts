@@ -194,5 +194,13 @@ main =
             "unsafeFromBuiltinData (solution 3)"
             ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
             ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
+        , scriptFitsUnder
+            "fromBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.fromData3CPS)
+            ("direct", fromCompiledCode Compiled.fromData3Direct)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.unsafeFromData3CPS)
+            ("direct", fromCompiledCode Compiled.unsafeFromData3Direct)
         ]
     ]
