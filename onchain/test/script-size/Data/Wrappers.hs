@@ -2,6 +2,8 @@ module Data.Wrappers (
   productToData2,
   productFromData2,
   productUnsafeFromData2,
+  cpsProductToData3,
+  directProductToData3,
   cpsProductFromData3,
   directProductFromData3,
   cpsProductUnsafeFromData3,
@@ -70,6 +72,19 @@ productUnsafeFromData2 f dat =
       y = unsafeFromBuiltinData (Unsafe.head ell1)
    in f x y
 
+{-# INLINE cpsProductToData3 #-}
+cpsProductToData3 ::
+  forall (a :: Type) (b :: Type) (c :: Type).
+  (ToData a, ToData b, ToData c) =>
+  a ->
+  b ->
+  c ->
+  BuiltinData
+cpsProductToData3 x y z = Unsafe.mkList go
+  where
+    go :: Unsafe.BuiltinList BuiltinData
+    go = step1 toBuiltinData x (step1 toBuiltinData y (done1 toBuiltinData z))
+
 {-# ANN cpsProductFromData3 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE cpsProductFromData3 #-}
 cpsProductFromData3 ::
@@ -92,6 +107,24 @@ cpsProductFromData3 f dat =
                   step fromBuiltinData (\z -> done (f x y z))
               )
         )
+
+{-# INLINE directProductToData3 #-}
+directProductToData3 ::
+  forall (a :: Type) (b :: Type) (c :: Type).
+  (ToData a, ToData b, ToData c) =>
+  a ->
+  b ->
+  c ->
+  BuiltinData
+directProductToData3 x z y =
+  Unsafe.mkList
+    ( Unsafe.mkCons
+        (toBuiltinData x)
+        ( Unsafe.mkCons
+            (toBuiltinData y)
+            (Unsafe.mkCons (toBuiltinData z) (Unsafe.mkNilData Unsafe.unitval))
+        )
+    )
 
 {-# INLINE directProductFromData3 #-}
 directProductFromData3 ::
@@ -176,6 +209,21 @@ step' f cb ell =
   let x = f (Unsafe.head ell)
       ell' = Unsafe.tail ell
    in cb x ell'
+
+step1 ::
+  forall (k :: Type).
+  (k -> BuiltinData) ->
+  k ->
+  Unsafe.BuiltinList BuiltinData ->
+  Unsafe.BuiltinList BuiltinData
+step1 f x = Unsafe.mkCons (f x)
+
+done1 ::
+  forall (k :: Type).
+  (k -> BuiltinData) ->
+  k ->
+  Unsafe.BuiltinList BuiltinData
+done1 f x = Unsafe.mkCons (f x) (Unsafe.mkNilData Unsafe.unitval)
 
 done :: Maybe d -> Unsafe.BuiltinList BuiltinData -> Maybe d
 done res ell = matchList ell res (\_ _ -> Nothing)

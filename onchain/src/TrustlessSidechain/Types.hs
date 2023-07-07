@@ -156,7 +156,7 @@ instance ToData CandidatePermissionMint where
 -- | @since Unreleased
 instance FromData CandidatePermissionMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 (\x y -> Just (CandidatePermissionMint x y))
+  fromBuiltinData = productFromData2 CandidatePermissionMint
 
 -- | @since Unreleased
 instance UnsafeFromData CandidatePermissionMint where
@@ -425,8 +425,7 @@ instance ToData SignedMerkleRootMint where
 -- | @since Unreleased
 instance FromData SignedMerkleRootMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData =
-    productFromData3 (\x y z -> Just (SignedMerkleRootMint x y z))
+  fromBuiltinData = productFromData3 SignedMerkleRootMint
 
 -- | @since Unreleased
 instance UnsafeFromData SignedMerkleRootMint where
@@ -506,7 +505,7 @@ instance ToData FUELMint where
 -- | @since Unreleased
 instance FromData FUELMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 (\x y z -> Just (FUELMint x y z))
+  fromBuiltinData = productFromData3 FUELMint
 
 -- | @since Unreleased
 instance UnsafeFromData FUELMint where
@@ -533,7 +532,7 @@ instance ToData UpdateCommitteeHashDatum where
 -- | @since Unreleased
 instance FromData UpdateCommitteeHashDatum where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 (\x y -> Just (UpdateCommitteeHashDatum x y))
+  fromBuiltinData = productFromData2 UpdateCommitteeHashDatum
 
 -- | @since Unreleased
 instance UnsafeFromData UpdateCommitteeHashDatum where
@@ -640,8 +639,7 @@ instance ToData UpdateCommitteeHash where
 -- | @since Unreleased
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData =
-    productFromData3 (\x y z -> Just (UpdateCommitteeHash x y z))
+  fromBuiltinData = productFromData3 UpdateCommitteeHash
 
 -- | @since Unreleased
 instance UnsafeFromData UpdateCommitteeHash where
@@ -679,7 +677,7 @@ instance ToData CheckpointDatum where
 -- | @since Unreleased
 instance FromData CheckpointDatum where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 (\x y -> Just (CheckpointDatum x y))
+  fromBuiltinData = productFromData2 CheckpointDatum
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointDatum where
@@ -778,7 +776,7 @@ instance ToData CheckpointParameter where
 -- | @since Unreleased
 instance FromData CheckpointParameter where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 (\x y z -> Just (CheckpointParameter x y z))
+  fromBuiltinData = productFromData3 CheckpointParameter
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointParameter where

@@ -8,6 +8,7 @@ module Data.Generated (
 
 import Data.Wrappers (
   cpsProductFromData3,
+  cpsProductToData3,
   cpsProductUnsafeFromData3,
   productFromData2,
   productToData2,
@@ -45,6 +46,10 @@ instance UnsafeFromData Bar where
   unsafeFromBuiltinData = productUnsafeFromData2 Bar
 
 data Baz = Baz Integer BuiltinByteString Integer
+
+instance ToData Baz where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Baz x y z) = cpsProductToData3 x y z
 
 instance FromData Baz where
   {-# INLINEABLE fromBuiltinData #-}

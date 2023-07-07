@@ -15,7 +15,9 @@ module TrustlessSidechain.PlutusPrelude (
 
   -- ** FromData
   productFromData2,
+  productFromData2',
   productFromData3,
+  productFromData3',
 
   -- ** UnsafeFromData
   productUnsafeFromData2,
@@ -49,15 +51,10 @@ productToData2 ::
   a ->
   b ->
   BuiltinData
-productToData2 x y =
-  Unsafe.mkList
-    ( Unsafe.mkCons
-        (toBuiltinData x)
-        ( Unsafe.mkCons
-            (toBuiltinData y)
-            (Unsafe.mkNilData Unsafe.unitval)
-        )
-    )
+productToData2 x y = Unsafe.mkList go
+  where
+    go :: Unsafe.BuiltinList BuiltinData
+    go = step1 toBuiltinData x (done1 toBuiltinData y)
 
 -- | @since Unreleased
 {-# INLINE productToData3 #-}
@@ -68,18 +65,19 @@ productToData3 ::
   b ->
   c ->
   BuiltinData
-productToData3 x y z =
-  Unsafe.mkList
-    ( Unsafe.mkCons
-        (toBuiltinData x)
-        ( Unsafe.mkCons
-            (toBuiltinData y)
-            ( Unsafe.mkCons
-                (toBuiltinData z)
-                (Unsafe.mkNilData Unsafe.unitval)
+productToData3 x y z = Unsafe.mkList go
+  where
+    go :: Unsafe.BuiltinList BuiltinData
+    go =
+      step1
+        toBuiltinData
+        x
+        ( step1
+            toBuiltinData
+            y
+            ( done1 toBuiltinData z
             )
         )
-    )
 
 -- Note from Koz (7/07/23): We disable the 'avoid lambda' hint from HLint for
 -- many definitions here, as the cost of function composition makes these
@@ -93,10 +91,21 @@ productToData3 x y z =
 productFromData2 ::
   forall (a :: Type) (b :: Type) (c :: Type).
   (FromData a, FromData b) =>
+  (a -> b -> c) ->
+  BuiltinData ->
+  Maybe c
+productFromData2 f = productFromData2' (\x y -> Just (f x y))
+
+-- | @since Unreleased
+{-# ANN productFromData2' ("HLint: ignore Avoid lambda" :: HString.String) #-}
+{-# INLINE productFromData2' #-}
+productFromData2' ::
+  forall (a :: Type) (b :: Type) (c :: Type).
+  (FromData a, FromData b) =>
   (a -> b -> Maybe c) ->
   BuiltinData ->
   Maybe c
-productFromData2 f dat =
+productFromData2' f dat =
   Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe c
@@ -117,10 +126,21 @@ productFromData2 f dat =
 productFromData3 ::
   forall (a :: Type) (b :: Type) (c :: Type) (d :: Type).
   (FromData a, FromData b, FromData c) =>
+  (a -> b -> c -> d) ->
+  BuiltinData ->
+  Maybe d
+productFromData3 f = productFromData3' (\x y z -> Just (f x y z))
+
+-- | @Since Unreleased
+{-# ANN productFromData3' ("HLint: ignore Avoid lambda" :: HString.String) #-}
+{-# INLINE productFromData3' #-}
+productFromData3' ::
+  forall (a :: Type) (b :: Type) (c :: Type) (d :: Type).
+  (FromData a, FromData b, FromData c) =>
   (a -> b -> c -> Maybe d) ->
   BuiltinData ->
   Maybe d
-productFromData3 f dat =
+productFromData3' f dat =
   Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe d
@@ -201,6 +221,14 @@ step' f cb ell =
       ell' = Unsafe.tail ell
    in cb x ell'
 
+step1 ::
+  forall (k :: Type).
+  (k -> BuiltinData) ->
+  k ->
+  Unsafe.BuiltinList BuiltinData ->
+  Unsafe.BuiltinList BuiltinData
+step1 f x = Unsafe.mkCons (f x)
+
 done ::
   forall (d :: Type).
   Maybe d ->
@@ -215,3 +243,10 @@ done' ::
   Unsafe.BuiltinList BuiltinData ->
   r
 done' f g ell = g (f (Unsafe.head ell))
+
+done1 ::
+  forall (k :: Type).
+  (k -> BuiltinData) ->
+  k ->
+  Unsafe.BuiltinList BuiltinData
+done1 f x = Unsafe.mkCons (f x) (Unsafe.mkNilData Unsafe.unitval)

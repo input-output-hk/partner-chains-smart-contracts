@@ -13,7 +13,11 @@ module Data.Handwritten (
 ) where
 
 import Data.Kind (Type)
-import Data.Wrappers (directProductFromData3, directProductUnsafeFromData3)
+import Data.Wrappers (
+  directProductFromData3,
+  directProductToData3,
+  directProductUnsafeFromData3,
+ )
 import Ledger.Value (CurrencySymbol)
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
@@ -212,6 +216,10 @@ instance UnsafeFromData Bar where
      in Bar x y
 
 data Baz = Baz Integer BuiltinByteString Integer
+
+instance ToData Baz where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Baz x y z) = directProductToData3 x y z
 
 instance FromData Baz where
   {-# INLINEABLE fromBuiltinData #-}

@@ -195,6 +195,10 @@ main =
             ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
             ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
         , scriptFitsUnder
+            "toBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.toData3CPS)
+            ("direct", fromCompiledCode Compiled.toData3Direct)
+        , scriptFitsUnder
             "fromBuiltinData (CPS versus direct)"
             ("cps", fromCompiledCode Compiled.fromData3CPS)
             ("direct", fromCompiledCode Compiled.fromData3Direct)
