@@ -417,52 +417,21 @@ data SignedMerkleRootMint = SignedMerkleRootMint
 instance ToData SignedMerkleRootMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (SignedMerkleRootMint {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData smrmSidechainParams)
-          ( Unsafe.mkCons
-              (toBuiltinData smrmUpdateCommitteeHashCurrencySymbol)
-              ( Unsafe.mkCons
-                  (toBuiltinData smrmValidatorHash)
-                  (Unsafe.mkNilData Unsafe.unitval)
-              )
-          )
-      )
+    productToData3
+      smrmSidechainParams
+      smrmUpdateCommitteeHashCurrencySymbol
+      smrmValidatorHash
 
 -- | @since Unreleased
 instance FromData SignedMerkleRootMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe SignedMerkleRootMint
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \sp ell1 ->
-              case fromBuiltinData sp of
-                Nothing -> Nothing
-                Just sp' -> matchList ell1 Nothing $ \cs ell2 ->
-                  case fromBuiltinData cs of
-                    Nothing -> Nothing
-                    Just cs' -> matchList ell2 Nothing $ \vh ell3 ->
-                      case fromBuiltinData vh of
-                        Nothing -> Nothing
-                        Just vh' ->
-                          matchList
-                            ell3
-                            (Just (SignedMerkleRootMint sp' cs' vh'))
-                            (\_ _ -> Nothing)
+  fromBuiltinData =
+    productFromData3 (\x y z -> Just (SignedMerkleRootMint x y z))
 
 -- | @since Unreleased
 instance UnsafeFromData SignedMerkleRootMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        sp = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell1
-        cs = unsafeFromBuiltinData (Unsafe.head ell1)
-        ell2 = Unsafe.tail ell1
-        vh = unsafeFromBuiltinData (Unsafe.head ell2)
-     in SignedMerkleRootMint sp cs vh
+  unsafeFromBuiltinData = productUnsafeFromData3 SignedMerkleRootMint
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
@@ -529,52 +498,20 @@ data FUELMint = FUELMint
 instance ToData FUELMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (FUELMint {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData fmMptRootTokenCurrencySymbol)
-          ( Unsafe.mkCons
-              (toBuiltinData fmSidechainParams)
-              ( Unsafe.mkCons
-                  (toBuiltinData fmDsKeyCurrencySymbol)
-                  (Unsafe.mkNilData Unsafe.unitval)
-              )
-          )
-      )
+    productToData3
+      fmMptRootTokenCurrencySymbol
+      fmSidechainParams
+      fmDsKeyCurrencySymbol
 
 -- | @since Unreleased
 instance FromData FUELMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe FUELMint
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \cs ell1 ->
-              case fromBuiltinData cs of
-                Nothing -> Nothing
-                Just cs' -> matchList ell1 Nothing $ \sp ell2 ->
-                  case fromBuiltinData sp of
-                    Nothing -> Nothing
-                    Just sp' -> matchList ell2 Nothing $ \kcs ell3 ->
-                      case fromBuiltinData kcs of
-                        Nothing -> Nothing
-                        Just kcs' ->
-                          matchList
-                            ell3
-                            (Just (FUELMint cs' sp' kcs'))
-                            (\_ _ -> Nothing)
+  fromBuiltinData = productFromData3 (\x y z -> Just (FUELMint x y z))
 
 -- | @since Unreleased
 instance UnsafeFromData FUELMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        cs = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell1
-        sp = unsafeFromBuiltinData (Unsafe.head ell1)
-        ell2 = Unsafe.tail ell1
-        kcs = unsafeFromBuiltinData (Unsafe.head ell2)
-     in FUELMint cs sp kcs
+  unsafeFromBuiltinData = productUnsafeFromData3 FUELMint
 
 -- * Update Committee Hash data
 
@@ -698,58 +635,18 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 instance ToData UpdateCommitteeHash where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHash {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData cSidechainParams)
-          ( Unsafe.mkCons
-              (toBuiltinData cToken)
-              ( Unsafe.mkCons
-                  (toBuiltinData cMptRootTokenCurrencySymbol)
-                  (Unsafe.mkNilData Unsafe.unitval)
-              )
-          )
-      )
+    productToData3 cSidechainParams cToken cMptRootTokenCurrencySymbol
 
 -- | @since Unreleased
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe UpdateCommitteeHash
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \sp ell1 ->
-              case fromBuiltinData sp of
-                Nothing -> Nothing
-                Just sp' -> matchList ell1 Nothing $ \tok ell2 ->
-                  case fromBuiltinData tok of
-                    Nothing -> Nothing
-                    Just tok' -> matchList ell2 Nothing $ \cs ell3 ->
-                      case fromBuiltinData cs of
-                        Nothing -> Nothing
-                        Just cs' ->
-                          matchList
-                            ell3
-                            ( Just
-                                ( UpdateCommitteeHash
-                                    sp'
-                                    tok'
-                                    cs'
-                                )
-                            )
-                            (\_ _ -> Nothing)
+  fromBuiltinData =
+    productFromData3 (\x y z -> Just (UpdateCommitteeHash x y z))
 
 -- | @since Unreleased
 instance UnsafeFromData UpdateCommitteeHash where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        sp = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        tok = unsafeFromBuiltinData (Unsafe.head ell1)
-        ell2 = Unsafe.tail ell1
-        cs = unsafeFromBuiltinData (Unsafe.head ell2)
-     in UpdateCommitteeHash sp tok cs
+  unsafeFromBuiltinData = productUnsafeFromData3 UpdateCommitteeHash
 
 {- | = Important note
 
@@ -873,52 +770,20 @@ data CheckpointParameter = CheckpointParameter
 instance ToData CheckpointParameter where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointParameter {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (toBuiltinData checkpointSidechainParams)
-          ( Unsafe.mkCons
-              (toBuiltinData checkpointAssetClass)
-              ( Unsafe.mkCons
-                  (toBuiltinData committeeHashAssetClass)
-                  (Unsafe.mkNilData Unsafe.unitval)
-              )
-          )
-      )
+    productToData3
+      checkpointSidechainParams
+      checkpointAssetClass
+      committeeHashAssetClass
 
 -- | @since Unreleased
 instance FromData CheckpointParameter where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe CheckpointParameter
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \sp ell1 ->
-              case fromBuiltinData sp of
-                Nothing -> Nothing
-                Just sp' -> matchList ell1 Nothing $ \ac ell2 ->
-                  case fromBuiltinData ac of
-                    Nothing -> Nothing
-                    Just ac' -> matchList ell2 Nothing $ \hac ell3 ->
-                      case fromBuiltinData hac of
-                        Nothing -> Nothing
-                        Just hac' ->
-                          matchList
-                            ell3
-                            (Just (CheckpointParameter sp' ac' hac'))
-                            (\_ _ -> Nothing)
+  fromBuiltinData = productFromData3 (\x y z -> Just (CheckpointParameter x y z))
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointParameter where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        sp = unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        ac = unsafeFromBuiltinData (Unsafe.head ell1)
-        ell2 = Unsafe.tail ell1
-        hac = unsafeFromBuiltinData (Unsafe.head ell2)
-     in CheckpointParameter sp ac hac
+  unsafeFromBuiltinData = productUnsafeFromData3 CheckpointParameter
 
 {- | = Important note
 
