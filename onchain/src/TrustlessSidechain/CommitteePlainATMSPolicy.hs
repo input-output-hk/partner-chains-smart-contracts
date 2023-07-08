@@ -1,35 +1,32 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TemplateHaskell #-}
-
 {- | "TrustlessSidechain.CommitteePlainATMSPolicy" provides a token which verifies
  that the current committee has signed its token name with the plain (simply
  public key and signature concatenation) ATMS scheme.
 -}
-module TrustlessSidechain.CommitteePlainATMSPolicy where
+module TrustlessSidechain.CommitteePlainATMSPolicy (
+  mkMintingPolicy,
+  verifyPlainMultisig,
+  aggregateCheck,
+  aggregateKeys,
+) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
 import Ledger.Value (CurrencySymbol, TokenName (..))
 import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   OutputDatum (OutputDatum),
-  Script,
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey,
+  ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey),
   ATMSPlainMultisignature (
     plainPublicKeys,
     plainSignatures
@@ -43,7 +40,8 @@ import TrustlessSidechain.Types (
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultisig)
+
+-- * Creating the plain ATMS minting policy
 
 {-# INLINEABLE mkMintingPolicy #-}
 
@@ -52,10 +50,16 @@ import TrustlessSidechain.Utils qualified as Utils (aggregateCheck, verifyMultis
       stored onchain
 
       2. the token name of this token that is minted minted has been signed by
-      the current committee
+      the current committee where this verification is performed by the given
+      @verifySig@ function
 -}
-mkMintingPolicy :: CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool
-mkMintingPolicy ccm atmspms ctx =
+mkMintingPolicy ::
+  (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
+  CommitteeCertificateMint ->
+  ATMSPlainMultisignature ->
+  ScriptContext ->
+  Bool
+mkMintingPolicy verifySig ccm atmspms ctx =
   traceIfFalse "error 'CommitteePlainATMSPolicy': current committee mismatch" isCurrentCommittee
     && traceIfFalse "error 'CommitteePlainATMSPolicy': committee signature invalid" signedByCurrentCommittee
   where
@@ -64,13 +68,14 @@ mkMintingPolicy ccm atmspms ctx =
     -- 1.
     isCurrentCommittee :: Bool
     isCurrentCommittee =
-      Utils.aggregateCheck (plainPublicKeys atmspms) $
+      aggregateCheck (plainPublicKeys atmspms) $
         aggregateCommitteePubKeys committeeDatum
 
     -- 2.
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
-      Utils.verifyMultisig
+      verifyPlainMultisig
+        verifySig
         (getSidechainPubKey <$> plainPublicKeys atmspms)
         threshold
         (unTokenName uniqueMintedTokenName)
@@ -144,9 +149,57 @@ mkMintingPolicy ccm atmspms ctx =
         tn
       | otherwise = Trace.traceError "error 'CommitteePlainATMSPolicy': bad mint"
 
--- CTL hack
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . IsData.unsafeFromBuiltinData
+-- * Plain ATMS primitives
 
-serialisableMintingPolicy :: Versioned Script
-serialisableMintingPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+{- | @'verifyPlainMultisig' verifySig pubKeys threshold message signatures@ checks if at least
+ @threshold@ of @pubKeys@ have signed @message@ with @signatures@ with @verifySig@.
+
+ Preconditions
+
+      * @signatures@ should be a subsequence of the corresponding @pubKeys@
+-}
+{-# INLINEABLE verifyPlainMultisig #-}
+verifyPlainMultisig ::
+  (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
+  [BuiltinByteString] ->
+  Integer ->
+  BuiltinByteString ->
+  [BuiltinByteString] ->
+  Bool
+verifyPlainMultisig verifySig pubKeys enough message signatures = go pubKeys signatures 0
+  where
+    go :: [BuiltinByteString] -> [BuiltinByteString] -> Integer -> Bool
+    go !pks !sigs !counted = case sigs of
+      -- All signatures are verified, we're done
+      [] -> counted >= enough
+      (s : ss) -> case pks of
+        -- Unverified signature after checking all cases, give up
+        [] -> False
+        (pk : pks') ->
+          if verifySig pk message s
+            then -- Found a verifying key, continue
+              go pks' ss (counted + 1)
+            else -- Not found a verifying key yet, try again with the next one
+              go pks' sigs counted
+
+{- | 'aggregateKeys' aggregates a list of public keys into a single
+ committee hash by essentially computing the merkle root of all public keys
+ together.
+ We call the output of this function an /aggregate public key/.
+-}
+{-# INLINEABLE aggregateKeys #-}
+aggregateKeys :: [SidechainPubKey] -> ATMSPlainAggregatePubKey
+aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat . map getSidechainPubKey
+
+{- Note [Aggregate Keys Append Scheme]
+ Potential optimizations: instead of doing the concatenated hash, we could
+ instead compute a merkle root.
+ -}
+
+{- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
+ key, and returns true or false to determinig whether the public keys were
+ used to produce the aggregate public key
+-}
+{-# INLINEABLE aggregateCheck #-}
+aggregateCheck :: [SidechainPubKey] -> ATMSPlainAggregatePubKey -> Bool
+aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
