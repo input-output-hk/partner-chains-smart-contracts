@@ -308,7 +308,7 @@ PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMin
  "TrustlessSidechain.CommitteePlainATMSPolicy".
 -}
 data ATMSPlainMultisignature = ATMSPlainMultisignature
-  { plainPublicKeys :: [SidechainPubKey]
+  { plainPublicKeys :: [BuiltinByteString]
   , plainSignatures :: [BuiltinByteString]
   }
 

@@ -36,7 +36,6 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -76,7 +75,7 @@ mkMintingPolicy verifySig ccm atmspms ctx =
     signedByCurrentCommittee =
       verifyPlainMultisig
         verifySig
-        (getSidechainPubKey <$> plainPublicKeys atmspms)
+        (plainPublicKeys atmspms)
         threshold
         (unTokenName uniqueMintedTokenName)
         (plainSignatures atmspms)
@@ -188,8 +187,8 @@ verifyPlainMultisig verifySig pubKeys enough message signatures = go pubKeys sig
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [SidechainPubKey] -> ATMSPlainAggregatePubKey
-aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat . map getSidechainPubKey
+aggregateKeys :: [BuiltinByteString] -> ATMSPlainAggregatePubKey
+aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could
@@ -201,5 +200,5 @@ aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat . map 
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [SidechainPubKey] -> ATMSPlainAggregatePubKey -> Bool
+aggregateCheck :: [BuiltinByteString] -> ATMSPlainAggregatePubKey -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
