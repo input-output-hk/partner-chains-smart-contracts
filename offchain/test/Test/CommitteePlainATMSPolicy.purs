@@ -91,7 +91,7 @@ testScenario1 =
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
-                initCommitteePubKeys
+                $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3

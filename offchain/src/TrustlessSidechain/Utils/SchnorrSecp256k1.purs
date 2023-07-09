@@ -24,6 +24,9 @@ module TrustlessSidechain.Utils.SchnorrSecp256k1
 
 import Contract.Prelude
 
+import Contract.PlutusData
+  ( class ToData
+  )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 
@@ -34,6 +37,15 @@ derive instance Generic SchnorrSecp256k1PrivateKey _
 
 derive instance Newtype SchnorrSecp256k1PrivateKey _
 
+derive newtype instance toDataSchnorrSecp256k1PrivateKey ∷
+  ToData SchnorrSecp256k1PrivateKey
+
+derive newtype instance ordSchnorrSecp256k1PrivateKey ∷
+  Ord SchnorrSecp256k1PrivateKey
+
+derive newtype instance eqSchnorrSecp256k1PrivateKey ∷
+  Eq SchnorrSecp256k1PrivateKey
+
 -- | Newtype wrapper around a `ByteArray`
 newtype SchnorrSecp256k1PublicKey = SchnorrSecp256k1PublicKey ByteArray
 
@@ -41,12 +53,30 @@ derive instance Generic SchnorrSecp256k1PublicKey _
 
 derive instance Newtype SchnorrSecp256k1PublicKey _
 
+derive newtype instance toDataSchnorrSecp256k1PublicKey ∷
+  ToData SchnorrSecp256k1PublicKey
+
+derive newtype instance ordSchnorrSecp256k1PublicKey ∷
+  Ord SchnorrSecp256k1PublicKey
+
+derive newtype instance eqSchnorrSecp256k1PublicKey ∷
+  Eq SchnorrSecp256k1PublicKey
+
 -- | Newtype wrapper around a `ByteArray`
 newtype SchnorrSecp256k1Signature = SchnorrSecp256k1Signature ByteArray
 
 derive instance Generic SchnorrSecp256k1Signature _
 
 derive instance Newtype SchnorrSecp256k1Signature _
+
+derive newtype instance toDataSchnorrSecp256k1Signature ∷
+  ToData SchnorrSecp256k1Signature
+
+derive newtype instance ordSchnorrSecp256k1Signature ∷
+  Ord SchnorrSecp256k1Signature
+
+derive newtype instance eqSchnorrSecp256k1Signature ∷
+  Eq SchnorrSecp256k1Signature
 
 -- | `parsePublicKey` converts an array of bytes into a schnorr public key
 -- | testing if the length is 32 bytes (the required length of a public key).

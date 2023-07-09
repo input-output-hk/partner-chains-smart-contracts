@@ -87,9 +87,11 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys $ map
-              Utils.Crypto.toPubKeyUnsafe
-              committee1PrvKeys
+          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+              $ map unwrap
+              $ map
+                  Utils.Crypto.toPubKeyUnsafe
+                  committee1PrvKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -234,9 +236,11 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys $ map
-              Utils.Crypto.toPubKeyUnsafe
-              committee1PrvKeys
+          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+              $ map unwrap
+              $ map
+                  Utils.Crypto.toPubKeyUnsafe
+                  committee1PrvKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -323,7 +327,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage
               { sidechainParams: sidechainParams
-              , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
+              , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map unwrap
+                  committee3PubKeys
               ,
                 -- Note: since we can trust the committee will sign the "correct" root,
                 -- we necessarily know that the message that they sign should be
@@ -339,7 +344,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         $
           UpdateCommitteeHashParams
             { sidechainParams
-            , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
+            , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map unwrap
+                committee3PubKeys
             , aggregateSignature:
                 PlainEcdsaSecp256k1 $
                   Array.zip

@@ -92,7 +92,8 @@ generateUchmSignatures
         $ Array.sortWith fst
         $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
 
-    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe
+    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort $ map
+      toPubKeyUnsafe
       newCommitteePrvKeys
 
   -- Creating the update committee hash validator (since we want to pay the
@@ -200,8 +201,10 @@ updateCommitteeHashWith params f = void do
   committeeSignatures ← generateUchmSignatures params
 
   let
-    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe $
-      params.newCommitteePrvKeys
+    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort
+      $ map toPubKeyUnsafe
+      $
+        params.newCommitteePrvKeys
     uchp =
       UpdateCommitteeHashParams
         { sidechainParams: params.sidechainParams
@@ -245,7 +248,8 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+          , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+              initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -288,7 +292,8 @@ testScenario2 =
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData $ aggregateKeys $
-                initCommitteePubKeys
+                map unwrap
+                  initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
@@ -345,10 +350,12 @@ testScenario3 =
             { initChainId: BigInt.fromInt 6
             , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $
-                case Array.uncons initCommitteePubKeys of
-                  Nothing → mempty
-                  Just { head, tail } → tail <> Array.singleton head
+            , initAggregatedCommittee: toData $ aggregateKeys
+                $ map unwrap
+                $
+                  case Array.uncons initCommitteePubKeys of
+                    Nothing → mempty
+                    Just { head, tail } → tail <> Array.singleton head
             -- note how we mess up the order of the initial public keys
             -- assuming that all entries are distinct (which should be the case
             -- with high probability)
@@ -435,13 +442,15 @@ testScenario4 =
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData $ aggregateKeys
-                [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                    "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                    "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                    "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
-                ]
+                $ map unwrap
+                $
+                  [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                      "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
+                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                      "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
+                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                      "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
+                  ]
             , initSidechainEpoch: one
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -461,13 +470,15 @@ testScenario4 =
           \uchp →
             pure $ wrap $ (unwrap uchp)
               { newAggregatePubKeys = toData $ aggregateKeys
-                  [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                      "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                      "02cb793bcfcab7f17453f4c5e0e07a2818c6df4d7995aa1b7a0f0b219c6cfe0e20"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
-                      "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
-                  ]
+                  $ map unwrap
+                  $
+                    [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                        "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
+                    , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                        "02cb793bcfcab7f17453f4c5e0e07a2818c6df4d7995aa1b7a0f0b219c6cfe0e20"
+                    , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                        "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
+                    ]
               -- the signatures from the issue aren't quite right (since it
               -- didn't order the committee), so we won't include those
               -- signatures
@@ -494,7 +505,8 @@ testScenario5 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0

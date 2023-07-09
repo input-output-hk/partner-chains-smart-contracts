@@ -293,7 +293,7 @@ sidechainEndpointParamsSpec maybeConfig = ado
     , long "atms-kind"
     , metavar "ATMS_KIND"
     , help
-        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'multisignature', 'pok', or 'dummy'"
+        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]

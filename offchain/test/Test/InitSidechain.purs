@@ -79,7 +79,8 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys initCommittee
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map unwrap
+                initCommittee
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -117,7 +118,7 @@ testScenario2 =
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
               , initAggregatedCommittee: toData $ Crypto.aggregateKeys
-                  initCommittee
+                  $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initThresholdNumerator: BigInt.fromInt 2
@@ -161,7 +162,8 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys initCommittee
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map unwrap
+                initCommittee
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initATMSKind: ATMSPlainEcdsaSecp256k1
@@ -203,7 +205,7 @@ testScenario4 =
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
               , initAggregatedCommittee: toData $ Crypto.aggregateKeys
-                  initCommittee
+                  $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
@@ -247,7 +249,7 @@ testScenario5 = do
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
               , initAggregatedCommittee: toData $ Crypto.aggregateKeys
-                  initCommittee
+                  $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3

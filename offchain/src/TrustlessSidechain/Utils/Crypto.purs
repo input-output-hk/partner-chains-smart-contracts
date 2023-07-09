@@ -60,6 +60,8 @@ derive newtype instance toDataSidechainPublicKey ∷ ToData SidechainPublicKey
 
 derive newtype instance fromDataSidechainPublicKey ∷ FromData SidechainPublicKey
 
+derive instance Newtype SidechainPublicKey _
+
 instance Show SidechainPublicKey where
   show (SidechainPublicKey byteArray) = "(byteArrayToSidechainPublicKeyUnsafe "
     <> show byteArray
@@ -177,6 +179,8 @@ derive newtype instance toDataSidechainSignature ∷ ToData SidechainSignature
 
 derive newtype instance fromDataSidechainSignature ∷ FromData SidechainSignature
 
+derive instance Newtype SidechainSignature _
+
 instance Show SidechainSignature where
   show (SidechainSignature byteArray) = "(byteArrayToSidechainSignatureUnsafe "
     <> show byteArray
@@ -235,8 +239,10 @@ multiSign xkeys msg = map (sign msg) xkeys
 -- | lexicographically sorted public keys, so sorting the public keys will
 -- | ensure that it matches the same onchain committee format.
 normalizeCommitteePubKeysAndSignatures ∷
-  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
-  Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  ∀ a b.
+  Ord a ⇒
+  Array (a /\ Maybe b) →
+  Array (a /\ Maybe b)
 normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 
 -- | `unzipCommitteePubKeysAndSignatures` unzips public keys and associated
@@ -246,18 +252,20 @@ normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 -- |    - The input array should be sorted lexicographically by
 -- |    `SidechainPublicKey` by `normalizeCommitteePubKeysAndSignatures`
 unzipCommitteePubKeysAndSignatures ∷
-  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
-  Tuple (Array SidechainPublicKey) (Array SidechainSignature)
+  ∀ a b.
+  Array (a /\ Maybe b) →
+  Tuple (Array a) (Array b)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
 -- | `countEnoughSignatures` counts the minimum number of signatures needed for
 -- | the onchain code to verify successfully.
 countEnoughSignatures ∷
+  ∀ a.
   -- numerator
   BigInt →
   -- denominator (ensure this is non-zero)
   BigInt →
-  Array SidechainPublicKey →
+  Array a →
   BigInt
 countEnoughSignatures numerator denominator arr =
   let
@@ -271,12 +279,13 @@ countEnoughSignatures numerator denominator arr =
 -- | minimum amount of
 -- | signatures needed.
 takeExactlyEnoughSignatures ∷
+  ∀ a b.
   -- numerator
   BigInt →
   -- denominator (ensure this is non-zero)
   BigInt →
-  Array SidechainPublicKey /\ Array SidechainSignature →
-  Array SidechainPublicKey /\ Array SidechainSignature
+  Array a /\ Array b →
+  Array a /\ Array b
 takeExactlyEnoughSignatures numerator denominator (pks /\ sigs) =
   pks /\
     Array.take
@@ -305,20 +314,24 @@ takeExactlyEnoughSignatures numerator denominator (pks /\ sigs) =
 -- | assumption that the signatures are essentially a subsequence of the public
 -- | keys); and is generalized to allow arbitrary thresholds to be given.
 verifyMultiSignature ∷
+  ∀ pubKey msg signature.
+  Ord pubKey ⇒
+  (pubKey → msg → signature → Boolean) →
   BigInt →
   BigInt →
-  Array SidechainPublicKey →
-  SidechainMessage →
-  Array SidechainSignature →
+  Array pubKey →
+  msg →
+  Array signature →
   Boolean
 verifyMultiSignature
+  verifySig
   thresholdNumerator
   thresholdDenominator
   pubKeys
   msg
   signatures =
   let
-    go ∷ BigInt → Array SidechainPublicKey → Array SidechainSignature → Boolean
+    go ∷ BigInt → Array pubKey → Array signature → Boolean
     go signed pubs sigs =
       let
         ok = signed >
@@ -333,7 +346,7 @@ verifyMultiSignature
             case Array.uncons sigs of
               Nothing → ok
               Just { head: sig, tail: sigs' } →
-                if verifyEcdsaSecp256k1Signature pub msg sig then
+                if verifySig pub msg sig then
                   -- the public key and signature match, so
                   -- we move them both forward..
                   go (signed + one) pubs' sigs'
@@ -357,8 +370,8 @@ isSorted xss = case Array.tail xss of
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
 -- | Note: this sorts the input array
-aggregateKeys ∷ Array SidechainPublicKey → ByteArray
+aggregateKeys ∷ Array ByteArray → ByteArray
 aggregateKeys =
   Hashing.blake2b256Hash
-    <<< foldMap getSidechainPublicKeyByteArray
-    <<< Array.sortWith getSidechainPublicKeyByteArray
+    <<< mconcat
+    <<< Array.sort
