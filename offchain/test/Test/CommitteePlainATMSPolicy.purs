@@ -5,6 +5,7 @@ module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
 import Contract.Prelude
 
 import Contract.Log (logInfo')
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
@@ -89,7 +90,8 @@ testScenario1 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+                initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3

@@ -27,12 +27,9 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, liftedM)
 import Contract.Monad as Monad
-import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
-  ( class ToData
-  , Datum(Datum)
-  , PlutusData(Constr)
-  , toData
+  ( Datum(Datum)
+  , PlutusData
   )
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
@@ -50,7 +47,6 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -97,7 +93,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
   ( InternalError(ConversionError, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -121,7 +116,7 @@ type InitTokensParams r =
   | r
   }
 
--- | Parameters to initialize a sidechain
+-- | Parameters to initialize a sidechain (purely an offchain type)
 newtype InitSidechainParams = InitSidechainParams InitSidechainParams'
 
 instance Show InitSidechainParams where
@@ -131,34 +126,14 @@ derive instance Generic InitSidechainParams _
 
 derive instance Newtype InitSidechainParams _
 
-instance ToData InitSidechainParams where
-  toData
-    ( InitSidechainParams
-        { initChainId
-        , initGenesisHash
-        , initUtxo
-        , initCommittee
-        , initThresholdNumerator
-        , initThresholdDenominator
-        }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData initChainId
-      , toData initGenesisHash
-      , toData initUtxo
-      , toData initCommittee
-      , toData initThresholdNumerator
-      , toData initThresholdDenominator
-      ]
-
 -- | Parameters for the second step (see description above) of the
 -- | initialisation procedure.
 -- | In particular, note that this augments `InitSidechainParams` with an
 -- | initial committee, and the initial committee's epoch
 type InitSidechainParams' =
   InitTokensParams
-    ( -- `initCommittee` is the initial committee of the sidechain
-      initCommittee ∷ Array Utils.Crypto.SidechainPublicKey
+    ( -- `initAggregatedCommittee` is the aggregated committee of the sidechain
+      initAggregatedCommittee ∷ PlutusData
     , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
       initSidechainEpoch ∷ BigInt
     )
@@ -380,8 +355,7 @@ initCommitteeHashLookupsAndConstraints isp = do
       isp.initATMSKind
 
   let
-    aggregatedKeys = Utils.Crypto.aggregateKeys $ Array.sort
-      isp.initCommittee
+    aggregatedKeys = isp.initAggregatedCommittee
     committeeHashParam = UpdateCommitteeHash
       { sidechainParams: sc
       , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol

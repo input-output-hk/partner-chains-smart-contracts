@@ -117,22 +117,22 @@ committeeSignaturesCodec = CAM.list memberCodec
   enc (p /\ signature) = { "public-key": p, signature }
 
 -- | Accepts the format `[ {"public-key":"aabb..."}, ... ]`
-committeeCodec ∷ CA.JsonCodec (List SidechainPublicKey)
+committeeCodec ∷ CA.JsonCodec (List ByteArray)
 committeeCodec = CAM.list memberCodec
   where
-  memberCodec ∷ CA.JsonCodec SidechainPublicKey
+  memberCodec ∷ CA.JsonCodec ByteArray
   memberCodec = CA.prismaticCodec "member" dec enc $ CAR.object "member"
-    { "public-key": sidechainPubKeyCodec }
+    { "public-key": byteArrayCodec }
 
   dec ∷
-    { "public-key" ∷ SidechainPublicKey
+    { "public-key" ∷ ByteArray
     } →
-    Maybe SidechainPublicKey
+    Maybe ByteArray
   dec { "public-key": p } = Just p
 
   enc ∷
-    SidechainPublicKey →
-    { "public-key" ∷ SidechainPublicKey
+    ByteArray →
+    { "public-key" ∷ ByteArray
     }
   enc p = { "public-key": p }
 

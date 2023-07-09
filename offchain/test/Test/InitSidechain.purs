@@ -10,6 +10,7 @@ import Contract.Prelude
 
 import Contract.Log as Log
 import Contract.Monad as Monad
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Utxos as Utxos
 import Contract.Value as Value
@@ -78,7 +79,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initCommittee
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys initCommittee
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -115,7 +116,8 @@ testScenario2 =
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
-              , initCommittee
+              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+                  initCommittee
               , initSidechainEpoch: zero
               , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initThresholdNumerator: BigInt.fromInt 2
@@ -159,7 +161,7 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initCommittee
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys initCommittee
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initATMSKind: ATMSPlainEcdsaSecp256k1
@@ -200,7 +202,8 @@ testScenario4 =
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
-              , initCommittee
+              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+                  initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
@@ -243,7 +246,8 @@ testScenario5 = do
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
-              , initCommittee
+              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+                  initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3

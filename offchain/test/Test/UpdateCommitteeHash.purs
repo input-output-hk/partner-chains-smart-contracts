@@ -245,7 +245,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: initCommitteePubKeys
+          , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -287,7 +287,8 @@ testScenario2 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
@@ -344,9 +345,10 @@ testScenario3 =
             { initChainId: BigInt.fromInt 6
             , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
             , initUtxo: genesisUtxo
-            , initCommittee: case Array.uncons initCommitteePubKeys of
-                Nothing → mempty
-                Just { head, tail } → tail <> Array.singleton head
+            , initAggregatedCommittee: toData $ aggregateKeys $
+                case Array.uncons initCommitteePubKeys of
+                  Nothing → mempty
+                  Just { head, tail } → tail <> Array.singleton head
             -- note how we mess up the order of the initial public keys
             -- assuming that all entries are distinct (which should be the case
             -- with high probability)
@@ -432,7 +434,7 @@ testScenario4 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
-            , initCommittee:
+            , initAggregatedCommittee: toData $ aggregateKeys
                 [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
                     "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
                 , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
@@ -492,7 +494,7 @@ testScenario5 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0

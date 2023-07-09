@@ -10,6 +10,7 @@ module TrustlessSidechain.CommitteeATMSSchemes
   , atmsCommitteeCertificateVerificationMintingPolicy
   , atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
   , toATMSAggregateSignatures
+  , aggregateATMSPublicKeys
 
   , module ExportCommitteeATMSSchemesTypes
   ) where
@@ -18,6 +19,8 @@ import Contract.Prelude
 
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.PlutusData (PlutusData)
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy)
@@ -159,6 +162,30 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
 
           pure $ pk' /\ sig'
 
+    ATMSDummy → Left "ATMS dummy not implemented yet"
+    ATMSPoK → Left "ATMS PoK not implemented yet"
+    ATMSMultisignature → Left "ATMS multisignature not implemented yet"
+
+-- | `aggregateATMSPublicKeys` aggregates the public keys of an ATMS key for
+-- | the given `ATMSKind`
+aggregateATMSPublicKeys ∷
+  { -- the atms kind
+    atmsKind ∷ ATMSKinds
+  , -- the committee's public keys and signature (if the signature is given)
+    committeePubKeys ∷ Array ByteArray
+  } →
+  Either String PlutusData
+aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
+  case atmsKind of
+    ATMSPlainEcdsaSecp256k1 →
+      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys)
+        $ flip traverse committeePubKeys
+        $
+          \pk → do
+            pk' ← case Utils.Crypto.sidechainPublicKey pk of
+              Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
+              Just pk' → Right pk'
+            pure $ pk'
     ATMSDummy → Left "ATMS dummy not implemented yet"
     ATMSPoK → Left "ATMS PoK not implemented yet"
     ATMSMultisignature → Left "ATMS multisignature not implemented yet"

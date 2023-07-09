@@ -7,6 +7,7 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (liftContractM, liftedM)
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts as Scripts
 import Contract.Value as Value
@@ -86,7 +87,9 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys $ map
+              Utils.Crypto.toPubKeyUnsafe
+              committee1PrvKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -231,7 +234,9 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           { initChainId: BigInt.fromInt 69_420
           , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys $ map
+              Utils.Crypto.toPubKeyUnsafe
+              committee1PrvKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3

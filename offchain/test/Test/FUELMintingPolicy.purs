@@ -45,7 +45,11 @@ import TrustlessSidechain.MerkleTree
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe)
+import TrustlessSidechain.Utils.Crypto
+  ( aggregateKeys
+  , generatePrivKey
+  , toPubKeyUnsafe
+  )
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
@@ -77,7 +81,8 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: initCommitteePubKeys
+          , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+              initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -159,7 +164,8 @@ testScenarioSuccess2 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+                initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -273,7 +279,8 @@ testScenarioSuccess3 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+                initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -408,7 +415,8 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+                initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
