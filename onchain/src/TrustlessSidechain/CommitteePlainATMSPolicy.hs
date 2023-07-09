@@ -182,8 +182,8 @@ verifyPlainMultisig verifySig pubKeys enough message signatures = go pubKeys sig
               go pks' sigs counted
 
 {- | 'aggregateKeys' aggregates a list of public keys into a single
- committee hash by essentially computing the merkle root of all public keys
- together.
+ committee hash by concatenating them altogether, and taking the hash
+
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
@@ -192,7 +192,8 @@ aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could
- instead compute a merkle root.
+ instead compute a merkle root; or better yet, we could just provide the
+ concatenated public keys as input and avoid the concatenation completely.
  -}
 
 {- | 'aggregateCheck' takes a sequence of public keys and an aggregate public
