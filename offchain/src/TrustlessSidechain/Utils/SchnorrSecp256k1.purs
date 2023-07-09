@@ -1,13 +1,13 @@
--- | `TrustlessSidechain.Utils.Schnorr` provides wrappers for
+-- | `TrustlessSidechain.Utils.SchnorrSecp256k1` provides wrappers for
 -- | "@noble/secp256k1"'s implementation of schnorr signatures
 -- | which supposedly follows this
 -- | [BIP](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki).
-module TrustlessSidechain.Utils.Schnorr
+module TrustlessSidechain.Utils.SchnorrSecp256k1
   (
     -- type wrappers
-    SchnorrPrivateKey(SchnorrPrivateKey)
-  , SchnorrPublicKey(SchnorrPublicKey)
-  , SchnorrSignature(SchnorrSignature)
+    SchnorrSecp256k1PrivateKey(SchnorrSecp256k1PrivateKey)
+  , SchnorrSecp256k1PublicKey(SchnorrSecp256k1PublicKey)
+  , SchnorrSecp256k1Signature(SchnorrSecp256k1Signature)
 
   -- parsing / serialization
   , parsePublicKey
@@ -28,25 +28,25 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 
 -- | Newtype wrapper around a `ByteArray`
-newtype SchnorrPrivateKey = SchnorrPrivateKey ByteArray
+newtype SchnorrSecp256k1PrivateKey = SchnorrSecp256k1PrivateKey ByteArray
 
-derive instance Generic SchnorrPrivateKey _
+derive instance Generic SchnorrSecp256k1PrivateKey _
 
-derive instance Newtype SchnorrPrivateKey _
-
--- | Newtype wrapper around a `ByteArray`
-newtype SchnorrPublicKey = SchnorrPublicKey ByteArray
-
-derive instance Generic SchnorrPublicKey _
-
-derive instance Newtype SchnorrPublicKey _
+derive instance Newtype SchnorrSecp256k1PrivateKey _
 
 -- | Newtype wrapper around a `ByteArray`
-newtype SchnorrSignature = SchnorrSignature ByteArray
+newtype SchnorrSecp256k1PublicKey = SchnorrSecp256k1PublicKey ByteArray
 
-derive instance Generic SchnorrSignature _
+derive instance Generic SchnorrSecp256k1PublicKey _
 
-derive instance Newtype SchnorrSignature _
+derive instance Newtype SchnorrSecp256k1PublicKey _
+
+-- | Newtype wrapper around a `ByteArray`
+newtype SchnorrSecp256k1Signature = SchnorrSecp256k1Signature ByteArray
+
+derive instance Generic SchnorrSecp256k1Signature _
+
+derive instance Newtype SchnorrSecp256k1Signature _
 
 -- | `parsePublicKey` converts an array of bytes into a schnorr public key
 -- | testing if the length is 32 bytes (the required length of a public key).
@@ -66,9 +66,10 @@ derive instance Newtype SchnorrSignature _
 -- TODO: perhaps we can just do some node bindings to the underlying C library?
 -- Probably the best solution instead of doing all this hacking around javascript
 -- reimplementations
-parsePublicKey ∷ ByteArray → Maybe SchnorrPublicKey
+parsePublicKey ∷ ByteArray → Maybe SchnorrSecp256k1PublicKey
 parsePublicKey byteArray
-  | ByteArray.byteLength byteArray == 32 = Just $ SchnorrPublicKey byteArray
+  | ByteArray.byteLength byteArray == 32 = Just $ SchnorrSecp256k1PublicKey
+      byteArray
   | otherwise = Nothing
 
 -- | `serializePublicKey` shows the raw bytes hex encoded.
@@ -85,18 +86,20 @@ parsePublicKey byteArray
 -- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
 -- which also decides that it would be a good idea to print out the hex of
 -- the serialization.
-serializePublicKey ∷ SchnorrPublicKey → String
-serializePublicKey (SchnorrPublicKey publicKey) = ByteArray.byteArrayToHex
-  publicKey
+serializePublicKey ∷ SchnorrSecp256k1PublicKey → String
+serializePublicKey (SchnorrSecp256k1PublicKey publicKey) =
+  ByteArray.byteArrayToHex
+    publicKey
 
 -- | `serializeSignature` shows the raw bytes hex encoded
 -- Note: this follows the
 -- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
 -- which also decides that it would be a good idea to print out the hex of
 -- the serialization.
-serializeSignature ∷ SchnorrSignature → String
-serializeSignature (SchnorrSignature publicKey) = ByteArray.byteArrayToHex
-  publicKey
+serializeSignature ∷ SchnorrSecp256k1Signature → String
+serializeSignature (SchnorrSecp256k1Signature publicKey) =
+  ByteArray.byteArrayToHex
+    publicKey
 
 -- | `parseSignature` converts an array of bytes into a schnorr signature by
 -- | testing if its length is 64 bytes.
@@ -115,27 +118,33 @@ serializeSignature (SchnorrSignature publicKey) = ByteArray.byteArrayToHex
 -- TODO: again, perhaps we can just do some node bindings to the underlying C library?
 -- Probably the best solution instead of doing all this hacking around javascript
 -- reimplementations
-parseSignature ∷ ByteArray → Maybe SchnorrSignature
+parseSignature ∷ ByteArray → Maybe SchnorrSecp256k1Signature
 parseSignature byteArray
-  | ByteArray.byteLength byteArray == 64 = Just $ SchnorrSignature byteArray
+  | ByteArray.byteLength byteArray == 64 = Just $ SchnorrSecp256k1Signature
+      byteArray
   | otherwise = Nothing
 
 -- | Generates a random schnorr private key
-generateRandomPrivateKey ∷ Effect SchnorrPrivateKey
-generateRandomPrivateKey = map SchnorrPrivateKey js_randomPrivateKey
+generateRandomPrivateKey ∷ Effect SchnorrSecp256k1PrivateKey
+generateRandomPrivateKey = map SchnorrSecp256k1PrivateKey js_randomPrivateKey
 
 -- | Converts a schnorr private key into its corresponding public key
-toPubKey ∷ SchnorrPrivateKey → SchnorrPublicKey
-toPubKey (SchnorrPrivateKey ba) = SchnorrPublicKey (js_getPublicKey ba)
+toPubKey ∷ SchnorrSecp256k1PrivateKey → SchnorrSecp256k1PublicKey
+toPubKey (SchnorrSecp256k1PrivateKey ba) = SchnorrSecp256k1PublicKey
+  (js_getPublicKey ba)
 
 -- | Signs a message
-sign ∷ ByteArray → SchnorrPrivateKey → SchnorrSignature
-sign message (SchnorrPrivateKey privateKey) = SchnorrSignature
+sign ∷ ByteArray → SchnorrSecp256k1PrivateKey → SchnorrSecp256k1Signature
+sign message (SchnorrSecp256k1PrivateKey privateKey) = SchnorrSecp256k1Signature
   (js_sign message privateKey)
 
 -- | Verifies a signature with a public key
-verify ∷ SchnorrSignature → ByteArray → SchnorrPublicKey → Boolean
-verify (SchnorrSignature signature) message (SchnorrPublicKey publicKey) =
+verify ∷
+  SchnorrSecp256k1Signature → ByteArray → SchnorrSecp256k1PublicKey → Boolean
+verify
+  (SchnorrSecp256k1Signature signature)
+  message
+  (SchnorrSecp256k1PublicKey publicKey) =
   js_verify signature message publicKey
 
 foreign import js_randomPrivateKey ∷ Effect ByteArray

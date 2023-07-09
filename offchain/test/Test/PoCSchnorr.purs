@@ -1,4 +1,4 @@
--- | `Test.PoCSchnorr` provides offchain code for a minting policy which mints
+-- | `Test.PoCSchnorrSecp256k1` provides offchain code for a minting policy which mints
 -- | only if the data in its redeemer (which contains a schnorr public key,
 -- | schnorr signature, and a message) is a valid schnorr signature.
 -- |
@@ -12,7 +12,7 @@
 -- |
 -- |    - verify that parsing / deserializing valid schnorr signatures still
 -- |    works with `testScenario3`
-module Test.PoCSchnorr (tests) where
+module Test.PoCSchnorrSecp256k1 (tests) where
 
 import Contract.Prelude
 
@@ -43,19 +43,19 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.Utils.Schnorr as Utils.Schnorr
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 
--- | `SchnorrRedeemer` corresponds to the onchain type.
-newtype SchnorrRedeemer = SchnorrRedeemer
+-- | `SchnorrSecp256k1Redeemer` corresponds to the onchain type.
+newtype SchnorrSecp256k1Redeemer = SchnorrSecp256k1Redeemer
   { message ∷ ByteArray
   , signature ∷ ByteArray
   , publicKey ∷ ByteArray
   }
 
-instance ToData SchnorrRedeemer where
-  toData (SchnorrRedeemer { message, signature, publicKey }) = Constr
+instance ToData SchnorrSecp256k1Redeemer where
+  toData (SchnorrSecp256k1Redeemer { message, signature, publicKey }) = Constr
     (BigNum.fromInt 0)
     [ PlutusData.toData message
     , PlutusData.toData signature
@@ -64,9 +64,9 @@ instance ToData SchnorrRedeemer where
 
 -- | Grabs the minting policy / currency symbol of the schnorr proof of concept
 -- | test minting policy.
-getPoCSchnorrMintingPolicy ∷
+getPoCSchnorrSecp256k1MintingPolicy ∷
   Contract { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
-getPoCSchnorrMintingPolicy = do
+getPoCSchnorrSecp256k1MintingPolicy = do
   mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams
     RawScripts.rawPoCSchnorr
     (mempty ∷ Array Unit)
@@ -74,16 +74,16 @@ getPoCSchnorrMintingPolicy = do
     $ Value.scriptCurrencySymbol mintingPolicy
   pure { mintingPolicy, currencySymbol }
 
--- | `mustMintPocSchnorr` provides the lookups + constraints for minting the
--- | `TrustlessSidechain.RawScripts.rawPoCSchnorr` minting policy.
-mustMintPocSchnorr ∷
-  SchnorrRedeemer →
+-- | `mustMintPocSchnorrSecp256k1` provides the lookups + constraints for minting the
+-- | `TrustlessSidechain.RawScripts.rawPoCSchnorrSecp256k1` minting policy.
+mustMintPocSchnorrSecp256k1 ∷
+  SchnorrSecp256k1Redeemer →
   Contract
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mustMintPocSchnorr schnorrRedeemer = do
-  { currencySymbol, mintingPolicy } ← getPoCSchnorrMintingPolicy
+mustMintPocSchnorrSecp256k1 schnorrRedeemer = do
+  { currencySymbol, mintingPolicy } ← getPoCSchnorrSecp256k1MintingPolicy
   let
     redeemer = wrap $ PlutusData.toData schnorrRedeemer
     value = Value.singleton
@@ -100,62 +100,62 @@ mustMintPocSchnorr schnorrRedeemer = do
         value
   pure { lookups, constraints }
 
--- | `tests` aggregates all the PoCSchnorr tests together conveniently
+-- | `tests` aggregates all the PoCSchnorrSecp256k1 tests together conveniently
 tests ∷ PlutipTest
-tests = Mote.Monad.group "PoCSchnorr tests" do
+tests = Mote.Monad.group "PoCSchnorrSecp256k1 tests" do
   testScenario1
   testScenario2
   testScenario3
 
 testScenario1 ∷ PlutipTest
-testScenario1 = Mote.Monad.test "PoCSchnorr: valid test scenario"
+testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       privateKey ← Effect.Class.liftEffect $
-        Utils.Schnorr.generateRandomPrivateKey
+        Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
       let
         message = ByteArray.hexToByteArrayUnsafe "706F6D6572616E69616E"
-        signature = Utils.Schnorr.sign message privateKey
-        publicKey = Utils.Schnorr.toPubKey privateKey
+        signature = Utils.SchnorrSecp256k1.sign message privateKey
+        publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
-        redeemer = SchnorrRedeemer
+        redeemer = SchnorrSecp256k1Redeemer
           { message
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorr redeemer
+      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
-      void $ Utils.Transaction.balanceSignAndSubmit "PoCSchnorr" lookups
+      void $ Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1" lookups
         constraints
       pure unit
 
 testScenario2 ∷ PlutipTest
-testScenario2 = Mote.Monad.test "PoCSchnorr: invalid test scenario"
+testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       privateKey ← Effect.Class.liftEffect $
-        Utils.Schnorr.generateRandomPrivateKey
+        Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
       let
         message = ByteArray.hexToByteArrayUnsafe "4D61792033312C2031383332"
-        signature = Utils.Schnorr.sign message privateKey
-        publicKey = Utils.Schnorr.toPubKey privateKey
+        signature = Utils.SchnorrSecp256k1.sign message privateKey
+        publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
         wrongMessage = ByteArray.hexToByteArrayUnsafe
           "4F63746F6265722032352C2031383131"
 
-        redeemer = SchnorrRedeemer
+        redeemer = SchnorrSecp256k1Redeemer
           { message: wrongMessage
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorr redeemer
+      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
       Test.Utils.fails $ void $ Utils.Transaction.balanceSignAndSubmit
-        "PoCSchnorr"
+        "PoCSchnorrSecp256k1"
         lookups
         constraints
       pure unit
@@ -163,23 +163,25 @@ testScenario2 = Mote.Monad.test "PoCSchnorr: invalid test scenario"
 testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test
-    "PoCSchnorr: valid test scenario which includes parsing / serialization of keys"
+    "PoCSchnorrSecp256k1: valid test scenario which includes parsing / serialization of keys"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
     $ \alice → Wallet.withKeyWallet alice do
         privateKey ← Effect.Class.liftEffect $
-          Utils.Schnorr.generateRandomPrivateKey
+          Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
         let
           message = ByteArray.hexToByteArrayUnsafe "6D616C74657365"
-          signature = Utils.Schnorr.sign message privateKey
-          publicKey = Utils.Schnorr.toPubKey privateKey
+          signature = Utils.SchnorrSecp256k1.sign message privateKey
+          publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
           serializedPublicKey ∷ String
-          serializedPublicKey = Utils.Schnorr.serializePublicKey publicKey
+          serializedPublicKey = Utils.SchnorrSecp256k1.serializePublicKey
+            publicKey
 
           serializedSignature ∷ String
-          serializedSignature = Utils.Schnorr.serializeSignature signature
+          serializedSignature = Utils.SchnorrSecp256k1.serializeSignature
+            signature
 
         -- Verify length assumptions
         ----------------------------
@@ -194,24 +196,24 @@ testScenario3 =
         -- Reparse the signatures
         ----------------------------
         parsedPublicKey ← Monad.liftContractM "bad public key parse"
-          $ Utils.Schnorr.parsePublicKey
+          $ Utils.SchnorrSecp256k1.parsePublicKey
           $ ByteArray.hexToByteArrayUnsafe serializedPublicKey
         parsedSignature ← Monad.liftContractM "bad signature parse"
-          $ Utils.Schnorr.parseSignature
+          $ Utils.SchnorrSecp256k1.parseSignature
           $ ByteArray.hexToByteArrayUnsafe serializedSignature
 
         -- Running the test
         ----------------------------
         let
-          redeemer = SchnorrRedeemer
+          redeemer = SchnorrSecp256k1Redeemer
             { message
             , signature: unwrap parsedSignature
             , publicKey: unwrap parsedPublicKey
             }
-        { lookups, constraints } ← mustMintPocSchnorr redeemer
+        { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
         void $ Utils.Transaction.balanceSignAndSubmit
-          "PoCSchnorr"
+          "PoCSchnorrSecp256k1"
           lookups
           constraints
         pure unit
