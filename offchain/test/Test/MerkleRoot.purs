@@ -24,7 +24,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(Plain)
-  , ATMSKinds(ATMSPlain)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(CombinedMerkleProof)
@@ -166,7 +166,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -270,7 +270,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -360,7 +360,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 99999
             , initThresholdDenominator: BigInt.fromInt 100000
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

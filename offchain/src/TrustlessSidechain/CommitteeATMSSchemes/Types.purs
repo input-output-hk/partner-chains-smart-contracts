@@ -3,7 +3,7 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   , ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
   , ATMSKinds
-      ( ATMSPlain
+      ( ATMSPlainEcdsaSecp256k1
       , ATMSMultisignature
       , ATMSPoK
       , ATMSDummy
@@ -96,7 +96,7 @@ data ATMSAggregateSignatures
 -- |    `TrustlessSidechain.Options.Parsers`, `TrustlessSidechain.Options.Specs`
 -- |    all have user facing documentation that must be updated as well.
 data ATMSKinds
-  = ATMSPlain
+  = ATMSPlainEcdsaSecp256k1
   | ATMSMultisignature
   | ATMSPoK
   | ATMSDummy

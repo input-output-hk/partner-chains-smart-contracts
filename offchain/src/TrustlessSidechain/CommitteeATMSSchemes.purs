@@ -27,13 +27,13 @@ import Contract.Value
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, Plain)
-  , ATMSKinds(ATMSPlain, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
-  , ATMSKinds(ATMSPlain, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
@@ -71,7 +71,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
     }
 atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
   atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm $ case sig of
-    Plain _ → ATMSPlain
+    Plain _ → ATMSPlainEcdsaSecp256k1
     Dummy → ATMSDummy
     PoK → ATMSPoK
     Multisignature → ATMSMultisignature
@@ -87,7 +87,7 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
-  ATMSPlain → do
+  ATMSPlainEcdsaSecp256k1 → do
     { committeePlainATMSPolicy
     , committeePlainATMSCurrencySymbol
     } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy ccm
@@ -120,7 +120,7 @@ toATMSAggregateSignatures ∷
   Either String ATMSAggregateSignatures
 toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
   case atmsKind of
-    ATMSPlain → map Plain $ flip traverse committeePubKeyAndSigs $
+    ATMSPlainEcdsaSecp256k1 → map Plain $ flip traverse committeePubKeyAndSigs $
       \(pk /\ mSig) → do
         pk' ← case Utils.Crypto.sidechainPublicKey pk of
           Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk

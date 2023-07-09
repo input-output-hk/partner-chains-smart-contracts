@@ -18,7 +18,7 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlain)
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
@@ -93,7 +93,7 @@ testScenario1 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams

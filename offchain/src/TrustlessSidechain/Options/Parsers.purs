@@ -46,7 +46,7 @@ import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
-      ( ATMSPlain
+      ( ATMSPlainEcdsaSecp256k1
       , ATMSDummy
       , ATMSPoK
       , ATMSMultisignature
@@ -66,7 +66,7 @@ atmsKind = eitherReader parseATMSKind
 -- | Parses one of the possible kinds of committee certificate verifications
 parseATMSKind ∷ String → Either String ATMSKinds
 parseATMSKind str = case str of
-  "plain" → Right ATMSPlain
+  "plain" → Right ATMSPlainEcdsaSecp256k1
   "pok" → Right ATMSPoK
   "dummy" → Right ATMSDummy
   "multisignature" → Right ATMSMultisignature

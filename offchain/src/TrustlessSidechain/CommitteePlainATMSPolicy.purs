@@ -100,8 +100,9 @@ instance ToData ATMSPlainMultisignature where
 committeePlainATMS ∷ CommitteeCertificateMint → Contract MintingPolicy
 committeePlainATMS param = do
   let
-    script = decodeTextEnvelope RawScripts.rawCommitteePlainATMSPolicy >>=
-      plutusScriptV2FromEnvelope
+    script =
+      decodeTextEnvelope RawScripts.rawCommitteePlainEcdsaSecp256k1ATMSPolicy >>=
+        plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied [ toData param ]

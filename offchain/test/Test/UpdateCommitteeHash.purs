@@ -29,7 +29,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(Plain)
-  , ATMSKinds(ATMSPlain)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
@@ -248,7 +248,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -290,7 +290,7 @@ testScenario2 =
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -351,7 +351,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -439,7 +439,7 @@ testScenario4 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -492,7 +492,7 @@ testScenario5 =
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
