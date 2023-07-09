@@ -31,6 +31,7 @@ import Data.List qualified as List
 import Data.String qualified as HString
 import Plutus.V2.Ledger.Api (TxOutRef)
 import System.IO (FilePath)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash, unRootHash)
 import TrustlessSidechain.OffChain qualified as OffChain
@@ -39,7 +40,7 @@ import TrustlessSidechain.Types (
   CombinedMerkleProof,
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   SidechainParams (SidechainParams, thresholdDenominator, thresholdNumerator),
-  SidechainPubKey,
+  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -58,7 +59,6 @@ import TrustlessSidechain.Types (
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
  )
-import TrustlessSidechain.Utils qualified as Utils
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
@@ -211,9 +211,11 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
         UpdateCommitteeHashMessage
           { sidechainParams = scParams
           , -- Old message that's no longer used..
-            -- , uchmNewCommitteePubKeys = Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+            -- , uchmNewCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ List.sort cuchNewCommitteePubKeys
             newAggregateCommitteePubKeys =
-              Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+              CommitteePlainATMSPolicy.aggregateKeys $
+                fmap getSidechainPubKey $
+                  List.sort cuchNewCommitteePubKeys
           , previousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
           , sidechainEpoch = cuchSidechainEpoch
           , validatorAddress =

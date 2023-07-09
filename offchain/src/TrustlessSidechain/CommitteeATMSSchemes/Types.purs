@@ -29,7 +29,6 @@ import Contract.Transaction
   )
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
-import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to

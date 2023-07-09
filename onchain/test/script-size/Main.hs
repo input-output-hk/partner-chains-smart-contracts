@@ -149,8 +149,8 @@ main =
     , testGroup
         "Other"
         [ fitsUnder
-            "verifyMultisig"
+            "verifyPlainMultisig"
             ("new", Compiled.newVerify)
-            ("old", Legacy.verifyMultisigCode)
+            ("old", Legacy.verifyPlainMultisigCode)
         ]
     ]
