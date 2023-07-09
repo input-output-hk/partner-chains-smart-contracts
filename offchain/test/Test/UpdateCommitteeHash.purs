@@ -28,7 +28,7 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
@@ -206,7 +206,7 @@ updateCommitteeHashWith params f = void do
         { sidechainParams: params.sidechainParams
         , newAggregatePubKeys: toData newAggregatePubKeys
         , aggregateSignature:
-            Plain (map (Just <$> _) committeeSignatures)
+            PlainEcdsaSecp256k1 (map (Just <$> _) committeeSignatures)
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
@@ -311,8 +311,8 @@ testScenario2 =
                     { aggregateSignature =
                         ( Unsafe.unsafePartial $
                             case params.aggregateSignature of
-                              Plain [ c1 /\ _s1, c2 /\ s2 ] →
-                                Plain
+                              PlainEcdsaSecp256k1 [ c1 /\ _s1, c2 /\ s2 ] →
+                                PlainEcdsaSecp256k1
                                   [ c1 /\ Nothing
                                   , c2 /\ s2
                                   ]
@@ -369,7 +369,8 @@ testScenario3 =
                   { aggregateSignature =
                       Unsafe.unsafePartial $
                         case (unwrap uchp).aggregateSignature of
-                          Plain sigs → Plain $ Array.reverse sigs
+                          PlainEcdsaSecp256k1 sigs → PlainEcdsaSecp256k1 $
+                            Array.reverse sigs
                   }
               )
 
@@ -512,12 +513,12 @@ testScenario5 =
                     { aggregateSignature =
                         Unsafe.unsafePartial
                           ( case params.aggregateSignature of
-                              Plain
+                              PlainEcdsaSecp256k1
                                 [ c1 /\ _s1
                                 , c2 /\ s2
                                 , c3 /\ s3
                                 , c4 /\ s4
-                                ] → Plain
+                                ] → PlainEcdsaSecp256k1
                                 [ c1 /\ Nothing
                                 , c2 /\ s2
                                 , c3 /\ s3

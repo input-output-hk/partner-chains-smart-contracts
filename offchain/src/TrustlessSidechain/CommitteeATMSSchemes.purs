@@ -26,13 +26,13 @@ import Contract.Value
   ( CurrencySymbol
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, Plain)
+  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1, Multisignature, PoK, Dummy)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -50,7 +50,7 @@ atmsSchemeLookupsAndConstraints ∷
     }
 atmsSchemeLookupsAndConstraints atmsParams =
   case (unwrap atmsParams).aggregateSignature of
-    Plain param → do
+    PlainEcdsaSecp256k1 param → do
       CommitteePlainATMSPolicy.mustMintCommitteePlainATMSPolicy
         $ CommitteeATMSParams
             ((unwrap atmsParams) { aggregateSignature = param })
@@ -71,7 +71,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
     }
 atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
   atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm $ case sig of
-    Plain _ → ATMSPlainEcdsaSecp256k1
+    PlainEcdsaSecp256k1 _ → ATMSPlainEcdsaSecp256k1
     Dummy → ATMSDummy
     PoK → ATMSPoK
     Multisignature → ATMSMultisignature
@@ -120,19 +120,21 @@ toATMSAggregateSignatures ∷
   Either String ATMSAggregateSignatures
 toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
   case atmsKind of
-    ATMSPlainEcdsaSecp256k1 → map Plain $ flip traverse committeePubKeyAndSigs $
-      \(pk /\ mSig) → do
-        pk' ← case Utils.Crypto.sidechainPublicKey pk of
-          Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
-          Just pk' → Right pk'
+    ATMSPlainEcdsaSecp256k1 → map PlainEcdsaSecp256k1
+      $ flip traverse committeePubKeyAndSigs
+      $
+        \(pk /\ mSig) → do
+          pk' ← case Utils.Crypto.sidechainPublicKey pk of
+            Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
+            Just pk' → Right pk'
 
-        sig' ← case mSig of
-          Nothing → Right Nothing
-          Just sig → case Utils.Crypto.sidechainSignature sig of
-            Nothing → Left $ "invalid ECDSA SECP256k1 signature: " <> show sig
-            Just sig' → Right $ Just sig'
+          sig' ← case mSig of
+            Nothing → Right Nothing
+            Just sig → case Utils.Crypto.sidechainSignature sig of
+              Nothing → Left $ "invalid ECDSA SECP256k1 signature: " <> show sig
+              Just sig' → Right $ Just sig'
 
-        pure $ pk' /\ sig'
+          pure $ pk' /\ sig'
 
     ATMSDummy → Left "ATMS dummy not implemented yet"
     ATMSPoK → Left "ATMS PoK not implemented yet"

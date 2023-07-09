@@ -21,7 +21,7 @@ import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
@@ -335,7 +335,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             { sidechainParams
             , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
             , aggregateSignature:
-                Plain $
+                PlainEcdsaSecp256k1 $
                   Array.zip
                     committee1PubKeys
                     ( Just <$> Utils.Crypto.multiSign committee1PrvKeys

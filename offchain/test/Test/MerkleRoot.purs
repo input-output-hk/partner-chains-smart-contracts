@@ -23,7 +23,7 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.FUELMintingPolicy
@@ -125,7 +125,7 @@ saveRoot
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
-    , aggregateSignature: Plain committeeSignatures
+    , aggregateSignature: PlainEcdsaSecp256k1 committeeSignatures
     }
   pure
     { merkleRoot
@@ -227,7 +227,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         , merkleRoot
         , previousMerkleRoot: Nothing
 
-        , aggregateSignature: Plain committeeSignatures
+        , aggregateSignature: PlainEcdsaSecp256k1 committeeSignatures
         }
 
       pure unit

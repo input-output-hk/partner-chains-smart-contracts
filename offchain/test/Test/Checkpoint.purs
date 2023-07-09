@@ -26,7 +26,7 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.InitSidechain
@@ -139,7 +139,8 @@ saveCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+                committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -205,7 +206,7 @@ notEnoughSignaturesTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain notEnoughSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1 notEnoughSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -263,7 +264,8 @@ outOfOrderCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+                committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -321,7 +323,8 @@ invalidCheckpointBlockHashTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+                committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -382,7 +385,7 @@ signedByUnknownCommitteeTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
                 unknownCommitteeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
@@ -453,7 +456,8 @@ committeeChangeCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+                committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
