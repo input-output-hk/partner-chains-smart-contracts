@@ -80,7 +80,7 @@ atmsKindCodec =
     Left _err → Nothing
 
   fromF ∷ ATMSKinds → String
-  fromF ATMSPlainEcdsaSecp256k1 = "plain"
+  fromF ATMSPlainEcdsaSecp256k1 = "plain-ecdsa-secp256k1"
   fromF ATMSDummy = "dummy"
   fromF ATMSPoK = "pok"
   fromF ATMSMultisignature = "multisignature"

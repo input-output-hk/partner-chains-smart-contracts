@@ -108,4 +108,8 @@ derive instance Eq ATMSKinds
 derive instance Ord ATMSKinds
 
 instance Show ATMSKinds where
-  show = genericShow
+  show = case _ of
+    ATMSPlainEcdsaSecp256k1 → "plain-ecdsa-secp256k1"
+    ATMSMultisignature → "multisignature"
+    ATMSPoK → "pok"
+    ATMSDummy → "dummy"
