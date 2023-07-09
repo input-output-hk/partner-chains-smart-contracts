@@ -46,7 +46,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
    [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
    offchain)
   ([83](https://github.com/input-output-hk/trustless-sidechain/issues/83),
-   offchain)
+   [501](https://github.com/mlabs-haskell/trustless-sidechain/pull/501)
+   offchain/onchain)
 * The flag `--new-committee-validator-cbor-encoded-address` or `--new-committee-validator-bech32-address`
   was added to the `committee-hash` endpoint for the offchain CLI interface
   which takes either hex encoded cbor of an address of a validator script or a
