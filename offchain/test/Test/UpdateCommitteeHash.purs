@@ -33,7 +33,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -101,14 +101,15 @@ generateUchmSignatures
   { committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  { committeePlainATMSCurrencySymbol:
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
       committeeCertificateVerificationCurrencySymbol
-  } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-    $ CommitteeCertificateMint
-        { committeeOraclePolicy: committeeOracleCurrencySymbol
-        , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        }
+  } ←
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      $ CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
 
   merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
     sidechainParams
@@ -206,7 +207,8 @@ updateCommitteeHashWith params f = void do
         { sidechainParams: params.sidechainParams
         , newAggregatePubKeys: toData newAggregatePubKeys
         , aggregateSignature:
-            PlainEcdsaSecp256k1 (map (Just <$> _) committeeSignatures)
+            PlainEcdsaSecp256k1
+              (map (Just <$> _) committeeSignatures)
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
@@ -311,7 +313,8 @@ testScenario2 =
                     { aggregateSignature =
                         ( Unsafe.unsafePartial $
                             case params.aggregateSignature of
-                              PlainEcdsaSecp256k1 [ c1 /\ _s1, c2 /\ s2 ] →
+                              PlainEcdsaSecp256k1
+                                [ c1 /\ _s1, c2 /\ s2 ] →
                                 PlainEcdsaSecp256k1
                                   [ c1 /\ Nothing
                                   , c2 /\ s2
@@ -369,8 +372,9 @@ testScenario3 =
                   { aggregateSignature =
                       Unsafe.unsafePartial $
                         case (unwrap uchp).aggregateSignature of
-                          PlainEcdsaSecp256k1 sigs → PlainEcdsaSecp256k1 $
-                            Array.reverse sigs
+                          PlainEcdsaSecp256k1 sigs →
+                            PlainEcdsaSecp256k1 $
+                              Array.reverse sigs
                   }
               )
 

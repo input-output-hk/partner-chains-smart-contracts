@@ -2,7 +2,7 @@
 -- | interface to the ATMS schemes.
 -- | Namely, this provides an interface for
 -- |
--- |    - `TrustlessSidechain.CommitteePlainATMSPolicy`
+-- |    - `TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy`
 -- |
 -- |    - (and more to come!)
 module TrustlessSidechain.CommitteeATMSSchemes
@@ -26,18 +26,38 @@ import Contract.Value
   ( CurrencySymbol
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, PlainEcdsaSecp256k1)
-  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  ( ATMSAggregateSignatures
+      ( Multisignature
+      , PoK
+      , Dummy
+      , PlainEcdsaSecp256k1
+      )
+  , ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSMultisignature
+      , ATMSPoK
+      , ATMSDummy
+      )
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1, Multisignature, PoK, Dummy)
-  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  ( ATMSAggregateSignatures
+      ( PlainEcdsaSecp256k1
+      , Multisignature
+      , PoK
+      , Dummy
+      )
+  , ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSMultisignature
+      , ATMSPoK
+      , ATMSDummy
+      )
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
@@ -51,7 +71,7 @@ atmsSchemeLookupsAndConstraints ∷
 atmsSchemeLookupsAndConstraints atmsParams =
   case (unwrap atmsParams).aggregateSignature of
     PlainEcdsaSecp256k1 param → do
-      CommitteePlainATMSPolicy.mustMintCommitteePlainATMSPolicy
+      CommitteePlainEcdsaSecp256k1ATMSPolicy.mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
         $ CommitteeATMSParams
             ((unwrap atmsParams) { aggregateSignature = param })
     -- TODO: fill these in later :^)
@@ -88,13 +108,16 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
     }
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
   ATMSPlainEcdsaSecp256k1 → do
-    { committeePlainATMSPolicy
-    , committeePlainATMSCurrencySymbol
-    } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy ccm
+    { committeePlainEcdsaSecp256k1ATMSPolicy
+    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+    } ←
+      CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+        ccm
     pure
-      { committeeCertificateVerificationMintingPolicy: committeePlainATMSPolicy
+      { committeeCertificateVerificationMintingPolicy:
+          committeePlainEcdsaSecp256k1ATMSPolicy
       , committeeCertificateVerificationCurrencySymbol:
-          committeePlainATMSCurrencySymbol
+          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
       }
   ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
   ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"

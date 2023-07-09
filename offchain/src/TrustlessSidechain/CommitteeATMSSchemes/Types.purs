@@ -1,7 +1,12 @@
 module TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeCertificateMint(CommitteeCertificateMint)
   , CommitteeATMSParams(CommitteeATMSParams)
-  , ATMSAggregateSignatures(PlainEcdsaSecp256k1, Multisignature, PoK, Dummy)
+  , ATMSAggregateSignatures
+      ( PlainEcdsaSecp256k1
+      , Multisignature
+      , PoK
+      , Dummy
+      )
   , ATMSKinds
       ( ATMSPlainEcdsaSecp256k1
       , ATMSMultisignature
@@ -78,7 +83,8 @@ derive instance Newtype (CommitteeATMSParams aggregateSignature) _
 -- | `ATMSAggregateSignatures` is a sumtype which defines all the possible ATMS
 -- | aggregate keys + signatures
 data ATMSAggregateSignatures
-  = PlainEcdsaSecp256k1 (Array (SidechainPublicKey /\ Maybe SidechainSignature))
+  = PlainEcdsaSecp256k1
+      (Array (SidechainPublicKey /\ Maybe SidechainSignature))
   | Multisignature
   | PoK
   | Dummy

@@ -139,7 +139,8 @@ saveCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map
+                (Just <$> _)
                 committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
@@ -206,7 +207,8 @@ notEnoughSignaturesTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 notEnoughSignatures
+            , aggregateSignature: PlainEcdsaSecp256k1
+                notEnoughSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -264,7 +266,8 @@ outOfOrderCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map
+                (Just <$> _)
                 committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
@@ -323,7 +326,8 @@ invalidCheckpointBlockHashTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map
+                (Just <$> _)
                 committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
@@ -385,7 +389,8 @@ signedByUnknownCommitteeTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map
+                (Just <$> _)
                 unknownCommitteeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
@@ -456,7 +461,8 @@ committeeChangeCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , aggregateSignature: PlainEcdsaSecp256k1 $ map (Just <$> _)
+            , aggregateSignature: PlainEcdsaSecp256k1 $ map
+                (Just <$> _)
                 committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber

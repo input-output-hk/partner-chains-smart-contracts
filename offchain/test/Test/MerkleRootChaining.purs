@@ -26,7 +26,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot.Types
@@ -274,14 +274,15 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       { committeeOracleCurrencySymbol
       } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-      { committeePlainATMSCurrencySymbol:
+      { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
           committeeCertificateVerificationCurrencySymbol
-      } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-        $ CommitteeCertificateMint
-            { committeeOraclePolicy: committeeOracleCurrencySymbol
-            , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-            , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-            }
+      } ←
+        CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+          $ CommitteeCertificateMint
+              { committeeOraclePolicy: committeeOracleCurrencySymbol
+              , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+              , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+              }
 
       merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
         sidechainParams

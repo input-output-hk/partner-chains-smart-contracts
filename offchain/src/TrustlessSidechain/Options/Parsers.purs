@@ -66,7 +66,8 @@ atmsKind = eitherReader parseATMSKind
 -- | Parses one of the possible kinds of committee certificate verifications
 parseATMSKind ∷ String → Either String ATMSKinds
 parseATMSKind str = case str of
-  "plain-ecdsa-secp256k1" → Right ATMSPlainEcdsaSecp256k1
+  "plain-ecdsa-secp256k1" → Right
+    ATMSPlainEcdsaSecp256k1
   "pok" → Right ATMSPoK
   "dummy" → Right ATMSDummy
   "multisignature" → Right ATMSMultisignature

@@ -227,7 +227,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         , merkleRoot
         , previousMerkleRoot: Nothing
 
-        , aggregateSignature: PlainEcdsaSecp256k1 committeeSignatures
+        , aggregateSignature: PlainEcdsaSecp256k1
+            committeeSignatures
         }
 
       pure unit
