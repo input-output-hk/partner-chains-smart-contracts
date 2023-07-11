@@ -47,7 +47,6 @@ import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value as Value
 import Contract.Wallet
   ( getWalletAddress
-
   , ownPaymentPubKeyHash
   )
 import Control.Alternative (guard)
