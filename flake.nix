@@ -232,7 +232,7 @@
           # `"$@"`
           text = ''
             export NODE_PATH="${project.nodeModules}/lib/node_modules"
-            node -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
+            node --enable-source-maps -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
           '';
         };
 
