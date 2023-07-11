@@ -195,17 +195,24 @@ line ensures that it's clear where each instance ends.
 camelCase MUST be used for all non-type, non-data-constructor names; otherwise,
 TitleCase MUST be used. Acronyms used as part of a naming identifier (such as
 'JSON', 'API', etc) SHOULD be downcased; thus ``repairJson`` and
-``fromHttpService`` are correct. Exceptions are allowed for external libraries
-(Aeson's ``parseJSON`` for example).
+``fromHttpService`` are correct. Exceptions are allowed in the following cases:
+
+- External libraries (Aeson's ``parseJSON`` for example); and
+
+- Imported JavaScript foreign functions, which SHOULD be prefixed with ``js_``
+  instead (``foreign import js_someForeignFunction :: String -> String`` for
+  example).
 
 ### Justification
 
-cameCase for non-type, non-data-constructor names is a convention in PureScript
-and JavaScript; TitleCase for type names or data constructors in _mandatory_ in
+camelCase for non-type, non-data-constructor names is a convention in PureScript
+and JavaScript; TitleCase for type names or data constructors is _mandatory_ in
 PureScript. Following these conventions reduces cognitive load, as it is common
 practice in the entire ecosystem. There is no particular standard regarding
 acronym casing: we made the given choice for consistency, but there's no
-particular reason for this.
+particular reason for this. Moreover, the choice to allow prefixing imported
+JavaScript foreign functions with `js_` was made to make it clear that the
+function is a foreign JavaScript function.
 
 ## Imports
 

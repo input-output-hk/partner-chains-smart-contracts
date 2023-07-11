@@ -127,7 +127,7 @@ format-js-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.js$$'\
 		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
-		| xargs -0 -r js-tidy format-in-place
+		| xargs -0 -r eslint format-in-place
 
 format-dhall-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
