@@ -10,14 +10,19 @@ import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
-import PlutusTx qualified
+import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
--- | Parameters uniquely identifying a sidechain
+{- | Parameters uniquely identifying a sidechain
+
+ = Note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
@@ -41,26 +46,7 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
     , IsString
     )
 
--- | @since Unreleased
-instance ToData SidechainParams where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (SidechainParams {..}) =
-    productToData5
-      chainId
-      genesisHash
-      genesisUtxo
-      thresholdNumerator
-      thresholdDenominator
-
--- | @since Unreleased
-instance FromData SidechainParams where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData5 SidechainParams
-
--- | @since Unreleased
-instance UnsafeFromData SidechainParams where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData5 SidechainParams
+makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 {- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 
