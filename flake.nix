@@ -99,10 +99,6 @@
               nixpkgs-fmt
               graphviz
             ];
-            additional = ps: with ps; [
-              cardano-crypto-class
-              plutus-tx-plugin
-            ];
             shellHook = ''
               [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
                    git config core.hooksPath hooks
