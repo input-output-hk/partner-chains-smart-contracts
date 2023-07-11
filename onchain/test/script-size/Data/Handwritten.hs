@@ -82,7 +82,7 @@ instance UnsafeFromData Foo where
     let ell = unsafeDataAsList dat
         tcs = unsafeFromBuiltinData (Unsafe.head ell)
         ell' = Unsafe.tail ell
-        sp = unsafeFromBuiltinData (Unsafe.head ell)
+        sp = unsafeFromBuiltinData (Unsafe.head ell')
         ell'' = Unsafe.tail ell'
         kcs = unsafeFromBuiltinData (Unsafe.head ell'')
      in Foo tcs sp kcs

@@ -234,7 +234,7 @@ regressions. This is particularly common with Plutus, due to a combination of
 use of a compiler plugin, and a different performance (and cost) model to
 regular Haskell. In such cases, we allow disabling hints, but only with an
 explanation, and in a limited scope to ensure that in other code, the
-suggestiosn still get used.
+suggestions still get used.
 
 ## Code formatting
 
