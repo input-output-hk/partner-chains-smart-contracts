@@ -13,8 +13,6 @@ import Contract.Prelude
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
-  , getWalletAddress
-  , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
 import Contract.Monad
@@ -47,6 +45,11 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value as Value
+import Contract.Wallet
+  ( getWalletAddress
+
+  , ownPaymentPubKeyHash
+  )
 import Control.Alternative (guard)
 import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)

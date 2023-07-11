@@ -170,7 +170,6 @@ executable trustless-sidechain-gen-signatures
     , base16-bytestring
     , bech32
     , bytestring
-    , cardano-addresses
     , cardano-binary
     , cardano-crypto-class
     , cryptonite
@@ -209,7 +208,6 @@ executable trustless-sidechain-merkle-tree
   build-depends:
     , bytestring
     , optparse-applicative
-    , plutus-ledger
     , serialise
     , trustless-sidechain
     , trustless-sidechain-prelude
@@ -318,7 +316,6 @@ benchmark bench-ctl
     , filepath
     , mtl
     , network
-    , plutus-ledger
     , plutus-ledger-api
     , process
     , secp256k1-haskell

@@ -27,5 +27,9 @@ config =
   , suppressLogs: true
   , hooks: mempty
   , clusterConfig:
-      { slotLength: Seconds 0.05 }
+      { slotLength: Seconds 0.05
+      , epochSize: Nothing
+      , maxTxSize: Nothing
+      , raiseExUnitsToMax: false
+      }
   }

@@ -2,15 +2,21 @@
   description = "trustless-sidechain";
 
   nixConfig = {
-    extra-substituters = [ "https://cache.iog.io" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
+    extra-substituters = [
+      "https://cache.iog.io"
+      "https://public-plutonomicon.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc="
+    ];
   };
 
   inputs = {
-    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/v5.0.0";
+    cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
 
     plutip.follows = "cardano-transaction-lib/plutip";
-    haskell-nix.follows = "cardano-transaction-lib/plutip/haskell-nix";
+    haskell-nix.url = "github:input-output-hk/haskell.nix/9af167fb4343539ca99465057262f289b44f55da";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
     iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
     CHaP.follows = "cardano-transaction-lib/plutip/CHaP";
@@ -56,10 +62,11 @@
         import nixpkgs {
           inherit system;
           overlays = [
-            haskell-nix.overlay
             (import "${inputs.iohk-nix}/overlays/crypto")
+            haskell-nix.overlay
             cardano-transaction-lib.overlays.runtime
             cardano-transaction-lib.overlays.purescript
+            cardano-transaction-lib.overlays.spago
           ];
           inherit (haskell-nix) config;
         };
@@ -95,9 +102,6 @@
             additional = ps: with ps; [
               cardano-crypto-class
               plutus-tx-plugin
-              plutus-script-utils
-              plutus-ledger
-              playground-common
             ];
             shellHook = ''
               [ -z "$(git config core.hooksPath)" -a -d hooks ] && {
@@ -125,7 +129,6 @@
           packageLock = ./offchain/package-lock.json;
           spagoPackages = ./offchain/spago-packages.nix;
           withRuntime = true;
-          shell.withChromium = false;
           shell.packages = with pkgs; [
             # Shell Utils
             bashInteractive
@@ -175,7 +178,7 @@
       upToDatePlutusScriptCheckFor = system:
         let
           pkgs = nixpkgsFor system;
-          hsProject = (hsProjectFor system).flake';
+          hsProject = (hsProjectFor system).flake { };
         in
         pkgs.runCommand "up-to-date-plutus-scripts-check"
           {
@@ -252,7 +255,6 @@
             inherit src pkgs;
             projectName = name;
             withRuntime = false;
-            shell.withChromium = false;
           };
         in
         pkgs.stdenv.mkDerivation rec {
