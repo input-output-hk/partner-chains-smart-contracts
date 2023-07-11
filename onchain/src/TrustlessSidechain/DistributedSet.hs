@@ -76,8 +76,6 @@ import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.Builtins (matchList)
-import PlutusTx.Builtins.Internal qualified as Unsafe
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 
@@ -92,14 +90,14 @@ newtype Ds = Ds
     dsConf :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
   { dsNext :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (Eq, FromData, ToData, UnsafeFromData)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
@@ -115,47 +113,19 @@ instance Eq Node where
   a == b = nKey a == nKey b && nNext a == nNext b
 
 -- | @since Unreleased
-instance PlutusTx.ToData Node where
+instance ToData Node where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (Node {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (PlutusTx.toBuiltinData nKey)
-          ( Unsafe.mkCons
-              (PlutusTx.toBuiltinData nNext)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+  toBuiltinData (Node {..}) = productToData2 nKey nNext
 
 -- | @since Unreleased
-instance PlutusTx.FromData Node where
+instance FromData Node where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe Node
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \k ell1 ->
-              case PlutusTx.fromBuiltinData k of
-                Nothing -> Nothing
-                Just k' -> matchList ell1 Nothing $ \n ell2 ->
-                  case PlutusTx.fromBuiltinData n of
-                    Nothing -> Nothing
-                    Just n' ->
-                      matchList
-                        ell2
-                        (Just (Node k' n'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 Node
 
 -- | @since Unreleased
-instance PlutusTx.UnsafeFromData Node where
+instance UnsafeFromData Node where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        k = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        n = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
-     in Node k n
+  unsafeFromBuiltinData = productUnsafeFromData2 Node
 
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
@@ -170,47 +140,19 @@ instance Eq DsConfDatum where
   a == b = dscKeyPolicy a == dscKeyPolicy b && dscFUELPolicy a == dscFUELPolicy b
 
 -- | @since Unreleased
-instance PlutusTx.ToData DsConfDatum where
+instance ToData DsConfDatum where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (DsConfDatum {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (PlutusTx.toBuiltinData dscKeyPolicy)
-          ( Unsafe.mkCons
-              (PlutusTx.toBuiltinData dscFUELPolicy)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+  toBuiltinData (DsConfDatum {..}) = productToData2 dscKeyPolicy dscFUELPolicy
 
 -- | @since Unreleased
-instance PlutusTx.FromData DsConfDatum where
+instance FromData DsConfDatum where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe DsConfDatum
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \kp ell1 ->
-              case PlutusTx.fromBuiltinData kp of
-                Nothing -> Nothing
-                Just kp' -> matchList ell1 Nothing $ \fp ell2 ->
-                  case PlutusTx.fromBuiltinData fp of
-                    Nothing -> Nothing
-                    Just fp' ->
-                      matchList
-                        ell2
-                        (Just (DsConfDatum kp' fp'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 DsConfDatum
 
 -- | @since Unreleased
-instance PlutusTx.UnsafeFromData DsConfDatum where
+instance UnsafeFromData DsConfDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        kp = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        fp = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
-     in DsConfDatum kp fp
+  unsafeFromBuiltinData = productUnsafeFromData2 DsConfDatum
 
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
  length "array" of how many new nodes (this is always 2, see 'lengthIb') are
@@ -224,53 +166,25 @@ instance TSPrelude.Foldable Ib where
   foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
 
 -- | @since Unreleased
-instance (PlutusTx.ToData a) => PlutusTx.ToData (Ib a) where
+instance (ToData a) => ToData (Ib a) where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (Ib (x, y)) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (PlutusTx.toBuiltinData x)
-          ( Unsafe.mkCons
-              (PlutusTx.toBuiltinData y)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+  toBuiltinData (Ib (x, y)) = productToData2 x y
 
 -- | @since Unreleased
 instance (PlutusTx.FromData a) => PlutusTx.FromData (Ib a) where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe (Ib a)
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \x ell1 ->
-              case PlutusTx.fromBuiltinData x of
-                Nothing -> Nothing
-                Just x' -> matchList ell1 Nothing $ \y ell2 ->
-                  case PlutusTx.fromBuiltinData y of
-                    Nothing -> Nothing
-                    Just y' ->
-                      matchList
-                        ell2
-                        (Just (Ib (x', y')))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 (curry Ib)
 
 -- | @since Unreleased
 instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        x = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        y = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
-     in Ib (x, y)
+  unsafeFromBuiltinData = productUnsafeFromData2 (curry Ib)
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
 -}
 newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
-  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (FromData, ToData, UnsafeFromData)
 
 {- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
  'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
@@ -291,47 +205,20 @@ data DsKeyMint = DsKeyMint
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since Unreleased
-instance PlutusTx.ToData DsKeyMint where
+instance ToData DsKeyMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (DsKeyMint {..}) =
-    Unsafe.mkList
-      ( Unsafe.mkCons
-          (PlutusTx.toBuiltinData dskmValidatorHash)
-          ( Unsafe.mkCons
-              (PlutusTx.toBuiltinData dskmConfCurrencySymbol)
-              (Unsafe.mkNilData Unsafe.unitval)
-          )
-      )
+    productToData2 dskmValidatorHash dskmConfCurrencySymbol
 
 -- | @since Unreleased
-instance PlutusTx.FromData DsKeyMint where
+instance FromData DsKeyMint where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = Unsafe.chooseData dat Nothing Nothing go Nothing Nothing
-    where
-      go :: Maybe DsKeyMint
-      go =
-        let ell0 = Unsafe.unsafeDataAsList dat
-         in matchList ell0 Nothing $ \vh ell1 ->
-              case PlutusTx.fromBuiltinData vh of
-                Nothing -> Nothing
-                Just vh' -> matchList ell1 Nothing $ \cs ell2 ->
-                  case PlutusTx.fromBuiltinData cs of
-                    Nothing -> Nothing
-                    Just cs' ->
-                      matchList
-                        ell2
-                        (Just (DsKeyMint vh' cs'))
-                        (\_ _ -> Nothing)
+  fromBuiltinData = productFromData2 DsKeyMint
 
 -- | @since Unreleased
-instance PlutusTx.UnsafeFromData DsKeyMint where
+instance UnsafeFromData DsKeyMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let ell0 = Unsafe.unsafeDataAsList dat
-        vh = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell0)
-        ell1 = Unsafe.tail ell0
-        cs = PlutusTx.unsafeFromBuiltinData (Unsafe.head ell1)
-     in DsKeyMint vh cs
+  unsafeFromBuiltinData = productUnsafeFromData2 DsKeyMint
 
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
