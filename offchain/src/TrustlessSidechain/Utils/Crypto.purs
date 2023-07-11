@@ -1,12 +1,12 @@
 module TrustlessSidechain.Utils.Crypto
-  ( SidechainMessage
+  ( SidechainMessage(SidechainMessage)
   , sidechainMessage
   , byteArrayToSidechainMessageUnsafe
   , sidechainMessageToTokenName
   , SidechainPrivateKey
   , byteArrayToSidechainPublicKeyUnsafe
-  , SidechainPublicKey
-  , SidechainSignature
+  , SidechainPublicKey(SidechainPublicKey)
+  , SidechainSignature(SidechainSignature)
   , toPubKeyUnsafe
   , generatePrivKey
   , generateRandomPrivateKey
