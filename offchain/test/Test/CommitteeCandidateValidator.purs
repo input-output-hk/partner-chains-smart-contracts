@@ -30,7 +30,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 mockSpoPubKey ∷ ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
