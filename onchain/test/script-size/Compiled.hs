@@ -54,8 +54,8 @@ import TrustlessSidechain.Types (
   FUELMint,
   FUELRedeemer,
   SidechainParams,
-  SignedMerkleRoot,
   SignedMerkleRootMint,
+  SignedMerkleRootRedeemer,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
   UpdateCommitteeHashRedeemer,
@@ -113,7 +113,7 @@ mkMPFuelCode = $$(compile [||FUEL.mkMintingPolicy||])
 mkMPMerkleRootCode ::
   CompiledCode
     ( SignedMerkleRootMint ->
-      SignedMerkleRoot ->
+      SignedMerkleRootRedeemer ->
       ScriptContext ->
       Bool
     )

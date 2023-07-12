@@ -25,6 +25,10 @@ import Test.UpdateCommitteeHash (updateCommitteeHash)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , ATMSKinds(ATMSPlain)
+  )
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
@@ -110,6 +114,7 @@ saveCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -134,7 +139,7 @@ saveCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: map (Just <$> _) committeeSignatures
+            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -166,6 +171,7 @@ notEnoughSignaturesTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -199,7 +205,7 @@ notEnoughSignaturesTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: notEnoughSignatures
+            , aggregateSignature: Plain notEnoughSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -231,6 +237,7 @@ outOfOrderCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -256,7 +263,7 @@ outOfOrderCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: map (Just <$> _) committeeSignatures
+            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -288,6 +295,7 @@ invalidCheckpointBlockHashTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -313,7 +321,7 @@ invalidCheckpointBlockHashTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: map (Just <$> _) committeeSignatures
+            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -347,6 +355,7 @@ signedByUnknownCommitteeTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -373,7 +382,8 @@ signedByUnknownCommitteeTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: map (Just <$> _) unknownCommitteeSignatures
+            , aggregateSignature: Plain $ map (Just <$> _)
+                unknownCommitteeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch
@@ -408,6 +418,7 @@ committeeChangeCheckpointTest =
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -442,7 +453,7 @@ committeeChangeCheckpointTest =
         let
           saveCheckpointInput = Checkpoint.CheckpointEndpointParam
             { sidechainParams
-            , committeeSignatures: map (Just <$> _) committeeSignatures
+            , aggregateSignature: Plain $ map (Just <$> _) committeeSignatures
             , newCheckpointBlockHash
             , newCheckpointBlockNumber
             , sidechainEpoch

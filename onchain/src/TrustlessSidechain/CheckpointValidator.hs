@@ -54,21 +54,14 @@ import TrustlessSidechain.Types (
   ),
   CheckpointParameter (
     checkpointAssetClass,
-    checkpointSidechainParams,
-    committeeHashAssetClass
+    checkpointCommitteeCertificateVerificationCurrencySymbol,
+    checkpointCommitteeOracleCurrencySymbol,
+    checkpointSidechainParams
   ),
-  CheckpointRedeemer (
-    checkpointCommitteePubKeys,
-    checkpointCommitteeSignatures
-  ),
-  SidechainParams (
-    thresholdDenominator,
-    thresholdNumerator
-  ),
-  SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
+  CheckpointRedeemer,
+  SidechainParams,
+  UpdateCommitteeDatum (sidechainEpoch),
  )
-import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
@@ -80,10 +73,9 @@ mkCheckpointValidator ::
   CheckpointRedeemer ->
   ScriptContext ->
   Bool
-mkCheckpointValidator checkpointParam datum red ctx =
+mkCheckpointValidator checkpointParam datum _red ctx =
   traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputContainsCheckpointNft
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'mkCheckpointValidator': current committee mismatch" isCurrentCommittee
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
       (checkpointBlockNumber datum < checkpointBlockNumber outputDatum)
@@ -94,6 +86,9 @@ mkCheckpointValidator checkpointParam datum red ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
+    minted :: Value
+    minted = txInfoMint info
+
     sc :: SidechainParams
     sc = checkpointSidechainParams checkpointParam
 
@@ -102,7 +97,11 @@ mkCheckpointValidator checkpointParam datum red ctx =
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in Value.assetClassValueOf outputValue (committeeHashAssetClass checkpointParam) == 1
+       in case AssocMap.lookup (checkpointCommitteeOracleCurrencySymbol checkpointParam) $ getValue outputValue of
+            Just tns -> case AssocMap.lookup (TokenName "") tns of
+              Just amount -> amount == 1
+              Nothing -> False
+            Nothing -> False
 
     -- Extract the UpdateCommitteeDatum from the list of input transactions
     extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
@@ -129,14 +128,6 @@ mkCheckpointValidator checkpointParam datum red ctx =
     outputContainsCheckpointNft :: Bool
     outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (checkpointAssetClass checkpointParam) == 1
 
-    threshold :: Integer
-    threshold =
-      ( length (checkpointCommitteePubKeys red)
-          `Builtins.multiplyInteger` thresholdNumerator sc
-          `Builtins.divideInteger` thresholdDenominator sc
-      )
-        + 1
-
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       let message =
@@ -146,14 +137,11 @@ mkCheckpointValidator checkpointParam datum red ctx =
               , checkpointMsgBlockNumber = checkpointBlockNumber outputDatum
               , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
               }
-       in verifyMultisig
-            (getSidechainPubKey <$> checkpointCommitteePubKeys red)
-            threshold
-            (Builtins.blake2b_256 (serializeCheckpointMsg message))
-            (checkpointCommitteeSignatures red)
-
-    isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (checkpointCommitteePubKeys red) $ aggregateCommitteePubKeys committeeDatum
+       in case AssocMap.lookup (checkpointCommitteeCertificateVerificationCurrencySymbol checkpointParam) $ getValue minted of
+            Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
+              Just amount -> amount > 0
+              Nothing -> False
+            Nothing -> False
 
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint

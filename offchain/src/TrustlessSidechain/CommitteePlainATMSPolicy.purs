@@ -310,7 +310,8 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol:
+          committeePlainATMSCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy

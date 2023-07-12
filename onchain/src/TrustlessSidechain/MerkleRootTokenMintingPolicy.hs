@@ -12,21 +12,18 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
 
 import Ledger (Language (PlutusV2), Versioned (Versioned))
 import Ledger qualified
-import Ledger.Value (TokenName (TokenName), getValue)
+import Ledger.Value (TokenName (TokenName, unTokenName), Value (getValue))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Address (addressCredential),
   Credential (ScriptCredential),
   CurrencySymbol,
-  Datum (getDatum),
-  OutputDatum (OutputDatum),
   Script,
   ScriptContext,
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
-  TxOut (txOutAddress, txOutDatum, txOutValue),
-  Value,
+  TxOut (txOutAddress, txOutValue),
   scriptContextTxInfo,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -36,28 +33,17 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey,
-  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
-  MerkleTreeEntry,
-  SidechainParams (
-    thresholdDenominator,
-    thresholdNumerator
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    mrimMerkleRoot,
+    mrimPreviousMerkleRoot,
+    mrimSidechainParams
   ),
-  SidechainPubKey (getSidechainPubKey),
-  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot, signatures),
-  SignedMerkleRootMint,
-  UpdateCommitteeDatum (aggregateCommitteePubKeys),
-  merkleRoot,
-  mrimMerkleRoot,
-  mrimPreviousMerkleRoot,
-  mrimSidechainParams,
-  signatures,
-  smrmSidechainParams,
-  smrmUpdateCommitteeHashCurrencySymbol,
-  smrmValidatorHash,
+  MerkleTreeEntry,
+  SignedMerkleRootMint (committeeCertificateVerificationCurrencySymbol, sidechainParams),
+  SignedMerkleRootRedeemer (previousMerkleRoot),
+  validatorHash,
  )
-import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Utils qualified as Utils
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -75,35 +61,18 @@ serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBui
 
       1. UTXO with the last Merkle root is referenced in the transaction.
 
-      2.  the signature can be verified with the submitted public key hashes of
-      committee members, and the list of public keys are unique
-
-      3. the concatenated and hashed value of the public keys correspond to the
-      one saved on-chain in 'TrustlessSidechain.UpdateCommitteeHash'
-
-      4. Exactly one token is minted
-
-      TODO: the spec doesn't say this, but this is what the implementation
-      does. Fairly certain this is what we want...
-
-      5. At least one token is paid to 'smrmValidatorHash'
+      2.  the committee certificate verification minting policy asserts that
+      `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
+      and At least one token is paid to 'validatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRoot -> ScriptContext -> Bool
+mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
   smrm
-  SignedMerkleRoot
-    { merkleRoot
-    , signatures
-    , committeePubKeys
-    , previousMerkleRoot
-    }
+  smrr
   ctx =
     traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' verifyMultisig failed" p2
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' committee hash mismatch" p3
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p4
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' must pay to validator hash" p5
+      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p2
     where
       info :: TxInfo
       info = scriptContextTxInfo ctx
@@ -111,44 +80,11 @@ mkMintingPolicy
       minted = txInfoMint info
       ownCurrencySymbol :: CurrencySymbol
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
-      ownTokenName :: TokenName
-      ownTokenName = Value.TokenName merkleRoot
-      sc :: SidechainParams
-      sc = smrmSidechainParams smrm
-      committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
-      committeeDatum =
-        let go :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
-            go (t : ts)
-              | o <- txInInfoResolved t
-                , amt <-
-                    Value.valueOf
-                      (txOutValue o)
-                      (smrmUpdateCommitteeHashCurrencySymbol smrm)
-                      UpdateCommitteeHash.initCommitteeOracleTn
-                , UpdateCommitteeHash.initCommitteeOracleMintAmount == amt
-                , -- See Note [Committee Hash Inline Datum] in
-                  -- 'TrustlessSidechain.UpdateCommitteeHash'
-                  OutputDatum d <- txOutDatum o =
-                IsData.unsafeFromBuiltinData $ getDatum d
-              | otherwise = go ts
-            go [] = traceError "error 'MerkleRootTokenMintingPolicy' no committee utxo given as reference input"
-         in go (txInfoReferenceInputs info)
-
-      threshold :: Integer
-      threshold =
-        -- See Note [Threshold of Strictly More than Threshold Majority] in
-        -- 'TrustlessSidechain.UpdateCommitteeHash' (this is mostly
-        -- duplicated from there)
-        ( length committeePubKeys
-            `Builtins.multiplyInteger` thresholdNumerator sc
-            `Builtins.divideInteger` thresholdDenominator sc
-        )
-          + 1
 
       -- Checks:
-      -- @p1@, @p2@, @p3@, @p4@, @p5@ correspond to verifications 1., 2., 3.,
-      -- 4., 5. resp. in the documentation of this function.
-      p1 = case previousMerkleRoot of
+      -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
+      -- documentation of this function.
+      p1 = case previousMerkleRoot smrr of
         Nothing -> True
         Just tn ->
           -- Checks if any of the reference inputs have at least 1 of the last
@@ -163,37 +99,41 @@ mkMintingPolicy
                   || go rest
               go [] = False
            in go (txInfoReferenceInputs info)
-      p2 =
-        Utils.verifyMultisig
-          (map getSidechainPubKey committeePubKeys)
-          threshold
-          ( serialiseMrimHash
-              MerkleRootInsertionMessage
-                { mrimSidechainParams = smrmSidechainParams smrm
-                , mrimMerkleRoot = merkleRoot
-                , mrimPreviousMerkleRoot = previousMerkleRoot
-                }
-          )
-          signatures
-      p3 = Utils.aggregateCheck committeePubKeys $ aggregateCommitteePubKeys committeeDatum
-      p4 = case flattenValue minted of
-        [(_sym, tn, amt)] -> amt == 1 && tn == ownTokenName
-        -- There's no need to verify the following condition
-        -- > sym == Contexts.ownCurrencySymbol ctx
-        -- since we know that the the minting script is run in the case we are
-        -- minting a token, and we pattern match to guarantee that there is
-        -- only one token being minted namely this token.
-        _ -> False
-      p5 =
-        let go [] = False
-            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
-              ScriptCredential vh
-                | vh == smrmValidatorHash smrm
-                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
-                    > 0 ->
-                  True
-              _ -> go txOuts
-         in go $ txInfoOutputs info
+
+      p2 = case AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue minted of
+        Nothing -> False
+        Just tns -> case AssocMap.toList tns of
+          -- assert that there is a unique token name (and only one) minted of
+          -- this currency symbol
+          [(tn, amount)]
+            | amount == 1 ->
+              let msg =
+                    MerkleRootInsertionMessage
+                      { mrimSidechainParams = sidechainParams smrm
+                      , mrimMerkleRoot = unTokenName tn
+                      , mrimPreviousMerkleRoot = previousMerkleRoot smrr
+                      }
+               in traceIfFalse
+                    "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
+                    ( Value.valueOf
+                        minted
+                        (committeeCertificateVerificationCurrencySymbol smrm)
+                        (TokenName (serialiseMrimHash msg))
+                        > 0
+                    )
+                    && traceIfFalse
+                      "error 'MerkleRootTokenMintingPolicy' token not paid to correct validator address"
+                      ( let go [] = False
+                            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
+                              ScriptCredential vh
+                                | vh == validatorHash smrm
+                                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
+                                    > 0 ->
+                                  True
+                              _ -> go txOuts
+                         in go $ txInfoOutputs info
+                      )
+          _ -> False
 
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

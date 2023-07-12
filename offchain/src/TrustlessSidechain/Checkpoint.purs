@@ -7,21 +7,19 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM, throwContractError)
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), fromData, toData)
+import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
+import Contract.Prim.ByteArray (ByteArray)
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , outputDatumDatum
-  )
-import Contract.TxConstraints (DatumPresence(DatumInline))
+import Contract.Transaction (TransactionHash)
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
+import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
@@ -42,7 +40,6 @@ import TrustlessSidechain.Checkpoint.Utils
   , checkpointValidator
   , findCheckpointUtxo
   , initCheckpointMintTn
-  , normalizeSignatures
   , serialiseCheckpointMessage
   )
 import TrustlessSidechain.Checkpoint.Utils
@@ -52,87 +49,158 @@ import TrustlessSidechain.Checkpoint.Utils
   , serialiseCheckpointMessage
   ) as ExportUtils
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSAggregateSignatures(Plain)
+  ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
-  )
-import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( findUpdateCommitteeHashUtxo
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
-  ( InternalError(InvalidScript, InvalidData, NotFoundUtxo)
-  , OffchainError(InvalidInputError, InternalError)
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
+  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
-saveCheckpoint = runSaveCheckpoint <<< normalizeSignatures
-
-runSaveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
-runSaveCheckpoint
+saveCheckpoint
   ( CheckpointEndpointParam
       { sidechainParams
-      , committeeSignatures
+      , aggregateSignature
       , newCheckpointBlockHash
       , newCheckpointBlockNumber
       , sidechainEpoch
       }
   ) = do
+  -- Set up for the committee ATMS schemes
+  ------------------------------------
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  -- Getting the minting policy / currency symbol / token name for checkpointing
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator:
+            (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator:
+            (unwrap sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      aggregateSignature
+
+  -- Find the UTxO with the current committee.
+  ------------------------------------
+  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
+    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+  currentCommitteeUtxo ←
+    liftedM
+      ( show $ InternalError $ NotFoundUtxo
+          "failed to find current committee UTxO"
+      )
+      $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
+      $ UpdateCommitteeHash
+          { sidechainParams
+          , committeeOracleCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          , merkleRootTokenCurrencySymbol
+          }
+
+  -- Grab the lookups + constraints for saving a merkle root
+  ------------------------------------
+  { lookupsAndConstraints
+  , checkpointMessage
+  } ← saveCheckpointLookupsAndConstraints
+    { sidechainParams
+    , newCheckpointBlockHash
+    , newCheckpointBlockNumber
+    , sidechainEpoch
+    , committeeCertificateVerificationCurrencySymbol
+    }
+
+  -- Grab the lookups + constraints for the committee certificate
+  -- verification
+  ------------------------------------
+  scMsg ←
+    liftContractM
+      ( show $ InternalError $ ConversionError
+          "failed serializing the MerkleRootInsertionMessage"
+      )
+      $ serialiseCheckpointMessage checkpointMessage
+
+  atmsLookupsAndConstraints ←
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
+      $ CommitteeATMSParams
+          { currentCommitteeUtxo
+          , committeeCertificateMint
+          , aggregateSignature
+          , message: Utils.Crypto.sidechainMessageToTokenName scMsg
+          }
+
+  -- Build / submit the transaction
+  ------------------------------------
+  let
+    { lookups, constraints } = atmsLookupsAndConstraints
+      <> lookupsAndConstraints
+      <>
+        -- include the current committee UTxO  in this transaction
+        { lookups:
+            Lookups.unspentOutputs
+              ( Map.singleton currentCommitteeUtxo.index
+                  currentCommitteeUtxo.value
+              )
+        , constraints:
+            TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
+        }
+
+  balanceSignAndSubmit "Save Checkpoint" lookups constraints
+
+saveCheckpointLookupsAndConstraints ∷
+  { sidechainParams ∷ SidechainParams
+  , newCheckpointBlockHash ∷ ByteArray
+  , newCheckpointBlockNumber ∷ BigInt
+  , sidechainEpoch ∷ BigInt
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  } →
+  Contract
+    { lookupsAndConstraints ∷
+        { constraints ∷ TxConstraints Void Void
+        , lookups ∷ ScriptLookups Void
+        }
+    , checkpointMessage ∷ CheckpointMessage
+    }
+saveCheckpointLookupsAndConstraints
+  { sidechainParams
+  , newCheckpointBlockHash
+  , newCheckpointBlockNumber
+  , committeeCertificateVerificationCurrencySymbol
+  , sidechainEpoch
+  } = do
+  -- Create the message to be signed
+  -------------------------------------------------------------
+  let
+    checkpointMessage = CheckpointMessage
+      { sidechainParams
+      , checkpointBlockHash: newCheckpointBlockHash
+      , checkpointBlockNumber: newCheckpointBlockNumber
+      , sidechainEpoch
+      }
+
+  -- Getting the associated plutus scripts / UTXOs for checkpointing
   -------------------------------------------------------------
   { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
     sidechainParams
 
-  { committeeOracleCurrencySymbol, committeeOracleTokenName } ←
+  { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
-
-  when (null committeeSignatures)
-    (throwContractError $ show (InvalidInputError "No signatures provided"))
-
-  let
-    curCommitteePubKeys /\ allCurCommitteeSignatures =
-      Utils.Crypto.unzipCommitteePubKeysAndSignatures
-        committeeSignatures
-    _ /\ curCommitteeSignatures = Utils.Crypto.takeExactlyEnoughSignatures
-      (unwrap sidechainParams).thresholdNumerator
-      (unwrap sidechainParams).thresholdDenominator
-      (curCommitteePubKeys /\ allCurCommitteeSignatures)
-
-  checkpointMessage ←
-    liftContractM
-      (show (InternalError (InvalidData "CheckpointMessage")))
-      $ serialiseCheckpointMessage
-      $ CheckpointMessage
-          { sidechainParams
-          , checkpointBlockHash: newCheckpointBlockHash
-          , checkpointBlockNumber: newCheckpointBlockNumber
-          , sidechainEpoch
-          }
-
-  unless
-    ( Utils.Crypto.verifyMultiSignature
-        ((unwrap sidechainParams).thresholdNumerator)
-        ((unwrap sidechainParams).thresholdDenominator)
-        curCommitteePubKeys
-        checkpointMessage
-        curCommitteeSignatures
-    )
-    ( throwContractError
-        (InvalidInputError "Invalid committee signatures for CheckpointMessage")
-    )
 
   -- Getting checkpoint validator
   let
@@ -140,8 +208,8 @@ runSaveCheckpoint
       { sidechainParams
       , checkpointAssetClass: assetClass checkpointCurrencySymbol
           checkpointTokenName
-      , committeeOracleAssetClass: assetClass committeeOracleCurrencySymbol
-          committeeOracleTokenName
+      , committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
   validator ← checkpointValidator checkpointParam
   let checkpointValidatorHash = Scripts.validatorHash validator
@@ -151,78 +219,9 @@ runSaveCheckpoint
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
-    liftContractM (show (InternalError (NotFoundUtxo "Checkpoint UTxO")))
+    liftContractM
+      (show $ InternalError $ NotFoundUtxo "Failed to find checkpoint UTxO")
       checkpointUtxoLookup
-
-  -- Getting the validator / minting policy for the merkle root token.
-  -- This is needed to get the committee hash utxo.
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
-        }
-    curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
-
-  -- TODO: the hard coded committee certificate verifications will be replaced
-  -- soon in a seperate PR.
-  { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      committeeCertificateMint
-      (Plain mempty)
-
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      }
-
-  -- Grabbing the current committee
-  lkup ← findUpdateCommitteeHashUtxo uch
-  { index: committeeOref
-  , value:
-      committeeOracleTxOut@
-        (TransactionOutputWithRefScript { output: TransactionOutput tOut })
-  } ←
-    liftContractM (show (InternalError (NotFoundUtxo "Committee Hash UTxO")))
-      lkup
-
-  comitteeHashDatum ←
-    liftContractM
-      ( show
-          ( InternalError
-              (InvalidData "Committee Hash UTxO is missing inline datum")
-          )
-      )
-      $ outputDatumDatum tOut.datum
-  UpdateCommitteeDatum datum ← liftContractM
-    ( show
-        ( InternalError
-            (InvalidData "Decoding datum at Committee Hash UTxO failed")
-        )
-    )
-    (fromData $ unwrap comitteeHashDatum)
-  when (datum.aggregatePubKeys /= curCommitteeHash)
-    (throwContractError (InvalidInputError "Incorrect committee provided"))
 
   -- Building / submitting the transaction.
   let
@@ -235,9 +234,7 @@ runSaveCheckpoint
     value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
     redeemer = Redeemer $ toData
       ( CheckpointRedeemer
-          { committeeSignatures: curCommitteeSignatures
-          , committeePubKeys: curCommitteePubKeys
-          , newCheckpointBlockHash
+          { newCheckpointBlockHash
           , newCheckpointBlockNumber
           }
       )
@@ -245,19 +242,19 @@ runSaveCheckpoint
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
-        <> Lookups.unspentOutputs
-          (Map.singleton committeeOref committeeOracleTxOut)
         <> Lookups.validator validator
 
     constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
       <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
         DatumInline
         value
-      <> TxConstraints.mustReferenceOutput committeeOref
 
-  balanceSignAndSubmit "Save Checkpoint" lookups constraints
+  pure
+    { lookupsAndConstraints: { constraints, lookups }
+    , checkpointMessage
+    }
 
--- | `getCheckpointPolicy` grabs the checkpoint hash policy, currency symbol and token name
+-- | `getCheckpointPolicy` grabs the checkpoint policy, currency symbol and token name
 -- | (potentially throwing an error in the case that it is not possible).
 getCheckpointPolicy ∷
   SidechainParams →

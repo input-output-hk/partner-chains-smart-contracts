@@ -4,6 +4,7 @@ module TrustlessSidechain.Options.Types
   , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
+  , SidechainEndpointParams(..)
   , CandidatePermissionTokenMintInit
   ) where
 
@@ -21,15 +22,25 @@ import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenInfo
   , CandidatePermissionTokenMintInfo
   )
-import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
+-- | `SidechainEndpointParams` is an offchain type for grabbing information
+-- | related to the sidechain.
+-- | This is essentially `SidechainParams` with a little bit more information.
+newtype SidechainEndpointParams = SidechainEndpointParams
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  }
+
+derive instance Newtype SidechainEndpointParams _
+
 -- | CLI arguments providing an interface to contract endpoints
 type Options =
-  { scParams ∷ SidechainParams
+  { sidechainEndpointParams ∷ SidechainEndpointParams
   , endpoint ∷ Endpoint
   , contractParams ∷ ContractParams
   }
@@ -48,6 +59,7 @@ type Config =
               { numerator ∷ Int
               , denominator ∷ Int
               }
+        , atmsKind ∷ Maybe ATMSKinds
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile ∷ Maybe FilePath
@@ -84,15 +96,16 @@ data Endpoint
   | CommitteeHash
       { newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
+      , mNewCommitteeAddress ∷ Maybe Address
       }
   | SaveRoot
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -102,13 +115,15 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe RootHash
       , newCommitteePubKeysInput ∷ InputArgOrFile (List SidechainPublicKey)
       , newCommitteeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , newMerkleRootSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , sidechainEpoch ∷ BigInt
+      , mNewCommitteeAddress ∷ Maybe Address
       }
   | GetAddrs
-      SidechainAddressesExtra
+      { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+      }
   | InitTokens
       { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
@@ -122,7 +137,7 @@ data Endpoint
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷
-          InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature))
+          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt

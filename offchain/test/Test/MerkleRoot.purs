@@ -22,6 +22,10 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(Plain)
+  , ATMSKinds(ATMSPlain)
+  )
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -121,7 +125,7 @@ saveRoot
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
-    , committeeSignatures
+    , aggregateSignature: Plain committeeSignatures
     }
   pure
     { merkleRoot
@@ -162,6 +166,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlain
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -222,7 +227,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         , merkleRoot
         , previousMerkleRoot: Nothing
 
-        , committeeSignatures
+        , aggregateSignature: Plain committeeSignatures
         }
 
       pure unit
@@ -265,6 +270,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlain
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -354,6 +360,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 99999
             , initThresholdDenominator: BigInt.fromInt 100000
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

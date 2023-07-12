@@ -141,32 +141,29 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
--- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
-data SignedMerkleRoot = SignedMerkleRoot
-  { -- | New merkle root to insert.
-    merkleRoot :: BuiltinByteString
-  , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
-  , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [BuiltinByteString]
-  , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
+{- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
+ minting policy
+-}
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { previousMerkleRoot :: Maybe BuiltinByteString
   }
-
-PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
+  deriving newtype
+    ( ToData
+    , FromData
+    , UnsafeFromData
+    )
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeDatum'
-    -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
-  , -- | 'smrmValidatorHash' is the validator hash corresponding to
+  { -- | 'sidechainParams' includes the 'SidechainParams'
+    sidechainParams :: SidechainParams
+  , -- | 'committeeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
+    -- provides a committee certificate for a message.
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+  , -- | 'validatorHash' is the validator hash corresponding to
     -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
     -- to ensure that this token gets minted to the "right" place.
-    smrmValidatorHash :: ValidatorHash
+    validatorHash :: ValidatorHash
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
@@ -321,9 +318,7 @@ PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature,
  checkpoint
 -}
 data CheckpointRedeemer = CheckpointRedeemer
-  { checkpointCommitteeSignatures :: [BuiltinByteString]
-  , checkpointCommitteePubKeys :: [SidechainPubKey]
-  , newCheckpointBlockHash :: BuiltinByteString
+  { newCheckpointBlockHash :: BuiltinByteString
   , newCheckpointBlockNumber :: Integer
   }
 
@@ -335,9 +330,13 @@ data CheckpointParameter = CheckpointParameter
   , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     checkpointAssetClass :: AssetClass
-  , -- | 'committeeHashAssetClass' is the 'AssetClass' of the NFT that is used to
-    -- | identify the current committee
-    committeeHashAssetClass :: AssetClass
+  , -- | 'checkpointCommitteeOracleCurrencySymbol' is the
+    -- currency symbol of the currency symbol which uniquely identifies the
+    -- current committee.
+    checkpointCommitteeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'checkpointCommitteeCertificateVerificationCurrencySymbol' is the
+    -- currency symbol of the committee certificate verification minting policy
+    checkpointCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]

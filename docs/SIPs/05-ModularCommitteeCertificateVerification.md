@@ -295,6 +295,13 @@ requires no changes to the Bridge.
 
 As redeemer, `MerkleRootTokenMintingPolicy` will take the following data type.
 ```haskell
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { previousMerkleRoot :: Maybe ByteString
+  }
+```
+
+Recall from the main specification we had the following data type.
+```haskell
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
     -- ^ Parameters identifying the Sidechain
@@ -302,20 +309,27 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , previousMerkleRoot :: Maybe ByteString
   }
 ```
-Note that similarly to the committee handover from the previous section, we
-pass the `MerkleRootInsertionMessage` directly as a redeemer instead of passing
-a separate redeemer type and reconstructing the message onchain.
+Moreover, recall that the Bridge generated signatures as follows.
+```
+signature = ecdsa.sign(data: blake2b(cbor(MerkleRootInsertionMessage)), key: committeeMemberPrvKey)
+```
 
 `MerkleRootTokenMintingPolicy` will mint only if the following are satisfied.
 
 - If `previousMerkleRoot` is specified, the UTxO with the given Merkle root is
   referenced in the transaction as a reference input.
 
-- There exists a `MerkleRootToken` with token name as `merkleRoot` at a
-  `MerkleRootTokenValidator` script address as a transaction output.
-
 - The committee certificate verification minting policy mints a token name, say
-  `tn`, which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))`.
+  `tn`, which satisfies `tn == blake2b(cbor(msg))` for some
+  `msg :: MerkleRootInsertionMessage`.
+
+- `sidechainParams` of `msg` match the `SidechainParams` that this script is
+  parameterized by.
+
+- `previousMerkleRoot` from the redeemer matches `msg`'s `previousMerkleRoot`.
+
+- The unique token name of this minting policy that is minted has token name
+  `merkleRoot` from `msg`, and is at a `MerkleRootTokenValidator` script output.
 
 The following diagram captures how this transaction is intended to be built.
 
@@ -333,9 +347,7 @@ changes to the Bridge.
 As redeemer, the `CheckpointValidator` will take the following data type.
 ```haskell
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ [SidechainSignature]
-  , committeePubKeys ∷ [SidechainPublicKey]
-  , newCheckpointBlockHash ∷ ByteString
+  { newCheckpointBlockHash ∷ ByteString
   , newCheckpointBlockNumber ∷ Integer
   }
 ```
