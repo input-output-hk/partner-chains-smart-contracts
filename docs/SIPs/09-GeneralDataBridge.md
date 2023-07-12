@@ -168,7 +168,7 @@ the address where the claimed token and datum must be sent:
 ```haskell
 data SidechainMessage = SidechainMessage
     { message :: PostBoxValidatorDatum
-    , targetAddress :: Maybe Address
+    , targetAddress :: Address
     }
 ```
 
@@ -179,8 +179,7 @@ Minting verifies the following:
 - `SCToken` with the token name `blake2b(Constr(1, serialiseData(SidechainMessage)))`
   is minted
 - output with own minted token includes `PostBoxValidatorDatum` datum
-- if `targetAddress` is set, output with own minted token is sent to it,
-  otherwise it is sent to the `PostBoxValidator`
+- output with own minted token is sent to `targetAddress`
 - if the payload is `FullMessage(data)` then `tokenName = blake2b(data)`,
   if `HashedMessage(dataHash)` then `tokenName = dataHash`
 - `sender` field in `PostBoxValidatorDatum` is the same as the parameter of the
