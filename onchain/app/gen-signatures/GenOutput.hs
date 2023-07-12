@@ -60,6 +60,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
 import System.IO.Error (userError)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -83,6 +84,7 @@ import TrustlessSidechain.Types (
     mrimSidechainParams
   ),
   SidechainParams (..),
+  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -92,7 +94,6 @@ import TrustlessSidechain.Types (
     validatorAddress
   ),
  )
-import TrustlessSidechain.Utils qualified as Utils
 
 -- * Main driver functions for generating output
 
@@ -169,7 +170,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                     { sidechainParams = scParams
                     , newAggregateCommitteePubKeys =
                         case atmsKind of
-                          Plain -> Utils.aggregateKeys $ List.sort uchcNewCommitteePubKeys
+                          Plain ->
+                            CommitteePlainATMSPolicy.aggregateKeys $
+                              fmap getSidechainPubKey $
+                                List.sort uchcNewCommitteePubKeys
                           _ -> error "unimplemented aggregate keys for update committee hash message"
                     , previousMerkleRoot = uchcPreviousMerkleRoot
                     , sidechainEpoch = uchcSidechainEpoch

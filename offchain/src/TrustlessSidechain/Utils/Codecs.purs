@@ -26,7 +26,7 @@ import Data.UInt as UInt
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
-      ( ATMSPlain
+      ( ATMSPlainEcdsaSecp256k1
       , ATMSDummy
       , ATMSPoK
       , ATMSMultisignature
@@ -80,7 +80,8 @@ atmsKindCodec =
     Left _err → Nothing
 
   fromF ∷ ATMSKinds → String
-  fromF ATMSPlain = "plain"
+  fromF ATMSPlainEcdsaSecp256k1 =
+    "plain-ecdsa-secp256k1"
   fromF ATMSDummy = "dummy"
   fromF ATMSPoK = "pok"
   fromF ATMSMultisignature = "multisignature"

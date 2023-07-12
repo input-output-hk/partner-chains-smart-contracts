@@ -21,12 +21,12 @@ import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain)
-  , ATMSKinds(ATMSPlain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot.Types
@@ -91,7 +91,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       -- 2. Saving a merkle root.
@@ -236,7 +236,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       -- 2. Saving a merkle root
@@ -274,14 +274,15 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       { committeeOracleCurrencySymbol
       } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-      { committeePlainATMSCurrencySymbol:
+      { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
           committeeCertificateVerificationCurrencySymbol
-      } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-        $ CommitteeCertificateMint
-            { committeeOraclePolicy: committeeOracleCurrencySymbol
-            , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-            , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-            }
+      } ←
+        CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+          $ CommitteeCertificateMint
+              { committeeOraclePolicy: committeeOracleCurrencySymbol
+              , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+              , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+              }
 
       merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
         sidechainParams
@@ -335,7 +336,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             { sidechainParams
             , newAggregatePubKeys: Utils.Crypto.aggregateKeys committee3PubKeys
             , aggregateSignature:
-                Plain $
+                PlainEcdsaSecp256k1 $
                   Array.zip
                     committee1PubKeys
                     ( Just <$> Utils.Crypto.multiSign committee1PrvKeys

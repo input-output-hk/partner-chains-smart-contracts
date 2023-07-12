@@ -139,7 +139,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
   --sidechain-id 1 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --sidechain-genesis-hash 112233
 ```
 
@@ -152,7 +152,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
   --sidechain-id 1 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --sidechain-genesis-hash 112233 \
   --candidate-permission-token-amount 1 \
   --candidate-permission-token-name ""\
@@ -169,7 +169,7 @@ nix run .#sidechain-main-cli -- init \
   --sidechain-id 1 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --sidechain-genesis-hash 112233 \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
@@ -188,7 +188,7 @@ nix run .#sidechain-main-cli -- addresses \
   --sidechain-id 1 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --sidechain-genesis-hash 112233
 ```
 
@@ -202,7 +202,7 @@ nix run .#sidechain-main-cli -- claim \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --combined-proof aabb \
   --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
     # ^ Optional flag to avoid a linear scan through the UTxO set
@@ -219,7 +219,7 @@ nix run .#sidechain-main-cli -- burn \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --amount 5 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --recipient aabbcc
 ```
 
@@ -233,7 +233,7 @@ cabal run trustless-sidechain-gen-signatures -- \
   --sidechain-id 1 \
   --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
   --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
   --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
@@ -249,7 +249,7 @@ nix run .#sidechain-main-cli -- register \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --spo-public-key f71ff66b6b8da0702444183b5ce5de09f6754457a6a71b3354b81ced8dcd7e30 \
   --sidechain-public-key 03eef26d3cf978e0fc2d786c443b1284b27b265a7c82eeeec68c24cd3fd0bb6428 \
   --spo-signature 980db1db31457189326e948c7f292b16278ab91bd45f5fd6ee9ad637bf993f26936c17ee126e510c52d0a3381b52acb36a2a89d4fe55a587cf3478678114dd0f \
@@ -267,7 +267,7 @@ nix run .#sidechain-main-cli -- register \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
   --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
   --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
@@ -290,7 +290,7 @@ nix run .#sidechain-main-cli -- deregister \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --spo-public-key aabbcc
 ```
 
@@ -304,7 +304,7 @@ nix run .#sidechain-main-cli -- committee-hash \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
   --committee-pub-key-and-signature aabbcc03:bbbbbb \
@@ -330,7 +330,7 @@ nix run .#sidechain-main-cli -- save-root \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --sidechain-id 1 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --merkle-root abababab \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
@@ -351,7 +351,7 @@ nix run .#sidechain-main-cli -- committee-handover \
   --threshold-denominator 3 \
   --merkle-root abababab \
   --sidechain-epoch 6 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --previous-merkle-root abcdef \
   --new-committee-pub-key ddeeff01 \
   --new-committee-pub-key ddeeff02 \
@@ -374,7 +374,7 @@ nix run .#sidechain-main-cli -- candidate-permission-token \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --candidate-permission-token-amount 10 \
   --candidate-permission-token-name "aabb" \
   --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
@@ -390,7 +390,7 @@ nix run .#sidechain-main-cli -- save-checkpoint \
   --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain \
+  --atms-kind plain-ecdsa-secp256k1 \
   --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
   --new-checkpoint-block-number 42 \
   --sidechain-epoch 5
@@ -406,7 +406,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
     "genesisHash": "11223344aabbcc",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
     "threshold": { "numerator": 2, "denominator": 3 },
-    "atmsKind": "plain"
+    "atmsKind": "plain-ecdsa-secp256k1"
   },
   "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",

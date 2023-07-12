@@ -13,7 +13,7 @@ module Compiled (
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
   mkDsKeyPolicyCode,
-  mkCommitteePlainATMSPolicyCode,
+  mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode,
 ) where
 
 import Plutus.V2.Ledger.Contexts (ScriptContext)
@@ -30,7 +30,8 @@ import TrustlessSidechain.CheckpointValidator (
 import TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
  )
-import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainATMSPolicy (verifyPlainMultisig)
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet (
   Ds,
   DsConfMint,
@@ -65,7 +66,6 @@ import TrustlessSidechain.UpdateCommitteeHash (
   mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
  )
-import TrustlessSidechain.Utils (verifyMultisig)
 
 newVerify ::
   CompiledCode
@@ -75,7 +75,7 @@ newVerify ::
       [BuiltinByteString] ->
       Bool
     )
-newVerify = $$(compile [||verifyMultisig||])
+newVerify = $$(compile [||verifyPlainMultisig verifyEcdsaSecp256k1Signature||])
 
 mkCPMPCode ::
   CompiledCode (CandidatePermissionMint -> () -> ScriptContext -> Bool)
@@ -159,6 +159,6 @@ mkDsKeyPolicyCode ::
   CompiledCode (DsKeyMint -> () -> ScriptContext -> Bool)
 mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
 
-mkCommitteePlainATMSPolicyCode ::
+mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode ::
   CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
-mkCommitteePlainATMSPolicyCode = $$(compile [||CommitteePlainATMSPolicy.mkMintingPolicy||])
+mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsaSecp256k1ATMSPolicy.mkMintingPolicy||])
