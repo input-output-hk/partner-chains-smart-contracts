@@ -18,6 +18,7 @@ import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
+import Test.PoCSchnorrSecp256k1 as PoCSchnorrSecp256k1
 import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
@@ -61,3 +62,4 @@ main = do
           PoCReferenceScript.tests
           PoCSerialiseData.tests
           PoCECDSA.testScenario
+          PoCSchnorrSecp256k1.tests

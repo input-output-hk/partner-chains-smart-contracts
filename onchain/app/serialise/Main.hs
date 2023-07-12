@@ -39,6 +39,7 @@ import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
+import TrustlessSidechain.PoCSchnorr qualified as PoCSchnorr
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 
@@ -215,6 +216,7 @@ main =
           , ("PoCReferenceScript", PoCReferenceScript.serialisablePoCReferenceScriptValidator)
           , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
+          , ("PoCSchnorr", PoCSchnorr.serialisablePolicy)
           ]
         plutusScriptsDotPlutus = fmap (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
      in case options of
