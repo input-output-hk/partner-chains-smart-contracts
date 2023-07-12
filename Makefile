@@ -120,7 +120,7 @@ format-purs-staged: requires_nix_shell
 format-js-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.js$$'\
-		| xargs -0 -r js-tidy format-in-place
+		| xargs -0 -r eslint format-in-place
 
 format-dhall-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
