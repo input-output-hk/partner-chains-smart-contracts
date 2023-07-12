@@ -38,6 +38,23 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
 * `abs` for absolute value in Haskell prelude, with the same usage caveats as
   `signum`.
+* The flag `--atms-kind` with value `plain` (in preparation for more signature
+  schemes to come) *must* be added to all CLI calls to specify which committee
+  certificate verification is being used. Alternatively, one can put
+  `"atmsKind": "plain"` in the config JSON file.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
+* The flag `--new-committee-validator-cbor-encoded-address` or `--new-committee-validator-bech32-address`
+  was added to the `committee-hash` endpoint for the offchain CLI interface
+  which takes either hex encoded cbor of an address of a validator script or a
+  bech32 address of a validator script for which the committee oracle should be
+  sent to.
+  In the former case, this desired address can be found in the `addresses` CLI
+  endpoint under the JSON keys `cborEncodedAddresses.CommitteeHashValidator`.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
 
 ## Changed
 
@@ -54,6 +71,20 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
    [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
    onchain)
+* `UpdateCommitteeHashMessage` has a new format so committee signatures *must*
+  be generated differently for this endpoint. In particular,
+  `UpdateCommitteeHashMessage` was changed so that the hash of the
+  sorted committee members keys replaces the sorted list of the public keys,
+  and a new field which must be an `Address` (see the next bullet point) must
+  be included.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain/onchain)
+* the subcommand `addresses` for the offchain CLI interface outputs the
+  `cbor(plutusData(Address))` of the committee hash validator.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain)
 
 ## Fixed
 

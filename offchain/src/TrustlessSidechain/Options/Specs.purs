@@ -2,6 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -50,13 +51,15 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
-  ( bigInt
+  ( bech32AddressParser
+  , bigInt
   , blockHash
   , byteArray
+  , cborEncodedAddressParser
   , combinedMerkleProofParserWithPkh
-  , committeeSignature
   , denominator
   , numerator
+  , pubKeyBytesAndSignatureBytes
   , rootHash
   , sidechainAddress
   , sidechainPublicKey
@@ -65,6 +68,7 @@ import TrustlessSidechain.Options.Parsers
   , transactionInput
   , uint
   )
+import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
   , Config
@@ -84,9 +88,10 @@ import TrustlessSidechain.Options.Types
       )
   , InputArgOrFile(InputFromArg, InputFromFile)
   , Options
+  , SidechainEndpointParams(SidechainEndpointParams)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -102,7 +107,7 @@ optSpec maybeConfig =
   hsubparser $ fold
     [ command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensSpec)
-            (progDesc "Pre-mint tokens without setting the inital committee")
+            (progDesc "Pre-mint tokens without setting the initial committee")
         )
     , command "init"
         ( info (withCommonOpts maybeConfig initSpec)
@@ -158,7 +163,7 @@ withCommonOpts ∷ Maybe Config → Parser Endpoint → Parser Options
 withCommonOpts maybeConfig endpointParser = ado
   pSkey ← pSkeySpec maybeConfig
   stSkey ← stSKeySpec maybeConfig
-  scParams ← scParamsSpec maybeConfig
+  sidechainEndpointParams ← sidechainEndpointParamsSpec maybeConfig
   endpoint ← endpointParser
 
   ogmiosConfig ← serverConfigSpec "ogmios" $
@@ -170,7 +175,7 @@ withCommonOpts maybeConfig endpointParser = ado
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
   in
-    { scParams
+    { sidechainEndpointParams
     , endpoint
     , contractParams: testnetConfig
         { logLevel = environment.logLevel
@@ -257,8 +262,8 @@ serverConfigSpec
   in { host, path, port, secure: secure || defSecure }
 
 -- | SidechainParams CLI parser
-scParamsSpec ∷ Maybe Config → Parser SidechainParams
-scParamsSpec maybeConfig = ado
+sidechainEndpointParamsSpec ∷ Maybe Config → Parser SidechainEndpointParams
+sidechainEndpointParamsSpec maybeConfig = ado
   chainId ← option int $ fold
     [ short 'i'
     , long "sidechain-id"
@@ -284,6 +289,16 @@ scParamsSpec maybeConfig = ado
     , help "Input UTxO to be spent with the first committee hash setup"
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
+    ]
+
+  atmsKind ← option Parsers.atmsKind $ fold
+    [ short 'm'
+    , long "atms-kind"
+    , metavar "ATMS_KIND"
+    , help
+        "ATMS kind for the sidechain -- either 'plain', 'multisignature', 'pok', or 'dummy'"
+    , maybe mempty value
+        (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]
 
   { thresholdNumerator, thresholdDenominator } ←
@@ -313,12 +328,16 @@ scParamsSpec maybeConfig = ado
     in
       thresholdNumeratorDenominatorOption
   in
-    SidechainParams
-      { chainId: BigInt.fromInt chainId
-      , genesisHash
-      , genesisUtxo
-      , thresholdNumerator
-      , thresholdDenominator
+    SidechainEndpointParams
+      { sidechainParams:
+          SidechainParams
+            { chainId: BigInt.fromInt chainId
+            , genesisHash
+            , genesisUtxo
+            , thresholdNumerator
+            , thresholdDenominator
+            }
+      , atmsKind
       }
 
 -- | Parse all parameters for the `claim` endpoint
@@ -448,13 +467,40 @@ committeeHashSpec = ado
     )
   previousMerkleRoot ← parsePreviousMerkleRoot
   sidechainEpoch ← parseSidechainEpoch
+  mNewCommitteeAddress ← parseNewCommitteeAddress
   in
     CommitteeHash
       { newCommitteePubKeysInput
       , committeeSignaturesInput
       , previousMerkleRoot
       , sidechainEpoch
+      , mNewCommitteeAddress
       }
+
+parseNewCommitteeAddress ∷ Parser (Maybe Address)
+parseNewCommitteeAddress =
+  optional $
+    ( option
+        cborEncodedAddressParser
+        ( fold
+            [ long "new-committee-validator-cbor-encoded-address"
+            , metavar "CBOR_ENCODED_ADDRESS"
+            , help
+                "Hex encoded cbor of a validator address to send the committee oracle to"
+            ]
+        )
+    )
+    <|>
+      ( option
+          bech32AddressParser
+          ( fold
+              [ long "new-committee-validator-bech32-address"
+              , metavar "BECH32_ADDRESS"
+              , help
+                  "bech32 of a validator address to send the committee oracle to"
+              ]
+          )
+      )
 
 -- | Parse all parameters for the `save-root` endpoint
 saveRootSpec ∷ Parser Endpoint
@@ -489,6 +535,7 @@ committeeHandoverSpec = ado
     "Filepath of a JSON file containing public keys and associated\
     \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
   sidechainEpoch ← parseSidechainEpoch
+  mNewCommitteeAddress ← parseNewCommitteeAddress
   in
     CommitteeHandover
       { merkleRoot
@@ -497,6 +544,7 @@ committeeHandoverSpec = ado
       , newCommitteeSignaturesInput
       , newMerkleRootSignaturesInput
       , sidechainEpoch
+      , mNewCommitteeAddress
       }
 
 -- | Parse all parameters for the `save-checkpoint` endpoint
@@ -571,11 +619,11 @@ parseCommitteeSignatures ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)))
+  Parser (InputArgOrFile (List (ByteArray /\ Maybe ByteArray)))
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
-        ( option committeeSignature
+        ( option pubKeyBytesAndSignatureBytes
             ( fold
                 [ long longflag
                 , metavar "PUBLIC_KEY[:[SIGNATURE]]"

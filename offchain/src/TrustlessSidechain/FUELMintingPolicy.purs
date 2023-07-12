@@ -2,6 +2,7 @@ module TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(..)
   , FUELMint(..)
   , FuelParams(..)
+  , FuelMintOrFuelBurnParams(..)
   , MerkleTreeEntry(..)
   , fuelMintingPolicy
   , getFuelMintingPolicy
@@ -57,6 +58,13 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Record as Record
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSKinds
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.CommitteeOraclePolicy (getCommitteeOraclePolicy)
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.MerkleRoot
   ( SignedMerkleRootMint(..)
@@ -66,7 +74,6 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
 import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash (getCommitteeHashPolicy)
 import TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , addressFromBech32Bytes
@@ -160,22 +167,33 @@ newtype CombinedMerkleProof = CombinedMerkleProof
 -- | This is a modestly convenient wrapper to help call the `runFuelMP `
 -- | endpoint for internal tests.
 combinedMerkleProofToFuelParams ∷
-  SidechainParams → CombinedMerkleProof → Maybe FuelParams
+  { sidechainParams ∷ SidechainParams
+  , combinedMerkleProof ∷ CombinedMerkleProof
+  , atmsKind ∷ ATMSKinds
+  } →
+  Maybe FuelParams
 combinedMerkleProofToFuelParams
-  sidechainParams
-  (CombinedMerkleProof { transaction, merkleProof }) = do
+  { sidechainParams
+  , combinedMerkleProof: CombinedMerkleProof { transaction, merkleProof }
+  , atmsKind
+  } = do
   let transaction' = unwrap transaction
 
   recipient ← addressFromBech32Bytes transaction'.recipient
-  pure $ Mint
-    { amount: transaction'.amount
-    , recipient
-    , merkleProof
-    , sidechainParams
-    , index: transaction'.index
-    , previousMerkleRoot: transaction'.previousMerkleRoot
-    , dsUtxo: Nothing
-    }
+  pure $
+    FuelParams
+      { sidechainParams
+      , atmsKind
+      , fuelMintOrFuelBurnParams:
+          Mint
+            { amount: transaction'.amount
+            , recipient
+            , merkleProof
+            , index: transaction'.index
+            , previousMerkleRoot: transaction'.previousMerkleRoot
+            , dsUtxo: Nothing
+            }
+      }
 
 instance Show CombinedMerkleProof where
   show = genericShow
@@ -228,14 +246,29 @@ fuelMintingPolicy fm = do
 -- | `SidechainParams`, and calls `fuelMintingPolicy` to give us the minting
 -- | policy
 getFuelMintingPolicy ∷
-  SidechainParams →
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  } →
   Contract
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingPolicyCurrencySymbol ∷ CurrencySymbol
     }
-getFuelMintingPolicy sidechainParams = do
+getFuelMintingPolicy { sidechainParams, atmsKind } = do
+  { committeeOracleCurrencySymbol } ← getCommitteeOraclePolicy sidechainParams
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+      ( CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
+      )
+      atmsKind
+
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sidechainParams
+    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+
   ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
 
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
@@ -247,7 +280,8 @@ getFuelMintingPolicy sidechainParams = do
       , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
       }
   fuelMintingPolicyCurrencySymbol ←
-    liftContractM (show (InternalError (InvalidScript ""))) $
+    liftContractM
+      (show (InternalError (InvalidScript "fuel minting policy is invalid"))) $
       Value.scriptCurrencySymbol policy
   pure
     { fuelMintingPolicy: policy
@@ -255,12 +289,17 @@ getFuelMintingPolicy sidechainParams = do
     }
 
 -- | `FuelParams` is the data for the FUEL mint / burn endpoint.
-data FuelParams
+newtype FuelParams = FuelParams
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  , fuelMintOrFuelBurnParams ∷ FuelMintOrFuelBurnParams
+  }
+
+data FuelMintOrFuelBurnParams
   = Mint
       { amount ∷ BigInt
       , recipient ∷ Address
       , merkleProof ∷ MerkleProof
-      , sidechainParams ∷ SidechainParams
       , index ∷ BigInt
       , previousMerkleRoot ∷ Maybe RootHash
       , dsUtxo ∷ Maybe TransactionInput
@@ -268,22 +307,31 @@ data FuelParams
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
 
 -- | `runFuelMP` executes the FUEL mint / burn endpoint.
-runFuelMP ∷ SidechainParams → FuelParams → Contract TransactionHash
-runFuelMP sp fp = do
-  { fuelMintingPolicy: fuelMP } ← getFuelMintingPolicy sp
+runFuelMP ∷ FuelParams → Contract TransactionHash
+runFuelMP
+  (FuelParams { sidechainParams: sp, atmsKind, fuelMintOrFuelBurnParams: fp }) =
+  do
+    { fuelMintingPolicy: fuelMP } ← getFuelMintingPolicy
+      { sidechainParams: sp
+      , atmsKind
+      }
 
-  { lookups, constraints } ← case fp of
-    Burn params →
-      burnFUEL fuelMP params
-    Mint params →
-      claimFUEL fuelMP params
+    { lookups, constraints } ← case fp of
+      Burn params →
+        burnFUEL fuelMP params
+      Mint params → claimFUEL fuelMP
+        $ Record.disjointUnion
+            params
+            { sidechainParams: sp
+            , atmsKind
+            }
 
-  let
-    txName = case fp of
-      Burn _ → "FUEL token burn"
-      Mint _ → "FUEL token mint"
+    let
+      txName = case fp of
+        Burn _ → "FUEL token burn"
+        Mint _ → "FUEL token mint"
 
-  balanceSignAndSubmit txName lookups constraints
+    balanceSignAndSubmit txName lookups constraints
 
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
@@ -293,6 +341,7 @@ claimFUEL ∷
   , recipient ∷ Address
   , merkleProof ∷ MerkleProof
   , sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
   , index ∷ BigInt
   , previousMerkleRoot ∷ Maybe RootHash
   , dsUtxo ∷ Maybe TransactionInput
@@ -305,6 +354,7 @@ claimFUEL
   , recipient
   , merkleProof
   , sidechainParams
+  , atmsKind
   , index
   , previousMerkleRoot
   , dsUtxo
@@ -350,7 +400,11 @@ claimFUEL
                 "Couldn't find the parent Merkle tree root hash of the transaction"
             )
         )
-        =<< findMerkleRootTokenUtxoByRootHash sidechainParams rootHash
+        =<< findMerkleRootTokenUtxoByRootHash
+          { sidechainParams
+          , rootHash
+          , atmsKind
+          }
 
     { inUtxo:
         { nodeRef
@@ -463,12 +517,24 @@ burnFUEL fuelMP { amount, recipient } = do
 -- | as given by the `RootHash`
 -- TODO: refactor to utility module
 findMerkleRootTokenUtxoByRootHash ∷
-  SidechainParams →
-  RootHash →
+  { sidechainParams ∷ SidechainParams
+  , rootHash ∷ RootHash
+  , atmsKind ∷ ATMSKinds
+  } →
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
-  { committeeHashCurrencySymbol } ← getCommitteeHashPolicy sidechainParams
+findMerkleRootTokenUtxoByRootHash { sidechainParams, rootHash, atmsKind } = do
+  { committeeOracleCurrencySymbol } ← getCommitteeOraclePolicy sidechainParams
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+      ( CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
+      )
+      atmsKind
 
   -- Then, we get the merkle root token validator hash / minting policy..
   merkleRootValidatorHash ← map Scripts.validatorHash $
@@ -476,7 +542,7 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   let
     smrm = SignedMerkleRootMint
       { sidechainParams
-      , updateCommitteeHashCurrencySymbol: committeeHashCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootValidatorHash
       }
   merkleRootTokenName ←

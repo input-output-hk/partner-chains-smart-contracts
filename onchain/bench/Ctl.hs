@@ -40,7 +40,14 @@ import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   SidechainParams (SidechainParams, thresholdDenominator, thresholdNumerator),
   SidechainPubKey,
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
+  ),
   bprmInputUtxo,
   bprmSidechainParams,
   bprmSidechainPubKey,
@@ -50,11 +57,8 @@ import TrustlessSidechain.Types (
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
-  uchmNewCommitteePubKeys,
-  uchmPreviousMerkleRoot,
-  uchmSidechainEpoch,
-  uchmSidechainParams,
  )
+import TrustlessSidechain.Utils qualified as Utils
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
 
@@ -205,10 +209,16 @@ ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
-          { uchmSidechainParams = scParams
-          , uchmNewCommitteePubKeys = List.sort cuchNewCommitteePubKeys
-          , uchmPreviousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
-          , uchmSidechainEpoch = cuchSidechainEpoch
+          { sidechainParams = scParams
+          , -- Old message that's no longer used..
+            -- , uchmNewCommitteePubKeys = Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+            newAggregateCommitteePubKeys =
+              Utils.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+          , previousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
+          , sidechainEpoch = cuchSidechainEpoch
+          , validatorAddress =
+              error "unimplemented validator address for UpdateCommitteeHashMessage"
+              -- TODO: put in the actual validator address.
           }
       currentCommitteePubKeysAndSigsFlags =
         fmap

@@ -12,33 +12,35 @@ import Contract.Monad
   ( Contract
   , liftContractM
   , liftedM
-  , throwContractError
   )
-import Contract.PlutusData (fromData, toData, unitDatum)
+import Contract.PlutusData (toData, unitDatum)
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , outputDatumDatum
-  )
+import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Map as Map
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( CommitteeATMSParams(CommitteeATMSParams)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
-  , SignedMerkleRoot(SignedMerkleRoot)
   , SignedMerkleRootMint(SignedMerkleRootMint)
+  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint(SignedMerkleRootMint)
+  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
@@ -50,49 +52,132 @@ import TrustlessSidechain.MerkleRoot.Utils
   ( findPreviousMerkleRootTokenUtxo
   , merkleRootTokenMintingPolicy
   , merkleRootTokenValidator
-  , normalizeSaveRootParams
   , serialiseMrimHash
   )
+import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
-  ( InternalError(InvalidScript, NotFoundUtxo, InvalidData)
-  , OffchainError(InvalidInputError, InternalError)
+  ( InternalError(InvalidData, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+
+-- | `saveRoot` is the endpoint.
+saveRoot ∷ SaveRootParams → Contract TransactionHash
+saveRoot
+  ( SaveRootParams
+      { sidechainParams
+      , merkleRoot
+      , previousMerkleRoot
+      , aggregateSignature
+      }
+  ) = do
+  -- Set up for the committee ATMS schemes
+  ------------------------------------
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator:
+            (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator:
+            (unwrap sidechainParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
+      committeeCertificateMint
+      aggregateSignature
+
+  -- Find the UTxO with the current committee.
+  ------------------------------------
+  { merkleRootTokenCurrencySymbol } ← getMerkleRootTokenMintingPolicy
+    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+  currentCommitteeUtxo ←
+    liftedM
+      ( show $ InternalError $ NotFoundUtxo
+          "failed to find current committee UTxO"
+      )
+      $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
+      $ UpdateCommitteeHash
+          { sidechainParams
+          , committeeOracleCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          , merkleRootTokenCurrencySymbol
+          }
+
+  -- Grab the lookups + constraints for saving a merkle root
+  ------------------------------------
+  { lookupsAndConstraints
+  , merkleRootInsertionMessage
+  } ← saveRootLookupsAndConstraints
+    { sidechainParams
+    , merkleRoot
+    , previousMerkleRoot
+    , committeeCertificateVerificationCurrencySymbol
+    }
+
+  -- Grab the lookups + constraints for the committee certificate
+  -- verification
+  ------------------------------------
+  scMsg ← liftContractM "failed serializing the MerkleRootInsertionMessage"
+    $
+      serialiseMrimHash merkleRootInsertionMessage
+
+  atmsLookupsAndConstraints ←
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
+      $ CommitteeATMSParams
+          { currentCommitteeUtxo
+          , committeeCertificateMint
+          , aggregateSignature
+          , message: Utils.Crypto.sidechainMessageToTokenName scMsg
+          }
+
+  -- Building the transaction / submitting it
+  ------------------------------------
+  let
+    { lookups, constraints } =
+      lookupsAndConstraints
+        <> atmsLookupsAndConstraints
+        <>
+          -- include the current committee UTxO  in this transaction
+          { lookups:
+              Lookups.unspentOutputs
+                ( Map.singleton currentCommitteeUtxo.index
+                    currentCommitteeUtxo.value
+                )
+          , constraints:
+              TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
+          }
+
+  balanceSignAndSubmit "Save Merkle root" lookups constraints
 
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters
 getMerkleRootTokenMintingPolicy ∷
-  SidechainParams →
+  { sidechainParams ∷ SidechainParams
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  } →
   Contract
     { merkleRootTokenMintingPolicy ∷ MintingPolicy
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
-getMerkleRootTokenMintingPolicy sidechainParams = do
+getMerkleRootTokenMintingPolicy
+  { sidechainParams, committeeCertificateVerificationCurrencySymbol } = do
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
     sidechainParams
 
-  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
-    $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
-  updateCommitteeHashCurrencySymbol ←
-    liftContractM
-      ( show
-          ( InternalError
-              (InvalidScript "CommitteeHashPolicy")
-          )
-      )
-      $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
   policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
     { sidechainParams
-    , updateCommitteeHashCurrencySymbol
+    , committeeCertificateVerificationCurrencySymbol
     , merkleRootValidatorHash
     }
   merkleRootTokenCurrencySymbol ←
@@ -100,39 +185,37 @@ getMerkleRootTokenMintingPolicy sidechainParams = do
       Value.scriptCurrencySymbol policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
--- | `saveRoot` is the endpoint.
-saveRoot ∷ SaveRootParams → Contract TransactionHash
-saveRoot = runSaveRoot <<< normalizeSaveRootParams
-
--- | `runSaveRoot` is the main worker of the `saveRoot` endpoint.
--- | Preconditions
--- |    - `SaveRootParams` must be normalized with `MerkleRoot.Utils.normalizeSaveRootParams`
-runSaveRoot ∷ SaveRootParams → Contract TransactionHash
-runSaveRoot
-  ( SaveRootParams
-      { sidechainParams, merkleRoot, previousMerkleRoot, committeeSignatures }
-  ) = do
+-- | `saveRootLookupsAndConstraints` creates the lookups and constraints (and
+-- | the message to be signed) for saving a Merkle root
+saveRootLookupsAndConstraints ∷
+  { sidechainParams ∷ SidechainParams
+  , merkleRoot ∷ RootHash
+  , previousMerkleRoot ∷ Maybe RootHash
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  } →
+  Contract
+    { lookupsAndConstraints ∷
+        { constraints ∷ TxConstraints Void Void
+        , lookups ∷ ScriptLookups Void
+        }
+    , merkleRootInsertionMessage ∷ MerkleRootInsertionMessage
+    }
+saveRootLookupsAndConstraints
+  { sidechainParams
+  , merkleRoot
+  , previousMerkleRoot
+  , committeeCertificateVerificationCurrencySymbol
+  } = do
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  updateCommitteeHashPolicy ← UpdateCommitteeHash.committeeHashPolicy
-    $ InitCommitteeHashMint { icTxOutRef: (unwrap sidechainParams).genesisUtxo }
-  updateCommitteeHashCurrencySymbol ←
-    liftContractM
-      ( show
-          ( InternalError
-              (InvalidScript "CommitteeHashPolicy")
-          )
-      )
-      $ Value.scriptCurrencySymbol updateCommitteeHashPolicy
-
   merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
     sidechainParams
 
   let
     smrm = SignedMerkleRootMint
       { sidechainParams
-      , updateCommitteeHashCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       , merkleRootValidatorHash
       }
   rootTokenMP ← merkleRootTokenMintingPolicy smrm
@@ -159,93 +242,20 @@ runSaveRoot
     previousMerkleRoot
     smrm
 
-  -- Grab the utxo with the current committee hash / verifying that this
-  -- committee has signed the current merkle root (for better error messages)
-  -- verifying that this really is the old committee
-  ---------------------------------------------------------
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , uchAssetClass: updateCommitteeHashCurrencySymbol /\
-          UpdateCommitteeHash.initCommitteeHashMintTn
-      , merkleRootTokenCurrencySymbol: rootTokenCS
-      }
-  { index: committeeHashTxIn
-  , value: committeeHashTxOut
-  } ←
-    liftedM
-      (show (InternalError (NotFoundUtxo "Failed to find committee hash utxo")))
-      $
-        UpdateCommitteeHash.findUpdateCommitteeHashUtxo uch
-
-  let
-    committeePubKeys /\ allSignatures =
-      Utils.Crypto.unzipCommitteePubKeysAndSignatures committeeSignatures
-    _ /\ signatures = Utils.Crypto.takeExactlyEnoughSignatures
-      (unwrap sidechainParams).thresholdNumerator
-      (unwrap sidechainParams).thresholdDenominator
-      (committeePubKeys /\ allSignatures)
-
-  -- Verifying the signature is valid
-  void do
-    mrimHash ←
-      liftContractM
-        ( show
-            ( InternalError
-                (InvalidData "Failed to create MerkleRootInsertionMessage")
-            )
-        )
-        $ serialiseMrimHash
-        $ MerkleRootInsertionMessage
-            { sidechainParams
-            , merkleRoot
-            , previousMerkleRoot
-            }
-    unless
-      ( Utils.Crypto.verifyMultiSignature
-          ((unwrap sidechainParams).thresholdNumerator)
-          ((unwrap sidechainParams).thresholdDenominator)
-          committeePubKeys
-          mrimHash
-          signatures
-      )
-      $ throwContractError
-      $ InvalidInputError
-          "Invalid committee signatures for MerkleRootInsertionMessage"
-
-  -- Verifying the provided committee is actually the committee stored on chain
-  void do
-    let
-      TransactionOutputWithRefScript { output: TransactionOutput tOut } =
-        committeeHashTxOut
-
-      committeeHash = Utils.Crypto.aggregateKeys committeePubKeys
-    rawDatum ←
-      liftContractM
-        ( show
-            ( InternalError
-                (NotFoundUtxo "Committee hash UTxO is missing inline datum")
-            )
-        )
-        $ outputDatumDatum tOut.datum
-    UpdateCommitteeDatum datum ← liftContractM
-      ( show
-          ( InternalError
-              (InvalidData "Decoding datum at committee hash UTxO failed")
-          )
-      )
-      (fromData $ unwrap rawDatum)
-
-    when (datum.committeeHash /= committeeHash)
-      $ throwContractError (InvalidInputError "Incorrect committee provided")
-
   -- Building the transaction
   ---------------------------------------------------------
   let
     value = Value.singleton rootTokenCS merkleRootTokenName one
 
-    redeemer = SignedMerkleRoot
-      { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
+    msg = MerkleRootInsertionMessage
+      { sidechainParams
+      , merkleRoot
+      , previousMerkleRoot
+      }
+
+    redeemer = SignedMerkleRootRedeemer
+      { previousMerkleRoot
+      }
 
     constraints ∷ TxConstraints Void Void
     constraints =
@@ -254,18 +264,18 @@ runSaveRoot
           unitDatum
           TxConstraints.DatumWitness
           value
-        <> TxConstraints.mustReferenceOutput committeeHashTxIn
         <> case maybePreviousMerkleRootUtxo of
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.mintingPolicy rootTokenMP
-      <> Lookups.unspentOutputs
-        (Map.singleton committeeHashTxIn committeeHashTxOut)
       <> case maybePreviousMerkleRootUtxo of
         Nothing → mempty
         Just { index: txORef, value: txOut } → Lookups.unspentOutputs
           (Map.singleton txORef txOut)
 
-  balanceSignAndSubmit "Save Merkle root" lookups constraints
+  pure
+    { lookupsAndConstraints: { lookups, constraints }
+    , merkleRootInsertionMessage: msg
+    }

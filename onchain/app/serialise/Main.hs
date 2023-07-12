@@ -199,7 +199,7 @@ main =
           , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
           , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
           , ("CandidatePermissionMintingPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
-          , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
+          , ("CommitteeOraclePolicy", UpdateCommitteeHash.serialisableCommitteeOraclePolicy)
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)

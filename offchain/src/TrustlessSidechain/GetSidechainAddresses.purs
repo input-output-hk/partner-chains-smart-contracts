@@ -2,16 +2,19 @@
 -- | identifying its associated hex encoded validator and currency symbol.
 module TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
-  , SidechainAddressesExtra
+  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   , getSidechainAddresses
   , currencySymbolToHex
   ) where
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Address as Address
+import Contract.CborBytes as CborBytes
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Transaction (TransactionInput)
@@ -20,17 +23,21 @@ import Contract.Value as Value
 import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSKinds
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClass)
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( updateCommitteeHashValidator
+  ( getUpdateCommitteeHashValidator
   )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
@@ -43,38 +50,68 @@ import TrustlessSidechain.Utils.Logging
 -- |
 -- | See `getSidechainAddresses` for more details.
 type SidechainAddresses =
-  { addresses ∷ Array (Tuple String String)
-  , mintingPolicies ∷ Array (Tuple String String)
+  { -- bech32 addresses
+    addresses ∷ Array (Tuple String String)
+  , --  currency symbols
+    mintingPolicies ∷ Array (Tuple String String)
+  , -- cbor of the Plutus Address type.
+    cborEncodedAddresses ∷ Array (Tuple String String)
   }
 
--- | `SidechainAddressesExtra` provides extra information for creating more
--- | addresses related to the sidechain.
--- | In particular, this allows us to optionally grab the minting policy of the
--- | candidate permission token.
-type SidechainAddressesExtra =
-  { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput }
+-- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
+-- | bundling the required data to grab all the sidechain addresses.
+newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  , -- Used to optionally grab the minting policy of candidate permission
+    -- token.
+    mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+
+  }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainParams` which contains related addresses and currency
--- | symbols. Moreover, it returns the currency symbol of the candidate
--- | permission token provided the `permissionTokenUtxo` is given.
+-- | the given `SidechainAddressesEndpointParams` which contains related
+-- | addresses and currency symbols. Moreover, it returns the currency symbol
+-- | of the candidate permission token provided the `permissionTokenUtxo` is
+-- | given.
 getSidechainAddresses ∷
-  SidechainParams → SidechainAddressesExtra → Contract SidechainAddresses
-getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
+  SidechainAddressesEndpointParams → Contract SidechainAddresses
+getSidechainAddresses
+  ( SidechainAddressesEndpointParams
+      { sidechainParams: scParams, atmsKind, mCandidatePermissionTokenUtxo }
+  ) = do
   -- Minting policies
   { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
-    scParams
+    { atmsKind
+    , sidechainParams: scParams
+    }
   let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
 
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
+
+  let
+    committeeCertificateMint =
+      CommitteeCertificateMint
+        { thresholdNumerator: (unwrap scParams).thresholdNumerator
+        , thresholdDenominator: (unwrap scParams).thresholdDenominator
+        , committeeOraclePolicy: committeeOracleCurrencySymbol
+        }
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+      committeeCertificateMint
+      atmsKind
+
   { merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.getMerkleRootTokenMintingPolicy scParams
+    MerkleRoot.getMerkleRootTokenMintingPolicy
+      { sidechainParams: scParams
+      , committeeCertificateVerificationCurrencySymbol
+      }
   let
     merkleRootTokenMintingPolicyId = currencySymbolToHex
       merkleRootTokenCurrencySymbol
 
-  { committeeHashCurrencySymbol, committeeHashTokenName } ←
-    UpdateCommitteeHash.getCommitteeHashPolicy scParams
-  let committeeNftPolicyId = currencySymbolToHex committeeHashCurrencySymbol
+  let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
   { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
@@ -108,19 +145,22 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← merkleRootTokenValidator scParams
     getAddr validator
 
-  let
-    updateCommittHashParams = assetClass committeeHashCurrencySymbol
-      committeeHashTokenName
-  committeeHashValidatorAddr ←
+  { committeeHashValidatorAddr, committeeHashValidatorCborAddress } ←
     do
       let
         uch = UpdateCommitteeHash
           { sidechainParams: scParams
-          , uchAssetClass: updateCommittHashParams
+          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
           , merkleRootTokenCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
           }
-      validator ← updateCommitteeHashValidator uch
-      getAddr validator
+      { validator, address } ← getUpdateCommitteeHashValidator uch
+      bech32Addr ← getAddr validator
+
+      pure
+        { committeeHashValidatorAddr: bech32Addr
+        , committeeHashValidatorCborAddress: getCborEncodedAddress address
+        }
 
   dsInsertValidatorAddr ← do
     validator ← DistributedSet.insertValidator ds
@@ -149,11 +189,16 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
       , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
-
       ]
+
+    cborEncodedAddresses =
+      [ "CommitteeHashValidator" /\ committeeHashValidatorCborAddress
+      ]
+
   pure
     { addresses
     , mintingPolicies
+    , cborEncodedAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
@@ -166,6 +211,13 @@ getAddr v = do
       (validatorHash v)
   serialised ← Address.addressToBech32 addr
   pure serialised
+
+-- | Gets the hex encoded string of the cbor representation of an Address
+getCborEncodedAddress ∷ Address → String
+getCborEncodedAddress =
+  ByteArray.byteArrayToHex
+    <<< CborBytes.cborBytesToByteArray
+    <<< PlutusData.serializeData
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol

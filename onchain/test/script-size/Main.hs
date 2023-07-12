@@ -57,11 +57,11 @@ main =
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_505
+            809
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
-            4_174
+            3_393
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -79,29 +79,29 @@ main =
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
             2_785
         , fitsInto
-            "mkCommitteeHashPolicy"
-            Compiled.mkCommitteeHashPolicyCode
+            "mkCommitteeOraclePolicy"
+            Compiled.mkCommitteeOraclePolicyCode
             400
         , scriptFitsInto
-            "mkCommitteeHashPolicy (serialized)"
-            (unversioned UCH.serialisableCommitteeHashPolicy)
+            "mkCommitteeOraclePolicy (serialized)"
+            (unversioned UCH.serialisableCommitteeOraclePolicy)
             2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_805
+            835
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_605
+            3_509
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_836
+            1_632
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_608
+            4_394
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode

@@ -8,7 +8,7 @@ module TrustlessSidechain.ConfigFile
 
 import Contract.Prelude
 
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -20,6 +20,7 @@ import Data.UInt as UInt
 import Effect.Exception as Exception
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readTextFile)
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds(ATMSPlain))
 import TrustlessSidechain.ConfigFile.Codecs
   ( committeeCodec
   , committeeSignaturesCodec
@@ -29,7 +30,7 @@ import TrustlessSidechain.Options.Types
   ( Config
   , InputArgOrFile(InputFromArg, InputFromFile)
   )
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto (SidechainPublicKey)
 
 optExample ∷ Config
 optExample =
@@ -44,6 +45,7 @@ optExample =
           { numerator: 2
           , denominator: 3
           }
+      , atmsKind: Just ATMSPlain
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing
@@ -59,8 +61,8 @@ getCommittee =
 
 --- | `getCommitteeSignatures` grabs the committee signatures from CLI argument or a JSON file
 getCommitteeSignatures ∷
-  InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)) →
-  Effect (List (SidechainPublicKey /\ Maybe SidechainSignature))
+  InputArgOrFile (List (ByteArray /\ Maybe ByteArray)) →
+  Effect (List (ByteArray /\ Maybe ByteArray))
 getCommitteeSignatures =
   getInputArgOrFile "committee signatures" committeeSignaturesCodec
 

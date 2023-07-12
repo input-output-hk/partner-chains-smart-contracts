@@ -8,7 +8,7 @@ module Compiled (
   mkMPFuelCode,
   mkMPMerkleRootCode,
   mkUPCVCode,
-  mkCommitteeHashPolicyCode,
+  mkCommitteeOraclePolicyCode,
   mkCPCode,
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
@@ -44,7 +44,6 @@ import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey,
   ATMSPlainMultisignature,
   BlockProducerRegistration,
   CandidatePermissionMint,
@@ -55,15 +54,15 @@ import TrustlessSidechain.Types (
   FUELMint,
   FUELRedeemer,
   SidechainParams,
-  SignedMerkleRoot,
   SignedMerkleRootMint,
+  SignedMerkleRootRedeemer,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
-  mkCommitteeHashPolicy,
+  mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
  )
 import TrustlessSidechain.Utils (verifyMultisig)
@@ -114,7 +113,7 @@ mkMPFuelCode = $$(compile [||FUEL.mkMintingPolicy||])
 mkMPMerkleRootCode ::
   CompiledCode
     ( SignedMerkleRootMint ->
-      SignedMerkleRoot ->
+      SignedMerkleRootRedeemer ->
       ScriptContext ->
       Bool
     )
@@ -123,21 +122,21 @@ mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
-      UpdateCommitteeDatum ATMSPlainAggregatePubKey ->
+      UpdateCommitteeDatum BuiltinData ->
       UpdateCommitteeHashRedeemer ->
       ScriptContext ->
       Bool
     )
 mkUPCVCode = $$(compile [||mkUpdateCommitteeHashValidator||])
 
-mkCommitteeHashPolicyCode ::
+mkCommitteeOraclePolicyCode ::
   CompiledCode
     ( InitCommitteeHashMint ->
       () ->
       ScriptContext ->
       Bool
     )
-mkCommitteeHashPolicyCode = $$(compile [||mkCommitteeHashPolicy||])
+mkCommitteeOraclePolicyCode = $$(compile [||mkCommitteeOraclePolicy||])
 
 mkCPCode ::
   CompiledCode

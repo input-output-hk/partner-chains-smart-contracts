@@ -17,15 +17,15 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CommitteePlainATMSPolicy
-  ( CommitteePlainATMSParams(CommitteePlainATMSParams)
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds(ATMSPlain)
+  , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
   , SidechainPrivateKey
@@ -93,6 +93,7 @@ testScenario1 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlain
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -137,15 +138,15 @@ testScenario1 =
           -- ```
 
           utxo ←
-            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
-          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy $
-            CommitteePlainATMSParams
-              { currentCommitteeUtxo: utxo
-              , committeeCertificateMint: committeePlainATMSMint
-              , signatures: committeeSignatures
-              , message: sidechainMessageTokenName
-              }
+          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
+            $ CommitteeATMSParams
+                { currentCommitteeUtxo: utxo
+                , committeeCertificateMint: committeePlainATMSMint
+                , aggregateSignature: committeeSignatures
+                , message: sidechainMessageTokenName
+                }
 
           Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
             sidechainMessageTokenName
@@ -185,13 +186,13 @@ testScenario1 =
           -- 80 committee members total
 
           utxo ←
-            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteePlainATMSParams
+            $ CommitteeATMSParams
                 { currentCommitteeUtxo: utxo
                 , committeeCertificateMint: committeePlainATMSMint
-                , signatures: committeeSignatures
+                , aggregateSignature: committeeSignatures
                 , message: sidechainMessageTokenName
                 }
 
@@ -226,13 +227,13 @@ testScenario1 =
                   allPubKeysAndJustSignatures
 
           utxo ←
-            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteePlainATMSParams
+            $ CommitteeATMSParams
                 { currentCommitteeUtxo: utxo
                 , committeeCertificateMint: committeePlainATMSMint
-                , signatures: committeeSignatures
+                , aggregateSignature: committeeSignatures
                 , message: sidechainMessageTokenName
                 }
 
@@ -265,14 +266,14 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
             ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-                $ CommitteePlainATMSParams
+                $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainATMSMint
-                    , signatures: committeeSignatures
+                    , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
             )
@@ -305,14 +306,14 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            UpdateCommitteeHash.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
             ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-                $ CommitteePlainATMSParams
+                $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainATMSMint
-                    , signatures: committeeSignatures
+                    , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
             )

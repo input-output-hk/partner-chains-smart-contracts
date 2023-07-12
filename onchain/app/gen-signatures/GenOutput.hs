@@ -52,6 +52,7 @@ import GetOpts (
   uchcNewCommitteePubKeys,
   uchcPreviousMerkleRoot,
   uchcSidechainEpoch,
+  uchcValidatorAddress,
  )
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
@@ -84,10 +85,11 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
   ),
  )
 
@@ -159,10 +161,15 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
-                    { uchmSidechainParams = scParams
-                    , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
-                    , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
-                    , uchmSidechainEpoch = uchcSidechainEpoch
+                    { sidechainParams = scParams
+                    , -- Old version that isn't used anymore
+                      -- , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
+                      newAggregateCommitteePubKeys =
+                        error "unimplemented aggregate keys for update committee hash message" :: ()
+                    , previousMerkleRoot = uchcPreviousMerkleRoot
+                    , sidechainEpoch = uchcSidechainEpoch
+                    , validatorAddress =
+                        uchcValidatorAddress
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap

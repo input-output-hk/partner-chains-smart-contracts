@@ -2,6 +2,7 @@ module TrustlessSidechain.Utils.Crypto
   ( SidechainMessage
   , sidechainMessage
   , byteArrayToSidechainMessageUnsafe
+  , sidechainMessageToTokenName
   , SidechainPrivateKey
   , byteArrayToSidechainPublicKeyUnsafe
   , SidechainPublicKey
@@ -36,6 +37,8 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.Value (TokenName)
+import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -148,6 +151,15 @@ sidechainMessage byteArray
 -- | without verifying any of the invariants
 byteArrayToSidechainMessageUnsafe ∷ ByteArray → SidechainMessage
 byteArrayToSidechainMessageUnsafe = SidechainMessage
+
+-- | `sidechainMessageToTokenName` converts a sidechain message to a token name
+sidechainMessageToTokenName ∷ SidechainMessage → TokenName
+sidechainMessageToTokenName (SidechainMessage byteArray) =
+  -- should be safe as they have the same length requirements
+  -- i.e., token names should be less than or equal to 32 bytes long
+  -- See:
+  -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/fde2e42b2e57ea978b3517913a1917ebf8836ab6/src/Internal/Types/TokenName.purs#L104-L109
+  Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName byteArray
 
 -- | `getSidechainMessageByteArray` grabs the underlying `ByteArray` of the
 -- | `SidechainMessage`
@@ -344,8 +356,9 @@ isSorted xss = case Array.tail xss of
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
--- | For this to be truly compatible with the onchain function, you need to ensure
--- | that the input list is sorted
+-- | Note: this sorts the input array
 aggregateKeys ∷ Array SidechainPublicKey → ByteArray
-aggregateKeys = Hashing.blake2b256Hash <<< foldMap
-  getSidechainPublicKeyByteArray
+aggregateKeys =
+  Hashing.blake2b256Hash
+    <<< foldMap getSidechainPublicKeyByteArray
+    <<< Array.sortWith getSidechainPublicKeyByteArray
