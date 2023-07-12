@@ -15,7 +15,7 @@ import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlain)
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.ConfigFile (readConfigJson)
 
@@ -66,7 +66,7 @@ test1 =
                               )
                           )
                       , threshold: (Just { denominator: 3, numerator: 2 })
-                      , atmsKind: Just ATMSPlain
+                      , atmsKind: Just ATMSPlainEcdsaSecp256k1
                       }
                   )
               , stakeSigningKeyFile: Nothing

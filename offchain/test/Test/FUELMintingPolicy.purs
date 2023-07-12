@@ -23,7 +23,9 @@ import Test.Utils
   , plutipGroup
   , toTxIn
   )
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds(ATMSPlain))
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy
   ( FuelMintOrFuelBurnParams(Mint, Burn)
@@ -80,7 +82,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -114,7 +116,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
       void $ runFuelMP
         ( FuelParams
             { sidechainParams
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             , fuelMintOrFuelBurnParams:
                 Mint
                   { amount
@@ -162,7 +164,7 @@ testScenarioSuccess2 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
         -- end of mostly duplicated code from `testScenarioSuccess`
 
@@ -204,7 +206,7 @@ testScenarioSuccess2 =
         fp0 ← liftContractM "Could not build FuelParams" $
           combinedMerkleProofToFuelParams
             { sidechainParams
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             , combinedMerkleProof: combinedMerkleProof0
             }
 
@@ -212,7 +214,7 @@ testScenarioSuccess2 =
           combinedMerkleProofToFuelParams
             { sidechainParams
             , combinedMerkleProof: combinedMerkleProof1
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             }
 
         -- TODO: see definition of assertMaxFee
@@ -225,7 +227,7 @@ testScenarioSuccess2 =
         void $ runFuelMP
           ( FuelParams
               { sidechainParams
-              , atmsKind: ATMSPlain
+              , atmsKind: ATMSPlainEcdsaSecp256k1
               , fuelMintOrFuelBurnParams:
                   Burn
                     { amount: BigInt.fromInt 10
@@ -238,7 +240,7 @@ testScenarioSuccess2 =
         void $ runFuelMP
           ( FuelParams
               { sidechainParams
-              , atmsKind: ATMSPlain
+              , atmsKind: ATMSPlainEcdsaSecp256k1
               , fuelMintOrFuelBurnParams:
                   Burn
                     { amount: BigInt.fromInt 2
@@ -276,7 +278,7 @@ testScenarioSuccess3 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -324,7 +326,7 @@ testScenarioSuccess3 =
           void $ runFuelMP
             $ FuelParams
                 { sidechainParams
-                , atmsKind: ATMSPlain
+                , atmsKind: ATMSPlainEcdsaSecp256k1
                 , fuelMintOrFuelBurnParams:
                     Mint
                       { amount
@@ -361,7 +363,7 @@ testScenarioFailure =
 
           void $ runFuelMP $ FuelParams
             { sidechainParams: scParams
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             , fuelMintOrFuelBurnParams:
                 Mint
                   { merkleProof: mp
@@ -374,7 +376,7 @@ testScenarioFailure =
             }
           void $ runFuelMP $ FuelParams
             { sidechainParams: scParams
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             , fuelMintOrFuelBurnParams:
                 Burn
                   { amount: BigInt.fromInt 1
@@ -411,7 +413,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -454,7 +456,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
           combinedMerkleProofToFuelParams
             { sidechainParams
             , combinedMerkleProof: combinedMerkleProof0
-            , atmsKind: ATMSPlain
+            , atmsKind: ATMSPlainEcdsaSecp256k1
             }
 
         -- the very bad double mint attempt...

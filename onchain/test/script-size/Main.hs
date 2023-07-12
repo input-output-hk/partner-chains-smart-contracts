@@ -8,7 +8,7 @@ import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
-import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CPATMSP
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
@@ -111,13 +111,13 @@ main =
             (unversioned CV.serialisableCheckpointPolicy)
             2_853
         , fitsInto
-            "mkMintingPolicy (CommitteePlainATMSPolicy)"
-            Compiled.mkCommitteePlainATMSPolicyCode
-            1_056
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
+            Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
+            931
         , scriptFitsInto
-            "mkMintingPolicy (CommitteePlainATMSPolicy) serialized"
-            (unversioned CPATMSP.serialisableMintingPolicy)
-            3_604
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
+            (unversioned CPEATMSP.serialisableMintingPolicy)
+            3_434
         ]
     , testGroup
         "Distributed set"
@@ -149,8 +149,8 @@ main =
     , testGroup
         "Other"
         [ fitsUnder
-            "verifyMultisig"
+            "verifyPlainMultisig"
             ("new", Compiled.newVerify)
-            ("old", Legacy.verifyMultisigCode)
+            ("old", Legacy.verifyPlainMultisigCode)
         ]
     ]

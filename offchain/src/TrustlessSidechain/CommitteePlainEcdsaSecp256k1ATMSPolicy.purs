@@ -1,19 +1,19 @@
--- | `TrustlessSidechain.CommitteePlainATMSPolicy` provides functionality to
+-- | `TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy` provides functionality to
 -- | replicate the onchain code data types, and grab its minting policies and
 -- | currency symbols.
 -- | Also, we provide mechanisms for creating the lookups and constraints to
 -- | build / submit the transaction.
-module TrustlessSidechain.CommitteePlainATMSPolicy
-  ( ATMSPlainMultisignature(ATMSPlainMultisignature)
-  , committeePlainATMSMintFromSidechainParams
+module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
+  ( ATMSPlainEcdsaSecp256k1Multisignature(ATMSPlainEcdsaSecp256k1Multisignature)
+  , committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
 
-  , committeePlainATMS
-  , getCommitteePlainATMSPolicy
+  , committeePlainEcdsaSecp256k1ATMS
+  , getCommitteePlainEcdsaSecp256k1ATMSPolicy
 
   , findUpdateCommitteeHashUtxoFromSidechainParams
 
-  , mustMintCommitteePlainATMSPolicy
-  , runCommitteePlainATMSPolicy
+  , mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
+  , runCommitteePlainEcdsaSecp256k1ATMSPolicy
   ) where
 
 import Contract.Prelude
@@ -76,60 +76,66 @@ import TrustlessSidechain.Utils.Logging
   )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 
--- | `ATMSPlainMultisignature` corresponds to the onchain type
-newtype ATMSPlainMultisignature = ATMSPlainMultisignature
-  { currentCommittee ∷ Array SidechainPublicKey
-  , currentCommitteeSignatures ∷ Array SidechainSignature
-  }
+-- | `ATMSPlainEcdsaSecp256k1Multisignature` corresponds to the onchain type
+newtype ATMSPlainEcdsaSecp256k1Multisignature =
+  ATMSPlainEcdsaSecp256k1Multisignature
+    { currentCommittee ∷ Array SidechainPublicKey
+    , currentCommitteeSignatures ∷ Array SidechainSignature
+    }
 
-derive instance Generic ATMSPlainMultisignature _
+derive instance Generic ATMSPlainEcdsaSecp256k1Multisignature _
 
-derive instance Newtype ATMSPlainMultisignature _
+derive instance Newtype ATMSPlainEcdsaSecp256k1Multisignature _
 
-instance ToData ATMSPlainMultisignature where
+instance ToData ATMSPlainEcdsaSecp256k1Multisignature where
   toData
-    ( ATMSPlainMultisignature
+    ( ATMSPlainEcdsaSecp256k1Multisignature
         { currentCommittee, currentCommitteeSignatures }
     ) = Constr (BigNum.fromInt 0)
     [ toData currentCommittee
     , toData currentCommitteeSignatures
     ]
 
--- | `committeePlainATMS` grabs the minting policy for the committee plain ATMS
+-- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the committee plainEcdsaSecp256k1 ATMS
 -- | policy
-committeePlainATMS ∷ CommitteeCertificateMint → Contract MintingPolicy
-committeePlainATMS param = do
+committeePlainEcdsaSecp256k1ATMS ∷
+  CommitteeCertificateMint → Contract MintingPolicy
+committeePlainEcdsaSecp256k1ATMS param = do
   let
-    script = decodeTextEnvelope RawScripts.rawCommitteePlainATMSPolicy >>=
-      plutusScriptV2FromEnvelope
+    script =
+      decodeTextEnvelope
+        RawScripts.rawCommitteePlainEcdsaSecp256k1ATMSPolicy >>=
+        plutusScriptV2FromEnvelope
 
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied [ toData param ]
   pure $ PlutusMintingPolicy applied
 
--- | `getCommitteePlainATMSPolicy` grabs the committee plain ATMS currency
+-- | `getCommitteePlainEcdsaSecp256k1ATMSPolicy` grabs the committee plainEcdsaSecp256k1 ATMS currency
 -- | symbol and policy
-getCommitteePlainATMSPolicy ∷
+getCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
   CommitteeCertificateMint →
   Contract
-    { committeePlainATMSPolicy ∷ MintingPolicy
-    , committeePlainATMSCurrencySymbol ∷ CurrencySymbol
+    { committeePlainEcdsaSecp256k1ATMSPolicy ∷ MintingPolicy
+    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol ∷ CurrencySymbol
     }
-getCommitteePlainATMSPolicy param = do
-  committeePlainATMSPolicy ← committeePlainATMS param
-  committeePlainATMSCurrencySymbol ← Monad.liftContractM
+getCommitteePlainEcdsaSecp256k1ATMSPolicy param = do
+  committeePlainEcdsaSecp256k1ATMSPolicy ← committeePlainEcdsaSecp256k1ATMS param
+  committeePlainEcdsaSecp256k1ATMSCurrencySymbol ← Monad.liftContractM
     ( show $ InternalError $ InvalidScript
-        "Failed to get committee plain ATMS currency symbol"
+        "Failed to get committee plainEcdsaSecp256k1 ATMS currency symbol"
     )
-    (Value.scriptCurrencySymbol committeePlainATMSPolicy)
+    (Value.scriptCurrencySymbol committeePlainEcdsaSecp256k1ATMSPolicy)
   pure
-    { committeePlainATMSPolicy, committeePlainATMSCurrencySymbol }
+    { committeePlainEcdsaSecp256k1ATMSPolicy
+    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+    }
 
--- | `committeePlainATMSMintFromSidechainParams` grabs the `CommitteePlainATMSPolicy`
+-- | `committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams` grabs the `CommitteePlainEcdsaSecp256k1ATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
-committeePlainATMSMintFromSidechainParams ∷
+committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams ∷
   SidechainParams → Contract CommitteeCertificateMint
-committeePlainATMSMintFromSidechainParams sidechainParams = do
+committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams sidechainParams = do
   { committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
   pure $ CommitteeCertificateMint
@@ -138,16 +144,16 @@ committeePlainATMSMintFromSidechainParams sidechainParams = do
     , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
     }
 
--- | `mustMintCommitteePlainATMSPolicy` provides the constraints to mint a
+-- | `mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy` provides the constraints to mint a
 -- | committee signed token.
 -- | Note: this does NOT include a constraint to reference or spend the UTxO
 -- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
-mustMintCommitteePlainATMSPolicy ∷
+mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
   CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-mustMintCommitteePlainATMSPolicy
+mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
   ( CommitteeATMSParams
       { currentCommitteeUtxo
       , committeeCertificateMint
@@ -171,10 +177,10 @@ mustMintCommitteePlainATMSPolicy
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
     curCommitteeHash = Utils.Crypto.aggregateKeys curCommitteePubKeys
 
-  -- Grabbing CommitteePlainATMSPolicy
+  -- Grabbing CommitteePlainEcdsaSecp256k1ATMSPolicy
   -------------------------------------------------------------
-  { committeePlainATMSPolicy
-  } ← getCommitteePlainATMSPolicy committeeCertificateMint
+  { committeePlainEcdsaSecp256k1ATMSPolicy
+  } ← getCommitteePlainEcdsaSecp256k1ATMSPolicy committeeCertificateMint
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
   -- the current committee isn't as expected.
@@ -221,7 +227,7 @@ mustMintCommitteePlainATMSPolicy
 
   let
     redeemer = Redeemer $ toData $
-      ATMSPlainMultisignature
+      ATMSPlainEcdsaSecp256k1Multisignature
         { currentCommittee: curCommitteePubKeys
         , currentCommitteeSignatures: curCommitteeSignatures
         }
@@ -230,10 +236,10 @@ mustMintCommitteePlainATMSPolicy
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeORef committeeTxOut)
-          <> ScriptLookups.mintingPolicy committeePlainATMSPolicy
+          <> ScriptLookups.mintingPolicy committeePlainEcdsaSecp256k1ATMSPolicy
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemer
-          (Scripts.mintingPolicyHash committeePlainATMSPolicy)
+          (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
           redeemer
           message
           one
@@ -250,20 +256,20 @@ mustMintCommitteePlainATMSPolicy
     -- ```
     }
 
--- | `runCommitteePlainATMSPolicy` provides a convenient way to submit a
--- | transaction with the constraints given in `mustMintCommitteePlainATMSPolicy`.
+-- | `runCommitteePlainEcdsaSecp256k1ATMSPolicy` provides a convenient way to submit a
+-- | transaction with the constraints given in `mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy`.
 -- |
 -- | This is mainly just used for testing as one wouldn't want to just call
 -- | this in isolation.
 -- |
 -- | Note: this assumes that the current committee should be given as reference
 -- | input (instead of spending it) to make testing a bit more terse.
-runCommitteePlainATMSPolicy ∷
+runCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
   CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
   Contract TransactionHash
-runCommitteePlainATMSPolicy params = do
+runCommitteePlainEcdsaSecp256k1ATMSPolicy params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
-    mustMintCommitteePlainATMSPolicy params
+    mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy params
 
   let
     extraLookupsAndContraints =
@@ -276,7 +282,8 @@ runCommitteePlainATMSPolicy params = do
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
       <> extraLookupsAndContraints
 
-  Utils.Transaction.balanceSignAndSubmit "CommitteePlainATMSPolicy" lookups
+  Utils.Transaction.balanceSignAndSubmit "CommitteePlainEcdsaSecp256k1ATMSPolicy"
+    lookups
     constraints
 
 -- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
@@ -299,8 +306,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
         , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
 
-  { committeePlainATMSCurrencySymbol } ← getCommitteePlainATMSPolicy
-    committeeCertificateMint
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+    getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      committeeCertificateMint
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
@@ -311,7 +319,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
     smrm = SignedMerkleRootMint
       { sidechainParams: sidechainParams
       , committeeCertificateVerificationCurrencySymbol:
-          committeePlainATMSCurrencySymbol
+          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
       , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
       }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
@@ -331,7 +339,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
       , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol:
-          committeePlainATMSCurrencySymbol
+          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
       }
 
   -- Finding the current committee

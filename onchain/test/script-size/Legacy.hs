@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Legacy (verifyMultisigCode) where
+module Legacy (verifyPlainMultisigCode) where
 
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.PlutusPrelude
 
-verifyMultisigCode ::
+verifyPlainMultisigCode ::
   CompiledCode
     ( [BuiltinByteString] ->
       Integer ->
@@ -14,18 +14,18 @@ verifyMultisigCode ::
       [BuiltinByteString] ->
       Bool
     )
-verifyMultisigCode = $$(compile [||verifyMultisig||])
+verifyPlainMultisigCode = $$(compile [||verifyPlainMultisig||])
 
 -- Helpers
 
-{-# INLINE verifyMultisig #-}
-verifyMultisig ::
+{-# INLINE verifyPlainMultisig #-}
+verifyPlainMultisig ::
   [BuiltinByteString] ->
   Integer ->
   BuiltinByteString ->
   [BuiltinByteString] ->
   Bool
-verifyMultisig pubKeys threshold message signatures =
+verifyPlainMultisig pubKeys threshold message signatures =
   let go :: Integer -> [BuiltinByteString] -> [BuiltinByteString] -> Bool
       go !signed !pubs !sigs =
         let ok = signed >= threshold

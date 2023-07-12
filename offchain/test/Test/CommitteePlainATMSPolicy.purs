@@ -1,4 +1,4 @@
-module Test.CommitteePlainATMSPolicy
+module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
   ( tests
   ) where
 
@@ -18,10 +18,10 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlain)
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeATMSParams(CommitteeATMSParams)
   )
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
@@ -62,17 +62,18 @@ generateSignatures
   in
     committeeSignatures
 
--- | `tests` aggregates all the `CommitteePlainATMSPolicy` tests together in
+-- | `tests` aggregates all the `CommitteePlainEcdsaSecp256k1ATMSPolicy` tests together in
 -- | one convenient function.
 tests ∷ WrappedTests
-tests = plutipGroup "CommitteePlainATMSPolicy minting" $ do
+tests = plutipGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
   testScenario1
 
--- | 'testScenario1' includes various tests for `CommitteePlainATMSPolicy` from
+-- | 'testScenario1' includes various tests for `CommitteePlainEcdsaSecp256k1ATMSPolicy` from
 -- | the same sidechain.
 testScenario1 ∷ PlutipTest
 testScenario1 =
-  Mote.Monad.test "Various tests for the CommitteePlainATMSPolicy token"
+  Mote.Monad.test
+    "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
     $ \alice → Wallet.withKeyWallet alice do
@@ -93,24 +94,25 @@ testScenario1 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
 
-        -- Grabbing the CommitteePlainATMSPolicy on chain parameters / minting policy
+        -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
-        committeePlainATMSMint ←
-          CommitteePlainATMSPolicy.committeePlainATMSMintFromSidechainParams
+        committeePlainEcdsaSecp256k1ATMSMint ←
+          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
             sidechainParams
 
-        { committeePlainATMSCurrencySymbol } ←
-          CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-            committeePlainATMSMint
+        { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+          CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+            committeePlainEcdsaSecp256k1ATMSMint
 
         -- Running the tests
         -------------------------
-        logInfo' "CommitteePlainATMSPolicy a successful mint from the committee"
+        logInfo'
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee"
         void do
           let
             sidechainMessageByteArray =
@@ -138,23 +140,25 @@ testScenario1 =
           -- ```
 
           utxo ←
-            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
-          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteeATMSParams
-                { currentCommitteeUtxo: utxo
-                , committeeCertificateMint: committeePlainATMSMint
-                , aggregateSignature: committeeSignatures
-                , message: sidechainMessageTokenName
-                }
+          _ ←
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              $ CommitteeATMSParams
+                  { currentCommitteeUtxo: utxo
+                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , aggregateSignature: committeeSignatures
+                  , message: sidechainMessageTokenName
+                  }
 
-          Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
+          Test.Utils.assertIHaveOutputWithAsset
+            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
         logInfo'
-          "CommitteePlainATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
         void do
           let
             sidechainMessageByteArray =
@@ -186,21 +190,23 @@ testScenario1 =
           -- 80 committee members total
 
           utxo ←
-            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
-          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteeATMSParams
-                { currentCommitteeUtxo: utxo
-                , committeeCertificateMint: committeePlainATMSMint
-                , aggregateSignature: committeeSignatures
-                , message: sidechainMessageTokenName
-                }
+          _ ←
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              $ CommitteeATMSParams
+                  { currentCommitteeUtxo: utxo
+                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , aggregateSignature: committeeSignatures
+                  , message: sidechainMessageTokenName
+                  }
 
-          Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
+          Test.Utils.assertIHaveOutputWithAsset
+            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         logInfo'
-          "CommitteePlainATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
         void do
           let
             sidechainMessageByteArray =
@@ -227,21 +233,23 @@ testScenario1 =
                   allPubKeysAndJustSignatures
 
           utxo ←
-            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
-          _ ← CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
-            $ CommitteeATMSParams
-                { currentCommitteeUtxo: utxo
-                , committeeCertificateMint: committeePlainATMSMint
-                , aggregateSignature: committeeSignatures
-                , message: sidechainMessageTokenName
-                }
+          _ ←
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              $ CommitteeATMSParams
+                  { currentCommitteeUtxo: utxo
+                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , aggregateSignature: committeeSignatures
+                  , message: sidechainMessageTokenName
+                  }
 
-          Test.Utils.assertIHaveOutputWithAsset committeePlainATMSCurrencySymbol
+          Test.Utils.assertIHaveOutputWithAsset
+            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         logInfo'
-          "CommitteePlainATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
         void do
           let
             sidechainMessageByteArray =
@@ -266,13 +274,13 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
-            ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
+            ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainATMSMint
+                    , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
@@ -280,7 +288,7 @@ testScenario1 =
             # Test.Utils.fails
 
         logInfo'
-          "CommitteePlainATMSPolicy an unsuccessful mint where we use wrong committee"
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
         void do
           wrongCommittee ← sequence $ Array.replicate keyCount
             Utils.Crypto.generatePrivKey
@@ -306,13 +314,13 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            CommitteePlainATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
-            ( CommitteePlainATMSPolicy.runCommitteePlainATMSPolicy
+            ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainATMSMint
+                    , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }

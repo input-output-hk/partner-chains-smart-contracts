@@ -28,12 +28,12 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Plain)
-  , ATMSKinds(ATMSPlain)
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainATMSPolicy as CommitteePlainATMSPolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.MerkleRoot.Types
   ( SignedMerkleRootMint(SignedMerkleRootMint)
@@ -101,14 +101,15 @@ generateUchmSignatures
   { committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  { committeePlainATMSCurrencySymbol:
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
       committeeCertificateVerificationCurrencySymbol
-  } ← CommitteePlainATMSPolicy.getCommitteePlainATMSPolicy
-    $ CommitteeCertificateMint
-        { committeeOraclePolicy: committeeOracleCurrencySymbol
-        , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        }
+  } ←
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      $ CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
 
   merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
     sidechainParams
@@ -206,7 +207,8 @@ updateCommitteeHashWith params f = void do
         { sidechainParams: params.sidechainParams
         , newAggregatePubKeys: toData newAggregatePubKeys
         , aggregateSignature:
-            Plain (map (Just <$> _) committeeSignatures)
+            PlainEcdsaSecp256k1
+              (map (Just <$> _) committeeSignatures)
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
@@ -248,7 +250,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlain
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -290,7 +292,7 @@ testScenario2 =
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -311,8 +313,9 @@ testScenario2 =
                     { aggregateSignature =
                         ( Unsafe.unsafePartial $
                             case params.aggregateSignature of
-                              Plain [ c1 /\ _s1, c2 /\ s2 ] →
-                                Plain
+                              PlainEcdsaSecp256k1
+                                [ c1 /\ _s1, c2 /\ s2 ] →
+                                PlainEcdsaSecp256k1
                                   [ c1 /\ Nothing
                                   , c2 /\ s2
                                   ]
@@ -351,7 +354,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -369,7 +372,9 @@ testScenario3 =
                   { aggregateSignature =
                       Unsafe.unsafePartial $
                         case (unwrap uchp).aggregateSignature of
-                          Plain sigs → Plain $ Array.reverse sigs
+                          PlainEcdsaSecp256k1 sigs →
+                            PlainEcdsaSecp256k1 $
+                              Array.reverse sigs
                   }
               )
 
@@ -439,7 +444,7 @@ testScenario4 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -492,7 +497,7 @@ testScenario5 =
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlain
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -512,12 +517,12 @@ testScenario5 =
                     { aggregateSignature =
                         Unsafe.unsafePartial
                           ( case params.aggregateSignature of
-                              Plain
+                              PlainEcdsaSecp256k1
                                 [ c1 /\ _s1
                                 , c2 /\ s2
                                 , c3 /\ s3
                                 , c4 /\ s4
-                                ] → Plain
+                                ] → PlainEcdsaSecp256k1
                                 [ c1 /\ Nothing
                                 , c2 /\ s2
                                 , c3 /\ s3

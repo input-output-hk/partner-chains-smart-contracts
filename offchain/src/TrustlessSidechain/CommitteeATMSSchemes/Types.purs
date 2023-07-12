@@ -1,9 +1,14 @@
 module TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeCertificateMint(CommitteeCertificateMint)
   , CommitteeATMSParams(CommitteeATMSParams)
-  , ATMSAggregateSignatures(Plain, Multisignature, PoK, Dummy)
+  , ATMSAggregateSignatures
+      ( PlainEcdsaSecp256k1
+      , Multisignature
+      , PoK
+      , Dummy
+      )
   , ATMSKinds
-      ( ATMSPlain
+      ( ATMSPlainEcdsaSecp256k1
       , ATMSMultisignature
       , ATMSPoK
       , ATMSDummy
@@ -24,7 +29,6 @@ import Contract.Transaction
   )
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
-import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
@@ -78,7 +82,8 @@ derive instance Newtype (CommitteeATMSParams aggregateSignature) _
 -- | `ATMSAggregateSignatures` is a sumtype which defines all the possible ATMS
 -- | aggregate keys + signatures
 data ATMSAggregateSignatures
-  = Plain (Array (SidechainPublicKey /\ Maybe SidechainSignature))
+  = PlainEcdsaSecp256k1
+      (Array (SidechainPublicKey /\ Maybe SidechainSignature))
   | Multisignature
   | PoK
   | Dummy
@@ -96,7 +101,7 @@ data ATMSAggregateSignatures
 -- |    `TrustlessSidechain.Options.Parsers`, `TrustlessSidechain.Options.Specs`
 -- |    all have user facing documentation that must be updated as well.
 data ATMSKinds
-  = ATMSPlain
+  = ATMSPlainEcdsaSecp256k1
   | ATMSMultisignature
   | ATMSPoK
   | ATMSDummy
@@ -108,4 +113,8 @@ derive instance Eq ATMSKinds
 derive instance Ord ATMSKinds
 
 instance Show ATMSKinds where
-  show = genericShow
+  show = case _ of
+    ATMSPlainEcdsaSecp256k1 → "plain-ecdsa-secp256k1"
+    ATMSMultisignature → "multisignature"
+    ATMSPoK → "pok"
+    ATMSDummy → "dummy"
