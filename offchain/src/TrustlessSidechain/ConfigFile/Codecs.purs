@@ -2,6 +2,8 @@ module TrustlessSidechain.ConfigFile.Codecs
   ( committeeSignaturesCodec
   , committeeCodec
   , configCodec
+  , sidechainSignatureCodec
+  , sidechainPubKeyCodec
   ) where
 
 import Contract.Prelude
@@ -16,9 +18,13 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
 import Data.UInt as UInt
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds
+  )
 import TrustlessSidechain.Options.Types (Config)
 import TrustlessSidechain.Utils.Codecs
-  ( byteArrayCodec
+  ( atmsKindCodec
+  , byteArrayCodec
   , thresholdCodec
   , transactionInputCodec
   )
@@ -51,6 +57,7 @@ configCodec =
             { denominator ∷ Int
             , numerator ∷ Int
             }
+      , atmsKind ∷ Maybe ATMSKinds
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
@@ -58,6 +65,7 @@ configCodec =
         , genesisHash: CAC.maybe byteArrayCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
+        , atmsKind: CAC.maybe atmsKindCodec
         }
     )
 
@@ -77,34 +85,34 @@ configCodec =
 
 -- | Accepts the format: `[ {"public-key":"aabb...", "signature":null}, ... ]`
 committeeSignaturesCodec ∷
-  CA.JsonCodec (List (SidechainPublicKey /\ Maybe SidechainSignature))
+  CA.JsonCodec (List (ByteArray /\ Maybe ByteArray))
 committeeSignaturesCodec = CAM.list memberCodec
   where
   memberRecord ∷
     CA.JsonCodec
-      { "public-key" ∷ SidechainPublicKey
-      , signature ∷ Maybe SidechainSignature
+      { "public-key" ∷ ByteArray
+      , signature ∷ Maybe ByteArray
       }
   memberRecord = CAR.object "member"
-    { "public-key": sidechainPubKeyCodec
-    , "signature": CAC.maybe sidechainSignatureCodec
+    { "public-key": byteArrayCodec
+    , "signature": CAC.maybe byteArrayCodec
     }
 
   memberCodec ∷
-    CA.JsonCodec (Tuple SidechainPublicKey (Maybe SidechainSignature))
+    CA.JsonCodec (Tuple ByteArray (Maybe ByteArray))
   memberCodec = CA.prismaticCodec "member" dec enc memberRecord
 
   dec ∷
-    { "public-key" ∷ SidechainPublicKey
-    , signature ∷ Maybe SidechainSignature
+    { "public-key" ∷ ByteArray
+    , signature ∷ Maybe ByteArray
     } →
-    Maybe (Tuple SidechainPublicKey (Maybe SidechainSignature))
+    Maybe (Tuple ByteArray (Maybe ByteArray))
   dec { "public-key": p, signature } = Just (p /\ signature)
 
   enc ∷
-    Tuple SidechainPublicKey (Maybe SidechainSignature) →
-    { "public-key" ∷ SidechainPublicKey
-    , signature ∷ Maybe SidechainSignature
+    Tuple ByteArray (Maybe ByteArray) →
+    { "public-key" ∷ ByteArray
+    , signature ∷ Maybe ByteArray
     }
   enc (p /\ signature) = { "public-key": p, signature }
 

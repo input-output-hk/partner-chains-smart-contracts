@@ -6,7 +6,8 @@
     "threshold": {
       "numerator": 2,
       "denominator": 3
-    }
+    },
+    "atmsKind": "plain"
   },
   "runtimeConfig": {
     "network": "testnet",
