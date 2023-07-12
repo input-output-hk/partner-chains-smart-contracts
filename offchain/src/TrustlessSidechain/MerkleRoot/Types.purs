@@ -23,6 +23,10 @@ import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Data
+  ( productToData3
+  , productToData4
+  )
 
 -- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot
@@ -45,13 +49,10 @@ instance ToData SignedMerkleRoot where
   toData
     ( SignedMerkleRoot
         { merkleRoot, previousMerkleRoot, signatures, committeePubKeys }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData merkleRoot
-      , toData previousMerkleRoot
-      , toData signatures
-      , toData committeePubKeys
-      ]
+    ) = productToData4 merkleRoot
+    previousMerkleRoot
+    signatures
+    committeePubKeys
 
 -- | `SignedMerkleRootMint` parameterizes the onchain minting policy.
 newtype SignedMerkleRootMint = SignedMerkleRootMint
@@ -77,12 +78,9 @@ instance ToData SignedMerkleRootMint where
         , updateCommitteeHashCurrencySymbol
         , merkleRootValidatorHash
         }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData sidechainParams
-      , toData updateCommitteeHashCurrencySymbol
-      , toData merkleRootValidatorHash
-      ]
+    ) = productToData3 sidechainParams
+    updateCommitteeHashCurrencySymbol
+    merkleRootValidatorHash
 
 -- | `SaveRootParams` is the offchain parameter for MerkleRoot (`MerkleRoot.saveRoot`)
 -- | endpoint.

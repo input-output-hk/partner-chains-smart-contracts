@@ -33,11 +33,9 @@ import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
-import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -59,6 +57,10 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
   , OffchainError(InternalError, InvalidInputError)
@@ -116,14 +118,16 @@ derive instance Generic DsConfDatum _
 derive instance Newtype DsConfDatum _
 
 instance FromData DsConfDatum where
-  fromData (Constr n [ a, b ]) | n == BigNum.fromInt 0 =
-    DsConfDatum <$>
-      ({ dscKeyPolicy: _, dscFUELPolicy: _ } <$> fromData a <*> fromData b)
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y → DsConfDatum
+        { dscKeyPolicy: x
+        , dscFUELPolicy: y
+        }
+    )
 
 instance ToData DsConfDatum where
   toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) =
-    Constr (BigNum.fromInt 0) [ toData dscKeyPolicy, toData dscFUELPolicy ]
+    productToData2 dscKeyPolicy dscFUELPolicy
 
 -- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
 -- | which initializes the distributed set (i.e., the parameter for the
@@ -154,17 +158,16 @@ derive instance Generic DsKeyMint _
 derive instance Newtype DsKeyMint _
 
 instance FromData DsKeyMint where
-  fromData (Constr n [ a, b ])
-    | n == BigNum.fromInt 0 = DsKeyMint <$>
-        ( { dskmValidatorHash: _, dskmConfCurrencySymbol: _ } <$> fromData a <*>
-            fromData b
-        )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y → DsKeyMint
+        { dskmValidatorHash: x
+        , dskmConfCurrencySymbol: y
+        }
+    )
 
 instance ToData DsKeyMint where
   toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) =
-    Constr (BigNum.fromInt 0)
-      [ toData dskmValidatorHash, toData dskmConfCurrencySymbol ]
+    productToData2 dskmValidatorHash dskmConfCurrencySymbol
 
 -- | `Node` is an internal type to represent the nodes in the distributed set.
 newtype Node = Node

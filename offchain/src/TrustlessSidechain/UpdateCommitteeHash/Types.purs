@@ -19,7 +19,6 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
-  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -30,6 +29,12 @@ import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  , productToData3
+  , productToData4
+  )
 
 -- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
 -- | validator
@@ -43,19 +48,16 @@ derive instance Generic UpdateCommitteeHashDatum _
 derive instance Newtype UpdateCommitteeHashDatum _
 
 instance ToData UpdateCommitteeHashDatum where
-  toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) = Constr
-    (BigNum.fromInt 0)
-    [ toData committeeHash, toData sidechainEpoch ]
+  toData (UpdateCommitteeHashDatum { committeeHash, sidechainEpoch }) =
+    productToData2 committeeHash sidechainEpoch
 
 instance FromData UpdateCommitteeHashDatum where
-  fromData (Constr n [ a, b ])
-    | n == BigNum.fromInt 0 =
-        UpdateCommitteeHashDatum <$>
-          ( { committeeHash: _, sidechainEpoch: _ }
-              <$> fromData a
-              <*> fromData b
-          )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y → UpdateCommitteeHashDatum
+        { committeeHash: x
+        , sidechainEpoch: y
+        }
+    )
 
 -- | `UpdateCommitteeHash` paramaterizes the the validator for the update
 -- | committee hash policy.
@@ -73,11 +75,9 @@ instance ToData UpdateCommitteeHash where
   toData
     ( UpdateCommitteeHash
         { sidechainParams, uchAssetClass, merkleRootTokenCurrencySymbol }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData uchAssetClass
-    , toData merkleRootTokenCurrencySymbol
-    ]
+    ) = productToData3 sidechainParams
+    uchAssetClass
+    merkleRootTokenCurrencySymbol
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
 -- | the utxo with the update committee hash validator script.
@@ -111,12 +111,10 @@ instance ToData UpdateCommitteeHashRedeemer where
         , newCommitteePubKeys
         , previousMerkleRoot
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCommitteePubKeys
-    , toData previousMerkleRoot
-    ]
+    ) = productToData4 committeeSignatures
+    committeePubKeys
+    newCommitteePubKeys
+    previousMerkleRoot
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.

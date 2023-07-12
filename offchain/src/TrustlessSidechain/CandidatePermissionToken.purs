@@ -13,8 +13,7 @@ import Contract.Prelude
 
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData (class ToData, PlutusData(Constr))
+import Contract.PlutusData (class ToData)
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -35,6 +34,7 @@ import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Data (productToData2)
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError)
@@ -57,11 +57,7 @@ derive instance Newtype CandidatePermissionMint _
 instance ToData CandidatePermissionMint where
   toData
     (CandidatePermissionMint { sidechainParams, candidatePermissionTokenUtxo }) =
-    Constr
-      (BigNum.fromInt 0)
-      [ PlutusData.toData sidechainParams
-      , PlutusData.toData candidatePermissionTokenUtxo
-      ]
+    productToData2 sidechainParams candidatePermissionTokenUtxo
 
 -- | `getCandidatePermissionMintingPolicy` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.

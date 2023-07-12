@@ -24,12 +24,10 @@ import Contract.Monad
   , liftedM
   , throwContractError
   )
-import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , Datum(Datum)
-  , PlutusData(Constr)
   , fromData
   , toData
   , unitRedeemer
@@ -62,6 +60,10 @@ import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Data
+  ( productFromData6
+  , productToData6
+  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -116,27 +118,25 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData bprSpoPubKey
-    , toData bprSidechainPubKey
-    , toData bprSpoSignature
-    , toData bprSidechainSignature
-    , toData bprInputUtxo
-    , toData bprOwnPkh
-    ]
+    ) = productToData6 bprSpoPubKey
+    bprSidechainPubKey
+    bprSpoSignature
+    bprSidechainSignature
+    bprInputUtxo
+    bprOwnPkh
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ]) | n == (BigNum.fromInt 0) =
-    { bprSpoPubKey: _
-    , bprSidechainPubKey: _
-    , bprSpoSignature: _
-    , bprSidechainSignature: _
-    , bprInputUtxo: _
-    , bprOwnPkh: _
-    } <$> fromData a <*> fromData b <*> fromData c <*> fromData d <*> fromData e
-      <*> fromData f
-      <#> BlockProducerRegistration
-  fromData _ = Nothing
+  fromData = productFromData6
+    ( \x1 x2 x3 x4 x5 x6 →
+        BlockProducerRegistration
+          { bprSpoPubKey: x1
+          , bprSidechainPubKey: x2
+          , bprSpoSignature: x3
+          , bprSidechainSignature: x4
+          , bprInputUtxo: x5
+          , bprOwnPkh: x6
+          }
+    )
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
