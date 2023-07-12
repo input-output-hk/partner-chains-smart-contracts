@@ -17,9 +17,9 @@ another sidechain.
 
 As with all data stored on a blockchain, we are mostly concerned about two
 aspects: transaction fees and latency. Clearly, in an interactive multi-chain
-protocol both these aspects are important from a usability standpoint. In this
-proposal we will try to address these issues in a way that both fee and latency
-is low, but in the end, it's the responsibility of the dApp developer to
+protocol both of these aspects are important from a usability standpoint. In this
+proposal we will try to address these issues in a way that both fees and latency
+are low, but in the end, it's the responsibility of the dApp developer to
 transfer and store only the most important data on-chain, while relying on
 other ways of communication between protocols.
 
@@ -82,8 +82,8 @@ _Data hash transfer_
 ![Data Hash Transfer](./09-GeneralDataBridge/HashOnly.svg)
 
 A few of the benefits of using data hash transfer:
-- reduced transaction fee due to smaller transaction size
-- allowing transfer of arbitrary size of data
+- reduced transaction fees due to smaller transaction size
+- allowing transfer of arbitrarily sized data
 - allowing various optimisation of a multi-sidechain protocol by only using the
   mainchain relay as a verification step
 - hiding original data without using any extra encryption (note however that
