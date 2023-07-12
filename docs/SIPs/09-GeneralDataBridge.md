@@ -120,7 +120,7 @@ contracts, in cases when a protocol requires some UTxO to be consumable.
 Each UTxO sent to one of these validators must include the following datum:
 
 ```haskell
-data BroadcastMessage = BroadcastMessage
+data PostBoxValidatorDatum = PostBoxValidatorDatum
     { topic :: ByteString
     , sender :: Maybe SidechainRef
     , payload :: BroadcastPayload
@@ -136,7 +136,7 @@ data BroadcastPayload
 This is the simplest of all directions, as we do not need a certificate to prove
 that some data was broadcast. Any UTxO sent to the `PostBoxValidator` with a
 valid datum is considered a valid downward message. It's the responsibility of
-the consumer to verify that the `BroadcastMessage` is valid. Furthermore,
+the consumer to verify that the `PostBoxValidatorDatum` is valid. Furthermore,
 the `sender` of such message must always be `Nothing`.
 
 ### Upwards (Sidechain to Mainchain)
@@ -162,12 +162,12 @@ collisions:
 - token transfer: `blake2b(Constr(0, serialiseData(lockedCurrencySymbol, lockedTokenName)))`
 - data transfer: `blake2b(Constr(1, serialiseData(SidechainMessage)))`
 
-where `SidechainMessage` includes the above mentioned `BroadcastMessage` and
+where `SidechainMessage` includes the above mentioned `PostBoxValidatorDatum` and
 the address where the claimed token and datum must be sent:
 
 ```haskell
 data SidechainMessage = SidechainMessage
-    { message :: BroadcastMessage
+    { message :: PostBoxValidatorDatum
     , targetAddress :: Maybe Address
     }
 ```
@@ -178,12 +178,12 @@ prove that the data was claimed with a sidechain certificate.
 Minting verifies the following:
 - `SCToken` with the token name `blake2b(Constr(1, serialiseData(SidechainMessage)))`
   is minted
-- output with own minted token includes `BroadcastMessage` datum
+- output with own minted token includes `PostBoxValidatorDatum` datum
 - if `targetAddress` is set, output with own minted token is sent to it,
   otherwise it is sent to the `PostBoxValidator`
 - if the payload is `FullMessage(data)` then `tokenName = blake2b(data)`,
   if `HashedMessage(dataHash)` then `tokenName = dataHash`
-- `sender` field in `BroadcastMessage` is the same as the parameter of the
+- `sender` field in `PostBoxValidatorDatum` is the same as the parameter of the
   current minting policy (own SidechainRef)
 
 ### Sideways (Sidechain A to Sidechain B)
