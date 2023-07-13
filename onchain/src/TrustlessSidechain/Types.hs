@@ -107,6 +107,10 @@ data DeregisterParams = DeregisterParams
   , spoPubKey :: PubKey
   }
 
+{- | = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
@@ -122,27 +126,7 @@ data BlockProducerRegistration = BlockProducerRegistration
     bprOwnPkh :: PubKeyHash
   }
 
--- | @since Unreleased
-instance ToData BlockProducerRegistration where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (BlockProducerRegistration {..}) =
-    productToData6
-      bprSpoPubKey
-      bprSidechainPubKey
-      bprSpoSignature
-      bprSidechainSignature
-      bprInputUtxo
-      bprOwnPkh
-
--- | @since Unreleased
-instance FromData BlockProducerRegistration where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData6 BlockProducerRegistration
-
--- | @since Unreleased
-instance UnsafeFromData BlockProducerRegistration where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData6 BlockProducerRegistration
+PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 {- | = Important note
 

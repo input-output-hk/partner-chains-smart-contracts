@@ -1,3 +1,9 @@
+-- | Provides mirrors of the equivalent onchain functions as provided by
+-- | onchain's Plutus-specific prelude. These are designed to ensure consistent
+-- | Data serializations in both places.
+-- |
+-- | Unlike onchain, there is no equivalent to UnsafeFromData: thus, we do not
+-- | provide mirrors of those functions.
 module TrustlessSidechain.Utils.Data
   ( productToData2
   , productToData3

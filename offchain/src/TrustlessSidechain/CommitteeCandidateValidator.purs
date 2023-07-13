@@ -24,10 +24,12 @@ import Contract.Monad
   , liftedM
   , throwContractError
   )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , Datum(Datum)
+  , PlutusData(Constr)
   , fromData
   , toData
   , unitRedeemer
@@ -60,10 +62,6 @@ import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
-import TrustlessSidechain.Utils.Data
-  ( productFromData6
-  , productToData6
-  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -118,25 +116,37 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = productToData6 bprSpoPubKey
-    bprSidechainPubKey
-    bprSpoSignature
-    bprSidechainSignature
-    bprInputUtxo
-    bprOwnPkh
+    ) =
+    Constr (BigNum.fromInt 0)
+      [ toData bprSpoPubKey
+      , toData bprSidechainPubKey
+      , toData bprSpoSignature
+      , toData bprSidechainSignature
+      , toData bprInputUtxo
+      , toData bprOwnPkh
+      ]
 
 instance FromData BlockProducerRegistration where
-  fromData = productFromData6
-    ( \x1 x2 x3 x4 x5 x6 →
-        BlockProducerRegistration
-          { bprSpoPubKey: x1
-          , bprSidechainPubKey: x2
-          , bprSpoSignature: x3
-          , bprSidechainSignature: x4
-          , bprInputUtxo: x5
-          , bprOwnPkh: x6
-          }
-    )
+  fromData plutusData = case plutusData of
+    Constr n [ x1, x2, x3, x4, x5, x6 ] → do
+      guard (n == BigNum.fromInt 0)
+      x1' ← fromData x1
+      x2' ← fromData x2
+      x3' ← fromData x3
+      x4' ← fromData x4
+      x5' ← fromData x5
+      x6' ← fromData x6
+      pure
+        ( BlockProducerRegistration
+            { bprSpoPubKey: x1'
+            , bprSidechainPubKey: x2'
+            , bprSpoSignature: x3'
+            , bprSidechainSignature: x4'
+            , bprInputUtxo: x5'
+            , bprOwnPkh: x6'
+            }
+        )
+    _ → Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
