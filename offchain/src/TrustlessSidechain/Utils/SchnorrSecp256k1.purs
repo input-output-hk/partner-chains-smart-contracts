@@ -105,7 +105,7 @@ parsePublicKey byteArray
   | otherwise = Nothing
 
 -- | `parsePrivateKey` parses the raw hex bytes
---  [for internal use only]
+--  (for internal use)
 parsePrivateKey ∷ ByteArray → Maybe SchnorrSecp256k1PrivateKey
 parsePrivateKey byteArray
   | ByteArray.byteLength byteArray == 32 = Just $ SchnorrSecp256k1PrivateKey
@@ -142,7 +142,7 @@ serializeSignature (SchnorrSecp256k1Signature publicKey) =
     publicKey
 
 -- | `serializePrivateKey` shows the raw bytes hex encoded.
--- (for internal use only)
+-- (for internal use)
 serializePrivateKey ∷ SchnorrSecp256k1PrivateKey → String
 serializePrivateKey (SchnorrSecp256k1PrivateKey privateKey) =
   ByteArray.byteArrayToHex privateKey

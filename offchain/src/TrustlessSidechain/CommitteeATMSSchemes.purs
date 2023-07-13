@@ -225,7 +225,6 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
               Just pk' → Right pk'
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
-      -- TODO: refactor the `aggregateKeys` so it just takes a byte array
       map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
         $ flip traverse committeePubKeys
         $

@@ -1,3 +1,6 @@
+-- | `Test.CommitteePlainSchnorrSecp256k1ATMSPolicy` includes tests for the
+-- | plain schnorr secp2256k1 policy.
+-- | Warning: this is mostly duplicated from `Test.CommitteePlainEcdsaSecp256k1ATMSPolicy`.
 module Test.CommitteePlainSchnorrSecp256k1ATMSPolicy
   ( tests
   ) where
