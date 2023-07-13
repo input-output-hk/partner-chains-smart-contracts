@@ -93,6 +93,7 @@ library
     TrustlessSidechain.PoCInlineDatum
     TrustlessSidechain.PoCReferenceInput
     TrustlessSidechain.PoCReferenceScript
+    TrustlessSidechain.PoCSchnorr
     TrustlessSidechain.PoCSerialiseData
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
