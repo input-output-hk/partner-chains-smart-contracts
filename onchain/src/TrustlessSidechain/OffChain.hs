@@ -194,7 +194,7 @@ instance FromJSON SidechainCommitteeMember where
           <$> Aeson.Types.explicitParseField pPrivKey v "private-key"
           <*> Aeson.Types.explicitParseField pPubKey v "public-key"
 
--- | @since Unreleased
+-- | @since v3.0.0
 instance ToJSON SidechainCommitteeMember where
   toJSON (SidechainCommitteeMember {..}) =
     Aeson.object
