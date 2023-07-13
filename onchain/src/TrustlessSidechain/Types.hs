@@ -57,16 +57,6 @@ newtype SidechainPubKey = SidechainPubKey
 
 -- * Committee Candidate Validator data
 
--- | Endpoint parameters for committee candidate registration
-data RegisterParams = RegisterParams
-  { sidechainParams :: SidechainParams
-  , spoPubKey :: PubKey
-  , sidechainPubKey :: BuiltinByteString
-  , spoSig :: Signature
-  , sidechainSig :: Signature
-  , inputUtxo :: TxOutRef
-  }
-
 {- | 'CandidatePermissionMint' is used to parameterize the minting policy in
  'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
 -}
@@ -76,12 +66,6 @@ data CandidatePermissionMint = CandidatePermissionMint
   }
 
 PlutusTx.makeIsDataIndexed ''CandidatePermissionMint [('CandidatePermissionMint, 0)]
-
--- | Endpoint parameters for committee candidate deregistration
-data DeregisterParams = DeregisterParams
-  { sidechainParams :: SidechainParams
-  , spoPubKey :: PubKey
-  }
 
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash

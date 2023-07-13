@@ -148,7 +148,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
             let msg =
                   BlockProducerRegistrationMsg
                     { bprmSidechainParams = scParams
-                    , bprmSidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
+                    , bprmSidechainPubKey = getSidechainPubKey $ OffChain.toSidechainPubKey rcSidechainPrivKey
                     , bprmInputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#sidechain-main-cli -- register"] :

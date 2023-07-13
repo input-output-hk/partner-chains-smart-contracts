@@ -179,7 +179,7 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
   let msg =
         BlockProducerRegistrationMsg
           { bprmSidechainParams = scParams
-          , bprmSidechainPubKey = OffChain.toSidechainPubKey crSidechainPrvKey
+          , bprmSidechainPubKey = getSidechainPubKey $ OffChain.toSidechainPubKey crSidechainPrvKey
           , bprmInputUtxo = crRegistrationUtxo
           }
    in fmap
