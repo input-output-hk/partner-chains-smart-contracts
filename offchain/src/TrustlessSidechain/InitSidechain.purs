@@ -132,7 +132,8 @@ derive instance Newtype InitSidechainParams _
 -- | initial committee, and the initial committee's epoch
 type InitSidechainParams' =
   InitTokensParams
-    ( -- `initAggregatedCommittee` is the aggregated committee of the sidechain
+    ( -- `initAggregatedCommittee` is the initial aggregated committee of the
+      -- sidechain
       initAggregatedCommittee ∷ PlutusData
     , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
       initSidechainEpoch ∷ BigInt
