@@ -11,8 +11,10 @@ module TrustlessSidechain.Utils.SchnorrSecp256k1
 
   -- parsing / serialization
   , parsePublicKey
+  , parsePrivateKey
   , parseSignature
   , serializePublicKey
+  , serializePrivateKey
   , serializeSignature
 
   -- schnorr cryptography primitives
@@ -102,6 +104,14 @@ parsePublicKey byteArray
       byteArray
   | otherwise = Nothing
 
+-- | `parsePrivateKey` parses the raw hex bytes
+--  [for internal use only]
+parsePrivateKey ∷ ByteArray → Maybe SchnorrSecp256k1PrivateKey
+parsePrivateKey byteArray
+  | ByteArray.byteLength byteArray == 32 = Just $ SchnorrSecp256k1PrivateKey
+      byteArray
+  | otherwise = Nothing
+
 -- | `serializePublicKey` shows the raw bytes hex encoded.
 -- Warning: it's a bit unclear if the js library follows the C library exactly
 -- which requires a little bit more work to serialize public keys i.e., does it
@@ -130,6 +140,12 @@ serializeSignature ∷ SchnorrSecp256k1Signature → String
 serializeSignature (SchnorrSecp256k1Signature publicKey) =
   ByteArray.byteArrayToHex
     publicKey
+
+-- | `serializePrivateKey` shows the raw bytes hex encoded.
+-- (for internal use only)
+serializePrivateKey ∷ SchnorrSecp256k1PrivateKey → String
+serializePrivateKey (SchnorrSecp256k1PrivateKey privateKey) =
+  ByteArray.byteArrayToHex privateKey
 
 -- | `parseSignature` converts an array of bytes into a schnorr signature by
 -- | testing if its length is 64 bytes.
