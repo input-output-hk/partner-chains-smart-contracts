@@ -61,7 +61,7 @@ newtype SidechainPubKey = SidechainPubKey
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
-  , sidechainPubKey :: SidechainPubKey
+  , sidechainPubKey :: BuiltinByteString
   , spoSig :: Signature
   , sidechainSig :: Signature
   , inputUtxo :: TxOutRef
@@ -87,7 +87,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: SidechainPubKey
+    bprSidechainPubKey :: BuiltinByteString
   , -- | Signature of the SPO
     bprSpoSignature :: Signature
   , -- | Signature of the SPO
@@ -102,7 +102,7 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: SidechainParams
-  , bprmSidechainPubKey :: SidechainPubKey
+  , bprmSidechainPubKey :: BuiltinByteString
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }
