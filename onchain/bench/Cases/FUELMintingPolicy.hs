@@ -34,19 +34,22 @@ import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTo
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
+import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
   CombinedMerkleProof (CombinedMerkleProof),
-  MerkleTreeEntry (MerkleTreeEntry),
+  MerkleTreeEntry (
+    MerkleTreeEntry,
+    amount,
+    index,
+    previousMerkleRoot,
+    recipient
+  ),
   SidechainParams (SidechainParams),
   chainId,
   cmpMerkleProof,
   cmpTransaction,
   genesisHash,
   genesisUtxo,
-  mteAmount,
-  mteIndex,
-  mtePreviousMerkleRoot,
-  mteRecipient,
   thresholdDenominator,
   thresholdNumerator,
  )
@@ -68,17 +71,7 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
     indicies :: [Integer]
     indicies = [1 .. n]
     entries :: [MerkleTreeEntry]
-    entries =
-      fmap
-        ( \ix ->
-            MerkleTreeEntry
-              { mteIndex = ix
-              , mteAmount = mteAmount merkleTreeEntry
-              , mteRecipient = mteRecipient merkleTreeEntry
-              , mtePreviousMerkleRoot = mtePreviousMerkleRoot merkleTreeEntry
-              }
-        )
-        indicies
+    entries = fmap (\ix -> PTPrelude.put @"index" ix merkleTreeEntry) indicies
     cborEntries :: [BuiltinByteString]
     cborEntries = fmap MerkleRootTokenMintingPolicy.serialiseMte entries
     cborToMte :: Map.Map RootHash MerkleTreeEntry
@@ -160,10 +153,10 @@ fuelMintingBench = do
     let bech32Recipient = getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
         entry =
           MerkleTreeEntry
-            { mteIndex = 0
-            , mteAmount = 69
-            , mteRecipient = bech32Recipient
-            , mtePreviousMerkleRoot = Nothing
+            { index = 0
+            , amount = 69
+            , recipient = bech32Recipient
+            , previousMerkleRoot = Nothing
             }
         (rootHash, combinedMerkleProofs) = replicateMerkleTree numberOfFUELMints entry
 

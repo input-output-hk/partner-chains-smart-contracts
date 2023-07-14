@@ -17,7 +17,7 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (CandidatePermissionMint, cpmUtxo)
+import TrustlessSidechain.Types (CandidatePermissionMint)
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 
@@ -33,7 +33,7 @@ mkCandidatePermissionMintingPolicy cpm _red ctx =
     go $ txInfoInputs $ scriptContextTxInfo ctx
   where
     utxo :: TxOutRef
-    utxo = cpmUtxo cpm
+    utxo = get @"utxo" cpm
 
     -- Tests if any of the input utxos in the script context are equal to the
     -- distinguished UTxO given in @cpm@.

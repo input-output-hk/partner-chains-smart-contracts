@@ -28,16 +28,19 @@ import GHC.Real ((^))
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
+import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
-  MerkleTreeEntry (MerkleTreeEntry),
+  MerkleTreeEntry (
+    MerkleTreeEntry,
+    amount,
+    index,
+    previousMerkleRoot,
+    recipient
+  ),
   SidechainParams (SidechainParams),
   chainId,
   genesisHash,
   genesisUtxo,
-  mteAmount,
-  mteIndex,
-  mtePreviousMerkleRoot,
-  mteRecipient,
   thresholdDenominator,
   thresholdNumerator,
  )
@@ -110,10 +113,10 @@ growingTreeClaim = do
 
         entry =
           MerkleTreeEntry
-            { mteIndex = 0
-            , mteAmount = 69
-            , mteRecipient = bech32Recipient
-            , mtePreviousMerkleRoot = Nothing
+            { index = 0
+            , amount = 69
+            , recipient = bech32Recipient
+            , previousMerkleRoot = Nothing
             }
 
         merkleRootsAndCombinedProofs = List.take sizeOfTrees $
@@ -121,7 +124,7 @@ growingTreeClaim = do
             let (newMerkleRoot, combinedMerkleProofs) =
                   Cases.FUELMintingPolicy.replicateMerkleTree
                     (2 ^ size)
-                    (entry {mtePreviousMerkleRoot = fmap MerkleTree.unRootHash prevMerkleRoot})
+                    (PTPrelude.put @"previousMerkleRoot" (fmap MerkleTree.unRootHash prevMerkleRoot) entry)
              in Just
                   ( (newMerkleRoot, combinedMerkleProofs)
                   , (Just newMerkleRoot, size + 1)

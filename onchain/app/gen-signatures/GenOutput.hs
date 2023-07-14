@@ -66,9 +66,9 @@ import TrustlessSidechain.OffChain as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
-    bprmInputUtxo,
-    bprmSidechainParams,
-    bprmSidechainPubKey
+    inputUtxo,
+    sidechainParams,
+    sidechainPubKey
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
@@ -77,9 +77,9 @@ import TrustlessSidechain.Types (
   ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
-    mrimMerkleRoot,
-    mrimPreviousMerkleRoot,
-    mrimSidechainParams
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
   ),
   SidechainParams (..),
   UpdateCommitteeHashMessage (
@@ -139,9 +139,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           RegistrationCommand {..} ->
             let msg =
                   BlockProducerRegistrationMsg
-                    { bprmSidechainParams = scParams
-                    , bprmSidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
-                    , bprmInputUtxo = rcRegistrationUtxo
+                    { sidechainParams = scParams
+                    , sidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
+                    , inputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#sidechain-main-cli -- register"] :
                 sidechainParamFlags
@@ -191,9 +191,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           SaveRootCommand {..} ->
             let msg =
                   MerkleRootInsertionMessage
-                    { mrimSidechainParams = scParams
-                    , mrimMerkleRoot = srcMerkleRoot
-                    , mrimPreviousMerkleRoot = srcPreviousMerkleRoot
+                    { sidechainParams = scParams
+                    , merkleRoot = srcMerkleRoot
+                    , previousMerkleRoot = srcPreviousMerkleRoot
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap

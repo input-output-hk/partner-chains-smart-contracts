@@ -30,13 +30,15 @@ import TrustlessSidechain.MerkleTree (
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   CombinedMerkleProof (CombinedMerkleProof),
-  MerkleTreeEntry (MerkleTreeEntry),
+  MerkleTreeEntry (
+    MerkleTreeEntry,
+    amount,
+    index,
+    previousMerkleRoot,
+    recipient
+  ),
   cmpMerkleProof,
   cmpTransaction,
-  mteAmount,
-  mteIndex,
-  mtePreviousMerkleRoot,
-  mteRecipient,
  )
 
 -- | 'unsafeFromHex' unsafely converts hex to the byte representation
@@ -150,14 +152,14 @@ testCombinedMerkleProof =
       CombinedMerkleProof
         { cmpTransaction =
             MerkleTreeEntry
-              { mteIndex = -8858258933817599851
-              , mteAmount = 8887194232705394223
-              , mteRecipient =
+              { index = -8858258933817599851
+              , amount = 8887194232705394223
+              , recipient =
                   BuiltinByteString
                     ( unsafeFromHex
                         "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
                     )
-              , mtePreviousMerkleRoot =
+              , previousMerkleRoot =
                   Just
                     ( BuiltinByteString
                         ( unsafeFromHex

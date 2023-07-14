@@ -35,9 +35,11 @@ common common-lang
     DataKinds
     DeriveTraversable
     DerivingVia
+    DuplicateRecordFields
     EmptyCase
     FlexibleContexts
     FlexibleInstances
+    FunctionalDependencies
     GeneralizedNewtypeDeriving
     HexFloatLiterals
     ImportQualifiedPost
@@ -46,6 +48,7 @@ common common-lang
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
     PackageImports
     RebindableSyntax
@@ -321,6 +324,7 @@ benchmark bench-ctl
     , network
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-shim-prelude
     , process
     , secp256k1-haskell
     , semirings

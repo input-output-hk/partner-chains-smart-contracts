@@ -35,21 +35,25 @@ import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash, unRootHash)
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
-  BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
+  BlockProducerRegistrationMsg (
+    BlockProducerRegistrationMsg,
+    inputUtxo,
+    sidechainParams,
+    sidechainPubKey
+  ),
   CombinedMerkleProof,
-  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
+  ),
   SidechainParams (SidechainParams),
   SidechainPubKey,
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
-  bprmInputUtxo,
-  bprmSidechainParams,
-  bprmSidechainPubKey,
   chainId,
   genesisHash,
   genesisUtxo,
-  mrimMerkleRoot,
-  mrimPreviousMerkleRoot,
-  mrimSidechainParams,
   thresholdDenominator,
   thresholdNumerator,
   uchmNewCommitteePubKeys,
@@ -176,9 +180,9 @@ ctlRegistrationFlags :: SidechainParams -> CtlRegistration -> [HString.String]
 ctlRegistrationFlags scParams CtlRegistration {..} =
   let msg =
         BlockProducerRegistrationMsg
-          { bprmSidechainParams = scParams
-          , bprmSidechainPubKey = OffChain.toSidechainPubKey crSidechainPrvKey
-          , bprmInputUtxo = crRegistrationUtxo
+          { sidechainParams = scParams
+          , sidechainPubKey = OffChain.toSidechainPubKey crSidechainPrvKey
+          , inputUtxo = crRegistrationUtxo
           }
    in fmap
         List.unwords
@@ -247,9 +251,9 @@ ctlSaveRootFlags :: SidechainParams -> CtlSaveRoot -> [HString.String]
 ctlSaveRootFlags scParams CtlSaveRoot {..} =
   let msg =
         MerkleRootInsertionMessage
-          { mrimSidechainParams = scParams
-          , mrimMerkleRoot = unRootHash csrMerkleRoot
-          , mrimPreviousMerkleRoot = fmap unRootHash csrPreviousMerkleRoot
+          { sidechainParams = scParams
+          , merkleRoot = unRootHash csrMerkleRoot
+          , previousMerkleRoot = fmap unRootHash csrPreviousMerkleRoot
           }
       currentCommitteePubKeysAndSigsFlags =
         fmap

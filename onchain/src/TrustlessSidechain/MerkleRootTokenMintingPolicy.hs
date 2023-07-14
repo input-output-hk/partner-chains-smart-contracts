@@ -36,21 +36,27 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
+  ),
   MerkleTreeEntry,
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
+  SignedMerkleRoot (
+    SignedMerkleRoot,
+    committeePubKeys,
+    merkleRoot,
+    previousMerkleRoot,
+    signatures
+  ),
   SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
-  merkleRoot,
-  mrimMerkleRoot,
-  mrimPreviousMerkleRoot,
-  mrimSidechainParams,
-  signatures,
   smrmSidechainParams,
   smrmUpdateCommitteeHashCurrencySymbol,
   smrmValidatorHash,
@@ -168,9 +174,9 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { mrimSidechainParams = smrmSidechainParams smrm
-                , mrimMerkleRoot = merkleRoot
-                , mrimPreviousMerkleRoot = previousMerkleRoot
+                { sidechainParams = smrmSidechainParams smrm
+                , merkleRoot = merkleRoot
+                , previousMerkleRoot = previousMerkleRoot
                 }
           )
           signatures

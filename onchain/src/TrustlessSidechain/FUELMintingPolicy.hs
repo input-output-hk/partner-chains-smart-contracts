@@ -21,11 +21,7 @@ import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTo
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (
-  FUELMint (fmDsKeyCurrencySymbol, fmMptRootTokenCurrencySymbol),
-  FUELRedeemer (MainToSide, SideToMain),
-  MerkleTreeEntry (mteAmount, mteRecipient),
- )
+import TrustlessSidechain.Types (FUELMint, FUELRedeemer (MainToSide, SideToMain))
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
@@ -101,8 +97,8 @@ mkMintingPolicy fm mode ctx = case mode of
            in RootHash $ unTokenName $ go $ txInfoReferenceInputs info
      in traceIfFalse
           "error 'FUELMintingPolicy' tx not signed by recipient"
-          (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (mteRecipient mte)))
-          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == mteAmount mte)
+          (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
+          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == get @"amount" mte)
           && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
           && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
   where
@@ -112,9 +108,9 @@ mkMintingPolicy fm mode ctx = case mode of
     ownCurrencySymbol :: CurrencySymbol
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
     merkleRootTnCurrencySymbol :: CurrencySymbol
-    merkleRootTnCurrencySymbol = fmMptRootTokenCurrencySymbol fm
+    merkleRootTnCurrencySymbol = get @"mptRootTokenCurrencySymbol" fm
     dsKeyCurrencySymbol :: CurrencySymbol
-    dsKeyCurrencySymbol = fmDsKeyCurrencySymbol fm
+    dsKeyCurrencySymbol = get @"dsKeyCurrencySymbol" fm
     minted :: Value
     minted = txInfoMint info
     fuelAmount :: Integer
