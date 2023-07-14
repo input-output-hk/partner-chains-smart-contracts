@@ -2,12 +2,13 @@ module Test.FUELMintingPolicy (tests) where
 
 import Contract.Prelude
 
-import Contract.Address (ownPaymentPubKeyHash, pubKeyHashAddress)
+import Contract.Address (pubKeyHashAddress)
 import Contract.Hashing (blake2b256Hash)
 import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Value as Value
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt

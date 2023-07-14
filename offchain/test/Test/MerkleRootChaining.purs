@@ -4,7 +4,6 @@ module Test.MerkleRootChaining (tests) where
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad (liftContractM, liftedM)
 import Contract.Prim.ByteArray as ByteArray
@@ -64,8 +63,8 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       ownPaymentPubKeyHash ← liftedM
-        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
+        Wallet.ownPaymentPubKeyHash
       ownRecipient ←
         liftContractM "Could not convert pub key hash to bech 32 bytes" $
           Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
@@ -209,8 +208,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       [ BigInt.fromInt 100_000_000, BigInt.fromInt 100_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       ownPaymentPubKeyHash ← liftedM
-        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+        "error 'Test.MerkleRootChaining.testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
+        Wallet.ownPaymentPubKeyHash
       ownRecipient ←
         liftContractM "Could not convert pub key hash to bech 32 bytes" $
           Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
