@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Test.TrustlessSidechain.Types where
+module Test.TrustlessSidechain.Types (tests) where
 
 import TrustlessSidechain.HaskellPrelude
 
@@ -135,6 +135,9 @@ import TrustlessSidechain.Types (
   ),
  )
 
+{- | Tests for all data types with @IsData@ implementation
+ Some of the data typs are only checked transitively (included by some other type)
+-}
 tests :: TestTree
 tests =
   testGroup
@@ -161,11 +164,8 @@ tests =
     , dataEncoderGoldenTest "CheckpointMessage" sampleCheckpointMessage
     ]
 
---
--- Sample data - building blocks
---
+-- * Sample data - building blocks
 
--- | Sample transaction
 sampleTxOutRef :: TxOutRef
 sampleTxOutRef = TxOutRef (TxId "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa") 4
 
@@ -225,9 +225,7 @@ sampleMerkleProof =
         }
     ]
 
---
---  Sample data - test subjects
---
+-- * Sample data - test subjects
 
 sampleSidechainParams :: SidechainParams
 sampleSidechainParams =
@@ -388,13 +386,20 @@ sampleCheckpointMessage =
     , checkpointMsgSidechainEpoch = 15791
     }
 
+{- | Creating a test group with two golden tests:
+ - encoding data using `toBuiltinData`
+ - serialising BuiltinData to CBOR
+
+ Results of the tests are compared to the files under ./test/golden/*.golden
+ If no file exists for the given data type, a new one will be created automatically
+-}
 dataEncoderGoldenTest :: ToData a => HString.String -> a -> TestTree
 dataEncoderGoldenTest name sampleData =
-  testGroup
-    ("Serialising " <> name)
-    [ goldenVsString "IsData encoding" ("./test/golden/" <> name <> "-isdata.golden") $ encodeData sampleData
-    , goldenVsString "CBOR encoding" ("./test/golden/" <> name <> "-cbor.golden") $ encodeCbor sampleData
-    ]
-  where
-    encodeData = pure . fromStrict . encodeUtf8 . Text.pack . show . toBuiltinData
-    encodeCbor = pure . fromStrict . encodeUtf8 . Text.pack . showBuiltinBS . Builtins.serialiseData . toBuiltinData
+  let builtinData = toBuiltinData sampleData
+      plutusDataBS = fromStrict $ encodeUtf8 $ Text.pack $ show builtinData
+      cborBS = fromStrict $ encodeUtf8 $ Text.pack $ showBuiltinBS $ Builtins.serialiseData builtinData
+   in testGroup
+        ("Serialising " <> name)
+        [ goldenVsString "IsData encoding" ("./test/golden/" <> name <> "-isdata.golden") $ pure plutusDataBS
+        , goldenVsString "CBOR encoding" ("./test/golden/" <> name <> "-cbor.golden") $ pure cborBS
+        ]
