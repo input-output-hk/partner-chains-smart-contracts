@@ -12,10 +12,12 @@ import Ledger.Crypto (Signature (Signature))
 import Plutus.V1.Ledger.Api (BuiltinByteString)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Tx (TxId (TxId), TxOutRef (TxOutRef))
+import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
+import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
   BlockProducerRegistration (
     BlockProducerRegistration,
@@ -387,7 +389,12 @@ sampleCheckpointMessage =
     }
 
 dataEncoderGoldenTest :: ToData a => HString.String -> a -> TestTree
-dataEncoderGoldenTest name =
-  goldenVsString ("IsData encoded " <> name) ("./test/golden/" <> name <> ".golden") . encode
+dataEncoderGoldenTest name sampleData =
+  testGroup
+    ("Serialising " <> name)
+    [ goldenVsString "IsData encoding" ("./test/golden/" <> name <> "-isdata.golden") $ encodeData sampleData
+    , goldenVsString "CBOR encoding" ("./test/golden/" <> name <> "-cbor.golden") $ encodeCbor sampleData
+    ]
   where
-    encode = pure . fromStrict . encodeUtf8 . Text.pack . show . toBuiltinData
+    encodeData = pure . fromStrict . encodeUtf8 . Text.pack . show . toBuiltinData
+    encodeCbor = pure . fromStrict . encodeUtf8 . Text.pack . showBuiltinBS . Builtins.serialiseData . toBuiltinData
