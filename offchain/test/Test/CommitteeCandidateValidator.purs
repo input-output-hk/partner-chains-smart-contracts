@@ -6,11 +6,11 @@ module Test.CommitteeCandidateValidator
 
 import Contract.Prelude
 
-import Contract.Address (getWalletAddress)
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
+import Contract.Wallet (getWalletAddress)
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
