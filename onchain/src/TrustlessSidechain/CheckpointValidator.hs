@@ -157,7 +157,9 @@ mkCheckpointValidator checkpointParam datum red ctx =
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    icTxOutRef :: TxOutRef
+    -- |
+    -- | @since Unreleased
+    txOutRef :: TxOutRef
   }
   deriving newtype
     ( TSPrelude.Show
@@ -167,6 +169,13 @@ newtype InitCheckpointMint = InitCheckpointMint
     )
 
 PlutusTx.makeLift ''InitCheckpointMint
+
+-- | @since Unreleased
+instance HasField "txOutRef" InitCheckpointMint TxOutRef where
+  {-# INLINE get #-}
+  get (InitCheckpointMint x) = x
+  {-# INLINE modify #-}
+  modify f (InitCheckpointMint x) = InitCheckpointMint (f x)
 
 {- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
  the utxo which contains the checkpoint. We use an empty bytestring for
@@ -197,7 +206,7 @@ mkCheckpointPolicy ichm _red ctx =
     info = scriptContextTxInfo ctx
 
     oref :: TxOutRef
-    oref = icTxOutRef ichm
+    oref = get @"txOutRef" ichm
 
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
