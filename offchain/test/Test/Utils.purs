@@ -30,9 +30,10 @@ import Contract.Transaction
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
-import Contract.Utxos (getWalletUtxos, utxosAt)
+import Contract.Utxos (utxosAt)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
+import Contract.Wallet (getWalletUtxos)
 import Control.Monad.Error.Class as MonadError
 import Ctl.Internal.Serialization.Hash as Hash
 import Data.BigInt (BigInt)

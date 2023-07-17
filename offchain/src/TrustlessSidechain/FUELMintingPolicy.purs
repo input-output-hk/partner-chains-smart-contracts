@@ -15,7 +15,6 @@ import Contract.Address
   ( Address
   , PaymentPubKeyHash(..)
   , StakePubKeyHash(..)
-  , ownPaymentPubKeyHash
   , toPubKeyHash
   , toStakingCredential
   )
@@ -54,6 +53,7 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map

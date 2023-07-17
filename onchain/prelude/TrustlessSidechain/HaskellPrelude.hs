@@ -343,7 +343,7 @@ import Witherable qualified
 {- | Map the first argument over the list, returning the result as a pair of
  lists. Mainly useful for complex state, or the 'State' monad.
 
- @since Unreleased
+ @since v3.0.0
 -}
 {-# INLINEABLE mapAndUnzipA #-}
 mapAndUnzipA ::
@@ -356,7 +356,7 @@ mapAndUnzipA = Monad.mapAndUnzipM
 
 {- | Generalizes 'zipWith' to arbitrary 'Applicative's.
 
- @since Unreleased
+ @since v3.0.0
 -}
 {-# INLINEABLE zipWithA #-}
 zipWithA ::
@@ -371,7 +371,7 @@ zipWithA = Monad.zipWithM
 {- | As 'zipWithA', but ignores the result: only the effects of @f@ are
  performed.
 
- @since Unreleased
+ @since v3.0.0
 -}
 {-# INLINEABLE zipWithA_ #-}
 zipWithA_ ::
@@ -386,7 +386,7 @@ zipWithA_ = Monad.zipWithM_
 {- | @'replicateA' n act@ performs the action @act@ @'max' 0 n@ times, gathering
  the results.
 
- @since Unreleased.
+ @since v3.0.0
 -}
 {-# INLINEABLE replicateA #-}
 replicateA ::
@@ -400,7 +400,7 @@ replicateA = Monad.replicateM
 {- | As 'replicateA', but ignores the result: only the effects of @f@ are
  performed.
 
- @since Unreleased
+ @since v3.0.0
 -}
 {-# INLINEABLE replicateA_ #-}
 replicateA_ ::
@@ -413,7 +413,7 @@ replicateA_ = Monad.replicateM_
 
 {- | Similar to 'comparing', but for 'Eq' instead of 'Ord'.
 
- @since Unreleased
+ @since v3.0.0
 -}
 {-# INLINEABLE equating #-}
 equating ::
@@ -427,7 +427,7 @@ equating f x y = f x == f y
 
 {- | Needed to ensure @if@ works properly.
 
- @since Unreleased
+ @since v3.0.0
 -}
 ifThenElse ::
   forall (a :: Type).
@@ -440,14 +440,14 @@ ifThenElse True x _ = x
 
 {- | Check for evenness.
 
- @since Unreleased
+ @since v3.0.0
 -}
 even :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
 even x = (x `rem` 2) == 0
 
 {- | Check for oddness.
 
- @since Unreleased
+ @since v3.0.0
 -}
 odd :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
 odd x = (x `rem` 2) /= 0
@@ -464,7 +464,7 @@ odd x = (x `rem` 2) /= 0
  something like a Gaussian integer (which have five signa) this will not work.
  However, we are unlikely to ever need such a type, so this works well enough.
 
- @since Unreleased
+ @since v3.0.0
 -}
 signum :: forall (a :: Type). (Ord a, Ring a) => a -> a
 signum x = case compare x zero of
@@ -478,7 +478,7 @@ signum x = case compare x zero of
 
  This has the same caveats on use as 'signum'.
 
- @since Unreleased
+ @since v3.0.0
 -}
 abs :: forall (a :: Type). (Ord a, Ring a) => a -> a
 abs x =
