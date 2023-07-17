@@ -72,8 +72,8 @@ import TrustlessSidechain.Types (
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
-    cmpMerkleProof,
-    cmpTransaction
+    merkleProof,
+    transaction
   ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
@@ -84,10 +84,10 @@ import TrustlessSidechain.Types (
   SidechainParams (..),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams
+    newCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams
   ),
  )
 
@@ -159,10 +159,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
-                    { uchmSidechainParams = scParams
-                    , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
-                    , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
-                    , uchmSidechainEpoch = uchcSidechainEpoch
+                    { sidechainParams = scParams
+                    , newCommitteePubKeys = List.sort uchcNewCommitteePubKeys
+                    , previousMerkleRoot = uchcPreviousMerkleRoot
+                    , sidechainEpoch = uchcSidechainEpoch
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -236,8 +236,8 @@ merkleTreeCommand = \case
         pure $
           OffChain.showCombinedMerkleProof
             CombinedMerkleProof
-              { cmpTransaction = cmpMerkleTreeEntry
-              , cmpMerkleProof = mp
+              { transaction = cmpMerkleTreeEntry
+              , merkleProof = mp
               }
 
 {- | 'sidechainKeyCommand' creates the output for commands relating to the

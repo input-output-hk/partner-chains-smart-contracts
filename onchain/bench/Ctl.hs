@@ -50,16 +50,18 @@ import TrustlessSidechain.Types (
   ),
   SidechainParams (SidechainParams),
   SidechainPubKey,
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams
+  ),
   chainId,
   genesisHash,
   genesisUtxo,
   thresholdDenominator,
   thresholdNumerator,
-  uchmNewCommitteePubKeys,
-  uchmPreviousMerkleRoot,
-  uchmSidechainEpoch,
-  uchmSidechainParams,
  )
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
@@ -211,10 +213,10 @@ ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
-          { uchmSidechainParams = scParams
-          , uchmNewCommitteePubKeys = List.sort cuchNewCommitteePubKeys
-          , uchmPreviousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
-          , uchmSidechainEpoch = cuchSidechainEpoch
+          { sidechainParams = scParams
+          , newCommitteePubKeys = List.sort cuchNewCommitteePubKeys
+          , previousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
+          , sidechainEpoch = cuchSidechainEpoch
           }
       currentCommitteePubKeysAndSigsFlags =
         fmap

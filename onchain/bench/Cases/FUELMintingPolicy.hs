@@ -36,7 +36,11 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
-  CombinedMerkleProof (CombinedMerkleProof),
+  CombinedMerkleProof (
+    CombinedMerkleProof,
+    merkleProof,
+    transaction
+  ),
   MerkleTreeEntry (
     MerkleTreeEntry,
     amount,
@@ -46,8 +50,6 @@ import TrustlessSidechain.Types (
   ),
   SidechainParams (SidechainParams),
   chainId,
-  cmpMerkleProof,
-  cmpTransaction,
   genesisHash,
   genesisUtxo,
   thresholdDenominator,
@@ -85,8 +87,8 @@ replicateMerkleTree n merkleTreeEntry = (MerkleTree.rootHash merkleTree, combine
       fmap
         ( \(cbor, proof) ->
             CombinedMerkleProof
-              { cmpTransaction = Maybe.fromJust $ Map.lookup cbor cborToMte
-              , cmpMerkleProof = proof
+              { transaction = Maybe.fromJust $ Map.lookup cbor cborToMte
+              , merkleProof = proof
               }
         )
         lookups

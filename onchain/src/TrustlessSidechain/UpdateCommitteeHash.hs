@@ -34,10 +34,16 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
+  UpdateCommitteeHash,
+  UpdateCommitteeHashDatum (committeeHash),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams
+  ),
+  UpdateCommitteeHashRedeemer (committeeSignatures),
  )
 import TrustlessSidechain.Utils (aggregateCheck, aggregateKeys, verifyMultisig)
 
@@ -86,19 +92,19 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       referencesPreviousMerkleRoot
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': expected different new committee"
-      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
+      (committeeHash outputDatum == aggregateKeys (get @"newCommitteePubKeys" red))
     -- Note: we only need to check if the new committee is "as signed
     -- by the committee", since we already know that the sidechainEpoch in
     -- the datum was "as signed by the committee" -- see how we constructed
     -- the 'UpdateCommitteeHashMessage'
     && traceIfFalse
       "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
-      (sidechainEpoch dat < sidechainEpoch outputDatum)
+      (get @"sidechainEpoch" dat < get @"sidechainEpoch" outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
     sc :: SidechainParams
-    sc = cSidechainParams uch
+    sc = get @"sidechainParams" uch
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
@@ -114,7 +120,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     outputHasToken :: Bool
     outputHasToken = hasNft (txOutValue ownOutput)
     hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (cToken uch) == 1
+    hasNft val = Value.assetClassValueOf val (get @"token" uch) == 1
     threshold :: Integer
     threshold =
       -- Note [Threshold of Strictly More than Threshold Majority]
@@ -143,7 +149,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       --    makes this smallest integer that is strictly larger than
       --    @numerator/denominator *n@ i.e., we have
       --    @ceil(numerator/denominator * n)@ as required.
-      ( length (committeePubKeys red)
+      ( length (get @"committeePubKeys" red)
           `Builtins.multiplyInteger` thresholdNumerator sc
           `Builtins.divideInteger` thresholdDenominator sc
       )
@@ -152,18 +158,18 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     signedByCurrentCommittee =
       let message =
             UpdateCommitteeHashMessage
-              { uchmSidechainParams = sc
-              , uchmNewCommitteePubKeys = newCommitteePubKeys red
-              , uchmPreviousMerkleRoot = previousMerkleRoot red
-              , uchmSidechainEpoch = sidechainEpoch outputDatum
+              { sidechainParams = sc
+              , newCommitteePubKeys = get @"newCommitteePubKeys" red
+              , previousMerkleRoot = get @"previousMerkleRoot" red
+              , sidechainEpoch = get @"sidechainEpoch" outputDatum
               }
        in verifyMultisig
-            (getSidechainPubKey <$> committeePubKeys red)
+            (getSidechainPubKey <$> get @"committeePubKeys" red)
             threshold
             (Builtins.blake2b_256 (serialiseUchm message))
             (committeeSignatures red)
     isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
+    isCurrentCommittee = aggregateCheck (get @"committeePubKeys" red) $ committeeHash dat
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
       -- Either we want to reference the previous merkle root or we don't (note
@@ -172,12 +178,17 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case previousMerkleRoot red of
+      case get @"previousMerkleRoot" red of
         Nothing -> True
         Just tn ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
+                ( ( Value.valueOf
+                      (txOutValue (txInInfoResolved txInInfo))
+                      (get @"mptRootTokenCurrencySymbol" uch)
+                      (TokenName tn)
+                      > 0
+                  )
                     || go rest
                 )
               go [] = False

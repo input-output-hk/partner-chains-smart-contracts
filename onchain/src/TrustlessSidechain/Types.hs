@@ -608,28 +608,94 @@ instance HasField "previousMerkleRoot" UpdateCommitteeHashRedeemer (Maybe Builti
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { cSidechainParams :: SidechainParams
-  , -- | 'cToken' is the 'AssetClass' of the NFT that is used to
-    -- identify the transaction.
-    cToken :: AssetClass
-  , -- | 'cMptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
-    -- root token. This is needed for verifying that the previous merkle root is verified.
-    cMptRootTokenCurrencySymbol :: CurrencySymbol
+  { -- | @since Unreleased
+    sidechainParams :: SidechainParams
+  , -- | 'token' is the 'AssetClass' of the NFT that is used to
+    -- | identify the transaction.
+    -- |
+    -- | @since Unreleased
+    token :: AssetClass
+  , -- | 'mptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
+    -- | root token. This is needed for verifying that the previous merkle root is verified.
+    -- |
+    -- | @since Unreleased
+    mptRootTokenCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
 
+-- | @since Unreleased
+instance HasField "sidechainParams" UpdateCommitteeHash SidechainParams where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHash x _ _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHash sp t rtcs) =
+    UpdateCommitteeHash (f sp) t rtcs
+
+-- | @since Unreleased
+instance HasField "token" UpdateCommitteeHash AssetClass where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHash _ x _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHash sp t rtcs) =
+    UpdateCommitteeHash sp (f t) rtcs
+
+-- | @since Unreleased
+instance HasField "mptRootTokenCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHash _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHash sp t rtcs) =
+    UpdateCommitteeHash sp t (f rtcs)
+
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { uchmSidechainParams :: SidechainParams
+  { -- | @since Unreleased
+    sidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
-    -- be sorted lexicographically (recall that we can trust the bridge, so it
-    -- should do this for us
-    uchmNewCommitteePubKeys :: [SidechainPubKey]
-  , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
-  , uchmSidechainEpoch :: Integer
+    -- | be sorted lexicographically (recall that we can trust the bridge, so it
+    -- | should do this for us
+    -- |
+    -- | @since Unreleased
+    newCommitteePubKeys :: [SidechainPubKey]
+  , -- | @since Unreleased
+    previousMerkleRoot :: Maybe BuiltinByteString
+  , -- | @since Unreleased
+    sidechainEpoch :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
+
+-- | @since Unreleased
+instance HasField "sidechainParams" UpdateCommitteeHashMessage SidechainParams where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage x _ _ _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
+    UpdateCommitteeHashMessage (f sp) ncpks pmr se
+
+-- | @since Unreleased
+instance HasField "newCommitteePubKeys" UpdateCommitteeHashMessage [SidechainPubKey] where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ x _ _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
+    UpdateCommitteeHashMessage sp (f ncpks) pmr se
+
+-- | @since Unreleased
+instance HasField "previousMerkleRoot" UpdateCommitteeHashMessage (Maybe BuiltinByteString) where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
+    UpdateCommitteeHashMessage sp ncpks (f pmr) se
+
+-- | @since Unreleased
+instance HasField "sidechainEpoch" UpdateCommitteeHashMessage Integer where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
+    UpdateCommitteeHashMessage sp ncpks pmr (f se)
 
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
@@ -651,6 +717,38 @@ data CheckpointRedeemer = CheckpointRedeemer
 
 PlutusTx.makeIsDataIndexed ''CheckpointRedeemer [('CheckpointRedeemer, 0)]
 
+-- | @since Unreleased
+instance HasField "checkpointCommitteeSignatures" CheckpointRedeemer [BuiltinByteString] where
+  {-# INLINE get #-}
+  get (CheckpointRedeemer x _ _ _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
+    CheckpointRedeemer (f ccs) ccpks ncbh ncbn
+
+-- | @since Unreleased
+instance HasField "checkpointCommitteePubKeys" CheckpointRedeemer [SidechainPubKey] where
+  {-# INLINE get #-}
+  get (CheckpointRedeemer _ x _ _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
+    CheckpointRedeemer ccs (f ccpks) ncbh ncbn
+
+-- | @since Unreleased
+instance HasField "newCheckpointBlockHash" CheckpointRedeemer BuiltinByteString where
+  {-# INLINE get #-}
+  get (CheckpointRedeemer _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
+    CheckpointRedeemer ccs ccpks (f ncbh) ncbn
+
+-- | @since Unreleased
+instance HasField "newCheckpointBlockNumber" CheckpointRedeemer Integer where
+  {-# INLINE get #-}
+  get (CheckpointRedeemer _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
+    CheckpointRedeemer ccs ccpks ncbh (f ncbn)
+
 -- | 'Checkpoint' is used as the parameter for the validator.
 data CheckpointParameter = CheckpointParameter
   { checkpointSidechainParams :: SidechainParams
@@ -664,11 +762,71 @@ data CheckpointParameter = CheckpointParameter
 
 PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
 
+-- | @since Unreleased
+instance HasField "checkpointSidechainParams" CheckpointParameter SidechainParams where
+  {-# INLINE get #-}
+  get (CheckpointParameter x _ _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointParameter csp cac chac) =
+    CheckpointParameter (f csp) cac chac
+
+-- | @since Unreleased
+instance HasField "checkpointAssetClass" CheckpointParameter AssetClass where
+  {-# INLINE get #-}
+  get (CheckpointParameter _ x _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointParameter csp cac chac) =
+    CheckpointParameter csp (f cac) chac
+
+-- | @since Unreleased
+instance HasField "committeeHashAssetClass" CheckpointParameter AssetClass where
+  {-# INLINE get #-}
+  get (CheckpointParameter _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointParameter csp cac chac) =
+    CheckpointParameter csp cac (f chac)
+
 data CheckpointMessage = CheckpointMessage
-  { checkpointMsgSidechainParams :: SidechainParams
-  , checkpointMsgBlockHash :: BuiltinByteString
-  , checkpointMsgBlockNumber :: Integer
-  , checkpointMsgSidechainEpoch :: Integer
+  { -- | @since Unreleased
+    sidechainParams :: SidechainParams
+  , -- | @since Unreleased
+    blockHash :: BuiltinByteString
+  , -- | @since Unreleased
+    blockNumber :: Integer
+  , -- | @since Unreleased
+    sidechainEpoch :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
+
+-- | @since Unreleased
+instance HasField "sidechainParams" CheckpointMessage SidechainParams where
+  {-# INLINE get #-}
+  get (CheckpointMessage x _ _ _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointMessage sp bh bn se) =
+    CheckpointMessage (f sp) bh bn se
+
+-- | @since Unreleased
+instance HasField "blockHash" CheckpointMessage BuiltinByteString where
+  {-# INLINE get #-}
+  get (CheckpointMessage _ x _ _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointMessage sp bh bn se) =
+    CheckpointMessage sp (f bh) bn se
+
+-- | @since Unreleased
+instance HasField "blockNumber" CheckpointMessage Integer where
+  {-# INLINE get #-}
+  get (CheckpointMessage _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointMessage sp bh bn se) =
+    CheckpointMessage sp bh (f bn) se
+
+-- | @since Unreleased
+instance HasField "sidechainEpoch" CheckpointMessage Integer where
+  {-# INLINE get #-}
+  get (CheckpointMessage _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointMessage sp bh bn se) =
+    CheckpointMessage sp bh bn (f se)

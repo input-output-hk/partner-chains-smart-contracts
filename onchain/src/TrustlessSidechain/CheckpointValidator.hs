@@ -46,10 +46,10 @@ import TrustlessSidechain.Types (
   ),
   CheckpointMessage (
     CheckpointMessage,
-    checkpointMsgBlockHash,
-    checkpointMsgBlockNumber,
-    checkpointMsgSidechainEpoch,
-    checkpointMsgSidechainParams
+    blockHash,
+    blockNumber,
+    sidechainEpoch,
+    sidechainParams
   ),
   CheckpointParameter (
     checkpointAssetClass,
@@ -65,7 +65,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
+  UpdateCommitteeHashDatum (committeeHash),
  )
 import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 
@@ -140,10 +140,10 @@ mkCheckpointValidator checkpointParam datum red ctx =
     signedByCurrentCommittee =
       let message =
             CheckpointMessage
-              { checkpointMsgSidechainParams = sc
-              , checkpointMsgBlockHash = checkpointBlockHash outputDatum
-              , checkpointMsgBlockNumber = checkpointBlockNumber outputDatum
-              , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
+              { sidechainParams = sc
+              , blockHash = checkpointBlockHash outputDatum
+              , blockNumber = checkpointBlockNumber outputDatum
+              , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
        in verifyMultisig
             (getSidechainPubKey <$> checkpointCommitteePubKeys red)
