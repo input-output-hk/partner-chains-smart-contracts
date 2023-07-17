@@ -699,11 +699,29 @@ instance HasField "sidechainEpoch" UpdateCommitteeHashMessage Integer where
 
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
-  { checkpointBlockHash :: BuiltinByteString
-  , checkpointBlockNumber :: Integer
+  { -- | @since Unreleased
+    blockHash :: BuiltinByteString
+  , -- | @since Unreleased
+    blockNumber :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
+
+-- | @since Unreleased
+instance HasField "blockHash" CheckpointDatum BuiltinByteString where
+  {-# INLINE get #-}
+  get (CheckpointDatum x _) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointDatum bh bn) =
+    CheckpointDatum (f bh) bn
+
+-- | @since Unreleased
+instance HasField "blockNumber" CheckpointDatum Integer where
+  {-# INLINE get #-}
+  get (CheckpointDatum _ x) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointDatum bh bn) =
+    CheckpointDatum bh (f bn)
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint

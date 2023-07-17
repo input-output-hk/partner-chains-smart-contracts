@@ -40,10 +40,7 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  CheckpointDatum (
-    checkpointBlockHash,
-    checkpointBlockNumber
-  ),
+  CheckpointDatum,
   CheckpointMessage (
     CheckpointMessage,
     blockHash,
@@ -85,10 +82,10 @@ mkCheckpointValidator checkpointParam datum red ctx =
     && traceIfFalse "error 'mkCheckpointValidator': current committee mismatch" isCurrentCommittee
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
-      (checkpointBlockNumber datum < checkpointBlockNumber outputDatum)
+      (get @"blockNumber" datum < get @"blockNumber" outputDatum)
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
-      (checkpointBlockHash datum /= checkpointBlockHash outputDatum)
+      (get @"blockHash" datum /= get @"blockHash" outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -141,8 +138,8 @@ mkCheckpointValidator checkpointParam datum red ctx =
       let message =
             CheckpointMessage
               { sidechainParams = sc
-              , blockHash = checkpointBlockHash outputDatum
-              , blockNumber = checkpointBlockNumber outputDatum
+              , blockHash = get @"blockHash" outputDatum
+              , blockNumber = get @"blockNumber" outputDatum
               , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
        in verifyMultisig
