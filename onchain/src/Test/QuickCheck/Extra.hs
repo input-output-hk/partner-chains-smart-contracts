@@ -33,7 +33,7 @@ import TrustlessSidechain.HaskellPrelude
  fails to generate a satisfactory @a@ within that many attempts, the
  generator will error out, and notify the user of this.
 
- @since Unreleased
+ @since v3.0.0.
 -}
 suchThat ::
   forall (a :: Type).
@@ -46,7 +46,7 @@ suchThat = suchThatRetrying 100
  it fails to generate a 'Just' within that many attempts, the generator will
  error out, and notify the user of this.
 
- @since Unreleased
+ @since v3.0.0.
 -}
 suchThatMap ::
   forall (a :: Type) (b :: Type).
@@ -57,7 +57,7 @@ suchThatMap = suchThatMapRetrying 100
 
 {- | As 'suchThat', but allows setting the retry limit explicitly.
 
- @since Unreleased
+ @since v3.0.0.
 -}
 suchThatRetrying ::
   forall (a :: Type).
@@ -79,7 +79,7 @@ suchThatRetrying limit gen p = sized (go 0)
 
 {- | As 'suchThatMap', but allows setting the retry limit explicitly.
 
- @since Unreleased
+ @since v3.0.0.
 -}
 suchThatMapRetrying ::
   forall (a :: Type) (b :: Type).
@@ -104,7 +104,7 @@ suchThatMapRetrying limit gen k = sized (go 0)
 
 {- | As 'Test.QuickCheck.Gen.sublistOf', but about faster by a factor of 2-3.
 
- @since Unreleased
+ @since v3.0.0.
 -}
 sublistOf ::
   forall (a :: Type).

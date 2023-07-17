@@ -1,4 +1,4 @@
-{ name = "ctl-test"
+{ name = "sidechain-main-cli"
 , dependencies =
   [ "argonaut"
   , "argonaut-core"

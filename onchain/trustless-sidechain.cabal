@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               trustless-sidechain
-version:            0.1
+version:            3.0.0
 synopsis:           TODO
 description:        TODO
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
@@ -174,7 +174,6 @@ executable trustless-sidechain-gen-signatures
     , base16-bytestring
     , bech32
     , bytestring
-    , cardano-addresses
     , cardano-binary
     , cardano-crypto-class
     , cryptonite
@@ -213,7 +212,6 @@ executable trustless-sidechain-merkle-tree
   build-depends:
     , bytestring
     , optparse-applicative
-    , plutus-ledger
     , serialise
     , trustless-sidechain
     , trustless-sidechain-prelude
@@ -322,7 +320,6 @@ benchmark bench-ctl
     , filepath
     , mtl
     , network
-    , plutus-ledger
     , plutus-ledger-api
     , plutus-shim-prelude
     , process
