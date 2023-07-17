@@ -52,15 +52,15 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             (unversioned FUEL.serialisableMintingPolicy)
-            4_009
+            3_969
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_505
+            1_434
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
-            4_174
+            4_054
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -76,7 +76,7 @@ main =
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
-            2_785
+            2_745
         , fitsInto
             "mkCommitteeHashPolicy"
             Compiled.mkCommitteeHashPolicyCode
@@ -88,19 +88,19 @@ main =
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_805
+            1_765
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_594
+            4_494
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_836
+            1_753
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_608
+            4_468
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
@@ -115,11 +115,11 @@ main =
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_690
+            1_650
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             (unversioned DS.serialisableInsertValidator)
-            4_098
+            4_058
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
@@ -135,7 +135,7 @@ main =
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             (unversioned DS.serialisableDsKeyPolicy)
-            3_667
+            3_627
         ]
     , testGroup
         "Other"

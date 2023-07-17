@@ -3,6 +3,29 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+# Unreleased
+
+## Added
+
+* Extra functions for efficient `Data` encoding and decoding for product types
+  ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+
+## Changed
+
+* Efficient versions of `Data` encoding functions for product types used where
+  possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+
+## Fixed
+
+* Types whose `Data` encodings cannot change have been noted as such (
+  [484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+
 # v3.0.0
 
 ## Added
@@ -38,9 +61,6 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
 * `abs` for absolute value in Haskell prelude, with the same usage caveats as
   `signum`.
-* Extra functions for efficient `Data` encoding and decoding for product types
-  ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
-  onchain)
 
 ## Changed
 
@@ -57,17 +77,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
    [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
    onchain)
-* Efficient versions of `Data` encoding functions for product types used where
-  possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
-  onchain)
 
 ## Fixed
 
 * Deregistration fail after multiple registrations with the same SPO public key
   ([236](https://github.com/mlabs-haskell/trustless-sidechain/issues/236)
-* Types whose `Data` encodings cannot change have been noted as such (
-  [484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
-  onchain)
 
 ## Removed
 
