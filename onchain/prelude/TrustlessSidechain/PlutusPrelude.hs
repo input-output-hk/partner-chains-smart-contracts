@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module TrustlessSidechain.PlutusPrelude (
   module PlutusTx.Prelude,

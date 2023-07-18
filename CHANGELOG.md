@@ -3,12 +3,21 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+# Unreleased
+
+## Added
+
+* `HasField` type class for easier onchain record handling
+  ([561](https://github.com/input-output-hk/trustless-sidechain/issues/561),
+  [508](https://github.com/mlabs-haskell/trustless-sidechain/pull/508),
+  onchain)
+
 # v3.0.0
 
 ## Added
 
 * Improved error handling with an application-wide error type
-  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471),
    [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
