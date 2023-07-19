@@ -3,8 +3,8 @@ module TrustlessSidechain.Utils.Crypto
   , sidechainMessage
   , byteArrayToSidechainMessageUnsafe
   , SidechainPrivateKey
-  , byteArrayToSidechainPublicKeyUnsafe
-  , SidechainPublicKey
+  , byteArrayToEcdsaSecp256k1PubKeyUnsafe
+  , EcdsaSecp256k1PubKey
   , SidechainSignature
   , toPubKeyUnsafe
   , generatePrivKey
@@ -12,11 +12,11 @@ module TrustlessSidechain.Utils.Crypto
   , multiSign
   , sign
   , verifyEcdsaSecp256k1Signature
-  , sidechainPublicKey
+  , ecdsaSecp256k1PubKey
   , normalizeCommitteePubKeysAndSignatures
   , unzipCommitteePubKeysAndSignatures
   , verifyMultiSignature
-  , getSidechainPublicKeyByteArray
+  , getEcdsaSecp256k1PubKeyByteArray
   , getSidechainPrivateKeyByteArray
   , getSidechainSignatureByteArray
   , byteArrayToSidechainPrivateKeyUnsafe
@@ -33,7 +33,7 @@ import Contract.Prelude
 
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
-import Contract.PlutusData (class FromData, class ToData)
+import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Data.Array as Array
@@ -45,41 +45,42 @@ import Data.Ord as Ord
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
--- | Invariant: ∀ x : SidechainPublicKey. length x = 33
--- | Format: Compressed & Serialized as per secp256k1 implementation
--- | make sure to check the leading byte for valid key format
-newtype SidechainPublicKey = SidechainPublicKey ByteArray
+-- | Invariant: length of the pubkey must be 33 bytes.
+-- | Format: Compressed and serialized as per ECDSA signatures for SECP256k1.
+-- | Check the leading byte for valid key format.
+newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey ByteArray
 
-derive newtype instance ordSidechainPublicKey ∷ Ord SidechainPublicKey
+derive newtype instance Eq EcdsaSecp256k1PubKey
 
-derive newtype instance eqSidechainPublicKey ∷ Eq SidechainPublicKey
+derive newtype instance Ord EcdsaSecp256k1PubKey
 
-derive newtype instance toDataSidechainPublicKey ∷ ToData SidechainPublicKey
+derive newtype instance ToData EcdsaSecp256k1PubKey
 
-derive newtype instance fromDataSidechainPublicKey ∷ FromData SidechainPublicKey
+instance FromData EcdsaSecp256k1PubKey where
+  fromData = fromData >=> ecdsaSecp256k1PubKey
 
-instance Show SidechainPublicKey where
-  show (SidechainPublicKey byteArray) = "(byteArrayToSidechainPublicKeyUnsafe "
-    <> show byteArray
-    <> ")"
+instance Show EcdsaSecp256k1PubKey where
+  show (EcdsaSecp256k1PubKey byteArray) =
+    "(byteArrayToEcdsaSecp256k1PubKeyUnsafe "
+      <> show byteArray
+      <> ")"
 
--- | Smart constructor for `SidechainPublicKey` to ensure it is a valid
+-- | Smart constructor for `EcdsaSecp256k1PubKey` to ensure it is a valid
 -- | compressed (33 bytes) secp256k1 public key.
-sidechainPublicKey ∷ ByteArray → Maybe SidechainPublicKey
-sidechainPublicKey bs
+ecdsaSecp256k1PubKey ∷ ByteArray → Maybe EcdsaSecp256k1PubKey
+ecdsaSecp256k1PubKey bs
   | ByteArray.byteLength bs == 33
-      && pubKeyVerify bs = Just $ SidechainPublicKey bs
+      && pubKeyVerify bs = Just $ EcdsaSecp256k1PubKey bs
   | otherwise = Nothing
 
--- | `getSidechainPublicKeyByteArray` grabs the underlying `ByteArray` of the
--- | `SidechainPublicKey`
-getSidechainPublicKeyByteArray ∷ SidechainPublicKey → ByteArray
-getSidechainPublicKeyByteArray (SidechainPublicKey byteArray) = byteArray
+-- | Get the underlying `ByteArray` of the `EcdsaSecp256k1PubKey`.
+getEcdsaSecp256k1PubKeyByteArray ∷ EcdsaSecp256k1PubKey → ByteArray
+getEcdsaSecp256k1PubKeyByteArray (EcdsaSecp256k1PubKey byteArray) = byteArray
 
--- | `byteArrayToSidechainPublicKeyUnsafe` constructs a sidechain public key without
--- | verifying any of the invariants.
-byteArrayToSidechainPublicKeyUnsafe ∷ ByteArray → SidechainPublicKey
-byteArrayToSidechainPublicKeyUnsafe = SidechainPublicKey
+-- | Construct a `EcdsaSecp256k1PubKey` without verifying invariants. Use with
+-- | extreme care.
+byteArrayToEcdsaSecp256k1PubKeyUnsafe ∷ ByteArray → EcdsaSecp256k1PubKey
+byteArrayToEcdsaSecp256k1PubKeyUnsafe = EcdsaSecp256k1PubKey
 
 -- | Invariant: ∀ x : SidechainPrivateKey. length x = 32, and is non zero and
 -- | less then the secp256k1 curve order. See 1. for details.
@@ -192,7 +193,7 @@ byteArrayToSidechainSignatureUnsafe = SidechainSignature
 
 foreign import generateRandomPrivateKey ∷ Effect SidechainPrivateKey
 
-foreign import toPubKeyUnsafe ∷ SidechainPrivateKey → SidechainPublicKey
+foreign import toPubKeyUnsafe ∷ SidechainPrivateKey → EcdsaSecp256k1PubKey
 
 foreign import pubKeyVerify ∷ ByteArray → Boolean
 
@@ -202,7 +203,7 @@ foreign import sign ∷
   SidechainMessage → SidechainPrivateKey → SidechainSignature
 
 foreign import verifyEcdsaSecp256k1Signature ∷
-  SidechainPublicKey → SidechainMessage → SidechainSignature → Boolean
+  EcdsaSecp256k1PubKey → SidechainMessage → SidechainSignature → Boolean
 
 generatePrivKey ∷ Contract SidechainPrivateKey
 generatePrivKey =
@@ -224,8 +225,8 @@ multiSign xkeys msg = map (sign msg) xkeys
 -- | lexicographically sorted public keys, so sorting the public keys will
 -- | ensure that it matches the same onchain committee format.
 normalizeCommitteePubKeysAndSignatures ∷
-  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
-  Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature) →
+  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
 normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 
 -- | `unzipCommitteePubKeysAndSignatures` unzips public keys and associated
@@ -235,15 +236,15 @@ normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 -- |    - The input array should be sorted lexicographically by
 -- |    `SidechainPublicKey` by `normalizeCommitteePubKeysAndSignatures`
 unzipCommitteePubKeysAndSignatures ∷
-  Array (SidechainPublicKey /\ Maybe SidechainSignature) →
-  Tuple (Array SidechainPublicKey) (Array SidechainSignature)
+  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature) →
+  Tuple (Array EcdsaSecp256k1PubKey) (Array SidechainSignature)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
 -- | `countEnoughSignatures` counts the minimum number of signatures needed for
 -- | the onchain code to verify successfully.
 countEnoughSignatures ∷
   SidechainParams →
-  Array SidechainPublicKey →
+  Array EcdsaSecp256k1PubKey →
   BigInt
 countEnoughSignatures (SidechainParams params) arr =
   let
@@ -258,8 +259,8 @@ countEnoughSignatures (SidechainParams params) arr =
 -- | signatures needed.
 takeExactlyEnoughSignatures ∷
   SidechainParams →
-  Array SidechainPublicKey /\ Array SidechainSignature →
-  Array SidechainPublicKey /\ Array SidechainSignature
+  Array EcdsaSecp256k1PubKey /\ Array SidechainSignature →
+  Array EcdsaSecp256k1PubKey /\ Array SidechainSignature
 takeExactlyEnoughSignatures sc (pks /\ sigs) =
   pks /\
     Array.take
@@ -290,7 +291,7 @@ takeExactlyEnoughSignatures sc (pks /\ sigs) =
 verifyMultiSignature ∷
   BigInt →
   BigInt →
-  Array SidechainPublicKey →
+  Array EcdsaSecp256k1PubKey →
   SidechainMessage →
   Array SidechainSignature →
   Boolean
@@ -301,7 +302,7 @@ verifyMultiSignature
   msg
   signatures =
   let
-    go ∷ BigInt → Array SidechainPublicKey → Array SidechainSignature → Boolean
+    go ∷ BigInt → Array EcdsaSecp256k1PubKey → Array SidechainSignature → Boolean
     go signed pubs sigs =
       let
         ok = signed >
@@ -341,6 +342,6 @@ isSorted xss = case Array.tail xss of
 -- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
 -- | For this to be truly compatible with the onchain function, you need to ensure
 -- | that the input list is sorted
-aggregateKeys ∷ Array SidechainPublicKey → ByteArray
+aggregateKeys ∷ Array EcdsaSecp256k1PubKey → ByteArray
 aggregateKeys = Hashing.blake2b256Hash <<< foldMap
-  getSidechainPublicKeyByteArray
+  getEcdsaSecp256k1PubKeyByteArray

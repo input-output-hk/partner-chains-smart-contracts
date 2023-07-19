@@ -32,7 +32,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
 
       dummyHexPubKey =
         "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-      dummyPubKey = Utils.Crypto.byteArrayToSidechainPublicKeyUnsafe
+      dummyPubKey = Utils.Crypto.byteArrayToEcdsaSecp256k1PubKeyUnsafe
         $ hexToByteArrayUnsafe dummyHexPubKey
 
       dummyHexSignature =

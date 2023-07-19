@@ -29,7 +29,10 @@ import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , SidechainSignature
+  )
 
 -- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
 -- | validator
@@ -96,8 +99,8 @@ instance ToData InitCommitteeHashMint where
 -- | hash validator.
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { committeeSignatures ∷ Array SidechainSignature
-  , committeePubKeys ∷ Array SidechainPublicKey
-  , newCommitteePubKeys ∷ Array SidechainPublicKey
+  , committeePubKeys ∷ Array EcdsaSecp256k1PubKey
+  , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
   , previousMerkleRoot ∷ Maybe RootHash
   }
 
@@ -122,8 +125,9 @@ instance ToData UpdateCommitteeHashRedeemer where
 -- | committee hash endpoint.
 newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array SidechainPublicKey
-  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
+  , committeeSignatures ∷
+      Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }
@@ -141,7 +145,7 @@ newtype UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   , -- `newCommitteePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    newCommitteePubKeys ∷ Array SidechainPublicKey
+    newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   }

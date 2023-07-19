@@ -40,7 +40,10 @@ import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , SidechainSignature
+  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
@@ -82,9 +85,9 @@ byteArray = maybeReader hexToByteArray
 
 -- | Parses a SidechainPublicKey from hexadecimal representation.
 -- | See `SidechainPublicKey` for the invariants.
-sidechainPublicKey ∷ ReadM SidechainPublicKey
+sidechainPublicKey ∷ ReadM EcdsaSecp256k1PubKey
 sidechainPublicKey = maybeReader
-  $ Utils.Crypto.sidechainPublicKey
+  $ Utils.Crypto.ecdsaSecp256k1PubKey
   <=< hexToByteArray
 
 -- | Parses a SidechainSignature from hexadecimal representation.
@@ -152,7 +155,7 @@ hexString = maybeReader $ \str →
     _ → Nothing
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
-committeeSignature ∷ ReadM (SidechainPublicKey /\ Maybe SidechainSignature)
+committeeSignature ∷ ReadM (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
@@ -161,17 +164,17 @@ committeeSignature = maybeReader parsePubKeyAndSignature
 -- `aa:bb` denotes a pubkey and a signature
 -- anything else is likely an error, and should be treated as malformed input
 parsePubKeyAndSignature ∷
-  String → Maybe (SidechainPublicKey /\ Maybe SidechainSignature)
+  String → Maybe (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
 parsePubKeyAndSignature str =
   case split (Pattern ":") str of
     [ l, r ] | l /= "" → do
-      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
       if r == "" then pure $ l' /\ Nothing
       else do
         r' ← Utils.Crypto.sidechainSignature <=< hexToByteArray $ r
         pure $ l' /\ Just r'
     [ l ] → ado
-      l' ← Utils.Crypto.sidechainPublicKey <=< hexToByteArray $ l
+      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
 

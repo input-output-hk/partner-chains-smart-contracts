@@ -22,7 +22,10 @@ import Contract.Scripts (ValidatorHash)
 import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , SidechainSignature
+  )
 
 -- | `SignedMerkleRoot` is the redeemer for the minting policy.
 data SignedMerkleRoot = SignedMerkleRoot
@@ -36,7 +39,7 @@ data SignedMerkleRoot = SignedMerkleRoot
     -- less than the committee public keys.
     signatures ∷ Array SidechainSignature
   , -- Sorted public keys of all committee members
-    committeePubKeys ∷ Array SidechainPublicKey
+    committeePubKeys ∷ Array EcdsaSecp256k1PubKey
   }
 
 derive instance Generic SignedMerkleRoot _
@@ -91,7 +94,8 @@ newtype SaveRootParams = SaveRootParams
   , merkleRoot ∷ RootHash
   , previousMerkleRoot ∷ Maybe RootHash
   , -- Public keys of all committee members and their corresponding signatures.
-    committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
+    committeeSignatures ∷
+      Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
   }
 
 -- | `MerkleRootInsertionMessage` is a data type for which committee members

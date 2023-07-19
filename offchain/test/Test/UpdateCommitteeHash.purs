@@ -33,11 +33,11 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
-  ( SidechainPrivateKey
-  , SidechainPublicKey
+  ( EcdsaSecp256k1PubKey
+  , SidechainPrivateKey
   , SidechainSignature
+  , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , byteArrayToSidechainPrivateKeyUnsafe
-  , byteArrayToSidechainPublicKeyUnsafe
   , generatePrivKey
   , multiSign
   , toPubKeyUnsafe
@@ -59,7 +59,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple SidechainPublicKey SidechainSignature))
+  Maybe (Array (Tuple EcdsaSecp256k1PubKey SidechainSignature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys
@@ -362,11 +362,11 @@ testScenario4 =
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
             , initCommittee:
-                [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
                 ]
             , initSidechainEpoch: one
@@ -387,11 +387,11 @@ testScenario4 =
           \uchp →
             pure $ wrap $ (unwrap uchp)
               { newCommitteePubKeys =
-                  [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "02cb793bcfcab7f17453f4c5e0e07a2818c6df4d7995aa1b7a0f0b219c6cfe0e20"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
                   ]
               -- the signatures from the issue arne't quite right (since it

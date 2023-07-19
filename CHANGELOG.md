@@ -3,12 +3,29 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+# Unreleased
+
+## Changed
+
+* `SidechainPublicKey` renamed to `EcdsaSecp256k1PubKey`. Functions around it
+  have also been similarly renamed: for example, `sidechainPublicKey` is now
+  `ecdsaSecp256k1PubKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  offchain)
+
+## Fixed
+
+* `FromData` for `EcdsaSecp256k1PubKey` (formerly `SidechainPublicKey`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  offchain)
+
 # v3.0.0
 
 ## Added
 
 * Improved error handling with an application-wide error type
-  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471),
    [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality

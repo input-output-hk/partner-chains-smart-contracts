@@ -63,7 +63,7 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
     { sidechainParams: scParams
     , spoPubKey: mockSpoPubKey
     , sidechainPubKey:
-        Utils.Crypto.byteArrayToSidechainPublicKeyUnsafe
+        Utils.Crypto.byteArrayToEcdsaSecp256k1PubKeyUnsafe
           $ hexToByteArrayUnsafe
               "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
     , spoSig: hexToByteArrayUnsafe ""

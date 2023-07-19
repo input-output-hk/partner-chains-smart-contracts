@@ -31,8 +31,8 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto
-  ( SidechainPrivateKey
-  , SidechainPublicKey
+  ( EcdsaSecp256k1PubKey
+  , SidechainPrivateKey
   , SidechainSignature
   , generatePrivKey
   , multiSign
@@ -46,7 +46,7 @@ generateCheckpointSignatures ∷
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple SidechainPublicKey SidechainSignature))
+  Maybe (Array (Tuple EcdsaSecp256k1PubKey SidechainSignature))
 generateCheckpointSignatures
   { sidechainParams
   , currentCommitteePrvKeys
