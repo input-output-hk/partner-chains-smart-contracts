@@ -22,6 +22,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   `ecdsaSecp256k1Message`
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
   offchain)
+* `SidechainPrivateKey` renamed to `EcdsaSecp256k1PrivateKey`. Functions around
+  it have also been similarly renamed: for example, `sidechainPrivateKey` is now
+  `ecdsaSecp256k1PrivateKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  offchain)
 
 ## Fixed
 
@@ -36,6 +41,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * `FromData` for `EcdsaSecp256k1Message` (formerly `SidechainMessage`) now
   correctly checks its length invariant
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  offchain)
+* `FromData` for `EcdsaSecp256k1PrivateKey` (formerly `SidechainPrivateKey`) now
+  correctly checks its invariants
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/526),
   offchain)
 
 # v3.0.0

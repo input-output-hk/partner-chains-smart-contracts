@@ -33,11 +33,11 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
+  ( EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
-  , SidechainPrivateKey
+  , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
-  , byteArrayToSidechainPrivateKeyUnsafe
   , generatePrivKey
   , multiSign
   , toPubKeyUnsafe
@@ -51,9 +51,9 @@ generateUchmSignatures ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- the sidechain epoch
@@ -99,9 +99,9 @@ updateCommitteeHash ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
@@ -120,9 +120,9 @@ updateCommitteeHashWith ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
@@ -339,19 +339,19 @@ testScenario4 =
         -- the committees as given in the test case
         let
           initCommitteePrvKeys =
-            [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            [ byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "3e77009e691a2c38c53d5c0608af90af5c793efaa6cfe9e8670b141ed0376911"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "d9465fedde9190b2760bb37ac2b89cf97d7121a98807f8849532e58750d23725"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "3563a2e4d2b373b4b8ea0397b7437e7386d3d39216a77fa3ceb8f64a43d98f56"
             ]
           nextCommitteePrvKeys =
-            [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            [ byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "1b7267b5d84a108d67bd8cdc95750d135c1a1fb6482531ddfa0923c043b308f1"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "173d5d8cd43bd6119c633e654d00bebc2165e6875190b132dc93d5ee1b7d2448"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "34edb67b9f73389280214dae93e62074a9fcfd1eefadd4406cd7d27fd64b46a8"
             ]
 

@@ -27,8 +27,8 @@ import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , SidechainPrivateKey
+  ( EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
   )
 import TrustlessSidechain.Utils.Crypto as Crypto
 
@@ -49,7 +49,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
 -- This may be helpful when attempting to use the CLI interface to generate
 -- test cases manually.
 generateInitCommittee ∷
-  Int → Effect (Array (EcdsaSecp256k1PubKey /\ SidechainPrivateKey))
+  Int → Effect (Array (EcdsaSecp256k1PubKey /\ EcdsaSecp256k1PrivateKey))
 generateInitCommittee committeeSize = do
   committeePrvKeys ← sequence $ Array.replicate committeeSize
     Crypto.generateRandomPrivateKey

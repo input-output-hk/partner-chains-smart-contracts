@@ -2,7 +2,7 @@ module TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message
   , ecdsaSecp256k1Message
   , byteArrayToEcdsaSecp256k1MessageUnsafe
-  , SidechainPrivateKey
+  , EcdsaSecp256k1PrivateKey
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
@@ -17,10 +17,10 @@ module TrustlessSidechain.Utils.Crypto
   , unzipCommitteePubKeysAndSignatures
   , verifyMultiSignature
   , getEcdsaSecp256k1PubKeyByteArray
-  , getSidechainPrivateKeyByteArray
+  , getEcdsaSecp256k1PrivateKeyByteArray
   , getEcdsaSecp256k1SignatureByteArray
-  , byteArrayToSidechainPrivateKeyUnsafe
-  , sidechainPrivateKey
+  , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe
+  , ecdsaSecp256k1PrivateKey
   , getEcdsaSecp256k1MessageByteArray
   , byteArrayToEcdsaSecp256k1SignatureUnsafe
   , ecdsaSecp256k1Signature
@@ -82,45 +82,46 @@ getEcdsaSecp256k1PubKeyByteArray (EcdsaSecp256k1PubKey byteArray) = byteArray
 byteArrayToEcdsaSecp256k1PubKeyUnsafe ∷ ByteArray → EcdsaSecp256k1PubKey
 byteArrayToEcdsaSecp256k1PubKeyUnsafe = EcdsaSecp256k1PubKey
 
--- | Invariant: ∀ x : SidechainPrivateKey. length x = 32, and is non zero and
--- | less then the secp256k1 curve order. See 1. for details.
--- | Format: raw bytes
+-- | Invariant 1: length of the privkey must be 32 bytes
+-- | Invariant 2: privkey must be nonzero
+-- | Invariant 3: privkey must be less than the secp256k1 curve order (see
+-- | reference for details)
 -- |
--- | References.
--- |    1. https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
-newtype SidechainPrivateKey = SidechainPrivateKey ByteArray
+-- | Reference: https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
+newtype EcdsaSecp256k1PrivateKey = EcdsaSecp256k1PrivateKey ByteArray
 
-derive newtype instance ordSidechainPrivateKey ∷ Ord SidechainPrivateKey
+derive newtype instance Ord EcdsaSecp256k1PrivateKey
 
-derive newtype instance eqSidechainPrivateKey ∷ Eq SidechainPrivateKey
+derive newtype instance Eq EcdsaSecp256k1PrivateKey
 
-derive newtype instance toDataSidechainPrivateKey ∷ ToData SidechainPrivateKey
+derive newtype instance ToData EcdsaSecp256k1PrivateKey
 
-derive newtype instance fromDataSidechainPrivateKey ∷
-  FromData SidechainPrivateKey
+instance FromData EcdsaSecp256k1PrivateKey where
+  fromData = fromData >=> ecdsaSecp256k1PrivateKey
 
-instance Show SidechainPrivateKey where
-  show (SidechainPrivateKey byteArray) = "(byteArrayToSidechainPrivateKeyUnsafe "
-    <> show byteArray
-    <> ")"
+instance Show EcdsaSecp256k1PrivateKey where
+  show (EcdsaSecp256k1PrivateKey byteArray) =
+    "(byteArrayToEcdsaSecp256k1PrivateKeyUnsafe "
+      <> show byteArray
+      <> ")"
 
--- | `sidechainPrivateKey` is a smart constructor for `SidechainPrivateKey` to
--- | check the required invariants.
-sidechainPrivateKey ∷ ByteArray → Maybe SidechainPrivateKey
-sidechainPrivateKey byteArray
+-- | Smart constructor for `EcdsaSecp256k1PrivateKey` which checks its
+-- | invariants.
+ecdsaSecp256k1PrivateKey ∷ ByteArray → Maybe EcdsaSecp256k1PrivateKey
+ecdsaSecp256k1PrivateKey byteArray
   | ByteArray.byteLength byteArray == 32
-      && secKeyVerify byteArray = Just $ SidechainPrivateKey byteArray
+      && secKeyVerify byteArray = Just $ EcdsaSecp256k1PrivateKey byteArray
   | otherwise = Nothing
 
--- | `byteArrayToSidechainPrivateKeyUnsafe` constructs a sidechain public key without
--- | verifying any of the invariants.
-byteArrayToSidechainPrivateKeyUnsafe ∷ ByteArray → SidechainPrivateKey
-byteArrayToSidechainPrivateKeyUnsafe = SidechainPrivateKey
+-- | Construct an `EcdsaSecp256k1PrivateKey` without checking its invariants.
+-- | Use with extreme care.
+byteArrayToEcdsaSecp256k1PrivateKeyUnsafe ∷ ByteArray → EcdsaSecp256k1PrivateKey
+byteArrayToEcdsaSecp256k1PrivateKeyUnsafe = EcdsaSecp256k1PrivateKey
 
--- | `getSidechainPrivateKeyByteArray` grabs the underlying `ByteArray` of the
--- | `SidechainPrivateKey`
-getSidechainPrivateKeyByteArray ∷ SidechainPrivateKey → ByteArray
-getSidechainPrivateKeyByteArray (SidechainPrivateKey byteArray) = byteArray
+-- | Get the underlying `ByteArray` of an `EcdsaSecp256k1PrivateKey`.
+getEcdsaSecp256k1PrivateKeyByteArray ∷ EcdsaSecp256k1PrivateKey → ByteArray
+getEcdsaSecp256k1PrivateKeyByteArray (EcdsaSecp256k1PrivateKey byteArray) =
+  byteArray
 
 -- | Invariant: length of the message must be 32 bytes.
 newtype EcdsaSecp256k1Message = EcdsaSecp256k1Message ByteArray
@@ -193,16 +194,16 @@ byteArrayToEcdsaSecp256k1SignatureUnsafe = EcdsaSecp256k1Signature
 
 -- TODO: newtype checks the type aliases above
 
-foreign import generateRandomPrivateKey ∷ Effect SidechainPrivateKey
+foreign import generateRandomPrivateKey ∷ Effect EcdsaSecp256k1PrivateKey
 
-foreign import toPubKeyUnsafe ∷ SidechainPrivateKey → EcdsaSecp256k1PubKey
+foreign import toPubKeyUnsafe ∷ EcdsaSecp256k1PrivateKey → EcdsaSecp256k1PubKey
 
 foreign import pubKeyVerify ∷ ByteArray → Boolean
 
 foreign import secKeyVerify ∷ ByteArray → Boolean
 
 foreign import sign ∷
-  EcdsaSecp256k1Message → SidechainPrivateKey → EcdsaSecp256k1Signature
+  EcdsaSecp256k1Message → EcdsaSecp256k1PrivateKey → EcdsaSecp256k1Signature
 
 foreign import verifyEcdsaSecp256k1Signature ∷
   EcdsaSecp256k1PubKey →
@@ -210,12 +211,12 @@ foreign import verifyEcdsaSecp256k1Signature ∷
   EcdsaSecp256k1Signature →
   Boolean
 
-generatePrivKey ∷ Contract SidechainPrivateKey
+generatePrivKey ∷ Contract EcdsaSecp256k1PrivateKey
 generatePrivKey =
   liftEffect generateRandomPrivateKey
 
 multiSign ∷
-  Array SidechainPrivateKey →
+  Array EcdsaSecp256k1PrivateKey →
   EcdsaSecp256k1Message →
   Array EcdsaSecp256k1Signature
 multiSign xkeys msg = map (sign msg) xkeys
