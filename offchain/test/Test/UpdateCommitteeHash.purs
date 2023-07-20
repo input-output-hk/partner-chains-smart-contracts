@@ -34,8 +34,8 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
   , SidechainPrivateKey
-  , SidechainSignature
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , byteArrayToSidechainPrivateKeyUnsafe
   , generatePrivKey
@@ -59,7 +59,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple EcdsaSecp256k1PubKey SidechainSignature))
+  Maybe (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys

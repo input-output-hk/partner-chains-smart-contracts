@@ -31,7 +31,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   )
 
 -- | `UpdateCommitteeHashDatum` is the datum for the update committee hash
@@ -98,7 +98,7 @@ instance ToData InitCommitteeHashMint where
 -- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee
 -- | hash validator.
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { committeeSignatures ∷ Array SidechainSignature
+  { committeeSignatures ∷ Array EcdsaSecp256k1Signature
   , committeePubKeys ∷ Array EcdsaSecp256k1PubKey
   , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
   , previousMerkleRoot ∷ Maybe RootHash
@@ -127,7 +127,7 @@ newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
   { sidechainParams ∷ SidechainParams
   , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
   , committeeSignatures ∷
-      Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
+      Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
   }

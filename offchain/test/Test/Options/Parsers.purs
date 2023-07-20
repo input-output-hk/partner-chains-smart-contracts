@@ -37,7 +37,7 @@ testParsePubKeyAndSignature = Mote.Monad.group
 
       dummyHexSignature =
         "1f9721994b4699c5f84d041d6a7ac5e52989568ba5b3203a2d4e6732e0a42c5a4f7f94f1a31b97f450025447ff5d2d3be2550cf3f1c779609b16000771f6b4de"
-      dummySignature = Utils.Crypto.byteArrayToSidechainSignatureUnsafe
+      dummySignature = Utils.Crypto.byteArrayToEcdsaSecp256k1SignatureUnsafe
         $ hexToByteArrayUnsafe dummyHexSignature
 
     -- Test case 1

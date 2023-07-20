@@ -42,7 +42,7 @@ import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -92,9 +92,9 @@ sidechainPublicKey = maybeReader
 
 -- | Parses a SidechainSignature from hexadecimal representation.
 -- | See `SidechainSignature` for the invariants.
-sidechainSignature ∷ ReadM SidechainSignature
+sidechainSignature ∷ ReadM EcdsaSecp256k1Signature
 sidechainSignature = maybeReader
-  $ Utils.Crypto.sidechainSignature
+  $ Utils.Crypto.ecdsaSecp256k1Signature
   <=< hexToByteArray
 
 -- | Parse only CBOR encoded hexadecimal
@@ -155,7 +155,8 @@ hexString = maybeReader $ \str →
     _ → Nothing
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
-committeeSignature ∷ ReadM (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
+committeeSignature ∷
+  ReadM (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
@@ -164,14 +165,14 @@ committeeSignature = maybeReader parsePubKeyAndSignature
 -- `aa:bb` denotes a pubkey and a signature
 -- anything else is likely an error, and should be treated as malformed input
 parsePubKeyAndSignature ∷
-  String → Maybe (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
+  String → Maybe (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
 parsePubKeyAndSignature str =
   case split (Pattern ":") str of
     [ l, r ] | l /= "" → do
       l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
       if r == "" then pure $ l' /\ Nothing
       else do
-        r' ← Utils.Crypto.sidechainSignature <=< hexToByteArray $ r
+        r' ← Utils.Crypto.ecdsaSecp256k1Signature <=< hexToByteArray $ r
         pure $ l' /\ Just r'
     [ l ] → ado
       l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l

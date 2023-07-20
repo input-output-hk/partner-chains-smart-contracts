@@ -5,7 +5,7 @@ module TrustlessSidechain.Utils.Crypto
   , SidechainPrivateKey
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   , toPubKeyUnsafe
   , generatePrivKey
   , generateRandomPrivateKey
@@ -18,12 +18,12 @@ module TrustlessSidechain.Utils.Crypto
   , verifyMultiSignature
   , getEcdsaSecp256k1PubKeyByteArray
   , getSidechainPrivateKeyByteArray
-  , getSidechainSignatureByteArray
+  , getEcdsaSecp256k1SignatureByteArray
   , byteArrayToSidechainPrivateKeyUnsafe
   , sidechainPrivateKey
   , getSidechainMessageByteArray
-  , byteArrayToSidechainSignatureUnsafe
-  , sidechainSignature
+  , byteArrayToEcdsaSecp256k1SignatureUnsafe
+  , ecdsaSecp256k1Signature
   , aggregateKeys
   , countEnoughSignatures
   , takeExactlyEnoughSignatures
@@ -156,38 +156,41 @@ byteArrayToSidechainMessageUnsafe = SidechainMessage
 getSidechainMessageByteArray ∷ SidechainMessage → ByteArray
 getSidechainMessageByteArray (SidechainMessage byteArray) = byteArray
 
--- | Invariant: ∀ x : SidechainSignature. length x = 64
-newtype SidechainSignature = SidechainSignature ByteArray
+-- | Invariant: length of the signature must be 64 bytes.
+newtype EcdsaSecp256k1Signature = EcdsaSecp256k1Signature ByteArray
 
-derive newtype instance ordSidechainSignature ∷ Ord SidechainSignature
+derive newtype instance Ord EcdsaSecp256k1Signature
 
-derive newtype instance eqSidechainSignature ∷ Eq SidechainSignature
+derive newtype instance Eq EcdsaSecp256k1Signature
 
-derive newtype instance toDataSidechainSignature ∷ ToData SidechainSignature
+derive newtype instance ToData EcdsaSecp256k1Signature
 
-derive newtype instance fromDataSidechainSignature ∷ FromData SidechainSignature
+instance FromData EcdsaSecp256k1Signature where
+  fromData = fromData >=> ecdsaSecp256k1Signature
 
-instance Show SidechainSignature where
-  show (SidechainSignature byteArray) = "(byteArrayToSidechainSignatureUnsafe "
-    <> show byteArray
-    <> ")"
+instance Show EcdsaSecp256k1Signature where
+  show (EcdsaSecp256k1Signature byteArray) =
+    "(byteArrayToEcdsaSecp256k1SignatureUnsafe "
+      <> show byteArray
+      <> ")"
 
--- | `sidechainSignature` is a smart constructor for `SidechainSignature` to
--- | verify the invariants.
-sidechainSignature ∷ ByteArray → Maybe SidechainSignature
-sidechainSignature byteArray
-  | ByteArray.byteLength byteArray == 64 = Just $ SidechainSignature byteArray
+-- | Smart constructor for `EcdsaSecp256k1Signature`, which verifies its
+-- | invariants.
+ecdsaSecp256k1Signature ∷ ByteArray → Maybe EcdsaSecp256k1Signature
+ecdsaSecp256k1Signature byteArray
+  | ByteArray.byteLength byteArray == 64 = Just $ EcdsaSecp256k1Signature
+      byteArray
   | otherwise = Nothing
 
--- | `getSidechainSignatureArray` grabs the underlying `ByteArray` of the
--- | `SidechainSignature`
-getSidechainSignatureByteArray ∷ SidechainSignature → ByteArray
-getSidechainSignatureByteArray (SidechainSignature byteArray) = byteArray
+-- | Get the underlying `ByteArray` of a `EcdsaSecp256k1Signature`
+getEcdsaSecp256k1SignatureByteArray ∷ EcdsaSecp256k1Signature → ByteArray
+getEcdsaSecp256k1SignatureByteArray (EcdsaSecp256k1Signature byteArray) =
+  byteArray
 
--- | `byteArrayToSidechainSignatureUnsafe` constructs a sidechain public key without
--- | verifying any of the invariants.
-byteArrayToSidechainSignatureUnsafe ∷ ByteArray → SidechainSignature
-byteArrayToSidechainSignatureUnsafe = SidechainSignature
+-- | Construct a `EcdsaSecp256k1Signature` without verifying invariants. Use
+-- | with extreme care.
+byteArrayToEcdsaSecp256k1SignatureUnsafe ∷ ByteArray → EcdsaSecp256k1Signature
+byteArrayToEcdsaSecp256k1SignatureUnsafe = EcdsaSecp256k1Signature
 
 -- TODO: newtype checks the type aliases above
 
@@ -200,17 +203,17 @@ foreign import pubKeyVerify ∷ ByteArray → Boolean
 foreign import secKeyVerify ∷ ByteArray → Boolean
 
 foreign import sign ∷
-  SidechainMessage → SidechainPrivateKey → SidechainSignature
+  SidechainMessage → SidechainPrivateKey → EcdsaSecp256k1Signature
 
 foreign import verifyEcdsaSecp256k1Signature ∷
-  EcdsaSecp256k1PubKey → SidechainMessage → SidechainSignature → Boolean
+  EcdsaSecp256k1PubKey → SidechainMessage → EcdsaSecp256k1Signature → Boolean
 
 generatePrivKey ∷ Contract SidechainPrivateKey
 generatePrivKey =
   liftEffect generateRandomPrivateKey
 
 multiSign ∷
-  Array SidechainPrivateKey → SidechainMessage → Array SidechainSignature
+  Array SidechainPrivateKey → SidechainMessage → Array EcdsaSecp256k1Signature
 multiSign xkeys msg = map (sign msg) xkeys
 
 -- | `normalizeCommitteePubKeysAndSignatures` takes a list of public keys and their
@@ -225,8 +228,8 @@ multiSign xkeys msg = map (sign msg) xkeys
 -- | lexicographically sorted public keys, so sorting the public keys will
 -- | ensure that it matches the same onchain committee format.
 normalizeCommitteePubKeysAndSignatures ∷
-  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature) →
-  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)
+  Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature) →
+  Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
 normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 
 -- | `unzipCommitteePubKeysAndSignatures` unzips public keys and associated
@@ -236,8 +239,8 @@ normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 -- |    - The input array should be sorted lexicographically by
 -- |    `SidechainPublicKey` by `normalizeCommitteePubKeysAndSignatures`
 unzipCommitteePubKeysAndSignatures ∷
-  Array (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature) →
-  Tuple (Array EcdsaSecp256k1PubKey) (Array SidechainSignature)
+  Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature) →
+  Tuple (Array EcdsaSecp256k1PubKey) (Array EcdsaSecp256k1Signature)
 unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 
 -- | `countEnoughSignatures` counts the minimum number of signatures needed for
@@ -259,8 +262,8 @@ countEnoughSignatures (SidechainParams params) arr =
 -- | signatures needed.
 takeExactlyEnoughSignatures ∷
   SidechainParams →
-  Array EcdsaSecp256k1PubKey /\ Array SidechainSignature →
-  Array EcdsaSecp256k1PubKey /\ Array SidechainSignature
+  Array EcdsaSecp256k1PubKey /\ Array EcdsaSecp256k1Signature →
+  Array EcdsaSecp256k1PubKey /\ Array EcdsaSecp256k1Signature
 takeExactlyEnoughSignatures sc (pks /\ sigs) =
   pks /\
     Array.take
@@ -293,7 +296,7 @@ verifyMultiSignature ∷
   BigInt →
   Array EcdsaSecp256k1PubKey →
   SidechainMessage →
-  Array SidechainSignature →
+  Array EcdsaSecp256k1Signature →
   Boolean
 verifyMultiSignature
   thresholdNumerator
@@ -302,7 +305,11 @@ verifyMultiSignature
   msg
   signatures =
   let
-    go ∷ BigInt → Array EcdsaSecp256k1PubKey → Array SidechainSignature → Boolean
+    go ∷
+      BigInt →
+      Array EcdsaSecp256k1PubKey →
+      Array EcdsaSecp256k1Signature →
+      Boolean
     go signed pubs sigs =
       let
         ok = signed >

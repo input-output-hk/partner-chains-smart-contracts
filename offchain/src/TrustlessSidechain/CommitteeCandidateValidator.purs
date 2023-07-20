@@ -65,7 +65,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
@@ -78,7 +78,7 @@ newtype RegisterParams = RegisterParams
   , spoPubKey ∷ PubKey
   , sidechainPubKey ∷ EcdsaSecp256k1PubKey
   , spoSig ∷ Signature
-  , sidechainSig ∷ SidechainSignature
+  , sidechainSig ∷ EcdsaSecp256k1Signature
   , inputUtxo ∷ TransactionInput
   , permissionToken ∷ Maybe CandidatePermissionTokenInfo
   }
@@ -102,7 +102,7 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
   , bprSidechainPubKey ∷ EcdsaSecp256k1PubKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ SidechainSignature -- Signature of the sidechain candidate
+  , bprSidechainSignature ∷ EcdsaSecp256k1Signature -- Signature of the sidechain candidate
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }

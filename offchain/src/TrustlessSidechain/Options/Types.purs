@@ -27,7 +27,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   )
 
 -- | CLI arguments providing an interface to contract endpoints
@@ -75,7 +75,7 @@ data Endpoint
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ EcdsaSecp256k1PubKey
       , spoSig ∷ Signature
-      , sidechainSig ∷ SidechainSignature
+      , sidechainSig ∷ EcdsaSecp256k1Signature
       , inputUtxo ∷ TransactionInput
       , permissionToken ∷
           Maybe
@@ -87,7 +87,8 @@ data Endpoint
   | CommitteeHash
       { newCommitteePubKeysInput ∷ InputArgOrFile (List EcdsaSecp256k1PubKey)
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+          InputArgOrFile
+            (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       }
@@ -95,7 +96,8 @@ data Endpoint
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+          InputArgOrFile
+            (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -105,9 +107,11 @@ data Endpoint
       , previousMerkleRoot ∷ Maybe RootHash
       , newCommitteePubKeysInput ∷ InputArgOrFile (List EcdsaSecp256k1PubKey)
       , newCommitteeSignaturesInput ∷
-          InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+          InputArgOrFile
+            (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
       , newMerkleRootSignaturesInput ∷
-          InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+          InputArgOrFile
+            (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
       , sidechainEpoch ∷ BigInt
       }
   | GetAddrs
@@ -125,7 +129,8 @@ data Endpoint
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷
-          InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+          InputArgOrFile
+            (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt

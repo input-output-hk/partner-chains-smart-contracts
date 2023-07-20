@@ -24,9 +24,9 @@ import TrustlessSidechain.Utils.Codecs
   )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   , getEcdsaSecp256k1PubKeyByteArray
-  , getSidechainSignatureByteArray
+  , getEcdsaSecp256k1SignatureByteArray
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -77,13 +77,13 @@ configCodec =
 
 -- | Accepts the format: `[ {"public-key":"aabb...", "signature":null}, ... ]`
 committeeSignaturesCodec ∷
-  CA.JsonCodec (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature))
+  CA.JsonCodec (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
 committeeSignaturesCodec = CAM.list memberCodec
   where
   memberRecord ∷
     CA.JsonCodec
       { "public-key" ∷ EcdsaSecp256k1PubKey
-      , signature ∷ Maybe SidechainSignature
+      , signature ∷ Maybe EcdsaSecp256k1Signature
       }
   memberRecord = CAR.object "member"
     { "public-key": sidechainPubKeyCodec
@@ -91,20 +91,20 @@ committeeSignaturesCodec = CAM.list memberCodec
     }
 
   memberCodec ∷
-    CA.JsonCodec (Tuple EcdsaSecp256k1PubKey (Maybe SidechainSignature))
+    CA.JsonCodec (Tuple EcdsaSecp256k1PubKey (Maybe EcdsaSecp256k1Signature))
   memberCodec = CA.prismaticCodec "member" dec enc memberRecord
 
   dec ∷
     { "public-key" ∷ EcdsaSecp256k1PubKey
-    , signature ∷ Maybe SidechainSignature
+    , signature ∷ Maybe EcdsaSecp256k1Signature
     } →
-    Maybe (Tuple EcdsaSecp256k1PubKey (Maybe SidechainSignature))
+    Maybe (Tuple EcdsaSecp256k1PubKey (Maybe EcdsaSecp256k1Signature))
   dec { "public-key": p, signature } = Just (p /\ signature)
 
   enc ∷
-    Tuple EcdsaSecp256k1PubKey (Maybe SidechainSignature) →
+    Tuple EcdsaSecp256k1PubKey (Maybe EcdsaSecp256k1Signature) →
     { "public-key" ∷ EcdsaSecp256k1PubKey
-    , signature ∷ Maybe SidechainSignature
+    , signature ∷ Maybe EcdsaSecp256k1Signature
     }
   enc (p /\ signature) = { "public-key": p, signature }
 
@@ -138,15 +138,15 @@ sidechainPubKeyCodec = CA.prismaticCodec "SidechainPublicKey" dec enc
   enc ∷ EcdsaSecp256k1PubKey → ByteArray
   enc = getEcdsaSecp256k1PubKeyByteArray
 
-sidechainSignatureCodec ∷ CA.JsonCodec SidechainSignature
+sidechainSignatureCodec ∷ CA.JsonCodec EcdsaSecp256k1Signature
 sidechainSignatureCodec = CA.prismaticCodec "SidechainSignature" dec enc
   byteArrayCodec
   where
-  dec ∷ ByteArray → Maybe SidechainSignature
-  dec = Utils.Crypto.sidechainSignature
+  dec ∷ ByteArray → Maybe EcdsaSecp256k1Signature
+  dec = Utils.Crypto.ecdsaSecp256k1Signature
 
-  enc ∷ SidechainSignature → ByteArray
-  enc = getSidechainSignatureByteArray
+  enc ∷ EcdsaSecp256k1Signature → ByteArray
+  enc = getEcdsaSecp256k1SignatureByteArray
 
 serverConfigCodec ∷ CA.JsonCodec ServerConfig
 serverConfigCodec = CAR.object "serverConfig"

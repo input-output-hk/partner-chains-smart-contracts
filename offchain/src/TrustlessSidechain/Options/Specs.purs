@@ -88,7 +88,7 @@ import TrustlessSidechain.Options.Types
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
-  , SidechainSignature
+  , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
@@ -575,7 +575,9 @@ parseCommitteeSignatures ∷
   String →
   String →
   Parser
-    (InputArgOrFile (List (EcdsaSecp256k1PubKey /\ Maybe SidechainSignature)))
+    ( InputArgOrFile
+        (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
+    )
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
