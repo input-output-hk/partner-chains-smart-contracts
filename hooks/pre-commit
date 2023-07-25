@@ -18,34 +18,17 @@ check() {
 check git diff-index --cached --check HEAD --
 
 # Catch formatting errors
-changed=$(git diff-index --cached --name-status HEAD -- | grep -v ^D | cut -f2)
-
-nix=$(grep '\.nix$' <<< $changed)
-cabal=$(grep '\.cabal$' <<< $changed)
-haskell=$(grep '\.l\?hs$' <<< $changed)
-purescript=$(grep '\.purs$' <<< $changed)
-javascript=$(grep '\.js$' <<< $changed)
-dhall=$(grep '\.dhall$' <<< $changed)
-flake=$(grep '^flake\.nix$' <<< $changed)
-
-! [ "$nix" ] || check nixpkgs-fmt --check $nix
-! [ "$flake" ] || check nix flake lock --no-update-lock-file
-
-! [ "$cabal" ] || check cabal-fmt --check $cabal
-! [ "$haskell" ] || {
-	FOURMOLU_EXTENSIONS='
-    -o -XBangPatterns
-		-o -XTypeApplications
-		-o -XTemplateHaskell
-		-o -XImportQualifiedPost
-		-o -XPatternSynonyms
-		-o -fplugin=RecordDotPreprocessor
-	'
-	check fourmolu $FOURMOLU_EXTENSIONS --mode check --check-idempotence $haskell \
-		|| die "Please check formatting in $haskell"
-	check hlint --no-summary $haskell
-}
-
-! [ "$purescript" ] || check purs-tidy check $purescript
-! [ "$javascript" ] || check eslint $javascript
-! [ "$dhall" ] || check dhall lint --check $dhall
+echo 'Checking Nix files...'
+check make --no-print-directory check-format-nix-staged
+echo 'Checking Cabal file...'
+check make --no-print-directory check-format-cabal-staged
+echo 'Checking flake...'
+check make --no-print-directory lock_check
+echo 'Checking Haskell files...'
+check make --no-print-directory check-format-hs-staged
+echo "Checking Purescript files..."
+check make --no-print-directory check-format-purs-staged
+echo "Checking JS files..."
+check make --no-print-directory check-format-js-staged
+echo "Checking Dhall files..."
+check make --no-print-directory check-format-dhall-staged
