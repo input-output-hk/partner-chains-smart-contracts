@@ -16,7 +16,7 @@ sidechain (vice versa) is realized with the `FUEL` token which accomplishes the
 following:
 
 - A transfer from *mainchain* to *sidechain* burns a participant's `FUEL`
-  tokens with a specified the sidechain recipient (as redeemer).
+  tokens with a specified sidechain recipient (as redeemer).
   Thus, for the sidechain recipient to receive their corresponding sidechain
   tokens in the sidechain, the Bridge must observe that a mainchain transaction
   has burnt `FUEL`, and unlock the corresponding sidechain tokens to the
