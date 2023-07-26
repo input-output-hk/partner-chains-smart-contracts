@@ -33,7 +33,7 @@ Thus, this document proposes that instead of *only* allowing `FUEL` to be
 
 From the mainchain's point of view, all transactions from the sidechain *must*
 be signed in some sense by the sidechain's committee.
-In particular, we recall that (TODO: cite the white paper)
+In particular, we recall from the white paper that:
 
 1. Sidechain stakeholders bundle up transactions in a Merkle tree, and
    collectively sign its Merkle root.
@@ -46,16 +46,23 @@ Following this line of reasoning, it's clear that we would like to isolate the
 Indeed, this is precisely condition 1. in the `FUEL` token that we are
     interested in modularising out.
 
-The rest of this document will be as follows.
+Early revisions of this document suggested having a seperate token for
+    modularising functionality to prove a transaction is in a Merkle root.
+This idea was ultimately discarded due to the high possibility of
+    incurring extra ada costs in transactions.
+Thus, the modularization in this document is purely "conceptual" to document
+    how one may write a token which may be bridged from sidechain to mainchain.
 
-1. We will give the specification for a token `CertifiedMerkleTreeEntryMintingPolicy` which
-   mints only if a `MerkleTreeEntry` (transaction) is in a signed Merkle root.
+As an overview, this document will discuss the following.
 
-2. We will show how `CertifiedMerkleTreeEntryMintingPolicy` can be used implement `FUEL`
+1. We will recall `FUELMintingPolicy`, and rename this to `ScToken` which will
+   be essentially identical to `FUELMintingPolicy` with some minor
+   improvements.
 
-3. We will sketch how `CertifiedMerkleTreeEntryMintingPolicy` can be used to allow the
-   sidechain to transfer other tokens to the mainchain which implement
-   functionality required by other SIPs such as
+2. With the ideas in mind from this document, we will sketch how the mainchain
+   contracts can be extended to allow bridging of other tokens from sidechain
+   to mainchain.
+   Specifically, we will sketch:
 
     - Transferring native Cardano assets from the sidechain to the mainchain
       (assuming that such assets are locked up in the mainchain already).
@@ -64,61 +71,211 @@ The rest of this document will be as follows.
 
     - Updating oracle feeds of data
 
-4. We will discuss tradeoffs of this approach.
+## Replacing `FUELMintingPolicy` with `ScToken`
 
-## `CertifiedMerkleTreeEntryMintingPolicy` Plutus Specification
-As discussed previously, `CertifiedMerkleTreeEntryMintingPolicy` isolates the
-functionality of verifying a transaction is in a signed Merkle root.
-In this section, we precisely describe its functionality.
+We will start with defining `MerkleTreeEntry` as follows
 
-We will need a data type `MerkleTreeEntry` (as in the original specification)
-which represents the transactions from the sidechain.
 ```haskell
 data MerkleTreeEntry
-```
-For now, we will not include any constructors but the intuition is that this
-contains enough information to represent transactions from the sidechain.
-
-Recall from the main specification (TODO: link this) that the
-`SignedMerkleRoot` policy mints only if its token name is a signed Merkle root
-of `MerkleTreeEntry`s from the sidechain.
-
-`CertifiedMerkleTreeEntryMintingPolicy` will take as redeemer a
-`CertifiedMerkleTreeEntryRedeemer` defined as follows.
-```haskell
-data CertifiedMerkleTreeEntryRedeemer
-    CertifiedMerkleTreeEntryRedeemer
-        { cborMerkleTreeEntry :: BuiltinByteString
-        , merkleProof :: MerkleProof
+    = ScTokenMerkleTreeEntry
+        { amount :: Integer
+            -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+        , recipient :: Address
+            -- the address of a recipien
+        , tokenName :: TokenName
+            -- 32 byte token name (often "FUEL")
+        , previousMerkleRoot :: Maybe ByteString
+            -- previousMerkleRoot is added to make sure that the hashed entry
+            -- is unique w.r.t other Merkle roots to prevent double claiming
         }
 ```
-[TODO: link the merkle proof]
-The idea is that this `CertifiedMerkleTreeEntryRedeemer` contains enough
-information to prove that given a `mte :: MerkleTreeEntry`, then `cbor(mte)`
-can be proven to be in a Merkle root with the proof `merkleProof`.
 
-Finally, `CertifiedMerkleTreeEntryMintingPolicy` must parameterized by the
-currency symbol of `SignedMerkleRoot` and mints only if all of the following
-are satisfied:
+Note that this is essentially identical to the original `MerkleTreeEntry`
+```haskell
+data MerkleTreeEntry = MerkleTreeEntry
+  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
+  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
+  }
+```
+except that we instead:
 
-- There exists a transaction input which has a unique `SignedMerkleRoot` token
-  with token name `merkleRoot`.
+- added a `tokenName` field to generalize the token name of tokens transferred
+  from the sidechain;
 
-- `cborMerkleTreeEntry` and `merkleProof` from its redeemer show that
-  `cborMerkleTreeEntry` is in `merkleRoot`
+- changed the type of `recipient` to match the representation of recipients
+  onchain;
 
-- The unique token name of `CertifiedMerkleTreeEntryMintingPolicy` is
-  `blake2b_256(cborMerkleTreeEntry)`.
+- removed the `index` field which is no longer needed to ensure uniqueness
+  amongst transactions within the Merkle tree (we instead propose to use the
+  Merkle proof).
 
-To summarize, `CertifiedMerkleTreeEntryMintingPolicy` verifies that the cbor of
-a `MerkleTreeEntry` is in a signed Merkle root, and the unique token name
-of`CertifiedMerkleTreeEntryMintingPolicy` must be `blake2b_256(cborMerkleTreeEntry)`.
-The latter condition allows other Plutus scripts to verify that a
-`MerkleTreeEntry` has been certified by the sidechain by testing if such a
-`MerkleTreeEntry`'s cbor hash is minted with `CertifiedMerkleTreeEntryMintingPolicy`.
+As redeemer, `ScToken` will take the following data type.
+```haskell
+data ScTokenRedeemer
+    = MainToSide
+        ByteString -- recipient sidechain address
+    | SideToMain
+        MerkleTreeEntry
+        MerkleProof
+```
 
-## Revamped `FUEL` Plutus Specification
+Then, `ScToken` mints only if all of the following are satisfied.
 
-## Sketching Other Tokens.
+- The redeemer is `SideToMain merkleTreeEntry merkleProof`, and
+  `merkleTreeEntry` is `ScTokenMerkleTreeEntry`.
+- There is a `MerkleRootTokenMintingPolicy` provided as reference input at a
+  `MerkleRootTokenValidator` with Merkle root `merkleRoot`.
+- `merkleProof` shows that `cbor(merkleTreeEntry)` is in `merkleRoot.`
+- This transaction corresponds to `merkleTreeEntry` in the sense that
+  the `recipient` has at least `amount` `ScToken` with `tokenName`, and exactly
+  `amount` `ScToken` is minted with `tokenName`.
+- `blake2b(cbor(merkleProof,previousMerkleRoot))` is not included in the
+  distributed set, and a new entry
+  `blake2b(cbor(merkleProof,previousMerkleRoot))` is inserted in the
+  distributed set.
+  This is to ensure that participants cannot "double mint" their tokens.
+  Note that `merkleProof`s are unique in a Merkle tree, and the
+  `previousMerkleRoot` ensures that uniqueness amongst different Merkle trees,
+  so every transaction `ScTokenMerkleTreeEntry` is unique w.r.t its Merkle
+  proof and the previous Merkle root.
 
-## Tradeoffs
+`ScToken` burns only if all of the following are satisfied
+
+- the redeemer is `MainToSide`.
+
+### Offchain Requirements for `ScToken`
+Similarly to `FUELMintingPolicy`, the offchain code should do the following.
+
+- _Mainchain to sidechain transfer._ Offchain code should observe transactions
+  which burn `ScToken` noting the amount burned and the sidechain recipient in
+  the redeemer. With this information, the sidechain node should mint the
+  corresponding amount in the sidechain.
+
+- _Sidechain to mainchain transfer._ At certain points in time, sidechain nodes
+  bundle up all sidechain transactions which transfer tokens to the mainchain
+  by constructing `ScTokenMerkleTreeEntry`s, say `scme1,...,scmeN`, and creates
+  a Merkle tree by computing
+  ```
+mt = merkleTree([cbor(scme1),...,cbor(scmeN)])
+  ```
+  and submitting the Merkle root (after collecting the required signatures) of
+  `mt` with `MerkleRootTokenMintingPolicy`.
+
+## Other sidechain to mainchain tokens
+This section discusses how to extend the mainchain contracts to allow
+sidechains to transfer different tokens from sidechain to mainchain.
+
+All of the following examples will follow the same steps
+Suppose we'd like to transfer a token `GreatDAppIdeaToken` from sidechain
+to mainchain.
+This amounts to writing the following:
+
+1. Modify the `MerkleTreeEntry` type to include another "arm" which includes
+   the data, say `GreatDAppIdeaMerkleTreeEntry { .. }`, required by
+   `GreatDAppIdeaToken`. In other words, we must have
+   ```diff
+data MerkleTreeEntry
+    = ScTokenMerkleTreeEntry
+    ...
++   | GreatDAppIdeaToken { .. }
+    ...
+   ```
+
+2. Implement `GreatDAppIdeaToken` to verify all of the following.
+
+    - A provided Merkle proof shows that the `GreatDAppIdeaMerkleTreeEntry`
+      is in a Merkle root from `MerkleRootTokenMintingPolicy`.
+
+    - Of course, it must verify that all the great ideas from
+      `GreatDAppIdeaToken` are also true.
+
+### Arbitrary Cardano Native Asset Token Transfer.
+Details will be in [this SIP](./docs/SIPs/07-ModularisingTokenHandling.md).
+
+The use case is as follows.
+
+1. There exists some token on Cardano (e.g. tokens representing concert
+   tickets) which are completely unrelated to a sidechain.
+
+2. If a user would like to bridge such tokens from the mainchain to the
+   sidechain, the user would pay such tokens to some address, call such an
+   address a `LockBox`, which is observed by the sidechain to mint the
+   corresponding token on the sidechain.
+
+3. If a user would like to bridge such tokens from the sidechain to the
+   mainchain, the user would issue a sidechain transaction which would transfer
+   it to the mainchain, and be eventually bundled up in a Merkle root. When the
+   user claims their transaction from the Merkle root, this amounts to
+   unlocking previously locked tokens in some number of `LockBox`s.
+
+To implement this, we first need a `LockBox` address to lock tokens.
+Hence, there will need to be a `LockBoxValidator` address which succeeds only if
+a token (described later), `ReleaseToken`, mints.
+
+Now, we detail the key parts of the mainchain contracts which allow controlled
+claiming of Cardano assets from the sidechain to the mainchain.
+
+We first extend `MerkleTreeEntry` to include an extra "arm" which
+contains enough information to identify a Cardano assset.
+```diff
+data MerkleTreeEntry
+    = ScTokenMerkleTreeEntry
+        { amount :: Integer
+            -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+        , recipient :: Address
+            -- the address of a recipien
+        , tokenName :: TokenName
+            -- 32 byte token name (often "FUEL")
+        , previousMerkleRoot :: Maybe ByteString
+            -- previousMerkleRoot is added to make sure that the hashed entry
+            -- is unique w.r.t other Merkle roots to prevent double claiming
+        }
++   | LockBoxMerkleTreeEntry
++       { amount :: Integer
++           -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
++       , recipient :: Address
++           -- the address of a recipien
++       , lockedCurrencySymbol :: CurrencySymbol
++           -- currency symbol of the token to unlock on the mainchain
++       , lockedTokenName :: TokenName
++           -- token name of the token to unlock on the mainchain
++       , previousMerkleRoot :: Maybe ByteString
++           -- previousMerkleRoot is added to make sure that the hashed entry
++           -- is unique w.r.t other Merkle roots to prevent double claiming
++       }
+```
+
+Note the new entry `LockBoxMerkleTreeEntry` where it contains fields to
+identify a certain amount of a Cardano asset, and the `previousMerkleRoot` is
+necessary to ensure that these transactions are unique for the distributed set.
+
+Then, we will create a token `ReleaseToken` which will take as redeemer a
+Merkle proof `merkleProof` which shows that the cbor of a
+`LockBoxMerkleTreeEntry` `lockBoxMerkleTreeEntry` is in a Merkle root.
+Using the `lockBoxMerkleTreeEntry`, this token will mint only if the following
+are all satisfied.
+
+- The recipient receives at least `amount` of the given Cardano asset that is
+  `lockedCurrencySymbol` with `lockedTokenName` (locked currently in
+  `LockBoxValidator`);
+
+- The remaining Cardano assets in the transaction input `LockBoxValidator` are
+  transferred out to `LockBoxValidator` transaction outputs.
+
+- Using that this `LockBoxMerkleTreeEntry` is unique w.r.t its `merkleProof`
+  and `previousMerkleRoot`, we must check that `blake2b(cbor(merkleProof,
+  previousMerkleRoot))` is not in the distributed set and is inserted in the
+  distributed set in this transaction (similar to `ScToken`).
+  This is to prevent double claiming.
+
+### Bridging Arbitrary Data
+Details will be in another SIP.
+
+TODO.
+
+### Updating Oracle Feeds of Data
+Details will be in another SIP.
+
+TODO.
