@@ -4,7 +4,7 @@
 		format-hs-staged format-cabal-staged format-purs-staged format-js-staged \
 		format-dhall-staged check-format-hs-staged check-format-cabal-staged \
 		check-format-purs-staged check-format-js-staged check-format-dhall-staged \
-		check-format-nix-staged
+		check-format-nix-staged check-format-whitespace
 
 # Generate TOC for README.md
 # It has to be manually inserted into the README.md for now.
@@ -170,3 +170,6 @@ lock: requires_nix_shell
 
 lock_check: requires_nix_shell
 	@nix flake lock --no-update-lock-file
+
+check-format-whitespace: requires_nix_shell
+	@git diff --check --cached HEAD --
