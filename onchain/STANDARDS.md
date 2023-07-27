@@ -1104,6 +1104,31 @@ put :: forall (l :: Symbol) (r :: Type) (a :: Type) .
 put x = modify @l (const x)
 ```
 
+An example of some instances for this type class follows.
+
+```haskell
+data Vector3D (a :: Type) = Vector3D {
+  x :: a,
+  y :: a,
+  z :: z
+  }
+
+-- | Direct field access
+instance HasField "x" (Vector3D a) a where
+  {-# INLINE get #-}
+  get (Vector3D x _ _) = x
+  {-# INLINE modify #-}
+  modify f (Vector3D x y z) = Vector3D (f x) y z
+
+-- | 'View'-style
+instance HasField "asTuple" (Vector3D a) (a, a, a) where
+  {-# INLINE get #-}
+  get (Vector3D x y z) = (x, y, z)
+  {-# INLINE modify #-}
+  modify f (Vector x y z) = let (x', y', z') = f (x, y z) in
+    Vector3D x' y' z'
+```
+
 While somewhat 'boilerplate-y' in the need to define instances for every record
 field, ``HasField`` has numerous advantages:
 
