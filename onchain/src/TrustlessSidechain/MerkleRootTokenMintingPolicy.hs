@@ -57,9 +57,6 @@ import TrustlessSidechain.Types (
   ),
   SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
-  smrmSidechainParams,
-  smrmUpdateCommitteeHashCurrencySymbol,
-  smrmValidatorHash,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils
@@ -119,7 +116,7 @@ mkMintingPolicy
       ownTokenName :: TokenName
       ownTokenName = Value.TokenName merkleRoot
       sc :: SidechainParams
-      sc = smrmSidechainParams smrm
+      sc = get @"sidechainParams" smrm
       committeeDatum :: UpdateCommitteeHashDatum
       committeeDatum =
         let go :: [TxInInfo] -> UpdateCommitteeHashDatum
@@ -128,7 +125,7 @@ mkMintingPolicy
                 , amt <-
                     Value.valueOf
                       (txOutValue o)
-                      (smrmUpdateCommitteeHashCurrencySymbol smrm)
+                      (get @"updateCommitteeHashCurrencySymbol" smrm)
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
@@ -174,7 +171,7 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { sidechainParams = smrmSidechainParams smrm
+                { sidechainParams = get @"sidechainParams" smrm
                 , merkleRoot = merkleRoot
                 , previousMerkleRoot = previousMerkleRoot
                 }
@@ -193,7 +190,7 @@ mkMintingPolicy
         let go [] = False
             go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
               ScriptCredential vh
-                | vh == smrmValidatorHash smrm
+                | vh == get @"validatorHash" smrm
                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
                     > 0 ->
                   True

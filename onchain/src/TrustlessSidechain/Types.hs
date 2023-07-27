@@ -406,21 +406,81 @@ data SignedMerkleRoot = SignedMerkleRoot
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
+-- | @since Unreleased
+instance HasField "merkleRoot" SignedMerkleRoot BuiltinByteString where
+  {-# INLINE get #-}
+  get (SignedMerkleRoot x _ _ _) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRoot mr pmr sigs cpks) =
+    SignedMerkleRoot (f mr) pmr sigs cpks
+
+-- | @since Unreleased
+instance HasField "previousMerkleRoot" SignedMerkleRoot (Maybe BuiltinByteString) where
+  {-# INLINE get #-}
+  get (SignedMerkleRoot _ x _ _) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRoot mr pmr sigs cpks) =
+    SignedMerkleRoot mr (f pmr) sigs cpks
+
+-- | @since Unreleased
+instance HasField "signatures" SignedMerkleRoot [BuiltinByteString] where
+  {-# INLINE get #-}
+  get (SignedMerkleRoot _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRoot mr pmr sigs cpks) =
+    SignedMerkleRoot mr pmr (f sigs) cpks
+
+-- | @since Unreleased
+instance HasField "committeePubKeys" SignedMerkleRoot [SidechainPubKey] where
+  {-# INLINE get #-}
+  get (SignedMerkleRoot _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRoot mr pmr sigs cpks) =
+    SignedMerkleRoot mr pmr sigs (f cpks)
+
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'smrmSidechainParams' includes the 'SidechainParams'
-    smrmSidechainParams :: SidechainParams
-  , -- | 'smrmUpdateCommitteeHashCurrencySymbol' is the 'CurrencySymbol' which
-    -- identifies the utxo for which the 'UpdateCommitteeHashDatum'
-    -- resides.
-    smrmUpdateCommitteeHashCurrencySymbol :: CurrencySymbol
-  , -- | 'smrmValidatorHash' is the validator hash corresponding to
-    -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
-    -- to ensure that this token gets minted to the "right" place.
-    smrmValidatorHash :: ValidatorHash
+  { -- | @since Unreleased
+    sidechainParams :: SidechainParams
+  , -- | The 'CurrencySymbol' which
+    -- | identifies the utxo for which the 'UpdateCommitteeHashDatum'
+    -- | resides.
+    -- |
+    -- | @since Unreleased
+    updateCommitteeHashCurrencySymbol :: CurrencySymbol
+  , -- | The validator hash corresponding to
+    -- | 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
+    -- | to ensure that this token gets minted to the "right" place.
+    -- |
+    -- | @since Unreleased
+    validatorHash :: ValidatorHash
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
+
+-- | @since Unreleased
+instance HasField "sidechainParams" SignedMerkleRootMint SidechainParams where
+  {-# INLINE get #-}
+  get (SignedMerkleRootMint x _ _) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRootMint sp uchcs vh) =
+    SignedMerkleRootMint (f sp) uchcs vh
+
+-- | @since Unreleased
+instance HasField "updateCommitteeHashCurrencySymbol" SignedMerkleRootMint CurrencySymbol where
+  {-# INLINE get #-}
+  get (SignedMerkleRootMint _ x _) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRootMint sp uchcs vh) =
+    SignedMerkleRootMint sp (f uchcs) vh
+
+-- | @since Unreleased
+instance HasField "validatorHash" SignedMerkleRootMint ValidatorHash where
+  {-# INLINE get #-}
+  get (SignedMerkleRootMint _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (SignedMerkleRootMint sp uchcs vh) =
+    SignedMerkleRootMint sp uchcs (f vh)
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
