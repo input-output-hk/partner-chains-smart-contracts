@@ -1045,7 +1045,7 @@ limited to:
   ambiguous. Confusingly, they can be in scope if not used or defined!
 * Field selectors for _reads_ behave like functions, but for _writes_ are
   awkward, especially for nested use.
-* Field selector syntax is unfamiliar relative pretty much any other language.
+* Field selector syntax is different to basically any other language.
 * Field selector use is technically optional: records are syntactic sugar over
   ordinary ADTs, and can still be used as ordinary ADTs via pattern matching.
 * Field selectors 'clash' with local bindings of the same name. This is even
@@ -1057,7 +1057,7 @@ limited to:
   with many record-related extensions are brittle and confusing, if they work
   at all.
 
-The extensions that exist to address different sub-sets of these issues are
+The extensions that exist to address different subsets of these issues are
 many, and their interactions are quite unpredictable and annoying. Some
 extensions are required at site-of-declaration, some are required at
 site-of-use, some are required at both; error messages for these tend to be
