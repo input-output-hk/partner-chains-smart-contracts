@@ -66,9 +66,9 @@ import TrustlessSidechain.OffChain as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
+    bprmEcdsaSecp256k1PubKey,
     bprmInputUtxo,
-    bprmSidechainParams,
-    bprmSidechainPubKey
+    bprmSidechainParams
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
@@ -140,7 +140,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   BlockProducerRegistrationMsg
                     { bprmSidechainParams = scParams
-                    , bprmSidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
+                    , bprmEcdsaSecp256k1PubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
                     , bprmInputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#sidechain-main-cli -- register"] :

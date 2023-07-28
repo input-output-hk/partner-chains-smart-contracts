@@ -43,9 +43,10 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
--- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
-newtype SidechainPubKey = SidechainPubKey
-  { getSidechainPubKey :: BuiltinByteString
+-- | Compressed DER SECP256k1 public key.
+newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
+  { -- | @since Unreleased
+    getEcdsaSecp256k1PubKey :: BuiltinByteString
   }
   deriving newtype
     ( TSPrelude.Eq
@@ -61,7 +62,8 @@ newtype SidechainPubKey = SidechainPubKey
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
-  , sidechainPubKey :: SidechainPubKey
+  , -- | @since Unreleased
+    sidechainPubKey :: EcdsaSecp256k1PubKey
   , spoSig :: Signature
   , sidechainSig :: Signature
   , inputUtxo :: TxOutRef
@@ -87,7 +89,8 @@ data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: SidechainPubKey
+    -- | @since Unreleased
+    bprEcdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | Signature of the SPO
     bprSpoSignature :: Signature
   , -- | Signature of the SPO
@@ -102,7 +105,8 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: SidechainParams
-  , bprmSidechainPubKey :: SidechainPubKey
+  , -- | @since Unreleased
+    bprmEcdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }
@@ -150,7 +154,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [BuiltinByteString]
   , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
@@ -250,9 +254,9 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
     committeeSignatures :: [BuiltinByteString]
   , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
-    newCommitteePubKeys :: [SidechainPubKey]
+    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
     previousMerkleRoot :: Maybe BuiltinByteString
   }
@@ -277,7 +281,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    uchmNewCommitteePubKeys :: [SidechainPubKey]
+    uchmNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
   , uchmSidechainEpoch :: Integer
   }
@@ -297,7 +301,7 @@ PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
 -}
 data CheckpointRedeemer = CheckpointRedeemer
   { checkpointCommitteeSignatures :: [BuiltinByteString]
-  , checkpointCommitteePubKeys :: [SidechainPubKey]
+  , checkpointCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , newCheckpointBlockHash :: BuiltinByteString
   , newCheckpointBlockNumber :: Integer
   }

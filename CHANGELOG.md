@@ -12,7 +12,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   `ecdsaSecp256k1PubKey`
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
   [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
-  offchain)
+  offchain and onchain)
 * `SidechainSignature` renamed to `EcdsaSecp256k1Signature`. Functions around it
   have also been similarly renamed: for example, `sidechainSignature` is now
   `ecdsaSecp256k1Signature`

@@ -75,10 +75,10 @@ import TrustlessSidechain.OffChain (
  )
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey,
   GenesisHash (GenesisHash),
   MerkleTreeEntry (..),
   SidechainParams (..),
-  SidechainPubKey,
  )
 
 -- | 'getArgs' grabs the command line options ('Args').
@@ -165,7 +165,8 @@ data GenCliCommand
       { -- | the current committee's (as stored on chain) private keys
         uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
       , -- | new committee public keys
-        uchcNewCommitteePubKeys :: [SidechainPubKey]
+        -- | @since Unreleased
+        uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | Sidechain epoch of the committee handover (needed to
         -- create the message we wish to sign
         uchcSidechainEpoch :: Integer
@@ -185,7 +186,8 @@ data GenCliCommand
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
       { -- | initial committee public keys
-        iscInitCommitteePubKeys :: [SidechainPubKey]
+        -- | @since Unreleased
+        iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | inital sidechain epoch
         iscSidechainEpoch :: Integer
       }
@@ -355,7 +357,7 @@ parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
 {- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
  on the format
 -}
-parseSidechainPubKey :: OptParse.ReadM SidechainPubKey
+parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
 parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
 -- | parses the previous merkle root as a hex encoded string
@@ -459,7 +461,7 @@ currentCommitteePrivateKeysParser =
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
-newCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
+newCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
 newCommitteePublicKeysParser =
   fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
@@ -491,7 +493,7 @@ newCommitteePublicKeysParser =
  'newCommitteePublicKeysParser' except the help strings / command line flag
  is changed to reflect that this is the inital committee.
 -}
-initCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
+initCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
 initCommitteePublicKeysParser =
   fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile

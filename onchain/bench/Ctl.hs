@@ -37,13 +37,13 @@ import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CombinedMerkleProof,
+  EcdsaSecp256k1PubKey,
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   SidechainParams (SidechainParams),
-  SidechainPubKey,
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  bprmEcdsaSecp256k1PubKey,
   bprmInputUtxo,
   bprmSidechainParams,
-  bprmSidechainPubKey,
   chainId,
   genesisHash,
   genesisUtxo,
@@ -78,7 +78,8 @@ data CtlDeregistration = CtlDeregistration
 --  to update the committee hash
 data CtlUpdateCommitteeHash = CtlUpdateCommitteeHash
   { cuchCurrentCommitteePrvKeys :: [Secp256k1.SecKey]
-  , cuchNewCommitteePubKeys :: [SidechainPubKey]
+  , -- | @since Unreleased
+    cuchNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , cuchSidechainEpoch :: Integer
   , cuchPreviousMerkleRoot :: Maybe RootHash
   }
@@ -94,7 +95,8 @@ data CtlSaveRoot = CtlSaveRoot
 --  | 'CtlInitSidechain' provides a wrapper type for the parameters required
 --  to inialise a sidechain
 data CtlInitSidechain = CtlInitSidechain
-  { cisInitCommitteePubKeys :: [SidechainPubKey]
+  { -- | @since Unreleased
+    cisInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , cisSidechainEpoch :: Integer
   }
 
@@ -177,7 +179,7 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
   let msg =
         BlockProducerRegistrationMsg
           { bprmSidechainParams = scParams
-          , bprmSidechainPubKey = OffChain.toSidechainPubKey crSidechainPrvKey
+          , bprmEcdsaSecp256k1PubKey = OffChain.toSidechainPubKey crSidechainPrvKey
           , bprmInputUtxo = crRegistrationUtxo
           }
    in fmap
@@ -293,8 +295,11 @@ ctlClaimFlags CtlClaim {..} =
 
 -- * Some utility functions
 
--- | 'generateFreshCommittee' generates a fresh sidechain committee of the given size
-generateFreshCommittee :: MonadIO m => Int -> m [(SECP.SecKey, SidechainPubKey)]
+{- | 'generateFreshCommittee' generates a fresh sidechain committee of the given size
+ |
+ | @since Unreleased
+-}
+generateFreshCommittee :: MonadIO m => Int -> m [(SECP.SecKey, EcdsaSecp256k1PubKey)]
 generateFreshCommittee n = IO.Class.liftIO $ do
   prvKeys <- Monad.replicateM n OffChain.generateRandomSecpPrivKey
   pure $ fmap (\prvKey -> (prvKey, OffChain.toSidechainPubKey prvKey)) prvKeys
