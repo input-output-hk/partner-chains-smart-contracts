@@ -8,34 +8,30 @@
  See: the executable `trustless-sidechain-gen-signatures`
 -}
 module TrustlessSidechain.OffChain (
-  Bech32Recipient (bech32RecipientBytes),
-  signWithSPOKey,
-  signWithSidechainKey,
-  showTxOutRef,
-  showBS,
-  showBuiltinBS,
-  showRootHash,
-  showPubKey,
-  showScPubKey,
-  showScPubKeyAndSig,
-  showSig,
-  showThreshold,
-  showMerkleTree,
-  showMerkleProof,
-  showSecpPrivKey,
-  showGenesisHash,
-  showCombinedMerkleProof,
-  toSpoPubKey,
-  vKeyToSpoPubKey,
-  toSidechainPubKey,
-  secpPubKeyToSidechainPubKey,
-  generateRandomSecpPrivKey,
+  Bech32Recipient (..),
   SidechainCommittee (..),
   SidechainCommitteeMember (..),
   strToSecpPrivKey,
   strToSecpPubKey,
-  bech32RecipientFromText,
-  txOutRefFromText,
+  secpPubKeyToSidechainPubKey,
+  toSidechainPubKey,
+  generateRandomSecpPrivKey,
+  showScPubKey,
+  showSecpPrivKey,
+  showCombinedMerkleProof,
+  showMerkleProof,
+  showBuiltinBS,
+  showMerkleTree,
+  showPubKey,
+  showTxOutRef,
+  showSig,
+  signWithSPOKey,
+  signWithSidechainKey,
+  showScPubKeyAndSig,
+  vKeyToSpoPubKey,
+  showGenesisHash,
+  showThreshold,
+  toSpoPubKey,
 ) where
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
@@ -54,9 +50,7 @@ import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types
-import Data.Attoparsec.Text qualified as Attoparsec.Text
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -77,7 +71,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
+import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
@@ -308,27 +302,6 @@ signWithSidechainKey skey msg =
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
 
--- * Parsing functions
-
-{- | 'txOutRefFromText' parses a 'TxOutRef' from 'Text'. E.g., it'll parse
- something like:
- @
-  c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
- @
--}
-txOutRefFromText ::
-  Text ->
-  Either HaskellString.String TxOutRef
-txOutRefFromText = Attoparsec.Text.parseOnly $ do
-  rawTxId <- Attoparsec.Text.takeWhile (/= '#')
-  txId <- case Aeson.Extras.tryDecode rawTxId of
-    Left err -> fail err
-    Right res -> pure $ TxId $ Builtins.Internal.BuiltinByteString res
-
-  _ <- Attoparsec.Text.char '#'
-  txIx <- Attoparsec.Text.decimal
-  pure $ TxOutRef txId txIx
-
 -- * Show functions
 
 -- | Serialise transaction output reference into CLI format (TX_ID#TX_IDX)
@@ -349,10 +322,6 @@ showGenesisHash = showBuiltinBS . getGenesisHash
 -- | Serialise a BuiltinByteString into hex string
 showBuiltinBS :: BuiltinByteString -> HaskellString.String
 showBuiltinBS = showBS . Builtins.fromBuiltin
-
--- | Serialise a RootHash into hex of serialized built in data.
-showRootHash :: RootHash -> HaskellString.String
-showRootHash = showHexOfCborBuiltinData
 
 -- | Serialise public key
 showPubKey :: PubKey -> HaskellString.String
