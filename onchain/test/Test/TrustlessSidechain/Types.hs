@@ -136,7 +136,9 @@ import TrustlessSidechain.Types (
  )
 
 {- | Tests for all data types with @IsData@ implementation
- Some of the data typs are only checked transitively (included by some other type)
+ Some of the data types are only checked transitively (included by some other type)
+
+ In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
 -}
 tests :: TestTree
 tests =
