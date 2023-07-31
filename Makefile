@@ -2,7 +2,9 @@
         nix-build-test requires_nix_shell ci-build-run format-staged \
 		unreachable-commit-staged format-whitespace-staged format-nix-staged \
 		format-hs-staged format-cabal-staged format-purs-staged format-js-staged \
-		format-dhall-staged
+		format-dhall-staged check-format-hs-staged check-format-cabal-staged \
+		check-format-purs-staged check-format-js-staged check-format-dhall-staged \
+		check-format-nix-staged check-format-whitespace
 
 # Generate TOC for README.md
 # It has to be manually inserted into the README.md for now.
@@ -94,6 +96,11 @@ format-nix-staged: requires_nix_shell
 		| grep -Ez '^.*\.nix$$'\
 		| xargs -0 -r nixpkgs-fmt
 
+check-format-nix-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.nix$$'\
+		| xargs -0 -r nixpkgs-fmt --check
+
 FOURMOLU_EXTENSIONS := \
 	-o -XBangPatterns \
 	-o -XTypeApplications \
@@ -107,25 +114,50 @@ format-hs-staged: requires_nix_shell
 		| grep -Ez '^.*\.hs$$'\
 		| xargs -0 -r fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence
 
+check-format-hs-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.hs$$'\
+		| xargs -0 -r fourmolu $(FOURMOLU_EXTENSIONS) --mode check --check-idempotence
+
 format-cabal-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.cabal$$'\
 		| xargs -0 -r cabal-fmt --inplace
+
+check-format-cabal-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.cabal$$'\
+		| xargs -0 -r cabal-fmt --check
 
 format-purs-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.purs$$'\
 		| xargs -0 -r purs-tidy format-in-place
 
+check-format-purs-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.purs$$'\
+		| xargs -0 -r purs-tidy check
+
 format-js-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.js$$'\
 		| xargs -0 -r eslint format-in-place
 
+check-format-js-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.js$$'\
+		| xargs -0 -r eslint
+
 format-dhall-staged: requires_nix_shell
 	@git diff -z --name-only --cached HEAD\
 		| grep -Ez '^.*\.dhall$$'\
 		| xargs -0 -r dhall lint
+
+check-format-dhall-staged: requires_nix_shell
+	@git diff -z --name-only --cached HEAD\
+		| grep -Ez '^.*\.dhall$$'\
+		| xargs -0 -r dhall lint --check
 
 nixpkgsfmt: requires_nix_shell
 	nixpkgs-fmt $(NIX_SOURCES)
@@ -137,4 +169,7 @@ lock: requires_nix_shell
 	nix flake lock
 
 lock_check: requires_nix_shell
-	nix flake lock --no-update-lock-file
+	@nix flake lock --no-update-lock-file
+
+check-format-whitespace: requires_nix_shell
+	@git diff --check --cached HEAD --
