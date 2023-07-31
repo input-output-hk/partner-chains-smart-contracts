@@ -1110,7 +1110,7 @@ An example of some instances for this type class follows.
 data Vector3D (a :: Type) = Vector3D {
   x :: a,
   y :: a,
-  z :: z
+  z :: a
   }
 
 -- | Direct field access
@@ -1125,7 +1125,7 @@ instance HasField "asTuple" (Vector3D a) (a, a, a) where
   {-# INLINE get #-}
   get (Vector3D x y z) = (x, y, z)
   {-# INLINE modify #-}
-  modify f (Vector x y z) = let (x', y', z') = f (x, y z) in
+  modify f (Vector3D x y z) = let (x', y', z') = f (x, y z) in
     Vector3D x' y' z'
 ```
 
