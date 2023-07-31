@@ -28,6 +28,7 @@ import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text qualified as Text
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import PlutusTx.Builtins (BuiltinByteString)
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
@@ -157,7 +158,7 @@ fuelMintingBench = do
               }
 
     -- Generating the merkle tree / merkle proofs
-    let bech32Recipient = getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
+    let bech32Recipient = LedgerBytes . getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
         entry =
           MerkleTreeEntry
             { mteIndex = 0

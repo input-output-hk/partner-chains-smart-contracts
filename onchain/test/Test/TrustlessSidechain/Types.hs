@@ -9,8 +9,8 @@ import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Crypto (Signature (Signature))
-import Plutus.V1.Ledger.Api (BuiltinByteString)
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api (LedgerBytes)
 import Plutus.V2.Ledger.Tx (TxId (TxId), TxOutRef (TxOutRef))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
@@ -185,7 +185,7 @@ sampleCommitteePubKeys' =
   , SidechainPubKey "0253e0839b05b420879089621b60f4a9618e877a90f624a2d8c8e8afa17c8be624"
   ]
 
-sampleCommitteeSignatures :: [BuiltinByteString]
+sampleCommitteeSignatures :: [LedgerBytes]
 sampleCommitteeSignatures =
   [ "6fd0dd049dc90ebf5d52450e03bcd833ab53352f50bc15c7c2c1236b6aa78ff54fef9979d470bffb79ef949abc075bfb456fea4665f9b722d371f3301e05fd65"
   , "7026f80d62c4bdaa303bf94892fecb27a20a407209a9d321c3f34b82e73ab1fa3d12b627c8d44d9a2c1674e38e68d389e61a2a867f61074e64c9d7d37aaacd7e"
