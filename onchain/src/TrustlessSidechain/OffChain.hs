@@ -31,7 +31,6 @@ module TrustlessSidechain.OffChain (
   strToSecpPrivKey,
   strToSecpPubKey,
   bech32RecipientFromText,
-  txOutRefFromText,
 ) where
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
@@ -50,9 +49,7 @@ import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types
-import Data.Attoparsec.Text qualified as Attoparsec.Text
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -301,27 +298,6 @@ signWithSidechainKey skey msg =
         . SECP.getCompactSig
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
-
--- * Parsing functions
-
-{- | 'txOutRefFromText' parses a 'TxOutRef' from 'Text'. E.g., it'll parse
- something like:
- @
-  c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
- @
--}
-txOutRefFromText ::
-  Text ->
-  Either HaskellString.String TxOutRef
-txOutRefFromText = Attoparsec.Text.parseOnly $ do
-  rawTxId <- Attoparsec.Text.takeWhile (/= '#')
-  txId <- case Aeson.Extras.tryDecode rawTxId of
-    Left err -> fail err
-    Right res -> pure $ TxId $ Builtins.Internal.BuiltinByteString res
-
-  _ <- Attoparsec.Text.char '#'
-  txIx <- Attoparsec.Text.decimal
-  pure $ TxOutRef txId txIx
 
 -- * Show functions
 
