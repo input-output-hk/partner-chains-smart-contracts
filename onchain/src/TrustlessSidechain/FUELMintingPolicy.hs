@@ -98,7 +98,7 @@ mkMintingPolicy fm mode ctx = case mode of
                 -- it.
                 | otherwise = go ts
               go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
-           in RootHash $ unTokenName $ go $ txInfoReferenceInputs info
+           in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
      in traceIfFalse
           "error 'FUELMintingPolicy' tx not signed by recipient"
           (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (mteRecipient mte)))
@@ -139,8 +139,8 @@ serialisableMintingPolicy = Versioned (fromCompiledCode $$(PlutusTx.compile [||m
  -   TODO: In later versions, we can use bytewise primitives
 -}
 {-# INLINEABLE bech32AddrToPubKeyHash #-}
-bech32AddrToPubKeyHash :: BuiltinByteString -> Maybe PubKeyHash
-bech32AddrToPubKeyHash addr =
+bech32AddrToPubKeyHash :: LedgerBytes -> Maybe PubKeyHash
+bech32AddrToPubKeyHash (LedgerBytes addr) =
   let header = indexByteString addr 0 `divideInteger` 16
    in if header `modInteger` 2 == 0
         then Just $ PubKeyHash $ sliceByteString 1 28 addr
