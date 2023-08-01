@@ -15,6 +15,7 @@ module Compiled (
   mkDsKeyPolicyCode,
 ) where
 
+import Plutus.V2.Ledger.Api (LedgerBytes)
 import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
@@ -65,10 +66,10 @@ import TrustlessSidechain.Utils (verifyMultisig)
 
 newVerify ::
   CompiledCode
-    ( [BuiltinByteString] ->
+    ( [LedgerBytes] ->
       Integer ->
-      BuiltinByteString ->
-      [BuiltinByteString] ->
+      LedgerBytes ->
+      [LedgerBytes] ->
       Bool
     )
 newVerify = $$(compile [||verifyMultisig||])

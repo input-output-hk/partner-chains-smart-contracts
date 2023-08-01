@@ -91,11 +91,11 @@ testRootHash =
     -- Hard coded integration tests for what #249 expects for RootHash
     [ HUnit.testCase "RootHash is encoded as a regular bytestring" $
         let expected = Builtins.mkB "maltese"
-            actual = toBuiltinData $ RootHash "maltese"
+            actual = toBuiltinData $ RootHash "6d616c74657365"
          in expected HUnit.@=? actual
     , HUnit.testCase "RootHash is encoded as a regular bytestring" $
         let expected = Builtins.mkB "pomeranian"
-            actual = toBuiltinData $ RootHash "pomeranian"
+            actual = toBuiltinData $ RootHash "706f6d6572616e69616e"
          in expected HUnit.@=? actual
     ]
 
@@ -110,7 +110,7 @@ testUp =
                 Constr
                   0
                   [ I 0
-                  , B "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
+                  , B (unsafeFromHex "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b")
                   ]
             actual =
               IsData.toBuiltinData $
@@ -130,7 +130,7 @@ testUp =
               toBuiltinData $
                 Up
                   { siblingSide = R
-                  , sibling = RootHash "pomeranian"
+                  , sibling = RootHash "706f6d6572616e69616e"
                   }
          in expected HUnit.@=? actual
     ]
@@ -152,90 +152,39 @@ testCombinedMerkleProof =
             MerkleTreeEntry
               { mteIndex = -8858258933817599851
               , mteAmount = 8887194232705394223
-              , mteRecipient =
-                  BuiltinByteString
-                    ( unsafeFromHex
-                        "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
-                    )
+              , mteRecipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
               , mtePreviousMerkleRoot =
-                  Just
-                    ( BuiltinByteString
-                        ( unsafeFromHex
-                            "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
-                        )
-                    )
+                  Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
               }
         , cmpMerkleProof =
             MerkleProof
               [ Up
                   { siblingSide = L
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
-                            )
-                        )
+                  , sibling = "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b"
                   }
               , Up
                   { siblingSide = R
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
-                            )
-                        )
+                  , sibling = "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
                   }
               , Up
                   { siblingSide = L
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
-                            )
-                        )
+                  , sibling = "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
                   }
               , Up
                   { siblingSide = L
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
-                            )
-                        )
+                  , sibling = "803d0ba3ff8080ff5cdf22dd00e38080807748fffd0078a59b80002964ff11c2"
                   }
               , Up
                   { siblingSide = R
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
-                            )
-                        )
+                  , sibling = "7b808fec00b2f580e101acb77f220180808035787380807f024d01d4b92ff301"
                   }
               , Up
                   { siblingSide = R
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
-                            )
-                        )
+                  , sibling = "a680e03c0001ea3e0016a9ac7f6c5be0017f66802b800180000001ff88e00079"
                   }
               , Up
                   { siblingSide = L
-                  , sibling =
-                      RootHash
-                        ( BuiltinByteString
-                            ( unsafeFromHex
-                                "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
-                            )
-                        )
+                  , sibling = "a9920088807fa280997f26f1800180ff2f5ffe700032ff017f7f807280a0aa00"
                   }
               ]
         }
