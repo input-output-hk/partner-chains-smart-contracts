@@ -3,12 +3,12 @@ module Test.TrustlessSidechain.MultiSig (test) where
 import Control.Applicative ((<|>))
 import Control.Monad (fail, guard)
 import Crypto.Secp256k1 qualified as SECP
-import Data.ByteString (ByteString)
 import Data.List qualified as List
 import Data.String qualified as HString
 import Data.Word (Word8)
 import GHC.Exts (fromListN)
 import GHC.Real (fromRational)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Property,
@@ -40,23 +40,16 @@ test =
 
 unitTests :: TestTree
 unitTests =
-  let -- XXX: The following is a lie. Investigate why.
-      --
-      -- >>> conv "hello" == "hello"
-      -- True
-      --
-      -- Only explicitly converted bytestrings work with verifyMultisig.
-      conv = toBuiltin @ByteString
-      -- blake2b_256 "msg"
-      msg = conv "\150\167\237\136a\219\n\188\NULoG?\158dhxu\243\217\223\142r:\218\233\245:\STX\178\174\195x"
+  let -- blake2b_256 "msg"
+      msg = "96a7ed8861db0abc006f473f9e64687875f3d9df8e723adae9f53a02b2aec378"
       -- skey1 = genKeyDSIGN . mkSeedFromBytes $ blake2b_256 "321"
       -- skey2 = ... "123"
       -- rawSerialiseVerKeyDSIGN $ deriveVerKeyDSIGN skeyN
-      key1 = conv "\ETX\US\205\137A\137\US\164\158\SO\ETB\DLE\168<U/_\165(\169\226y\NUL|Mp\rQ\ENQ\239\158\195\250"
-      key2 = conv "\ETX}\241\\\253\\\164\156\RS\209\176M#\242yy\132\SOG\190\193\254\211\194%\SUB\223M*\STXb\237H"
+      key1 = "031fcd8941891fa49e0e1710a83c552f5fa528a9e279007c4d700d5105ef9ec3fa"
+      key2 = "037df15cfd5ca49c1ed1b04d23f27979840e47bec1fed3c2251adf4d2a0262ed48"
       -- rawSerialiseSigDSIGN $ signDSIGN () msg skeyN
-      sig1 = conv "\148{qy5\CAN\f\154Ni\144\&2I\171\SUB\v\148\229I\SOH\140\163\209$\t\139\242H\139\204\147\DC4x\238%/\178>\193[\190\184\229\216\&7\214\235\153\225d\216t \132\138\207\246\&6\154\209\133/tF"
-      sig2 = conv "\190\160N\239)\238~j\STX\v\CAN\CAN\r\226q\\8ts\DC3!g\233dm\ne\148\205z'\aM\218\218\226\205\209\&8\153\&9_\161.\b91v\211d\ETXY\254\220fP\US\216%\137\201\249S\184"
+      sig1 = "947b717935180c9a4e69903249ab1a0b94e549018ca3d124098bf2488bcc931478ee252fb23ec15bbeb8e5d837d6eb99e164d87420848acff6369ad1852f7446"
+      sig2 = "bea04eef29ee7e6a020b18180de2715c387473132167e9646d0a6594cd7a27074ddadae2cdd13899395fa12e08393176d3640359fedc66501fd82589c9f953b8"
    in testGroup
         "Unit tests"
         [ testCase "0 threshold" $
@@ -114,10 +107,10 @@ insufficientVerification =
 
 data SufficientVerification
   = SufficientVerification
-      [BuiltinByteString]
+      [LedgerBytes]
       Integer
-      BuiltinByteString
-      [BuiltinByteString]
+      LedgerBytes
+      [LedgerBytes]
 
 instance Arbitrary SufficientVerification where
   arbitrary = do
@@ -134,9 +127,9 @@ instance Arbitrary SufficientVerification where
           guard (TSPrelude.not . List.null $ pkSubs)
           TSPrelude.pure pkSubs
     enough <- TSPrelude.fmap TSPrelude.fromIntegral . Gen.chooseInt $ (1, TSPrelude.length signatures)
-    let pubKeyBytes = TSPrelude.fmap (toBuiltin . SECP.exportPubKey True) pubKeys
-    let messageBBS = toBuiltin messageBS
-    TSPrelude.pure .SufficientVerification pubKeyBytes enough messageBBS $ signatures
+    let pubKeyBytes = TSPrelude.fmap (LedgerBytes . toBuiltin . SECP.exportPubKey True) pubKeys
+    let messageBBS = LedgerBytes $ toBuiltin messageBS
+    TSPrelude.pure . SufficientVerification pubKeyBytes enough messageBBS $ signatures
   shrink (SufficientVerification pks enough msg sigs) = do
     enough' <- shrink enough
     guard (enough' TSPrelude.> 0)
@@ -166,10 +159,10 @@ showSufficientVerification (SufficientVerification pks enough msg sigs) =
 
 data InsufficientVerification
   = InsufficientVerification
-      [BuiltinByteString]
+      [LedgerBytes]
       Integer
-      BuiltinByteString
-      [BuiltinByteString]
+      LedgerBytes
+      [LedgerBytes]
 
 -- We piggyback off SufficientVerification, then cull some signatures
 instance Arbitrary InsufficientVerification where
@@ -218,9 +211,10 @@ showInsufficientVerification (InsufficientVerification pks enough msg sigs) =
 mkPrivKey :: [Word8] -> Maybe SECP.SecKey
 mkPrivKey = SECP.secKey . fromListN 32
 
-signWithKey :: SECP.SecKey -> SECP.Msg -> BuiltinByteString
+signWithKey :: SECP.SecKey -> SECP.Msg -> LedgerBytes
 signWithKey sk =
-  toBuiltin
+  LedgerBytes
+    . toBuiltin
     . SECP.getCompactSig
     . SECP.exportCompactSig
     . SECP.signMsg sk

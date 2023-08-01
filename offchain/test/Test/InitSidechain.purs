@@ -11,7 +11,6 @@ import Contract.Prelude
 import Contract.Log as Log
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Utxos as Utxos
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
@@ -137,7 +136,7 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
   $ \(alice /\ bob) → do
       aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
         "Failed to query wallet utxos"
-        Utxos.getWalletUtxos
+        Wallet.getWalletUtxos
 
       genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
         $ Set.findMin

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               trustless-sidechain
-version:            0.1
+version:            3.0.0
 synopsis:           TODO
 description:        TODO
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
@@ -91,6 +91,7 @@ library
     TrustlessSidechain.PoCInlineDatum
     TrustlessSidechain.PoCReferenceInput
     TrustlessSidechain.PoCReferenceScript
+    TrustlessSidechain.PoCSchnorr
     TrustlessSidechain.PoCSerialiseData
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
@@ -170,7 +171,6 @@ executable trustless-sidechain-gen-signatures
     , base16-bytestring
     , bech32
     , bytestring
-    , cardano-addresses
     , cardano-binary
     , cardano-crypto-class
     , cryptonite
@@ -209,7 +209,6 @@ executable trustless-sidechain-merkle-tree
   build-depends:
     , bytestring
     , optparse-applicative
-    , plutus-ledger
     , serialise
     , trustless-sidechain
     , trustless-sidechain-prelude
@@ -226,6 +225,7 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
+    Test.TrustlessSidechain.Types
     Test.TrustlessSidechain.UpdateCommitteeHashMessage
 
   build-depends:
@@ -239,8 +239,10 @@ test-suite trustless-sidechain-test
     , quickcheck-extra
     , secp256k1-haskell
     , tasty
+    , tasty-golden
     , tasty-hunit
     , tasty-quickcheck
+    , text
     , trustless-sidechain
     , trustless-sidechain-prelude
 
@@ -285,52 +287,6 @@ test-suite quickcheck-extra-test
   hs-source-dirs: test/quickcheck-extra-test
 
 -- Benchmarks
-
-benchmark bench-ctl
-  import:         common-lang, common-optimized-parallel, common-script-lang
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
-  other-modules:
-    Bench
-    Bench.BenchResults
-    Bench.Logger
-    Bench.Monad
-    Bench.NodeQuery
-    Bench.OdcQuery
-    Bench.Process
-    Cases.FUELMintingPolicy
-    Cases.GrowingTreeClaim
-    Cases.InitSidechain
-    Cases.UpdateCommitteeHash
-    Ctl
-
-  build-depends:
-    , aeson
-    , base
-    , base64
-    , bytestring
-    , cardano-api
-    , cardano-crypto-class
-    , Chart
-    , Chart-diagrams
-    , containers
-    , direct-sqlite
-    , filepath
-    , mtl
-    , network
-    , plutus-ledger
-    , plutus-ledger-api
-    , process
-    , secp256k1-haskell
-    , semirings
-    , statistics
-    , text
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-    , vector
-    , websockets
-
-  hs-source-dirs: bench/
 
 benchmark quickcheck-extra-bench
   import:         common-lang, common-optimized
