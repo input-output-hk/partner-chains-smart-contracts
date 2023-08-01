@@ -20,9 +20,9 @@ In later SIPs, it became clear that this limitation of only allowing
     purpose than `FUEL` and hence require different verifications.
 Examples of such tokens from other SIPs include:
 
-    - Arbitrary Cardano native asset token transfer.
+- Arbitrary Cardano native asset token transfer.
 
-    - Bridging arbitrary data.
+- Bridging arbitrary data.
 
 Thus, this document proposes that instead of *only* allowing `FUEL` to be
     transferred from the sidechain to the mainchain, we instead allow an
