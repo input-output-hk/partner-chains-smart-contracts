@@ -12,12 +12,12 @@ The end goal is to be able to deploy two types of sidechains:
 ## Background
 The current semantics of the onchain Plutus code to provide the
 mechanism for which an asset is transferred between the mainchain and the
-sidechain (vice versa) is realized with the `FUEL` token which accomplishes the
+sidechain is realized with the `FUEL` token which accomplishes the
 following:
 
 - A transfer from *mainchain* to *sidechain* burns a participant's `FUEL`
   tokens with a specified sidechain recipient (as redeemer).
-  Thus, for the sidechain recipient to receive their corresponding sidechain
+  So, for the sidechain recipient to receive their corresponding sidechain
   tokens in the sidechain, the Bridge must observe that a mainchain transaction
   has burnt `FUEL`, and unlock the corresponding sidechain tokens to the
   recipient on the sidechain (by e.g. minting such tokens).
@@ -39,27 +39,27 @@ We call the currently implemented mechanism which implements the two-way peg on
 the mainchain via minting and burning of a wrapped token a *mainchain wrapped
 token transfer*.
 
-This SIP proposes an alternative method (which may be used in place of the
+This SIP proposes an alternative method (which may be used in addition to the
 *wrapped token*) to implement the two-way peg on the mainchain.
 So, instead of minting and burning a wrapped token, we propose to take any
 arbitrary token on the mainchain, say `McToken`, and implement the two-way peg
 as follows.
 
 - Transfers of `McToken` from *mainchain* to *sidechain* amounts to
-  participants sending their `McToken` to a distinguished address that contains
-  the sidechain recipient, call such an address a *lock box address*,
-  which *locks* the participant's `McToken`s.
-  Thus, for a sidechain recipient to receive their corresponding sidechain
+  participants sending their `McToken` to a distinguished address (while
+  identifying a sidechain recipient), call such an address a *lock box*, which
+  *locks* the participant's `McToken`s.
+  So, for a sidechain recipient to receive their corresponding sidechain
   tokens in the sidechain, the Bridge must observe transactions which lock
-  `McToken`s at a lock box address and mint the corresponding amount to the
-  sidechain recipient.
+  `McToken`s at a lock box and mint the corresponding amount to the sidechain
+  recipient.
 
 - Transfers of `McToken` from *sidechain* to *mainchain* amounts to (again)
   creating a Merkle root of such transactions which are posted to the mainchain
-  (note this reuses the existing mechanism),
-  and later participants may claim their `McToken`s by using some specified
-  Merkle root to spend UTxOs at a lock box address for which `McToken` is
-  locked at and finally pay the locked `McToken`s to themselves.
+  (note this reuses the existing mechanism).
+  Later, participants may claim their `McToken`s by using some specified
+  Merkle root to spend UTxOs at lock boxes for which `McToken` is
+  locked at, and finally pay the locked `McToken`s to themselves.
   In essence, Merkle roots give participants permission to *unlock* previously
   locked `McToken`s to claim themselves.
 
@@ -71,23 +71,15 @@ this proposal, and we will show how to modify the current system such that it
 allows a lock/unlock transfer of Cardano assets.
 
 ## Plutus Design Specification.
-We will build off of [SIP
-09](./docs/SIPs/09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md),
-so we will take the ideas given in that document as understood.
-
 As an overview, we will create:
 
 - A new minting policy `LockBoxOracleMintingPolicy` which will identify the
-  lock boxes (`LockBoxValidator`s) which the system is interested in.
+  `LockBoxValidator` addresses (lock boxes).
 
-- A new validator address `LockBoxValidator` which will be the lock box address
-  that locks tokens transferred from mainchain to sidechain.
-  This will be
-  This must support both adding tokens to the lock box and controlled
-  withdrawing to intended recipients.
-
-- A new minting policy `LockToken` which allows one to lock assets in a
-  collection of `LockBoxValidator`s.
+- A new validator address `LockBoxValidator` which will be the lock box that
+  locks tokens transferred from mainchain to sidechain.
+  This must support both controlled deposits and controlled withdrawals of
+  tokens.
 
 - A new minting policy `ReleaseToken` which allows controlled validation of a
   collection of `LockBoxValidators` to ensure that locked tokens are received
@@ -98,9 +90,17 @@ As an overview, we will create:
 We first describe `LockBoxOracleMintingPolicy` which will identify the
     `LockBoxValidator`s used in the sidechain.
 This will be parameterized by:
-- a UTxO (or anything to guarantee that this token is uniquely identified with the sidechain);
+- a UTxO (or anything to guarantee that this token is uniquely identified with a point in time);
 - (optional) an integer denoting the total number of lock boxes available in the system;
-- (optional) the address of the `LockBoxValidator` (indirectly).
+- (optional) the address of the `LockBoxValidator` (indirectly)[^indirectParamterization].
+
+[^indirectParamterization]: Often, we will say a Plutus script is _indirectly
+  parameterized_ by `someData` meaning that `someData` must be found through a
+  layer of indirection of some other read-only UTxO with this information.
+  This is necessary since sometimes Plutus scripts must be cyclically
+  parameterized by each other, and this is simply impossible as the hash of the
+  scripts cannot depend on each other.
+
 Note the optional data is not required but may be included to decrease trust
     assumptions in the setup.
 Finally, `LockBoxOracleMintingPolicy` mints only if its UTxO is spent,
@@ -112,7 +112,7 @@ Finally, `LockBoxOracleMintingPolicy` mints only if its UTxO is spent,
 ### `LockBoxValidator`
 We describe `LockBoxValidator`.
 `LockBoxValidator` will be parameterized by the currency symbol of
-    `ReleaseToken`, and `LockBoxValidator` must also be (indirectly)
+    `ReleaseToken`, and must also be (indirectly)
     parameterized by the currency symbol of `LockBoxOracleMintingPolicy`.
 As redeemer, `LockBoxValidator` will take the following data type.
 ```haskell
@@ -121,8 +121,11 @@ data LockBoxValidatorRedeemer
         -- ^ the address of the sidechain recipient observed by sidechain nodes
     | Release
 ```
+In other words, `LockBoxValidatorRedeemer` indicates that we are either
+    interested in locking tokens inside the lock box, or releasing (unlocking)
+    tokens already locked in the lock box.
 
-The datum of `LockBoxValidator` is will be the currency symbol and the token
+The datum of `LockBoxValidator` will be the currency symbol and the token
     name of the mainchain asset we are interested in transferring between
     mainchain and sidechain.
 ```haskell
@@ -148,50 +151,41 @@ If the redeemer is `Lock`, then the `LockBoxValidator` validates only if
 
 [^relativelySmall]: This condition is a technical condition where adversaries
   can add a whole bunch of garbage tokens to an output to make the output far
-  too large to be able to be spent (as Plutus code will be spending all of its
+  too large to be spent (as Plutus code will be spending all of its
   budget decoding the `ScriptContext`), thus locking the tokens away forever.
 
-In summary, these conditions verify that the `LockBoxValidator` has more of the
-specified asset than we started with.
+In summary, these conditions verify that the `LockBoxValidator` has strictly more of the
+    specified asset.
 
 If the redeemer is `Release`, then the `LockBoxValidator` validates
-    only if `ReleaseToken` mints.
+    only if `ReleaseToken` mints (recall that `LockBoxValidator` is
+    parameterized by the currency symbol of `ReleaseToken`).
 Note that in this case, `LockBoxValidator` simply forwards all of its
     verifications to `ReleaseToken`.
 
 ### `ReleaseToken`
-We describe the final Plutus script `ReleaseToken` which is where most of
+We describe the final Plutus script, `ReleaseToken`, which is where most of
     the complexity lies.
-In this description, we will be using many the ideas from
+In this description, we will be using many of the ideas from
     [SIP09](./docs/SIPs/09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md).
 
-`ReleaseToken` allows one claim one's already locked tokens from the
+`ReleaseToken` allows one to claim already locked tokens from the
     sidechain.
-`ReleaseToken` must be paramterized by the currency symbol of
+`ReleaseToken` must be parameterized by the currency symbol of
     `MerkleRootTokenMintingPolicy`, and (indirectly) parameterized by the
     currency symbol of `LockBoxOracleMintingPolicy`.
 
-We first must augment `MerkleTreeEntry` with an extra ``arm'' so `ReleaseToken`
+We first must augment `MerkleTreeEntry` with an extra "arm" so `ReleaseToken`
 has enough information to ensure that the recipient receives the intended
 amount of tokens.
 ```diff
 data MerkleTreeEntry
-    = ScTokenMerkleTreeEntry
-        { amount :: Integer
-            -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-        , recipient :: Address
-            -- the address of a recipien
-        , tokenName :: TokenName
-            -- 32 byte token name (often "FUEL")
-        , previousMerkleRoot :: Maybe ByteString
-            -- previousMerkleRoot is added to make sure that the hashed entry
-            -- is unique w.r.t other Merkle roots to prevent double claiming
-        }
+    = ...
 +   | LockBoxMerkleTreeEntry
 +       { amount :: Integer
 +           -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
 +       , recipient :: Address
-+           -- the address of a recipien
++           -- the address of a recipient
 +       , lockedCurrencySymbol :: CurrencySymbol
 +           -- currency symbol of the token to unlock on the mainchain
 +       , lockedTokenName :: TokenName
@@ -219,7 +213,7 @@ Then, `ReleaseToken` mints only if the following are all satisfied:
   `MerkleRootTokenValidator` with Merkle root `merkleRoot`.
 
 - `releaseTokenMerkleProof` shows that `cbor(releaseTokenMerkleTreeEntry)` is
-  in `merkleRoot.`
+  in `merkleRoot`.
 
 - This transaction corresponds to `releaseTokenMerkleTreeEntry` in the sense
   that the `recipient` has at least `amount` of `lockedCurrencySymbol` with
@@ -236,9 +230,11 @@ Then, `ReleaseToken` mints only if the following are all satisfied:
   `LockBoxValidator` address with `LockBoxOracleMintingPolicy`.
 
     -  `lockBoxIns` and `lockBoxOuts` all have as datum the
-       `lockedCurrencySymbol` and `lockedTokenName`
+       `lockedCurrencySymbol` and `lockedTokenName`.
 
-    -  There are the same amount of `lockBoxIns` and `lockBoxOuts`
+    -  There are the same amount of `lockBoxIns` and `lockBoxOuts`.
+
+    -  `lockBoxOuts` are relatively small.
 
     -  Let `ki` denote the sum of all `lockedCurrencySymbol` with
        `lockedTokenName` in all `lockBoxIns`, and let `ko` denote the sum of
@@ -248,7 +244,8 @@ Then, `ReleaseToken` mints only if the following are all satisfied:
        remain in lock boxes.
 
 In summary, `ReleaseToken` verifies that the transaction sent over from the
-    sidechain occurs on the mainchain and happens at most once.
+    sidechain corresponds to the transaction on the mainchain, and this
+    transaction happens at most once.
 Also, since `ReleaseToken` is used exclusively to validate that the transaction
     itself is valid in the aforementioned sense, `ReleaseToken` is thus no
     longer needed after this transaction and may be sent to a burn address.
@@ -261,13 +258,19 @@ All designs started with one key idea -- that is, we must have at least one
     mainchain to sidechain transfer, and unlocking this lockbox denotes a
     transfer from sidechain to mainchain.
 
-With this in mind, there's a point of ambiguitiy.
-It isn't clear ``how many'' lock boxes one should have in the system.
-Given an asset on the mainchain,
-    one could have exactly one lock box (uniquely identified by an NFT),
-    an unbounded number of lock boxes (simply identified by a validator address),
-    or a bounded number of lock boxes (identified by some minted tokens) which
-    was the final solution written up in this document.
+With this in mind, there is a point of ambiguity -- namely, how many lock boxes
+    one should have in the system.
+We saw that there were 3 choices for this.
+Given an asset on the mainchain, we could have
+
+- exactly one lock box uniquely identified by an NFT,
+
+- an unbounded number of lock boxes identified by (only) a validator address,
+  or
+
+- a bounded number of lock boxes identified by some small number of minted
+  tokens (this was the final solution written up in this document).
+
 We discuss each possibility below.
 
 - _Exactly one lock box._
@@ -276,10 +279,10 @@ We discuss each possibility below.
   sidechain.
   Transfers from mainchain to sidechain amounts to spending the unique lock box
   UTxO, and transfers from sidechain to mainchain also amount to spending the
-  unique lockbox UTxO.
-  Clearly, this potentially could have concurrency issues as all participants
-  are ``competing'' to spend the same UTxO for every operation on the
-  sidechain.
+  unique lock box UTxO.
+  While this is a nice simple idea, this potentially could have concurrency
+  issues as all participants are "competing" to spend the same UTxO for every
+  operation on the sidechain.
 
 - _An unbounded number of lock boxes._
   Seeing the potential concurrency problems with having exactly one lock box,
@@ -287,16 +290,19 @@ We discuss each possibility below.
   Thus, transfers from mainchain to sidechain would amount to paying one's
   assets to a lock box validator address.
   Unfortunately, since this imposes little structure on the UTxOs which contain
-    the mainchain assets that are transferred to the sidechain, and hence
-    significantly complicates transfers from sidechain to mainchain.
-  For example, if there is 100 participants transfer 1 token from mainchain to
-    sidechain, then there would be 100 UTxOs each containing a single mainchain asset.
+    the mainchain assets that are transferred to the sidechain, this
+    adds complications to transfers from sidechain to mainchain.
+  For example, if there are 100 participants who transfer 1 token from mainchain to
+    sidechain, then there would be 100 UTxOs (lock boxes) each containing a single mainchain asset.
   So, if one tries to claim all 100 of the mainchain asset in a transfer from sidechain to mainchain,
     clearly one cannot do this in a single transaction due to transaction size
     limits of the blockchain.
-  Following this line of reasoning, this forces the design to be "two-staged"
-    in the sense that transfers from sidechain to mainchain must mint an extra
-    a token whose burning allows controlled unlocking of lock box addresses.
+  Following this line of reasoning, this forces the design to be "multi-staged"
+    in the sense that transfers from sidechain to mainchain must allow claiming
+    of tokens in lock boxes to be distributed over many transactions.
+  A natural way to implement this would be to mint `k` tokens on the mainchain
+  for each sidechain to mainchain transaction transferring `k` mainchain assets, and make
+  burning of this token correspond to unlocking the mainchain assets.
   Of course, this extra level of "indirection" increases fees, so this idea was
     dismissed.
 
@@ -304,13 +310,13 @@ We discuss each possibility below.
   In effort to balance the pros / cons of the aforementioned ideas, we settled
   on having a small bounded number of lock boxes (the design presented in the
   document).
-  Indeed, having multiple lockboxes may improve the concurrency situation as
+  Indeed, having multiple lock boxes may improve the concurrency situation as
   participants may not necessarily need to all compete to spend the same UTxOs,
   and if we choose the number of lock boxes to be small enough we can guarantee
   that _every_ transfer from sidechain to mainchain can occur in a single
-  efficient transaction.
+  (hopefully) efficient transaction.
 
-So, after weighing the tradeoffs, we decided the bounded number of lockboxes
+So, after weighing the tradeoffs, we decided the bounded number of lock boxes
 was best.
 
 There was an idea to have an unbounded number of lock boxes
@@ -325,10 +331,10 @@ say `McToken`, between mainchain and sidechain (vice versa).
 **Workflow: Initialization of lock boxes**
 1. A small number of lock boxes are created with datum as `McToken`.
    Note that if we wanted to transfer other types of tokens, say `McToken'`,
-   we would need to create lockboxes with datum as `McToken'` as well.
+   we would need to create lock boxes with datum as `McToken'` as well.
 
 The following diagram depicts the transaction for step 1 of the workflow.
-![Initialization of a lock box](./07-ModularisingTokenHandling/LockBoxMainchainToSidechain.svg)
+![Initialization of a lock box](./07-ModularisingTokenHandling/InitializationOfLockBoxes.svg)
 
 **Workflow: transferring `McToken`s from mainchain to sidechain**
 1. On the mainchain, a participant posts a transaction which pays some amount
@@ -356,18 +362,10 @@ The following diagram depicts the transaction for step 1 of the workflow.
 1. On the sidechain, a participant posts a transaction which burns `McToken`'s
    corresponding sidechain tokens.
 2. Eventually, transactions from 1. are bundled up into a Merkle root, and the
-   Merkle root is signed by the committee and posted to the mainchain. Note
-   that the `tokenName` field of the `MerkleTreeEntry`s *must* be set to
-   `blake2b(serialiseData(McToken currency symbol, McToken token name))`.
-3. A mainchain recipient of a transaction from 1. claims their `SCToken`s by
-   posting a transaction on the mainchain, which also unlocks `McToken`s
-   residing at `LockBoxValidator` addresses.
-4. A participant may burn their `SCToken`s as they serve no purpose -- note
-   that this differs from the original `FUELMintingPolicy` where burning of
-   `FUELMintingPolicy` was something sidechain nodes observed to mint the
-   corresponding tokens on the sidechain. With lock/unlock mechanism,
-   sidechains *should not* observe such a transaction, and this should be
-   considered a noop.
+   Merkle root is signed by the committee and posted to the mainchain.
+3. A mainchain recipient of a transaction from 1. claims their `McToken`s by
+   posting a transaction on the mainchain, which mints a `ReleaseToken` that
+   unlocks `McToken`s residing at `LockBoxValidator` addresses.
 
 The following diagram depicts the transaction for step 3 of the workflow using
 3 lock boxes for `McToken`.
