@@ -13,7 +13,7 @@ strict digraph {
   OutputLockBoxValidator2 [label = "LockBoxValidator with datum `McToken`"];
   OutputLockBoxValidator3 [label = "LockBoxValidator with datum `McToken`"];
 
-  UnlockMintingPolicy [shape = ellipse ] ;
+  ReleaseToken [shape = ellipse ] ;
   BurnAddress ;
 
   Transaction [ shape=diamond ];
@@ -36,6 +36,6 @@ strict digraph {
   Transaction -> DistributedSetNode1 [label = "output"];
   Transaction -> DistributedSetNode2 [label = "output"];
   Transaction -> Recipient [ label = "output" ];
-  Transaction -> UnlockMintingPolicy [ label = "mints", style=dashed ];
-  UnlockMintingPolicy -> BurnAddress[ label = "is paid to", style=dashed ];
+  Transaction -> ReleaseToken [ label = "mints", style=dashed ];
+  ReleaseToken -> BurnAddress[ label = "is paid to", style=dashed ];
 }

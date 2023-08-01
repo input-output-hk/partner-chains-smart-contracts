@@ -248,6 +248,10 @@ Merkle proof, say `merkleProof`, which shows that the cbor of a
 Using the `lockBoxMerkleTreeEntry`, this token will mint only if the following
 are all satisfied.
 
+- There is a `MerkleRootTokenMintingPolicy` provided as reference input at a
+  `MerkleRootTokenValidator` address with Merkle root `merkleRoot`, and
+  `merkleProof` shows that `cbor(lockBoxMerkleTreeEntry)` is in `merkleRoot`.
+
 - The recipient receives at least `amount` of the given Cardano asset that is
   `lockedCurrencySymbol` with `lockedTokenName` (locked currently in
   `LockBoxValidator`);
@@ -306,6 +310,10 @@ Then, `PostBoxToken` will take as redeemer a Merkle proof, say `merkleProof`, wh
     `postBoxMerkleTreeEntry`, is in a Merkle root.
 Using the `postBoxMerkleTreeEntry`, `PostBoxToken` will mint only if the
     following are all satisfied.
+
+- There is a `MerkleRootTokenMintingPolicy` provided as reference input at a
+  `MerkleRootTokenValidator` address with Merkle root `merkleRoot`, and
+  `merkleProof` shows that `cbor(postBoxMerkleTreeEntry)` is in `merkleRoot`.
 
 - There exists a transaction output `targetAddress` with `postBoxData` as
   datum and `PostBoxToken` is paid to this address.
