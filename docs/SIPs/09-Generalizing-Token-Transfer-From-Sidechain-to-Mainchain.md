@@ -81,7 +81,7 @@ data MerkleTreeEntry
         { amount :: Integer
             -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
         , recipient :: Address
-            -- the address of a recipien
+            -- the address of a recipient
         , tokenName :: TokenName
             -- 32 byte token name (often "FUEL")
         , previousMerkleRoot :: Maybe ByteString
@@ -221,22 +221,12 @@ We first extend `MerkleTreeEntry` to include an extra "arm" which
 contains enough information to identify a Cardano assset.
 ```diff
 data MerkleTreeEntry
-    = ScTokenMerkleTreeEntry
-        { amount :: Integer
-            -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-        , recipient :: Address
-            -- the address of a recipien
-        , tokenName :: TokenName
-            -- 32 byte token name (often "FUEL")
-        , previousMerkleRoot :: Maybe ByteString
-            -- previousMerkleRoot is added to make sure that the hashed entry
-            -- is unique w.r.t other Merkle roots to prevent double claiming
-        }
+    = ...
 +   | LockBoxMerkleTreeEntry
 +       { amount :: Integer
 +           -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
 +       , recipient :: Address
-+           -- the address of a recipien
++           -- the address of a recipient
 +       , lockedCurrencySymbol :: CurrencySymbol
 +           -- currency symbol of the token to unlock on the mainchain
 +       , lockedTokenName :: TokenName
@@ -273,9 +263,59 @@ are all satisfied.
 ### Bridging Arbitrary Data
 Details will be in another SIP.
 
-TODO.
+The use case is as follows.
+
+1. The sidechain wants to bridge some data to the mainchain so that sidechains
+   can can observe / react to this data at some specified address.
+   Moreover, it should be easy for sidechains to attest to the validity of the
+   data transferred from another sidechain by e.g. testing if the specified
+   address has a particular token.
+
+To this end, we will need a data type, `PostBoxValidatorDatum`, which will
+    include either the hash of arbitrary data or the data directly, and some extra
+    auxillary information about the data.
+Moreover, we will also need a token `PostBoxToken` which will attest to the
+    validity of the data `PostBoxValidatorDatum` which was sent from sidechain
+    to mainchain.
+
+The design of `PostBoxToken` will follow the same steps outlined above.
+We first need to add an "arm" to `MerkleTreeEntry` as follows.
+```diff
+data MerkleTreeEntry
+    = ...
++  | PostBoxMerkleTreeEntry
++      { targetAddress :: Address
++          -- the address to send the data to
++      , postBoxData :: PostBoxValidatorDatum
++          -- the data to put at @targetAddress@.
++      -- , previousMerkleRoot :: Maybe ByteString
++      --     -- (optional) previousMerkleRoot to ensure that the data can be
++      --     -- transferred from sidechain to mainchain at most once
++      }
+```
+Note that `PostBoxMerkleTreeEntry` has an address `targetAddress` to send the
+    data from `postBoxData` to.
+Also, if we require that the data can be transferred from sidechain to mainchain at most once,
+    then we would need to include `previousMerkleRoot` and verify that this
+    transaction is being inserted in the distributed set for the first time.
+
+Then, `PostBoxToken` will take as redeemer a Merkle proof `merkleProof` which
+shows that the cbor of a `PostBoxMerkleTreeEntry`, say
+`postBoxMerkleTreeEntry`, is in a Merkle root.
+Using the `postBoxMerkleTreeEntry`, the `PostBoxToken` will mint only if the
+following are all satisfied.
+
+- There exists a transaction output `targetAddress` with `postBoxData` as
+  datum and `PostBoxToken` is paid to this address.
+
+- Exactly one `PostBoxToken` is minted.
+
+- (optional) If we require uniqueness of transferring data from sidechain to
+  mainchain, we would verify that
+  `blake2b(cbor(merkleProof,previousMerkleRoot))` is inserted in the
+  distributed set in this transaction.
 
 ### Updating Oracle Feeds of Data
 Details will be in another SIP.
 
-TODO.
+TODO
