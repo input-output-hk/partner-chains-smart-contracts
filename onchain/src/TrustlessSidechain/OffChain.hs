@@ -14,16 +14,12 @@ module TrustlessSidechain.OffChain (
   showTxOutRef,
   showBS,
   showBuiltinBS,
-  showRootHash,
-  showPubKey,
-  showScPubKey,
   showScPubKeyAndSig,
   showSig,
   showThreshold,
   showMerkleTree,
   showMerkleProof,
   showSecpPrivKey,
-  showGenesisHash,
   showCombinedMerkleProof,
   toSpoPubKey,
   vKeyToSpoPubKey,
@@ -35,7 +31,6 @@ module TrustlessSidechain.OffChain (
   strToSecpPrivKey,
   strToSecpPubKey,
   bech32RecipientFromText,
-  txOutRefFromText,
 ) where
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
@@ -54,9 +49,7 @@ import Crypto.Secp256k1 qualified as SECP
 import Crypto.Secp256k1.Internal qualified as SECP.Internal
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Extras qualified as Aeson.Extras
 import Data.Aeson.Types qualified as Aeson.Types
-import Data.Attoparsec.Text qualified as Attoparsec.Text
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
@@ -65,7 +58,7 @@ import Data.List qualified as List
 import Data.String qualified as HaskellString
 import Data.Text qualified as Text
 import GHC.Err (undefined)
-import Ledger (PubKey (PubKey), Signature (Signature))
+import Ledger (Signature (Signature))
 import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   BuiltinByteString,
@@ -77,11 +70,10 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
+import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
-  GenesisHash (getGenesisHash),
   SidechainPubKey (SidechainPubKey),
  )
 
@@ -199,12 +191,12 @@ instance ToJSON SidechainCommitteeMember where
   toJSON (SidechainCommitteeMember {..}) =
     Aeson.object
       [ "private-key" Aeson..= showSecpPrivKey scmPrivateKey
-      , "public-key" Aeson..= showScPubKey scmPublicKey
+      , "public-key" Aeson..= show scmPublicKey
       ]
   toEncoding (SidechainCommitteeMember {..}) =
     Aeson.pairs
       ( "private-key" Aeson..= showSecpPrivKey scmPrivateKey
-          <> "public-key" Aeson..= showScPubKey scmPublicKey
+          <> "public-key" Aeson..= show scmPublicKey
       )
 
 -- | Parses a hex encoded string into a sidechain private key
@@ -307,27 +299,6 @@ signWithSidechainKey skey msg =
         . SECP.exportCompactSig
         $ SECP.signMsg skey ecdsaMsg
 
--- * Parsing functions
-
-{- | 'txOutRefFromText' parses a 'TxOutRef' from 'Text'. E.g., it'll parse
- something like:
- @
-  c97c374fa579742fb7934b9a9c306734fdc0d48432d4d6b46498c8288b88100c#0
- @
--}
-txOutRefFromText ::
-  Text ->
-  Either HaskellString.String TxOutRef
-txOutRefFromText = Attoparsec.Text.parseOnly $ do
-  rawTxId <- Attoparsec.Text.takeWhile (/= '#')
-  txId <- case Aeson.Extras.tryDecode rawTxId of
-    Left err -> fail err
-    Right res -> pure $ TxId $ Builtins.Internal.BuiltinByteString res
-
-  _ <- Attoparsec.Text.char '#'
-  txIx <- Attoparsec.Text.decimal
-  pure $ TxOutRef txId txIx
-
 -- * Show functions
 
 -- | Serialise transaction output reference into CLI format (TX_ID#TX_IDX)
@@ -341,25 +312,9 @@ showBS :: ByteString -> HaskellString.String
 showBS =
   Char8.unpack . Base16.encode
 
--- | Serialise a ByteString into hex string
-showGenesisHash :: GenesisHash -> HaskellString.String
-showGenesisHash = showBuiltinBS . getGenesisHash
-
 -- | Serialise a BuiltinByteString into hex string
 showBuiltinBS :: BuiltinByteString -> HaskellString.String
 showBuiltinBS = showBS . Builtins.fromBuiltin
-
--- | Serialise a RootHash into hex of serialized built in data.
-showRootHash :: RootHash -> HaskellString.String
-showRootHash = showHexOfCborBuiltinData
-
--- | Serialise public key
-showPubKey :: PubKey -> HaskellString.String
-showPubKey (PubKey (LedgerBytes pk)) = showBuiltinBS pk
-
--- | Serialise sidechain public key
-showScPubKey :: SidechainPubKey -> HaskellString.String
-showScPubKey (SidechainPubKey pk) = showBuiltinBS pk
 
 -- | Serailises a 'SECP.SecKey' private key by hex encoding it
 showSecpPrivKey :: SECP.SecKey -> HaskellString.String
@@ -373,7 +328,7 @@ showScPubKeyAndSig ::
   Signature ->
   HaskellString.String
 showScPubKeyAndSig sckey sig =
-  concat [showScPubKey sckey, ":", showSig sig]
+  concat [show sckey, ":", showSig sig]
 
 -- | Serialise signature
 showSig :: Signature -> HaskellString.String
@@ -443,4 +398,4 @@ toSidechainPubKey =
 
 -- | Converts a 'SECP.PubKey' to a 'SidechainPubKey'
 secpPubKeyToSidechainPubKey :: SECP.PubKey -> SidechainPubKey
-secpPubKeyToSidechainPubKey = SidechainPubKey . Builtins.toBuiltin . SECP.exportPubKey True
+secpPubKeyToSidechainPubKey = SidechainPubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey True
