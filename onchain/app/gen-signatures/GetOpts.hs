@@ -56,8 +56,8 @@ import Options.Applicative (
  )
 import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
-  BuiltinByteString,
   FromData (fromBuiltinData),
+  LedgerBytes (LedgerBytes),
   TxId (TxId),
   TxOutRef (TxOutRef),
  )
@@ -172,16 +172,16 @@ data GenCliCommand
         uchcSidechainEpoch :: Integer
       , -- | previous merkle root that was just stored on chain.
         -- This is needed to create the message we wish to sign
-        uchcPreviousMerkleRoot :: Maybe BuiltinByteString
+        uchcPreviousMerkleRoot :: Maybe LedgerBytes
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
       { -- | 32 byte merkle root hash
-        srcMerkleRoot :: BuiltinByteString
+        srcMerkleRoot :: LedgerBytes
       , -- | current committee's (as stored on chain) private keys
         srcCurrentCommitteePrivKeys :: [SECP.SecKey]
       , -- | the previous merkle root (as needed to create the CLI command)
-        srcPreviousMerkleRoot :: Maybe BuiltinByteString
+        srcPreviousMerkleRoot :: Maybe LedgerBytes
       }
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
@@ -208,7 +208,7 @@ instance FromJSON MerkleTreeEntryJson where
         <$> v Aeson..: "index"
         <*> v Aeson..: "amount"
         <*> fmap
-          bech32RecipientBytes
+          (LedgerBytes . bech32RecipientBytes)
           (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
         -- parse the bech32 type, then grab the byte output
         <*> v Aeson..:? "previousMerkleRoot"
@@ -296,7 +296,7 @@ parseTxOutRef =
 parseGenesisHash :: OptParse.ReadM GenesisHash
 parseGenesisHash =
   eitherReader
-    ( fmap (GenesisHash . Builtins.toBuiltin)
+    ( fmap (GenesisHash . LedgerBytes . Builtins.toBuiltin)
         . mapLeft ("Unable to parse genesisHash: " <>)
         . Base16.decode
         . Char8.pack
@@ -361,10 +361,10 @@ parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
 parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
 -- | parses the previous merkle root as a hex encoded string
-parsePreviousMerkleRoot :: OptParse.ReadM BuiltinByteString
+parsePreviousMerkleRoot :: OptParse.ReadM LedgerBytes
 parsePreviousMerkleRoot =
   eitherReader
-    ( fmap Builtins.toBuiltin
+    ( fmap (LedgerBytes . Builtins.toBuiltin)
         . mapLeft ("Invalid previous merkle root hex: " <>)
         . Base16.decode
         . Char8.pack
@@ -382,10 +382,10 @@ parseMerkleTree = eitherReader $ \str -> do
 {- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
  of a root hash of a merkle tree given as a CLI argument.
 -}
-parseRootHash :: OptParse.ReadM BuiltinByteString
+parseRootHash :: OptParse.ReadM LedgerBytes
 parseRootHash =
   eitherReader
-    ( fmap Builtins.toBuiltin
+    ( fmap (LedgerBytes . Builtins.toBuiltin)
         . mapLeft ("Invalid merkle root hash: " <>)
         . Base16.decode
         . Char8.pack

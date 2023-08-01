@@ -7,7 +7,7 @@ module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (ValidatorHash)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes), ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
@@ -32,29 +32,33 @@ data SidechainParams = SidechainParams
     thresholdDenominator :: Integer
   }
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
-    ( TSPrelude.Show
+    ( Eq
+    , Ord
     , ToData
     , FromData
     , UnsafeFromData
-    , IsString
     )
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | Compressed DER SECP256k1 public key.
 newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
   { -- | @since Unreleased
-    getEcdsaSecp256k1PubKey :: BuiltinByteString
+    getEcdsaSecp256k1PubKey :: LedgerBytes
   }
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
-    ( TSPrelude.Eq
-    , TSPrelude.Ord
+    ( Eq
+    , Ord
     , ToData
     , FromData
     , UnsafeFromData
     )
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 -- * Committee Candidate Validator data
 
@@ -126,9 +130,9 @@ data MerkleTreeEntry = MerkleTreeEntry
   , -- | arbitrary length bytestring that represents decoded bech32 cardano
     -- address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- of bech32
-    mteRecipient :: BuiltinByteString
+    mteRecipient :: LedgerBytes
   , -- | the previous merkle root to ensure that the hashed entry is unique
-    mtePreviousMerkleRoot :: Maybe BuiltinByteString
+    mtePreviousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
@@ -139,8 +143,8 @@ PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 -}
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { mrimSidechainParams :: SidechainParams
-  , mrimMerkleRoot :: BuiltinByteString
-  , mrimPreviousMerkleRoot :: Maybe BuiltinByteString
+  , mrimMerkleRoot :: LedgerBytes
+  , mrimPreviousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
@@ -148,11 +152,11 @@ PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMe
 -- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
   { -- | New merkle root to insert.
-    merkleRoot :: BuiltinByteString
+    merkleRoot :: LedgerBytes
   , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [BuiltinByteString]
+    signatures :: [LedgerBytes]
   , -- | Lexicographically sorted public keys of all committee members
     committeePubKeys :: [EcdsaSecp256k1PubKey]
   }
@@ -191,7 +195,7 @@ PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
-  = MainToSide BuiltinByteString -- Recipient's sidechain address
+  = MainToSide LedgerBytes -- Recipient's sidechain address
   | -- | 'SideToMain' indicates that we wish to mint FUEL on the mainchain.
     -- So, this includes which transaction in the sidechain we are
     -- transferring over to the main chain (hence the 'MerkleTreeEntry'), and
@@ -241,7 +245,7 @@ PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
  concatenated public key hashes of the committee members
 -}
 data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash :: BuiltinByteString
+  { committeeHash :: LedgerBytes
   , sidechainEpoch :: Integer
   }
 
@@ -252,13 +256,13 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatu
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
-    committeeSignatures :: [BuiltinByteString]
+    committeeSignatures :: [LedgerBytes]
   , -- | 'committeePubKeys' is the current committee public keys
     committeePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
     newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
@@ -282,7 +286,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
     uchmNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-  , uchmPreviousMerkleRoot :: Maybe BuiltinByteString
+  , uchmPreviousMerkleRoot :: Maybe LedgerBytes
   , uchmSidechainEpoch :: Integer
   }
 
@@ -290,7 +294,7 @@ PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMe
 
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
-  { checkpointBlockHash :: BuiltinByteString
+  { checkpointBlockHash :: LedgerBytes
   , checkpointBlockNumber :: Integer
   }
 
@@ -300,7 +304,7 @@ PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
  checkpoint
 -}
 data CheckpointRedeemer = CheckpointRedeemer
-  { checkpointCommitteeSignatures :: [BuiltinByteString]
+  { checkpointCommitteeSignatures :: [LedgerBytes]
   , checkpointCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , newCheckpointBlockHash :: BuiltinByteString
   , newCheckpointBlockNumber :: Integer
@@ -323,7 +327,7 @@ PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
 
 data CheckpointMessage = CheckpointMessage
   { checkpointMsgSidechainParams :: SidechainParams
-  , checkpointMsgBlockHash :: BuiltinByteString
+  , checkpointMsgBlockHash :: LedgerBytes
   , checkpointMsgBlockNumber :: Integer
   , checkpointMsgSidechainEpoch :: Integer
   }
