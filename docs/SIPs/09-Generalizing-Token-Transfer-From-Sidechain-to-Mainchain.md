@@ -15,16 +15,14 @@ Currently, the only token that the sidechain may transfer to the mainchain is
 3. `FUEL` is received by the intended recipient.
 
 In later SIPs, it became clear that this limitation of only allowing
-    `FUEL` to be transferred is insufficient as later SIPs required designing
-    tokens which fundamentally serve a different purpose than `FUEL` and hence
-    must verify different conditions.
+    `FUEL` to be transferred from sidechain to mainchain is insufficient as
+    later SIPs required designing tokens which fundamentally serve a different
+    purpose than `FUEL` and hence require different verifications.
 Examples of such tokens from other SIPs include:
 
     - Arbitrary Cardano native asset token transfer.
 
     - Bridging arbitrary data.
-
-    - Updating oracle feeds of data.
 
 Thus, this document proposes that instead of *only* allowing `FUEL` to be
     transferred from the sidechain to the mainchain, we instead allow an
@@ -46,12 +44,13 @@ Following this line of reasoning, it's clear that we would like to isolate the
 Indeed, this is precisely condition 1. in the `FUEL` token that we are
     interested in modularising out.
 
-Early revisions of this document suggested having a seperate token for
-    modularising functionality to prove a transaction is in a Merkle root.
-This idea was ultimately discarded due to the high possibility of
-    incurring extra ada costs in transactions.
-Thus, the modularization in this document is purely "conceptual" to document
-    how one may write a token which may be bridged from sidechain to mainchain.
+Early revisions of this document suggested having a separate token for
+    modularising the functionality to prove a transaction is in a Merkle root,
+    but this idea was ultimately discarded due to the possibility of incurring
+    extra ada costs in transactions.
+Thus, the modularization in this document is purely "conceptual", and we aim to
+    document how one may write a token which may be bridged from sidechain to
+    mainchain.
 
 As an overview, this document will discuss the following.
 
@@ -68,8 +67,6 @@ As an overview, this document will discuss the following.
       (assuming that such assets are locked up in the mainchain already).
 
     - Bridging arbitrary data from the sidechain to the mainchain
-
-    - Updating oracle feeds of data
 
 ## Replacing `FUELMintingPolicy` with `ScToken`
 
@@ -157,9 +154,9 @@ Similarly to `FUELMintingPolicy`, the offchain code should do the following.
   bundle up all sidechain transactions which transfer tokens to the mainchain
   by constructing `ScTokenMerkleTreeEntry`s, say `scme1,...,scmeN`, and creates
   a Merkle tree by computing
-  ```
+```
 mt = merkleTree([cbor(scme1),...,cbor(scmeN)])
-  ```
+```
   and submitting the Merkle root (after collecting the required signatures) of
   `mt` with `MerkleRootTokenMintingPolicy`.
 
@@ -175,13 +172,13 @@ This amounts to writing the following:
 1. Modify the `MerkleTreeEntry` type to include another "arm" which includes
    the data, say `GreatDAppIdeaMerkleTreeEntry { .. }`, required by
    `GreatDAppIdeaToken`. In other words, we must have
-   ```diff
+```diff
 data MerkleTreeEntry
     = ScTokenMerkleTreeEntry
     ...
 +   | GreatDAppIdeaToken { .. }
     ...
-   ```
+```
 
 2. Implement `GreatDAppIdeaToken` to verify all of the following.
 
@@ -314,8 +311,3 @@ following are all satisfied.
   mainchain, we would verify that
   `blake2b(cbor(merkleProof,previousMerkleRoot))` is inserted in the
   distributed set in this transaction.
-
-### Updating Oracle Feeds of Data
-Details will be in another SIP.
-
-TODO
