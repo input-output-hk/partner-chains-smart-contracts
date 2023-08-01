@@ -20,6 +20,8 @@ import Contract.Value as Value
 import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types (CheckpointParameter(..))
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
@@ -99,6 +101,10 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
         candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
+  { checkpointCurrencySymbol } ← do
+    Checkpoint.getCheckpointPolicy scParams
+  let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
+
   -- Validators
   committeeCandidateValidatorAddr ← do
     validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
@@ -129,6 +135,18 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
     validator ← DistributedSet.dsConfValidator ds
     getAddr validator
 
+  checkpointValidatorAddr ← do
+    let
+      checkpointParam = CheckpointParameter
+        { sidechainParams: scParams
+        , checkpointAssetClass: assetClass checkpointCurrencySymbol
+            Checkpoint.initCheckpointMintTn
+        , committeeHashAssetClass: assetClass committeeHashCurrencySymbol
+            UpdateCommitteeHash.initCommitteeHashMintTn
+        }
+    validator ← Checkpoint.checkpointValidator checkpointParam
+    getAddr validator
+
   let
     mintingPolicies =
       [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
@@ -136,6 +154,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
       , "CommitteeNftPolicyId" /\ committeeNftPolicyId
       , "DSKeyPolicy" /\ dsKeyPolicyPolicyId
       , "DSConfPolicy" /\ dsConfPolicyId
+      , "CheckpointPolicy" /\ checkpointPolicyId
       ]
         <>
           Array.catMaybes
@@ -149,6 +168,7 @@ getSidechainAddresses scParams { mCandidatePermissionTokenUtxo } = do
       , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
+      , "CheckpointValidator" /\ checkpointValidatorAddr
 
       ]
   pure

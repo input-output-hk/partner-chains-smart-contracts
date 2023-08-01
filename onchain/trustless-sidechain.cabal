@@ -227,6 +227,7 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
+    Test.TrustlessSidechain.Types
     Test.TrustlessSidechain.UpdateCommitteeHashMessage
 
   build-depends:
@@ -240,8 +241,10 @@ test-suite trustless-sidechain-test
     , quickcheck-extra
     , secp256k1-haskell
     , tasty
+    , tasty-golden
     , tasty-hunit
     , tasty-quickcheck
+    , text
     , trustless-sidechain
     , trustless-sidechain-prelude
 

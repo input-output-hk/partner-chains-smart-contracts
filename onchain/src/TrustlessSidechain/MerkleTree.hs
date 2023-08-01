@@ -59,6 +59,7 @@ import Data.ByteString.Base16 qualified as Base16
 import Data.List qualified as List
 import Data.String qualified as HaskellString
 import GHC.Generics (Generic)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
 import PlutusPrelude (NonEmpty, on)
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)
@@ -84,10 +85,11 @@ import TrustlessSidechain.PlutusPrelude
  some type level book keeping to remember what we have hashed and what we
  haven't; and also represents hashes of subtrees of a merkle tree.
 -}
-newtype RootHash = RootHash {unRootHash :: BuiltinByteString}
-  deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
+newtype RootHash = RootHash {unRootHash :: LedgerBytes}
+  deriving stock (TSPrelude.Eq, Generic)
   deriving anyclass (Schema.ToSchema)
   deriving newtype (FromData, ToData, UnsafeFromData, TSPrelude.Ord)
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 -- See #249 for the modified serialisation scheme
 
@@ -99,7 +101,7 @@ pureScriptShowRootHash RootHash {unRootHash = rh} =
     , "("
     , "hexToByteArrayUnsafe"
     , TSPrelude.show $ case rh of
-        BuiltinByteString bs -> Base16.encode bs
+        LedgerBytes (BuiltinByteString bs) -> Base16.encode bs
     , ")"
     ]
 
@@ -234,7 +236,7 @@ pureScriptShowMerkleProof (MerkleProof proof) =
 -- | 'hash' is an internal function which is a wrapper around the desired hashing function.
 {-# INLINEABLE hash #-}
 hash :: BuiltinByteString -> RootHash
-hash = RootHash . Builtins.blake2b_256
+hash = RootHash . LedgerBytes . Builtins.blake2b_256
 
 {- | 'hashLeaf' is an internal function used to hash a leaf for the merkle
  tree. See: Note [2nd Preimage Attack on The Merkle Tree]
@@ -253,7 +255,9 @@ hashInternalNode = hash . Builtins.consByteString 1
 -- | 'mergeRootHashes' is an internal function which combines two 'BuiltinByteString' in the 'MerkleTree'
 {-# INLINEABLE mergeRootHashes #-}
 mergeRootHashes :: RootHash -> RootHash -> RootHash
-mergeRootHashes l r = hashInternalNode $ (Builtins.appendByteString `on` unRootHash) l r
+mergeRootHashes l r =
+  hashInternalNode $
+    (Builtins.appendByteString `on` (getLedgerBytes . unRootHash)) l r
 
 {- | 'MerkleTree' is a tree of hashes. See 'fromList' and 'fromNonEmpty' for
  building a 'MerkleTree', and see 'lookupMp' and 'memberMp' for creating and

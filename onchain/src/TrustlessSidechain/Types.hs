@@ -6,7 +6,7 @@ module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (ValidatorHash)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes), ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (FromData, ToData, UnsafeFromData)
 import PlutusTx qualified
@@ -31,14 +31,16 @@ data SidechainParams = SidechainParams
     thresholdDenominator :: Integer
   }
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: BuiltinByteString}
+newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
-    ( TSPrelude.Show
+    ( Eq
+    , Ord
     , ToData
     , FromData
     , UnsafeFromData
-    , IsString
     )
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
@@ -79,15 +81,17 @@ instance HasField "thresholdDenominator" SidechainParams Integer where
 
 -- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
 newtype SidechainPubKey = SidechainPubKey
-  { getSidechainPubKey :: BuiltinByteString
+  { getSidechainPubKey :: LedgerBytes
   }
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
-    ( TSPrelude.Eq
-    , TSPrelude.Ord
+    ( Eq
+    , Ord
     , ToData
     , FromData
     , UnsafeFromData
     )
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 -- * Committee Candidate Validator data
 
@@ -313,10 +317,10 @@ data MerkleTreeEntry = MerkleTreeEntry
     -- | address. See [here](https://cips.cardano.org/cips/cip19/) for more details
     -- | of bech32
     -- | @since Unreleased
-    recipient :: BuiltinByteString
+    recipient :: LedgerBytes
   , -- | the previous merkle root to ensure that the hashed entry is unique
     -- | @since Unreleased
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
@@ -338,7 +342,7 @@ instance HasField "amount" MerkleTreeEntry Integer where
     MerkleTreeEntry i (f a) r pmr
 
 -- | @since Unreleased
-instance HasField "recipient" MerkleTreeEntry BuiltinByteString where
+instance HasField "recipient" MerkleTreeEntry LedgerBytes where
   {-# INLINE get #-}
   get (MerkleTreeEntry _ _ x _) = x
   {-# INLINE modify #-}
@@ -346,7 +350,7 @@ instance HasField "recipient" MerkleTreeEntry BuiltinByteString where
     MerkleTreeEntry i a (f r) pmr
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" MerkleTreeEntry (Maybe BuiltinByteString) where
+instance HasField "previousMerkleRoot" MerkleTreeEntry (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (MerkleTreeEntry _ _ _ x) = x
   {-# INLINE modify #-}
@@ -361,9 +365,9 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { -- | @since Unreleased
     sidechainParams :: SidechainParams
   , -- | @since Unreleased
-    merkleRoot :: BuiltinByteString
+    merkleRoot :: LedgerBytes
   , -- | @since Unreleased
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
@@ -377,7 +381,7 @@ instance HasField "sidechainParams" MerkleRootInsertionMessage SidechainParams w
     MerkleRootInsertionMessage (f sp) mr pmr
 
 -- | @since Unreleased
-instance HasField "merkleRoot" MerkleRootInsertionMessage BuiltinByteString where
+instance HasField "merkleRoot" MerkleRootInsertionMessage LedgerBytes where
   {-# INLINE get #-}
   get (MerkleRootInsertionMessage _ x _) = x
   {-# INLINE modify #-}
@@ -385,7 +389,7 @@ instance HasField "merkleRoot" MerkleRootInsertionMessage BuiltinByteString wher
     MerkleRootInsertionMessage sp (f mr) pmr
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe BuiltinByteString) where
+instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (MerkleRootInsertionMessage _ _ x) = x
   {-# INLINE modify #-}
@@ -395,11 +399,11 @@ instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe Builtin
 -- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
 data SignedMerkleRoot = SignedMerkleRoot
   { -- | New merkle root to insert.
-    merkleRoot :: BuiltinByteString
+    merkleRoot :: LedgerBytes
   , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [BuiltinByteString]
+    signatures :: [LedgerBytes]
   , -- | Lexicographically sorted public keys of all committee members
     committeePubKeys :: [SidechainPubKey]
   }
@@ -407,7 +411,7 @@ data SignedMerkleRoot = SignedMerkleRoot
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
 
 -- | @since Unreleased
-instance HasField "merkleRoot" SignedMerkleRoot BuiltinByteString where
+instance HasField "merkleRoot" SignedMerkleRoot LedgerBytes where
   {-# INLINE get #-}
   get (SignedMerkleRoot x _ _ _) = x
   {-# INLINE modify #-}
@@ -415,7 +419,7 @@ instance HasField "merkleRoot" SignedMerkleRoot BuiltinByteString where
     SignedMerkleRoot (f mr) pmr sigs cpks
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" SignedMerkleRoot (Maybe BuiltinByteString) where
+instance HasField "previousMerkleRoot" SignedMerkleRoot (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (SignedMerkleRoot _ x _ _) = x
   {-# INLINE modify #-}
@@ -423,7 +427,7 @@ instance HasField "previousMerkleRoot" SignedMerkleRoot (Maybe BuiltinByteString
     SignedMerkleRoot mr (f pmr) sigs cpks
 
 -- | @since Unreleased
-instance HasField "signatures" SignedMerkleRoot [BuiltinByteString] where
+instance HasField "signatures" SignedMerkleRoot [LedgerBytes] where
   {-# INLINE get #-}
   get (SignedMerkleRoot _ _ x _) = x
   {-# INLINE modify #-}
@@ -516,7 +520,7 @@ instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
 
 -- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
 data FUELRedeemer
-  = MainToSide BuiltinByteString -- Recipient's sidechain address
+  = MainToSide LedgerBytes -- Recipient's sidechain address
   | -- | 'SideToMain' indicates that we wish to mint FUEL on the mainchain.
     -- So, this includes which transaction in the sidechain we are
     -- transferring over to the main chain (hence the 'MerkleTreeEntry'), and
@@ -596,14 +600,14 @@ instance HasField "dsKeyCurrencySymbol" FUELMint CurrencySymbol where
  concatenated public key hashes of the committee members
 -}
 data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash :: BuiltinByteString
+  { committeeHash :: LedgerBytes
   , sidechainEpoch :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
 
 -- | @since Unreleased
-instance HasField "committeeHash" UpdateCommitteeHashDatum BuiltinByteString where
+instance HasField "committeeHash" UpdateCommitteeHashDatum LedgerBytes where
   {-# INLINE get #-}
   get (UpdateCommitteeHashDatum x _) = x
   {-# INLINE modify #-}
@@ -623,19 +627,19 @@ instance HasField "sidechainEpoch" UpdateCommitteeHashDatum Integer where
 -}
 data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
-    committeeSignatures :: [BuiltinByteString]
+    committeeSignatures :: [LedgerBytes]
   , -- | 'committeePubKeys' is the current committee public keys
     committeePubKeys :: [SidechainPubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
     newCommitteePubKeys :: [SidechainPubKey]
   , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   }
 
 PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
 
 -- | @since Unreleased
-instance HasField "committeeSignatures" UpdateCommitteeHashRedeemer [BuiltinByteString] where
+instance HasField "committeeSignatures" UpdateCommitteeHashRedeemer [LedgerBytes] where
   {-# INLINE get #-}
   get (UpdateCommitteeHashRedeemer x _ _ _) = x
   {-# INLINE modify #-}
@@ -659,7 +663,7 @@ instance HasField "newCommitteePubKeys" UpdateCommitteeHashRedeemer [SidechainPu
     UpdateCommitteeHashRedeemer cs cpk (f ncpk) pmr
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" UpdateCommitteeHashRedeemer (Maybe BuiltinByteString) where
+instance HasField "previousMerkleRoot" UpdateCommitteeHashRedeemer (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (UpdateCommitteeHashRedeemer _ _ _ x) = x
   {-# INLINE modify #-}
@@ -718,7 +722,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- | @since Unreleased
     newCommitteePubKeys :: [SidechainPubKey]
   , -- | @since Unreleased
-    previousMerkleRoot :: Maybe BuiltinByteString
+    previousMerkleRoot :: Maybe LedgerBytes
   , -- | @since Unreleased
     sidechainEpoch :: Integer
   }
@@ -742,7 +746,7 @@ instance HasField "newCommitteePubKeys" UpdateCommitteeHashMessage [SidechainPub
     UpdateCommitteeHashMessage sp (f ncpks) pmr se
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" UpdateCommitteeHashMessage (Maybe BuiltinByteString) where
+instance HasField "previousMerkleRoot" UpdateCommitteeHashMessage (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ _ x _) = x
   {-# INLINE modify #-}
@@ -760,7 +764,7 @@ instance HasField "sidechainEpoch" UpdateCommitteeHashMessage Integer where
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
   { -- | @since Unreleased
-    blockHash :: BuiltinByteString
+    blockHash :: LedgerBytes
   , -- | @since Unreleased
     blockNumber :: Integer
   }
@@ -768,7 +772,7 @@ data CheckpointDatum = CheckpointDatum
 PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
 
 -- | @since Unreleased
-instance HasField "blockHash" CheckpointDatum BuiltinByteString where
+instance HasField "blockHash" CheckpointDatum LedgerBytes where
   {-# INLINE get #-}
   get (CheckpointDatum x _) = x
   {-# INLINE modify #-}
@@ -787,16 +791,16 @@ instance HasField "blockNumber" CheckpointDatum Integer where
  checkpoint
 -}
 data CheckpointRedeemer = CheckpointRedeemer
-  { checkpointCommitteeSignatures :: [BuiltinByteString]
+  { checkpointCommitteeSignatures :: [LedgerBytes]
   , checkpointCommitteePubKeys :: [SidechainPubKey]
-  , newCheckpointBlockHash :: BuiltinByteString
+  , newCheckpointBlockHash :: LedgerBytes
   , newCheckpointBlockNumber :: Integer
   }
 
 PlutusTx.makeIsDataIndexed ''CheckpointRedeemer [('CheckpointRedeemer, 0)]
 
 -- | @since Unreleased
-instance HasField "checkpointCommitteeSignatures" CheckpointRedeemer [BuiltinByteString] where
+instance HasField "checkpointCommitteeSignatures" CheckpointRedeemer [LedgerBytes] where
   {-# INLINE get #-}
   get (CheckpointRedeemer x _ _ _) = x
   {-# INLINE modify #-}
@@ -812,7 +816,7 @@ instance HasField "checkpointCommitteePubKeys" CheckpointRedeemer [SidechainPubK
     CheckpointRedeemer ccs (f ccpks) ncbh ncbn
 
 -- | @since Unreleased
-instance HasField "newCheckpointBlockHash" CheckpointRedeemer BuiltinByteString where
+instance HasField "newCheckpointBlockHash" CheckpointRedeemer LedgerBytes where
   {-# INLINE get #-}
   get (CheckpointRedeemer _ _ x _) = x
   {-# INLINE modify #-}
@@ -868,7 +872,7 @@ data CheckpointMessage = CheckpointMessage
   { -- | @since Unreleased
     sidechainParams :: SidechainParams
   , -- | @since Unreleased
-    blockHash :: BuiltinByteString
+    blockHash :: LedgerBytes
   , -- | @since Unreleased
     blockNumber :: Integer
   , -- | @since Unreleased
@@ -886,7 +890,7 @@ instance HasField "sidechainParams" CheckpointMessage SidechainParams where
     CheckpointMessage (f sp) bh bn se
 
 -- | @since Unreleased
-instance HasField "blockHash" CheckpointMessage BuiltinByteString where
+instance HasField "blockHash" CheckpointMessage LedgerBytes where
   {-# INLINE get #-}
   get (CheckpointMessage _ x _ _) = x
   {-# INLINE modify #-}

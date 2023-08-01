@@ -21,6 +21,7 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
+  LedgerBytes (LedgerBytes),
   TokenName (TokenName),
   Value (getValue),
  )
@@ -145,7 +146,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
        in verifyMultisig
             (getSidechainPubKey <$> checkpointCommitteePubKeys red)
             threshold
-            (Builtins.blake2b_256 (serializeCheckpointMsg message))
+            (LedgerBytes (Builtins.blake2b_256 (serializeCheckpointMsg message)))
             (checkpointCommitteeSignatures red)
 
     isCurrentCommittee :: Bool

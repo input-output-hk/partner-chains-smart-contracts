@@ -16,6 +16,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+* Added checkpoint validator address and checkpoint currency symbol to `addresses` command
+  ([506](https://github.com/mlabs-haskell/trustless-sidechain/pull/506) offchain)
 * Improved error handling with an application-wide error type
   ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471),
    [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
