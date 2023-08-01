@@ -20,6 +20,7 @@ import Plutus.V2.Ledger.Api (
   Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
+  LedgerBytes (LedgerBytes, getLedgerBytes),
   OutputDatum (OutputDatum),
   Script,
   ScriptContext,
@@ -67,8 +68,9 @@ serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
  > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
 -}
 {-# INLINEABLE serialiseMrimHash #-}
-serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
-serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
+serialiseMrimHash :: MerkleRootInsertionMessage -> LedgerBytes
+serialiseMrimHash =
+  LedgerBytes . Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
 {- | 'mkMintingPolicy' verifies the following
 
@@ -111,7 +113,7 @@ mkMintingPolicy
       ownCurrencySymbol :: CurrencySymbol
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
       ownTokenName :: TokenName
-      ownTokenName = Value.TokenName merkleRoot
+      ownTokenName = Value.TokenName $ getLedgerBytes merkleRoot
       sc :: SidechainParams
       sc = smrmSidechainParams smrm
       committeeDatum :: UpdateCommitteeHashDatum
@@ -149,7 +151,7 @@ mkMintingPolicy
       -- 4., 5. resp. in the documentation of this function.
       p1 = case previousMerkleRoot of
         Nothing -> True
-        Just tn ->
+        Just (LedgerBytes tn) ->
           -- Checks if any of the reference inputs have at least 1 of the last
           -- merkle root.
           let go :: [TxInInfo] -> Bool
