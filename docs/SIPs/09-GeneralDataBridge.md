@@ -25,10 +25,11 @@ other ways of communication between protocols.
 
 ## Assumptions
 
-This proposal heavily builds on [SIP 7 - Modularising Token Handling][modulartokens]
-and [SIP 8 - Cross Chain Verification][crosschainver] as the infrastructure of
-cross-chain awareness. These SIPs should be understood first before reading this
-document. Assumptions and requirements written in those documents will not
+This proposal heavily builds on [SIP 7 - Modularising Token Handling][modulartokens],
+[SIP 8 - Cross Chain Verification][crosschainver], and
+[SIP 9 - Generalizing Token Transfer][generalizedtransfer] as the infrastructure
+of cross-chain awareness. These SIPs should be understood first before reading
+this document. Assumptions and requirements written in those documents will not
 be mentioned here, but they all apply for the current document.
 
 ##  High level design
@@ -152,38 +153,47 @@ token transfers:
 2. Merkle root inserted to the Mainchain
 3. Data is claimed (anyone can claim)
 
-In [SIP 7 - Modularising Token Handling][modulartokens] we have established
-a modified claim workflow: we generalised the token itself with a token we
-called `SCTokens`. The token name of this token identifies the actual token
-than can be redeemed when this token is minted. In that proposal the token name
-was `blake2b(serialiseData (lockedCurrencySymbol, lockedTokenName))`, however
-we will have to expand the pre-image of this hash in some way, to avoid
-collisions:
-- token transfer: `blake2b(Constr(0, serialiseData(lockedCurrencySymbol, lockedTokenName)))`
-- data transfer: `blake2b(Constr(1, serialiseData(SidechainMessage)))`
-
-where `SidechainMessage` includes the above mentioned `PostBoxValidatorDatum` and
-the address where the claimed token and datum must be sent:
+In [SIP 9 - Generalizing Token Transfer][generalizedtransfer] we have introduced
+changes to the Merkle tree entry, generalising it in a way that it can handle
+different kinds of transfers. By this simple change, the same MerkleTreeEntry
+can be used for signed data transfer.
 
 ```haskell
-data SidechainMessage = SidechainMessage
-    { message :: PostBoxValidatorDatum
-    , targetAddress :: Address
-    }
+data MerkleTreeEntry
+    = ...
+   | PostBoxMerkleTreeEntry
+       { targetAddress :: Address
+           -- the address to send the data to
+       , postBoxData :: PostBoxValidatorDatum
+           -- the data to put at targetAddress.
+       , previousMerkleRoot :: Maybe ByteString
+           -- (optional) previousMerkleRoot to ensure that the data can be
+           -- transferred from sidechain to mainchain at most once
+       }
 ```
 
 We will introduce a new token we call `SidechainMessageToken`. This token will
 prove that the data was claimed with a sidechain certificate.
 
+The workflow of claiming will be identical to claiming of FUEL tokens: a user
+has to use a Merkle proof, and it will mint `SidechainMessageToken`.
+
 Minting verifies the following:
-- `SCToken` with the token name `blake2b(Constr(1, serialiseData(SidechainMessage)))`
-  is minted
+- Merkle proof is valid for the given `MerkleTreeEntry`
 - output with own minted token includes `PostBoxValidatorDatum` datum
 - output with own minted token is sent to `targetAddress`
 - if the payload is `FullMessage(data)` then `tokenName = blake2b(data)`,
   if `HashedMessage(dataHash)` then `tokenName = dataHash`
 - `sender` field in `PostBoxValidatorDatum` is the same as the parameter of the
   current minting policy (own SidechainRef)
+- (optional) exactly one item is added to the Distributed Set
+
+Note: as security assumption on data tokens are not so strict, we decided
+that verifying uniqueness of the redeemed data token is not a requirement.
+Reducing this verification step will lower transaction fees. A dApp developer
+could use conventional web techniques, such as idempotency keys, to make sure
+that any message is only acted upon once, no matter how many times it appears
+on chain.
 
 ### Sideways (Sidechain A to Sidechain B)
 
@@ -198,3 +208,4 @@ Sidechain A.
 
 [modulartokens]: ./07-ModularisingTokenHandling.md
 [crosschainver]: ./08-CrossChainVerification.md
+[generalizedtransfer]: ./09-Generalizing-Token-Transfer.md
