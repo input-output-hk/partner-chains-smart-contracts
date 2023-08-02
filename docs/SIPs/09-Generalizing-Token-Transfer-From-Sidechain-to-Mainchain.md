@@ -98,9 +98,9 @@ Note that this is essentially identical to the original `MerkleTreeEntry`
 -       , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
 +       , recipient :: Address -- the address of a recipient
 +       , tokenName :: TokenName -- 32 byte token name (often "FUEL")
-+       , previousMerkleRoot :: Maybe ByteString
-+           -- previousMerkleRoot is added to make sure that the hashed entry
-+           -- is unique w.r.t other Merkle roots to prevent double claiming
+        , previousMerkleRoot :: Maybe ByteString
+            -- previousMerkleRoot is added to make sure that the hashed entry
+            -- is unique w.r.t other Merkle roots to prevent double claiming
   }
 ```
 except that we instead:
@@ -161,13 +161,13 @@ Similarly to `FUELMintingPolicy`, offchain code should do the following.
 
 - _Sidechain to mainchain transfer._ At certain points in time, sidechain nodes
   bundle up all sidechain transactions which transfer tokens to the mainchain
-  by constructing `ScTokenMerkleTreeEntry`s, say `scme1,...,scmeN`, and create
+  by constructing `ScTokenMerkleTreeEntry`s, say `scme1,...,scmeN`, and creating
   a Merkle tree by computing
-```
-mt = merkleTree([cbor(scme1),...,cbor(scmeN)])
-```
-  and submitting the Merkle root (after collecting the required signatures) of
-  `mt` with `MerkleRootTokenMintingPolicy`.
+    ```
+    mt = merkleTree([cbor(scme1),...,cbor(scmeN)])
+    ```
+  Then, sidechain nodes must post the Merkle root (after collecting the
+  required signatures) of `mt` with `MerkleRootTokenMintingPolicy`.
 
 ## Other Tokens
 This section discusses how to extend the mainchain contracts to allow
@@ -184,24 +184,22 @@ This amounts to completing the following:
 1. Modify the `MerkleTreeEntry` type to include another "arm" which includes
    the data, say `GreatDAppIdeaMerkleTreeEntry { .. }`, required by
    `GreatDAppIdeaToken`. In other words, we must have
-```diff
-data MerkleTreeEntry
-    = ScTokenMerkleTreeEntry
-    ...
-+   | GreatDAppIdeaToken { .. }
-    ...
-```
+    ```diff
+    data MerkleTreeEntry
+        = ...
+    +   | GreatDAppIdeaToken { .. }
+        ...
+    ```
 
 2. Implement `GreatDAppIdeaToken` to verify all of the following:
 
     - a provided Merkle proof shows that the `GreatDAppIdeaMerkleTreeEntry`
-      is in a Merkle root from `MerkleRootTokenMintingPolicy`; and
+      is in a signed Merkle root from `MerkleRootTokenMintingPolicy`; and
 
-    - whatever other great ideas from `GreatDAppIdeaToken` that need to be
-      verified.
+    - whatever other great ideas `GreatDAppIdeaToken` needs to verify.
 
 ### Arbitrary Cardano Native Asset Token Transfer.
-Details will be in [this SIP](./docs/SIPs/07-ModularisingTokenHandling.md).
+Details will be in this [SIP](./docs/SIPs/07-ModularisingTokenHandling.md).
 
 The use case is as follows.
 
@@ -252,7 +250,7 @@ ensure that these transactions are unique for the distributed set.
 
 Then, we will create a token, say `ReleaseToken`, which will take as redeemer a
 Merkle proof, say `merkleProof`, which shows that the cbor of a
-`LockBoxMerkleTreeEntry`, say `lockBoxMerkleTreeEntry`, is in a Merkle root.
+`LockBoxMerkleTreeEntry`, say `lockBoxMerkleTreeEntry`, is in a signed Merkle root.
 Using the `lockBoxMerkleTreeEntry`, this token will mint only if the following
 are all satisfied.
 
@@ -264,7 +262,7 @@ are all satisfied.
   `lockedCurrencySymbol` with `lockedTokenName` (locked currently in
   `LockBoxValidator`);
 
-- The remaining Cardano assets in the transaction input `LockBoxValidator` are
+- The remaining Cardano assets in the `LockBoxValidator` transaction inputs are
   transferred back to `LockBoxValidator` transaction outputs.
 
 - Using that this `LockBoxMerkleTreeEntry` is unique w.r.t its `merkleProof`
@@ -288,7 +286,7 @@ To this end, we will need a data type, `PostBoxValidatorDatum`, which will
     include either the hash of arbitrary data or the data to be transferred
     from a sidechain, and some extra auxillary information about the data.
 Moreover, we will also need a token `PostBoxToken` which will attest to the
-    validity of the data `PostBoxValidatorDatum` which was sent from sidechain
+    validity of the `PostBoxValidatorDatum` data which was sent from sidechain
     to mainchain.
 
 The design of `PostBoxToken` will follow the same steps outlined above.
@@ -301,21 +299,17 @@ data MerkleTreeEntry
 +          -- the address to send the data to
 +      , postBoxData :: PostBoxValidatorDatum
 +          -- the data to put at @targetAddress@.
-+      -- , previousMerkleRoot :: Maybe ByteString
-+      --     -- (optional) previousMerkleRoot to ensure that the data can be
-+      --     -- transferred from sidechain to mainchain at most once
++      , previousMerkleRoot :: Maybe ByteString
++          -- (optional) previousMerkleRoot to ensure that the data can be
++          -- transferred from sidechain to mainchain at most once
 +      }
 ```
 Note that `PostBoxMerkleTreeEntry` contains enough information to send some
-    data (`postBoxData`) to some address (`targetAddress)`.
-Also, if we require that the data can be transferred from sidechain to
-    mainchain at most once, then we would need to include `previousMerkleRoot` and
-    verify that this transaction is being inserted in the distributed set for the
-    first time.
+    data (`postBoxData`) to some address (`targetAddress)` at most once.
 
 Then, `PostBoxToken` will take as redeemer a Merkle proof, say `merkleProof`, which
     shows that the cbor of a `PostBoxMerkleTreeEntry`, say
-    `postBoxMerkleTreeEntry`, is in a Merkle root.
+    `postBoxMerkleTreeEntry`, is in a signed Merkle root.
 Using the `postBoxMerkleTreeEntry`, `PostBoxToken` will mint only if the
     following are all satisfied.
 
@@ -324,11 +318,10 @@ Using the `postBoxMerkleTreeEntry`, `PostBoxToken` will mint only if the
   `merkleProof` shows that `cbor(postBoxMerkleTreeEntry)` is in `merkleRoot`.
 
 - There exists a transaction output `targetAddress` with `postBoxData` as
-  datum and `PostBoxToken` is paid to this address.
+  datum, and `PostBoxToken` is paid to this address.
 
 - Exactly one `PostBoxToken` is minted.
 
-- (optional) If we require uniqueness of transferring data from sidechain to
-  mainchain, we would verify that
-  `blake2b(cbor(merkleProof,previousMerkleRoot))` is inserted in the
-  distributed set in this transaction.
+- `blake2b(cbor(merkleProof,previousMerkleRoot))` is not already in the
+  distributed set, and this transaction inserts
+  `blake2b(cbor(merkleProof,previousMerkleRoot))` in the distributed set.
