@@ -53,7 +53,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHashMessage
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
-import TrustlessSidechain.Utils.Crypto (SidechainMessage)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
@@ -118,8 +118,8 @@ committeeHashAssetClass ichm = do
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
-serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe SidechainMessage
-serialiseUchmHash = Utils.Crypto.sidechainMessage
+serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe EcdsaSecp256k1Message
+serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
   <<< PlutusData.serializeData

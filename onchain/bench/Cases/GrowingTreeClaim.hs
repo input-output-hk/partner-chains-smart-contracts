@@ -25,6 +25,7 @@ import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.Text qualified as Text
 import GHC.Real ((^))
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
@@ -106,7 +107,7 @@ growingTreeClaim = do
               }
 
     -- Generating the merkle tree / merkle proofs
-    let bech32Recipient = getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
+    let bech32Recipient = LedgerBytes . getRight . fmap OffChain.bech32RecipientBytes . OffChain.bech32RecipientFromText . Text.pack $ addr
 
         entry =
           MerkleTreeEntry

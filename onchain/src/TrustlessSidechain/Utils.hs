@@ -6,9 +6,10 @@ module TrustlessSidechain.Utils (
   aggregateCheck,
 ) where
 
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
+import TrustlessSidechain.Types (EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey))
 
 {- | @'verifyMultisig' pubKeys threshold message signatures@ checks if at least
  @threshold@ of @pubKeys@ have signed @message@ with @signatures@.
@@ -19,17 +20,17 @@ import TrustlessSidechain.Types (SidechainPubKey (getSidechainPubKey))
 -}
 {-# INLINEABLE verifyMultisig #-}
 verifyMultisig ::
-  [BuiltinByteString] -> Integer -> BuiltinByteString -> [BuiltinByteString] -> Bool
-verifyMultisig pubKeys enough message signatures = go pubKeys signatures 0
+  [LedgerBytes] -> Integer -> LedgerBytes -> [LedgerBytes] -> Bool
+verifyMultisig pubKeys enough (LedgerBytes message) signatures = go pubKeys signatures 0
   where
-    go :: [BuiltinByteString] -> [BuiltinByteString] -> Integer -> Bool
+    go :: [LedgerBytes] -> [LedgerBytes] -> Integer -> Bool
     go !pks !sigs !counted = case sigs of
       -- All signatures are verified, we're done
       [] -> counted >= enough
-      (s : ss) -> case pks of
+      (LedgerBytes s : ss) -> case pks of
         -- Unverified signature after checking all cases, give up
         [] -> False
-        (pk : pks') ->
+        (LedgerBytes pk : pks') ->
           if verifyEcdsaSecp256k1Signature pk message s
             then -- Found a verifying key, continue
               go pks' ss (counted + 1)
@@ -42,8 +43,8 @@ verifyMultisig pubKeys enough message signatures = go pubKeys signatures 0
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [SidechainPubKey] -> BuiltinByteString
-aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
+aggregateKeys :: [EcdsaSecp256k1PubKey] -> LedgerBytes
+aggregateKeys = LedgerBytes . Builtins.blake2b_256 . mconcat . map (getLedgerBytes . getEcdsaSecp256k1PubKey)
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could
@@ -55,5 +56,5 @@ aggregateKeys = Builtins.blake2b_256 . mconcat . map getSidechainPubKey
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [SidechainPubKey] -> BuiltinByteString -> Bool
+aggregateCheck :: [EcdsaSecp256k1PubKey] -> LedgerBytes -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk

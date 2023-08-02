@@ -10,6 +10,7 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
+  LedgerBytes (LedgerBytes),
   TokenName (TokenName),
   Value (getValue),
  )
@@ -29,11 +30,11 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
   UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
@@ -158,9 +159,9 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               , uchmSidechainEpoch = sidechainEpoch outputDatum
               }
        in verifyMultisig
-            (getSidechainPubKey <$> committeePubKeys red)
+            (getEcdsaSecp256k1PubKey <$> committeePubKeys red)
             threshold
-            (Builtins.blake2b_256 (serialiseUchm message))
+            (LedgerBytes (Builtins.blake2b_256 (serialiseUchm message)))
             (committeeSignatures red)
     isCurrentCommittee :: Bool
     isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
@@ -174,7 +175,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- merkle root tokens.
       case previousMerkleRoot red of
         Nothing -> True
-        Just tn ->
+        Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
                 ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
