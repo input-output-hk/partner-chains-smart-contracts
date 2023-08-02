@@ -61,11 +61,11 @@ import TrustlessSidechain.Types (
     checkpointCommitteePubKeys,
     checkpointCommitteeSignatures
   ),
+  EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
  )
 import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
@@ -147,7 +147,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
               , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
               }
        in verifyMultisig
-            (getSidechainPubKey <$> checkpointCommitteePubKeys red)
+            (getEcdsaSecp256k1PubKey <$> checkpointCommitteePubKeys red)
             threshold
             (LedgerBytes (Builtins.blake2b_256 (serializeCheckpointMsg message)))
             (checkpointCommitteeSignatures red)
