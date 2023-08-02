@@ -21,18 +21,18 @@ import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
   BlockProducerRegistration (
     BlockProducerRegistration,
+    ecdsaSecp256k1PubKey,
     inputUtxo,
     ownPkh,
-    sidechainPubKey,
     sidechainSignature,
     spoPubKey,
     spoSignature
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
+    ecdsaSecp256k1PubKey,
     inputUtxo,
-    sidechainParams,
-    sidechainPubKey
+    sidechainParams
   ),
   CandidatePermissionMint (
     CandidatePermissionMint,
@@ -69,6 +69,7 @@ import TrustlessSidechain.Types (
     merkleProof,
     transaction
   ),
+  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMint (
     FUELMint,
     dsKeyCurrencySymbol,
@@ -98,7 +99,6 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (SidechainPubKey),
   SignedMerkleRoot (
     SignedMerkleRoot,
     committeePubKeys,
@@ -175,20 +175,20 @@ tests =
 sampleTxOutRef :: TxOutRef
 sampleTxOutRef = TxOutRef (TxId "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa") 4
 
-sampleCommitteePubKeys :: [SidechainPubKey]
+sampleCommitteePubKeys :: [EcdsaSecp256k1PubKey]
 sampleCommitteePubKeys =
-  [ SidechainPubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
-  , SidechainPubKey "03e19ca8508c2bc8fc46872086bab3c0c91d65862525577034d25564c212d76ab3"
-  , SidechainPubKey "03cd0ea1b6652948b4a9c4551101981330feaea6a23e0698ad0b9d0adf05d4a260"
-  , SidechainPubKey "0240e20a9959ebf4fb9a59162ee324f95279c85e5277f98ef80dd3a77d4bc04b50"
+  [ EcdsaSecp256k1PubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
+  , EcdsaSecp256k1PubKey "03e19ca8508c2bc8fc46872086bab3c0c91d65862525577034d25564c212d76ab3"
+  , EcdsaSecp256k1PubKey "03cd0ea1b6652948b4a9c4551101981330feaea6a23e0698ad0b9d0adf05d4a260"
+  , EcdsaSecp256k1PubKey "0240e20a9959ebf4fb9a59162ee324f95279c85e5277f98ef80dd3a77d4bc04b50"
   ]
 
-sampleCommitteePubKeys' :: [SidechainPubKey]
+sampleCommitteePubKeys' :: [EcdsaSecp256k1PubKey]
 sampleCommitteePubKeys' =
-  [ SidechainPubKey "023a435665c40e4fb432790fb738be6c888f5d37e273a637a8a5b84ec285f52122"
-  , SidechainPubKey "02f45e4a11288fd16cb908c85410390d10129dae674dc800001c21a9fed2d59c2c"
-  , SidechainPubKey "0241ea46a78aef957c814f8aa5f64355ac8c3b59318d4eb3f2aacafcf724995513"
-  , SidechainPubKey "0253e0839b05b420879089621b60f4a9618e877a90f624a2d8c8e8afa17c8be624"
+  [ EcdsaSecp256k1PubKey "023a435665c40e4fb432790fb738be6c888f5d37e273a637a8a5b84ec285f52122"
+  , EcdsaSecp256k1PubKey "02f45e4a11288fd16cb908c85410390d10129dae674dc800001c21a9fed2d59c2c"
+  , EcdsaSecp256k1PubKey "0241ea46a78aef957c814f8aa5f64355ac8c3b59318d4eb3f2aacafcf724995513"
+  , EcdsaSecp256k1PubKey "0253e0839b05b420879089621b60f4a9618e877a90f624a2d8c8e8afa17c8be624"
   ]
 
 sampleCommitteeSignatures :: [LedgerBytes]
@@ -254,7 +254,7 @@ sampleBlockProducerRegistration :: BlockProducerRegistration
 sampleBlockProducerRegistration =
   BlockProducerRegistration
     { spoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
-    , sidechainPubKey = SidechainPubKey "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
     , spoSignature = Signature "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
     , sidechainSignature = Signature "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
     , inputUtxo = sampleTxOutRef
@@ -265,7 +265,7 @@ sampleBlockProducerRegistrationMsg :: BlockProducerRegistrationMsg
 sampleBlockProducerRegistrationMsg =
   BlockProducerRegistrationMsg
     { sidechainParams = sampleSidechainParams
-    , sidechainPubKey = SidechainPubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
+    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
     , inputUtxo = sampleTxOutRef
     }
 

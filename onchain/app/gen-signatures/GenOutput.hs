@@ -66,9 +66,9 @@ import TrustlessSidechain.OffChain as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
+    ecdsaSecp256k1PubKey,
     inputUtxo,
-    sidechainParams,
-    sidechainPubKey
+    sidechainParams
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
@@ -81,7 +81,14 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainParams
   ),
-  SidechainParams (..),
+  SidechainParams (
+    SidechainParams,
+    chainId,
+    genesisHash,
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newCommitteePubKeys,
@@ -140,7 +147,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   BlockProducerRegistrationMsg
                     { sidechainParams = scParams
-                    , sidechainPubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
+                    , ecdsaSecp256k1PubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
                     , inputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#sidechain-main-cli -- register"] :

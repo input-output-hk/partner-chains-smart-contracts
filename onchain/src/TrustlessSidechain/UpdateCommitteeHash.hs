@@ -30,11 +30,11 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (getSidechainPubKey),
   UpdateCommitteeHash,
   UpdateCommitteeHashDatum (committeeHash),
   UpdateCommitteeHashMessage (
@@ -165,7 +165,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               , sidechainEpoch = get @"sidechainEpoch" outputDatum
               }
        in verifyMultisig
-            (getSidechainPubKey <$> get @"committeePubKeys" red)
+            (getEcdsaSecp256k1PubKey <$> get @"committeePubKeys" red)
             threshold
             (LedgerBytes (Builtins.blake2b_256 (serialiseUchm message)))
             (committeeSignatures red)

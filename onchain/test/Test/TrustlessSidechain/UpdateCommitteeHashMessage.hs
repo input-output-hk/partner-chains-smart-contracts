@@ -7,9 +7,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   GenesisHash (GenesisHash),
   SidechainParams (SidechainParams),
-  SidechainPubKey (SidechainPubKey),
   UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
  )
 import TrustlessSidechain.UpdateCommitteeHash (serialiseUchm)
@@ -22,11 +22,13 @@ unitTests =
   let genesisHash = GenesisHash "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
       genesisUtxo = TxOutRef "7247647315d327d4e56fd3fe62d45be1dc3a76a647c910e0048cca8b97c8df3e" 0
       pubKeys =
-        [ SidechainPubKey "029ef0f8e7f2144461246f4d14772a34945069e0b746fc93d641f5cceb23dba760"
-        , SidechainPubKey "0374df74bd17e647fbea5ad07699ee36eae9247b2fb633f31223da66626e083272"
-        , SidechainPubKey "038b098f1a3ccb005419df63dc1ce954a3f9071e2f41aefece0f86ee991285b498"
-        , SidechainPubKey "03f16df0d21e2a447d820999c6b65794820cd1920cafccc3a7b83956f6148441ed"
-        ]
+        fmap
+          EcdsaSecp256k1PubKey
+          [ "029ef0f8e7f2144461246f4d14772a34945069e0b746fc93d641f5cceb23dba760"
+          , "0374df74bd17e647fbea5ad07699ee36eae9247b2fb633f31223da66626e083272"
+          , "038b098f1a3ccb005419df63dc1ce954a3f9071e2f41aefece0f86ee991285b498"
+          , "03f16df0d21e2a447d820999c6b65794820cd1920cafccc3a7b83956f6148441ed"
+          ]
       scParams = SidechainParams 78 genesisHash genesisUtxo 2 3
       epoch = 123
       previousMRH = "abababababababababababababababababababababababababababababababab"

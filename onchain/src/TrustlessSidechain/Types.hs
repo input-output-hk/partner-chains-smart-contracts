@@ -16,6 +16,17 @@ import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
+newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
+  deriving newtype
+    ( Eq
+    , Ord
+    , ToData
+    , FromData
+    , UnsafeFromData
+    )
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
+
 -- | Parameters uniquely identifying a sidechain
 data SidechainParams = SidechainParams
   { chainId :: Integer
@@ -30,17 +41,6 @@ data SidechainParams = SidechainParams
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
   }
-
-newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
-  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
-  deriving newtype
-    ( Eq
-    , Ord
-    , ToData
-    , FromData
-    , UnsafeFromData
-    )
-  deriving (IsString, TSPrelude.Show) via LedgerBytes
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
@@ -79,9 +79,10 @@ instance HasField "thresholdDenominator" SidechainParams Integer where
   {-# INLINE modify #-}
   modify f sp = sp {thresholdDenominator = f (thresholdDenominator sp)}
 
--- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
-newtype SidechainPubKey = SidechainPubKey
-  { getSidechainPubKey :: LedgerBytes
+-- | Compressed DER SECP256k1 public key.
+newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
+  { -- | @since Unreleased
+    getEcdsaSecp256k1PubKey :: LedgerBytes
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
@@ -99,7 +100,8 @@ newtype SidechainPubKey = SidechainPubKey
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
-  , sidechainPubKey :: SidechainPubKey
+  , -- | @since Unreleased
+    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , spoSig :: Signature
   , sidechainSig :: Signature
   , inputUtxo :: TxOutRef
@@ -121,11 +123,11 @@ instance HasField "spoPubKey" RegisterParams PubKey where
   modify f rp = rp {spoPubKey = f (spoPubKey rp)}
 
 -- | @since Unreleased
-instance HasField "sidechainPubKey" RegisterParams SidechainPubKey where
+instance HasField "ecdsaSecp256k1PubKey" RegisterParams EcdsaSecp256k1PubKey where
   {-# INLINE get #-}
-  get = sidechainPubKey
+  get = ecdsaSecp256k1PubKey
   {-# INLINE modify #-}
-  modify f rp = rp {sidechainPubKey = f (sidechainPubKey rp)}
+  modify f rp = rp {ecdsaSecp256k1PubKey = f (ecdsaSecp256k1PubKey rp)}
 
 -- | @since Unreleased
 instance HasField "spoSig" RegisterParams Signature where
@@ -200,7 +202,7 @@ data BlockProducerRegistration = BlockProducerRegistration
     spoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
     -- | @since Unreleased
-    sidechainPubKey :: SidechainPubKey
+    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | Signature of the SPO
     -- | @since Unreleased
     spoSignature :: Signature
@@ -226,7 +228,7 @@ instance HasField "spoPubKey" BlockProducerRegistration PubKey where
     BlockProducerRegistration (f sPK) scPK sS scS u pkh
 
 -- | @since Unreleased
-instance HasField "sidechainPubKey" BlockProducerRegistration SidechainPubKey where
+instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration EcdsaSecp256k1PubKey where
   {-# INLINE get #-}
   get (BlockProducerRegistration _ x _ _ _ _) = x
   {-# INLINE modify #-}
@@ -269,7 +271,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { -- | @since Unreleased
     sidechainParams :: SidechainParams
   , -- | @since Unreleased
-    sidechainPubKey :: SidechainPubKey
+    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | A UTxO that must be spent by the transaction
     -- | @since Unreleased
     inputUtxo :: TxOutRef
@@ -286,7 +288,7 @@ instance HasField "sidechainParams" BlockProducerRegistrationMsg SidechainParams
     BlockProducerRegistrationMsg (f sp) spk u
 
 -- | @since Unreleased
-instance HasField "sidechainPubKey" BlockProducerRegistrationMsg SidechainPubKey where
+instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistrationMsg EcdsaSecp256k1PubKey where
   {-# INLINE get #-}
   get (BlockProducerRegistrationMsg _ x _) = x
   {-# INLINE modify #-}
@@ -405,7 +407,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [LedgerBytes]
   , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   }
 
 PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
@@ -435,7 +437,7 @@ instance HasField "signatures" SignedMerkleRoot [LedgerBytes] where
     SignedMerkleRoot mr pmr (f sigs) cpks
 
 -- | @since Unreleased
-instance HasField "committeePubKeys" SignedMerkleRoot [SidechainPubKey] where
+instance HasField "committeePubKeys" SignedMerkleRoot [EcdsaSecp256k1PubKey] where
   {-# INLINE get #-}
   get (SignedMerkleRoot _ _ _ x) = x
   {-# INLINE modify #-}
@@ -629,9 +631,9 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
     committeeSignatures :: [LedgerBytes]
   , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
-    newCommitteePubKeys :: [SidechainPubKey]
+    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
     previousMerkleRoot :: Maybe LedgerBytes
   }
@@ -647,7 +649,7 @@ instance HasField "committeeSignatures" UpdateCommitteeHashRedeemer [LedgerBytes
     UpdateCommitteeHashRedeemer (f cs) cpk ncpk pmr
 
 -- | @since Unreleased
-instance HasField "committeePubKeys" UpdateCommitteeHashRedeemer [SidechainPubKey] where
+instance HasField "committeePubKeys" UpdateCommitteeHashRedeemer [EcdsaSecp256k1PubKey] where
   {-# INLINE get #-}
   get (UpdateCommitteeHashRedeemer _ x _ _) = x
   {-# INLINE modify #-}
@@ -655,7 +657,7 @@ instance HasField "committeePubKeys" UpdateCommitteeHashRedeemer [SidechainPubKe
     UpdateCommitteeHashRedeemer cs (f cpk) ncpk pmr
 
 -- | @since Unreleased
-instance HasField "newCommitteePubKeys" UpdateCommitteeHashRedeemer [SidechainPubKey] where
+instance HasField "newCommitteePubKeys" UpdateCommitteeHashRedeemer [EcdsaSecp256k1PubKey] where
   {-# INLINE get #-}
   get (UpdateCommitteeHashRedeemer _ _ x _) = x
   {-# INLINE modify #-}
@@ -720,7 +722,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
     -- | should do this for us
     -- |
     -- | @since Unreleased
-    newCommitteePubKeys :: [SidechainPubKey]
+    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | @since Unreleased
     previousMerkleRoot :: Maybe LedgerBytes
   , -- | @since Unreleased
@@ -738,7 +740,7 @@ instance HasField "sidechainParams" UpdateCommitteeHashMessage SidechainParams w
     UpdateCommitteeHashMessage (f sp) ncpks pmr se
 
 -- | @since Unreleased
-instance HasField "newCommitteePubKeys" UpdateCommitteeHashMessage [SidechainPubKey] where
+instance HasField "newCommitteePubKeys" UpdateCommitteeHashMessage [EcdsaSecp256k1PubKey] where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ x _ _) = x
   {-# INLINE modify #-}
@@ -792,7 +794,7 @@ instance HasField "blockNumber" CheckpointDatum Integer where
 -}
 data CheckpointRedeemer = CheckpointRedeemer
   { checkpointCommitteeSignatures :: [LedgerBytes]
-  , checkpointCommitteePubKeys :: [SidechainPubKey]
+  , checkpointCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , newCheckpointBlockHash :: LedgerBytes
   , newCheckpointBlockNumber :: Integer
   }
@@ -808,7 +810,7 @@ instance HasField "checkpointCommitteeSignatures" CheckpointRedeemer [LedgerByte
     CheckpointRedeemer (f ccs) ccpks ncbh ncbn
 
 -- | @since Unreleased
-instance HasField "checkpointCommitteePubKeys" CheckpointRedeemer [SidechainPubKey] where
+instance HasField "checkpointCommitteePubKeys" CheckpointRedeemer [EcdsaSecp256k1PubKey] where
   {-# INLINE get #-}
   get (CheckpointRedeemer _ x _ _) = x
   {-# INLINE modify #-}

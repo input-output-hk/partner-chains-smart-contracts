@@ -149,7 +149,7 @@ instance ToData InitSidechainParams where
 type InitSidechainParams' =
   InitTokensParams
     ( -- `initCommittee` is the initial committee of the sidechain
-      initCommittee ∷ Array Utils.Crypto.SidechainPublicKey
+      initCommittee ∷ Array Utils.Crypto.EcdsaSecp256k1PubKey
     , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
       initSidechainEpoch ∷ BigInt
     )

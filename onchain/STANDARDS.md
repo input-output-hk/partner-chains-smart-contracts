@@ -1420,11 +1420,11 @@ SHOULD be `via`-derived or `newtype`-derived where possible.
 
 ``type`` MUST NOT be used.
 
-Sum types containing record fields MUST NOT be defined. Thus, the following is
-not allowed:
+Sum types containing record fields SHOULD NOT be defined. Thus, the following
+should be avoided:
 
 ```haskell
--- Do not do this!
+-- Try to avoid this!
 data Foo = Bar | Baz { quux :: Int }
 ```
 
