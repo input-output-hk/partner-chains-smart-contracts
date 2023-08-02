@@ -258,9 +258,9 @@ are all satisfied.
   `MerkleRootTokenValidator` address with Merkle root `merkleRoot`, and
   `merkleProof` shows that `cbor(lockBoxMerkleTreeEntry)` is in `merkleRoot`.
 
-- The recipient receives at least `amount` of the given Cardano asset that is
-  `lockedCurrencySymbol` with `lockedTokenName` (locked currently in
-  `LockBoxValidator`);
+- The recipient receives at least `amount` of the given Cardano asset (with
+  currency symbol `lockedCurrencySymbol` and token name `lockedTokenName`)
+  which is currently locked in some `LockBoxValidator`s.
 
 - The remaining Cardano assets in the `LockBoxValidator` transaction inputs are
   transferred back to `LockBoxValidator` transaction outputs.
