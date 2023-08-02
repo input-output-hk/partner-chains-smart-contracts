@@ -64,7 +64,7 @@ As an overview, this document will discuss the following.
    Specifically, we will sketch:
 
     - Transferring native Cardano assets from the sidechain to the mainchain
-      (assuming that such assets are locked up in the mainchain already).
+      (assuming that such assets are locked up on the mainchain already).
 
     - Bridging arbitrary data from the sidechain to the mainchain
 
@@ -149,7 +149,7 @@ Similarly to `FUELMintingPolicy`, offchain code should do the following.
 - _Mainchain to sidechain transfer._ Offchain code should observe transactions
   which burn `ScToken` noting the amount burned and the sidechain recipient in
   the redeemer. With this information, the sidechain node should mint the
-  corresponding amount in the sidechain.
+  corresponding amount on the sidechain.
 
 - _Sidechain to mainchain transfer._ At certain points in time, sidechain nodes
   bundle up all sidechain transactions which transfer tokens to the mainchain

@@ -15,15 +15,15 @@ mechanism for which an asset is transferred between the mainchain and the
 sidechain is realized with the `FUEL` token which accomplishes the
 following:
 
-- A transfer from *mainchain* to *sidechain* burns a participant's `FUEL`
-  tokens with a specified sidechain recipient (as redeemer).
+- A transfer from *mainchain* to *sidechain* amounts to a participant burning
+  their `FUEL` tokens with a specified sidechain recipient (as redeemer).
   So, for the sidechain recipient to receive their corresponding sidechain
-  tokens in the sidechain, the Bridge must observe that a mainchain transaction
+  tokens on the sidechain, the Bridge must observe that a mainchain transaction
   has burnt `FUEL`, and unlock the corresponding sidechain tokens to the
   recipient on the sidechain (by e.g. minting such tokens).
 
 - A transfer from *sidechain* to *mainchain* amounts to creating a Merkle root
-  of such transactions (i.e., a *sidechain certificate*) which are posted to
+  of such transactions (i.e., a *sidechain certificate*) which is posted to
   the mainchain (via the Bridge), and later participants may claim `FUEL` from
   a specified Merkle root by minting `FUEL` tokens.
 
@@ -31,8 +31,8 @@ The key point is this -- the current mechanism implements this transfer via
 *minting* and *burning* of some distinguished token.
 We call such a token a *wrapped token*.
 
-In general, the mechanism for which coins are transferred between sidechains
-and back at a fixed (or otherwise deterministic) exchange rate is a called a
+In general, the mechanism for which coins are transferred between sidechain
+and mainchain at a fixed (or otherwise deterministic) exchange rate is a called a
 *two-way peg*[^refEnablingBlockchainInnovations].
 
 We call the currently implemented mechanism which implements the two-way peg on
@@ -41,33 +41,33 @@ token transfer*.
 
 This SIP proposes an alternative method (which may be used in addition to the
 *wrapped token*) to implement the two-way peg on the mainchain.
-So, instead of minting and burning a wrapped token, we propose to take any
+Instead of minting and burning a wrapped token, we propose to take any
 arbitrary token on the mainchain, say `McToken`, and implement the two-way peg
-as follows.
+for `McToken` as follows.
 
 - Transfers of `McToken` from *mainchain* to *sidechain* amounts to
   participants sending their `McToken` to a distinguished address (while
   identifying a sidechain recipient), call such an address a *lock box*, which
   *locks* the participant's `McToken`s.
   So, for a sidechain recipient to receive their corresponding sidechain
-  tokens in the sidechain, the Bridge must observe transactions which lock
+  tokens on the sidechain, the Bridge must observe transactions which lock
   `McToken`s at a lock box and mint the corresponding amount to the sidechain
   recipient.
 
 - Transfers of `McToken` from *sidechain* to *mainchain* amounts to (again)
-  creating a Merkle root of such transactions which are posted to the mainchain
+  creating a Merkle root of such transactions which is posted to the mainchain
   (note this reuses the existing mechanism).
   Later, participants may claim their `McToken`s by using some specified
   Merkle root to spend UTxOs at lock boxes for which `McToken` is
   locked at, and finally pay the locked `McToken`s to themselves.
-  In essence, Merkle roots give participants permission to *unlock* previously
-  locked `McToken`s to claim themselves.
+  In essence, Merkle roots give participants permission to *unlock* (or
+  *release*) previously locked `McToken`s to claim themselves.
 
 We call a two-way peg implemented this way on the mainchain via locking
 and unlocking of `McToken`s a *mainchain lock/unlock transfer*.
 
 The implementation of a mainchain lock/unlock transfer is the primary focus of
-this proposal, and we will show how to modify the current system such that it
+this proposal, and we will show how to modify the current system so that it
 allows a lock/unlock transfer of Cardano assets.
 
 ## Plutus Design Specification.
@@ -78,28 +78,28 @@ As an overview, we will create:
 
 - A new validator address `LockBoxValidator` which will be the lock box that
   locks tokens transferred from mainchain to sidechain.
-  This must support both controlled deposits and controlled withdrawals of
-  tokens.
+  This will support controlled deposits and controlled withdrawals (via
+  `ReleaseToken`) of tokens.
 
-- A new minting policy `ReleaseToken` which allows controlled validation of a
-  collection of `LockBoxValidators` to ensure that locked tokens are received
+- A new minting policy `ReleaseToken` which allows controlled withdrawals of a
+  collection of `LockBoxValidator`s to ensure that locked tokens are received
   by the intended recipient and users do not take more tokens than they are
   entitled to.
 
 ### `LockBoxOracleMintingPolicy`
 We first describe `LockBoxOracleMintingPolicy` which will identify the
-    `LockBoxValidator`s used in the sidechain.
+    `LockBoxValidator`s used on the sidechain.
 This will be parameterized by:
 - a UTxO (or anything to guarantee that this token is uniquely identified with a point in time);
-- (optional) an integer denoting the total number of lock boxes available in the system;
+- (optional) an integer denoting the total number of lock boxes in the system;
 - (optional) the address of the `LockBoxValidator` (indirectly)[^indirectParamterization].
 
 [^indirectParamterization]: Often, we will say a Plutus script is _indirectly
   parameterized_ by `someData` meaning that `someData` must be found through a
   layer of indirection of some other read-only UTxO with this information.
   This is necessary since sometimes Plutus scripts must be cyclically
-  parameterized by each other, and this is simply impossible as the hash of the
-  scripts cannot depend on each other.
+  parameterized by each other which is impossible as the hash of the scripts
+  cannot depend on each other.
 
 Note the optional data is not required but may be included to decrease trust
     assumptions in the setup.
@@ -110,7 +110,8 @@ Finally, `LockBoxOracleMintingPolicy` mints only if its UTxO is spent,
     `LockBoxValidator` addresses.
 
 ### `LockBoxValidator`
-We describe `LockBoxValidator`.
+We describe `LockBoxValidator` which will be the validator that locks tokens on
+    the mainchain.
 `LockBoxValidator` will be parameterized by the currency symbol of
     `ReleaseToken`, and must also be (indirectly)
     parameterized by the currency symbol of `LockBoxOracleMintingPolicy`.
@@ -169,8 +170,8 @@ We describe the final Plutus script, `ReleaseToken`, which is where most of
 In this description, we will be using many of the ideas from
     [SIP09](./docs/SIPs/09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md).
 
-`ReleaseToken` allows one to claim already locked tokens from the
-    sidechain.
+`ReleaseToken` allows one to claim already locked tokens in `LockBoxValidator`s
+    identified by `LockBoxOracleMintingPolicy` from the sidechain.
 `ReleaseToken` must be parameterized by the currency symbol of
     `MerkleRootTokenMintingPolicy`, and (indirectly) parameterized by the
     currency symbol of `LockBoxOracleMintingPolicy`.
@@ -229,8 +230,8 @@ Then, `ReleaseToken` mints only if the following are all satisfied:
   `lockBoxOuts` denote the set of all transaction outputs which are at a
   `LockBoxValidator` address with `LockBoxOracleMintingPolicy`.
 
-    -  `lockBoxIns` and `lockBoxOuts` all have as datum the
-       `lockedCurrencySymbol` and `lockedTokenName`.
+    -  `lockBoxIns` and `lockBoxOuts` all have as datum `lockedCurrencySymbol`
+       and `lockedTokenName`.
 
     -  There are the same amount of `lockBoxIns` and `lockBoxOuts`.
 
@@ -278,8 +279,9 @@ We discuss each possibility below.
   an NFT) for every Cardano asset we wish to transfer from mainchain to
   sidechain.
   Transfers from mainchain to sidechain amounts to spending the unique lock box
-  UTxO, and transfers from sidechain to mainchain also amount to spending the
-  unique lock box UTxO.
+  UTxO and adding more tokens to the lock box, and transfers from sidechain to
+  mainchain also amount to spending the unique lock box UTxO but taking away
+  tokens from the lock box.
   While this is a nice simple idea, this potentially could have concurrency
   issues as all participants are "competing" to spend the same UTxO for every
   operation on the sidechain.
@@ -301,8 +303,9 @@ We discuss each possibility below.
     in the sense that transfers from sidechain to mainchain must allow claiming
     of tokens in lock boxes to be distributed over many transactions.
   A natural way to implement this would be to mint `k` tokens on the mainchain
-  for each sidechain to mainchain transaction transferring `k` mainchain assets, and make
-  burning of this token correspond to unlocking the mainchain assets.
+  for each sidechain to mainchain transaction transferring `k` mainchain
+  assets, and define the lock boxes so that burning of this token corresponds
+  to unlocking the mainchain assets.
   Of course, this extra level of "indirection" increases fees, so this idea was
     dismissed.
 
@@ -319,9 +322,9 @@ We discuss each possibility below.
 So, after weighing the tradeoffs, we decided the bounded number of lock boxes
 was best.
 
-There was an idea to have an unbounded number of lock boxes
-    controlled by SPOs which could use the the stake distribution of the asset for
-    the proof of stake leader election.
+There was also an idea to have lock boxes
+    provided by SPOs who would use the stake distribution of the assets locked
+    in the lock boxes for the proof of stake leader election.
 This idea is exciting, and will probably have more thought in later SIPs.
 
 ## Workflow
@@ -342,7 +345,7 @@ The following diagram depicts the transaction for step 1 of the workflow.
    `LockBoxOracleMintingPolicy` with datum as `McToken`.
 
 2. Sidechain nodes observe that 1. has occurred on the mainchain, and hence
-   (after the transaction is stable) includes the corresponding transaction in
+   (after the transaction is stable) includes the corresponding transaction on
    the sidechain where sidechain nodes determine the sidechain recipient from
    the redeemer `LockBoxValidatorRedeemer`.
 
@@ -350,17 +353,17 @@ The following diagram depicts the transaction for step 1 of the workflow.
    sidechain.
    Let `ki` denote the number of `McToken`s in the consumed `LockBoxValidator`
    transaction input identified by `LockBoxOracleMintingPolicy` and the datum,
-   and let `ko` denote the the number of `McToken`s in the `LockBoxValidator`
-   transaction output identified by the `LockBoxOracleMintingPolicy` and datum.
-   Then, sidechain nodes will mint `ko - ki` tokens in the sidechain.
+   and let `ko` denote the number of `McToken`s in the `LockBoxValidator`
+   transaction output identified by the `LockBoxOracleMintingPolicy` and the datum.
+   Then, sidechain nodes will mint `ko - ki` tokens on the sidechain.
 
 The following diagram depicts the transaction for step 1 of the workflow.
 
 ![Lock box mainchain to sidechain](./07-ModularisingTokenHandling/McTokenMainchainToSidechain.svg)
 
 **Workflow: transferring from sidechain to mainchain**
-1. On the sidechain, a participant posts a transaction which burns `McToken`'s
-   corresponding sidechain tokens.
+1. On the sidechain, a participant posts a transaction which transfers sidechain tokens
+   that correspond to `McToken`s to the mainchain.
 2. Eventually, transactions from 1. are bundled up into a Merkle root, and the
    Merkle root is signed by the committee and posted to the mainchain.
 3. A mainchain recipient of a transaction from 1. claims their `McToken`s by
@@ -368,7 +371,7 @@ The following diagram depicts the transaction for step 1 of the workflow.
    unlocks `McToken`s residing at `LockBoxValidator` addresses.
 
 The following diagram depicts the transaction for step 3 of the workflow using
-3 lock boxes for `McToken`.
+2 lock boxes for `McToken`.
 
 ![Lock box sidechain to mainchain part 1](./07-ModularisingTokenHandling/McTokenSidechainToMainchain.svg)
 

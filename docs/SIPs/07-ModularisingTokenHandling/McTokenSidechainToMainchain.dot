@@ -5,13 +5,11 @@ strict digraph {
   DistributedSetNode [ label = "Distributed set node"];
   MerkleRoot [ label = "Merkle root of `MerkleTreeEntry`s"];
 
-  InputLockBoxValidator1 [label = "LockBoxValidator with datum `McToken`"];
-  InputLockBoxValidator2 [label = "LockBoxValidator with datum `McToken`"];
-  InputLockBoxValidator3 [label = "LockBoxValidator with datum `McToken`"];
+  InputLockBoxValidator1 [label = "LockBoxValidator with datum `McToken`\nwith `LockBoxOracleMintingPolicy` and `McToken`s" ];
+  InputLockBoxValidator2 [label = "LockBoxValidator with datum `McToken`\nwith `LockBoxOracleMintingPolicy` and `McToken`s" ] ;
 
-  OutputLockBoxValidator1 [label = "LockBoxValidator with datum `McToken`"];
-  OutputLockBoxValidator2 [label = "LockBoxValidator with datum `McToken`"];
-  OutputLockBoxValidator3 [label = "LockBoxValidator with datum `McToken`"];
+  OutputLockBoxValidator1 [label = "LockBoxValidator with datum `McToken`\nwith `LockBoxOracleMintingPolicy` and `McToken`s" ];
+  OutputLockBoxValidator2 [label = "LockBoxValidator with datum `McToken`\nwith `LockBoxOracleMintingPolicy` and `McToken`s" ];
 
   ReleaseToken [shape = ellipse ] ;
   BurnAddress ;
@@ -28,14 +26,23 @@ strict digraph {
 
   InputLockBoxValidator1 -> Transaction [label = "input"];
   InputLockBoxValidator2 -> Transaction [label = "input"];
-  InputLockBoxValidator3 -> Transaction [label = "input"];
+
+  InputLockBoxValidator1 -> OutputLockBoxValidator1
+    [ label="`LockBoxOracleMintingPolicy`/`McToken`s are paid to", style=dashed]
+  InputLockBoxValidator2 -> OutputLockBoxValidator2
+    [ label="`LockBoxOracleMintingPolicy`/`McToken`s are paid to", style=dashed]
 
   Transaction -> OutputLockBoxValidator1 [label = "output"];
   Transaction -> OutputLockBoxValidator2 [label = "output"];
-  Transaction -> OutputLockBoxValidator3 [label = "output"];
+
+  InputLockBoxValidator1 -> Recipient [label = "`McToken`s are paid to", style=dashed];
+  InputLockBoxValidator2 -> Recipient [label = "`McToken`s are paid to", style=dashed];
+
+  Transaction -> Recipient [ label = "output" ];
+
   Transaction -> DistributedSetNode1 [label = "output"];
   Transaction -> DistributedSetNode2 [label = "output"];
-  Transaction -> Recipient [ label = "output" ];
+
   Transaction -> ReleaseToken [ label = "mints", style=dashed ];
   ReleaseToken -> BurnAddress[ label = "is paid to", style=dashed ];
 }
