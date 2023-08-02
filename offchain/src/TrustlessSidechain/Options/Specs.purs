@@ -86,7 +86,10 @@ import TrustlessSidechain.Options.Types
   , Options
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -528,7 +531,7 @@ parseCommittee ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List SidechainPublicKey))
+  Parser (InputArgOrFile (List EcdsaSecp256k1PubKey))
 parseCommittee longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
@@ -554,7 +557,7 @@ parseCommittee longflag hdesc filelongflag filehdesc =
         )
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
-parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List SidechainPublicKey))
+parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List EcdsaSecp256k1PubKey))
 parseNewCommitteePubKeys =
   parseCommittee
     "new-committee-pub-key"
@@ -571,7 +574,10 @@ parseCommitteeSignatures ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List (SidechainPublicKey /\ Maybe SidechainSignature)))
+  Parser
+    ( InputArgOrFile
+        (List (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
+    )
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many

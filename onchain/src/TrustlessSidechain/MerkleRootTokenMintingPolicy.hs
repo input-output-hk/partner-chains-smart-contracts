@@ -37,13 +37,13 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
   MerkleTreeEntry,
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SidechainPubKey (getSidechainPubKey),
   SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
   SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
@@ -166,7 +166,7 @@ mkMintingPolicy
            in go (txInfoReferenceInputs info)
       p2 =
         Utils.verifyMultisig
-          (map getSidechainPubKey committeePubKeys)
+          (map getEcdsaSecp256k1PubKey committeePubKeys)
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage

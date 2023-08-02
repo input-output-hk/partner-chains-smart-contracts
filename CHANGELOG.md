@@ -3,6 +3,58 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+# Unreleased
+
+## Changed
+
+* `SidechainPublicKey` renamed to `EcdsaSecp256k1PubKey`. Functions around it
+  have also been similarly renamed: for example, `sidechainPublicKey` is now
+  `ecdsaSecp256k1PubKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain and onchain)
+* `SidechainSignature` renamed to `EcdsaSecp256k1Signature`. Functions around it
+  have also been similarly renamed: for example, `sidechainSignature` is now
+  `ecdsaSecp256k1Signature`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `SidechainMessage` renamed to `EcdsaSecp256k1Message`. Functions around it
+  have also been similarly renamed: for example, `sidechainMessage` is now
+  `ecdsaSecp256k1Message`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `SidechainPrivateKey` renamed to `EcdsaSecp256k1PrivateKey`. Functions around
+  it have also been similarly renamed: for example, `sidechainPrivateKey` is now
+  `ecdsaSecp256k1PrivateKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+
+## Fixed
+
+* `FromData` for `EcdsaSecp256k1PubKey` (formerly `SidechainPublicKey`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1Signature` (formerly `SidechainSignature`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/526),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1Message` (formerly `SidechainMessage`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1PrivateKey` (formerly `SidechainPrivateKey`) now
+  correctly checks its invariants
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/526),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+
 # v3.0.0
 
 ## Added
@@ -10,7 +62,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Added checkpoint validator address and checkpoint currency symbol to `addresses` command
   ([506](https://github.com/mlabs-haskell/trustless-sidechain/pull/506) offchain)
 * Improved error handling with an application-wide error type
-  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471),
    [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
