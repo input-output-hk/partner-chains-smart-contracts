@@ -17,10 +17,10 @@ Currently, the only token that the sidechain may transfer to the mainchain is
 In later SIPs, it became clear that this limitation of only allowing
     `FUEL` to be transferred between sidechain and mainchain is insufficient as
     later SIPs required designing tokens which fundamentally serve a different
-    purpose than `FUEL` and hence require different verifications.
+    purpose from `FUEL`, and hence require different verifications.
 Examples of such tokens from other SIPs include:
 
-- Arbitrary Cardano native asset token transfer.
+- Arbitrary Cardano native asset token transfer between mainchain and sidechain.
 
 - Bridging arbitrary data.
 
@@ -36,7 +36,7 @@ In particular, we recall from the white paper that:
 1. Sidechain stakeholders bundle up transactions in a Merkle tree, and
    collectively sign its Merkle root.
 
-2. A signed Merkle root contains the transactions certified by the sidechain,
+2. The signed Merkle root contains the transactions certified by the sidechain,
    and hence these transactions may occur on the mainchain.
 
 Following this line of reasoning, it's clear that we would like to isolate the
@@ -45,12 +45,12 @@ Indeed, this is precisely condition 1. in the `FUEL` token that we are
     interested in modularising out.
 
 Early revisions of this document suggested having a separate token for
-    modularising the functionality to prove a transaction is in a Merkle root,
-    but this idea was ultimately discarded due to the possibility of incurring
-    extra ada costs in transactions.
-Thus, the modularization in this document is purely "conceptual", and we aim to
-    document how one may write a token which may be bridged between sidechain
-    and mainchain.
+    modularising the functionality to prove a transaction is in a signed Merkle
+    root, but this idea was ultimately discarded due to the possibility of
+    incurring extra ada costs in transactions.
+Thus, the modularization in this document is purely conceptual, and we aim to
+    document how one may write their own token which may be bridged between
+    sidechain and mainchain.
 
 As an overview, this document will discuss the following.
 
@@ -66,11 +66,11 @@ As an overview, this document will discuss the following.
     - Transferring native Cardano assets from the sidechain to the mainchain
       (assuming that such assets are locked up on the mainchain already).
 
-    - Bridging arbitrary data from the sidechain to the mainchain
+    - Bridging arbitrary data from the sidechain to the mainchain.
 
 ## Replacing `FUELMintingPolicy` with `ScToken`
 
-We will start with defining `MerkleTreeEntry` as follows
+We will start with defining `MerkleTreeEntry` as follows.
 
 ```haskell
 data MerkleTreeEntry
@@ -88,12 +88,19 @@ data MerkleTreeEntry
 ```
 
 Note that this is essentially identical to the original `MerkleTreeEntry`
-```haskell
-data MerkleTreeEntry = MerkleTreeEntry
-  { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-  , amount :: Integer -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-  , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
-  , previousMerkleRoot :: Maybe ByteString -- previousMerkleRoot is added to make sure that the hashed entry is unique
+```diff
+-data MerkleTreeEntry = MerkleTreeEntry
++data MerkleTreeEntry
++   = ScTokenMerkleTreeEntry
+-       { index :: Integer -- 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+        { amount :: Integer
+            -- 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+-       , recipient :: ByteString -- arbitrary length bytestring that represents decoded bech32 cardano address
++       , recipient :: Address -- the address of a recipient
++       , tokenName :: TokenName -- 32 byte token name (often "FUEL")
++       , previousMerkleRoot :: Maybe ByteString
++           -- previousMerkleRoot is added to make sure that the hashed entry
++           -- is unique w.r.t other Merkle roots to prevent double claiming
   }
 ```
 except that we instead:
@@ -102,7 +109,7 @@ except that we instead:
   from the sidechain;
 
 - changed the type of `recipient` to match the representation of recipients
-  onchain;
+  onchain (a minor optimization);
 
 - removed the `index` field which is no longer needed to ensure uniqueness
   amongst transactions within the Merkle tree (we instead propose to use the
@@ -117,6 +124,7 @@ data ScTokenRedeemer
         MerkleTreeEntry
         MerkleProof
 ```
+Note that this is identical to the original `FUELMintingPolicy`'s redeemer.
 
 Then, `ScToken` mints only if all of the following are satisfied.
 
