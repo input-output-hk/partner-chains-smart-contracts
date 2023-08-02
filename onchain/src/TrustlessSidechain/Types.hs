@@ -50,14 +50,14 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
 
 makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
-{- | 'SidechainPubKey' is compressed DER Secp256k1 public key.
-
+{- | Compressed DER SECP256k1 public key.
  = Important note
 
  The 'Data' serializations for this type /cannot/ change.
 -}
-newtype SidechainPubKey = SidechainPubKey
-  { getSidechainPubKey :: LedgerBytes
+newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
+  { -- | @since Unreleased
+    getEcdsaSecp256k1PubKey :: LedgerBytes
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
@@ -67,7 +67,12 @@ newtype SidechainPubKey = SidechainPubKey
     , FromData
     , UnsafeFromData
     )
-  deriving (IsString, TSPrelude.Show) via LedgerBytes
+  deriving
+    ( -- | @since Unreleased
+      IsString
+    , TSPrelude.Show
+    )
+    via LedgerBytes
 
 -- * Committee Candidate Validator data
 
@@ -75,7 +80,8 @@ newtype SidechainPubKey = SidechainPubKey
 data RegisterParams = RegisterParams
   { sidechainParams :: SidechainParams
   , spoPubKey :: PubKey
-  , sidechainPubKey :: SidechainPubKey
+  , -- | @since Unreleased
+    sidechainPubKey :: EcdsaSecp256k1PubKey
   , spoSig :: Signature
   , sidechainSig :: Signature
   , inputUtxo :: TxOutRef
@@ -119,7 +125,8 @@ data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    bprSidechainPubKey :: SidechainPubKey
+    -- | @since Unreleased
+    bprEcdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | Signature of the SPO
     bprSpoSignature :: Signature
   , -- | Signature of the SPO
@@ -138,7 +145,8 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 -}
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: SidechainParams
-  , bprmSidechainPubKey :: SidechainPubKey
+  , -- | @since Unreleased
+    bprmEcdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
   , -- | A UTxO that must be spent by the transaction
     bprmInputUtxo :: TxOutRef
   }
@@ -194,7 +202,7 @@ data SignedMerkleRoot = SignedMerkleRoot
   , -- | Current committee signatures ordered as their corresponding keys
     signatures :: [LedgerBytes]
   , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   }
 
 -- | @since Unreleased
@@ -360,9 +368,9 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
     committeeSignatures :: [LedgerBytes]
   , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [SidechainPubKey]
+    committeePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'newCommitteePubKeys' is the hash of the new committee
-    newCommitteePubKeys :: [SidechainPubKey]
+    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
     previousMerkleRoot :: Maybe LedgerBytes
   }
@@ -423,7 +431,7 @@ data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    uchmNewCommitteePubKeys :: [SidechainPubKey]
+    uchmNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
   , uchmPreviousMerkleRoot :: Maybe LedgerBytes
   , uchmSidechainEpoch :: Integer
   }
@@ -457,8 +465,8 @@ instance UnsafeFromData CheckpointDatum where
 -}
 data CheckpointRedeemer = CheckpointRedeemer
   { checkpointCommitteeSignatures :: [LedgerBytes]
-  , checkpointCommitteePubKeys :: [SidechainPubKey]
-  , newCheckpointBlockHash :: LedgerBytes
+  , checkpointCommitteePubKeys :: [EcdsaSecp256k1PubKey]
+  , newCheckpointBlockHash :: BuiltinByteString
   , newCheckpointBlockNumber :: Integer
   }
 

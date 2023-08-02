@@ -63,7 +63,10 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -73,9 +76,9 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
   , spoPubKey ∷ PubKey
-  , sidechainPubKey ∷ SidechainPublicKey
+  , sidechainPubKey ∷ EcdsaSecp256k1PubKey
   , spoSig ∷ Signature
-  , sidechainSig ∷ SidechainSignature
+  , sidechainSig ∷ EcdsaSecp256k1Signature
   , inputUtxo ∷ TransactionInput
   , permissionToken ∷ Maybe CandidatePermissionTokenInfo
   }
@@ -97,9 +100,9 @@ getCommitteeCandidateValidator sp = do
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
-  , bprSidechainPubKey ∷ SidechainPublicKey -- public key in the sidechain's desired format
+  , bprSidechainPubKey ∷ EcdsaSecp256k1PubKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ SidechainSignature -- Signature of the sidechain candidate
+  , bprSidechainSignature ∷ EcdsaSecp256k1Signature -- Signature of the sidechain candidate
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }
@@ -152,7 +155,7 @@ instance FromData BlockProducerRegistration where
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
-  , bprmSidechainPubKey ∷ SidechainPublicKey
+  , bprmSidechainPubKey ∷ EcdsaSecp256k1PubKey
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 

@@ -21,7 +21,10 @@ import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -80,8 +83,8 @@ instance ToData InitCheckpointMint where
     toData icTxOutRef
 
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ Array SidechainSignature
-  , committeePubKeys ∷ Array SidechainPublicKey
+  { committeeSignatures ∷ Array EcdsaSecp256k1Signature
+  , committeePubKeys ∷ Array EcdsaSecp256k1PubKey
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   }
@@ -104,7 +107,8 @@ instance ToData CheckpointRedeemer where
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
-  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  , committeeSignatures ∷
+      Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt

@@ -74,7 +74,7 @@ import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
-  SidechainPubKey (SidechainPubKey),
+  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
  )
 
 -- * Bech32 addresses
@@ -153,7 +153,8 @@ instance FromJSON Bech32Recipient where
 -- | SidechainCommitteeMember is a sidechain (SECP) public and private key pair
 data SidechainCommitteeMember = SidechainCommitteeMember
   { scmPrivateKey :: SECP.SecKey
-  , scmPublicKey :: SidechainPubKey
+  , -- | @since Unreleased
+    scmPublicKey :: EcdsaSecp256k1PubKey
   }
 
 {- | 'SidechainCommittee' is a newtype wrapper around a lsit of
@@ -176,7 +177,7 @@ instance FromJSON SidechainCommitteeMember where
             Right ans -> pure ans
         pPrivKey _ = Aeson.Types.parseFail "Expected hex encoded SECP private key"
 
-        pPubKey :: Aeson.Value -> Aeson.Types.Parser SidechainPubKey
+        pPubKey :: Aeson.Value -> Aeson.Types.Parser EcdsaSecp256k1PubKey
         pPubKey (Aeson.String text) =
           case fmap secpPubKeyToSidechainPubKey $ strToSecpPubKey (Text.unpack text) of
             Left err -> Aeson.Types.parseFail err
@@ -324,7 +325,7 @@ showSecpPrivKey = showBS . SECP.getSecKey
  > PUBKEY:SIG
 -}
 showScPubKeyAndSig ::
-  SidechainPubKey ->
+  EcdsaSecp256k1PubKey ->
   Signature ->
   HaskellString.String
 showScPubKeyAndSig sckey sig =
@@ -391,11 +392,11 @@ vKeyToSpoPubKey =
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN
 
 -- | Derive SECP256K1 public key from the private key
-toSidechainPubKey :: SECP.SecKey -> SidechainPubKey
+toSidechainPubKey :: SECP.SecKey -> EcdsaSecp256k1PubKey
 toSidechainPubKey =
   secpPubKeyToSidechainPubKey
     . SECP.derivePubKey
 
 -- | Converts a 'SECP.PubKey' to a 'SidechainPubKey'
-secpPubKeyToSidechainPubKey :: SECP.PubKey -> SidechainPubKey
-secpPubKeyToSidechainPubKey = SidechainPubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey True
+secpPubKeyToSidechainPubKey :: SECP.PubKey -> EcdsaSecp256k1PubKey
+secpPubKeyToSidechainPubKey = EcdsaSecp256k1PubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey True
