@@ -44,7 +44,7 @@ With this in mind, we can identify three directions:
 - Upwards: Sidechain to Mainchain
 - Sideways: Sidechain A to Sidechain B
 
-![Chain relationship](./09-GeneralDataBridge/Relationship.svg)
+![Chain relationship](./10-GeneralDataBridge/Relationship.svg)
 
 Data transfer will follow a similar flow to token transfer, and will reuse the
 same mechanisms: transferring down can be achieved by a simple lock mechanism,
@@ -71,7 +71,7 @@ will be full data transfer.
 
 _Full data transfer_
 
-![Full Data Transfer](./09-GeneralDataBridge/FullData.svg)
+![Full Data Transfer](./10-GeneralDataBridge/FullData.svg)
 
 A few of the benefits of using a full data transfer:
 - no need for direct communication channels
@@ -80,7 +80,7 @@ A few of the benefits of using a full data transfer:
 
 _Data hash transfer_
 
-![Data Hash Transfer](./09-GeneralDataBridge/HashOnly.svg)
+![Data Hash Transfer](./10-GeneralDataBridge/HashOnly.svg)
 
 A few of the benefits of using data hash transfer:
 - reduced transaction fees due to smaller transaction size
@@ -208,4 +208,4 @@ Sidechain A.
 
 [modulartokens]: ./07-ModularisingTokenHandling.md
 [crosschainver]: ./08-CrossChainVerification.md
-[generalizedtransfer]: ./09-Generalizing-Token-Transfer.md
+[generalizedtransfer]: ./10-Generalizing-Token-Transfer.md
