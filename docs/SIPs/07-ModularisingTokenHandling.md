@@ -88,7 +88,7 @@ As an overview, we will create:
 
 ### `LockBoxOracleMintingPolicy`
 We first describe `LockBoxOracleMintingPolicy` which will identify the
-    `LockBoxValidator`s used on the sidechain.
+    `LockBoxValidator`s used by the sidechain.
 This will be parameterized by:
 - a UTxO (or anything to guarantee that this token is uniquely identified with a point in time);
 - (optional) an integer denoting the total number of lock boxes in the system;
