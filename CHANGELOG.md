@@ -5,8 +5,19 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Added
+
+* Extra functions for efficient `Data` encoding and decoding for product types
+  ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+
 ## Changed
 
+* Efficient versions of `Data` encoding functions for product types used where
+  possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
 * `SidechainPublicKey` renamed to `EcdsaSecp256k1PubKey`. Functions around it
   have also been similarly renamed: for example, `sidechainPublicKey` is now
   `ecdsaSecp256k1PubKey`
@@ -34,6 +45,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Fixed
 
+* Types whose `Data` encodings cannot change have been noted as such (
+  [484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
 * `FromData` for `EcdsaSecp256k1PubKey` (formerly `SidechainPublicKey`) now
   correctly checks its length invariant
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
