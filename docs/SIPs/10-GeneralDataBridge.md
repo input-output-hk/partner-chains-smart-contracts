@@ -92,17 +92,17 @@ A few of the benefits of using data hash transfer:
 
 #### Claiming
 
-The claiming workflow is almost identical to the token claim: it is using the
-same Merkle root, claiming with a proof. There are however a few key differences:
+The claiming workflow is almost identical to the token claim: it uses the
+same Merkle root, and the claiming is done with a Merkle proof. There are however a few key differences:
 - the claim transaction will mint a special token, proving the validity of the data
 - the output must include a Datum with some metadata (details in the Implementation
   section)
-- the optional data will be sent to designated validator address
+- the optional data will be sent to a designated validator address
 
 Note: it's important to note that claiming is a separate step from Merkle root
 insertion, so there is the possibility of data remaining unclaimed. To mitigate
 this issue, we could incentivise sidechain users to find and claim these data
-UTxOs, by locking n amount of tokens on the sidechain. These tokens would be
+UTxOs, by locking some amount of tokens on the sidechain. These tokens would be
 paid to the wallet of the claimer, while the data must always go to its
 designated address. However, incentivisation is out of scope of the current SIP.
 
@@ -110,11 +110,11 @@ designated address. However, incentivisation is out of scope of the current SIP.
 
 We will introduce a new validator: `PostBoxValidator`. All sidechains will
 observe this validator and handle new UTxOs as incoming messages. In essence
-this will be a lockbox validator never allowing redeeming, thus ensuring that
+this will be a lock box validator which never allows redeeming, thus ensuring that
 the data is always available. Any mainchain contract can use these UTxOs as
 reference inputs, however they cannot be consumed.
 
-Apart from this `PostBoxValidator` we will also allow sending the message to
+Apart from `PostBoxValidator`, we will also allow sending the message to
 an arbitrary address. This will allow better integration with mainchain
 contracts, in cases when a protocol requires some UTxO to be consumable.
 
@@ -143,20 +143,19 @@ the `sender` of such message must always be `Nothing`.
 ### Upwards (Sidechain to Mainchain)
 
 Similarly to token transfer from sidechain to mainchain, data transfer will also
-require a sidechain certificate. We will simply modify the token name of`SCToken`
-which is included in each leaf nodes of the Merkle tree (`MerkleTreeEntry`) such
-that it can not only accept tokens, but arbitrary data as well
-(not at the same time). With this change, the workflow will be identical to
-token transfers:
+require a sidechain certificate. So, we will create a new token, `SidechainMessageToken`,  
+which may be claimed with arbitrary data in the leaf nodes (`MerkleTreeEntry`s) of a signed Merkle tree.
+With this change, the workflow will be identical to token transfers:
 
 1. Pending data transfers are accumulated into a Merkle tree
 2. Merkle root inserted to the Mainchain
 3. Data is claimed (anyone can claim)
 
-In [SIP 9 - Generalizing Token Transfer][generalizedtransfer] we have introduced
-changes to the Merkle tree entry, generalising it in a way that it can handle
-different kinds of transfers. By this simple change, the same MerkleTreeEntry
-can be used for signed data transfer.
+Recall in [SIP 9 - Generalizing Token Transfer][generalizedtransfer] we have introduced
+a method to make changes to Merkle tree entries so that it can be generalized to handle
+different kinds of transfers. 
+With these ideas, we modify the `MerkleTreeEntry` data type to support signed data transfer
+as follows.
 
 ```haskell
 data MerkleTreeEntry
@@ -172,23 +171,23 @@ data MerkleTreeEntry
        }
 ```
 
-We will introduce a new token we call `SidechainMessageToken`. This token will
+We will now define `SidechainMessageToken`. This token will
 prove that the data was claimed with a sidechain certificate.
 
 The workflow of claiming will be identical to claiming of FUEL tokens: a user
-has to use a Merkle proof, and it will mint `SidechainMessageToken`.
+has to use a Merkle proof (with its corresponding `MerkleTreeEntry`) to mint `SidechainMessageToken`.
 
 Minting verifies the following:
-- Merkle proof is valid for the given `MerkleTreeEntry`
-- output with own minted token includes `PostBoxValidatorDatum` datum
-- output with own minted token is sent to `targetAddress`
-- if the payload is `FullMessage(data)` then `tokenName = blake2b(data)`,
-  if `HashedMessage(dataHash)` then `tokenName = dataHash`
+- Merkle proof is valid for the given `MerkleTreeEntry`.
+- There is a transaction output with the minted `SidechainMessageToken` that has as datum `PostBoxValidatorDatum` at address `targetAddress`.
+- If the payload is `FullMessage(data)` then the minted `SidechainMessageToken` must satisfy `tokenName = blake2b(data)`.
+  Otherwise, if the payload is `HashedMessage(dataHash)` then the minted `SidechainMessageToken` must satisfy `tokenName = dataHash`.
 - `sender` field in `PostBoxValidatorDatum` is the same as the parameter of the
-  current minting policy (own SidechainRef)
-- (optional) exactly one item is added to the Distributed Set
+  current minting policy (own SidechainRef).
+- (optional) `blake2b(cbor(merkleProof, previousMerkleRoot))` is added to the Distributed Set.
+- The minted `SidechainMessageToken` is unique.
 
-Note: as security assumption on data tokens are not so strict, we decided
+Note: as security assumptions on data tokens are not so strict, we decided
 that verifying uniqueness of the redeemed data token is not a requirement.
 Reducing this verification step will lower transaction fees. A dApp developer
 could use conventional web techniques, such as idempotency keys, to make sure
@@ -208,4 +207,4 @@ Sidechain A.
 
 [modulartokens]: ./07-ModularisingTokenHandling.md
 [crosschainver]: ./08-CrossChainVerification.md
-[generalizedtransfer]: ./10-Generalizing-Token-Transfer.md
+[generalizedtransfer]: ./09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md
