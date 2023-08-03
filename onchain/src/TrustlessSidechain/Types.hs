@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,15 +10,19 @@ import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes), ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
-import PlutusTx (FromData, ToData, UnsafeFromData)
-import PlutusTx qualified
+import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
--- | Parameters uniquely identifying a sidechain
+{- | Parameters uniquely identifying a sidechain
+
+ = Note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , genesisHash :: GenesisHash
@@ -43,9 +48,13 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
     )
   deriving (IsString, TSPrelude.Show) via LedgerBytes
 
-PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
+makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
--- | Compressed DER SECP256k1 public key.
+{- | Compressed DER SECP256k1 public key.
+ = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
   { -- | @since Unreleased
     getEcdsaSecp256k1PubKey :: LedgerBytes
@@ -58,7 +67,12 @@ newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
     , FromData
     , UnsafeFromData
     )
-  deriving (IsString, TSPrelude.Show) via LedgerBytes
+  deriving
+    ( -- | @since Unreleased
+      IsString
+    , TSPrelude.Show
+    )
+    via LedgerBytes
 
 -- * Committee Candidate Validator data
 
@@ -81,7 +95,21 @@ data CandidatePermissionMint = CandidatePermissionMint
   , cpmUtxo :: TxOutRef
   }
 
-PlutusTx.makeIsDataIndexed ''CandidatePermissionMint [('CandidatePermissionMint, 0)]
+-- | @since Unreleased
+instance ToData CandidatePermissionMint where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (CandidatePermissionMint {..}) =
+    productToData2 cpmSidechainParams cpmUtxo
+
+-- | @since Unreleased
+instance FromData CandidatePermissionMint where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 CandidatePermissionMint
+
+-- | @since Unreleased
+instance UnsafeFromData CandidatePermissionMint where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
 
 -- | Endpoint parameters for committee candidate deregistration
 data DeregisterParams = DeregisterParams
@@ -89,6 +117,10 @@ data DeregisterParams = DeregisterParams
   , spoPubKey :: PubKey
   }
 
+{- | = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 data BlockProducerRegistration = BlockProducerRegistration
   { -- | SPO cold verification key hash
     bprSpoPubKey :: PubKey -- own cold verification key hash
@@ -107,6 +139,10 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
+{- | = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams :: SidechainParams
   , -- | @since Unreleased
@@ -121,6 +157,10 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegist
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
  for the MerkleRootToken.
+
+ = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
 -}
 data MerkleTreeEntry = MerkleTreeEntry
   { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
@@ -140,6 +180,10 @@ PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 {- | 'MerkleRootInsertionMessage' is a data type for which committee members
  create signatures for
  >  blake2b(cbor(MerkleRootInsertionMessage))
+
+ = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
 -}
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { mrimSidechainParams :: SidechainParams
@@ -161,7 +205,21 @@ data SignedMerkleRoot = SignedMerkleRoot
     committeePubKeys :: [EcdsaSecp256k1PubKey]
   }
 
-PlutusTx.makeIsDataIndexed ''SignedMerkleRoot [('SignedMerkleRoot, 0)]
+-- | @since Unreleased
+instance ToData SignedMerkleRoot where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (SignedMerkleRoot {..}) =
+    productToData4 merkleRoot previousMerkleRoot signatures committeePubKeys
+
+-- | @since Unreleased
+instance FromData SignedMerkleRoot where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData4 SignedMerkleRoot
+
+-- | @since Unreleased
+instance UnsafeFromData SignedMerkleRoot where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData4 SignedMerkleRoot
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
@@ -177,12 +235,33 @@ data SignedMerkleRootMint = SignedMerkleRootMint
     smrmValidatorHash :: ValidatorHash
   }
 
-PlutusTx.makeIsDataIndexed ''SignedMerkleRootMint [('SignedMerkleRootMint, 0)]
+-- | @since Unreleased
+instance ToData SignedMerkleRootMint where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (SignedMerkleRootMint {..}) =
+    productToData3
+      smrmSidechainParams
+      smrmUpdateCommitteeHashCurrencySymbol
+      smrmValidatorHash
+
+-- | @since Unreleased
+instance FromData SignedMerkleRootMint where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 SignedMerkleRootMint
+
+-- | @since Unreleased
+instance UnsafeFromData SignedMerkleRootMint where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 SignedMerkleRootMint
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
 
  This exists as for testing in #249.
+
+ = Important note
+
+ The 'Data' serializations of this type /cannot/ change.
 -}
 data CombinedMerkleProof = CombinedMerkleProof
   { cmpTransaction :: MerkleTreeEntry
@@ -236,7 +315,24 @@ data FUELMint = FUELMint
     fmDsKeyCurrencySymbol :: CurrencySymbol
   }
 
-PlutusTx.makeIsDataIndexed ''FUELMint [('FUELMint, 0)]
+-- | @since Unreleased
+instance ToData FUELMint where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (FUELMint {..}) =
+    productToData3
+      fmMptRootTokenCurrencySymbol
+      fmSidechainParams
+      fmDsKeyCurrencySymbol
+
+-- | @since Unreleased
+instance FromData FUELMint where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 FUELMint
+
+-- | @since Unreleased
+instance UnsafeFromData FUELMint where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 FUELMint
 
 -- * Update Committee Hash data
 
@@ -249,7 +345,21 @@ data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
   , sidechainEpoch :: Integer
   }
 
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashDatum [('UpdateCommitteeHashDatum, 0)]
+-- | @since Unreleased
+instance ToData UpdateCommitteeHashDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (UpdateCommitteeHashDatum {..}) =
+    productToData2 committeeHash sidechainEpoch
+
+-- | @since Unreleased
+instance FromData UpdateCommitteeHashDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 UpdateCommitteeHashDatum
+
+-- | @since Unreleased
+instance UnsafeFromData UpdateCommitteeHashDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeHashDatum
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  committee
@@ -265,7 +375,25 @@ data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
     previousMerkleRoot :: Maybe LedgerBytes
   }
 
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashRedeemer [('UpdateCommitteeHashRedeemer, 0)]
+-- | @since Unreleased
+instance ToData UpdateCommitteeHashRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (UpdateCommitteeHashRedeemer {..}) =
+    productToData4
+      committeeSignatures
+      committeePubKeys
+      newCommitteePubKeys
+      previousMerkleRoot
+
+-- | @since Unreleased
+instance FromData UpdateCommitteeHashRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData4 UpdateCommitteeHashRedeemer
+
+-- | @since Unreleased
+instance UnsafeFromData UpdateCommitteeHashRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData4 UpdateCommitteeHashRedeemer
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
@@ -278,8 +406,26 @@ data UpdateCommitteeHash = UpdateCommitteeHash
     cMptRootTokenCurrencySymbol :: CurrencySymbol
   }
 
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHash [('UpdateCommitteeHash, 0)]
+-- | @since Unreleased
+instance ToData UpdateCommitteeHash where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (UpdateCommitteeHash {..}) =
+    productToData3 cSidechainParams cToken cMptRootTokenCurrencySymbol
 
+-- | @since Unreleased
+instance FromData UpdateCommitteeHash where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 UpdateCommitteeHash
+
+-- | @since Unreleased
+instance UnsafeFromData UpdateCommitteeHash where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 UpdateCommitteeHash
+
+{- | = Important note
+
+ The 'Data' serializations for this type /cannot/ be changed.
+-}
 data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
   { uchmSidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
@@ -298,7 +444,21 @@ data CheckpointDatum = CheckpointDatum
   , checkpointBlockNumber :: Integer
   }
 
-PlutusTx.makeIsDataIndexed ''CheckpointDatum [('CheckpointDatum, 0)]
+-- | @since Unreleased
+instance ToData CheckpointDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (CheckpointDatum {..}) =
+    productToData2 checkpointBlockHash checkpointBlockNumber
+
+-- | @since Unreleased
+instance FromData CheckpointDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 CheckpointDatum
+
+-- | @since Unreleased
+instance UnsafeFromData CheckpointDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 CheckpointDatum
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint
@@ -310,7 +470,25 @@ data CheckpointRedeemer = CheckpointRedeemer
   , newCheckpointBlockNumber :: Integer
   }
 
-PlutusTx.makeIsDataIndexed ''CheckpointRedeemer [('CheckpointRedeemer, 0)]
+-- | @since Unreleased
+instance ToData CheckpointRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (CheckpointRedeemer {..}) =
+    productToData4
+      checkpointCommitteeSignatures
+      checkpointCommitteePubKeys
+      newCheckpointBlockHash
+      newCheckpointBlockNumber
+
+-- | @since Unreleased
+instance FromData CheckpointRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData4 CheckpointRedeemer
+
+-- | @since Unreleased
+instance UnsafeFromData CheckpointRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData4 CheckpointRedeemer
 
 -- | 'Checkpoint' is used as the parameter for the validator.
 data CheckpointParameter = CheckpointParameter
@@ -323,8 +501,29 @@ data CheckpointParameter = CheckpointParameter
     committeeHashAssetClass :: AssetClass
   }
 
-PlutusTx.makeIsDataIndexed ''CheckpointParameter [('CheckpointParameter, 0)]
+-- | @since Unreleased
+instance ToData CheckpointParameter where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (CheckpointParameter {..}) =
+    productToData3
+      checkpointSidechainParams
+      checkpointAssetClass
+      committeeHashAssetClass
 
+-- | @since Unreleased
+instance FromData CheckpointParameter where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 CheckpointParameter
+
+-- | @since Unreleased
+instance UnsafeFromData CheckpointParameter where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 CheckpointParameter
+
+{- | = Important note
+
+ The 'Data' serializations of this type /cannot/ be changed.
+-}
 data CheckpointMessage = CheckpointMessage
   { checkpointMsgSidechainParams :: SidechainParams
   , checkpointMsgBlockHash :: LedgerBytes
