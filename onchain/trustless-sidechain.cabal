@@ -258,6 +258,9 @@ test-suite script-size
   main-is:        Main.hs
   other-modules:
     Compiled
+    Data.Generated
+    Data.Handwritten
+    Data.Wrappers
     Legacy
     Sizer
 

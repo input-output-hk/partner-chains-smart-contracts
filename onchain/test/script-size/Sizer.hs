@@ -1,4 +1,9 @@
-module Sizer (fitsUnder, fitsInto, scriptFitsInto) where
+module Sizer (
+  fitsUnder,
+  fitsInto,
+  scriptFitsInto,
+  scriptFitsUnder,
+) where
 
 import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
@@ -23,6 +28,13 @@ fitsUnder ::
   TestTree
 fitsUnder name test target = singleTest name $ SizeComparison test target
 
+scriptFitsUnder ::
+  HString.String ->
+  (HString.String, Script) ->
+  (HString.String, Script) ->
+  TestTree
+scriptFitsUnder name test target = singleTest name $ ScriptSizeComparison @() test target
+
 fitsInto ::
   forall (a :: Type).
   Typeable a =>
@@ -45,6 +57,7 @@ data SizeTest (a :: Type)
   = SizeBound (CompiledCode a) Integer
   | SizeComparison (HString.String, CompiledCode a) (HString.String, CompiledCode a)
   | ScriptSizeBound Script Integer
+  | ScriptSizeComparison (HString.String, Script) (HString.String, Script)
 
 instance Typeable a => IsTest (SizeTest a) where
   testOptions = Tagged []
@@ -71,6 +84,14 @@ instance Typeable a => IsTest (SizeTest a) where
         (-1) -> testFailed $ "Exceeded limit by " <> show (abs diff)
         0 -> testPassed $ "Size: " <> show estimate
         _ -> testPassed $ "Remaining headroom: " <> show diff
+    ScriptSizeComparison (mName, mScript) (tName, tScript) -> do
+      let tEstimate = scriptSize tScript
+      let mEstimate = scriptSize mScript
+      let diff = tEstimate - mEstimate
+      pure $ case signum diff of
+        (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
+        0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
+        _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
 
 renderFailed ::
   (HString.String, Integer) ->
@@ -80,7 +101,7 @@ renderFailed ::
 renderFailed tData mData diff =
   renderEstimates tData mData
     <> "Exceeded by: "
-    <> show diff
+    <> show (abs diff)
 
 renderEstimates ::
   (HString.String, Integer) ->

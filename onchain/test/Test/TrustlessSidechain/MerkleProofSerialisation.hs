@@ -10,10 +10,6 @@ import Plutus.V1.Ledger.Bytes qualified as Bytes
 import PlutusCore.Data (Data (B, Constr, I, List))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
-import PlutusTx.IsData.Class (
-  toBuiltinData,
-  unsafeFromBuiltinData,
- )
 import PlutusTx.IsData.Class qualified as IsData
 import Test.Tasty (TestTree)
 import Test.Tasty qualified as Tasty

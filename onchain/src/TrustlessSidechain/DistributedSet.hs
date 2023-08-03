@@ -1,4 +1,5 @@
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -66,7 +67,6 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -84,7 +84,7 @@ newtype Ds = Ds
     identitySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | @since Unreleased
 instance HasField "identitySymbol" Ds CurrencySymbol where
@@ -99,7 +99,7 @@ newtype DsDatum = DsDatum
     next :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (Eq, FromData, ToData, UnsafeFromData)
 
 -- | @since Unreleased
 instance HasField "next" DsDatum BuiltinByteString where
@@ -139,6 +139,21 @@ instance HasField "next" Node BuiltinByteString where
   {-# INLINE modify #-}
   modify f (Node k n) = Node k (f n)
 
+-- | @since Unreleased
+instance ToData Node where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Node {..}) = productToData2 key next
+
+-- | @since Unreleased
+instance FromData Node where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 Node
+
+-- | @since Unreleased
+instance UnsafeFromData Node where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 Node
+
 {- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
  minting policies needed by the distributed set.
 -}
@@ -169,16 +184,46 @@ instance HasField "fuelPolicy" DsConfDatum CurrencySymbol where
   {-# INLINE modify #-}
   modify f (DsConfDatum kp fp) = DsConfDatum kp (f fp)
 
+-- | @since Unreleased
+instance ToData DsConfDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (DsConfDatum {..}) = productToData2 keyPolicy fuelPolicy
+
+-- | @since Unreleased
+instance FromData DsConfDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 DsConfDatum
+
+-- | @since Unreleased
+instance UnsafeFromData DsConfDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 DsConfDatum
+
 {- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
  length "array" of how many new nodes (this is always 2, see 'lengthIb') are
  generated after inserting into a node.
 -}
 newtype Ib a = Ib {unIb :: (a, a)}
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
-  deriving newtype (Eq, PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving newtype (Eq)
 
 instance TSPrelude.Foldable Ib where
   foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
+
+-- | @since Unreleased
+instance (ToData a) => ToData (Ib a) where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (Ib (x, y)) = productToData2 x y
+
+-- | @since Unreleased
+instance (PlutusTx.FromData a) => PlutusTx.FromData (Ib a) where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 (curry Ib)
+
+-- | @since Unreleased
+instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 (curry Ib)
 
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
@@ -231,6 +276,22 @@ instance HasField "confCurrencySymbol" DsKeyMint CurrencySymbol where
   {-# INLINE modify #-}
   modify f (DsKeyMint vh ccs) = DsKeyMint vh (f ccs)
 
+-- | @since Unreleased
+instance ToData DsKeyMint where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (DsKeyMint {..}) =
+    productToData2 validatorHash confCurrencySymbol
+
+-- | @since Unreleased
+instance FromData DsKeyMint where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 DsKeyMint
+
+-- | @since Unreleased
+instance UnsafeFromData DsKeyMint where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 DsKeyMint
+
 {- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
  otherwise.
 -}
@@ -260,13 +321,7 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
-makeIsDataIndexed ''Node [('Node, 0)]
-
-makeIsDataIndexed ''DsKeyMint [('DsKeyMint, 0)]
-
 PlutusTx.makeLift ''DsKeyMint
-
-makeIsDataIndexed ''DsConfDatum [('DsConfDatum, 0)]
 
 PlutusTx.makeLift ''DsConfDatum
 

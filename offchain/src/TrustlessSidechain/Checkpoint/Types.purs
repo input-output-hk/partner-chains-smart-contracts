@@ -14,7 +14,6 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
-  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -25,6 +24,12 @@ import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  , productToData3
+  , productToData4
   )
 
 newtype CheckpointDatum = CheckpointDatum
@@ -37,19 +42,14 @@ derive instance Generic CheckpointDatum _
 derive instance Newtype CheckpointDatum _
 
 instance ToData CheckpointDatum where
-  toData (CheckpointDatum { blockHash, blockNumber }) = Constr
-    (BigNum.fromInt 0)
-    [ toData blockHash, toData blockNumber ]
+  toData (CheckpointDatum { blockHash, blockNumber }) =
+    productToData2 blockHash blockNumber
 
 instance FromData CheckpointDatum where
-  fromData (Constr n [ a, b ])
-    | n == (BigNum.fromInt 0) =
-        CheckpointDatum <$>
-          ( { blockHash: _, blockNumber: _ }
-              <$> fromData a
-              <*> fromData b
-          )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y →
+        CheckpointDatum { blockHash: x, blockNumber: y }
+    )
 
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
@@ -65,11 +65,9 @@ instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
         { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData checkpointAssetClass
-    , toData committeeHashAssetClass
-    ]
+    ) = productToData3 sidechainParams
+    checkpointAssetClass
+    committeeHashAssetClass
 
 derive newtype instance Show CheckpointParameter
 
@@ -101,12 +99,10 @@ instance ToData CheckpointRedeemer where
         , newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCheckpointBlockHash
-    , toData newCheckpointBlockNumber
-    ]
+    ) = productToData4 committeeSignatures
+    committeePubKeys
+    newCheckpointBlockHash
+    newCheckpointBlockNumber
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam

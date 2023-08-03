@@ -14,6 +14,13 @@ to evolve as our needs change.
 * `DuplicateRecordFields` and `OverloadedLabels` are now mandatory extensions.
 * New section on records.
 
+## 10/07/23
+
+### Changed
+
+* HLint related section now allows per-definition disabling of HLint warnings
+  with explanation.
+
 ## 15/06/23
 
 ### Added
@@ -211,9 +218,15 @@ we require the same settings as for tests.
 ## Linting
 
 Every source file SHOULD be free of warnings as produced by [HLint][hlint], with
-default settings; the CI MUST enforce this. The only exception granted is when
-enforcing the recommendation would cause the code to no longer compile; in that
-case, the warning MUST be disabled on a per-module basis, using an annotation.
+default settings; the CI MUST enforce this. Two exceptions are granted:
+
+* If enforcing the recommendation would cause the code to no longer compile; or
+* If the recommendation would impact performance in a measurable way.
+
+In either case, the warning MUST be disabled using an annotation, in the
+narrowest possible scope. This scope SHOULD be a single definition.
+Additionally, a comment MUST be provided specifying the reason for disabling the
+warning.
 
 ### Justification
 
@@ -221,10 +234,14 @@ HLint automates away the detection of many common sources of boilerplate and
 inefficiency. It also describes many useful refactors, which in many cases make
 the code easier to read and understand. As this is fully automatic, it saves
 effort on our part, and ensures consistency across the codebase without us
-having to think about it. At times, HLint may offer suggestions that no longer
-compile, especially in cases where compiler plugins (like Plutus) are involved:
-we allow disabling these suggestions in such cases, but only in a specific
-scope.
+having to think about it.
+
+Occasionally, HLint suggestions may not compile, or may cause performance
+regressions. This is particularly common with Plutus, due to a combination of
+use of a compiler plugin, and a different performance (and cost) model to
+regular Haskell. In such cases, we allow disabling hints, but only with an
+explanation, and in a limited scope to ensure that in other code, the
+suggestions still get used.
 
 ## Code formatting
 
