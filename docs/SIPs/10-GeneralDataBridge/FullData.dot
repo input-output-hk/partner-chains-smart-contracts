@@ -1,0 +1,18 @@
+digraph {
+  node [shape=square style=rounded]
+  rankdir=BT
+
+  subgraph cluster_mainchain {
+    label="Mainchain"
+    style=rounded
+
+    data [label = "Original data", style = filled]
+  }
+
+  sidechain_a_bridge [label = "Bridge for\nSidechain A"]
+
+  sidechain_b_bridge [label = "Bridge for\nSidechain B"]
+
+  sidechain_a_bridge -> data [label = " Broadcasting"]
+  sidechain_b_bridge -> data [style=dotted, label= "Observing"]
+}
