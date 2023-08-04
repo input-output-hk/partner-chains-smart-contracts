@@ -92,15 +92,15 @@ main =
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_494
+            4_492
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_753
+            1_756
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_468
+            4_471
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
@@ -115,11 +115,11 @@ main =
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_650
+            1_667
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             (unversioned DS.serialisableInsertValidator)
-            4_058
+            4_049
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
@@ -131,11 +131,11 @@ main =
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode
-            1_228
+            1_231
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             (unversioned DS.serialisableDsKeyPolicy)
-            3_627
+            3_630
         ]
     , testGroup
         "Other"

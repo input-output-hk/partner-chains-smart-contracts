@@ -7,6 +7,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+* `HasField` type class for easier onchain record handling
+  ([561](https://github.com/input-output-hk/trustless-sidechain/issues/561),
+  [508](https://github.com/mlabs-haskell/trustless-sidechain/pull/508),
+  onchain)
 * Extra functions for efficient `Data` encoding and decoding for product types
   ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),

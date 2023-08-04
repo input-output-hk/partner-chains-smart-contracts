@@ -38,23 +38,26 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
-  MerkleRootInsertionMessage (MerkleRootInsertionMessage),
+  MerkleRootInsertionMessage (
+    MerkleRootInsertionMessage,
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
+  ),
   MerkleTreeEntry,
   SidechainParams (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SignedMerkleRoot (SignedMerkleRoot, committeePubKeys, previousMerkleRoot),
+  SignedMerkleRoot (
+    SignedMerkleRoot,
+    committeePubKeys,
+    merkleRoot,
+    previousMerkleRoot,
+    signatures
+  ),
   SignedMerkleRootMint,
   UpdateCommitteeHashDatum (committeeHash),
-  merkleRoot,
-  mrimMerkleRoot,
-  mrimPreviousMerkleRoot,
-  mrimSidechainParams,
-  signatures,
-  smrmSidechainParams,
-  smrmUpdateCommitteeHashCurrencySymbol,
-  smrmValidatorHash,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils qualified as Utils
@@ -115,7 +118,7 @@ mkMintingPolicy
       ownTokenName :: TokenName
       ownTokenName = Value.TokenName $ getLedgerBytes merkleRoot
       sc :: SidechainParams
-      sc = smrmSidechainParams smrm
+      sc = get @"sidechainParams" smrm
       committeeDatum :: UpdateCommitteeHashDatum
       committeeDatum =
         let go :: [TxInInfo] -> UpdateCommitteeHashDatum
@@ -124,7 +127,7 @@ mkMintingPolicy
                 , amt <-
                     Value.valueOf
                       (txOutValue o)
-                      (smrmUpdateCommitteeHashCurrencySymbol smrm)
+                      (get @"updateCommitteeHashCurrencySymbol" smrm)
                       UpdateCommitteeHash.initCommitteeHashMintTn
                 , UpdateCommitteeHash.initCommitteeHashMintAmount == amt
                 , -- See Note [Committee Hash Inline Datum] in
@@ -170,9 +173,9 @@ mkMintingPolicy
           threshold
           ( serialiseMrimHash
               MerkleRootInsertionMessage
-                { mrimSidechainParams = smrmSidechainParams smrm
-                , mrimMerkleRoot = merkleRoot
-                , mrimPreviousMerkleRoot = previousMerkleRoot
+                { sidechainParams = get @"sidechainParams" smrm
+                , merkleRoot = merkleRoot
+                , previousMerkleRoot = previousMerkleRoot
                 }
           )
           signatures
@@ -189,7 +192,7 @@ mkMintingPolicy
         let go [] = False
             go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
               ScriptCredential vh
-                | vh == smrmValidatorHash smrm
+                | vh == get @"validatorHash" smrm
                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol ownTokenName
                     > 0 ->
                   True

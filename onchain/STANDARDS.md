@@ -7,6 +7,13 @@ to evolve as our needs change.
 
 # Changelog
 
+## 18/07/23
+
+### Added
+
+* `DuplicateRecordFields` and `OverloadedLabels` are now mandatory extensions.
+* New section on records.
+
 ## 10/07/23
 
 ### Changed
@@ -524,6 +531,7 @@ The following pragmata MUST be enabled for all stanzas:
 * ``DataKinds``
 * ``DeriveTraversable``
 * ``DerivingVia``
+* ``DuplicateRecordFields``
 * ``EmptyCase``
 * ``FlexibleContexts``
 * ``FlexibleInstances``
@@ -536,6 +544,7 @@ The following pragmata MUST be enabled for all stanzas:
 * ``MultiParamTypeClasses``
 * ``NoStarIsType``
 * ``NumericUnderscores``
+* ``OverloadedLabels``
 * ``OverloadedStrings``
 * ``PackageImports``
 * ``RebindableSyntax``
@@ -648,6 +657,29 @@ lawfulness, is completely safe. While this merely provides _a_ derivation for a
 lawful ``Traversable``, rather than _the_ lawful ``Traversable``, this is
 still useful and requires no signposting.
 
+``DuplicateRecordFields`` is part of the constellation of extensions designed to
+address the deficiencies of Haskell2010 records. In particular, it allows
+defining two records in the same scope with identically-named fields:
+
+```haskell
+-- Won't work without DuplicateRecordFields
+data Foo = Foo {
+    bar :: Int,
+    baz :: Int
+    }
+
+data Bar = Bar {
+    bar :: Int,
+    baz :: Int
+    }
+```
+
+We use `DuplicateRecordFields`, together with `OverloadedLabels` and a custom
+type class, to address our needs for records: see the Records section for more
+information. Since this extension must be enabled both at use sites and at
+definition sites, we'd have to enable it almost everywhere: thus, making it
+global poses no real issues.
+
 ``EmptyCase`` resolves an inconsistency in Haskell2010, as the report allows
 us to _define_ an empty data type (that is, one with no constructors), but not
 pattern match on it. This should really be in the language, and enabling this
@@ -732,6 +764,12 @@ produce some very odd-looking error messages. ``NoStarIsType`` resolves this
 problem, particularly in error messages, by replacing ``*`` with ``Type``,
 which is more informative and more consistent. There’s no reason not to have
 this enabled by default.
+
+``OverloadedLabels``, together with ``DuplicateRecordFields`` and a custom type
+class, is our solution for the problems of Haskell2010 records; see the Records
+section for more information. As it must be on at every use site of our custom
+type class, we would have to enable it everywhere anyway: making it global saves
+us some effort.
 
 ``OverloadedStrings`` deals with the problem of ``String`` being a suboptimal
 choice of string representation for basically _any_ problem, but at the same
@@ -986,6 +1024,156 @@ We also have to 'shim' some Plutus prelude functionality to work correctly with
 some of our extensions (notably `RebindableSyntax`), thus our second wrapper
 prelude. We can also use this for stability, as Plutus is known to change
 rapidly without warning.
+
+## Records
+
+Records for onchain use SHOULD have `HasField` instances defined for each field.
+Record accesses and modifications onchain SHOULD NOT use built-in fields;
+instead, they SHOULD use `get`, `put` and `modify` using the appropriate
+`HasField` instances. The labels for `HasField` instances SHOULD match the field
+names.
+
+Records for onchain use MUST NOT have prefixed fields:
+
+```haskell
+-- This is wrong
+data Foo = Foo {
+    fooBar :: Integer,
+    fooBaz :: BuiltinByteString
+    }
+
+-- This is correct
+data Quux = Quux {
+    bar :: Integer,
+    baz :: BuiltinByteString
+    }
+```
+
+### Justification
+
+Records in Haskell, whether 98, 2010, or GHC, are an unmitigated disaster. Due
+to a range of factors both historical and priority-related, there is a soup of
+extensions designed to address various limitations in Haskell record syntax,
+rather than a general language-level fix. These issues include, but are not
+limited to:
+
+* Two records with the same field name can’t be used or defined at the same
+  time, even if they come from different modules and their use would not be
+  ambiguous. Confusingly, they can be in scope if not used or defined!
+* Field selectors for _reads_ behave like functions, but for _writes_ are
+  awkward, especially for nested use.
+* Field selector syntax is different to basically any other language.
+* Field selector use is technically optional: records are syntactic sugar over
+  ordinary ADTs, and can still be used as ordinary ADTs via pattern matching.
+* Field selectors 'clash' with local bindings of the same name. This is even
+  worse when you deal with module re-exports or qualified imports; this
+  problem can even arise within a module which imports no clashes, even if the
+  types would give an unambiguous solution.
+* Stability of interface with field selectors is basically impossible if you
+  want to change representations. Record patterns help, but their interactions
+  with many record-related extensions are brittle and confusing, if they work
+  at all.
+
+The extensions that exist to address different subsets of these issues are
+many, and their interactions are quite unpredictable and annoying. Some
+extensions are required at site-of-declaration, some are required at
+site-of-use, some are required at both; error messages for these tend to be
+extremely unhelpful, especially for `OverloadedRecordDot` due to the syntactic
+clash with function composition and whitespace sensitivity; anti-clashing
+extensions don’t resolve all clashes, as field selectors share the namespace
+with functions and identifiers some of the time even with these on; different
+combinations of extensions are required in different places depending on
+imports, local definitions, and possibly external dependencies, in
+hard-to-reason-about ways; and many more issues besides. This in itself is a
+rat’s nest of problems, which do nothing but eat up developer time and
+headspace, when all we want to do is use records in a way even the C
+programming language doesn’t create complications for.
+
+What’s worse than all the above is that, as a result of this diversity of
+'solutions', every project (and sometimes, every _module_ in a project) ends
+up requiring different combinations of extensions. This is confusing, hard to
+refactor or clean up, and makes the use of records far more annoying and
+tedious than it needs to be, as every developer now has to juggle fifteen
+special cases in their heads to understand what exactly they need to have
+enabled where. This leads to 'extension soup' as developers just 'blanket
+enable' everything in frustration, creating yet more interactions which may
+have issues far down the line due to the non-locality of the behaviour of many
+of these. This is a completely ridiculous and untenable situation.
+
+While some solutions exist which avoid most, if not all, of these problems,
+onchain code presents additional challenges. Firstly, not every valid construct
+in Haskell is also valid in Plutus; secondly, even if a construct is _valid_, it
+might not be _efficient_, especially from the point of view of size. Both of
+these considerations rule out most solutions that work for 'regular' Haskell
+(such as optics), requiring us to design something which gives us a similar
+degree of usability, without sacrificing onchain costs. ``HasField`` as defined
+by our custom Plutus prelude is that solution, as follows:
+
+```haskell
+class HasField (l :: Symbol) (r :: Type) (a :: Type) | l r -> a where
+  get :: r -> a
+  modify :: (a -> a) -> r -> r
+
+-- Allows us this definition
+put :: forall (l :: Symbol) (r :: Type) (a :: Type) .
+  HasField l r a ->
+  a -> r -> r
+put x = modify @l (const x)
+```
+
+An example of some instances for this type class follows.
+
+```haskell
+data Vector3D (a :: Type) = Vector3D {
+  x :: a,
+  y :: a,
+  z :: a
+  }
+
+-- | Direct field access
+instance HasField "x" (Vector3D a) a where
+  {-# INLINE get #-}
+  get (Vector3D x _ _) = x
+  {-# INLINE modify #-}
+  modify f (Vector3D x y z) = Vector3D (f x) y z
+
+-- | 'View'-style
+instance HasField "asTuple" (Vector3D a) (a, a, a) where
+  {-# INLINE get #-}
+  get (Vector3D x y z) = (x, y, z)
+  {-# INLINE modify #-}
+  modify f (Vector3D x y z) = let (x', y', z') = f (x, y z) in
+    Vector3D x' y' z'
+```
+
+While somewhat 'boilerplate-y' in the need to define instances for every record
+field, ``HasField`` has numerous advantages:
+
+* `get` and `modify` compose like any other function, including for nested
+  access and modification, as well as multiple modifications at once.
+* The use of labels to direct which field we are interested in removes any
+  ambiguity. Furthermore, this can be stable to refactors, such as field
+  renaming or representation changes.
+* Both access and modification are driven by the type class resolution
+  mechanism: as long as a given record is in scope, so is is the ability to
+  access and modify its fields. Furthermore, error messages are clear and
+  inference is good, due to careful use of functional dependencies.
+* Multiple different 'APIs' over the same record can exist simultaneously for
+  the same record, using different `HasField` instances. It is also possible to
+  'pre-compose' access and modification for frequently-used combinations for
+  convenience.
+* The 'sum types over records' problem can be ameliorated by careful definition
+  of instances which return `Maybe` for fields that might not be available in
+  each variant.
+* The cost of `HasField`-based `get`, `modify` and `put` doesn't exceed that of
+  pattern matching and manual reconstruction on-chain.
+
+The only outstanding issue is that of record pattern matching and construction,
+as well as duplicate field names for different records. `DuplicateRecordFields`
+addresses this problem well, provided we don't need to use field accessors. As
+that functionality [is due to be removed anyway][accessors], we can enable
+`DuplicateRecordFields` and use `HasField` for record access and modification
+instead.
 
 ## Versioning and changelogging
 
@@ -1550,3 +1738,4 @@ consistent with `toJSON`: it shouldn't matter whether we use the intermediate
 [parse-dont-validate]: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
 [hspec]: http://hackage.haskell.org/package/hspec
 [rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
+[accessors]: https://github.com/ghc-proposals/ghc-proposals/blob/master/proposals/0366-no-ambiguous-field-access.rst

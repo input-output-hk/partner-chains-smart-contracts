@@ -23,7 +23,6 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,
-  bprOwnPkh,
  )
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
@@ -39,7 +38,7 @@ mkCommitteeCandidateValidator _ datum _ ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
     pkh :: Ledger.PubKeyHash
-    pkh = bprOwnPkh datum
+    pkh = get @"ownPkh" datum
     isSigned :: Bool
     isSigned = txSignedBy info pkh
 

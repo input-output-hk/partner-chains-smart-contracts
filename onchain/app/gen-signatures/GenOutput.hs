@@ -66,28 +66,35 @@ import TrustlessSidechain.OffChain as OffChain
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
-    bprmEcdsaSecp256k1PubKey,
-    bprmInputUtxo,
-    bprmSidechainParams
+    ecdsaSecp256k1PubKey,
+    inputUtxo,
+    sidechainParams
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
-    cmpMerkleProof,
-    cmpTransaction
+    merkleProof,
+    transaction
   ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
-    mrimMerkleRoot,
-    mrimPreviousMerkleRoot,
-    mrimSidechainParams
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
   ),
-  SidechainParams (..),
+  SidechainParams (
+    SidechainParams,
+    chainId,
+    genesisHash,
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams
+    newCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams
   ),
  )
 
@@ -139,9 +146,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           RegistrationCommand {..} ->
             let msg =
                   BlockProducerRegistrationMsg
-                    { bprmSidechainParams = scParams
-                    , bprmEcdsaSecp256k1PubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
-                    , bprmInputUtxo = rcRegistrationUtxo
+                    { sidechainParams = scParams
+                    , ecdsaSecp256k1PubKey = OffChain.toSidechainPubKey rcSidechainPrivKey
+                    , inputUtxo = rcRegistrationUtxo
                     }
              in ["nix run .#sidechain-main-cli -- register"] :
                 sidechainParamFlags
@@ -159,10 +166,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           UpdateCommitteeHashCommand {..} ->
             let msg =
                   UpdateCommitteeHashMessage
-                    { uchmSidechainParams = scParams
-                    , uchmNewCommitteePubKeys = List.sort uchcNewCommitteePubKeys
-                    , uchmPreviousMerkleRoot = uchcPreviousMerkleRoot
-                    , uchmSidechainEpoch = uchcSidechainEpoch
+                    { sidechainParams = scParams
+                    , newCommitteePubKeys = List.sort uchcNewCommitteePubKeys
+                    , previousMerkleRoot = uchcPreviousMerkleRoot
+                    , sidechainEpoch = uchcSidechainEpoch
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -191,9 +198,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           SaveRootCommand {..} ->
             let msg =
                   MerkleRootInsertionMessage
-                    { mrimSidechainParams = scParams
-                    , mrimMerkleRoot = srcMerkleRoot
-                    , mrimPreviousMerkleRoot = srcPreviousMerkleRoot
+                    { sidechainParams = scParams
+                    , merkleRoot = srcMerkleRoot
+                    , previousMerkleRoot = srcPreviousMerkleRoot
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -236,8 +243,8 @@ merkleTreeCommand = \case
         pure $
           OffChain.showCombinedMerkleProof
             CombinedMerkleProof
-              { cmpTransaction = cmpMerkleTreeEntry
-              , cmpMerkleProof = mp
+              { transaction = cmpMerkleTreeEntry
+              , merkleProof = mp
               }
 
 {- | 'sidechainKeyCommand' creates the output for commands relating to the

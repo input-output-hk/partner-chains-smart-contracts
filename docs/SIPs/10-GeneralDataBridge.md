@@ -143,7 +143,7 @@ the `sender` of such message must always be `Nothing`.
 ### Upwards (Sidechain to Mainchain)
 
 Similarly to token transfer from sidechain to mainchain, data transfer will also
-require a sidechain certificate. So, we will create a new token, `SidechainMessageToken`,  
+require a sidechain certificate. So, we will create a new token, `SidechainMessageToken`,
 which may be claimed with arbitrary data in the leaf nodes (`MerkleTreeEntry`s) of a signed Merkle tree.
 With this change, the workflow will be identical to token transfers:
 
@@ -153,7 +153,7 @@ With this change, the workflow will be identical to token transfers:
 
 Recall in [SIP 9 - Generalizing Token Transfer][generalizedtransfer] we have introduced
 a method to make changes to Merkle tree entries so that it can be generalized to handle
-different kinds of transfers. 
+different kinds of transfers.
 With these ideas, we modify the `MerkleTreeEntry` data type to support signed data transfer
 as follows.
 

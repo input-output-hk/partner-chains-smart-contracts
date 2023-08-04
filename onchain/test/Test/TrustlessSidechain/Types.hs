@@ -21,31 +21,35 @@ import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
   BlockProducerRegistration (
     BlockProducerRegistration,
-    bprEcdsaSecp256k1PubKey,
-    bprInputUtxo,
-    bprOwnPkh,
-    bprSidechainSignature,
-    bprSpoPubKey,
-    bprSpoSignature
+    ecdsaSecp256k1PubKey,
+    inputUtxo,
+    ownPkh,
+    sidechainSignature,
+    spoPubKey,
+    spoSignature
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
-    bprmEcdsaSecp256k1PubKey,
-    bprmInputUtxo,
-    bprmSidechainParams
+    ecdsaSecp256k1PubKey,
+    inputUtxo,
+    sidechainParams
   ),
-  CandidatePermissionMint (CandidatePermissionMint, cpmSidechainParams, cpmUtxo),
+  CandidatePermissionMint (
+    CandidatePermissionMint,
+    sidechainParams,
+    utxo
+  ),
   CheckpointDatum (
     CheckpointDatum,
-    checkpointBlockHash,
-    checkpointBlockNumber
+    blockHash,
+    blockNumber
   ),
   CheckpointMessage (
     CheckpointMessage,
-    checkpointMsgBlockHash,
-    checkpointMsgBlockNumber,
-    checkpointMsgSidechainEpoch,
-    checkpointMsgSidechainParams
+    blockHash,
+    blockNumber,
+    sidechainEpoch,
+    sidechainParams
   ),
   CheckpointParameter (
     CheckpointParameter,
@@ -62,30 +66,30 @@ import TrustlessSidechain.Types (
   ),
   CombinedMerkleProof (
     CombinedMerkleProof,
-    cmpMerkleProof,
-    cmpTransaction
+    merkleProof,
+    transaction
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMint (
     FUELMint,
-    fmDsKeyCurrencySymbol,
-    fmMptRootTokenCurrencySymbol,
-    fmSidechainParams
+    dsKeyCurrencySymbol,
+    mptRootTokenCurrencySymbol,
+    sidechainParams
   ),
   FUELRedeemer (MainToSide, SideToMain),
   GenesisHash (GenesisHash),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
-    mrimMerkleRoot,
-    mrimPreviousMerkleRoot,
-    mrimSidechainParams
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
   ),
   MerkleTreeEntry (
     MerkleTreeEntry,
-    mteAmount,
-    mteIndex,
-    mtePreviousMerkleRoot,
-    mteRecipient
+    amount,
+    index,
+    previousMerkleRoot,
+    recipient
   ),
   SidechainParams (
     SidechainParams,
@@ -104,15 +108,15 @@ import TrustlessSidechain.Types (
   ),
   SignedMerkleRootMint (
     SignedMerkleRootMint,
-    smrmSidechainParams,
-    smrmUpdateCommitteeHashCurrencySymbol,
-    smrmValidatorHash
+    sidechainParams,
+    updateCommitteeHashCurrencySymbol,
+    validatorHash
   ),
   UpdateCommitteeHash (
     UpdateCommitteeHash,
-    cMptRootTokenCurrencySymbol,
-    cSidechainParams,
-    cToken
+    mptRootTokenCurrencySymbol,
+    sidechainParams,
+    token
   ),
   UpdateCommitteeHashDatum (
     UpdateCommitteeHashDatum,
@@ -121,10 +125,10 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    uchmNewCommitteePubKeys,
-    uchmPreviousMerkleRoot,
-    uchmSidechainEpoch,
-    uchmSidechainParams
+    newCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams
   ),
   UpdateCommitteeHashRedeemer (
     UpdateCommitteeHashRedeemer,
@@ -242,44 +246,44 @@ sampleSidechainParams =
 sampleCandidatePermissionMint :: CandidatePermissionMint
 sampleCandidatePermissionMint =
   CandidatePermissionMint
-    { cpmSidechainParams = sampleSidechainParams
-    , cpmUtxo = sampleTxOutRef
+    { sidechainParams = sampleSidechainParams
+    , utxo = sampleTxOutRef
     }
 
 sampleBlockProducerRegistration :: BlockProducerRegistration
 sampleBlockProducerRegistration =
   BlockProducerRegistration
-    { bprSpoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
-    , bprEcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , bprSpoSignature = Signature "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
-    , bprSidechainSignature = Signature "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
-    , bprInputUtxo = sampleTxOutRef
-    , bprOwnPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    { spoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
+    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    , spoSignature = Signature "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
+    , sidechainSignature = Signature "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
+    , inputUtxo = sampleTxOutRef
+    , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
     }
 
 sampleBlockProducerRegistrationMsg :: BlockProducerRegistrationMsg
 sampleBlockProducerRegistrationMsg =
   BlockProducerRegistrationMsg
-    { bprmSidechainParams = sampleSidechainParams
-    , bprmEcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
-    , bprmInputUtxo = sampleTxOutRef
+    { sidechainParams = sampleSidechainParams
+    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
+    , inputUtxo = sampleTxOutRef
     }
 
 sampleMerkleTreeEntry :: MerkleTreeEntry
 sampleMerkleTreeEntry =
   MerkleTreeEntry
-    { mteIndex = -8858258933817599851
-    , mteAmount = 8887194232705394223
-    , mteRecipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
-    , mtePreviousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    { index = -8858258933817599851
+    , amount = 8887194232705394223
+    , recipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+    , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     }
 
 sampleMerkleRootInsertionMessage :: MerkleRootInsertionMessage
 sampleMerkleRootInsertionMessage =
   MerkleRootInsertionMessage
-    { mrimSidechainParams = sampleSidechainParams
-    , mrimMerkleRoot = "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
-    , mrimPreviousMerkleRoot = Nothing
+    { sidechainParams = sampleSidechainParams
+    , merkleRoot = "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    , previousMerkleRoot = Nothing
     }
 
 sampleSignedMerkleRoot :: SignedMerkleRoot
@@ -294,16 +298,16 @@ sampleSignedMerkleRoot =
 sampleSignedMerkleRootMint :: SignedMerkleRootMint
 sampleSignedMerkleRootMint =
   SignedMerkleRootMint
-    { smrmSidechainParams = sampleSidechainParams
-    , smrmUpdateCommitteeHashCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-    , smrmValidatorHash = "3689d804b3e43789fb0442314ba46aa1ccb9b3aa03fc5073ffa6486d"
+    { sidechainParams = sampleSidechainParams
+    , updateCommitteeHashCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , validatorHash = "3689d804b3e43789fb0442314ba46aa1ccb9b3aa03fc5073ffa6486d"
     }
 
 sampleCombinedMerkleProof :: CombinedMerkleProof
 sampleCombinedMerkleProof =
   CombinedMerkleProof
-    { cmpTransaction = sampleMerkleTreeEntry
-    , cmpMerkleProof = sampleMerkleProof
+    { transaction = sampleMerkleTreeEntry
+    , merkleProof = sampleMerkleProof
     }
 
 sampleFUELReedemer1 :: FUELRedeemer
@@ -317,9 +321,9 @@ sampleFUELReedemer2 =
 sampleFUELMint :: FUELMint
 sampleFUELMint =
   FUELMint
-    { fmMptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
-    , fmSidechainParams = sampleSidechainParams
-    , fmDsKeyCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
+    { mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    , sidechainParams = sampleSidechainParams
+    , dsKeyCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
     }
 
 sampleUpdateCommitteeHashDatum :: UpdateCommitteeHashDatum
@@ -341,25 +345,25 @@ sampleUpdateCommitteeHashRedeemer =
 sampleUpdateCommitteeHash :: UpdateCommitteeHash
 sampleUpdateCommitteeHash =
   UpdateCommitteeHash
-    { cSidechainParams = sampleSidechainParams
-    , cToken = Value.assetClass "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" ""
-    , cMptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    { sidechainParams = sampleSidechainParams
+    , token = Value.assetClass "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" ""
+    , mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
 sampleUpdateCommitteeHashMessage :: UpdateCommitteeHashMessage
 sampleUpdateCommitteeHashMessage =
   UpdateCommitteeHashMessage
-    { uchmSidechainParams = sampleSidechainParams
-    , uchmNewCommitteePubKeys = sampleCommitteePubKeys'
-    , uchmPreviousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
-    , uchmSidechainEpoch = 12
+    { sidechainParams = sampleSidechainParams
+    , newCommitteePubKeys = sampleCommitteePubKeys'
+    , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    , sidechainEpoch = 12
     }
 
 sampleCheckpointDatum :: CheckpointDatum
 sampleCheckpointDatum =
   CheckpointDatum
-    { checkpointBlockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
-    , checkpointBlockNumber = 15791
+    { blockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
+    , blockNumber = 15791
     }
 
 sampleCheckpointRedeemer :: CheckpointRedeemer
@@ -382,10 +386,10 @@ sampleCheckpointParameter =
 sampleCheckpointMessage :: CheckpointMessage
 sampleCheckpointMessage =
   CheckpointMessage
-    { checkpointMsgSidechainParams = sampleSidechainParams
-    , checkpointMsgBlockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
-    , checkpointMsgBlockNumber = 863548
-    , checkpointMsgSidechainEpoch = 15791
+    { sidechainParams = sampleSidechainParams
+    , blockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
+    , blockNumber = 863548
+    , sidechainEpoch = 15791
     }
 
 {- | Creating a test group with two golden tests:

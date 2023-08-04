@@ -9,20 +9,13 @@
 -}
 module TrustlessSidechain.DistributedSet (
   -- * Data types
-  Ds (Ds, dsConf),
-  DsDatum (DsDatum, dsNext),
-  Node (Node, nKey, nNext),
-  DsConfDatum (DsConfDatum, dscKeyPolicy, dscFUELPolicy),
-  DsConfMint (
-    DsConfMint,
-    dscmTxOutRef
-  ),
-  DsKeyMint (
-    DsKeyMint,
-    dskmValidatorHash,
-    dskmConfCurrencySymbol
-  ),
-  Ib (Ib, unIb),
+  Ds (..),
+  DsDatum (..),
+  Node (..),
+  DsConfDatum (..),
+  DsConfMint (..),
+  DsKeyMint (..),
+  Ib (..),
 
   -- * Helper functions for the data types
   mkNode,
@@ -85,37 +78,71 @@ import TrustlessSidechain.PlutusPrelude
  the appropriate datum and redeemer type
 -}
 newtype Ds = Ds
-  { -- | 'dsConf' is the 'CurrencySymbol' which identifies the utxo
-    -- with 'DsConfDatum'.
-    dsConf :: CurrencySymbol
+  { -- | The 'CurrencySymbol' which identifies the utxo with 'DsConfDatum'.
+    -- |
+    -- | @since Unreleased
+    identitySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (FromData, ToData, UnsafeFromData)
 
+-- | @since Unreleased
+instance HasField "identitySymbol" Ds CurrencySymbol where
+  {-# INLINE get #-}
+  get (Ds x) = x
+  {-# INLINE modify #-}
+  modify f (Ds x) = Ds (f x)
+
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
-  { dsNext :: BuiltinByteString
+  { -- | @since Unreleased
+    next :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq, FromData, ToData, UnsafeFromData)
+
+-- | @since Unreleased
+instance HasField "next" DsDatum BuiltinByteString where
+  {-# INLINE get #-}
+  get (DsDatum x) = x
+  {-# INLINE modify #-}
+  modify f (DsDatum x) = DsDatum (f x)
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
 -}
 data Node = Node
-  { nKey :: BuiltinByteString
-  , nNext :: BuiltinByteString
+  { -- | @since Unreleased
+    key :: BuiltinByteString
+  , -- | @since Unreleased
+    next :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 instance Eq Node where
   {-# INLINEABLE (==) #-}
-  a == b = nKey a == nKey b && nNext a == nNext b
+  a == b =
+    get @"key" a == get @"key" b
+      && get @"next" a == get @"next" b
+
+-- | @since Unreleased
+instance HasField "key" Node BuiltinByteString where
+  {-# INLINE get #-}
+  get (Node x _) = x
+  {-# INLINE modify #-}
+  modify f (Node k n) = Node (f k) n
+
+-- | @since Unreleased
+instance HasField "next" Node BuiltinByteString where
+  {-# INLINE get #-}
+  get (Node _ x) = x
+  {-# INLINE modify #-}
+  modify f (Node k n) = Node k (f n)
 
 -- | @since Unreleased
 instance ToData Node where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (Node {..}) = productToData2 nKey nNext
+  toBuiltinData (Node {..}) = productToData2 key next
 
 -- | @since Unreleased
 instance FromData Node where
@@ -131,18 +158,36 @@ instance UnsafeFromData Node where
  minting policies needed by the distributed set.
 -}
 data DsConfDatum = DsConfDatum
-  { dscKeyPolicy :: CurrencySymbol
-  , dscFUELPolicy :: CurrencySymbol
+  { -- | @since Unreleased
+    keyPolicy :: CurrencySymbol
+  , -- | @since Unreleased
+    fuelPolicy :: CurrencySymbol
   }
 
 instance Eq DsConfDatum where
   {-# INLINEABLE (==) #-}
-  a == b = dscKeyPolicy a == dscKeyPolicy b && dscFUELPolicy a == dscFUELPolicy b
+  a == b =
+    get @"keyPolicy" a == get @"keyPolicy" b
+      && get @"fuelPolicy" a == get @"fuelPolicy" b
+
+-- | @since Unreleased
+instance HasField "keyPolicy" DsConfDatum CurrencySymbol where
+  {-# INLINE get #-}
+  get (DsConfDatum x _) = x
+  {-# INLINE modify #-}
+  modify f (DsConfDatum kp fp) = DsConfDatum (f kp) fp
+
+-- | @since Unreleased
+instance HasField "fuelPolicy" DsConfDatum CurrencySymbol where
+  {-# INLINE get #-}
+  get (DsConfDatum _ x) = x
+  {-# INLINE modify #-}
+  modify f (DsConfDatum kp fp) = DsConfDatum kp (f fp)
 
 -- | @since Unreleased
 instance ToData DsConfDatum where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (DsConfDatum {..}) = productToData2 dscKeyPolicy dscFUELPolicy
+  toBuiltinData (DsConfDatum {..}) = productToData2 keyPolicy fuelPolicy
 
 -- | @since Unreleased
 instance FromData DsConfDatum where
@@ -183,32 +228,59 @@ instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
 {- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
  set. See 'mkDsConfPolicy' for more details.
 -}
-newtype DsConfMint = DsConfMint {dscmTxOutRef :: TxOutRef}
-  deriving newtype (FromData, ToData, UnsafeFromData)
+newtype DsConfMint = DsConfMint
+  { -- | @since Unreleased
+    txOutRef :: TxOutRef
+  }
+  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+
+-- | @since Unreleased
+instance HasField "txOutRef" DsConfMint TxOutRef where
+  {-# INLINE get #-}
+  get (DsConfMint x) = x
+  {-# INLINE modify #-}
+  modify f (DsConfMint x) = DsConfMint (f x)
 
 {- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
  'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
  the token. See Note [How This All Works] for more details.
 -}
 data DsKeyMint = DsKeyMint
-  { -- | 'dskmValidatorHash' is the validator hash that the minting policy
-    -- essentially "forwards" its checks to the validator.
-    --
-    --
-    -- TODO: as an optimization, we can take the 'Address' as a parameter
-    -- instead (since the offchain code will always immediately convert this
-    -- into an 'Address').
-    dskmValidatorHash :: ValidatorHash
-  , -- | 'dskmConfCurrencySymbol' is the currency symbol to identify a utxo with 'DsConfDatum'
-    dskmConfCurrencySymbol :: CurrencySymbol
+  { -- | The validator hash that the minting policy
+    -- | essentially "forwards" its checks to the validator.
+    -- |
+    -- | TODO: as an optimization, we can take the 'Address' as a parameter
+    -- | instead (since the offchain code will always immediately convert this
+    -- | into an 'Address').
+    -- |
+    -- | @since Unreleased
+    validatorHash :: ValidatorHash
+  , -- | The currency symbol to identify a utxo with 'DsConfDatum'
+    -- |
+    -- | @since Unreleased
+    confCurrencySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
+
+-- | @since Unreleased
+instance HasField "validatorHash" DsKeyMint ValidatorHash where
+  {-# INLINE get #-}
+  get (DsKeyMint x _) = x
+  {-# INLINE modify #-}
+  modify f (DsKeyMint vh ccs) = DsKeyMint (f vh) ccs
+
+-- | @since Unreleased
+instance HasField "confCurrencySymbol" DsKeyMint CurrencySymbol where
+  {-# INLINE get #-}
+  get (DsKeyMint _ x) = x
+  {-# INLINE modify #-}
+  modify f (DsKeyMint vh ccs) = DsKeyMint vh (f ccs)
 
 -- | @since Unreleased
 instance ToData DsKeyMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (DsKeyMint {..}) =
-    productToData2 dskmValidatorHash dskmConfCurrencySymbol
+    productToData2 validatorHash confCurrencySymbol
 
 -- | @since Unreleased
 instance FromData DsKeyMint where
@@ -262,8 +334,8 @@ PlutusTx.makeLift ''DsConfDatum
 mkNode :: BuiltinByteString -> DsDatum -> Node
 mkNode str d =
   Node
-    { nKey = str
-    , nNext = dsNext d
+    { key = str
+    , next = get @"next" d
     }
 
 -- | 'rootNode' is the root node of every distributed set.
@@ -271,10 +343,10 @@ mkNode str d =
 rootNode :: Node
 rootNode =
   Node
-    { nKey = emptyByteString
+    { key = emptyByteString
     , -- this is the lower bound of all values in the set.
 
-      nNext =
+      next =
         let dbl str = str `appendByteString` str
          in consByteString 255 (dbl (dbl (dbl (dbl (dbl (consByteString 255 emptyByteString))))))
         -- TODO:
@@ -311,9 +383,9 @@ lengthIb _ = 2
 {-# INLINEABLE insertNode #-}
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
 insertNode str node
-  | nKey node < str && str < nNext node =
+  | get @"key" node < str && str < get @"next" node =
     Just $
-      Ib {unIb = (node {nNext = str}, Node {nKey = str, nNext = nNext node})}
+      Ib {unIb = (put @"next" str node, Node {key = str, next = get @"next" node})}
   | otherwise = Nothing
 
 {- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
@@ -328,7 +400,7 @@ mkInsertValidator ds _dat _red ctx =
               contNodes :: Ib Node
               contNodes =
                 let normalizeIbNodes Ib {unIb = (a, b)}
-                      | nKey a < nKey b = Ib {unIb = (a, b)}
+                      | get @"key" a < get @"key" b = Ib {unIb = (a, b)}
                       | otherwise = Ib {unIb = (b, a)}
                  in normalizeIbNodes $
                       fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
@@ -354,7 +426,7 @@ mkInsertValidator ds _dat _red ctx =
                     2
                 _ -> -1
            in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
-                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (dscFUELPolicy conf) minted)
+                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (get @"fuelPolicy" conf) minted)
       )
         ( fromMaybe
             (traceError "error 'mkInsertValidator' bad insertion")
@@ -386,10 +458,10 @@ mkInsertValidator ds _dat _red ctx =
     !minted = getValue (txInfoMint info)
 
     conf :: DsConfDatum
-    !conf = getConf (dsConf ds) info
+    !conf = getConf (get @"identitySymbol" ds) info
 
     keyCurrencySymbol :: CurrencySymbol
-    keyCurrencySymbol = dscKeyPolicy conf
+    keyCurrencySymbol = get @"keyPolicy" conf
 
     -- Given a value, gets the token name (of the "continuing" token name)
     getKeyTn :: Value -> BuiltinByteString
@@ -432,7 +504,7 @@ mkDsConfPolicy dsc _red ctx =
 
     -- Checks
     spendsTxOutRef :: Bool
-    spendsTxOutRef = isJust $ Contexts.findTxInByTxOutRef (dscmTxOutRef dsc) info
+    spendsTxOutRef = isJust $ Contexts.findTxInByTxOutRef (get @"txOutRef" dsc) info
 
     mintingChecks :: Bool
     mintingChecks
@@ -463,11 +535,11 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      AssocMap.member (dskmConfCurrencySymbol dskm) $ getValue $ txInfoMint info ->
+      AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ txInfoMint info ->
       case mintedTns of
-        [tn] | unTokenName tn == nKey rootNode ->
+        [tn] | unTokenName tn == get @"key" rootNode ->
           traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
-            case find (\txout -> txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)) (txInfoOutputs info) of
+            case find (\txout -> txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)) (txInfoOutputs info) of
               Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
               Nothing -> False
         -- Note: Why don't we have to verify that the 'DsConf' validator has
@@ -492,7 +564,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
       let go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
-              , txOutAddress txout == scriptHashAddress (dskmValidatorHash dskm)
+              , txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)
               , Just tns <- AssocMap.lookup ownCS $ getValue (txOutValue txout)
               , -- If it's more clear, we're checking the following condition:
                 -- > [(tn,1)] <- AssocMap.toList tns
