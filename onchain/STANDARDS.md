@@ -7,6 +7,12 @@ to evolve as our needs change.
 
 # Changelog
 
+## 8/08/23
+
+### Changed
+
+* Naming for C FFI functions into Haskell now requires a `c_` prefix.
+
 ## 18/07/23
 
 ### Added
@@ -303,11 +309,13 @@ regressions, and also reduces reviewer cognitive load.
 
 ## Naming
 
-camelCase MUST be used for all non-type, non-data-constructor names; otherwise,
-TitleCase MUST be used. Acronyms used as part of a naming identifier (such as
-'JSON', 'API', etc) SHOULD be downcased; thus ``repairJson`` and
-``fromHttpService`` are correct. Exceptions are allowed for external libraries
-(Aeson's ``parseJSON`` for example).
+camelCase SHOULD be used for all non-type, non-data-constructor names. The only
+exception is C FFI definitions, which MUST instead have the same name as the
+function they are importing, with a `c_` prefix. Otherwise, TitleCase MUST be
+used. Acronyms as part of a naming identifier (such as 'JSON', 'API' etc) SHOULD
+be downcased; thus, ``repairJson`` and ``fromHttpService`` are correct.
+Exceptions are allowed for external library definitions (such as Aeson's
+``parseJSON``).
 
 If a name would contain the word 'Transaction' or 'transaction', it SHOULD be
 shortened to 'Tx' and 'tx' respectively.
@@ -321,6 +329,13 @@ it is common practice among the entire Haskell ecosystem. There is no particular
 standard regarding acronym casing: examples of always upcasing exist (Aeson) as
 well as examples of downcasing (``http-api-data``). One choice for consistency
 (or as much as is possible) should be made however.
+
+The use of a dedicated prefix for FFI bindings is common across languages, as it
+helps distinguish them from natively-defined identifiers. This can be important,
+as directly calling bindings might be much less safe, or come with more caveats
+around use. The exact choice of prefix varies: for consistency with our
+Purescript standards, we use `c_`. Furthermore, mandating a name match (apart
+from the prefix) makes it easy to see what identifier we're binding.
 
 The word ‘transaction’ (in both capitalized and non-capitalized form) comes up
 often in the context of Plutus-adjacent code; ‘tx’ is not ambiguous, and is
