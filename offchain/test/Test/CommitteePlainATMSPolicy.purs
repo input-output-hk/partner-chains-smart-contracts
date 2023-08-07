@@ -27,10 +27,10 @@ import TrustlessSidechain.InitSidechain
   , initSidechain
   )
 import TrustlessSidechain.Utils.Crypto
-  ( SidechainMessage
-  , SidechainPrivateKey
-  , SidechainPublicKey
-  , SidechainSignature
+  ( EcdsaSecp256k1Message
+  , EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -38,10 +38,10 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 -- | the given `sidechainMessage`
 generateSignatures ∷
   { -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
-  , sidechainMessage ∷ SidechainMessage
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
+  , sidechainMessage ∷ EcdsaSecp256k1Message
   } →
-  Array (Tuple SidechainPublicKey SidechainSignature)
+  Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature)
 generateSignatures
   { currentCommitteePrvKeys
   , sidechainMessage
@@ -119,7 +119,7 @@ testScenario1 =
               -- byte array of 32 bytes which are all 0s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 0
 
-            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
@@ -165,7 +165,7 @@ testScenario1 =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
 
-            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
@@ -213,7 +213,7 @@ testScenario1 =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
 
-            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
@@ -256,7 +256,7 @@ testScenario1 =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
 
-            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
@@ -297,7 +297,7 @@ testScenario1 =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 4
 
-            sidechainMessage = Utils.Crypto.byteArrayToSidechainMessageUnsafe
+            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust

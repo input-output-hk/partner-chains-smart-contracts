@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.TrustlessSidechain.MerkleProofSerialisation qualified as MerkleProofSerialisation
 import Test.TrustlessSidechain.MerkleTree qualified as MerkleTree
 import Test.TrustlessSidechain.MultiSig qualified as MultiSig
+import Test.TrustlessSidechain.Types qualified as Types
 import Test.TrustlessSidechain.UpdateCommitteeHashMessage qualified as UpdateCommitteeHashMessage
 import TrustlessSidechain.HaskellPrelude
 
@@ -21,6 +22,7 @@ tests =
     "TrustlessSidechain"
     [ MerkleTree.test
     , MultiSig.test
+    , Types.tests
     , MerkleProofSerialisation.testSide
     , MerkleProofSerialisation.testRootHash
     , MerkleProofSerialisation.testUp

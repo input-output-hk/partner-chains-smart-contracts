@@ -63,7 +63,10 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -73,9 +76,9 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
   , spoPubKey ∷ PubKey
-  , sidechainPubKey ∷ SidechainPublicKey
+  , sidechainPubKey ∷ EcdsaSecp256k1PubKey
   , spoSig ∷ Signature
-  , sidechainSig ∷ SidechainSignature
+  , sidechainSig ∷ EcdsaSecp256k1Signature
   , inputUtxo ∷ TransactionInput
   , permissionToken ∷ Maybe CandidatePermissionTokenInfo
   }
@@ -97,9 +100,9 @@ getCommitteeCandidateValidator sp = do
 
 newtype BlockProducerRegistration = BlockProducerRegistration
   { bprSpoPubKey ∷ PubKey -- own cold verification key hash
-  , bprSidechainPubKey ∷ SidechainPublicKey -- public key in the sidechain's desired format
+  , bprSidechainPubKey ∷ EcdsaSecp256k1PubKey -- public key in the sidechain's desired format
   , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ SidechainSignature -- Signature of the sidechain candidate
+  , bprSidechainSignature ∷ EcdsaSecp256k1Signature -- Signature of the sidechain candidate
   , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }
@@ -118,31 +121,41 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData bprSpoPubKey
-    , toData bprSidechainPubKey
-    , toData bprSpoSignature
-    , toData bprSidechainSignature
-    , toData bprInputUtxo
-    , toData bprOwnPkh
-    ]
+    ) =
+    Constr (BigNum.fromInt 0)
+      [ toData bprSpoPubKey
+      , toData bprSidechainPubKey
+      , toData bprSpoSignature
+      , toData bprSidechainSignature
+      , toData bprInputUtxo
+      , toData bprOwnPkh
+      ]
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ]) | n == (BigNum.fromInt 0) =
-    { bprSpoPubKey: _
-    , bprSidechainPubKey: _
-    , bprSpoSignature: _
-    , bprSidechainSignature: _
-    , bprInputUtxo: _
-    , bprOwnPkh: _
-    } <$> fromData a <*> fromData b <*> fromData c <*> fromData d <*> fromData e
-      <*> fromData f
-      <#> BlockProducerRegistration
-  fromData _ = Nothing
+  fromData plutusData = case plutusData of
+    Constr n [ x1, x2, x3, x4, x5, x6 ] → do
+      guard (n == BigNum.fromInt 0)
+      x1' ← fromData x1
+      x2' ← fromData x2
+      x3' ← fromData x3
+      x4' ← fromData x4
+      x5' ← fromData x5
+      x6' ← fromData x6
+      pure
+        ( BlockProducerRegistration
+            { bprSpoPubKey: x1'
+            , bprSidechainPubKey: x2'
+            , bprSpoSignature: x3'
+            , bprSidechainSignature: x4'
+            , bprInputUtxo: x5'
+            , bprOwnPkh: x6'
+            }
+        )
+    _ → Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams
-  , bprmSidechainPubKey ∷ SidechainPublicKey
+  , bprmSidechainPubKey ∷ EcdsaSecp256k1PubKey
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 

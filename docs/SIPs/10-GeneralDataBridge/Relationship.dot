@@ -1,0 +1,14 @@
+digraph {
+  node [shape=square style=rounded]
+  splines=false
+
+  mainchain [label = "Mainchain"]
+  sidechain_a [label = "Sidechain A"]
+  sidechain_b [label = "Sidechain B"]
+
+  mainchain -> sidechain_a [label = " Downwards"]
+
+  sidechain_b -> mainchain [label = " Upwards"]
+
+  {rank=same; sidechain_a -> sidechain_b [label = " Sideways", dir = "both"] }
+}

@@ -29,7 +29,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.InitSidechain as InitSidechain
-import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey, SidechainPublicKey)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
+  )
 import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- | `tests` aggregates all the tests together in one convenient funciton
@@ -49,7 +52,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
 -- This may be helpful when attempting to use the CLI interface to generate
 -- test cases manually.
 generateInitCommittee ∷
-  Int → Effect (Array (SidechainPublicKey /\ SidechainPrivateKey))
+  Int → Effect (Array (EcdsaSecp256k1PubKey /\ EcdsaSecp256k1PrivateKey))
 generateInitCommittee committeeSize = do
   committeePrvKeys ← sequence $ Array.replicate committeeSize
     Crypto.generateRandomPrivateKey

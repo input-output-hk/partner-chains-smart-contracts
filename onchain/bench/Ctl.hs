@@ -151,9 +151,9 @@ ctlCommonFlags CtlCommon {..} =
    in fmap
         List.unwords
         [ ["--payment-signing-key-file", ccSigningKeyFile]
-        , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
+        , ["--genesis-committee-hash-utxo", show genesisUtxo]
         , ["--sidechain-id", show chainId]
-        , ["--sidechain-genesis-hash", OffChain.showGenesisHash genesisHash]
+        , ["--sidechain-genesis-hash", show genesisHash]
         , ["--threshold", OffChain.showThreshold thresholdNumerator thresholdDenominator]
         ]
 
@@ -169,7 +169,7 @@ ctlInitSidechainFlags CtlInitSidechain {..} =
       ]
       $ flip fmap cisInitCommitteePubKeys $
         \pubKey ->
-          ["--committee-pub-key", OffChain.showScPubKey pubKey]
+          ["--committee-pub-key", show pubKey]
 
 {- | 'ctlRegistrationFlags' generates the CLI flags that corresponds to register
  command
@@ -185,10 +185,10 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
    in fmap
         List.unwords
         [ ["register"]
-        , ["--sidechain-public-key", OffChain.showScPubKey $ OffChain.toSidechainPubKey crSidechainPrvKey]
+        , ["--sidechain-public-key", show $ OffChain.toSidechainPubKey crSidechainPrvKey]
         , ["--spo-signature", OffChain.showSig $ OffChain.signWithSPOKey crSpoPrivKey msg]
         , ["--sidechain-signature", OffChain.showSig $ OffChain.signWithSidechainKey crSidechainPrvKey msg]
-        , ["--registration-utxo", OffChain.showTxOutRef crRegistrationUtxo]
+        , ["--registration-utxo", show crRegistrationUtxo]
         ]
 
 {- | 'ctlDeregistrationFlags' generates the CLI flags that corresponds to deregister
@@ -199,7 +199,7 @@ ctlDeregistrationFlags CtlDeregistration {..} =
   fmap
     List.unwords
     [ ["deregister"]
-    , ["--spo-public-key", OffChain.showPubKey $ OffChain.vKeyToSpoPubKey cdrSpoPubKey]
+    , ["--spo-public-key", show $ OffChain.vKeyToSpoPubKey cdrSpoPubKey]
     ]
 
 {- | 'ctlUpdateCommitteeHash' generates the CLI flags that corresponds to the
@@ -236,7 +236,7 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
         fmap
           ( \pubKey ->
               [ "--new-committee-pub-key"
-              , OffChain.showScPubKey pubKey
+              , show pubKey
               ]
           )
           cuchNewCommitteePubKeys
@@ -247,7 +247,7 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
           <> [["--sidechain-epoch", show cuchSidechainEpoch]]
           <> maybe
             []
-            (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS $ unRootHash bs]])
+            (\bs -> [["--previous-merkle-root", show $ unRootHash bs]])
             cuchPreviousMerkleRoot
 
 {- | 'ctlSaveRootFlags' generates the CLI flags that corresponds to the
@@ -274,8 +274,8 @@ ctlSaveRootFlags scParams CtlSaveRoot {..} =
    in fmap List.unwords $
         [["save-root"]]
           <> currentCommitteePubKeysAndSigsFlags
-          <> [["--merkle-root", OffChain.showBuiltinBS $ unRootHash csrMerkleRoot]]
-          <> maybe [] (\bs -> [["--previous-merkle-root", OffChain.showBuiltinBS $ unRootHash bs]]) csrPreviousMerkleRoot
+          <> [["--merkle-root", show csrMerkleRoot]]
+          <> maybe [] (\bs -> [["--previous-merkle-root", show $ unRootHash bs]]) csrPreviousMerkleRoot
 
 {- | 'ctlClaimFlags' generates the CLI flags that corresponds to the
  claim command (minting FUEL)

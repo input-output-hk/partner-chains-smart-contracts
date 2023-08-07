@@ -14,7 +14,6 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
-  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -24,6 +23,11 @@ import Data.BigInt (BigInt)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  , productToData4
+  )
 
 newtype CheckpointDatum = CheckpointDatum
   { blockHash ∷ ByteArray
@@ -35,19 +39,14 @@ derive instance Generic CheckpointDatum _
 derive instance Newtype CheckpointDatum _
 
 instance ToData CheckpointDatum where
-  toData (CheckpointDatum { blockHash, blockNumber }) = Constr
-    (BigNum.fromInt 0)
-    [ toData blockHash, toData blockNumber ]
+  toData (CheckpointDatum { blockHash, blockNumber }) =
+    productToData2 blockHash blockNumber
 
 instance FromData CheckpointDatum where
-  fromData (Constr n [ a, b ])
-    | n == (BigNum.fromInt 0) =
-        CheckpointDatum <$>
-          ( { blockHash: _, blockNumber: _ }
-              <$> fromData a
-              <*> fromData b
-          )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y →
+        CheckpointDatum { blockHash: x, blockNumber: y }
+    )
 
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
@@ -68,12 +67,12 @@ instance ToData CheckpointParameter where
         , committeeOracleCurrencySymbol
         , committeeCertificateVerificationCurrencySymbol
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData checkpointAssetClass
-    , toData committeeOracleCurrencySymbol
-    , toData committeeCertificateVerificationCurrencySymbol
-    ]
+    ) = productToData4 sidechainParams
+    checkpointAssetClass
+    committeeOracleCurrencySymbol
+    committeeCertificateVerificationCurrencySymbol
+
+derive newtype instance Show CheckpointParameter
 
 newtype InitCheckpointMint = InitCheckpointMint
   { icTxOutRef ∷ TransactionInput }
@@ -86,14 +85,12 @@ instance ToData InitCheckpointMint where
   toData (InitCheckpointMint { icTxOutRef }) =
     toData icTxOutRef
 
-newtype CheckpointRedeemer = CheckpointRedeemer
+data CheckpointRedeemer = CheckpointRedeemer
   { newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   }
 
 derive instance Generic CheckpointRedeemer _
-
-derive instance Newtype CheckpointRedeemer _
 
 instance ToData CheckpointRedeemer where
   toData
@@ -101,10 +98,9 @@ instance ToData CheckpointRedeemer where
         { newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData newCheckpointBlockHash
-    , toData newCheckpointBlockNumber
-    ]
+    ) = productToData2
+    newCheckpointBlockHash
+    newCheckpointBlockNumber
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
