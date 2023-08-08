@@ -24,9 +24,13 @@ import Test.Utils
   , plutipGroup
   , toTxIn
   )
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy
-  ( FuelParams(Mint, Burn)
+  ( FuelMintOrFuelBurnParams(Mint, Burn)
+  , FuelParams(FuelParams)
   , MerkleTreeEntry(MerkleTreeEntry)
   , combinedMerkleProofToFuelParams
   , runFuelMP
@@ -79,6 +83,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -109,15 +114,19 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
         , previousMerkleRoot: Nothing
         }
 
-      void $ runFuelMP sidechainParams
-        ( Mint
-            { amount
-            , recipient
-            , sidechainParams
-            , merkleProof
-            , index
-            , previousMerkleRoot
-            , dsUtxo: Nothing
+      void $ runFuelMP
+        ( FuelParams
+            { sidechainParams
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            , fuelMintOrFuelBurnParams:
+                Mint
+                  { amount
+                  , recipient
+                  , merkleProof
+                  , index
+                  , previousMerkleRoot
+                  , dsUtxo: Nothing
+                  }
             }
         )
 
@@ -156,6 +165,7 @@ testScenarioSuccess2 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
         -- end of mostly duplicated code from `testScenarioSuccess`
 
@@ -195,30 +205,48 @@ testScenarioSuccess2 =
                 _ → Nothing
 
         fp0 ← liftContractM "Could not build FuelParams" $
-          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+          combinedMerkleProofToFuelParams
+            { sidechainParams
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            , combinedMerkleProof: combinedMerkleProof0
+            }
 
         fp1 ← liftContractM "Could not build FuelParams" $
-          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof1
+          combinedMerkleProofToFuelParams
+            { sidechainParams
+            , combinedMerkleProof: combinedMerkleProof1
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            }
 
         -- TODO: see definition of assertMaxFee
         -- assertMaxFee (BigInt.fromInt 1_350_000) =<<
-        void $ runFuelMP sidechainParams fp0
+        void $ runFuelMP fp0
         -- assertMaxFee (BigInt.fromInt 1_350_000) =<<
-        void $ runFuelMP sidechainParams fp1
+        void $ runFuelMP fp1
 
         -- assertMaxFee (BigInt.fromInt 500_000) =<<
-        void $ runFuelMP sidechainParams
-          ( Burn
-              { amount: BigInt.fromInt 10
-              , recipient: hexToByteArrayUnsafe "aabbcc"
+        void $ runFuelMP
+          ( FuelParams
+              { sidechainParams
+              , atmsKind: ATMSPlainEcdsaSecp256k1
+              , fuelMintOrFuelBurnParams:
+                  Burn
+                    { amount: BigInt.fromInt 10
+                    , recipient: hexToByteArrayUnsafe "aabbcc"
+                    }
               }
           )
 
         -- assertMaxFee (BigInt.fromInt 500_000) =<<
-        void $ runFuelMP sidechainParams
-          ( Burn
-              { amount: BigInt.fromInt 2
-              , recipient: hexToByteArrayUnsafe "aabbcc"
+        void $ runFuelMP
+          ( FuelParams
+              { sidechainParams
+              , atmsKind: ATMSPlainEcdsaSecp256k1
+              , fuelMintOrFuelBurnParams:
+                  Burn
+                    { amount: BigInt.fromInt 2
+                    , recipient: hexToByteArrayUnsafe "aabbcc"
+                    }
               }
           )
 
@@ -251,6 +279,7 @@ testScenarioSuccess3 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -295,17 +324,20 @@ testScenarioSuccess3 =
           { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
             $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
 
-          void $ runFuelMP sidechainParams
-            ( Mint
-                { amount
-                , recipient
-                , sidechainParams
-                , merkleProof
-                , index
-                , previousMerkleRoot
-                , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
+          void $ runFuelMP
+            $ FuelParams
+                { sidechainParams
+                , atmsKind: ATMSPlainEcdsaSecp256k1
+                , fuelMintOrFuelBurnParams:
+                    Mint
+                      { amount
+                      , recipient
+                      , merkleProof
+                      , index
+                      , previousMerkleRoot
+                      , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
+                      }
                 }
-            )
 
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
@@ -330,17 +362,28 @@ testScenarioFailure =
           mt ← liftedE $ pure (fromList (pure mp'))
           mp ← liftedM "couldn't lookup merkleproof" $ pure (lookupMp mp' mt)
 
-          void $ runFuelMP scParams $ Mint
-            { merkleProof: mp
-            , recipient
-            , sidechainParams: scParams
-            , amount: BigInt.fromInt 1
-            , index: BigInt.fromInt 0
-            , previousMerkleRoot: Nothing
-            , dsUtxo: Nothing
+          void $ runFuelMP $ FuelParams
+            { sidechainParams: scParams
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            , fuelMintOrFuelBurnParams:
+                Mint
+                  { merkleProof: mp
+                  , recipient
+                  , amount: BigInt.fromInt 1
+                  , index: BigInt.fromInt 0
+                  , previousMerkleRoot: Nothing
+                  , dsUtxo: Nothing
+                  }
             }
-          void $ runFuelMP scParams $ Burn
-            { amount: BigInt.fromInt 1, recipient: hexToByteArrayUnsafe "aabbcc" }
+          void $ runFuelMP $ FuelParams
+            { sidechainParams: scParams
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            , fuelMintOrFuelBurnParams:
+                Burn
+                  { amount: BigInt.fromInt 1
+                  , recipient: hexToByteArrayUnsafe "aabbcc"
+                  }
+            }
           # fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
@@ -371,6 +414,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -410,11 +454,15 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
                 _ → Nothing
 
         fp0 ← liftContractM "Could not build FuelParams" $
-          combinedMerkleProofToFuelParams sidechainParams combinedMerkleProof0
+          combinedMerkleProofToFuelParams
+            { sidechainParams
+            , combinedMerkleProof: combinedMerkleProof0
+            , atmsKind: ATMSPlainEcdsaSecp256k1
+            }
 
         -- the very bad double mint attempt...
-        void $ runFuelMP sidechainParams fp0
-        void $ runFuelMP sidechainParams fp0
+        void $ runFuelMP fp0
+        void $ runFuelMP fp0
 
         pure unit
         # fails

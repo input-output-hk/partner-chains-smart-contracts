@@ -30,6 +30,7 @@ import System.IO.Error qualified as Error
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.HaskellPrelude
@@ -199,10 +200,12 @@ main =
           , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
           , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
           , ("CandidatePermissionMintingPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
-          , ("CommitteeHashPolicy", UpdateCommitteeHash.serialisableCommitteeHashPolicy)
+          , ("CommitteeOraclePolicy", UpdateCommitteeHash.serialisableCommitteeOraclePolicy)
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
+          , -- ATMS schemes
+            ("CommitteePlainEcdsaSecp256k1ATMSPolicy", CommitteePlainEcdsaSecp256k1ATMSPolicy.serialisableMintingPolicy)
           , -- Distributed set validators / minting policies
             ("InsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)

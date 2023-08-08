@@ -1,10 +1,15 @@
 module TrustlessSidechain.Options.Parsers
   ( parsePubKeyAndSignature
   , transactionInput
+  , atmsKind
+  , parseATMSKind
   , combinedMerkleProofParser
   , committeeSignature
+  , parsePubKeyBytesAndSignatureBytes
+  , pubKeyBytesAndSignatureBytes
   , sidechainSignature
   , sidechainPublicKey
+  , bech32AddressParser
   , sidechainAddress
   , combinedMerkleProofParserWithPkh
   , parseTokenName
@@ -12,6 +17,7 @@ module TrustlessSidechain.Options.Parsers
   , uint
   , bigInt
   , byteArray
+  , cborEncodedAddressParser
   , rootHash
   , numerator
   , denominator
@@ -30,12 +36,17 @@ import Contract.Transaction
   )
 import Contract.Value (TokenName)
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
+import Ctl.Internal.Serialization.Address as Serialization.Address
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSDummy, ATMSPoK, ATMSMultisignature)
+  )
 import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
@@ -45,6 +56,21 @@ import TrustlessSidechain.Utils.Crypto
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+
+-- | Wraps `parseATMSKind`
+atmsKind ∷ ReadM ATMSKinds
+atmsKind = eitherReader parseATMSKind
+
+-- | Parses one of the possible kinds of committee certificate verifications
+parseATMSKind ∷ String → Either String ATMSKinds
+parseATMSKind str = case str of
+  "plain-ecdsa-secp256k1" → Right
+    ATMSPlainEcdsaSecp256k1
+  "pok" → Right ATMSPoK
+  "dummy" → Right ATMSDummy
+  "multisignature" → Right ATMSMultisignature
+  _ → Left
+    "invalid ATMS kind expected either 'plain-ecdsa-secp256k1', 'multisignature', 'pok', or 'dummy'"
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput
@@ -59,6 +85,26 @@ transactionInput = maybeReader \txIn →
           , index
           }
     _ → Nothing
+
+cborEncodedAddressParser ∷ ReadM Address
+cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
+  maybe (readerError "Error while parsing supplied CBOR as Address.")
+    pure
+
+-- | `bech32AddressParser` parses a bech32 address
+-- TODO: this does *not* check if the network of the address coincides with the
+-- network that CTL is running on.
+bech32AddressParser ∷ ReadM Address
+bech32AddressParser = eitherReader \str → do
+  addr ← case (Serialization.Address.addressFromBech32 str) of
+    Just x → Right x
+    Nothing → Left "bech32 address deserialization failed."
+
+  addr' ← case Conversion.Address.toPlutusAddress addr of
+    Just x → Right x
+    Nothing → Left "bech32 address conversion to plutus address failed"
+
+  pure addr'
 
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
 combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>
@@ -83,8 +129,8 @@ combinedMerkleProofParserWithPkh = do
 byteArray ∷ ReadM ByteArray
 byteArray = maybeReader hexToByteArray
 
--- | Parses a SidechainPublicKey from hexadecimal representation.
--- | See `SidechainPublicKey` for the invariants.
+-- | Parses a EcdsaSecp256k1PubKey from hexadecimal representation.
+-- | See `EcdsaSecp256k1PubKey` for the invariants.
 sidechainPublicKey ∷ ReadM EcdsaSecp256k1PubKey
 sidechainPublicKey = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1PubKey
@@ -160,6 +206,9 @@ committeeSignature ∷
 committeeSignature = maybeReader parsePubKeyAndSignature
 
 -- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
+-- | subject to the hex strings satisfying some conditions about whether the
+-- | public key  / signature could be a `EcdsaSecp256k1PubKey` or a
+-- | `SidechainSignature`
 -- Note: should we make this more strict and disallow `aa:`? in a sense:
 -- `aa` denotes a pubkey without a signature
 -- `aa:bb` denotes a pubkey and a signature
@@ -176,6 +225,31 @@ parsePubKeyAndSignature str =
         pure $ l' /\ Just r'
     [ l ] → ado
       l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
+      in l' /\ Nothing
+    _ → Nothing
+
+-- | `pubKeyBytesAndSignatureBytes` is a the CLI parser for `parsePubKeyBytesAndSignatureBytes`.
+pubKeyBytesAndSignatureBytes ∷ ReadM (ByteArray /\ Maybe ByteArray)
+pubKeyBytesAndSignatureBytes = maybeReader parsePubKeyBytesAndSignatureBytes
+
+-- | `parsePubKeyBytesAndSignatureBytes` parses the following format
+-- | `hexStr[:[hexStr]]`
+-- Note: should we make this more strict and disallow `aa:`? in a sense:
+-- `aa` denotes a pubkey without a signature
+-- `aa:bb` denotes a pubkey and a signature
+-- anything else is likely an error, and should be treated as malformed input
+parsePubKeyBytesAndSignatureBytes ∷
+  String → Maybe (ByteArray /\ Maybe ByteArray)
+parsePubKeyBytesAndSignatureBytes str =
+  case split (Pattern ":") str of
+    [ l, r ] | l /= "" → do
+      l' ← hexToByteArray $ l
+      if r == "" then pure $ l' /\ Nothing
+      else do
+        r' ← hexToByteArray $ r
+        pure $ l' /\ Just r'
+    [ l ] → ado
+      l' ← hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
 

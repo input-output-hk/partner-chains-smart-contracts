@@ -21,6 +21,7 @@ module TrustlessSidechain.OffChain (
   showMerkleProof,
   showSecpPrivKey,
   showCombinedMerkleProof,
+  showHexOfCborBuiltinData,
   toSpoPubKey,
   vKeyToSpoPubKey,
   toSidechainPubKey,
@@ -31,6 +32,9 @@ module TrustlessSidechain.OffChain (
   strToSecpPrivKey,
   strToSecpPubKey,
   bech32RecipientFromText,
+  ATMSKind (..),
+  showATMSKind,
+  parseATMSKind,
 ) where
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
@@ -375,7 +379,7 @@ showHexOfCborBuiltinData ::
   HaskellString.String
 showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinData
 
--- * Covnerting converting private keys to public keys
+-- * Converting private keys to public keys
 
 -- | Derive Ed25519DSIGN public key from the private key
 toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
@@ -400,3 +404,24 @@ toSidechainPubKey =
 -- | Converts a 'SECP.PubKey' to a 'SidechainPubKey'
 secpPubKeyToSidechainPubKey :: SECP.PubKey -> EcdsaSecp256k1PubKey
 secpPubKeyToSidechainPubKey = EcdsaSecp256k1PubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey True
+
+-- * ATMS offchain types
+
+-- | 'ATMSKind' denotes the ATMS scheme used for the sidechain
+data ATMSKind
+  = Plain
+  | Multisignature
+  | PoK
+  | Dummy
+  deriving (Eq)
+
+-- | 'showATMSKind' shows the 'ATMSKind' in a CTL compatible way.
+showATMSKind :: ATMSKind -> HaskellString.String
+showATMSKind Plain = "plain"
+showATMSKind _ = error "unimplemented ATMSKind"
+
+-- | 'showATMSKind' shows the 'ATMSKind' in a CTL compatible way.
+parseATMSKind :: HaskellString.String -> Maybe ATMSKind
+parseATMSKind str = case str of
+  "plain" -> Just Plain
+  _ -> Nothing

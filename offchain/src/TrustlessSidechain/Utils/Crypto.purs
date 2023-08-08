@@ -2,6 +2,7 @@ module TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message
   , ecdsaSecp256k1Message
   , byteArrayToEcdsaSecp256k1MessageUnsafe
+  , ecdsaSecp256k1MessageToTokenName
   , EcdsaSecp256k1PrivateKey
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , EcdsaSecp256k1PubKey
@@ -36,6 +37,8 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.Value (TokenName)
+import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -43,7 +46,6 @@ import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | Invariant: length of the pubkey must be 33 bytes.
 -- | Format: Compressed and serialized as per ECDSA signatures for SECP256k1.
@@ -152,6 +154,15 @@ ecdsaSecp256k1Message byteArray
 byteArrayToEcdsaSecp256k1MessageUnsafe ∷ ByteArray → EcdsaSecp256k1Message
 byteArrayToEcdsaSecp256k1MessageUnsafe = EcdsaSecp256k1Message
 
+-- | `ecdsaSecp256k1MessageToTokenName` converts a sidechain message to a token name
+ecdsaSecp256k1MessageToTokenName ∷ EcdsaSecp256k1Message → TokenName
+ecdsaSecp256k1MessageToTokenName (EcdsaSecp256k1Message byteArray) =
+  -- should be safe as they have the same length requirements
+  -- i.e., token names should be less than or equal to 32 bytes long
+  -- See:
+  -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/fde2e42b2e57ea978b3517913a1917ebf8836ab6/src/Internal/Types/TokenName.purs#L104-L109
+  Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName byteArray
+
 -- | Get the underlying `ByteArray` from an `EcdsaSecp256k1Message`.
 getEcdsaSecp256k1MessageByteArray ∷ EcdsaSecp256k1Message → ByteArray
 getEcdsaSecp256k1MessageByteArray (EcdsaSecp256k1Message byteArray) = byteArray
@@ -223,7 +234,7 @@ multiSign xkeys msg = map (sign msg) xkeys
 
 -- | `normalizeCommitteePubKeysAndSignatures` takes a list of public keys and their
 -- | associated signatures and sorts by the natural lexicographical ordering of the
--- | `SidechainPublicKey`s
+-- | `EcdsaSecp256k1PubKey`s
 -- |
 -- | Previously, the onchain multisign method required that the public keys are
 -- | sorted (to verify uniqueness of public keys), but this requirement was
@@ -242,7 +253,7 @@ normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
 -- |
 -- | Preconditions to be compatible with the onchain Haskell multisign method:
 -- |    - The input array should be sorted lexicographically by
--- |    `SidechainPublicKey` by `normalizeCommitteePubKeysAndSignatures`
+-- |    `EcdsaSecp256k1PubKey` by `normalizeCommitteePubKeysAndSignatures`
 unzipCommitteePubKeysAndSignatures ∷
   Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature) →
   Tuple (Array EcdsaSecp256k1PubKey) (Array EcdsaSecp256k1Signature)
@@ -251,14 +262,17 @@ unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
 -- | `countEnoughSignatures` counts the minimum number of signatures needed for
 -- | the onchain code to verify successfully.
 countEnoughSignatures ∷
-  SidechainParams →
+  -- numerator
+  BigInt →
+  -- denominator (ensure this is non-zero)
+  BigInt →
   Array EcdsaSecp256k1PubKey →
   BigInt
-countEnoughSignatures (SidechainParams params) arr =
+countEnoughSignatures numerator denominator arr =
   let
     len = BigInt.fromInt $ Array.length arr
   in
-    one + ((params.thresholdNumerator * len) / params.thresholdDenominator)
+    one + ((numerator * len) / denominator)
 
 -- | `takeExactlyEnoughSignatures` takes exactly enough signatures (if it
 -- | or less than if it cannot) for committee certificate verification as a
@@ -266,10 +280,13 @@ countEnoughSignatures (SidechainParams params) arr =
 -- | minimum amount of
 -- | signatures needed.
 takeExactlyEnoughSignatures ∷
-  SidechainParams →
+  -- numerator
+  BigInt →
+  -- denominator (ensure this is non-zero)
+  BigInt →
   Array EcdsaSecp256k1PubKey /\ Array EcdsaSecp256k1Signature →
   Array EcdsaSecp256k1PubKey /\ Array EcdsaSecp256k1Signature
-takeExactlyEnoughSignatures sc (pks /\ sigs) =
+takeExactlyEnoughSignatures numerator denominator (pks /\ sigs) =
   pks /\
     Array.take
       -- It should be big enough to fit in a plain old int as this
@@ -277,7 +294,7 @@ takeExactlyEnoughSignatures sc (pks /\ sigs) =
       -- length)
       -- TODO
       ( Unsafe.unsafePartial $ Maybe.fromJust $ BigInt.toInt
-          (countEnoughSignatures sc pks)
+          (countEnoughSignatures numerator denominator pks)
       )
       sigs
 
@@ -351,9 +368,10 @@ isSorted xss = case Array.tail xss of
   Nothing → false
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
--- | may be stored in the `UpdateCommitteeHashDatum` in an onchain compatible way.
--- | For this to be truly compatible with the onchain function, you need to ensure
--- | that the input list is sorted
+-- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
+-- | Note: this sorts the input array
 aggregateKeys ∷ Array EcdsaSecp256k1PubKey → ByteArray
-aggregateKeys = Hashing.blake2b256Hash <<< foldMap
-  getEcdsaSecp256k1PubKeyByteArray
+aggregateKeys =
+  Hashing.blake2b256Hash
+    <<< foldMap getEcdsaSecp256k1PubKeyByteArray
+    <<< Array.sortWith getEcdsaSecp256k1PubKeyByteArray

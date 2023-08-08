@@ -8,6 +8,7 @@ import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
@@ -56,11 +57,11 @@ main =
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_434
+            809
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
-            4_054
+            3_393
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -78,29 +79,29 @@ main =
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
             2_745
         , fitsInto
-            "mkCommitteeHashPolicy"
-            Compiled.mkCommitteeHashPolicyCode
+            "mkCommitteeOraclePolicy"
+            Compiled.mkCommitteeOraclePolicyCode
             400
         , scriptFitsInto
-            "mkCommitteeHashPolicy (serialized)"
-            (unversioned UCH.serialisableCommitteeHashPolicy)
+            "mkCommitteeOraclePolicy (serialized)"
+            (unversioned UCH.serialisableCommitteeOraclePolicy)
             2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_765
+            835
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_492
+            3_509
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_756
+            1_632
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_471
+            4_394
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
@@ -109,6 +110,14 @@ main =
             "mkCheckpointPolicy (serialized)"
             (unversioned CV.serialisableCheckpointPolicy)
             2_853
+        , fitsInto
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
+            Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
+            947
+        , scriptFitsInto
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
+            (unversioned CPEATMSP.serialisableMintingPolicy)
+            3_460
         ]
     , testGroup
         "Distributed set"
@@ -140,9 +149,9 @@ main =
     , testGroup
         "Other"
         [ fitsUnder
-            "verifyMultisig"
+            "verifyPlainMultisig"
             ("new", Compiled.newVerify)
-            ("old", Legacy.verifyMultisigCode)
+            ("old", Legacy.verifyPlainMultisigCode)
         ]
     , testGroup
         "Data rep"

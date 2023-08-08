@@ -52,6 +52,7 @@ import GetOpts (
   uchcNewCommitteePubKeys,
   uchcPreviousMerkleRoot,
   uchcSidechainEpoch,
+  uchcValidatorAddress,
  )
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
@@ -59,6 +60,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
 import System.IO.Error (userError)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash (unRootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -75,6 +77,7 @@ import TrustlessSidechain.Types (
     merkleProof,
     transaction
   ),
+  EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -91,10 +94,11 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    newCommitteePubKeys,
+    newAggregateCommitteePubKeys,
     previousMerkleRoot,
     sidechainEpoch,
-    sidechainParams
+    sidechainParams,
+    validatorAddress
   ),
  )
 
@@ -109,11 +113,13 @@ genCliCommand ::
   FilePath ->
   -- | Sidechain parameters
   SidechainParams ->
+  -- | ATMS kind of the sidechain
+  ATMSKind ->
   -- | Command we wish to generate
   GenCliCommand ->
   -- | CLI command to execute for purescript
   HString.String
-genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
+genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
   let -- build the flags related to the sidechain params (this is common to
       -- all commands)
       sidechainParamFlags :: [[HString.String]]
@@ -124,7 +130,9 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
           , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
           , ["--sidechain-id", show chainId]
           , ["--sidechain-genesis-hash", show genesisHash]
-          , ["--threshold", OffChain.showThreshold thresholdNumerator thresholdDenominator]
+          , ["--threshold-numerator", show thresholdNumerator]
+          , ["--threshold-denominator", show thresholdDenominator]
+          , ["--atms-kind", OffChain.showATMSKind atmsKind]
           ]
    in List.intercalate " \\\n" $
         fmap List.unwords $ case cliCommand of
@@ -167,9 +175,17 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
             let msg =
                   UpdateCommitteeHashMessage
                     { sidechainParams = scParams
-                    , newCommitteePubKeys = List.sort uchcNewCommitteePubKeys
+                    , newAggregateCommitteePubKeys =
+                        case atmsKind of
+                          Plain ->
+                            CommitteePlainATMSPolicy.aggregateKeys $
+                              fmap getEcdsaSecp256k1PubKey $
+                                List.sort uchcNewCommitteePubKeys
+                          _ -> error "unimplemented aggregate keys for update committee hash message"
                     , previousMerkleRoot = uchcPreviousMerkleRoot
                     , sidechainEpoch = uchcSidechainEpoch
+                    , validatorAddress =
+                        uchcValidatorAddress
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -194,6 +210,8 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                   <> currentCommitteePubKeysAndSigsFlags
                   <> newCommitteeFlags
                   <> [["--sidechain-epoch", show uchcSidechainEpoch]]
+                  <> [ ["--new-committee-validator-cbor-encoded-address", OffChain.showHexOfCborBuiltinData uchcValidatorAddress]
+                     ]
                   <> maybe [] (\bs -> [["--previous-merkle-root", show bs]]) uchcPreviousMerkleRoot
           SaveRootCommand {..} ->
             let msg =

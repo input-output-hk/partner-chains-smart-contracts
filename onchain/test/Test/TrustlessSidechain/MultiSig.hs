@@ -23,9 +23,9 @@ import Test.QuickCheck.Gen as Gen
 import Test.Tasty (TestTree, adjustOption, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Utils qualified as Utils
 
 test :: TestTree
 test =
@@ -37,6 +37,9 @@ test =
   where
     go :: QuickCheckTests -> QuickCheckTests
     go = const 10000
+
+verifyMultisig :: [LedgerBytes] -> Integer -> LedgerBytes -> [LedgerBytes] -> Bool
+verifyMultisig = CommitteePlainATMSPolicy.verifyPlainMultisig verifyEcdsaSecp256k1Signature
 
 unitTests :: TestTree
 unitTests =
@@ -53,22 +56,22 @@ unitTests =
    in testGroup
         "Unit tests"
         [ testCase "0 threshold" $
-            Utils.verifyMultisig [] 0 msg [] @?= True
+            verifyMultisig [] 0 msg [] @?= True
         , testCase "not eq" $
-            Utils.verifyMultisig [key1] 1 msg [sig2] @?= False
+            verifyMultisig [key1] 1 msg [sig2] @?= False
         , testCase "1-1" $
-            Utils.verifyMultisig [key1] 1 msg [sig1] @?= True
+            verifyMultisig [key1] 1 msg [sig1] @?= True
         , testCase "2-1" $
-            Utils.verifyMultisig [key1, key2] 1 msg [sig2] @?= True
+            verifyMultisig [key1, key2] 1 msg [sig2] @?= True
         , testCase "1-2" $
-            Utils.verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
+            verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
         , -- this test is malformed, and hence should be 'False'.. while
           -- it is a valid signature, it doesn't satisfy the
           -- preconditions of the function
           testCase "attemptDuplicatePubkey" $
-            Utils.verifyMultisig [key1, key1] 2 msg [sig1] @?= False
+            verifyMultisig [key1, key1] 2 msg [sig1] @?= False
         , testCase "attemptDuplicateSigs" $
-            Utils.verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
+            verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
         ]
 
 propertyTests :: TestTree
@@ -91,7 +94,7 @@ sufficientVerification =
        in classify (densityRatio TSPrelude.< 0.5) "sparse (less than half signatures needed)"
             . classify (densityRatio TSPrelude.>= 0.5) "dense (at least half signatures neeeded)"
             . property
-            $ Utils.verifyMultisig pubKeys enough message signatures
+            $ verifyMultisig pubKeys enough message signatures
 
 insufficientVerification :: Property
 insufficientVerification =
@@ -101,7 +104,7 @@ insufficientVerification =
        in label ("shortfall of " <> TSPrelude.show (enough - sigLen))
             . property
             . TSPrelude.not
-            $ Utils.verifyMultisig pubKeys enough message signatures
+            $ verifyMultisig pubKeys enough message signatures
 
 -- Helpers
 

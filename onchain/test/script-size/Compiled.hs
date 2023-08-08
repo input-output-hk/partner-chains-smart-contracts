@@ -8,11 +8,12 @@ module Compiled (
   mkMPFuelCode,
   mkMPMerkleRootCode,
   mkUPCVCode,
-  mkCommitteeHashPolicyCode,
+  mkCommitteeOraclePolicyCode,
   mkCPCode,
   mkInsertValidatorCode,
   mkDsConfPolicyCode,
   mkDsKeyPolicyCode,
+  mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode,
   toDataGenerated,
   toDataHandwritten,
   fromDataGenerated,
@@ -62,6 +63,8 @@ import TrustlessSidechain.CheckpointValidator (
 import TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
  )
+import TrustlessSidechain.CommitteePlainATMSPolicy (verifyPlainMultisig)
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet (
   Ds,
   DsConfMint,
@@ -75,26 +78,27 @@ import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ATMSPlainMultisignature,
   BlockProducerRegistration,
   CandidatePermissionMint,
   CheckpointDatum,
   CheckpointParameter,
   CheckpointRedeemer,
+  CommitteeCertificateMint,
   FUELMint,
   FUELRedeemer,
   SidechainParams,
-  SignedMerkleRoot,
   SignedMerkleRootMint,
+  SignedMerkleRootRedeemer,
+  UpdateCommitteeDatum,
   UpdateCommitteeHash,
-  UpdateCommitteeHashDatum,
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
-  mkCommitteeHashPolicy,
+  mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
  )
-import TrustlessSidechain.Utils (verifyMultisig)
 
 toData3CPS :: CompiledCode (Generated.Baz -> BuiltinData)
 toData3CPS = $$(compile [||toBuiltinData||])
@@ -194,7 +198,7 @@ newVerify ::
       [LedgerBytes] ->
       Bool
     )
-newVerify = $$(compile [||verifyMultisig||])
+newVerify = $$(compile [||verifyPlainMultisig verifyEcdsaSecp256k1Signature||])
 
 mkCPMPCode ::
   CompiledCode (CandidatePermissionMint -> () -> ScriptContext -> Bool)
@@ -232,7 +236,7 @@ mkMPFuelCode = $$(compile [||FUEL.mkMintingPolicy||])
 mkMPMerkleRootCode ::
   CompiledCode
     ( SignedMerkleRootMint ->
-      SignedMerkleRoot ->
+      SignedMerkleRootRedeemer ->
       ScriptContext ->
       Bool
     )
@@ -241,21 +245,21 @@ mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 mkUPCVCode ::
   CompiledCode
     ( UpdateCommitteeHash ->
-      UpdateCommitteeHashDatum ->
+      UpdateCommitteeDatum BuiltinData ->
       UpdateCommitteeHashRedeemer ->
       ScriptContext ->
       Bool
     )
 mkUPCVCode = $$(compile [||mkUpdateCommitteeHashValidator||])
 
-mkCommitteeHashPolicyCode ::
+mkCommitteeOraclePolicyCode ::
   CompiledCode
     ( InitCommitteeHashMint ->
       () ->
       ScriptContext ->
       Bool
     )
-mkCommitteeHashPolicyCode = $$(compile [||mkCommitteeHashPolicy||])
+mkCommitteeOraclePolicyCode = $$(compile [||mkCommitteeOraclePolicy||])
 
 mkCPCode ::
   CompiledCode
@@ -277,3 +281,7 @@ mkDsConfPolicyCode = $$(compile [||mkDsConfPolicy||])
 mkDsKeyPolicyCode ::
   CompiledCode (DsKeyMint -> () -> ScriptContext -> Bool)
 mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
+
+mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode ::
+  CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsaSecp256k1ATMSPolicy.mkMintingPolicy||])

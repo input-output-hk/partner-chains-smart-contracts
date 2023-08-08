@@ -83,6 +83,8 @@ library
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CheckpointValidator
     TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.CommitteePlainATMSPolicy
+    TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.MerkleRootTokenMintingPolicy
@@ -97,7 +99,6 @@ library
     TrustlessSidechain.PoCSerialiseData
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
-    TrustlessSidechain.Utils
 
   build-depends:
     , aeson                        ^>=1.5.0.0

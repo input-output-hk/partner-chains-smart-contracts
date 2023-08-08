@@ -18,17 +18,14 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
+import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
-  , productToData3
   , productToData4
   )
 
@@ -54,7 +51,8 @@ instance FromData CheckpointDatum where
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
   , checkpointAssetClass ∷ AssetClass
-  , committeeHashAssetClass ∷ AssetClass
+  , committeeOracleCurrencySymbol ∷ CurrencySymbol
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic CheckpointParameter _
@@ -64,10 +62,15 @@ derive instance Newtype CheckpointParameter _
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
-        { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
-    ) = productToData3 sidechainParams
+        { sidechainParams
+        , checkpointAssetClass
+        , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
+        }
+    ) = productToData4 sidechainParams
     checkpointAssetClass
-    committeeHashAssetClass
+    committeeOracleCurrencySymbol
+    committeeCertificateVerificationCurrencySymbol
 
 derive newtype instance Show CheckpointParameter
 
@@ -83,9 +86,7 @@ instance ToData InitCheckpointMint where
     toData icTxOutRef
 
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ Array EcdsaSecp256k1Signature
-  , committeePubKeys ∷ Array EcdsaSecp256k1PubKey
-  , newCheckpointBlockHash ∷ ByteArray
+  { newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   }
 
@@ -94,27 +95,21 @@ derive instance Generic CheckpointRedeemer _
 instance ToData CheckpointRedeemer where
   toData
     ( CheckpointRedeemer
-        { committeeSignatures
-        , committeePubKeys
-        , newCheckpointBlockHash
+        { newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = productToData4 committeeSignatures
-    committeePubKeys
+    ) = productToData2
     newCheckpointBlockHash
     newCheckpointBlockNumber
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
-  , committeeSignatures ∷
-      Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
+  , aggregateSignature ∷ ATMSAggregateSignatures
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt
   }
-
-derive newtype instance Show CheckpointEndpointParam
 
 derive instance Newtype CheckpointEndpointParam _
 

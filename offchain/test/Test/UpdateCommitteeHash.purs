@@ -13,7 +13,10 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
+import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Scripts as Scripts
+import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt (BigInt)
@@ -24,18 +27,32 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes.Types
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.MerkleRoot.Types
+  ( SignedMerkleRootMint(SignedMerkleRootMint)
+  )
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
+  , getUpdateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
+  , aggregateKeys
   , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , generatePrivKey
@@ -59,7 +76,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Maybe (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
+  Contract (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys
@@ -75,15 +92,62 @@ generateUchmSignatures
         $ Array.sortWith fst
         $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
 
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe newCommitteePrvKeys
+    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe
+      newCommitteePrvKeys
 
+  -- Creating the update committee hash validator (since we want to pay the
+  -- committee oracle back to the same address)
+  ---------------------------
+  { committeeOracleCurrencySymbol
+  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
+      committeeCertificateVerificationCurrencySymbol
+  } ←
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      $ CommitteeCertificateMint
+          { committeeOraclePolicy: committeeOracleCurrencySymbol
+          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
+          }
+
+  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
+    sidechainParams
+
+  let
+    smrm = SignedMerkleRootMint
+      { sidechainParams: sidechainParams
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      }
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    smrm
+  merkleRootTokenCurrencySymbol ←
+    liftContractM
+      "Failed to get merkleRootTokenCurrencySymbol"
+      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+
+  let
+    uch = UpdateCommitteeHash
+      { sidechainParams
+      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootTokenCurrencySymbol
+      }
+
+  { address: updateCommitteeHashValidator } ← getUpdateCommitteeHashValidator uch
+
+  -- Building the message to sign
+  ---------------------------
   committeeMessage ←
-    UpdateCommitteeHash.serialiseUchmHash
+    liftContractM "Failed to serialise update committee hash message"
+      $ UpdateCommitteeHash.serialiseUchmHash
       $ UpdateCommitteeHashMessage
-          { sidechainParams: sidechainParams
-          , newCommitteePubKeys
+          { sidechainParams
+          , newAggregatePubKeys
           , previousMerkleRoot
           , sidechainEpoch
+          , validatorAddress: updateCommitteeHashValidator
           }
   let
     committeeSignatures = Array.zip
@@ -128,26 +192,27 @@ updateCommitteeHashWith ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   } →
-  (UpdateCommitteeHashParams → Contract UpdateCommitteeHashParams) →
+  ( UpdateCommitteeHashParams PlutusData →
+    Contract (UpdateCommitteeHashParams PlutusData)
+  ) →
   Contract Unit
 updateCommitteeHashWith params f = void do
-  committeeSignatures ←
-    liftContractM
-      "error 'Test.UpdateCommitteeHash.updateCommitteeHash': failed to generate the committee signatures for the committee hash message"
-      $ generateUchmSignatures params
+  committeeSignatures ← generateUchmSignatures params
 
   let
-    newCommitteePubKeys = Array.sort $ map toPubKeyUnsafe $
+    newAggregatePubKeys = aggregateKeys $ Array.sort $ map toPubKeyUnsafe $
       params.newCommitteePrvKeys
     uchp =
       UpdateCommitteeHashParams
         { sidechainParams: params.sidechainParams
-        , newCommitteePubKeys
-        , committeeSignatures:
-            map (Just <$> _) committeeSignatures
+        , newAggregatePubKeys: toData newAggregatePubKeys
+        , aggregateSignature:
+            PlainEcdsaSecp256k1
+              (map (Just <$> _) committeeSignatures)
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
+        , mNewCommitteeAddress: Nothing
         }
 
   uchp' ← f uchp
@@ -185,6 +250,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← initSidechain initScParams
@@ -226,6 +292,7 @@ testScenario2 =
             , initThresholdDenominator: BigInt.fromInt 1
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -243,16 +310,16 @@ testScenario2 =
               pure
                 $ UpdateCommitteeHashParams
                 $ params
-                    { committeeSignatures =
-                        Unsafe.unsafePartial
-                          ( case params.committeeSignatures of
-                              [ c1 /\ _s1
-                              , c2 /\ s2
-                              ] →
-                                [ c1 /\ Nothing
-                                , c2 /\ s2
-                                ]
-                          )
+                    { aggregateSignature =
+                        ( Unsafe.unsafePartial $
+                            case params.aggregateSignature of
+                              PlainEcdsaSecp256k1
+                                [ c1 /\ _s1, c2 /\ s2 ] →
+                                PlainEcdsaSecp256k1
+                                  [ c1 /\ Nothing
+                                  , c2 /\ s2
+                                  ]
+                        )
                     }
 
 -- | `testScenario3` initialises the committee with an out of order committee
@@ -287,6 +354,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -296,14 +364,17 @@ testScenario3 =
 
         let
           reverseSignaturesAndNewCommittee ∷
-            UpdateCommitteeHashParams → UpdateCommitteeHashParams
+            UpdateCommitteeHashParams PlutusData →
+            UpdateCommitteeHashParams PlutusData
           reverseSignaturesAndNewCommittee uchp =
             wrap
               ( (unwrap uchp)
-                  { committeeSignatures = Array.reverse
-                      ((unwrap uchp).committeeSignatures)
-                  , newCommitteePubKeys = Array.reverse
-                      ((unwrap uchp).newCommitteePubKeys)
+                  { aggregateSignature =
+                      Unsafe.unsafePartial $
+                        case (unwrap uchp).aggregateSignature of
+                          PlainEcdsaSecp256k1 sigs →
+                            PlainEcdsaSecp256k1 $
+                              Array.reverse sigs
                   }
               )
 
@@ -373,6 +444,7 @@ testScenario4 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
@@ -386,7 +458,7 @@ testScenario4 =
           }
           \uchp →
             pure $ wrap $ (unwrap uchp)
-              { newCommitteePubKeys =
+              { newAggregatePubKeys = toData $ aggregateKeys
                   [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
                   , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
@@ -394,7 +466,7 @@ testScenario4 =
                   , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
                   ]
-              -- the signatures from the issue arne't quite right (since it
+              -- the signatures from the issue aren't quite right (since it
               -- didn't order the committee), so we won't include those
               -- signatures
               }
@@ -425,6 +497,7 @@ testScenario5 =
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams
@@ -441,14 +514,15 @@ testScenario5 =
               pure
                 $ UpdateCommitteeHashParams
                 $ params
-                    { committeeSignatures =
+                    { aggregateSignature =
                         Unsafe.unsafePartial
-                          ( case params.committeeSignatures of
-                              [ c1 /\ _s1
-                              , c2 /\ s2
-                              , c3 /\ s3
-                              , c4 /\ s4
-                              ] →
+                          ( case params.aggregateSignature of
+                              PlainEcdsaSecp256k1
+                                [ c1 /\ _s1
+                                , c2 /\ s2
+                                , c3 /\ s3
+                                , c4 /\ s4
+                                ] → PlainEcdsaSecp256k1
                                 [ c1 /\ Nothing
                                 , c2 /\ s2
                                 , c3 /\ s3
