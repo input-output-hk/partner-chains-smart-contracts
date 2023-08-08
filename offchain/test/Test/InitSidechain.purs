@@ -25,6 +25,9 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  )
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
@@ -78,6 +81,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
             , initCommittee
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -115,6 +119,7 @@ testScenario2 =
               , initUtxo: genesisUtxo
               , initCommittee
               , initSidechainEpoch: zero
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
@@ -159,6 +164,7 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             , initCommittee
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             }
@@ -200,6 +206,7 @@ testScenario4 =
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initCandidatePermissionTokenMintInfo:
                   Just
                     { amount: one
@@ -242,6 +249,7 @@ testScenario5 = do
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initCandidatePermissionTokenMintInfo:
                   Just
                     { amount: one

@@ -11,62 +11,36 @@
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( committeeHashPolicy
-  , updateCommitteeHashValidator
-  , initCommitteeHashMintTn
-  , committeeHashAssetClass
+  ( updateCommitteeHashValidator
   , findUpdateCommitteeHashUtxo
   , serialiseUchmHash
-  , normalizeCommitteeHashParams
+  , getUpdateCommitteeHashValidator
   ) where
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
+import Contract.PlutusData (class ToData)
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , Validator(Validator)
-  )
+import Contract.Scripts (Validator(Validator), ValidatorHash)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
-import Data.Array as Array
-import Partial.Unsafe (unsafePartial)
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( InitCommitteeHashMint
-  , UpdateCommitteeHash
+  ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
-  , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
-
-committeeHashPolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
-committeeHashPolicy sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCommitteeHashPolicy
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ PlutusMintingPolicy applied
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
 updateCommitteeHashValidator sp = do
@@ -79,46 +53,35 @@ updateCommitteeHashValidator sp = do
     [ PlutusData.toData sp ]
   pure $ Validator applied
 
--- | `normalizeCommitteeHashParams` modifies the following fields in
--- | `UpdateCommitteeHashParams` fields to satisfy the following properties
--- |    - `newCommitteePubKeys` is sorted (lexicographically), and
--- |    - `committeeSignatures` is sorted (lexicographically) by the
--- |    `SidechainPublicKey`.
-normalizeCommitteeHashParams ∷
-  UpdateCommitteeHashParams → UpdateCommitteeHashParams
-normalizeCommitteeHashParams (UpdateCommitteeHashParams p) =
-  UpdateCommitteeHashParams
-    p
-      { newCommitteePubKeys = Array.sort p.newCommitteePubKeys
-      , committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-          p.committeeSignatures
-      }
+-- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
+-- | also returns the hash and address
+getUpdateCommitteeHashValidator ∷
+  UpdateCommitteeHash →
+  Contract
+    { validator ∷ Validator
+    , validatorHash ∷ ValidatorHash
+    , address ∷ Address
+    }
+getUpdateCommitteeHashValidator uch = do
+  netId ← Address.getNetworkId
+  validator ← updateCommitteeHashValidator uch
+  let validatorHash = Scripts.validatorHash validator
 
--- | `initCommitteeHashMintTn` is the token name of the NFT which identifies
--- | the utxo which contains the committee hash. We use an empty bytestring for
--- | this because the name really doesn't matter, so we mighaswell save a few
--- | bytes by giving it the empty name.
-initCommitteeHashMintTn ∷ Value.TokenName
-initCommitteeHashMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
-  ByteArray.hexToByteArrayUnsafe ""
-
--- | `committeeHashCurSymbol` is the asset class. See `initCommitteeHashMintTn`
--- | for details on the token name
-{-# INLINEABLE committeeHashAssetClass #-}
-committeeHashAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
-committeeHashAssetClass ichm = do
-  cp ← committeeHashPolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get committeeHash currency symbol"
-    (Value.scriptCurrencySymbol cp)
-
-  pure $ assetClass curSym initCommitteeHashMintTn
+  address ← Monad.liftContractM
+    "error 'getUpdateCommitteeHashValidator': failed to get validator address"
+    (Address.validatorHashEnterpriseAddress netId validatorHash)
+  pure { validator, validatorHash, address }
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
 -- | ```
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
-serialiseUchmHash ∷ UpdateCommitteeHashMessage → Maybe EcdsaSecp256k1Message
+serialiseUchmHash ∷
+  ∀ aggregatePubKeys.
+  ToData aggregatePubKeys ⇒
+  UpdateCommitteeHashMessage aggregatePubKeys →
+  Maybe EcdsaSecp256k1Message
 serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
@@ -144,5 +107,6 @@ findUpdateCommitteeHashUtxo uch = do
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
-    Value.valueOf value (fst (unwrap uch).uchAssetClass) initCommitteeHashMintTn
+    Value.valueOf value ((unwrap uch).committeeOracleCurrencySymbol)
+      CommitteeOraclePolicy.committeeOracleTn
       /= zero

@@ -7,7 +7,7 @@ module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes), ValidatorHash)
+import Plutus.V2.Ledger.Api (Address, LedgerBytes (LedgerBytes), ValidatorHash)
 import Plutus.V2.Ledger.Tx (TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -447,81 +447,35 @@ instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe LedgerB
   modify f (MerkleRootInsertionMessage sp mr pmr) =
     MerkleRootInsertionMessage sp mr (f pmr)
 
--- | 'SignedMerkleRoot' is the redeemer for the Merkle root token minting policy
-data SignedMerkleRoot = SignedMerkleRoot
-  { -- | New merkle root to insert.
-    merkleRoot :: LedgerBytes
-  , -- | Previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe LedgerBytes
-  , -- | Current committee signatures ordered as their corresponding keys
-    signatures :: [LedgerBytes]
-  , -- | Lexicographically sorted public keys of all committee members
-    committeePubKeys :: [EcdsaSecp256k1PubKey]
+{- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
+ minting policy
+-}
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { previousMerkleRoot :: Maybe LedgerBytes
   }
+  deriving newtype
+    ( ToData
+    , FromData
+    , UnsafeFromData
+    )
 
--- | @since Unreleased
-instance ToData SignedMerkleRoot where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (SignedMerkleRoot {..}) =
-    productToData4 merkleRoot previousMerkleRoot signatures committeePubKeys
-
--- | @since Unreleased
-instance FromData SignedMerkleRoot where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 SignedMerkleRoot
-
--- | @since Unreleased
-instance UnsafeFromData SignedMerkleRoot where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 SignedMerkleRoot
-
--- | @since Unreleased
-instance HasField "merkleRoot" SignedMerkleRoot LedgerBytes where
+instance HasField "previousMerkleRoot" SignedMerkleRootRedeemer (Maybe LedgerBytes) where
   {-# INLINE get #-}
-  get (SignedMerkleRoot x _ _ _) = x
+  get (SignedMerkleRootRedeemer x) = x
   {-# INLINE modify #-}
-  modify f (SignedMerkleRoot mr pmr sigs cpks) =
-    SignedMerkleRoot (f mr) pmr sigs cpks
-
--- | @since Unreleased
-instance HasField "previousMerkleRoot" SignedMerkleRoot (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (SignedMerkleRoot _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRoot mr pmr sigs cpks) =
-    SignedMerkleRoot mr (f pmr) sigs cpks
-
--- | @since Unreleased
-instance HasField "signatures" SignedMerkleRoot [LedgerBytes] where
-  {-# INLINE get #-}
-  get (SignedMerkleRoot _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRoot mr pmr sigs cpks) =
-    SignedMerkleRoot mr pmr (f sigs) cpks
-
--- | @since Unreleased
-instance HasField "committeePubKeys" SignedMerkleRoot [EcdsaSecp256k1PubKey] where
-  {-# INLINE get #-}
-  get (SignedMerkleRoot _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRoot mr pmr sigs cpks) =
-    SignedMerkleRoot mr pmr sigs (f cpks)
+  modify f (SignedMerkleRootRedeemer pmr) =
+    SignedMerkleRootRedeemer (f pmr)
 
 -- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
 data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | @since Unreleased
+  { -- | 'sidechainParams' includes the 'SidechainParams'
     sidechainParams :: SidechainParams
-  , -- | The 'CurrencySymbol' which
-    -- | identifies the utxo for which the 'UpdateCommitteeHashDatum'
-    -- | resides.
-    -- |
-    -- | @since Unreleased
-    updateCommitteeHashCurrencySymbol :: CurrencySymbol
-  , -- | The validator hash corresponding to
-    -- | 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
-    -- | to ensure that this token gets minted to the "right" place.
-    -- |
-    -- | @since Unreleased
+  , -- | 'committeeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
+    -- provides a committee certificate for a message.
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+  , -- | 'validatorHash' is the validator hash corresponding to
+    -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
+    -- to ensure that this token gets minted to the "right" place.
     validatorHash :: ValidatorHash
   }
 
@@ -531,7 +485,7 @@ instance ToData SignedMerkleRootMint where
   toBuiltinData (SignedMerkleRootMint {..}) =
     productToData3
       sidechainParams
-      updateCommitteeHashCurrencySymbol
+      committeeCertificateVerificationCurrencySymbol
       validatorHash
 
 -- | @since Unreleased
@@ -698,126 +652,65 @@ instance HasField "dsKeyCurrencySymbol" FUELMint CurrencySymbol where
 
 -- * Update Committee Hash data
 
-{- | Datum for the committee hash. This /committee hash/ is used to verify
- signatures for sidechain to mainchain transfers. This is a hash of
- concatenated public key hashes of the committee members
+{- | Datum for the committee. This is used to verify
+ signatures for sidechain to mainchain transfers.
+
+ The actual representation of the committee's public key depends on the ATMS
+ implementation.
 -}
-data UpdateCommitteeHashDatum = UpdateCommitteeHashDatum
-  { committeeHash :: LedgerBytes
+data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
+  { aggregateCommitteePubKeys :: aggregatePubKeys
   , sidechainEpoch :: Integer
   }
 
 -- | @since Unreleased
-instance ToData UpdateCommitteeHashDatum where
+instance ToData aggregatePubKeys => ToData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (UpdateCommitteeHashDatum {..}) =
-    productToData2 committeeHash sidechainEpoch
+  toBuiltinData (UpdateCommitteeDatum {..}) =
+    productToData2 aggregateCommitteePubKeys sidechainEpoch
 
 -- | @since Unreleased
-instance FromData UpdateCommitteeHashDatum where
+instance FromData aggregatePubKeys => FromData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 UpdateCommitteeHashDatum
+  fromBuiltinData = productFromData2 UpdateCommitteeDatum
 
 -- | @since Unreleased
-instance UnsafeFromData UpdateCommitteeHashDatum where
+instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeHashDatum
+  unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeDatum
 
 -- | @since Unreleased
-instance HasField "committeeHash" UpdateCommitteeHashDatum LedgerBytes where
+instance HasField "aggregateCommitteePubKeys" (UpdateCommitteeDatum aggregatePubKeys) aggregatePubKeys where
   {-# INLINE get #-}
-  get (UpdateCommitteeHashDatum x _) = x
+  get (UpdateCommitteeDatum x _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashDatum ch se) =
-    UpdateCommitteeHashDatum (f ch) se
+  modify f (UpdateCommitteeDatum ch se) =
+    UpdateCommitteeDatum (f ch) se
 
 -- | @since Unreleased
-instance HasField "sidechainEpoch" UpdateCommitteeHashDatum Integer where
+instance HasField "sidechainEpoch" (UpdateCommitteeDatum aggregatePubKeys) Integer where
   {-# INLINE get #-}
-  get (UpdateCommitteeHashDatum _ x) = x
+  get (UpdateCommitteeDatum _ x) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashDatum ch se) =
-    UpdateCommitteeHashDatum ch (f se)
+  modify f (UpdateCommitteeDatum ch se) =
+    UpdateCommitteeDatum ch (f se)
 
-{- | The Redeemer that is passed to the on-chain validator to update the
- committee
--}
-data UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
-  { -- | The current committee's signatures for the @'aggregateKeys' 'newCommitteePubKeys'@
-    committeeSignatures :: [LedgerBytes]
-  , -- | 'committeePubKeys' is the current committee public keys
-    committeePubKeys :: [EcdsaSecp256k1PubKey]
-  , -- | 'newCommitteePubKeys' is the hash of the new committee
-    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-  , -- | 'previousMerkleRoot' is the previous merkle root (if it exists)
-    previousMerkleRoot :: Maybe LedgerBytes
-  }
-
--- | @since Unreleased
-instance ToData UpdateCommitteeHashRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (UpdateCommitteeHashRedeemer {..}) =
-    productToData4
-      committeeSignatures
-      committeePubKeys
-      newCommitteePubKeys
-      previousMerkleRoot
-
--- | @since Unreleased
-instance FromData UpdateCommitteeHashRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 UpdateCommitteeHashRedeemer
-
--- | @since Unreleased
-instance UnsafeFromData UpdateCommitteeHashRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 UpdateCommitteeHashRedeemer
-
--- | @since Unreleased
-instance HasField "committeeSignatures" UpdateCommitteeHashRedeemer [LedgerBytes] where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashRedeemer x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashRedeemer cs cpk ncpk pmr) =
-    UpdateCommitteeHashRedeemer (f cs) cpk ncpk pmr
-
--- | @since Unreleased
-instance HasField "committeePubKeys" UpdateCommitteeHashRedeemer [EcdsaSecp256k1PubKey] where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashRedeemer _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashRedeemer cs cpk ncpk pmr) =
-    UpdateCommitteeHashRedeemer cs (f cpk) ncpk pmr
-
--- | @since Unreleased
-instance HasField "newCommitteePubKeys" UpdateCommitteeHashRedeemer [EcdsaSecp256k1PubKey] where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashRedeemer _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashRedeemer cs cpk ncpk pmr) =
-    UpdateCommitteeHashRedeemer cs cpk (f ncpk) pmr
-
--- | @since Unreleased
-instance HasField "previousMerkleRoot" UpdateCommitteeHashRedeemer (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashRedeemer _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashRedeemer cs cpk ncpk pmr) =
-    UpdateCommitteeHashRedeemer cs cpk ncpk (f pmr)
+newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
+  deriving newtype (FromData, ToData, UnsafeFromData, Eq, Ord, IsString)
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
-  { -- | @since Unreleased
-    sidechainParams :: SidechainParams
-  , -- | 'token' is the 'AssetClass' of the NFT that is used to
-    -- | identify the transaction.
-    -- |
-    -- | @since Unreleased
-    token :: AssetClass
+  { sidechainParams :: SidechainParams
+  , -- | 'committeeOracleCurrencySymbol' is the 'CurrencySymbol' of the NFT that is used to
+    -- identify the transaction the current committee.
+    committeeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'committeeCertificateVerificationCurrencySymbol' is the currency
+    -- symbol for the committee certificate verification policy i.e., the
+    -- currency symbol whose minted token name indicates that the current
+    -- committee has signed the token name.
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
   , -- | 'mptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
-    -- | root token. This is needed for verifying that the previous merkle root is verified.
-    -- |
-    -- | @since Unreleased
+    -- root token. This is needed for verifying that the previous merkle root is verified.
     mptRootTokenCurrencySymbol :: CurrencySymbol
   }
 
@@ -825,93 +718,126 @@ data UpdateCommitteeHash = UpdateCommitteeHash
 instance ToData UpdateCommitteeHash where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHash {..}) =
-    productToData3 sidechainParams token mptRootTokenCurrencySymbol
+    productToData4 sidechainParams committeeOracleCurrencySymbol committeeCertificateVerificationCurrencySymbol mptRootTokenCurrencySymbol
 
 -- | @since Unreleased
 instance HasField "sidechainParams" UpdateCommitteeHash SidechainParams where
   {-# INLINE get #-}
-  get (UpdateCommitteeHash x _ _) = x
+  get (UpdateCommitteeHash x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp t rtcs) =
-    UpdateCommitteeHash (f sp) t rtcs
+  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
+    UpdateCommitteeHash (f sp) cocs ccvcs rtcs
 
 -- | @since Unreleased
-instance HasField "token" UpdateCommitteeHash AssetClass where
+instance HasField "committeeOracleCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
   {-# INLINE get #-}
-  get (UpdateCommitteeHash _ x _) = x
+  get (UpdateCommitteeHash _ x _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp t rtcs) =
-    UpdateCommitteeHash sp (f t) rtcs
+  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
+    UpdateCommitteeHash sp (f cocs) ccvcs rtcs
+
+-- | @since Unreleased
+instance HasField "committeeCertificateVerificationCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHash _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
+    UpdateCommitteeHash sp cocs (f ccvcs) rtcs
 
 -- | @since Unreleased
 instance HasField "mptRootTokenCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
   {-# INLINE get #-}
-  get (UpdateCommitteeHash _ _ x) = x
+  get (UpdateCommitteeHash _ _ _ x) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp t rtcs) =
-    UpdateCommitteeHash sp t (f rtcs)
+  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
+    UpdateCommitteeHash sp cocs ccvcs (f rtcs)
 
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 UpdateCommitteeHash
+  fromBuiltinData = productFromData4 UpdateCommitteeHash
 
 -- | @since Unreleased
 instance UnsafeFromData UpdateCommitteeHash where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData3 UpdateCommitteeHash
+  unsafeFromBuiltinData = productUnsafeFromData4 UpdateCommitteeHash
 
 {- | = Important note
 
  The 'Data' serializations for this type /cannot/ be changed.
 -}
-data UpdateCommitteeHashMessage = UpdateCommitteeHashMessage
-  { -- | @since Unreleased
-    sidechainParams :: SidechainParams
-  , -- | 'newCommitteePubKeys' is the new committee public keys and _should_
-    -- | be sorted lexicographically (recall that we can trust the bridge, so it
-    -- | should do this for us
-    -- |
-    -- | @since Unreleased
-    newCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-  , -- | @since Unreleased
-    previousMerkleRoot :: Maybe LedgerBytes
-  , -- | @since Unreleased
-    sidechainEpoch :: Integer
+data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
+  { sidechainParams :: SidechainParams
+  , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
+    newAggregateCommitteePubKeys :: aggregatePubKeys
+  , previousMerkleRoot :: Maybe LedgerBytes
+  , sidechainEpoch :: Integer
+  , validatorAddress :: Address
   }
 
-PlutusTx.makeIsDataIndexed ''UpdateCommitteeHashMessage [('UpdateCommitteeHashMessage, 0)]
+-- | @since Unreleased
+instance ToData aggregatePubKeys => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (UpdateCommitteeHashMessage {..}) =
+    productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch validatorAddress
 
 -- | @since Unreleased
-instance HasField "sidechainParams" UpdateCommitteeHashMessage SidechainParams where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
-    UpdateCommitteeHashMessage (f sp) ncpks pmr se
+instance FromData aggregatePubKeys => FromData (UpdateCommitteeHashMessage aggregatePubKeys) where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData5 UpdateCommitteeHashMessage
 
 -- | @since Unreleased
-instance HasField "newCommitteePubKeys" UpdateCommitteeHashMessage [EcdsaSecp256k1PubKey] where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
-    UpdateCommitteeHashMessage sp (f ncpks) pmr se
+instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeHashMessage aggregatePubKeys) where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData5 UpdateCommitteeHashMessage
 
 -- | @since Unreleased
-instance HasField "previousMerkleRoot" UpdateCommitteeHashMessage (Maybe LedgerBytes) where
+instance HasField "sidechainParams" (UpdateCommitteeHashMessage aggregatePubKeys) SidechainParams where
   {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ _ x _) = x
+  get (UpdateCommitteeHashMessage x _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
-    UpdateCommitteeHashMessage sp ncpks (f pmr) se
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
+    UpdateCommitteeHashMessage (f sp) nacpks pmr se va
 
 -- | @since Unreleased
-instance HasField "sidechainEpoch" UpdateCommitteeHashMessage Integer where
+instance HasField "newAggregateCommitteePubKeys" (UpdateCommitteeHashMessage aggregatePubKeys) aggregatePubKeys where
   {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ _ _ x) = x
+  get (UpdateCommitteeHashMessage _ x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp ncpks pmr se) =
-    UpdateCommitteeHashMessage sp ncpks pmr (f se)
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
+    UpdateCommitteeHashMessage sp (f nacpks) pmr se va
+
+-- | @since Unreleased
+instance HasField "previousMerkleRoot" (UpdateCommitteeHashMessage aggregatePubKeys) (Maybe LedgerBytes) where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ _ x _ _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
+    UpdateCommitteeHashMessage sp nacpks (f pmr) se va
+
+-- | @since Unreleased
+instance HasField "sidechainEpoch" (UpdateCommitteeHashMessage aggregatePubKeys) Integer where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ _ _ x _) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
+    UpdateCommitteeHashMessage sp nacpks pmr (f se) va
+
+-- | @since Unreleased
+instance HasField "validatorAddress" (UpdateCommitteeHashMessage aggregatePubKeys) Address where
+  {-# INLINE get #-}
+  get (UpdateCommitteeHashMessage _ _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
+    UpdateCommitteeHashMessage sp nacpks pmr se (f va)
+
+newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
+  { previousMerkleRoot :: Maybe LedgerBytes
+  }
+  deriving newtype
+    ( ToData
+    , FromData
+    , UnsafeFromData
+    )
 
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
@@ -953,13 +879,34 @@ instance HasField "blockNumber" CheckpointDatum Integer where
   modify f (CheckpointDatum bh bn) =
     CheckpointDatum bh (f bn)
 
+{- | 'CommitteeCertificateMint' is the type to parameterize committee
+ certificate verification minting policies.
+ See SIP05 in @docs/SIPs/@ for details.
+-}
+data CommitteeCertificateMint = CommitteeCertificateMint
+  { committeeOraclePolicy :: CurrencySymbol
+  , thresholdNumerator :: Integer
+  , thresholdDenominator :: Integer
+  }
+
+PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
+
+{- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
+ This is used as redeemer for the
+ "TrustlessSidechain.CommitteePlainATMSPolicy".
+-}
+data ATMSPlainMultisignature = ATMSPlainMultisignature
+  { plainPublicKeys :: [LedgerBytes]
+  , plainSignatures :: [LedgerBytes]
+  }
+
+PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
+
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint
 -}
 data CheckpointRedeemer = CheckpointRedeemer
-  { checkpointCommitteeSignatures :: [LedgerBytes]
-  , checkpointCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-  , newCheckpointBlockHash :: LedgerBytes
+  { newCheckpointBlockHash :: LedgerBytes
   , newCheckpointBlockNumber :: Integer
   }
 
@@ -967,53 +914,35 @@ data CheckpointRedeemer = CheckpointRedeemer
 instance ToData CheckpointRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointRedeemer {..}) =
-    productToData4
-      checkpointCommitteeSignatures
-      checkpointCommitteePubKeys
+    productToData2
       newCheckpointBlockHash
       newCheckpointBlockNumber
 
 -- | @since Unreleased
 instance FromData CheckpointRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 CheckpointRedeemer
+  fromBuiltinData = productFromData2 CheckpointRedeemer
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 CheckpointRedeemer
-
--- | @since Unreleased
-instance HasField "checkpointCommitteeSignatures" CheckpointRedeemer [LedgerBytes] where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
-    CheckpointRedeemer (f ccs) ccpks ncbh ncbn
-
--- | @since Unreleased
-instance HasField "checkpointCommitteePubKeys" CheckpointRedeemer [EcdsaSecp256k1PubKey] where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
-    CheckpointRedeemer ccs (f ccpks) ncbh ncbn
+  unsafeFromBuiltinData = productUnsafeFromData2 CheckpointRedeemer
 
 -- | @since Unreleased
 instance HasField "newCheckpointBlockHash" CheckpointRedeemer LedgerBytes where
   {-# INLINE get #-}
-  get (CheckpointRedeemer _ _ x _) = x
+  get (CheckpointRedeemer x _) = x
   {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
-    CheckpointRedeemer ccs ccpks (f ncbh) ncbn
+  modify f (CheckpointRedeemer ncbh ncbn) =
+    CheckpointRedeemer (f ncbh) ncbn
 
 -- | @since Unreleased
 instance HasField "newCheckpointBlockNumber" CheckpointRedeemer Integer where
   {-# INLINE get #-}
-  get (CheckpointRedeemer _ _ _ x) = x
+  get (CheckpointRedeemer _ x) = x
   {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ccs ccpks ncbh ncbn) =
-    CheckpointRedeemer ccs ccpks ncbh (f ncbn)
+  modify f (CheckpointRedeemer ncbh ncbn) =
+    CheckpointRedeemer ncbh (f ncbn)
 
 -- | 'Checkpoint' is used as the parameter for the validator.
 data CheckpointParameter = CheckpointParameter
@@ -1021,53 +950,66 @@ data CheckpointParameter = CheckpointParameter
   , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
     -- identify the transaction.
     checkpointAssetClass :: AssetClass
-  , -- | 'committeeHashAssetClass' is the 'AssetClass' of the NFT that is used to
-    -- | identify the current committee
-    committeeHashAssetClass :: AssetClass
+  , -- | 'checkpointCommitteeOracleCurrencySymbol' is the
+    -- currency symbol of the currency symbol which uniquely identifies the
+    -- current committee.
+    checkpointCommitteeOracleCurrencySymbol :: CurrencySymbol
+  , -- | 'checkpointCommitteeCertificateVerificationCurrencySymbol' is the
+    -- currency symbol of the committee certificate verification minting policy
+    checkpointCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
 
 -- | @since Unreleased
 instance ToData CheckpointParameter where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointParameter {..}) =
-    productToData3
+    productToData4
       checkpointSidechainParams
       checkpointAssetClass
-      committeeHashAssetClass
+      checkpointCommitteeOracleCurrencySymbol
+      checkpointCommitteeCertificateVerificationCurrencySymbol
 
 -- | @since Unreleased
 instance HasField "checkpointSidechainParams" CheckpointParameter SidechainParams where
   {-# INLINE get #-}
-  get (CheckpointParameter x _ _) = x
+  get (CheckpointParameter x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac chac) =
-    CheckpointParameter (f csp) cac chac
+  modify f (CheckpointParameter csp cac ccocs chac) =
+    CheckpointParameter (f csp) cac ccocs chac
 
 -- | @since Unreleased
 instance HasField "checkpointAssetClass" CheckpointParameter AssetClass where
   {-# INLINE get #-}
-  get (CheckpointParameter _ x _) = x
+  get (CheckpointParameter _ x _ _) = x
   {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac chac) =
-    CheckpointParameter csp (f cac) chac
+  modify f (CheckpointParameter csp cac ccocs chac) =
+    CheckpointParameter csp (f cac) ccocs chac
 
 -- | @since Unreleased
-instance HasField "committeeHashAssetClass" CheckpointParameter AssetClass where
+instance HasField "checkpointCommitteeOracleCurrencySymbol" CheckpointParameter CurrencySymbol where
   {-# INLINE get #-}
-  get (CheckpointParameter _ _ x) = x
+  get (CheckpointParameter _ _ x _) = x
   {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac chac) =
-    CheckpointParameter csp cac (f chac)
+  modify f (CheckpointParameter csp cac ccocs chac) =
+    CheckpointParameter csp cac (f ccocs) chac
+
+-- | @since Unreleased
+instance HasField "checkpointCommitteeCertificationVerificationCurrencySymbol" CheckpointParameter CurrencySymbol where
+  {-# INLINE get #-}
+  get (CheckpointParameter _ _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (CheckpointParameter csp cac ccocs chac) =
+    CheckpointParameter csp cac ccocs (f chac)
 
 -- | @since Unreleased
 instance FromData CheckpointParameter where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 CheckpointParameter
+  fromBuiltinData = productFromData4 CheckpointParameter
 
 -- | @since Unreleased
 instance UnsafeFromData CheckpointParameter where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData3 CheckpointParameter
+  unsafeFromBuiltinData = productUnsafeFromData4 CheckpointParameter
 
 {- | = Important note
 

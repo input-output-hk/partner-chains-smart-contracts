@@ -39,6 +39,7 @@ main =
         GenOutput.genCliCommand
           gccSigningKeyFile
           gccSidechainParams
+          gccATMSKind
           gccCliCommand
     MerkleTreeCommand {..} ->
       GenOutput.merkleTreeCommand mtcCommand >>= IO.putStrLn

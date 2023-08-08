@@ -9,16 +9,18 @@ import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Crypto (Signature (Signature))
+import Plutus.V1.Ledger.Address (scriptHashAddress)
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (LedgerBytes)
 import Plutus.V2.Ledger.Tx (TxId (TxId), TxOutRef (TxOutRef))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey,
   BlockProducerRegistration (
     BlockProducerRegistration,
     ecdsaSecp256k1PubKey,
@@ -54,13 +56,12 @@ import TrustlessSidechain.Types (
   CheckpointParameter (
     CheckpointParameter,
     checkpointAssetClass,
-    checkpointSidechainParams,
-    committeeHashAssetClass
+    checkpointCommitteeCertificateVerificationCurrencySymbol,
+    checkpointCommitteeOracleCurrencySymbol,
+    checkpointSidechainParams
   ),
   CheckpointRedeemer (
     CheckpointRedeemer,
-    checkpointCommitteePubKeys,
-    checkpointCommitteeSignatures,
     newCheckpointBlockHash,
     newCheckpointBlockNumber
   ),
@@ -69,7 +70,7 @@ import TrustlessSidechain.Types (
     merkleProof,
     transaction
   ),
-  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
+  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
   FUELMint (
     FUELMint,
     dsKeyCurrencySymbol,
@@ -99,45 +100,43 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  SignedMerkleRoot (
-    SignedMerkleRoot,
-    committeePubKeys,
-    merkleRoot,
-    previousMerkleRoot,
-    signatures
-  ),
   SignedMerkleRootMint (
     SignedMerkleRootMint,
+    committeeCertificateVerificationCurrencySymbol,
     sidechainParams,
-    updateCommitteeHashCurrencySymbol,
     validatorHash
+  ),
+  SignedMerkleRootRedeemer (
+    SignedMerkleRootRedeemer,
+    previousMerkleRoot
+  ),
+  UpdateCommitteeDatum (
+    UpdateCommitteeDatum,
+    aggregateCommitteePubKeys,
+    sidechainEpoch
   ),
   UpdateCommitteeHash (
     UpdateCommitteeHash,
+    committeeCertificateVerificationCurrencySymbol,
+    committeeOracleCurrencySymbol,
     mptRootTokenCurrencySymbol,
-    sidechainParams,
-    token
-  ),
-  UpdateCommitteeHashDatum (
-    UpdateCommitteeHashDatum,
-    committeeHash,
-    sidechainEpoch
+    sidechainParams
   ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
-    newCommitteePubKeys,
+    newAggregateCommitteePubKeys,
     previousMerkleRoot,
     sidechainEpoch,
-    sidechainParams
+    sidechainParams,
+    validatorAddress
   ),
   UpdateCommitteeHashRedeemer (
     UpdateCommitteeHashRedeemer,
-    committeePubKeys,
-    committeeSignatures,
-    newCommitteePubKeys,
     previousMerkleRoot
   ),
  )
+
+-- import Plutus.V2.Ledger.Api (LedgerBytes)
 
 {- | Tests for all data types with @IsData@ implementation
  Some of the data types are only checked transitively (included by some other type)
@@ -154,13 +153,13 @@ tests =
     , dataEncoderGoldenTest "BlockProducerRegistrationMsg" sampleBlockProducerRegistrationMsg
     , dataEncoderGoldenTest "MerkleTreeEntry" sampleMerkleTreeEntry
     , dataEncoderGoldenTest "MerkleRootInsertionMessage" sampleMerkleRootInsertionMessage
-    , dataEncoderGoldenTest "SignedMerkleRoot" sampleSignedMerkleRoot
+    , dataEncoderGoldenTest "SignedMerkleRootRedeemer" sampleSignedMerkleRootRedeemer
     , dataEncoderGoldenTest "SignedMerkleRootMint" sampleSignedMerkleRootMint
     , dataEncoderGoldenTest "CombinedMerkleProof" sampleCombinedMerkleProof
     , dataEncoderGoldenTest "FUELReedemer1" sampleFUELReedemer1
     , dataEncoderGoldenTest "FUELReedemer2" sampleFUELReedemer2
     , dataEncoderGoldenTest "FUELMint" sampleFUELMint
-    , dataEncoderGoldenTest "UpdateCommitteeHashDatum" sampleUpdateCommitteeHashDatum
+    , dataEncoderGoldenTest "UpdateCommitteeDatum" sampleUpdateCommitteeDatum
     , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer" sampleUpdateCommitteeHashRedeemer
     , dataEncoderGoldenTest "UpdateCommitteeHash" sampleUpdateCommitteeHash
     , dataEncoderGoldenTest "UpdateCommitteeHashMessage" sampleUpdateCommitteeHashMessage
@@ -191,12 +190,12 @@ sampleCommitteePubKeys' =
   , EcdsaSecp256k1PubKey "0253e0839b05b420879089621b60f4a9618e877a90f624a2d8c8e8afa17c8be624"
   ]
 
-sampleCommitteeSignatures :: [LedgerBytes]
-sampleCommitteeSignatures =
-  [ "6fd0dd049dc90ebf5d52450e03bcd833ab53352f50bc15c7c2c1236b6aa78ff54fef9979d470bffb79ef949abc075bfb456fea4665f9b722d371f3301e05fd65"
-  , "7026f80d62c4bdaa303bf94892fecb27a20a407209a9d321c3f34b82e73ab1fa3d12b627c8d44d9a2c1674e38e68d389e61a2a867f61074e64c9d7d37aaacd7e"
-  , "44cf123d63075abf1cd1141b65a16f6f8e3f49c21f3c09661e0ed2a633f34f165fe982513ce82b51f4161c792877d0333b27cea6b413917f18738155988d18e3"
-  ]
+-- sampleCommitteeSignatures :: [LedgerBytes]
+-- sampleCommitteeSignatures =
+--   [ "6fd0dd049dc90ebf5d52450e03bcd833ab53352f50bc15c7c2c1236b6aa78ff54fef9979d470bffb79ef949abc075bfb456fea4665f9b722d371f3301e05fd65"
+--   , "7026f80d62c4bdaa303bf94892fecb27a20a407209a9d321c3f34b82e73ab1fa3d12b627c8d44d9a2c1674e38e68d389e61a2a867f61074e64c9d7d37aaacd7e"
+--   , "44cf123d63075abf1cd1141b65a16f6f8e3f49c21f3c09661e0ed2a633f34f165fe982513ce82b51f4161c792877d0333b27cea6b413917f18738155988d18e3"
+--   ]
 
 sampleMerkleProof :: MerkleProof
 sampleMerkleProof =
@@ -286,20 +285,17 @@ sampleMerkleRootInsertionMessage =
     , previousMerkleRoot = Nothing
     }
 
-sampleSignedMerkleRoot :: SignedMerkleRoot
-sampleSignedMerkleRoot =
-  SignedMerkleRoot
-    { merkleRoot = "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
-    , previousMerkleRoot = Nothing
-    , signatures = sampleCommitteeSignatures
-    , committeePubKeys = sampleCommitteePubKeys
+sampleSignedMerkleRootRedeemer :: SignedMerkleRootRedeemer
+sampleSignedMerkleRootRedeemer =
+  SignedMerkleRootRedeemer
+    { previousMerkleRoot = Nothing
     }
 
 sampleSignedMerkleRootMint :: SignedMerkleRootMint
 sampleSignedMerkleRootMint =
   SignedMerkleRootMint
     { sidechainParams = sampleSidechainParams
-    , updateCommitteeHashCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , committeeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     , validatorHash = "3689d804b3e43789fb0442314ba46aa1ccb9b3aa03fc5073ffa6486d"
     }
 
@@ -326,37 +322,36 @@ sampleFUELMint =
     , dsKeyCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
     }
 
-sampleUpdateCommitteeHashDatum :: UpdateCommitteeHashDatum
-sampleUpdateCommitteeHashDatum =
-  UpdateCommitteeHashDatum
-    { committeeHash = "569f8aa770784cd10d0fe657fd389c76b20d3dafcd2fab43a14ebb2fd99e94e2"
+sampleUpdateCommitteeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
+sampleUpdateCommitteeDatum =
+  UpdateCommitteeDatum
+    { aggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys
     , sidechainEpoch = 12
     }
 
 sampleUpdateCommitteeHashRedeemer :: UpdateCommitteeHashRedeemer
 sampleUpdateCommitteeHashRedeemer =
   UpdateCommitteeHashRedeemer
-    { committeeSignatures = sampleCommitteeSignatures
-    , committeePubKeys = sampleCommitteePubKeys
-    , newCommitteePubKeys = sampleCommitteePubKeys'
-    , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    { previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     }
 
 sampleUpdateCommitteeHash :: UpdateCommitteeHash
 sampleUpdateCommitteeHash =
   UpdateCommitteeHash
     { sidechainParams = sampleSidechainParams
-    , token = Value.assetClass "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" ""
+    , committeeOracleCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , committeeCertificateVerificationCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
     , mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
-sampleUpdateCommitteeHashMessage :: UpdateCommitteeHashMessage
+sampleUpdateCommitteeHashMessage :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
 sampleUpdateCommitteeHashMessage =
   UpdateCommitteeHashMessage
     { sidechainParams = sampleSidechainParams
-    , newCommitteePubKeys = sampleCommitteePubKeys'
+    , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     , sidechainEpoch = 12
+    , validatorAddress = scriptHashAddress "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
 sampleCheckpointDatum :: CheckpointDatum
@@ -369,9 +364,7 @@ sampleCheckpointDatum =
 sampleCheckpointRedeemer :: CheckpointRedeemer
 sampleCheckpointRedeemer =
   CheckpointRedeemer
-    { checkpointCommitteeSignatures = sampleCommitteeSignatures
-    , checkpointCommitteePubKeys = sampleCommitteePubKeys
-    , newCheckpointBlockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
+    { newCheckpointBlockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
     , newCheckpointBlockNumber = 15791
     }
 
@@ -379,8 +372,9 @@ sampleCheckpointParameter :: CheckpointParameter
 sampleCheckpointParameter =
   CheckpointParameter
     { checkpointSidechainParams = sampleSidechainParams
-    , checkpointAssetClass = Value.assetClass "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084" ""
-    , committeeHashAssetClass = Value.assetClass "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" ""
+    , checkpointAssetClass = Value.assetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
+    , checkpointCommitteeOracleCurrencySymbol = "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084"
+    , checkpointCommitteeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     }
 
 sampleCheckpointMessage :: CheckpointMessage

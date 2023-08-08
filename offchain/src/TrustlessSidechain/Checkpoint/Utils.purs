@@ -4,7 +4,6 @@ module TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , checkpointAssetClass
   , serialiseCheckpointMessage
-  , normalizeSignatures
   , findCheckpointUtxo
   ) where
 
@@ -33,8 +32,7 @@ import Contract.Transaction
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
-  ( CheckpointEndpointParam(CheckpointEndpointParam)
-  , CheckpointMessage
+  ( CheckpointMessage
   , CheckpointParameter
   , InitCheckpointMint
   )
@@ -65,13 +63,6 @@ checkpointValidator sp = do
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
     [ PlutusData.toData sp ]
   pure $ Validator applied
-
-normalizeSignatures ∷ CheckpointEndpointParam → CheckpointEndpointParam
-normalizeSignatures (CheckpointEndpointParam p) = CheckpointEndpointParam
-  p
-    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-        p.committeeSignatures
-    }
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
