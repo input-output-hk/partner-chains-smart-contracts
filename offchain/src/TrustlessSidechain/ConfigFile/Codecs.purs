@@ -18,9 +18,7 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
 import Data.List (List)
 import Data.UInt as UInt
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds
-  )
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.Options.Types (Config)
 import TrustlessSidechain.Utils.Codecs
   ( atmsKindCodec
@@ -29,10 +27,10 @@ import TrustlessSidechain.Utils.Codecs
   , transactionInputCodec
   )
 import TrustlessSidechain.Utils.Crypto
-  ( SidechainPublicKey
-  , SidechainSignature
-  , getSidechainPublicKeyByteArray
-  , getSidechainSignatureByteArray
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  , getEcdsaSecp256k1PubKeyByteArray
+  , getEcdsaSecp256k1SignatureByteArray
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
@@ -136,25 +134,25 @@ committeeCodec = CAM.list memberCodec
     }
   enc p = { "public-key": p }
 
-sidechainPubKeyCodec ∷ CA.JsonCodec SidechainPublicKey
-sidechainPubKeyCodec = CA.prismaticCodec "SidechainPublicKey" dec enc
+sidechainPubKeyCodec ∷ CA.JsonCodec EcdsaSecp256k1PubKey
+sidechainPubKeyCodec = CA.prismaticCodec "EcdsaSecp256k1PubKey" dec enc
   byteArrayCodec
   where
-  dec ∷ ByteArray → Maybe SidechainPublicKey
-  dec = Utils.Crypto.sidechainPublicKey
+  dec ∷ ByteArray → Maybe EcdsaSecp256k1PubKey
+  dec = Utils.Crypto.ecdsaSecp256k1PubKey
 
-  enc ∷ SidechainPublicKey → ByteArray
-  enc = getSidechainPublicKeyByteArray
+  enc ∷ EcdsaSecp256k1PubKey → ByteArray
+  enc = getEcdsaSecp256k1PubKeyByteArray
 
-sidechainSignatureCodec ∷ CA.JsonCodec SidechainSignature
-sidechainSignatureCodec = CA.prismaticCodec "SidechainSignature" dec enc
+sidechainSignatureCodec ∷ CA.JsonCodec EcdsaSecp256k1Signature
+sidechainSignatureCodec = CA.prismaticCodec "EcdsaSecp256k1Signature" dec enc
   byteArrayCodec
   where
-  dec ∷ ByteArray → Maybe SidechainSignature
-  dec = Utils.Crypto.sidechainSignature
+  dec ∷ ByteArray → Maybe EcdsaSecp256k1Signature
+  dec = Utils.Crypto.ecdsaSecp256k1Signature
 
-  enc ∷ SidechainSignature → ByteArray
-  enc = getSidechainSignatureByteArray
+  enc ∷ EcdsaSecp256k1Signature → ByteArray
+  enc = getEcdsaSecp256k1SignatureByteArray
 
 serverConfigCodec ∷ CA.JsonCodec ServerConfig
 serverConfigCodec = CAR.object "serverConfig"

@@ -49,12 +49,12 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto
-  ( SidechainPrivateKey
-  , SidechainPublicKey
-  , SidechainSignature
+  ( EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
   , aggregateKeys
-  , byteArrayToSidechainPrivateKeyUnsafe
-  , byteArrayToSidechainPublicKeyUnsafe
+  , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe
+  , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , generatePrivKey
   , multiSign
   , toPubKeyUnsafe
@@ -68,15 +68,15 @@ generateUchmSignatures ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   } →
-  Contract (Array (Tuple SidechainPublicKey SidechainSignature))
+  Contract (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
   { sidechainParams
   , currentCommitteePrvKeys
@@ -163,9 +163,9 @@ updateCommitteeHash ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
@@ -184,9 +184,9 @@ updateCommitteeHashWith ∷
   { sidechainParams ∷ SidechainParams
   ,
     -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- The new committee
-    newCommitteePrvKeys ∷ Array SidechainPrivateKey
+    newCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the last merkle root
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
@@ -412,19 +412,19 @@ testScenario4 =
         -- the committees as given in the test case
         let
           initCommitteePrvKeys =
-            [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            [ byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "3e77009e691a2c38c53d5c0608af90af5c793efaa6cfe9e8670b141ed0376911"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "d9465fedde9190b2760bb37ac2b89cf97d7121a98807f8849532e58750d23725"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "3563a2e4d2b373b4b8ea0397b7437e7386d3d39216a77fa3ceb8f64a43d98f56"
             ]
           nextCommitteePrvKeys =
-            [ byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            [ byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "1b7267b5d84a108d67bd8cdc95750d135c1a1fb6482531ddfa0923c043b308f1"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "173d5d8cd43bd6119c633e654d00bebc2165e6875190b132dc93d5ee1b7d2448"
-            , byteArrayToSidechainPrivateKeyUnsafe $ hexToByteArrayUnsafe
+            , byteArrayToEcdsaSecp256k1PrivateKeyUnsafe $ hexToByteArrayUnsafe
                 "34edb67b9f73389280214dae93e62074a9fcfd1eefadd4406cd7d27fd64b46a8"
             ]
 
@@ -435,11 +435,11 @@ testScenario4 =
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData $ aggregateKeys
-                [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
-                , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                     "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
                 ]
             , initSidechainEpoch: one
@@ -461,11 +461,11 @@ testScenario4 =
           \uchp →
             pure $ wrap $ (unwrap uchp)
               { newAggregatePubKeys = toData $ aggregateKeys
-                  [ byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "02b37ba1e0a18e8b3723e57fb6b220836ba6417ab75296f08f717106ad731ac47b"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "02cb793bcfcab7f17453f4c5e0e07a2818c6df4d7995aa1b7a0f0b219c6cfe0e20"
-                  , byteArrayToSidechainPublicKeyUnsafe $ hexToByteArrayUnsafe
+                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
                       "0377c83c74fbccf05671697bf343a71a9c221568721c8e77f330fe82e9b08fdfea"
                   ]
               -- the signatures from the issue aren't quite right (since it

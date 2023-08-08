@@ -13,6 +13,7 @@ import Ledger.Value (CurrencySymbol, TokenName (..))
 import Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
+  LedgerBytes (LedgerBytes, getLedgerBytes),
   OutputDatum (OutputDatum),
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
@@ -77,7 +78,7 @@ mkMintingPolicy verifySig ccm atmspms ctx =
         verifySig
         (plainPublicKeys atmspms)
         threshold
-        (unTokenName uniqueMintedTokenName)
+        (LedgerBytes (unTokenName uniqueMintedTokenName))
         (plainSignatures atmspms)
 
     threshold :: Integer
@@ -160,21 +161,21 @@ mkMintingPolicy verifySig ccm atmspms ctx =
 {-# INLINEABLE verifyPlainMultisig #-}
 verifyPlainMultisig ::
   (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
-  [BuiltinByteString] ->
+  [LedgerBytes] ->
   Integer ->
-  BuiltinByteString ->
-  [BuiltinByteString] ->
+  LedgerBytes ->
+  [LedgerBytes] ->
   Bool
-verifyPlainMultisig verifySig pubKeys enough message signatures = go pubKeys signatures 0
+verifyPlainMultisig verifySig pubKeys enough (LedgerBytes message) signatures = go pubKeys signatures 0
   where
-    go :: [BuiltinByteString] -> [BuiltinByteString] -> Integer -> Bool
+    go :: [LedgerBytes] -> [LedgerBytes] -> Integer -> Bool
     go !pks !sigs !counted = case sigs of
       -- All signatures are verified, we're done
       [] -> counted >= enough
-      (s : ss) -> case pks of
+      (LedgerBytes s : ss) -> case pks of
         -- Unverified signature after checking all cases, give up
         [] -> False
-        (pk : pks') ->
+        (LedgerBytes pk : pks') ->
           if verifySig pk message s
             then -- Found a verifying key, continue
               go pks' ss (counted + 1)
@@ -187,8 +188,8 @@ verifyPlainMultisig verifySig pubKeys enough message signatures = go pubKeys sig
  We call the output of this function an /aggregate public key/.
 -}
 {-# INLINEABLE aggregateKeys #-}
-aggregateKeys :: [BuiltinByteString] -> ATMSPlainAggregatePubKey
-aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat
+aggregateKeys :: [LedgerBytes] -> ATMSPlainAggregatePubKey
+aggregateKeys = ATMSPlainAggregatePubKey . LedgerBytes . Builtins.blake2b_256 . mconcat . fmap getLedgerBytes
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could
@@ -201,5 +202,5 @@ aggregateKeys = ATMSPlainAggregatePubKey . Builtins.blake2b_256 . mconcat
  used to produce the aggregate public key
 -}
 {-# INLINEABLE aggregateCheck #-}
-aggregateCheck :: [BuiltinByteString] -> ATMSPlainAggregatePubKey -> Bool
+aggregateCheck :: [LedgerBytes] -> ATMSPlainAggregatePubKey -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk

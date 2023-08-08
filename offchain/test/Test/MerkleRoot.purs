@@ -40,7 +40,7 @@ import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (Bech32Bytes, bech32BytesFromAddress)
-import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
@@ -66,7 +66,7 @@ saveRoot ∷
   , -- merkle tree entries used to build the new merkle root
     merkleTreeEntries ∷ Array MerkleTreeEntry
   , -- the current committee's (expected to be stored on chain) private keys
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe RootHash
   } →
@@ -175,8 +175,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
       ownPaymentPubKeyHash ← liftedM
-        "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+        "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
+        Wallet.ownPaymentPubKeyHash
 
       ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
         paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
@@ -281,8 +281,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
       ownPaymentPubKeyHash ← liftedM
-        "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-        Address.ownPaymentPubKeyHash
+        "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
+        Wallet.ownPaymentPubKeyHash
 
       ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
         paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
@@ -372,8 +372,8 @@ testScenario3 =
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------
         ownPaymentPubKeyHash ← liftedM
-          "error 'testScenario1': 'Contract.Address.ownPaymentPubKeyHash' failed"
-          Address.ownPaymentPubKeyHash
+          "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
+          Wallet.ownPaymentPubKeyHash
 
         ownRecipient ← liftContractM "Could not convert address to bech 32 bytes"
           $

@@ -142,7 +142,7 @@ saveCheckpoint
           { currentCommitteeUtxo
           , committeeCertificateMint
           , aggregateSignature
-          , message: Utils.Crypto.sidechainMessageToTokenName scMsg
+          , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
           }
 
   -- Build / submit the transaction

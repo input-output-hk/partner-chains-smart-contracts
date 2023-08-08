@@ -41,16 +41,13 @@ import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
-  CheckpointDatum (
-    checkpointBlockHash,
-    checkpointBlockNumber
-  ),
+  CheckpointDatum,
   CheckpointMessage (
     CheckpointMessage,
-    checkpointMsgBlockHash,
-    checkpointMsgBlockNumber,
-    checkpointMsgSidechainEpoch,
-    checkpointMsgSidechainParams
+    blockHash,
+    blockNumber,
+    sidechainEpoch,
+    sidechainParams
   ),
   CheckpointParameter (
     checkpointAssetClass,
@@ -60,7 +57,7 @@ import TrustlessSidechain.Types (
   ),
   CheckpointRedeemer,
   SidechainParams,
-  UpdateCommitteeDatum (sidechainEpoch),
+  UpdateCommitteeDatum,
  )
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
@@ -78,10 +75,10 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
-      (checkpointBlockNumber datum < checkpointBlockNumber outputDatum)
+      (get @"blockNumber" datum < get @"blockNumber" outputDatum)
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
-      (checkpointBlockHash datum /= checkpointBlockHash outputDatum)
+      (get @"blockHash" datum /= get @"blockHash" outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -132,10 +129,10 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     signedByCurrentCommittee =
       let message =
             CheckpointMessage
-              { checkpointMsgSidechainParams = sc
-              , checkpointMsgBlockHash = checkpointBlockHash outputDatum
-              , checkpointMsgBlockNumber = checkpointBlockNumber outputDatum
-              , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
+              { sidechainParams = sc
+              , blockHash = get @"blockHash" outputDatum
+              , blockNumber = get @"blockNumber" outputDatum
+              , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
        in case AssocMap.lookup (checkpointCommitteeCertificateVerificationCurrencySymbol checkpointParam) $ getValue minted of
             Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
@@ -146,7 +143,9 @@ mkCheckpointValidator checkpointParam datum _red ctx =
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    icTxOutRef :: TxOutRef
+    -- |
+    -- | @since Unreleased
+    txOutRef :: TxOutRef
   }
   deriving newtype
     ( TSPrelude.Show
@@ -156,6 +155,13 @@ newtype InitCheckpointMint = InitCheckpointMint
     )
 
 PlutusTx.makeLift ''InitCheckpointMint
+
+-- | @since Unreleased
+instance HasField "txOutRef" InitCheckpointMint TxOutRef where
+  {-# INLINE get #-}
+  get (InitCheckpointMint x) = x
+  {-# INLINE modify #-}
+  modify f (InitCheckpointMint x) = InitCheckpointMint (f x)
 
 {- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
  the utxo which contains the checkpoint. We use an empty bytestring for
@@ -186,7 +192,7 @@ mkCheckpointPolicy ichm _red ctx =
     info = scriptContextTxInfo ctx
 
     oref :: TxOutRef
-    oref = icTxOutRef ichm
+    oref = get @"txOutRef" ichm
 
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info

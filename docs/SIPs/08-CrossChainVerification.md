@@ -137,20 +137,20 @@ with the same Merkle root, one from each sidechain, we will need to
 differentiate between them, and make sure we have one token from each required
 sidechain. To achieve this, we will add a datum to the UTxO of the merkle root,
 with this information. We will use the `VersionOracleToken` currency symbol (we
-will call this `VersionOracleRef`) to identify the verifier sidechain:
+will call this `SidechainRef`) to identify the verifier sidechain:
 
 ```haskell
 data MerkleRootDatum = MerkleRootDatum
-    { verifierVersionOracleRef :: VersionOracleRef
+    { verifierSidechain :: SidechainRef
     }
 
-newtype VersionOracleRef = VersionOracleRef CurrencySymbol
+newtype SidechainRef = SidechainRef CurrencySymbol
 ```
 
-As a general rule, scripts are parameterised by their own `VersionOracleRef`,
+As a general rule, scripts are parameterised by their own `SidechainRef`,
 however in this case, `PartialMerkleRootToken` minting policy will be
-parameterised by the `VersionOracleRef` of the verifier sidechain, while
-`PartialMerkleRootValidator` will be parameterised by the `VersionOracleRef`
+parameterised by the `SidechainRef` of the verifier sidechain, while
+`PartialMerkleRootValidator` will be parameterised by the `SidechainRef`
 of the verified sidechain. This is justified by the fact that we send a
 certified root from sidechain B to A.
 
@@ -158,7 +158,7 @@ The verification of `PartialMerkleRootToken` will be different in the following
 three points:
 - existence of reference input pointing to `previousMerkleRoot` is not checked
 - verify that `verifierVersionOracleRef` in the output datum is identical to the
-  parameter `VersionOracleRef`
+  parameter `SidechainRef`
 - burning of the token is allowed, if a `FinalMerkleRoot` is minted with the
   same Merkle root as it's token name
 
@@ -170,10 +170,10 @@ if the `MerkleRootToken` is burnt in the same UTxO.
 A new endpoint will be implemented to aggregate `PartialMerkleRootToken`s,
 and mint a single `FinalMerkleRootToken`.
 
-`FinalMerkleRoot` is parameterised by the list of `VersionOracleRef`s of the
+`FinalMerkleRoot` is parameterised by the list of `SidechainRef`s of the
 verifier sidechains.
 Minting a `FinalMerkleRoot` verifies that
-- for each of the `VersionOracleRef`s
+- for each of the `SidechainRef`s
 in the list, there is one `PartialMerkleRootToken` burnt with the same
 Merkle root as the token name
 - if `previousMerkleRoot` is specified, the UTxO with the given roothash is

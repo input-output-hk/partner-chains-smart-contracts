@@ -16,7 +16,6 @@ import Contract.Address
   ( Address
   , PaymentPubKeyHash(..)
   , StakePubKeyHash(..)
-  , ownPaymentPubKeyHash
   , toPubKeyHash
   , toStakingCredential
   )
@@ -55,6 +54,7 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
+import Contract.Wallet (ownPaymentPubKeyHash)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -79,6 +79,7 @@ import TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , bech32BytesFromAddress
   )
+import TrustlessSidechain.Utils.Data (productToData3)
 import TrustlessSidechain.Utils.Logging
   ( InternalError
       ( NotFoundOwnPubKeyHash
@@ -99,17 +100,16 @@ newtype FUELMint = FUELMint
   }
 
 derive instance Generic FUELMint _
+
 derive instance Newtype FUELMint _
+
 instance ToData FUELMint where
   toData
     ( FUELMint
         { merkleRootTokenCurrencySymbol, sidechainParams, dsKeyCurrencySymbol }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData merkleRootTokenCurrencySymbol
-      , toData sidechainParams
-      , toData dsKeyCurrencySymbol
-      ]
+    ) = productToData3 merkleRootTokenCurrencySymbol
+    sidechainParams
+    dsKeyCurrencySymbol
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:

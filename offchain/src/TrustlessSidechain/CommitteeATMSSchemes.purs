@@ -25,38 +25,16 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy)
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value
-  ( CurrencySymbol
-  )
+import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures
-      ( Multisignature
-      , PoK
-      , Dummy
-      , PlainEcdsaSecp256k1
-      )
-  , ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSMultisignature
-      , ATMSPoK
-      , ATMSDummy
-      )
+  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, PlainEcdsaSecp256k1)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures
-      ( PlainEcdsaSecp256k1
-      , Multisignature
-      , PoK
-      , Dummy
-      )
-  , ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSMultisignature
-      , ATMSPoK
-      , ATMSDummy
-      )
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1, Multisignature, PoK, Dummy)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
@@ -150,13 +128,13 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
       $ flip traverse committeePubKeyAndSigs
       $
         \(pk /\ mSig) → do
-          pk' ← case Utils.Crypto.sidechainPublicKey pk of
+          pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
             Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
             Just pk' → Right pk'
 
           sig' ← case mSig of
             Nothing → Right Nothing
-            Just sig → case Utils.Crypto.sidechainSignature sig of
+            Just sig → case Utils.Crypto.ecdsaSecp256k1Signature sig of
               Nothing → Left $ "invalid ECDSA SECP256k1 signature: " <> show sig
               Just sig' → Right $ Just sig'
 
@@ -182,7 +160,7 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
         $ flip traverse committeePubKeys
         $
           \pk → do
-            pk' ← case Utils.Crypto.sidechainPublicKey pk of
+            pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
               Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
               Just pk' → Right pk'
             pure $ pk'

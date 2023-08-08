@@ -13,11 +13,9 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Constr)
   , fromData
   , toData
   )
@@ -25,6 +23,16 @@ import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  , productToData4
+  , productToData5
+  )
 
 -- | `UpdateCommitteeDatum` is the datum for the update committee hash
 -- | validator
@@ -39,21 +47,20 @@ newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
 instance
   ToData aggregatePubKeys ⇒
   ToData (UpdateCommitteeDatum aggregatePubKeys) where
-  toData (UpdateCommitteeDatum { aggregatePubKeys, sidechainEpoch }) = Constr
-    (BigNum.fromInt 0)
-    [ toData aggregatePubKeys, toData sidechainEpoch ]
+  toData (UpdateCommitteeDatum { aggregatePubKeys, sidechainEpoch }) =
+    productToData2
+      aggregatePubKeys
+      sidechainEpoch
 
 instance
   FromData aggregatePubKeys ⇒
   FromData (UpdateCommitteeDatum aggregatePubKeys) where
-  fromData (Constr n [ a, b ])
-    | n == BigNum.fromInt 0 =
-        UpdateCommitteeDatum <$>
-          ( { aggregatePubKeys: _, sidechainEpoch: _ }
-              <$> fromData a
-              <*> fromData b
-          )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y → UpdateCommitteeDatum
+        { aggregatePubKeys: x
+        , sidechainEpoch: y
+        }
+    )
 
 -- | `UpdateCommitteeHashRedeemer` is the redeemer for the update committee hash
 -- | validator
@@ -95,12 +102,25 @@ instance ToData UpdateCommitteeHash where
         , committeeCertificateVerificationCurrencySymbol
         , merkleRootTokenCurrencySymbol
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData committeeOracleCurrencySymbol
-    , toData committeeCertificateVerificationCurrencySymbol
-    , toData merkleRootTokenCurrencySymbol
-    ]
+    ) = productToData4 sidechainParams
+    committeeOracleCurrencySymbol
+    committeeCertificateVerificationCurrencySymbol
+    merkleRootTokenCurrencySymbol
+
+-- | `UpdateCommitteeHashParams` is the offchain parameter for the update
+-- | committee hash endpoint.
+newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
+  { sidechainParams ∷ SidechainParams
+  , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
+  , committeeSignatures ∷
+      Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
+  , previousMerkleRoot ∷ Maybe RootHash
+  , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
+  }
+
+derive newtype instance Show UpdateCommitteeHashParams
+
+derive instance Newtype UpdateCommitteeHashParams _
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
 -- | signed by the committee (technically, if `uchm` is an
@@ -111,7 +131,7 @@ newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   , -- `newAggregatePubKeys` is the new committee public keys and _should_
     -- be sorted lexicographically (recall that we can trust the bridge, so it
     -- should do this for us
-    -- newAggregatePubKeys ∷ Array SidechainPublicKey
+    -- newAggregatePubKeys ∷ Array EcdsaSecp256k1PubKey
     -- TODO: fix the documentation here
     newAggregatePubKeys ∷ aggregatePubKeys
   , previousMerkleRoot ∷ Maybe RootHash
@@ -130,10 +150,9 @@ instance
         , sidechainEpoch
         , validatorAddress
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData newAggregatePubKeys
-    , toData previousMerkleRoot
-    , toData sidechainEpoch
-    , toData validatorAddress
-    ]
+    ) = productToData5
+    sidechainParams
+    newAggregatePubKeys
+    previousMerkleRoot
+    sidechainEpoch
+    validatorAddress
