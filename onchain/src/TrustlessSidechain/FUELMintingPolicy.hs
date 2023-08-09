@@ -63,7 +63,9 @@ fuelTokenName = TokenName "FUEL"
 mkMintingPolicy :: FUELMint -> FUELRedeemer -> ScriptContext -> Bool
 mkMintingPolicy fm mode ctx = case mode of
   MainToSide _ ->
-    traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
+    -- Allow unconditional minting of FUEL.
+    -- This is a temporary measure to allow us to test the passive flow
+    True
   SideToMain mte mp ->
     let cborMte :: BuiltinByteString
         cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte

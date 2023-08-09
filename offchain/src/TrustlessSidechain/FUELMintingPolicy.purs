@@ -265,6 +265,7 @@ data FuelParams
       , dsUtxo ∷ Maybe TransactionInput
       }
   | Burn { amount ∷ BigInt, recipient ∷ ByteArray }
+  | TestMint { amount ∷ BigInt, recipient ∷ ByteArray }
 
 -- | `runFuelMP` executes the FUEL mint / burn endpoint.
 runFuelMP ∷ SidechainParams → FuelParams → Contract TransactionHash
@@ -277,6 +278,7 @@ runFuelMP sp fp = do
     Burn params →
       burnFUEL fuelMP params
     Mint params → claimFUEL fuelMP params
+    TestMint params → mintFUEL fuelMP params
 
   ubTx ← liftedE (lmap msg <$> Lookups.mkUnbalancedTx lookups constraints)
   bsTx ← liftedE (lmap msg <$> balanceTx ubTx)
@@ -438,6 +440,22 @@ burnFUEL fuelMP { amount, recipient } = do
 
   let
     value = Value.singleton cs tn (-amount)
+    redeemer = wrap (toData (MainToSide recipient))
+  pure
+    { lookups: Lookups.mintingPolicy fuelMP
+    , constraints: Constraints.mustMintValueWithRedeemer redeemer value
+    }
+
+mintFUEL ∷
+  MintingPolicy →
+  { amount ∷ BigInt, recipient ∷ ByteArray } →
+  Contract
+    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+mintFUEL fuelMP { amount, recipient } = do
+  cs /\ tn ← getFuelAssetClass fuelMP
+
+  let
+    value = Value.singleton cs tn (amount)
     redeemer = wrap (toData (MainToSide recipient))
   pure
     { lookups: Lookups.mintingPolicy fuelMP

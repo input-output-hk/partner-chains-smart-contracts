@@ -70,6 +70,7 @@ data Endpoint
       , dsUtxo ∷ Maybe TransactionInput
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
+  | MintAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
       , sidechainPubKey ∷ SidechainPublicKey

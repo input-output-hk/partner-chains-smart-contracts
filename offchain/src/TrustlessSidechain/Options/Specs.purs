@@ -119,6 +119,10 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig burnSpec)
             (progDesc "Burn a certain amount of FUEL tokens")
         )
+    , command "mint"
+        ( info (withCommonOpts maybeConfig burnSpec)
+            (progDesc "Mint a certain amount of FUEL tokens (temporary command)")
+        )
     , command "register"
         ( info (withCommonOpts maybeConfig regSpec)
             (progDesc "Register a committee candidate")

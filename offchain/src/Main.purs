@@ -23,6 +23,7 @@ import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( ClaimActResp
       , BurnActResp
+      , MintActResp
       , CommitteeCandidateRegResp
       , CandidatePermissionTokenResp
       , CommitteeCandidateDeregResp
@@ -35,7 +36,10 @@ import TrustlessSidechain.EndpointResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.FUELMintingPolicy (FuelParams(Burn, Mint), runFuelMP)
+import TrustlessSidechain.FUELMintingPolicy
+  ( FuelParams(Burn, Mint, TestMint)
+  , runFuelMP
+  )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( initSidechain
@@ -49,6 +53,7 @@ import TrustlessSidechain.Options.Types
   ( Endpoint
       ( ClaimAct
       , BurnAct
+      , MintAct
       , GetAddrs
       , CommitteeCandidateReg
       , CandidiatePermissionTokenAct
@@ -131,6 +136,11 @@ runEndpoint scParams =
       runFuelMP scParams
         (Burn { amount, recipient }) <#> unwrap >>> { transactionId: _ } >>>
         BurnActResp
+
+    MintAct { amount, recipient } →
+      runFuelMP scParams
+        (TestMint { amount, recipient }) <#> unwrap >>> { transactionId: _ } >>>
+        MintActResp
 
     CommitteeCandidateReg
       { spoPubKey
