@@ -25,23 +25,12 @@ import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData
-  ( class ToData
-  )
+import Contract.PlutusData (class ToData)
 import Contract.PlutusData as PlutusData
-import Contract.Scripts
-  ( Validator(Validator)
-  , ValidatorHash
-  )
+import Contract.Scripts (Validator(Validator), ValidatorHash)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.RawScripts as RawScripts
@@ -49,7 +38,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   )
-import TrustlessSidechain.Utils.Crypto (SidechainMessage)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
@@ -92,8 +81,8 @@ serialiseUchmHash ∷
   ∀ aggregatePubKeys.
   ToData aggregatePubKeys ⇒
   UpdateCommitteeHashMessage aggregatePubKeys →
-  Maybe SidechainMessage
-serialiseUchmHash = Utils.Crypto.sidechainMessage
+  Maybe EcdsaSecp256k1Message
+serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
   <<< PlutusData.serializeData

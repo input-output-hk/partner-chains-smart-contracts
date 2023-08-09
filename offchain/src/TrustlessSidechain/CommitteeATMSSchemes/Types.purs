@@ -20,18 +20,14 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
 import Contract.Prelude
 
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData
-  ( class ToData
-  , PlutusData(Constr)
-  , toData
-  )
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PublicKey
   , SchnorrSecp256k1Signature
@@ -89,7 +85,7 @@ derive instance Newtype (CommitteeATMSParams aggregateSignature) _
 -- | aggregate keys + signatures
 data ATMSAggregateSignatures
   = PlainEcdsaSecp256k1
-      (Array (SidechainPublicKey /\ Maybe SidechainSignature))
+      (Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
   | PlainSchnorrSecp256k1
       (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
   | Multisignature

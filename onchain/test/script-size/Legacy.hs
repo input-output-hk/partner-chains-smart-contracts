@@ -2,16 +2,17 @@
 
 module Legacy (verifyPlainMultisigCode) where
 
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.PlutusPrelude
 
 verifyPlainMultisigCode ::
   CompiledCode
-    ( [BuiltinByteString] ->
+    ( [LedgerBytes] ->
       Integer ->
-      BuiltinByteString ->
-      [BuiltinByteString] ->
+      LedgerBytes ->
+      [LedgerBytes] ->
       Bool
     )
 verifyPlainMultisigCode = $$(compile [||verifyPlainMultisig||])
@@ -20,22 +21,22 @@ verifyPlainMultisigCode = $$(compile [||verifyPlainMultisig||])
 
 {-# INLINE verifyPlainMultisig #-}
 verifyPlainMultisig ::
-  [BuiltinByteString] ->
+  [LedgerBytes] ->
   Integer ->
-  BuiltinByteString ->
-  [BuiltinByteString] ->
+  LedgerBytes ->
+  [LedgerBytes] ->
   Bool
-verifyPlainMultisig pubKeys threshold message signatures =
-  let go :: Integer -> [BuiltinByteString] -> [BuiltinByteString] -> Bool
+verifyPlainMultisig pubKeys threshold (LedgerBytes message) signatures =
+  let go :: Integer -> [LedgerBytes] -> [LedgerBytes] -> Bool
       go !signed !pubs !sigs =
         let ok = signed >= threshold
          in ok
               || ( case pubs of
                     [] -> ok
-                    pub : pubs' ->
+                    LedgerBytes pub : pubs' ->
                       case sigs of
                         [] -> ok
-                        sig : sigs' ->
+                        LedgerBytes sig : sigs' ->
                           if verifyEcdsaSecp256k1Signature pub message sig
                             then -- the public key and signature match, so
                             -- we move them both forward..

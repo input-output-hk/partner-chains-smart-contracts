@@ -11,6 +11,7 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
+  LedgerBytes (LedgerBytes),
   TokenName (TokenName),
   Value (getValue),
  )
@@ -23,7 +24,6 @@ import Plutus.V2.Ledger.Contexts (
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
-import PlutusTx (ToData)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -142,7 +142,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- merkle root tokens.
       case previousMerkleRoot (red :: UpdateCommitteeHashRedeemer) of
         Nothing -> True
-        Just tn ->
+        Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
                 ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (mptRootTokenCurrencySymbol uch) (TokenName tn) > 0)

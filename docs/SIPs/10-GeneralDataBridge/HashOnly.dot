@@ -1,0 +1,21 @@
+digraph {
+  node [shape=square style=rounded]
+  rankdir=BT
+
+  subgraph cluster_mainchain {
+    label="Mainchain"
+    labeljust=l
+    style=rounded
+
+    dataHash [label = "Data hash", style=filled]
+  }
+
+  sidechain_a_bridge [label = "Bridge for\nSidechain A"]
+
+  sidechain_b_bridge [label = "Bridge for\nSidechain B"]
+
+  sidechain_a_bridge -> dataHash [label = " Broadcasting"]
+  sidechain_b_bridge -> dataHash [style=dotted, label= "Verifying"]
+
+  {rank=same; sidechain_a_bridge -> sidechain_b_bridge [label = "Send directly"] }
+}

@@ -23,6 +23,8 @@ import Contract.Value as Value
 import Data.Array as Array
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types (CheckpointParameter(..))
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -35,6 +37,7 @@ import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
@@ -136,6 +139,10 @@ getSidechainAddresses
         candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
+  { checkpointCurrencySymbol } ← do
+    Checkpoint.getCheckpointPolicy scParams
+  let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
+
   -- Validators
   committeeCandidateValidatorAddr ← do
     validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
@@ -169,6 +176,18 @@ getSidechainAddresses
     validator ← DistributedSet.dsConfValidator ds
     getAddr validator
 
+  checkpointValidatorAddr ← do
+    let
+      checkpointParam = CheckpointParameter
+        { sidechainParams: scParams
+        , checkpointAssetClass: assetClass checkpointCurrencySymbol
+            Checkpoint.initCheckpointMintTn
+        , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
+        }
+    validator ← Checkpoint.checkpointValidator checkpointParam
+    getAddr validator
+
   let
     mintingPolicies =
       [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
@@ -176,6 +195,7 @@ getSidechainAddresses
       , "CommitteeNftPolicyId" /\ committeeNftPolicyId
       , "DSKeyPolicy" /\ dsKeyPolicyPolicyId
       , "DSConfPolicy" /\ dsConfPolicyId
+      , "CheckpointPolicy" /\ checkpointPolicyId
       ]
         <>
           Array.catMaybes
@@ -189,6 +209,7 @@ getSidechainAddresses
       , "CommitteeHashValidator" /\ committeeHashValidatorAddr
       , "DSConfValidator" /\ dsConfValidatorAddr
       , "DSInsertValidator" /\ dsInsertValidatorAddr
+      , "CheckpointValidator" /\ checkpointValidatorAddr
       ]
 
     cborEncodedAddresses =

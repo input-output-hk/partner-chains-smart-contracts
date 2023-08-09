@@ -13,8 +13,6 @@ import Contract.Prelude
 import Contract.Address
   ( PaymentPubKeyHash
   , getNetworkId
-  , getWalletAddress
-  , ownPaymentPubKeyHash
   , validatorHashEnterpriseAddress
   )
 import Contract.Monad
@@ -48,6 +46,10 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value as Value
+import Contract.Wallet
+  ( getWalletAddress
+  , ownPaymentPubKeyHash
+  )
 import Control.Alternative (guard)
 import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)
@@ -116,27 +118,37 @@ instance ToData BlockProducerRegistration where
         , bprInputUtxo
         , bprOwnPkh
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData bprSpoPubKey
-    , toData bprSidechainPubKey
-    , toData bprSpoSignature
-    , toData bprSidechainSignature
-    , toData bprInputUtxo
-    , toData bprOwnPkh
-    ]
+    ) =
+    Constr (BigNum.fromInt 0)
+      [ toData bprSpoPubKey
+      , toData bprSidechainPubKey
+      , toData bprSpoSignature
+      , toData bprSidechainSignature
+      , toData bprInputUtxo
+      , toData bprOwnPkh
+      ]
 
 instance FromData BlockProducerRegistration where
-  fromData (Constr n [ a, b, c, d, e, f ]) | n == (BigNum.fromInt 0) =
-    { bprSpoPubKey: _
-    , bprSidechainPubKey: _
-    , bprSpoSignature: _
-    , bprSidechainSignature: _
-    , bprInputUtxo: _
-    , bprOwnPkh: _
-    } <$> fromData a <*> fromData b <*> fromData c <*> fromData d <*> fromData e
-      <*> fromData f
-      <#> BlockProducerRegistration
-  fromData _ = Nothing
+  fromData plutusData = case plutusData of
+    Constr n [ x1, x2, x3, x4, x5, x6 ] → do
+      guard (n == BigNum.fromInt 0)
+      x1' ← fromData x1
+      x2' ← fromData x2
+      x3' ← fromData x3
+      x4' ← fromData x4
+      x5' ← fromData x5
+      x6' ← fromData x6
+      pure
+        ( BlockProducerRegistration
+            { bprSpoPubKey: x1'
+            , bprSidechainPubKey: x2'
+            , bprSpoSignature: x3'
+            , bprSidechainSignature: x4'
+            , bprInputUtxo: x5'
+            , bprOwnPkh: x6'
+            }
+        )
+    _ → Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { bprmSidechainParams ∷ SidechainParams

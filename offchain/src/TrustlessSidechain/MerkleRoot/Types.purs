@@ -13,16 +13,13 @@ module TrustlessSidechain.MerkleRoot.Types
 import Contract.Prelude
 
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData
-  ( class ToData
-  , PlutusData(Constr)
-  , toData
-  )
+import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Scripts (ValidatorHash)
 import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Data (productToData3)
 
 -- | `SignedMerkleRootMint` parameterizes the onchain minting policy.
 newtype SignedMerkleRootMint = SignedMerkleRootMint
@@ -48,12 +45,9 @@ instance ToData SignedMerkleRootMint where
         , committeeCertificateVerificationCurrencySymbol
         , merkleRootValidatorHash
         }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData sidechainParams
-      , toData committeeCertificateVerificationCurrencySymbol
-      , toData merkleRootValidatorHash
-      ]
+    ) = productToData3 sidechainParams
+    committeeCertificateVerificationCurrencySymbol
+    merkleRootValidatorHash
 
 -- | `SignedMerkleRootRedeemer` is the redeemer for the update committee hash
 -- | validator

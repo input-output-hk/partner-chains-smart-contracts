@@ -19,6 +19,7 @@ import Plutus.V2.Ledger.Api (
   Address (addressCredential),
   Credential (ScriptCredential),
   CurrencySymbol,
+  LedgerBytes (LedgerBytes, getLedgerBytes),
   Script,
   ScriptContext,
   TxInInfo (txInInfoResolved),
@@ -35,13 +36,13 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
-    mrimMerkleRoot,
-    mrimPreviousMerkleRoot,
-    mrimSidechainParams
+    merkleRoot,
+    previousMerkleRoot,
+    sidechainParams
   ),
   MerkleTreeEntry,
-  SignedMerkleRootMint (committeeCertificateVerificationCurrencySymbol, sidechainParams),
-  SignedMerkleRootRedeemer (previousMerkleRoot),
+  SignedMerkleRootMint (committeeCertificateVerificationCurrencySymbol),
+  SignedMerkleRootRedeemer,
   validatorHash,
  )
 
@@ -54,8 +55,9 @@ serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
  > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
 -}
 {-# INLINEABLE serialiseMrimHash #-}
-serialiseMrimHash :: MerkleRootInsertionMessage -> BuiltinByteString
-serialiseMrimHash = Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
+serialiseMrimHash :: MerkleRootInsertionMessage -> LedgerBytes
+serialiseMrimHash =
+  LedgerBytes . Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
 {- | 'mkMintingPolicy' verifies the following
 
@@ -84,9 +86,9 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
       -- documentation of this function.
-      p1 = case previousMerkleRoot smrr of
+      p1 = case get @"previousMerkleRoot" smrr of
         Nothing -> True
-        Just tn ->
+        Just (LedgerBytes tn) ->
           -- Checks if any of the reference inputs have at least 1 of the last
           -- merkle root.
           let go :: [TxInInfo] -> Bool
@@ -109,16 +111,16 @@ mkMintingPolicy
             | amount == 1 ->
               let msg =
                     MerkleRootInsertionMessage
-                      { mrimSidechainParams = sidechainParams smrm
-                      , mrimMerkleRoot = unTokenName tn
-                      , mrimPreviousMerkleRoot = previousMerkleRoot smrr
+                      { sidechainParams = get @"sidechainParams" smrm
+                      , merkleRoot = LedgerBytes $ unTokenName tn
+                      , previousMerkleRoot = get @"previousMerkleRoot" smrr
                       }
                in traceIfFalse
                     "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
                     ( Value.valueOf
                         minted
                         (committeeCertificateVerificationCurrencySymbol smrm)
-                        (TokenName (serialiseMrimHash msg))
+                        (TokenName (getLedgerBytes (serialiseMrimHash msg)))
                         > 0
                     )
                     && traceIfFalse

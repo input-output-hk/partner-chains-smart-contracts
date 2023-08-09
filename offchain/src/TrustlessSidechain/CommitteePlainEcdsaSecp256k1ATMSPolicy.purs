@@ -32,10 +32,7 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -43,13 +40,9 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
-import Contract.TxConstraints
-  ( TxConstraints
-  )
+import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value
-  ( CurrencySymbol
-  )
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -68,7 +61,10 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Crypto
+  ( EcdsaSecp256k1PubKey
+  , EcdsaSecp256k1Signature
+  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, InvalidData)
@@ -79,8 +75,8 @@ import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 -- | `ATMSPlainEcdsaSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainEcdsaSecp256k1Multisignature =
   ATMSPlainEcdsaSecp256k1Multisignature
-    { currentCommittee ∷ Array SidechainPublicKey
-    , currentCommitteeSignatures ∷ Array SidechainSignature
+    { currentCommittee ∷ Array EcdsaSecp256k1PubKey
+    , currentCommitteeSignatures ∷ Array EcdsaSecp256k1Signature
     }
 
 derive instance Generic ATMSPlainEcdsaSecp256k1Multisignature _
@@ -150,7 +146,8 @@ committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams sidechainParams = do
 -- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
 mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
-  CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
+  CommitteeATMSParams
+    (Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)) →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -217,7 +214,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
         ((unwrap committeeCertificateMint).thresholdNumerator)
         ((unwrap committeeCertificateMint).thresholdDenominator)
         curCommitteePubKeys
-        (Utils.Crypto.byteArrayToSidechainMessageUnsafe messageByteArray)
+        (Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe messageByteArray)
         -- this is actually safe because TokenName and SidechainMessage have
         -- the same invariants
         curCommitteeSignatures
@@ -267,7 +264,8 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
 -- | Note: this assumes that the current committee should be given as reference
 -- | input (instead of spending it) to make testing a bit more terse.
 runCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
-  CommitteeATMSParams (Array (SidechainPublicKey /\ Maybe SidechainSignature)) →
+  CommitteeATMSParams
+    (Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)) →
   Contract TransactionHash
 runCommitteePlainEcdsaSecp256k1ATMSPolicy params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
