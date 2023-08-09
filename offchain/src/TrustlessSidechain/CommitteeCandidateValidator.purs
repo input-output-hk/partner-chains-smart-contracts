@@ -64,10 +64,6 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
