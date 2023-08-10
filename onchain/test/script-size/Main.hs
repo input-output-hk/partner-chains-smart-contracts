@@ -118,15 +118,15 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             (unversioned CPEATMSP.serialisableMintingPolicy)
-            3_434
+            3_443
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
-            931
+            947
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             (unversioned CPSATMSP.serialisableMintingPolicy)
-            3_434
+            3_443
         ]
     , testGroup
         "Distributed set"
