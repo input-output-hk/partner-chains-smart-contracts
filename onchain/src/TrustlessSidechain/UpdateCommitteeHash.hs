@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -17,8 +18,8 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
-  TxOut (txOutDatum, txOutValue),
+  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
+  TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -30,141 +31,107 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  SidechainParams (
-    thresholdDenominator,
-    thresholdNumerator
+  UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
+  UpdateCommitteeHash (
+    committeeCertificateVerificationCurrencySymbol,
+    committeeOracleCurrencySymbol,
+    mptRootTokenCurrencySymbol,
+    sidechainParams
   ),
-  SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHash (cMptRootTokenCurrencySymbol, cSidechainParams, cToken),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage, uchmNewCommitteePubKeys, uchmPreviousMerkleRoot, uchmSidechainEpoch, uchmSidechainParams),
-  UpdateCommitteeHashRedeemer (committeePubKeys, committeeSignatures, newCommitteePubKeys, previousMerkleRoot),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
+  ),
+  UpdateCommitteeHashRedeemer (previousMerkleRoot),
  )
-import TrustlessSidechain.Utils (aggregateCheck, aggregateKeys, verifyMultisig)
 
 -- * Updating the committee hash
 
 {- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
  to the Plutus data representation, then encoding it to cbor via the builtin.
 -}
-serialiseUchm :: UpdateCommitteeHashMessage -> BuiltinByteString
+serialiseUchm :: ToData aggregatePubKeys => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'mkUpdateCommitteeHashValidator' is the on-chain validator. We test for the following conditions
-  1. The native token is in both the input and output.
-  2. The new committee hash is signed by the current committee
-  3. The committee provided really is the current committee
-  4. The new output transaction contains the new committee hash
-TODO an optimization. Instead of putting the new committee hash in the
-redeemer, we could just:
-    1. check if the committee hash is included in the datum (we already do
-    this)
-    2. check if what is in the datum is signed by the current committee
-Note [Committee hash in output datum]:
-Normally, the producer of a utxo is only required to include the datum hash,
-and not the datum itself (but can optionally do so). In this case, we rely on
-the fact that the producer actually does include the datum; and enforce this
-with 'outputDatum'.
-Note [Input has Token and Output has Token]:
-In an older iteration, we used to check if the tx's input has the token, but
-this is implicitly covered when checking if the output spends the token. Hence,
-we don't need to check if the input tx's spends the token which is a nice
-little optimization.
+{- | 'initCommitteeOracleTn'  is the token name of the NFT which identifies
+ the utxo which contains the committee hash. We use an empty bytestring for
+ this because the name really doesn't matter, so we mighaswell save a few
+ bytes by giving it the empty name.
+-}
+{-# INLINEABLE initCommitteeOracleTn #-}
+initCommitteeOracleTn :: TokenName
+initCommitteeOracleTn = TokenName Builtins.emptyByteString
+
+{- | 'initCommitteeOracleMintAmount' is the amount of the currency to mint which
+ is 1.
+-}
+{-# INLINEABLE initCommitteeOracleMintAmount #-}
+initCommitteeOracleMintAmount :: Integer
+initCommitteeOracleMintAmount = 1
+
+{- | 'mkUpdateCommitteeHashValidator' is the on-chain validator.
+ See the specification for what is verified, but as a summary: we verify that
+ the transaction corresponds to the signed update committee message in a
+ reasonable sense.
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
-  UpdateCommitteeHashDatum ->
+  UpdateCommitteeDatum BuiltinData ->
   UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "error 'mkUpdateCommitteeHashValidator': output missing NFT" outputHasToken
-    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'mkUpdateCommitteeHashValidator': current committee mismatch" isCurrentCommittee
+  traceIfFalse "error 'mkUpdateCommitteeHashValidator': invalid committee output" committeeOutputIsValid
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': missing reference input to last merkle root"
+      "error 'mkUpdateCommitteeHashValidator': tx doesn't reference previous merkle root"
       referencesPreviousMerkleRoot
-    && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': expected different new committee"
-      (committeeHash outputDatum == aggregateKeys (newCommitteePubKeys red))
-    -- Note: we only need to check if the new committee is "as signed
-    -- by the committee", since we already know that the sidechainEpoch in
-    -- the datum was "as signed by the committee" -- see how we constructed
-    -- the 'UpdateCommitteeHashMessage'
-    && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
-      (sidechainEpoch dat < sidechainEpoch outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-    sc :: SidechainParams
-    sc = cSidechainParams uch
-    ownOutput :: TxOut
-    ownOutput = case Contexts.getContinuingOutputs ctx of
-      [o] -> o
-      _ -> traceError "Expected exactly one committee output"
-    outputDatum :: UpdateCommitteeHashDatum
-    outputDatum = case txOutDatum ownOutput of
-      -- Note [Committee Hash Inline Datum]
-      -- We only accept the committtee has to be given as inline datum, so
-      -- all other scripts which rely on this script can safely assume that
-      -- the datum is given inline.
-      OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
-      _ -> traceError "error 'mkUpdateCommitteeHashValidator': no output inline datum missing"
-    outputHasToken :: Bool
-    outputHasToken = hasNft (txOutValue ownOutput)
-    hasNft :: Value -> Bool
-    hasNft val = Value.assetClassValueOf val (cToken uch) == 1
-    threshold :: Integer
-    threshold =
-      -- Note [Threshold of Strictly More than Threshold Majority]
-      -- The spec wants us to have strictly more than numerator/denominator majority of the
-      -- committee size. Let @n@ denote the committee size. To have strictly
-      -- more than numerator/denominator majority, we are interested in the smallest integer that
-      -- is strictly greater than @numerator/denominator*n@ which is either:
-      --    1. if @numerator/denominator * n@ is an integer, then the smallest
-      --    integer strictly greater than @numerator/denominator * n@ is
-      --    @numerator/denominator * n + 1@.
-      --
-      --    2. if @numerator/denominator * n@ is not an integer, then the
-      --    smallest integer is @ceil(numerator/denominator * n)@
-      --
-      -- We can capture both cases with the expression @floor((numerator * n)/denominator) + 1@
-      -- via distinguishing cases (again) if @numerator/denominator * n@ is an integer.
-      --
-      --    1.  if @numerator/denominator * n@ is an integer, then
-      --    @floor((numerator * n)/denominator) + 1 = (numerator *
-      --    n)/denominator + 1@ is the smallest integer strictly greater than
-      --    @numerator/denominator * n@ as required.
-      --
-      --    2.  if @numerator/denominator * n@ is not an integer, then
-      --    @floor((numerator * n)/denominator)@ is the largest integer
-      --    strictly smaller than @numerator/denominator *n@, but adding @+1@
-      --    makes this smallest integer that is strictly larger than
-      --    @numerator/denominator *n@ i.e., we have
-      --    @ceil(numerator/denominator * n)@ as required.
-      ( length (committeePubKeys red)
-          `Builtins.multiplyInteger` thresholdNumerator sc
-          `Builtins.divideInteger` thresholdDenominator sc
-      )
-        + 1
-    signedByCurrentCommittee :: Bool
-    signedByCurrentCommittee =
-      let message =
-            UpdateCommitteeHashMessage
-              { uchmSidechainParams = sc
-              , uchmNewCommitteePubKeys = newCommitteePubKeys red
-              , uchmPreviousMerkleRoot = previousMerkleRoot red
-              , uchmSidechainEpoch = sidechainEpoch outputDatum
-              }
-       in verifyMultisig
-            (getSidechainPubKey <$> committeePubKeys red)
-            threshold
-            (LedgerBytes (Builtins.blake2b_256 (serialiseUchm message)))
-            (committeeSignatures red)
-    isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (committeePubKeys red) $ committeeHash dat
+
+    committeeOutputIsValid :: Bool
+    committeeOutputIsValid =
+      let go :: [TxOut] -> Bool
+          go [] = False
+          go (o : os)
+            | -- recall that 'committeeOracleCurrencySymbol' should be
+              -- an NFT, so  (> 0) ==> exactly one.
+              Value.valueOf (txOutValue o) (committeeOracleCurrencySymbol uch) initCommitteeOracleTn > 0
+              , OutputDatum d <- txOutDatum o
+              , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
+              -- Note that we build the @msg@ that we check is signed
+              -- with the data in this transaction directly... so in a sense,
+              -- checking if this message is signed is checking if the
+              -- transaction corresponds to the message
+              let msg =
+                    UpdateCommitteeHashMessage
+                      { sidechainParams = sidechainParams (uch :: UpdateCommitteeHash)
+                      , newAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
+                      , previousMerkleRoot = previousMerkleRoot (red :: UpdateCommitteeHashRedeemer)
+                      , sidechainEpoch = sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
+                      , validatorAddress = txOutAddress o
+                      }
+               in traceIfFalse
+                    "error 'mkUpdateCommitteeHashValidator': tx not signed by committee"
+                    ( Value.valueOf
+                        (txInfoMint info)
+                        (committeeCertificateVerificationCurrencySymbol uch)
+                        (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
+                        > 0
+                    )
+                    && traceIfFalse
+                      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+                      ( sidechainEpoch (dat :: UpdateCommitteeDatum BuiltinData)
+                          < sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
+                      )
+            | otherwise = go os
+       in go (txInfoOutputs info)
+
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
       -- Either we want to reference the previous merkle root or we don't (note
@@ -173,12 +140,12 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case previousMerkleRoot red of
+      case previousMerkleRoot (red :: UpdateCommitteeHashRedeemer) of
         Nothing -> True
         Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (cMptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
+                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (mptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
                     || go rest
                 )
               go [] = False
@@ -200,30 +167,14 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
 
 PlutusTx.makeLift ''InitCommitteeHashMint
 
-{- | 'initCommitteeHashMintTn'  is the token name of the NFT which identifies
- the utxo which contains the committee hash. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
-{-# INLINEABLE initCommitteeHashMintTn #-}
-initCommitteeHashMintTn :: TokenName
-initCommitteeHashMintTn = TokenName Builtins.emptyByteString
-
-{- | 'initCommitteeHashMintAmount' is the amount of the currency to mint which
- is 1.
--}
-{-# INLINEABLE initCommitteeHashMintAmount #-}
-initCommitteeHashMintAmount :: Integer
-initCommitteeHashMintAmount = 1
-
-{- | 'mkCommitteeHashPolicy' is the minting policy for the NFT which identifies
+{- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
  the committee hash.
 -}
-{-# INLINEABLE mkCommitteeHashPolicy #-}
-mkCommitteeHashPolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
-mkCommitteeHashPolicy ichm _red ctx =
-  traceIfFalse "error 'mkCommitteeHashPolicy' UTxO not consumed" hasUtxo
-    && traceIfFalse "error 'mkCommitteeHashPolicy' wrong amount minted" checkMintedAmount
+{-# INLINEABLE mkCommitteeOraclePolicy #-}
+mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
+mkCommitteeOraclePolicy ichm _red ctx =
+  traceIfFalse "error 'mkCommitteeOraclePolicy' UTxO not consumed" hasUtxo
+    && traceIfFalse "error 'mkCommitteeOraclePolicy' wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -235,17 +186,17 @@ mkCommitteeHashPolicy ichm _red ctx =
     checkMintedAmount :: Bool
     checkMintedAmount =
       case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
-        Just [(tn', amt)] -> tn' == initCommitteeHashMintTn && amt == initCommitteeHashMintAmount
+        Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 
 -- CTL hack
-mkCommitteeHashPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeHashPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeHashPolicy . PlutusTx.unsafeFromBuiltinData
+mkCommitteeOraclePolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeOraclePolicyUntyped =
+  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeHashPolicy :: Versioned Ledger.Script
-serialisableCommitteeHashPolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashPolicyUntyped||])) PlutusV2
+serialisableCommitteeOraclePolicy :: Versioned Ledger.Script
+serialisableCommitteeOraclePolicy =
+  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])) PlutusV2
 
 mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeHashValidatorUntyped =

@@ -14,7 +14,6 @@ module TrustlessSidechain.MerkleRoot.Utils
   , findMerkleRootTokenUtxo
   , findPreviousMerkleRootTokenUtxo
   , serialiseMrimHash
-  , normalizeSaveRootParams
   ) where
 
 import Contract.Prelude
@@ -39,27 +38,15 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
-  , SaveRootParams(SaveRootParams)
   , SignedMerkleRootMint
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Crypto (SidechainMessage)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
-
--- | `normalizeSaveRootParams` modifies the following fields in
--- | `SaveRootParams` fields to satisfy the following properties
--- |    - `committeeSignatures` is sorted (lexicographically) by the
--- |    `SidechainPublicKey`.
-normalizeSaveRootParams ∷ SaveRootParams → SaveRootParams
-normalizeSaveRootParams (SaveRootParams p) =
-  SaveRootParams p
-    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-        p.committeeSignatures
-    }
 
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMerkleRootTokenMintingPolicy` paramaterized by the given
@@ -153,9 +140,9 @@ findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm =
 -- | ```purescript
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
-serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe SidechainMessage
+serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe EcdsaSecp256k1Message
 serialiseMrimHash =
-  Utils.Crypto.sidechainMessage
+  Utils.Crypto.ecdsaSecp256k1Message
     <<< Hashing.blake2b256Hash
     <<< cborBytesToByteArray
     <<< PlutusData.serializeData

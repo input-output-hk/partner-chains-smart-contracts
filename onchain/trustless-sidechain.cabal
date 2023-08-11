@@ -35,6 +35,7 @@ common common-lang
     DataKinds
     DeriveTraversable
     DerivingVia
+    DuplicateRecordFields
     EmptyCase
     FlexibleContexts
     FlexibleInstances
@@ -46,6 +47,7 @@ common common-lang
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
+    OverloadedLabels
     OverloadedStrings
     PackageImports
     RebindableSyntax
@@ -81,6 +83,8 @@ library
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CheckpointValidator
     TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.CommitteePlainATMSPolicy
+    TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.MerkleRootTokenMintingPolicy
@@ -95,7 +99,6 @@ library
     TrustlessSidechain.PoCSerialiseData
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
-    TrustlessSidechain.Utils
 
   build-depends:
     , aeson                        ^>=1.5.0.0
@@ -256,6 +259,9 @@ test-suite script-size
   main-is:        Main.hs
   other-modules:
     Compiled
+    Data.Generated
+    Data.Handwritten
+    Data.Wrappers
     Legacy
     Sizer
 

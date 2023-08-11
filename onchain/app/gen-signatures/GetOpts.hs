@@ -29,6 +29,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Extras (tryDecode)
 import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
+import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Lazy qualified as ByteString.Lazy
@@ -48,6 +49,7 @@ import Options.Applicative (
   helper,
   info,
   long,
+  maybeReader,
   metavar,
   option,
   progDesc,
@@ -56,6 +58,8 @@ import Options.Applicative (
  )
 import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
+  Address,
+  BuiltinData,
   FromData (fromBuiltinData),
   LedgerBytes (LedgerBytes),
   TxId (TxId),
@@ -69,16 +73,17 @@ import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
 import TrustlessSidechain.OffChain (
+  ATMSKind,
   Bech32Recipient (bech32RecipientBytes),
   SidechainCommittee (SidechainCommittee),
   SidechainCommitteeMember (..),
  )
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
+  EcdsaSecp256k1PubKey,
   GenesisHash (GenesisHash),
   MerkleTreeEntry (..),
   SidechainParams (..),
-  SidechainPubKey,
  )
 
 -- | 'getArgs' grabs the command line options ('Args').
@@ -99,6 +104,9 @@ data Command
   = GenCliCommand
       { gccSigningKeyFile :: FilePath
       , gccSidechainParams :: SidechainParams
+      , -- | The 'String' which identifies the ATMS kind used by the sidechain.
+        -- Note that this 'String' is simply forwarded to Purescript CLI.
+        gccATMSKind :: ATMSKind
       , gccCliCommand :: GenCliCommand
       }
   | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
@@ -165,13 +173,15 @@ data GenCliCommand
       { -- | the current committee's (as stored on chain) private keys
         uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
       , -- | new committee public keys
-        uchcNewCommitteePubKeys :: [SidechainPubKey]
+        -- | @since Unreleased
+        uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | Sidechain epoch of the committee handover (needed to
         -- create the message we wish to sign
         uchcSidechainEpoch :: Integer
       , -- | previous merkle root that was just stored on chain.
         -- This is needed to create the message we wish to sign
         uchcPreviousMerkleRoot :: Maybe LedgerBytes
+      , uchcValidatorAddress :: Address
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
@@ -185,7 +195,8 @@ data GenCliCommand
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
       { -- | initial committee public keys
-        iscInitCommitteePubKeys :: [SidechainPubKey]
+        -- | @since Unreleased
+        iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | inital sidechain epoch
         iscSidechainEpoch :: Integer
       }
@@ -355,7 +366,7 @@ parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
 {- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
  on the format
 -}
-parseSidechainPubKey :: OptParse.ReadM SidechainPubKey
+parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
 parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
 -- | parses the previous merkle root as a hex encoded string
@@ -459,7 +470,7 @@ currentCommitteePrivateKeysParser =
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
-newCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
+newCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
 newCommitteePublicKeysParser =
   fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
@@ -487,11 +498,30 @@ newCommitteePublicKeysParser =
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
+{- | Parser for parsing a hex encoded CBOR encoded
+ 'Plutus.V2.Ledger.Api.Address'
+-}
+parseAddress :: OptParse.ReadM Address
+parseAddress = eitherReader $ \(str :: HString.String) -> do
+  decoded <-
+    Bifunctor.first ("Invalid hex: " <>)
+      . Base16.decode
+      . Char8.pack
+      $ str
+  builtinData :: BuiltinData <-
+    fmap Builtins.dataToBuiltinData $
+      Bifunctor.first show $
+        Codec.Serialise.deserialiseOrFail $
+          ByteString.Lazy.fromStrict decoded
+  case fromBuiltinData builtinData of
+    Nothing -> Left "Invalid `Address`"
+    Just addr -> return addr
+
 {- | 'initCommitteePublicKeysParser' is essentially identical to
  'newCommitteePublicKeysParser' except the help strings / command line flag
  is changed to reflect that this is the inital committee.
 -}
-initCommitteePublicKeysParser :: OptParse.Parser (IO [SidechainPubKey])
+initCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
 initCommitteePublicKeysParser =
   fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
     OptParse.<|> newCommitteeFile
@@ -574,11 +604,19 @@ signingKeyFileParser =
 genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
+  atmsKind <-
+    option (maybeReader OffChain.parseATMSKind) $
+      mconcat
+        [ long "atms-kind"
+        , metavar "ATMS_KIND"
+        , help "ATMS kind of the sidechain"
+        ]
   signingKeyFile <- signingKeyFileParser
   pure $ \cmd ->
     GenCliCommand
       { gccSidechainParams = scParams
       , gccSigningKeyFile = signingKeyFile
+      , gccATMSKind = atmsKind
       , gccCliCommand = cmd
       }
 
@@ -703,6 +741,13 @@ updateCommitteeHashCommand =
                 , metavar "PREVIOUS_MERKLE_ROOT"
                 , help "Hex encoded previous merkle root (if it exists)"
                 ]
+        uchcValidatorAddress <-
+          option parseAddress $
+            mconcat
+              [ long "--new-committee-validator-cbor-encoded-address"
+              , metavar "ADDRESS"
+              , help "Hex encoded CBOR encoded BuiltinData of `Address`"
+              ]
         pure $ do
           uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
           uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys
@@ -886,7 +931,7 @@ freshSidechainCommittee = do
                 -- we know the next "iteration" will multiply by 10,
                 -- and add at most 9, so if `acc'` is greater or equal to this, then
                 -- we know for sure that we'll go out of bounds..
-                | acc' >= (maxBound :: Int) `quot` 10 -> Left "Committee size too large"
+                | acc' >= ((maxBound :: Int) `quot` 10) + 9 -> Left "Committee size too large"
                 --  do the usual C magic trick (subtract by ascii value
                 --  of @0@) to figure out what int that a digit is.
                 | Char.isDigit a -> Right (acc' * 10 + (Char.ord a - Char.ord '0'))

@@ -31,16 +31,18 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   MerkleTreeEntry (MerkleTreeEntry),
-  SidechainParams (SidechainParams),
-  chainId,
-  genesisHash,
-  genesisUtxo,
+  SidechainParams (
+    SidechainParams,
+    chainId,
+    genesisHash,
+    genesisUtxo,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
   mteAmount,
   mteIndex,
   mtePreviousMerkleRoot,
   mteRecipient,
-  thresholdDenominator,
-  thresholdNumerator,
  )
 
 {- | @'fuelMintingBench'@ is a FUELMintingPolicy benchmark which

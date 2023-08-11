@@ -14,15 +14,20 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
-  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
+import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
+import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainPublicKey, SidechainSignature)
+import TrustlessSidechain.Utils.Data
+  ( productFromData2
+  , productToData2
+  , productToData4
+  )
 
 newtype CheckpointDatum = CheckpointDatum
   { blockHash ∷ ByteArray
@@ -34,24 +39,20 @@ derive instance Generic CheckpointDatum _
 derive instance Newtype CheckpointDatum _
 
 instance ToData CheckpointDatum where
-  toData (CheckpointDatum { blockHash, blockNumber }) = Constr
-    (BigNum.fromInt 0)
-    [ toData blockHash, toData blockNumber ]
+  toData (CheckpointDatum { blockHash, blockNumber }) =
+    productToData2 blockHash blockNumber
 
 instance FromData CheckpointDatum where
-  fromData (Constr n [ a, b ])
-    | n == (BigNum.fromInt 0) =
-        CheckpointDatum <$>
-          ( { blockHash: _, blockNumber: _ }
-              <$> fromData a
-              <*> fromData b
-          )
-  fromData _ = Nothing
+  fromData = productFromData2
+    ( \x y →
+        CheckpointDatum { blockHash: x, blockNumber: y }
+    )
 
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
   , checkpointAssetClass ∷ AssetClass
-  , committeeHashAssetClass ∷ AssetClass
+  , committeeOracleCurrencySymbol ∷ CurrencySymbol
+  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic CheckpointParameter _
@@ -61,12 +62,15 @@ derive instance Newtype CheckpointParameter _
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
-        { sidechainParams, checkpointAssetClass, committeeHashAssetClass }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData sidechainParams
-    , toData checkpointAssetClass
-    , toData committeeHashAssetClass
-    ]
+        { sidechainParams
+        , checkpointAssetClass
+        , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
+        }
+    ) = productToData4 sidechainParams
+    checkpointAssetClass
+    committeeOracleCurrencySymbol
+    committeeCertificateVerificationCurrencySymbol
 
 derive newtype instance Show CheckpointParameter
 
@@ -82,9 +86,7 @@ instance ToData InitCheckpointMint where
     toData icTxOutRef
 
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ Array SidechainSignature
-  , committeePubKeys ∷ Array SidechainPublicKey
-  , newCheckpointBlockHash ∷ ByteArray
+  { newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   }
 
@@ -93,28 +95,21 @@ derive instance Generic CheckpointRedeemer _
 instance ToData CheckpointRedeemer where
   toData
     ( CheckpointRedeemer
-        { committeeSignatures
-        , committeePubKeys
-        , newCheckpointBlockHash
+        { newCheckpointBlockHash
         , newCheckpointBlockNumber
         }
-    ) = Constr (BigNum.fromInt 0)
-    [ toData committeeSignatures
-    , toData committeePubKeys
-    , toData newCheckpointBlockHash
-    , toData newCheckpointBlockNumber
-    ]
+    ) = productToData2
+    newCheckpointBlockHash
+    newCheckpointBlockNumber
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
   { sidechainParams ∷ SidechainParams
-  , committeeSignatures ∷ Array (SidechainPublicKey /\ Maybe SidechainSignature)
+  , aggregateSignature ∷ ATMSAggregateSignatures
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt
   }
-
-derive newtype instance Show CheckpointEndpointParam
 
 derive instance Newtype CheckpointEndpointParam _
 

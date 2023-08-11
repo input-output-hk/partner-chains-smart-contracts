@@ -31,6 +31,7 @@ import Data.List qualified as List
 import Data.String qualified as HString
 import Plutus.V2.Ledger.Api (TxOutRef)
 import System.IO (FilePath)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (RootHash, unRootHash)
 import TrustlessSidechain.OffChain qualified as OffChain
@@ -38,9 +39,16 @@ import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (BlockProducerRegistrationMsg),
   CombinedMerkleProof,
   MerkleRootInsertionMessage (MerkleRootInsertionMessage),
-  SidechainParams (SidechainParams),
-  SidechainPubKey,
-  UpdateCommitteeHashMessage (UpdateCommitteeHashMessage),
+  SidechainParams (SidechainParams, thresholdDenominator, thresholdNumerator),
+  SidechainPubKey (getSidechainPubKey),
+  UpdateCommitteeHashMessage (
+    UpdateCommitteeHashMessage,
+    newAggregateCommitteePubKeys,
+    previousMerkleRoot,
+    sidechainEpoch,
+    sidechainParams,
+    validatorAddress
+  ),
   bprmInputUtxo,
   bprmSidechainParams,
   bprmSidechainPubKey,
@@ -50,12 +58,6 @@ import TrustlessSidechain.Types (
   mrimMerkleRoot,
   mrimPreviousMerkleRoot,
   mrimSidechainParams,
-  thresholdDenominator,
-  thresholdNumerator,
-  uchmNewCommitteePubKeys,
-  uchmPreviousMerkleRoot,
-  uchmSidechainEpoch,
-  uchmSidechainParams,
  )
 
 -- * Various product types to represent the parameters needed for the corresponding ctl command
@@ -207,10 +209,18 @@ ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
         UpdateCommitteeHashMessage
-          { uchmSidechainParams = scParams
-          , uchmNewCommitteePubKeys = List.sort cuchNewCommitteePubKeys
-          , uchmPreviousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
-          , uchmSidechainEpoch = cuchSidechainEpoch
+          { sidechainParams = scParams
+          , -- Old message that's no longer used..
+            -- , uchmNewCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ List.sort cuchNewCommitteePubKeys
+            newAggregateCommitteePubKeys =
+              CommitteePlainATMSPolicy.aggregateKeys $
+                fmap getSidechainPubKey $
+                  List.sort cuchNewCommitteePubKeys
+          , previousMerkleRoot = unRootHash <$> cuchPreviousMerkleRoot
+          , sidechainEpoch = cuchSidechainEpoch
+          , validatorAddress =
+              error "unimplemented validator address for UpdateCommitteeHashMessage"
+              -- TODO: put in the actual validator address.
           }
       currentCommitteePubKeysAndSigsFlags =
         fmap

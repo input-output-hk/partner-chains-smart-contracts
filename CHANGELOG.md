@@ -3,6 +3,77 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+# Unreleased
+
+## Added
+
+* `HasField` type class for easier onchain record handling
+  ([561](https://github.com/input-output-hk/trustless-sidechain/issues/561),
+  [508](https://github.com/mlabs-haskell/trustless-sidechain/pull/508),
+  onchain)
+* Extra functions for efficient `Data` encoding and decoding for product types
+  ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+
+## Changed
+
+* Efficient versions of `Data` encoding functions for product types used where
+  possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+* `SidechainPublicKey` renamed to `EcdsaSecp256k1PubKey`. Functions around it
+  have also been similarly renamed: for example, `sidechainPublicKey` is now
+  `ecdsaSecp256k1PubKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain and onchain)
+* `SidechainSignature` renamed to `EcdsaSecp256k1Signature`. Functions around it
+  have also been similarly renamed: for example, `sidechainSignature` is now
+  `ecdsaSecp256k1Signature`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `SidechainMessage` renamed to `EcdsaSecp256k1Message`. Functions around it
+  have also been similarly renamed: for example, `sidechainMessage` is now
+  `ecdsaSecp256k1Message`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `SidechainPrivateKey` renamed to `EcdsaSecp256k1PrivateKey`. Functions around
+  it have also been similarly renamed: for example, `sidechainPrivateKey` is now
+  `ecdsaSecp256k1PrivateKey`
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+
+## Fixed
+
+* Types whose `Data` encodings cannot change have been noted as such (
+  [484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
+  [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
+  onchain)
+* `FromData` for `EcdsaSecp256k1PubKey` (formerly `SidechainPublicKey`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1Signature` (formerly `SidechainSignature`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/526),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1Message` (formerly `SidechainMessage`) now
+  correctly checks its length invariant
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+* `FromData` for `EcdsaSecp256k1PrivateKey` (formerly `SidechainPrivateKey`) now
+  correctly checks its invariants
+  ([562](https://github.com/input-output-hk/trustless-sidechain/issues/526),
+  [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
+  offchain)
+
 # v3.0.0
 
 ## Added
@@ -10,7 +81,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Added checkpoint validator address and checkpoint currency symbol to `addresses` command
   ([506](https://github.com/mlabs-haskell/trustless-sidechain/pull/506) offchain)
 * Improved error handling with an application-wide error type
-  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471), 
+  ([471](https://github.com/mlabs-haskell/trustless-sidechain/issues/471),
    [492](https://github.com/mlabs-haskell/trustless-sidechain/pull/492) offchain)
 * Checks for `--threshold-numerator` and `--threshold-denominator` to ensure
   coprimality
@@ -40,6 +111,26 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [473](https://github.com/mlabs-haskell/trustless-sidechain/pull/473), onchain)
 * `abs` for absolute value in Haskell prelude, with the same usage caveats as
   `signum`.
+* The flag `--atms-kind` with value `plain-ecdsa-secp256k1` (in preparation for more signature
+  schemes to come) *must* be added to all CLI calls to specify which committee
+  certificate verification is being used. Alternatively, one can put
+  `"atmsKind": "plain-ecdsa-secp256k1"` in the config JSON file.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
+  ([83](https://github.com/input-output-hk/trustless-sidechain/issues/83),
+   [501](https://github.com/mlabs-haskell/trustless-sidechain/pull/501)
+   offchain/onchain)
+* The flag `--new-committee-validator-cbor-encoded-address` or `--new-committee-validator-bech32-address`
+  was added to the `committee-hash` endpoint for the offchain CLI interface
+  which takes either hex encoded cbor of an address of a validator script or a
+  bech32 address of a validator script for which the committee oracle should be
+  sent to.
+  In the former case, this desired address can be found in the `addresses` CLI
+  endpoint under the JSON keys `cborEncodedAddresses.CommitteeHashValidator`.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/493),
+   offchain)
 
 ## Changed
 
@@ -56,6 +147,20 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([441](https://github.com/mlabs-haskell/trustless-sidechain/issues/441),
    [450](https://github.com/mlabs-haskell/trustless-sidechain/pull/450),
    onchain)
+* `UpdateCommitteeHashMessage` has a new format so committee signatures *must*
+  be generated differently for this endpoint. In particular,
+  `UpdateCommitteeHashMessage` was changed so that the hash of the
+  sorted committee members keys replaces the sorted list of the public keys,
+  and a new field which must be an `Address` (see the next bullet point) must
+  be included.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain/onchain)
+* the subcommand `addresses` for the offchain CLI interface outputs the
+  `cbor(plutusData(Address))` of the committee hash validator.
+  ([394](https://github.com/mlabs-haskell/trustless-sidechain/issues/394),
+   [487]( https://github.com/mlabs-haskell/trustless-sidechain/pull/487),
+   offchain)
 
 ## Fixed
 

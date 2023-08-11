@@ -4,7 +4,6 @@ module TrustlessSidechain.Checkpoint.Utils
   , initCheckpointMintTn
   , checkpointAssetClass
   , serialiseCheckpointMessage
-  , normalizeSignatures
   , findCheckpointUtxo
   ) where
 
@@ -33,14 +32,13 @@ import Contract.Transaction
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
-  ( CheckpointEndpointParam(CheckpointEndpointParam)
-  , CheckpointMessage
+  ( CheckpointMessage
   , CheckpointParameter
   , InitCheckpointMint
   )
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Crypto (SidechainMessage)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
@@ -66,13 +64,6 @@ checkpointValidator sp = do
     [ PlutusData.toData sp ]
   pure $ Validator applied
 
-normalizeSignatures ∷ CheckpointEndpointParam → CheckpointEndpointParam
-normalizeSignatures (CheckpointEndpointParam p) = CheckpointEndpointParam
-  p
-    { committeeSignatures = Utils.Crypto.normalizeCommitteePubKeysAndSignatures
-        p.committeeSignatures
-    }
-
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
@@ -94,8 +85,8 @@ checkpointAssetClass ichm = do
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 -- | The result of this function is what is signed by the committee members.
-serialiseCheckpointMessage ∷ CheckpointMessage → Maybe SidechainMessage
-serialiseCheckpointMessage = Utils.Crypto.sidechainMessage
+serialiseCheckpointMessage ∷ CheckpointMessage → Maybe EcdsaSecp256k1Message
+serialiseCheckpointMessage = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
   <<< PlutusData.serializeData

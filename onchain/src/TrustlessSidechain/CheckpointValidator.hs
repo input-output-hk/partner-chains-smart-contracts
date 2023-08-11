@@ -21,7 +21,6 @@ import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
-  LedgerBytes (LedgerBytes),
   TokenName (TokenName),
   Value (getValue),
  )
@@ -41,34 +40,25 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  CheckpointDatum (
-    checkpointBlockHash,
-    checkpointBlockNumber
-  ),
+  ATMSPlainAggregatePubKey,
+  CheckpointDatum,
   CheckpointMessage (
     CheckpointMessage,
-    checkpointMsgBlockHash,
-    checkpointMsgBlockNumber,
-    checkpointMsgSidechainEpoch,
-    checkpointMsgSidechainParams
+    blockHash,
+    blockNumber,
+    sidechainEpoch,
+    sidechainParams
   ),
   CheckpointParameter (
     checkpointAssetClass,
-    checkpointSidechainParams,
-    committeeHashAssetClass
+    checkpointCommitteeCertificateVerificationCurrencySymbol,
+    checkpointCommitteeOracleCurrencySymbol,
+    checkpointSidechainParams
   ),
-  CheckpointRedeemer (
-    checkpointCommitteePubKeys,
-    checkpointCommitteeSignatures
-  ),
-  SidechainParams (
-    thresholdDenominator,
-    thresholdNumerator
-  ),
-  SidechainPubKey (getSidechainPubKey),
-  UpdateCommitteeHashDatum (committeeHash, sidechainEpoch),
+  CheckpointRedeemer,
+  SidechainParams,
+  UpdateCommitteeDatum,
  )
-import TrustlessSidechain.Utils (aggregateCheck, verifyMultisig)
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
@@ -80,19 +70,21 @@ mkCheckpointValidator ::
   CheckpointRedeemer ->
   ScriptContext ->
   Bool
-mkCheckpointValidator checkpointParam datum red ctx =
+mkCheckpointValidator checkpointParam datum _red ctx =
   traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputContainsCheckpointNft
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
-    && traceIfFalse "error 'mkCheckpointValidator': current committee mismatch" isCurrentCommittee
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
-      (checkpointBlockNumber datum < checkpointBlockNumber outputDatum)
+      (get @"blockNumber" datum < get @"blockNumber" outputDatum)
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
-      (checkpointBlockHash datum /= checkpointBlockHash outputDatum)
+      (get @"blockHash" datum /= get @"blockHash" outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
+
+    minted :: Value
+    minted = txInfoMint info
 
     sc :: SidechainParams
     sc = checkpointSidechainParams checkpointParam
@@ -102,10 +94,14 @@ mkCheckpointValidator checkpointParam datum red ctx =
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in Value.assetClassValueOf outputValue (committeeHashAssetClass checkpointParam) == 1
+       in case AssocMap.lookup (checkpointCommitteeOracleCurrencySymbol checkpointParam) $ getValue outputValue of
+            Just tns -> case AssocMap.lookup (TokenName "") tns of
+              Just amount -> amount == 1
+              Nothing -> False
+            Nothing -> False
 
-    -- Extract the UpdateCommitteeHashDatum from the list of input transactions
-    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeHashDatum
+    -- Extract the UpdateCommitteeDatum from the list of input transactions
+    extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
     extractCommitteeDatum [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
     extractCommitteeDatum (txIn : txIns)
       | containsCommitteeNft txIn = case txOutDatum (txInInfoResolved txIn) of
@@ -113,7 +109,7 @@ mkCheckpointValidator checkpointParam datum red ctx =
         _ -> extractCommitteeDatum txIns
       | otherwise = extractCommitteeDatum txIns
 
-    committeeDatum :: UpdateCommitteeHashDatum
+    committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum = extractCommitteeDatum (txInfoReferenceInputs info)
 
     ownOutput :: TxOut
@@ -129,36 +125,27 @@ mkCheckpointValidator checkpointParam datum red ctx =
     outputContainsCheckpointNft :: Bool
     outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (checkpointAssetClass checkpointParam) == 1
 
-    threshold :: Integer
-    threshold =
-      ( length (checkpointCommitteePubKeys red)
-          `Builtins.multiplyInteger` thresholdNumerator sc
-          `Builtins.divideInteger` thresholdDenominator sc
-      )
-        + 1
-
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
       let message =
             CheckpointMessage
-              { checkpointMsgSidechainParams = sc
-              , checkpointMsgBlockHash = checkpointBlockHash outputDatum
-              , checkpointMsgBlockNumber = checkpointBlockNumber outputDatum
-              , checkpointMsgSidechainEpoch = sidechainEpoch committeeDatum
+              { sidechainParams = sc
+              , blockHash = get @"blockHash" outputDatum
+              , blockNumber = get @"blockNumber" outputDatum
+              , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
-       in verifyMultisig
-            (getSidechainPubKey <$> checkpointCommitteePubKeys red)
-            threshold
-            (LedgerBytes (Builtins.blake2b_256 (serializeCheckpointMsg message)))
-            (checkpointCommitteeSignatures red)
-
-    isCurrentCommittee :: Bool
-    isCurrentCommittee = aggregateCheck (checkpointCommitteePubKeys red) $ committeeHash committeeDatum
+       in case AssocMap.lookup (checkpointCommitteeCertificateVerificationCurrencySymbol checkpointParam) $ getValue minted of
+            Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
+              Just amount -> amount > 0
+              Nothing -> False
+            Nothing -> False
 
 -- | 'InitCheckpointMint' is used as the parameter for the minting policy
 newtype InitCheckpointMint = InitCheckpointMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    icTxOutRef :: TxOutRef
+    -- |
+    -- | @since Unreleased
+    txOutRef :: TxOutRef
   }
   deriving newtype
     ( TSPrelude.Show
@@ -168,6 +155,13 @@ newtype InitCheckpointMint = InitCheckpointMint
     )
 
 PlutusTx.makeLift ''InitCheckpointMint
+
+-- | @since Unreleased
+instance HasField "txOutRef" InitCheckpointMint TxOutRef where
+  {-# INLINE get #-}
+  get (InitCheckpointMint x) = x
+  {-# INLINE modify #-}
+  modify f (InitCheckpointMint x) = InitCheckpointMint (f x)
 
 {- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
  the utxo which contains the checkpoint. We use an empty bytestring for
@@ -198,7 +192,7 @@ mkCheckpointPolicy ichm _red ctx =
     info = scriptContextTxInfo ctx
 
     oref :: TxOutRef
-    oref = icTxOutRef ichm
+    oref = get @"txOutRef" ichm
 
     hasUtxo :: Bool
     hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info

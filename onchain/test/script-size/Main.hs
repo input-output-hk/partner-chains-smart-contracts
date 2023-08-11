@@ -1,13 +1,14 @@
 module Main (main) where
 
 import Compiled qualified
-import Ledger.Scripts (unversioned)
+import Ledger.Scripts (fromCompiledCode, unversioned)
 import Legacy qualified
-import Sizer (fitsInto, fitsUnder, scriptFitsInto)
+import Sizer (fitsInto, fitsUnder, scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
@@ -52,15 +53,15 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             (unversioned FUEL.serialisableMintingPolicy)
-            4_009
+            3_969
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_505
+            809
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
-            4_174
+            3_393
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -76,31 +77,31 @@ main =
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
-            2_785
+            2_745
         , fitsInto
-            "mkCommitteeHashPolicy"
-            Compiled.mkCommitteeHashPolicyCode
+            "mkCommitteeOraclePolicy"
+            Compiled.mkCommitteeOraclePolicyCode
             400
         , scriptFitsInto
-            "mkCommitteeHashPolicy (serialized)"
-            (unversioned UCH.serialisableCommitteeHashPolicy)
+            "mkCommitteeOraclePolicy (serialized)"
+            (unversioned UCH.serialisableCommitteeOraclePolicy)
             2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            1_805
+            835
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            4_594
+            3_509
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_836
+            1_632
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_608
+            4_394
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
@@ -109,17 +110,25 @@ main =
             "mkCheckpointPolicy (serialized)"
             (unversioned CV.serialisableCheckpointPolicy)
             2_853
+        , fitsInto
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
+            Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
+            947
+        , scriptFitsInto
+            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
+            (unversioned CPEATMSP.serialisableMintingPolicy)
+            3_460
         ]
     , testGroup
         "Distributed set"
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_690
+            1_667
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             (unversioned DS.serialisableInsertValidator)
-            4_098
+            4_049
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
@@ -131,17 +140,80 @@ main =
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode
-            1_228
+            1_231
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             (unversioned DS.serialisableDsKeyPolicy)
-            3_667
+            3_630
         ]
     , testGroup
         "Other"
         [ fitsUnder
-            "verifyMultisig"
+            "verifyPlainMultisig"
             ("new", Compiled.newVerify)
-            ("old", Legacy.verifyMultisigCode)
+            ("old", Legacy.verifyPlainMultisigCode)
+        ]
+    , testGroup
+        "Data rep"
+        [ scriptFitsUnder
+            "toBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
+            ("generated", fromCompiledCode Compiled.toDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.fromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.fromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData"
+            ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairToDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairFromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (pair)"
+            ("handwritten", fromCompiledCode Compiled.pairUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairUnsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listToDataGenerated)
+        , scriptFitsUnder
+            "fromBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listFromDataGenerated)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (list)"
+            ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
+        , scriptFitsUnder
+            "toBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.toDataWrapper)
+            ("direct", fromCompiledCode Compiled.toDataDirect)
+        , scriptFitsUnder
+            "fromBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.fromDataWrapper)
+            ("direct", fromCompiledCode Compiled.fromDataDirect)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (solution 3)"
+            ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
+            ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
+        , scriptFitsUnder
+            "toBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.toData3CPS)
+            ("direct", fromCompiledCode Compiled.toData3Direct)
+        , scriptFitsUnder
+            "fromBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.fromData3CPS)
+            ("direct", fromCompiledCode Compiled.fromData3Direct)
+        , scriptFitsUnder
+            "unsafeFromBuiltinData (CPS versus direct)"
+            ("cps", fromCompiledCode Compiled.unsafeFromData3CPS)
+            ("direct", fromCompiledCode Compiled.unsafeFromData3Direct)
         ]
     ]

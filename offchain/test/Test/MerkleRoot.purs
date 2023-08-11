@@ -22,6 +22,10 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CommitteeATMSSchemes
+  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
+  , ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  )
 import TrustlessSidechain.FUELMintingPolicy
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -36,7 +40,7 @@ import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (Bech32Bytes, bech32BytesFromAddress)
-import TrustlessSidechain.Utils.Crypto (SidechainPrivateKey)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
@@ -62,7 +66,7 @@ saveRoot ∷
   , -- merkle tree entries used to build the new merkle root
     merkleTreeEntries ∷ Array MerkleTreeEntry
   , -- the current committee's (expected to be stored on chain) private keys
-    currentCommitteePrvKeys ∷ Array SidechainPrivateKey
+    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe RootHash
   } →
@@ -121,7 +125,7 @@ saveRoot
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
-    , committeeSignatures
+    , aggregateSignature: PlainEcdsaSecp256k1 committeeSignatures
     }
   pure
     { merkleRoot
@@ -162,6 +166,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -222,7 +227,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         , merkleRoot
         , previousMerkleRoot: Nothing
 
-        , committeeSignatures
+        , aggregateSignature: PlainEcdsaSecp256k1
+            committeeSignatures
         }
 
       pure unit
@@ -265,6 +271,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
+          , initATMSKind: ATMSPlainEcdsaSecp256k1
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
@@ -354,6 +361,7 @@ testScenario3 =
             , initThresholdNumerator: BigInt.fromInt 99999
             , initThresholdDenominator: BigInt.fromInt 100000
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
         { sidechainParams } ← InitSidechain.initSidechain initSidechainParams

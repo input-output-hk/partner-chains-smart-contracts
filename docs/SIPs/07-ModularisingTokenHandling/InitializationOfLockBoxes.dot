@@ -1,0 +1,22 @@
+strict digraph {
+  node [shape=record]
+  // graph [nodesep="1", ranksep="1"]
+
+  Transaction [ shape=diamond ];
+
+  LockBoxOracleMintingPolicy [shape = ellipse];
+
+  LockBoxValidator1 [label = "LockBoxValidator with datum `McToken`"];
+  LockBoxValidator2 [label = "LockBoxValidator with datum `McToken`"];
+  LockBoxValidator3 [label = "LockBoxValidator with datum `McToken`"];
+
+  Transaction -> LockBoxOracleMintingPolicy [ label = "mints" ];
+
+  LockBoxOracleMintingPolicy -> LockBoxValidator1 [ label = "pays a token to", style=dashed ];
+  LockBoxOracleMintingPolicy -> LockBoxValidator2 [ label = "pays a token to", style=dashed ];
+  LockBoxOracleMintingPolicy -> LockBoxValidator3 [ label = "pays a token to", style=dashed ];
+
+  Transaction -> LockBoxValidator1 [label = "output"]
+  Transaction -> LockBoxValidator2 [label = "output"]
+  Transaction -> LockBoxValidator3 [label = "output"]
+}

@@ -216,7 +216,16 @@ Note that this is essentially identical to the previous specification with the
 only difference being we abstract the representation of the aggregated
 committee public keys to some `aggregatePubKeys` type.
 
-As redeemer, `UpdateCommitteeValidator` will take the following
+As redeemer, `UpdateCommitteeValidator` will take simply the previous Merkle
+root (if it exists) i.e., the type
+```haskell
+newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
+    { previousMerkleRoot :: Maybe RootHash
+    }
+```
+
+We will also require an important data type, `UpdateCommitteeMessage`, which
+will be the messages that will be signed in the Bridge.
 `UpdateCommitteeMessage` data type as follows.
 ```haskell
 data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
@@ -234,25 +243,37 @@ data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
   }
 ```
 
+Later, in [implementations of committee certificate verification minting
+policies](#implementations-of-committee-certificate-verification-minting-policies),
+we will see how this data type must be signed.
+
 Finally, `UpdateCommitteeValidator` validates only if the following are all
 satisfied:
 
 - The committee certificate verification minting policy mints with token name
-  `tn` for which `tn` satisfies `tn == blake2b(cbor(UpdateCommitteeMessage))`
-  where `UpdateCommitteeMessage` is as provided in the redeemer
+  `tn` for which `tn` satisfies `tn == blake2b(cbor(msg))` for some
+   `msg :: UpdateCommitteeMessage BuiltinData`, and this transaction corresponds to the signed `msg`.
+  In other words, if the script verifies that `blake2b(cbor(msg))` is signed
+  then the following must be true for this transaction:
 
-- The NFT `CommitteeOraclePolicy` is output at a validator address
-  `newValidatorAddress` from the redeemer. This validator address must also
-  have as datum `UpdateCommitteeDatum aggregatePubKeys` for which its
-  `aggregateCommitteePubKeys :: aggregatePubKeys` is the
-  `newAggregateCommitteePubKeys :: aggregatePubKeys` from the redeemer, and its
-  `sidechainEpoch` is `newSidechainEpoch` from the redeemer.
+    - The `sidechainParams` in the signed `msg` are the same
+      sidechain parameters that the validator is parameterized by
 
-- The `sidechainEpoch` in the current datum is strictly smaller than
-  `newSidechainEpoch` as provided in the redeemer (this is to prevent replay
-  attacks).
+    - The unique script output at address `addr` identified by the NFT
+      `CommitteeOraclePolicy` has as datum
+      `newUpdateCommitteeHashDatum :: UpdateCommitteeDatum BuiltinData`.
 
-- There is a reference to the `previousMerkleRoot` in the transaction.
+    - `addr` is `newValidatorAddress` in the signed `msg`.
+
+    - `newUpdateCommitteeHashDatum`'s `sidechainEpoch` is `newSidechainEpoch`
+      in the signed `msg`, and `sidechainEpoch` is strictly less than
+      `newSidechainEpoch` (this prevents replay attacks).
+
+    - `newUpdateCommitteeHashDatum`'s `aggregateCommitteePubKeys` is
+      `newAggregateCommitteePubKeys` in the signed `msg`.
+
+    - `previousMerkleRoot` provided in the redeemer is `previousMerkleRoot` in
+      the signed `msg`, and this Merkle root is referenced in this transaction.
 
 In essence, these verify that this transaction for updating the committee
 corresponds to the signed `UpdateCommitteeMessage` in a reasonable sense.
@@ -274,6 +295,13 @@ requires no changes to the Bridge.
 
 As redeemer, `MerkleRootTokenMintingPolicy` will take the following data type.
 ```haskell
+newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
+  { previousMerkleRoot :: Maybe ByteString
+  }
+```
+
+Recall from the main specification we had the following data type.
+```haskell
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { sidechainParams :: SidechainParams
     -- ^ Parameters identifying the Sidechain
@@ -281,20 +309,27 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , previousMerkleRoot :: Maybe ByteString
   }
 ```
-Note that similarly to the committee handover from the previous section, we
-pass the `MerkleRootInsertionMessage` directly as a redeemer instead of passing
-a separate redeemer type and reconstructing the message onchain.
+Moreover, recall that the Bridge generated signatures as follows.
+```
+signature = ecdsa.sign(data: blake2b(cbor(MerkleRootInsertionMessage)), key: committeeMemberPrvKey)
+```
 
 `MerkleRootTokenMintingPolicy` will mint only if the following are satisfied.
 
 - If `previousMerkleRoot` is specified, the UTxO with the given Merkle root is
   referenced in the transaction as a reference input.
 
-- There exists a `MerkleRootToken` with token name as `merkleRoot` at a
-  `MerkleRootTokenValidator` script address as a transaction output.
-
 - The committee certificate verification minting policy mints a token name, say
-  `tn`, which satisfies `tn == blake2b(cbor(MerkleRootInsertionMessage))`.
+  `tn`, which satisfies `tn == blake2b(cbor(msg))` for some
+  `msg :: MerkleRootInsertionMessage`.
+
+- `sidechainParams` of `msg` match the `SidechainParams` that this script is
+  parameterized by.
+
+- `previousMerkleRoot` from the redeemer matches `msg`'s `previousMerkleRoot`.
+
+- The unique token name of this minting policy that is minted has token name
+  `merkleRoot` from `msg`, and is at a `MerkleRootTokenValidator` script output.
 
 The following diagram captures how this transaction is intended to be built.
 
@@ -312,9 +347,7 @@ changes to the Bridge.
 As redeemer, the `CheckpointValidator` will take the following data type.
 ```haskell
 data CheckpointRedeemer = CheckpointRedeemer
-  { committeeSignatures ∷ [SidechainSignature]
-  , committeePubKeys ∷ [SidechainPublicKey]
-  , newCheckpointBlockHash ∷ ByteString
+  { newCheckpointBlockHash ∷ ByteString
   , newCheckpointBlockNumber ∷ Integer
   }
 ```
@@ -406,6 +439,7 @@ policy.
 ### Design of `CommitteePlainATMSPolicy`
 The `CommitteePlainATMSPolicy` is the same committee certificate verification
 mechanism that is in the current implementation.
+Although, we will introduce some changes which optimize the onchain validator scripts.
 
 We will instantiate the `aggregatePubKeys` type to be the concatenated hash of
 public keys
@@ -415,11 +449,30 @@ public keys
 -- @
 -- committeePubKeys = sort([key1, key2, ..., keyN])
 -- committeePubKeysHash = blake2b(concat(committeePubKeys))
--- keyN - 33 bytes compressed ecdsa public key of a committee member
+-- keyi - 33 bytes compressed ecdsa public key of a committee member
 -- @
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey ByteString
 ```
-and we instantiate the `multisignature` type to two lists of public keys and
+
+In particular, this means that when the Bridge executes a [committee
+handover](#committee-handover-changes), the Bridge must generate signatures as follows.
+```
+-- committeePubKeys = sort([key1, key2, ..., keyN])
+-- committeePubKeysHash = blake2b(concat(committeePubKeys))
+-- keyi - 33 bytes compressed ecdsa public key of a committee member
+
+msg =
+    UpdateCommitteeMessage ATMSPlainAggregatePubKey
+  { sidechainParams = {- .. -}
+  , newAggregateCommitteePubKeys = committeePubKeysHash
+  , previousMerkleRoot = {- .. -}
+  , newSidechainEpoch = {- .. -}
+  , newValidatorAddress = {- .. -}
+  }
+signature = ecdsa.sign(data: blake2b(cbor(msg)), key: committeeMemberPrvKey)
+```
+
+We instantiate the `multisignature` type to two lists of public keys and
 their associated signatures
 ```haskell
 -- | Invariant: 'atmsPublicKeys' is sorted lexicographically, and the
