@@ -10,7 +10,9 @@ import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
-import Contract.Wallet (getWalletAddress)
+import Contract.Wallet
+  ( getWalletAddress
+  )
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
@@ -30,7 +32,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 mockSpoPubKey ∷ ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
@@ -62,15 +63,11 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
   register $ RegisterParams
     { sidechainParams: scParams
     , spoPubKey: mockSpoPubKey
-    , sidechainPubKey:
-        Utils.Crypto.byteArrayToEcdsaSecp256k1PubKeyUnsafe
-          $ hexToByteArrayUnsafe
-              "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
+    , sidechainPubKey: hexToByteArrayUnsafe
+        "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
     , spoSig: hexToByteArrayUnsafe ""
-    , sidechainSig:
-        Utils.Crypto.byteArrayToEcdsaSecp256k1SignatureUnsafe
-          $ hexToByteArrayUnsafe
-              "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
+    , sidechainSig: hexToByteArrayUnsafe
+        "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
     , inputUtxo: registrationUtxo
     , permissionToken: cpti
     }

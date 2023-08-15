@@ -161,7 +161,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: initCommitteePubKeys
+          , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+              initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -266,7 +267,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initCommittee: initCommitteePubKeys
+          , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+              initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -356,7 +358,8 @@ testScenario3 =
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+                initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 99999
             , initThresholdDenominator: BigInt.fromInt 100000

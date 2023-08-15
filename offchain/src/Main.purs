@@ -73,7 +73,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -242,13 +241,18 @@ runEndpoint sidechainEndpointParams endpoint =
             , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
             }
 
-        newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+        rawNewCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           newCommitteePubKeysInput
+
+        newAggregatePubKeys ← liftContractE $
+          CommitteeATMSSchemes.aggregateATMSPublicKeys
+            { atmsKind
+            , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
+            }
         let
           params = UpdateCommitteeHashParams
             { sidechainParams: scParams
-            , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ List.toUnfoldable
-                newCommitteePubKeys
+            , newAggregatePubKeys: newAggregatePubKeys
             , aggregateSignature
             , previousMerkleRoot
             , sidechainEpoch
@@ -320,8 +324,14 @@ runEndpoint sidechainEndpointParams endpoint =
         , useInitTokens
         , initCandidatePermissionTokenMintInfo
         } → do
-        committeePubKeys ← liftEffect $ ConfigFile.getCommittee
+        rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           committeePubKeysInput
+
+        committeePubKeys ← liftContractE $
+          CommitteeATMSSchemes.aggregateATMSPublicKeys
+            { atmsKind
+            , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+            }
         let
           sc = unwrap scParams
           isc =
@@ -329,7 +339,7 @@ runEndpoint sidechainEndpointParams endpoint =
             , initGenesisHash: sc.genesisHash
             , initUtxo: sc.genesisUtxo
             , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-            , initCommittee: List.toUnfoldable committeePubKeys
+            , initAggregatedCommittee: committeePubKeys
 
             , -- duplicated from the `InitTokens` case
               initCandidatePermissionTokenMintInfo:
@@ -389,8 +399,15 @@ runEndpoint sidechainEndpointParams endpoint =
             , committeePubKeyAndSigs: List.toUnfoldable newMerkleRootSignatures
             }
 
-        newCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+        rawNewCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           newCommitteePubKeysInput
+
+        newAggregatePubKeys ← liftContractE $
+          CommitteeATMSSchemes.aggregateATMSPublicKeys
+            { atmsKind
+            , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
+            }
+
         let
           saveRootParams = SaveRootParams
             { sidechainParams: scParams
@@ -401,8 +418,7 @@ runEndpoint sidechainEndpointParams endpoint =
           uchParams = UpdateCommitteeHashParams
             { sidechainParams: scParams
             , newAggregatePubKeys:
-                Utils.Crypto.aggregateKeys $ List.toUnfoldable
-                  newCommitteePubKeys
+                newAggregatePubKeys
             , aggregateSignature: newCommitteeAggregateSignature
             , -- the previous merkle root is the merkle root we just saved..
               previousMerkleRoot: Just merkleRoot

@@ -110,65 +110,6 @@ newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
 
 -- * Committee Candidate Validator data
 
--- | Endpoint parameters for committee candidate registration
-data RegisterParams = RegisterParams
-  { sidechainParams :: SidechainParams
-  , spoPubKey :: PubKey
-  , -- | @since Unreleased
-    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
-  , spoSig :: Signature
-  , sidechainSig :: Signature
-  , inputUtxo :: TxOutRef
-  }
-
--- | @since Unreleased
-instance HasField "sidechainParams" RegisterParams SidechainParams where
-  {-# INLINE get #-}
-  get (RegisterParams x _ _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams (f sp) spoPK sPK sS scS u
-
--- | @since Unreleased
-instance HasField "spoPubKey" RegisterParams PubKey where
-  {-# INLINE get #-}
-  get (RegisterParams _ x _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams sp (f spoPK) sPK sS scS u
-
--- | @since Unreleased
-instance HasField "ecdsaSecp256k1PubKey" RegisterParams EcdsaSecp256k1PubKey where
-  {-# INLINE get #-}
-  get (RegisterParams _ _ x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams sp spoPK (f sPK) sS scS u
-
--- | @since Unreleased
-instance HasField "spoSig" RegisterParams Signature where
-  {-# INLINE get #-}
-  get (RegisterParams _ _ _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams sp spoPK sPK (f sS) scS u
-
--- | @since Unreleased
-instance HasField "sidechainSig" RegisterParams Signature where
-  {-# INLINE get #-}
-  get (RegisterParams _ _ _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams sp spoPK sPK sS (f scS) u
-
--- | @since Unreleased
-instance HasField "inputUtxo" RegisterParams TxOutRef where
-  {-# INLINE get #-}
-  get (RegisterParams _ _ _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (RegisterParams sp spoPK sPK sS scS u) =
-    RegisterParams sp spoPK sPK sS scS (f u)
-
 {- | 'CandidatePermissionMint' is used to parameterize the minting policy in
  'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
 -}
@@ -209,28 +150,7 @@ instance HasField "utxo" CandidatePermissionMint TxOutRef where
   {-# INLINE modify #-}
   modify f (CandidatePermissionMint sp u) = CandidatePermissionMint sp (f u)
 
--- | Endpoint parameters for committee candidate deregistration
-data DeregisterParams = DeregisterParams
-  { sidechainParams :: SidechainParams
-  , spoPubKey :: PubKey
-  }
-
--- | @since Unreleased
-instance HasField "sidechainParams" DeregisterParams SidechainParams where
-  {-# INLINE get #-}
-  get (DeregisterParams sp _) = sp
-  {-# INLINE modify #-}
-  modify f (DeregisterParams sp sPK) = DeregisterParams (f sp) sPK
-
--- | @since Unreleased
-instance HasField "spoPubKey" DeregisterParams PubKey where
-  {-# INLINE get #-}
-  get (DeregisterParams _ x) = x
-  {-# INLINE modify #-}
-  modify f (DeregisterParams sp sPK) = DeregisterParams sp (f sPK)
-
-{- | = Important note
-
+{-
  The 'Data' serializations for this type /cannot/ change.
 -}
 data BlockProducerRegistration = BlockProducerRegistration
@@ -238,8 +158,7 @@ data BlockProducerRegistration = BlockProducerRegistration
     -- | @since Unreleased
     spoPubKey :: PubKey -- own cold verification key hash
   , -- | public key in the sidechain's desired format
-    -- | @since Unreleased
-    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
+    sidechainPubKey :: LedgerBytes
   , -- | Signature of the SPO
     -- | @since Unreleased
     spoSignature :: Signature
@@ -265,7 +184,7 @@ instance HasField "spoPubKey" BlockProducerRegistration PubKey where
     BlockProducerRegistration (f sPK) scPK sS scS u pkh
 
 -- | @since Unreleased
-instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration EcdsaSecp256k1PubKey where
+instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration LedgerBytes where
   {-# INLINE get #-}
   get (BlockProducerRegistration _ x _ _ _ _) = x
   {-# INLINE modify #-}
@@ -309,10 +228,8 @@ instance HasField "ownPkh" BlockProducerRegistration PubKeyHash where
  The 'Data' serializations for this type /cannot/ change.
 -}
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { -- | @since Unreleased
-    sidechainParams :: SidechainParams
-  , -- | @since Unreleased
-    ecdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey
+  { sidechainParams :: SidechainParams
+  , sidechainPubKey :: LedgerBytes
   , -- | A UTxO that must be spent by the transaction
     -- | @since Unreleased
     inputUtxo :: TxOutRef
@@ -329,7 +246,7 @@ instance HasField "sidechainParams" BlockProducerRegistrationMsg SidechainParams
     BlockProducerRegistrationMsg (f sp) spk u
 
 -- | @since Unreleased
-instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistrationMsg EcdsaSecp256k1PubKey where
+instance HasField "sidechainPubKey" BlockProducerRegistrationMsg LedgerBytes where
   {-# INLINE get #-}
   get (BlockProducerRegistrationMsg _ x _) = x
   {-# INLINE modify #-}

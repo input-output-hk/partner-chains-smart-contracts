@@ -23,18 +23,18 @@ import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
   BlockProducerRegistration (
     BlockProducerRegistration,
-    ecdsaSecp256k1PubKey,
     inputUtxo,
     ownPkh,
+    sidechainPubKey,
     sidechainSignature,
     spoPubKey,
     spoSignature
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
-    ecdsaSecp256k1PubKey,
     inputUtxo,
-    sidechainParams
+    sidechainParams,
+    sidechainPubKey
   ),
   CandidatePermissionMint (
     CandidatePermissionMint,
@@ -253,7 +253,7 @@ sampleBlockProducerRegistration :: BlockProducerRegistration
 sampleBlockProducerRegistration =
   BlockProducerRegistration
     { spoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
-    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
     , spoSignature = Signature "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
     , sidechainSignature = Signature "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
     , inputUtxo = sampleTxOutRef
@@ -264,7 +264,7 @@ sampleBlockProducerRegistrationMsg :: BlockProducerRegistrationMsg
 sampleBlockProducerRegistrationMsg =
   BlockProducerRegistrationMsg
     { sidechainParams = sampleSidechainParams
-    , ecdsaSecp256k1PubKey = EcdsaSecp256k1PubKey "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
+    , sidechainPubKey = "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
     , inputUtxo = sampleTxOutRef
     }
 

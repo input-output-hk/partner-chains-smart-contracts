@@ -32,7 +32,6 @@ import TrustlessSidechain.Options.Types
   ( Config
   , InputArgOrFile(InputFromArg, InputFromFile)
   )
-import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PubKey)
 
 optExample ∷ Config
 optExample =
@@ -56,8 +55,8 @@ optExample =
 
 --- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
 getCommittee ∷
-  InputArgOrFile (List EcdsaSecp256k1PubKey) →
-  Effect (List EcdsaSecp256k1PubKey)
+  InputArgOrFile (List ByteArray) →
+  Effect (List ByteArray)
 getCommittee =
   getInputArgOrFile "committee" committeeCodec
 
