@@ -111,7 +111,8 @@ saveCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -170,7 +171,8 @@ notEnoughSignaturesTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -237,7 +239,8 @@ outOfOrderCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -297,7 +300,8 @@ invalidCheckpointBlockHashTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -359,7 +363,8 @@ signedByUnknownCommitteeTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -423,7 +428,8 @@ committeeChangeCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0

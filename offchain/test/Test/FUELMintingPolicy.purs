@@ -83,7 +83,8 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
           , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
-              initCommitteePubKeys
+              $ map unwrap
+                  initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
@@ -166,7 +167,7 @@ testScenarioSuccess2 =
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
-                initCommitteePubKeys
+                $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -281,7 +282,7 @@ testScenarioSuccess3 =
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
-                initCommitteePubKeys
+                $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -417,7 +418,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
-                initCommitteePubKeys
+                $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3

@@ -1,4 +1,7 @@
-module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
+-- | `Test.CommitteePlainSchnorrSecp256k1ATMSPolicy` includes tests for the
+-- | plain schnorr secp2256k1 policy.
+-- | Warning: this is mostly duplicated from `Test.CommitteePlainEcdsaSecp256k1ATMSPolicy`.
+module Test.CommitteePlainSchnorrSecp256k1ATMSPolicy
   ( tests
   ) where
 
@@ -6,12 +9,14 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
+import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipTest)
@@ -19,30 +24,30 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
+  ( ATMSKinds(ATMSPlainSchnorrSecp256k1)
   , CommitteeATMSParams(CommitteeATMSParams)
   )
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1Message
-  , EcdsaSecp256k1PrivateKey
-  , EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PrivateKey
+  , SchnorrSecp256k1PublicKey
+  , SchnorrSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
 -- | `generateSignatures` generates signatures from the provided committee for
 -- | the given `sidechainMessage`
 generateSignatures ∷
   { -- the current committee stored on chain
-    currentCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
-  , sidechainMessage ∷ EcdsaSecp256k1Message
+    currentCommitteePrvKeys ∷ Array SchnorrSecp256k1PrivateKey
+  , sidechainMessage ∷ ByteArray
   } →
-  Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature)
+  Array (Tuple SchnorrSecp256k1PublicKey SchnorrSecp256k1Signature)
 generateSignatures
   { currentCommitteePrvKeys
   , sidechainMessage
@@ -53,28 +58,31 @@ generateSignatures
     currentCommitteePubKeys /\ currentCommitteePrvKeys' =
       Array.unzip
         $ Array.sortWith fst
-        $ map (\prvKey → Utils.Crypto.toPubKeyUnsafe prvKey /\ prvKey)
+        $ map (\prvKey → Utils.SchnorrSecp256k1.toPubKey prvKey /\ prvKey)
             currentCommitteePrvKeys
 
     committeeSignatures = Array.zip
       currentCommitteePubKeys
-      (Utils.Crypto.multiSign currentCommitteePrvKeys' sidechainMessage)
+      ( map
+          (Utils.SchnorrSecp256k1.sign sidechainMessage)
+          currentCommitteePrvKeys'
+      )
 
   in
     committeeSignatures
 
--- | `tests` aggregates all the `CommitteePlainEcdsaSecp256k1ATMSPolicy` tests together in
+-- | `tests` aggregates all the `CommitteePlainSchnorrSecp256k1ATMSPolicy` tests together in
 -- | one convenient function.
 tests ∷ WrappedTests
-tests = plutipGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
+tests = plutipGroup "CommitteePlainSchnorrSecp256k1ATMSPolicy minting" $ do
   testScenario1
 
--- | 'testScenario1' includes various tests for `CommitteePlainEcdsaSecp256k1ATMSPolicy` from
+-- | 'testScenario1' includes various tests for `CommitteePlainSchnorrSecp256k1ATMSPolicy` from
 -- | the same sidechain.
 testScenario1 ∷ PlutipTest
 testScenario1 =
   Mote.Monad.test
-    "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
+    "Various tests for the CommitteePlainSchnorrSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
     $ \alice → Wallet.withKeyWallet alice do
@@ -82,9 +90,10 @@ testScenario1 =
         let
           keyCount = 80
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount
-          Utils.Crypto.generatePrivKey
+          $ Effect.Class.liftEffect
+              Utils.SchnorrSecp256k1.generateRandomPrivateKey
         let
-          initCommitteePubKeys = map Utils.Crypto.toPubKeyUnsafe
+          initCommitteePubKeys = map Utils.SchnorrSecp256k1.toPubKey
             initCommitteePrvKeys
           initScParams = InitSidechainParams
             { initChainId: BigInt.fromInt 1
@@ -96,33 +105,32 @@ testScenario1 =
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initATMSKind: ATMSPlainSchnorrSecp256k1
             }
 
         { sidechainParams } ← initSidechain initScParams
 
-        -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
+        -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
-        committeePlainEcdsaSecp256k1ATMSMint ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+        committeePlainSchnorrSecp256k1ATMSMint ←
+          CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
             sidechainParams
 
-        { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-            committeePlainEcdsaSecp256k1ATMSMint
+        { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+          CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+            committeePlainSchnorrSecp256k1ATMSMint
 
         -- Running the tests
         -------------------------
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee"
         void do
           let
             sidechainMessageByteArray =
               -- byte array of 32 bytes which are all 0s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 0
 
-            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
-              sidechainMessageByteArray
+            sidechainMessage = sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
 
@@ -142,32 +150,32 @@ testScenario1 =
           -- ```
 
           utxo ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
                   , aggregateSignature: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
         void do
           let
             sidechainMessageByteArray =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
 
-            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
+            sidechainMessage =
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
@@ -192,30 +200,30 @@ testScenario1 =
           -- 80 committee members total
 
           utxo ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
                   , aggregateSignature: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
         void do
           let
             sidechainMessageByteArray =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
 
-            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
+            sidechainMessage =
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
               Value.mkTokenName sidechainMessageByteArray
@@ -235,30 +243,30 @@ testScenario1 =
                   allPubKeysAndJustSignatures
 
           utxo ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           _ ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
                   , aggregateSignature: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
         void do
           let
             sidechainMessageByteArray =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
 
-            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
+            sidechainMessage =
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
@@ -276,13 +284,14 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
-            ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+            ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                    , committeeCertificateMint:
+                        committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
@@ -290,16 +299,17 @@ testScenario1 =
             # Test.Utils.fails
 
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
         void do
           wrongCommittee ← sequence $ Array.replicate keyCount
-            Utils.Crypto.generatePrivKey
+            $ Effect.Class.liftEffect
+            $ Utils.SchnorrSecp256k1.generateRandomPrivateKey
           let
             sidechainMessageByteArray =
               -- byte array of 32 bytes which are all 1s.
               ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 4
 
-            sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
+            sidechainMessage =
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
@@ -316,13 +326,14 @@ testScenario1 =
               allPubKeysAndSignatures
 
           utxo ←
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
           void
-            ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+            ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+                    , committeeCertificateMint:
+                        committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }

@@ -14,6 +14,7 @@ module Compiled (
   mkDsConfPolicyCode,
   mkDsKeyPolicyCode,
   mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode,
+  mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode,
   toDataGenerated,
   toDataHandwritten,
   fromDataGenerated,
@@ -65,6 +66,7 @@ import TrustlessSidechain.CommitteeCandidateValidator (
  )
 import TrustlessSidechain.CommitteePlainATMSPolicy (verifyPlainMultisig)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet (
   Ds,
   DsConfMint,
@@ -285,3 +287,7 @@ mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode ::
   CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsaSecp256k1ATMSPolicy.mkMintingPolicy||])
+
+mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
+  CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])

@@ -9,6 +9,7 @@ import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CPSATMSP
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.HaskellPrelude
@@ -117,7 +118,15 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             (unversioned CPEATMSP.serialisableMintingPolicy)
-            3_460
+            3_443
+        , fitsInto
+            "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
+            Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
+            947
+        , scriptFitsInto
+            "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
+            (unversioned CPSATMSP.serialisableMintingPolicy)
+            3_443
         ]
     , testGroup
         "Distributed set"

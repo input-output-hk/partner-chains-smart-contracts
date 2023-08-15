@@ -45,7 +45,13 @@ import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSDummy, ATMSPoK, ATMSMultisignature)
+  ( ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
+      , ATMSDummy
+      , ATMSPoK
+      , ATMSMultisignature
+      )
   )
 import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
 import TrustlessSidechain.MerkleTree (RootHash)
@@ -66,11 +72,13 @@ parseATMSKind ∷ String → Either String ATMSKinds
 parseATMSKind str = case str of
   "plain-ecdsa-secp256k1" → Right
     ATMSPlainEcdsaSecp256k1
+  "plain-schnorr-secp256k1" → Right
+    ATMSPlainSchnorrSecp256k1
   "pok" → Right ATMSPoK
   "dummy" → Right ATMSDummy
   "multisignature" → Right ATMSMultisignature
   _ → Left
-    "invalid ATMS kind expected either 'plain-ecdsa-secp256k1', 'multisignature', 'pok', or 'dummy'"
+    "invalid ATMS kind expected either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput

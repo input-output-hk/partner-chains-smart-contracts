@@ -27,19 +27,44 @@ import Contract.Scripts (MintingPolicy)
 import Contract.TxConstraints (TxConstraints)
 import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(Multisignature, PoK, Dummy, PlainEcdsaSecp256k1)
-  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  ( ATMSAggregateSignatures
+      ( Multisignature
+      , PoK
+      , Dummy
+      , PlainEcdsaSecp256k1
+      , PlainSchnorrSecp256k1
+      )
+  , ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
+      , ATMSMultisignature
+      , ATMSPoK
+      , ATMSDummy
+      )
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSAggregateSignatures(PlainEcdsaSecp256k1, Multisignature, PoK, Dummy)
-  , ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSMultisignature, ATMSPoK, ATMSDummy)
+  ( ATMSAggregateSignatures
+      ( PlainEcdsaSecp256k1
+      , Multisignature
+      , PoK
+      , Dummy
+      )
+  , ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
+      , ATMSMultisignature
+      , ATMSPoK
+      , ATMSDummy
+      )
   , CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
@@ -53,6 +78,10 @@ atmsSchemeLookupsAndConstraints atmsParams =
   case (unwrap atmsParams).aggregateSignature of
     PlainEcdsaSecp256k1 param → do
       CommitteePlainEcdsaSecp256k1ATMSPolicy.mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
+        $ CommitteeATMSParams
+            ((unwrap atmsParams) { aggregateSignature = param })
+    PlainSchnorrSecp256k1 param → do
+      CommitteePlainSchnorrSecp256k1ATMSPolicy.mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         $ CommitteeATMSParams
             ((unwrap atmsParams) { aggregateSignature = param })
     -- TODO: fill these in later :^)
@@ -73,6 +102,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
 atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
   atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm $ case sig of
     PlainEcdsaSecp256k1 _ → ATMSPlainEcdsaSecp256k1
+    PlainSchnorrSecp256k1 _ → ATMSPlainSchnorrSecp256k1
     Dummy → ATMSDummy
     PoK → ATMSPoK
     Multisignature → ATMSMultisignature
@@ -99,6 +129,18 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
           committeePlainEcdsaSecp256k1ATMSPolicy
       , committeeCertificateVerificationCurrencySymbol:
           committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+      }
+  ATMSPlainSchnorrSecp256k1 → do
+    { committeePlainSchnorrSecp256k1ATMSPolicy
+    , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+    } ←
+      CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+        ccm
+    pure
+      { committeeCertificateVerificationMintingPolicy:
+          committeePlainSchnorrSecp256k1ATMSPolicy
+      , committeeCertificateVerificationCurrencySymbol:
+          committeePlainSchnorrSecp256k1ATMSCurrencySymbol
       }
   ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
   ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"
@@ -140,6 +182,22 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
 
           pure $ pk' /\ sig'
 
+    ATMSPlainSchnorrSecp256k1 → map PlainSchnorrSecp256k1
+      $ flip traverse committeePubKeyAndSigs
+      $
+        \(pk /\ mSig) → do
+          pk' ← case SchnorrSecp256k1.parsePublicKey pk of
+            Nothing → Left $ "invalid Schnorr SECP256k1 public key: " <> show pk
+            Just pk' → Right pk'
+
+          sig' ← case mSig of
+            Nothing → Right Nothing
+            Just sig → case SchnorrSecp256k1.parseSignature sig of
+              Nothing → Left $ "invalid Schnorr SECP256k1 signature: " <> show sig
+              Just sig' → Right $ Just sig'
+
+          pure $ pk' /\ sig'
+
     ATMSDummy → Left "ATMS dummy not implemented yet"
     ATMSPoK → Left "ATMS PoK not implemented yet"
     ATMSMultisignature → Left "ATMS multisignature not implemented yet"
@@ -156,12 +214,21 @@ aggregateATMSPublicKeys ∷
 aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 →
-      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys)
+      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
         $ flip traverse committeePubKeys
         $
           \pk → do
             pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
               Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
+              Just pk' → Right pk'
+            pure $ pk'
+    ATMSPlainSchnorrSecp256k1 →
+      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
+        $ flip traverse committeePubKeys
+        $
+          \pk → do
+            pk' ← case SchnorrSecp256k1.parsePublicKey pk of
+              Nothing → Left $ "invalid Schnorr SECP256k1 public key: " <> show pk
               Just pk' → Right pk'
             pure $ pk'
     ATMSDummy → Left "ATMS dummy not implemented yet"
