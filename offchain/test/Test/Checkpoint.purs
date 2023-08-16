@@ -12,6 +12,7 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.Monad (liftContractM)
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array (mapWithIndex)
@@ -38,6 +39,7 @@ import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
+  , aggregateKeys
   , generatePrivKey
   , multiSign
   , toPubKeyUnsafe
@@ -109,7 +111,8 @@ saveCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -168,7 +171,8 @@ notEnoughSignaturesTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -235,7 +239,8 @@ outOfOrderCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -295,7 +300,8 @@ invalidCheckpointBlockHashTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -357,7 +363,8 @@ signedByUnknownCommitteeTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
@@ -421,7 +428,8 @@ committeeChangeCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initCommittee: initCommitteePubKeys
+            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+                initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0

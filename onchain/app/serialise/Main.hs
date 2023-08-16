@@ -31,6 +31,7 @@ import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as Candidat
 import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.HaskellPrelude
@@ -206,6 +207,7 @@ main =
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
           , -- ATMS schemes
             ("CommitteePlainEcdsaSecp256k1ATMSPolicy", CommitteePlainEcdsaSecp256k1ATMSPolicy.serialisableMintingPolicy)
+          , ("CommitteePlainSchnorrSecp256k1ATMSPolicy", CommitteePlainSchnorrSecp256k1ATMSPolicy.serialisableMintingPolicy)
           , -- Distributed set validators / minting policies
             ("InsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)

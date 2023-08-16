@@ -6,6 +6,18 @@ document of our practices for current and future contributors to the project. We
 intend for this document to evolve as our needs change, as well as act as a
 single point of truth for standards.
 
+# Changelog
+
+## 8/15/23
+
+### Changed
+
+* Naming for JavaScript FFI functions into PureScript now requires a `js_` prefix.
+
+### Added
+
+* Start changelog
+
 # Motivation
 
 The desired outcomes from the standards specified in this document are as
@@ -213,6 +225,13 @@ acronym casing: we made the given choice for consistency, but there's no
 particular reason for this. Moreover, the choice to allow prefixing imported
 JavaScript foreign functions with `js_` was made to make it clear that the
 function is a foreign JavaScript function.
+
+The use of a dedicated prefix for FFI bindings is common across languages, as it
+helps distinguish them from natively-defined identifiers. This can be important,
+as directly calling bindings might be much less safe, or come with more caveats
+around use. The exact choice of prefix varies: for consistency with our
+Purescript standards, we use `js_`. Furthermore, mandating a name match (apart
+from the prefix) makes it easy to see what identifier we're binding.
 
 ## Imports
 

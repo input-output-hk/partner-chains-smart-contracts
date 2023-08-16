@@ -62,8 +62,6 @@ import TrustlessSidechain.Options.Parsers
   , pubKeyBytesAndSignatureBytes
   , rootHash
   , sidechainAddress
-  , sidechainPublicKey
-  , sidechainSignature
   , tokenName
   , transactionInput
   , uint
@@ -91,7 +89,6 @@ import TrustlessSidechain.Options.Types
   , SidechainEndpointParams(SidechainEndpointParams)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PubKey)
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -296,7 +293,7 @@ sidechainEndpointParamsSpec maybeConfig = ado
     , long "atms-kind"
     , metavar "ATMS_KIND"
     , help
-        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'multisignature', 'pok', or 'dummy'"
+        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]
@@ -394,7 +391,7 @@ parseAmount = option bigInt $ fold
 regSpec ∷ Parser Endpoint
 regSpec = ado
   spoPubKey ← parseSpoPubKey
-  sidechainPubKey ← option sidechainPublicKey $ fold
+  sidechainPubKey ← option byteArray $ fold
     [ long "sidechain-public-key"
     , metavar "PUBLIC_KEY"
     , help "Sidechain public key value"
@@ -404,7 +401,7 @@ regSpec = ado
     , metavar "SIGNATURE"
     , help "SPO signature"
     ]
-  sidechainSig ← option sidechainSignature $ fold
+  sidechainSig ← option byteArray $ fold
     [ long "sidechain-signature"
     , metavar "SIGNATURE"
     , help "Sidechain signature"
@@ -576,11 +573,11 @@ parseCommittee ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List EcdsaSecp256k1PubKey))
+  Parser (InputArgOrFile (List ByteArray))
 parseCommittee longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
-        ( option sidechainPublicKey
+        ( option byteArray
             ( fold
                 [ long longflag
                 , metavar "PUBLIC_KEY"
@@ -602,7 +599,7 @@ parseCommittee longflag hdesc filelongflag filehdesc =
         )
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
-parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List EcdsaSecp256k1PubKey))
+parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List ByteArray))
 parseNewCommitteePubKeys =
   parseCommittee
     "new-committee-pub-key"

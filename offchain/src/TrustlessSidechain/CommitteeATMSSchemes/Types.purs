@@ -3,12 +3,14 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   , ATMSAggregateSignatures
       ( PlainEcdsaSecp256k1
+      , PlainSchnorrSecp256k1
       , Multisignature
       , PoK
       , Dummy
       )
   , ATMSKinds
       ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
       , ATMSMultisignature
       , ATMSPoK
       , ATMSDummy
@@ -25,6 +27,10 @@ import Data.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PublicKey
+  , SchnorrSecp256k1Signature
   )
 
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
@@ -80,6 +86,8 @@ derive instance Newtype (CommitteeATMSParams aggregateSignature) _
 data ATMSAggregateSignatures
   = PlainEcdsaSecp256k1
       (Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature))
+  | PlainSchnorrSecp256k1
+      (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
   | Multisignature
   | PoK
   | Dummy
@@ -98,6 +106,7 @@ data ATMSAggregateSignatures
 -- |    all have user facing documentation that must be updated as well.
 data ATMSKinds
   = ATMSPlainEcdsaSecp256k1
+  | ATMSPlainSchnorrSecp256k1
   | ATMSMultisignature
   | ATMSPoK
   | ATMSDummy
@@ -111,6 +120,7 @@ derive instance Ord ATMSKinds
 instance Show ATMSKinds where
   show = case _ of
     ATMSPlainEcdsaSecp256k1 → "plain-ecdsa-secp256k1"
+    ATMSPlainSchnorrSecp256k1 → "plain-schnorr-secp256k1"
     ATMSMultisignature → "multisignature"
     ATMSPoK → "pok"
     ATMSDummy → "dummy"

@@ -27,6 +27,7 @@ import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
       ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
       , ATMSDummy
       , ATMSPoK
       , ATMSMultisignature
@@ -82,6 +83,8 @@ atmsKindCodec =
   fromF ∷ ATMSKinds → String
   fromF ATMSPlainEcdsaSecp256k1 =
     "plain-ecdsa-secp256k1"
+  fromF ATMSPlainSchnorrSecp256k1 =
+    "plain-schnorr-secp256k1"
   fromF ATMSDummy = "dummy"
   fromF ATMSPoK = "pok"
   fromF ATMSMultisignature = "multisignature"

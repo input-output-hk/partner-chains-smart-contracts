@@ -26,10 +26,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
 
 -- | `SidechainEndpointParams` is an offchain type for grabbing information
 -- | related to the sidechain.
@@ -85,9 +81,9 @@ data Endpoint
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
       { spoPubKey ∷ PubKey
-      , sidechainPubKey ∷ EcdsaSecp256k1PubKey
+      , sidechainPubKey ∷ ByteArray
       , spoSig ∷ Signature
-      , sidechainSig ∷ EcdsaSecp256k1Signature
+      , sidechainSig ∷ ByteArray
       , inputUtxo ∷ TransactionInput
       , permissionToken ∷
           Maybe
@@ -97,7 +93,7 @@ data Endpoint
       CandidatePermissionTokenMintInfo
   | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
   | CommitteeHash
-      { newCommitteePubKeysInput ∷ InputArgOrFile (List EcdsaSecp256k1PubKey)
+      { newCommitteePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , committeeSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
@@ -116,7 +112,7 @@ data Endpoint
     CommitteeHandover
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , newCommitteePubKeysInput ∷ InputArgOrFile (List EcdsaSecp256k1PubKey)
+      , newCommitteePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , newCommitteeSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , newMerkleRootSignaturesInput ∷
@@ -132,7 +128,7 @@ data Endpoint
           Maybe CandidatePermissionTokenMintInit
       }
   | Init
-      { committeePubKeysInput ∷ InputArgOrFile (List EcdsaSecp256k1PubKey)
+      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt
       , useInitTokens ∷ Boolean
       , initCandidatePermissionTokenMintInfo ∷
