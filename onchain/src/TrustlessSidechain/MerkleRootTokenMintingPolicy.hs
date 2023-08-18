@@ -16,8 +16,6 @@ import Ledger.Value (TokenName (TokenName, unTokenName), Value (getValue))
 import Ledger.Value qualified as Value
 import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
-  Address (addressCredential),
-  Credential (ScriptCredential),
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
   Script,
@@ -41,10 +39,11 @@ import TrustlessSidechain.Types (
     sidechainParams
   ),
   MerkleTreeEntry,
-  SignedMerkleRootMint (committeeCertificateVerificationCurrencySymbol),
+  SidechainParams,
   SignedMerkleRootRedeemer,
-  validatorHash,
+  merkleRoot,
  )
+import TrustlessSidechain.Versioning qualified as Versioning
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -68,9 +67,10 @@ serialiseMrimHash =
       and At least one token is paid to 'validatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SignedMerkleRootMint -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> Versioning.VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
-  smrm
+  sp
+  versionOracleConfig
   smrr
   ctx =
     traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
@@ -82,6 +82,11 @@ mkMintingPolicy
       minted = txInfoMint info
       ownCurrencySymbol :: CurrencySymbol
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+
+      merkleRootTokenValidatorAddress =
+        Versioning.getVersionedValidatorAddress versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 2}) ctx
+      committeeCertificateVerificationPolicy =
+        Versioning.getVersionedCurrencySymbol versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 18}) ctx
 
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
@@ -111,7 +116,7 @@ mkMintingPolicy
             | amount == 1 ->
               let msg =
                     MerkleRootInsertionMessage
-                      { sidechainParams = get @"sidechainParams" smrm
+                      { sidechainParams = sp
                       , merkleRoot = LedgerBytes $ unTokenName tn
                       , previousMerkleRoot = get @"previousMerkleRoot" smrr
                       }
@@ -119,30 +124,28 @@ mkMintingPolicy
                     "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
                     ( Value.valueOf
                         minted
-                        (committeeCertificateVerificationCurrencySymbol smrm)
+                        committeeCertificateVerificationPolicy
                         (TokenName (getLedgerBytes (serialiseMrimHash msg)))
                         > 0
                     )
                     && traceIfFalse
                       "error 'MerkleRootTokenMintingPolicy' token not paid to correct validator address"
                       ( let go [] = False
-                            go (txOut : txOuts) = case addressCredential (txOutAddress txOut) of
-                              ScriptCredential vh
-                                | vh == validatorHash smrm
+                            go (txOut : txOuts) =
+                              ( ( txOutAddress txOut == merkleRootTokenValidatorAddress
                                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
-                                    > 0 ->
-                                  True
-                              _ -> go txOuts
+                                      > 0
+                                )
+                                  || go txOuts
+                              )
                          in go $ txInfoOutputs info
                       )
           _ -> False
 
 -- CTL hack
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy
-    . mkMintingPolicy
-    . IsData.unsafeFromBuiltinData
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped sp versioningConfig =
+  ScriptUtils.mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
 serialisableMintingPolicy :: Versioned Script
 serialisableMintingPolicy =

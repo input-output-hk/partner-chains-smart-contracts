@@ -47,6 +47,7 @@ optExample =
           , denominator: 3
           }
       , atmsKind: Just ATMSPlainEcdsaSecp256k1
+      , governanceAuthority: Just $ hexToByteArrayUnsafe "pubKeyHash"
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

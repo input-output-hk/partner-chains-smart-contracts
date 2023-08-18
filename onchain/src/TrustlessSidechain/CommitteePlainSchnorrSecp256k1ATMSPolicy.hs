@@ -15,13 +15,13 @@ import Plutus.V2.Ledger.Api (
   ScriptContext,
  )
 import PlutusTx (compile)
-import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainMultisignature,
   CommitteeCertificateMint,
  )
+import TrustlessSidechain.Versioning (VersionOracleConfig)
 
 {-# INLINEABLE mkMintingPolicy #-}
 
@@ -29,14 +29,15 @@ import TrustlessSidechain.Types (
  'TrustlessSidechain.CommitteePlainATMSPolicy.mkMintingPolicy' and uses
  'verifySchnorrSecp256k1Signature' to verify the signatures
 -}
-mkMintingPolicy :: CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool
+mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool
 mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy
     verifySchnorrSecp256k1Signature
 
 -- CTL hack
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped = ScriptUtils.mkUntypedMintingPolicy . mkMintingPolicy . IsData.unsafeFromBuiltinData
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped ccm versionOracleConfig =
+  ScriptUtils.mkUntypedMintingPolicy $ (mkMintingPolicy (unsafeFromBuiltinData ccm) (unsafeFromBuiltinData versionOracleConfig))
 
 serialisableMintingPolicy :: Versioned Script
 serialisableMintingPolicy = Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2

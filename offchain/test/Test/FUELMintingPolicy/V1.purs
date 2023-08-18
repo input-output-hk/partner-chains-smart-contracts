@@ -1,4 +1,4 @@
-module Test.FUELMintingPolicy (tests) where
+module Test.FUELMintingPolicy.V1 where
 
 import Contract.Prelude
 
@@ -8,7 +8,6 @@ import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Value as Value
-import Contract.Wallet (ownPaymentPubKeyHash)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -19,22 +18,22 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils
   ( WrappedTests
+  , dummySidechainParams
   , fails
   , getOwnTransactionInput
   , plutipGroup
-  , toTxIn
   )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.FUELMintingPolicy
-  ( FuelMintOrFuelBurnParams(Mint, Burn)
-  , FuelParams(FuelParams)
+import TrustlessSidechain.FUELMintingPolicy.V1
+  ( FuelMintParams(FuelMintParams)
   , MerkleTreeEntry(MerkleTreeEntry)
   , combinedMerkleProofToFuelParams
-  , runFuelMP
+  , mkMintFuelLookupAndConstraints
   )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
@@ -45,30 +44,37 @@ import TrustlessSidechain.MerkleTree
   , lookupMp
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
   , toPubKeyUnsafe
   )
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
 tests ∷ WrappedTests
-tests = plutipGroup "Claiming and burning FUEL tokens" $ do
-  testScenarioSuccess
-  testScenarioSuccess2
-  testScenarioSuccess3
-  testScenarioFailure
-  testScenarioFailure2
+tests = plutipGroup "Minting FUEL tokens using MerkleTree-based minting policy"
+  $ do
+      testScenarioSuccess
+      testScenarioSuccess2
+      testScenarioFailure
+      testScenarioFailure2
 
 -- | `testScenarioSuccess` tests minting some tokens
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 100_000_000
+      , BigInt.fromInt 100_000_000
+      , BigInt.fromInt 100_000_000
+      , BigInt.fromInt 100_000_000
+      , BigInt.fromInt 100_000_000
+      ]
   $ \alice → Wallet.withKeyWallet alice do
-      pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+
+      pkh ← getOwnPaymentPubKeyHash
       ownRecipient ←
         liftContractM "Could not convert pub key hash to bech 32 bytes" $
           Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
@@ -90,9 +96,10 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
           }
 
-      { sidechainParams } ← initSidechain initScParams
+      { sidechainParams } ← initSidechain initScParams 1
       let
         amount = BigInt.fromInt 5
         recipient = pubKeyHashAddress pkh Nothing
@@ -120,154 +127,33 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
         , previousMerkleRoot: Nothing
         }
 
-      void $ runFuelMP
-        ( FuelParams
-            { sidechainParams
-            , atmsKind: ATMSPlainEcdsaSecp256k1
-            , fuelMintOrFuelBurnParams:
-                Mint
-                  { amount
-                  , recipient
-                  , merkleProof
-                  , index
-                  , previousMerkleRoot
-                  , dsUtxo: Nothing
-                  }
+      void
+        $ mkMintFuelLookupAndConstraints sidechainParams
+            { amount
+            , recipient
+            , sidechainParams
+            , merkleProof
+            , index
+            , previousMerkleRoot
+            , dsUtxo: Nothing
             }
-        )
+        >>=
+          submitAndAwaitTx mempty
 
--- | `testScenarioSuccess2` mints and burns a few times.. In particular, we:
--- |    - mint 5
--- |    - mint 7
--- |    - burn 10
--- |    - burn 2
+-- | `testScenarioSuccess2` tests minting some tokens with the fast distributed
+-- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
 testScenarioSuccess2 ∷ PlutipTest
 testScenarioSuccess2 =
-  Mote.Monad.test
-    "Multiple claim and burn steps (minting 5 FUEL, minting 7 FUEL, burning 10 FUEL, burning 2 FUEL)"
-    $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000
-        , BigInt.fromInt 10_000_000
-        , BigInt.fromInt 10_000_000
-        ]
-    $ \alice → Wallet.withKeyWallet alice do
-        -- start of mostly duplicated code from `testScenarioSuccess`
-        pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
-        ownRecipient ←
-          liftContractM "Could not convert pub key hash to bech 32 bytes" $
-            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-        -- end of mostly duplicated code from `testScenarioSuccess`
-
-        { sidechainParams } ← initSidechain initScParams
-
-        { combinedMerkleProofs } ← Test.MerkleRoot.saveRoot
-          { sidechainParams
-          , merkleTreeEntries:
-              let
-                previousMerkleRoot = Nothing
-                entry0 =
-                  MerkleTreeEntry
-                    { index: BigInt.fromInt 0
-                    , amount: BigInt.fromInt 5
-                    , previousMerkleRoot
-                    , recipient: ownRecipient
-                    }
-                entry1 =
-                  MerkleTreeEntry
-                    { index: BigInt.fromInt 1
-                    , amount: BigInt.fromInt 7
-                    , previousMerkleRoot
-                    , recipient: ownRecipient
-                    }
-              in
-                [ entry0, entry1 ]
-          , currentCommitteePrvKeys: initCommitteePrvKeys
-          , previousMerkleRoot: Nothing
-          }
-
-        (combinedMerkleProof0 /\ combinedMerkleProof1) ←
-          liftContractM "bad test case for `testScenarioSuccess2`"
-            $ case combinedMerkleProofs of
-                [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
-                  $ combinedMerkleProof0
-                  /\ combinedMerkleProof1
-                _ → Nothing
-
-        fp0 ← liftContractM "Could not build FuelParams" $
-          combinedMerkleProofToFuelParams
-            { sidechainParams
-            , atmsKind: ATMSPlainEcdsaSecp256k1
-            , combinedMerkleProof: combinedMerkleProof0
-            }
-
-        fp1 ← liftContractM "Could not build FuelParams" $
-          combinedMerkleProofToFuelParams
-            { sidechainParams
-            , combinedMerkleProof: combinedMerkleProof1
-            , atmsKind: ATMSPlainEcdsaSecp256k1
-            }
-
-        -- TODO: see definition of assertMaxFee
-        -- assertMaxFee (BigInt.fromInt 1_350_000) =<<
-        void $ runFuelMP fp0
-        -- assertMaxFee (BigInt.fromInt 1_350_000) =<<
-        void $ runFuelMP fp1
-
-        -- assertMaxFee (BigInt.fromInt 500_000) =<<
-        void $ runFuelMP
-          ( FuelParams
-              { sidechainParams
-              , atmsKind: ATMSPlainEcdsaSecp256k1
-              , fuelMintOrFuelBurnParams:
-                  Burn
-                    { amount: BigInt.fromInt 10
-                    , recipient: hexToByteArrayUnsafe "aabbcc"
-                    }
-              }
-          )
-
-        -- assertMaxFee (BigInt.fromInt 500_000) =<<
-        void $ runFuelMP
-          ( FuelParams
-              { sidechainParams
-              , atmsKind: ATMSPlainEcdsaSecp256k1
-              , fuelMintOrFuelBurnParams:
-                  Burn
-                    { amount: BigInt.fromInt 2
-                    , recipient: hexToByteArrayUnsafe "aabbcc"
-                    }
-              }
-          )
-
-        pure unit
-
--- | `testScenarioSuccess3` tests minting some tokens with the fast distributed
--- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
-testScenarioSuccess3 ∷ PlutipTest
-testScenarioSuccess3 =
   Mote.Monad.test "Claiming FUEL tokens with fast distributed set lookup"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
-        pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+
+        pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
           liftContractM "Could not convert pub key hash to bech 32 bytes" $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
@@ -288,9 +174,11 @@ testScenarioSuccess3 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
         let
           amount = BigInt.fromInt 5
           recipient = pubKeyHashAddress pkh Nothing
@@ -332,66 +220,52 @@ testScenarioSuccess3 =
           { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
             $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
 
-          void $ runFuelMP
-            $ FuelParams
-                { sidechainParams
-                , atmsKind: ATMSPlainEcdsaSecp256k1
-                , fuelMintOrFuelBurnParams:
-                    Mint
-                      { amount
-                      , recipient
-                      , merkleProof
-                      , index
-                      , previousMerkleRoot
-                      , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
-                      }
+          void
+            $ mkMintFuelLookupAndConstraints sidechainParams
+                { amount
+                , recipient
+                , sidechainParams
+                , merkleProof
+                , index
+                , previousMerkleRoot
+                , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
                 }
+            >>=
+              submitAndAwaitTx mempty
 
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
   Mote.Monad.test "Attempt to claim with invalid merkle proof (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice →
         Wallet.withKeyWallet alice do
-          pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+
+          pkh ← getOwnPaymentPubKeyHash
           let
             recipient = pubKeyHashAddress pkh Nothing
-            scParams = SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisHash: hexToByteArrayUnsafe "aabbcc"
-              , genesisUtxo: toTxIn "aabbcc" 0
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              }
 
           -- This is not how you create a working merkleproof that passes onchain validator.
           let mp' = unwrap $ PlutusData.serializeData (MerkleProof [])
           mt ← liftedE $ pure (fromList (pure mp'))
           mp ← liftedM "couldn't lookup merkleproof" $ pure (lookupMp mp' mt)
 
-          void $ runFuelMP $ FuelParams
-            { sidechainParams: scParams
-            , atmsKind: ATMSPlainEcdsaSecp256k1
-            , fuelMintOrFuelBurnParams:
-                Mint
-                  { merkleProof: mp
-                  , recipient
-                  , amount: BigInt.fromInt 1
-                  , index: BigInt.fromInt 0
-                  , previousMerkleRoot: Nothing
-                  , dsUtxo: Nothing
-                  }
-            }
-          void $ runFuelMP $ FuelParams
-            { sidechainParams: scParams
-            , atmsKind: ATMSPlainEcdsaSecp256k1
-            , fuelMintOrFuelBurnParams:
-                Burn
-                  { amount: BigInt.fromInt 1
-                  , recipient: hexToByteArrayUnsafe "aabbcc"
-                  }
-            }
+          void
+            $ mkMintFuelLookupAndConstraints dummySidechainParams
+                { merkleProof: mp
+                , recipient
+                , sidechainParams: dummySidechainParams
+                , amount: BigInt.fromInt 1
+                , index: BigInt.fromInt 0
+                , previousMerkleRoot: Nothing
+                , dsUtxo: Nothing
+                }
+            >>=
+              submitAndAwaitTx mempty
           # fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
@@ -399,11 +273,16 @@ testScenarioFailure =
 testScenarioFailure2 ∷ PlutipTest
 testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 40_000_000
+      ]
   $ \alice →
       Wallet.withKeyWallet alice do
         -- start of mostly duplicated code from `testScenarioSuccess2`
-        pkh ← liftedM "cannot get own pubkey" ownPaymentPubKeyHash
+
+        pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
           liftContractM "Could not convert pub key hash to bech 32 bytes" $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
@@ -424,9 +303,11 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         { combinedMerkleProofs } ← Test.MerkleRoot.saveRoot
           { sidechainParams
@@ -462,16 +343,17 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
                   /\ combinedMerkleProof1
                 _ → Nothing
 
-        fp0 ← liftContractM "Could not build FuelParams" $
+        FuelMintParams fp0 ← liftContractM "Could not build FuelParams" $
           combinedMerkleProofToFuelParams
             { sidechainParams
             , combinedMerkleProof: combinedMerkleProof0
-            , atmsKind: ATMSPlainEcdsaSecp256k1
             }
 
         -- the very bad double mint attempt...
-        void $ runFuelMP fp0
-        void $ runFuelMP fp0
+        void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
+          submitAndAwaitTx mempty
+        void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
+          submitAndAwaitTx mempty
 
         pure unit
         # fails

@@ -1,15 +1,22 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Types where
 
 import Ledger.Crypto (PubKey, PubKeyHash, Signature)
 import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (Address, LedgerBytes (LedgerBytes), ValidatorHash)
+import Plutus.V2.Ledger.Api (
+  Address,
+  LedgerBytes (LedgerBytes),
+ )
 import Plutus.V2.Ledger.Tx (TxOutRef)
-import PlutusTx (makeIsDataIndexed)
+import PlutusTx qualified
+import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.PlutusPrelude
@@ -21,11 +28,10 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
   deriving newtype
     ( Eq
     , Ord
-    , ToData
-    , FromData
-    , UnsafeFromData
     )
-  deriving (IsString, TSPrelude.Show) via LedgerBytes
+  deriving (IsString, ToData, FromData, UnsafeFromData, TSPrelude.Show) via LedgerBytes
+
+PlutusTx.makeLift ''GenesisHash
 
 {- | Parameters uniquely identifying a sidechain
 
@@ -45,8 +51,13 @@ data SidechainParams = SidechainParams
   , -- | 'thresholdDenominator' is the denominator for the ratio of the
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
+  , -- | 'governanceAuthority' stores credentials of a governing body allowed to
+    -- make updates to versioned scripts.  For now we just use a master public
+    -- key, whose owner is allowed to make any decisions about script versions.
+    governanceAuthority :: Governance.GovernanceAuthority
   }
 
+PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | @since Unreleased
@@ -383,62 +394,6 @@ instance HasField "previousMerkleRoot" SignedMerkleRootRedeemer (Maybe LedgerByt
   modify f (SignedMerkleRootRedeemer pmr) =
     SignedMerkleRootRedeemer (f pmr)
 
--- | 'SignedMerkleRootMint' is used to parameterize 'mkMintingPolicy'.
-data SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | 'sidechainParams' includes the 'SidechainParams'
-    sidechainParams :: SidechainParams
-  , -- | 'committeeCertificateVerificationCurrencySymbol' is the 'CurrencySymbol' which
-    -- provides a committee certificate for a message.
-    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
-  , -- | 'validatorHash' is the validator hash corresponding to
-    -- 'TrustlessSidechain.MerkleRootTokenValidator.mkMptRootTokenValidator'
-    -- to ensure that this token gets minted to the "right" place.
-    validatorHash :: ValidatorHash
-  }
-
--- | @since Unreleased
-instance ToData SignedMerkleRootMint where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (SignedMerkleRootMint {..}) =
-    productToData3
-      sidechainParams
-      committeeCertificateVerificationCurrencySymbol
-      validatorHash
-
--- | @since Unreleased
-instance FromData SignedMerkleRootMint where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 SignedMerkleRootMint
-
--- | @since Unreleased
-instance UnsafeFromData SignedMerkleRootMint where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData3 SignedMerkleRootMint
-
--- | @since Unreleased
-instance HasField "sidechainParams" SignedMerkleRootMint SidechainParams where
-  {-# INLINE get #-}
-  get (SignedMerkleRootMint x _ _) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRootMint sp uchcs vh) =
-    SignedMerkleRootMint (f sp) uchcs vh
-
--- | @since Unreleased
-instance HasField "updateCommitteeHashCurrencySymbol" SignedMerkleRootMint CurrencySymbol where
-  {-# INLINE get #-}
-  get (SignedMerkleRootMint _ x _) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRootMint sp uchcs vh) =
-    SignedMerkleRootMint sp (f uchcs) vh
-
--- | @since Unreleased
-instance HasField "validatorHash" SignedMerkleRootMint ValidatorHash where
-  {-# INLINE get #-}
-  get (SignedMerkleRootMint _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRootMint sp uchcs vh) =
-    SignedMerkleRootMint sp uchcs (f vh)
-
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
 
@@ -475,97 +430,14 @@ instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
 
 -- * FUEL Minting Policy data
 
--- | The Redeemer that's to be passed to onchain policy, indicating its mode of usage.
-data FUELRedeemer
-  = MainToSide LedgerBytes -- Recipient's sidechain address
-  | -- | 'SideToMain' indicates that we wish to mint FUEL on the mainchain.
-    -- So, this includes which transaction in the sidechain we are
-    -- transferring over to the main chain (hence the 'MerkleTreeEntry'), and
-    -- the proof tha this actually happened on the sidechain (hence the
-    -- 'MerkleProof')
-    SideToMain MerkleTreeEntry MerkleProof
-
--- Recipient address is in FUELRedeemer just for reference on the mainchain,
--- it's actually useful (and verified) on the sidechain, so it needs to be
--- recorded in the mainchain.
-
-PlutusTx.makeIsDataIndexed ''FUELRedeemer [('MainToSide, 0), ('SideToMain, 1)]
-
-{- | 'FUELMint' is the data type to parameterize the minting policy. See
- 'mkMintingPolicy' for details of why we need the datum in 'FUELMint'
+{- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
+ So, this includes which transaction in the sidechain we are transferring over
+ to the main chain (hence the 'MerkleTreeEntry'), and the proof tha this
+ actually happened on the sidechain (hence the 'MerkleProof')
 -}
-data FUELMint = FUELMint
-  { -- 'fmMptRootTokenValidator' is the hash of the validator script
-    -- which /should/ have a token which has the merkle root in the token
-    -- name. See 'TrustlessSidechain.MerkleRootTokenValidator' for
-    -- details.
-    -- > fmMptRootTokenValidator :: ValidatorHash
-    -- N.B. We don't need this! We're really only interested in the token,
-    -- and indeed; anyone can pay a token to this script so there really
-    -- isn't a reason to use this validator script as the "identifier" for
-    -- MerkleRootTokens.
+data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
 
-    -- | 'fmMptRootTokenCurrencySymbol' is the 'CurrencySymbol' of a token
-    -- | which contains a merkle root in the 'TokenName'. See
-    -- | 'TrustlessSidechain.MerkleRootTokenMintingPolicy' for details.
-    -- |
-    -- | @since Unreleased
-    mptRootTokenCurrencySymbol :: CurrencySymbol
-  , -- | 'fmSidechainParams' is the sidechain parameters
-    -- |
-    -- | @since Unreleased
-    sidechainParams :: SidechainParams
-  , -- | 'fmDsKeyCurrencySymbol' is th currency symbol for the tokens which
-    -- | hold the key for the distributed set. In particular, this allows the
-    -- | FUEL minting policy to verify if a string has /just been inserted/ into
-    -- | the distributed set.
-    -- |
-    -- | @since Unreleased
-    dsKeyCurrencySymbol :: CurrencySymbol
-  }
-
--- | @since Unreleased
-instance ToData FUELMint where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (FUELMint {..}) =
-    productToData3
-      mptRootTokenCurrencySymbol
-      sidechainParams
-      dsKeyCurrencySymbol
-
--- | @since Unreleased
-instance FromData FUELMint where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData3 FUELMint
-
--- | @since Unreleased
-instance UnsafeFromData FUELMint where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData3 FUELMint
-
--- | @since Unreleased
-instance HasField "mptRootTokenCurrencySymbol" FUELMint CurrencySymbol where
-  {-# INLINE get #-}
-  get (FUELMint x _ _) = x
-  {-# INLINE modify #-}
-  modify f (FUELMint rtcs sp kcs) =
-    FUELMint (f rtcs) sp kcs
-
--- | @since Unreleased
-instance HasField "sidechainParams" FUELMint SidechainParams where
-  {-# INLINE get #-}
-  get (FUELMint _ x _) = x
-  {-# INLINE modify #-}
-  modify f (FUELMint rtcs sp kcs) =
-    FUELMint rtcs (f sp) kcs
-
--- | @since Unreleased
-instance HasField "dsKeyCurrencySymbol" FUELMint CurrencySymbol where
-  {-# INLINE get #-}
-  get (FUELMint _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (FUELMint rtcs sp kcs) =
-    FUELMint rtcs sp (f kcs)
+PlutusTx.makeIsDataIndexed ''FUELMintingRedeemer [('FUELMintingRedeemer, 0)]
 
 -- * Update Committee Hash data
 
@@ -801,8 +673,7 @@ instance HasField "blockNumber" CheckpointDatum Integer where
  See SIP05 in @docs/SIPs/@ for details.
 -}
 data CommitteeCertificateMint = CommitteeCertificateMint
-  { committeeOraclePolicy :: CurrencySymbol
-  , thresholdNumerator :: Integer
+  { thresholdNumerator :: Integer
   , thresholdDenominator :: Integer
   }
 

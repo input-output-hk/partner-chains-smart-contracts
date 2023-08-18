@@ -63,27 +63,33 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
 atmsSchemeLookupsAndConstraints ∷
+  SidechainParams →
   CommitteeATMSParams ATMSAggregateSignatures →
   Contract
     { constraints ∷ TxConstraints Void Void
     , lookups ∷ ScriptLookups Void
     }
-atmsSchemeLookupsAndConstraints atmsParams =
+atmsSchemeLookupsAndConstraints sidechainParams atmsParams = do
   case (unwrap atmsParams).aggregateSignature of
     PlainEcdsaSecp256k1 param → do
       CommitteePlainEcdsaSecp256k1ATMSPolicy.mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
+        sidechainParams
         $ CommitteeATMSParams
             ((unwrap atmsParams) { aggregateSignature = param })
     PlainSchnorrSecp256k1 param → do
       CommitteePlainSchnorrSecp256k1ATMSPolicy.mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
-        $ CommitteeATMSParams
-            ((unwrap atmsParams) { aggregateSignature = param })
+        { sidechainParams
+        , committeeATMSParams:
+            CommitteeATMSParams
+              ((unwrap atmsParams) { aggregateSignature = param })
+        }
     -- TODO: fill these in later :^)
     Dummy → Monad.throwContractError "ATMS dummy not implemented yet"
     PoK → Monad.throwContractError "ATMS PoK not implemented yet"
@@ -93,14 +99,16 @@ atmsSchemeLookupsAndConstraints atmsParams =
 -- | `atmsCommitteeCertificateVerificationMintingPolicy` grabs
 -- | the currency symbol / minting policy associated with the aggregate signature.
 atmsCommitteeCertificateVerificationMintingPolicy ∷
-  CommitteeCertificateMint →
+  { sidechainParams ∷ SidechainParams
+  , committeeCertificateMint ∷ CommitteeCertificateMint
+  } →
   ATMSAggregateSignatures →
   Contract
     { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
-atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
-  atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm $ case sig of
+atmsCommitteeCertificateVerificationMintingPolicy params sig =
+  atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params $ case sig of
     PlainEcdsaSecp256k1 _ → ATMSPlainEcdsaSecp256k1
     PlainSchnorrSecp256k1 _ → ATMSPlainSchnorrSecp256k1
     Dummy → ATMSDummy
@@ -111,19 +119,21 @@ atmsCommitteeCertificateVerificationMintingPolicy ccm sig =
 -- | essentially `atmsCommitteeCertificateVerificationMintingPolicy` but with
 -- | `ATMSKinds`.
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
-  CommitteeCertificateMint →
+  { sidechainParams ∷ SidechainParams
+  , committeeCertificateMint ∷ CommitteeCertificateMint
+  } →
   ATMSKinds →
   Contract
     { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
-atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
+atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
   ATMSPlainEcdsaSecp256k1 → do
     { committeePlainEcdsaSecp256k1ATMSPolicy
     , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
     } ←
       CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-        ccm
+        params
     pure
       { committeeCertificateVerificationMintingPolicy:
           committeePlainEcdsaSecp256k1ATMSPolicy
@@ -135,7 +145,7 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ccm = case _ of
     , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
     } ←
       CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
-        ccm
+        params
     pure
       { committeeCertificateVerificationMintingPolicy:
           committeePlainSchnorrSecp256k1ATMSPolicy

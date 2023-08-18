@@ -15,6 +15,13 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
   onchain)
+* Script versioning system with three new commands: `insert-version`,
+  `invalidate-version`, and `update-version`.  First two require `--version`
+  followed by a positive integer as an argument.  `update-version` requires
+  `--old-version` and `--new-version` options, each followed by a positive
+  integer.
+* Added `claim-v2` and `burn-v2` commands for claiming and burning fuel using
+  version 2 of the scripts.
 
 ## Changed
 
@@ -46,6 +53,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
   [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
   offchain)
+* Commands `claim` and `burn` have been renamed to `claim-v1` and `burn-v1`,
+  respectively.
+* Commands `init` and `init-tokens-mint` now require `--version` flag followed
+  by a positive integer as an argument.
 
 ## Fixed
 

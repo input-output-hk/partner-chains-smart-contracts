@@ -6,10 +6,11 @@ import TrustlessSidechain.HaskellPrelude
 {-
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
-import Ledger (TxId (TxId), TxOutRef (TxOutRef))
+import Ledger (PubKeyHash (PubKeyHash), TxId (TxId), TxOutRef (TxOutRef))
 import PlutusTx.Builtins (blake2b_256)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.Governance (mkGovernanceAuthority)
 import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   GenesisHash (GenesisHash),
@@ -32,6 +33,7 @@ unitTests :: TestTree
 unitTests =
   let genesisHash = GenesisHash "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
       genesisUtxo = TxOutRef "7247647315d327d4e56fd3fe62d45be1dc3a76a647c910e0048cca8b97c8df3e" 0
+      governanceAuthority = mkGovernanceAuthority $ PubKeyHash "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
       pubKeys =
         fmap
           EcdsaSecp256k1PubKey
@@ -40,7 +42,7 @@ unitTests =
           , "038b098f1a3ccb005419df63dc1ce954a3f9071e2f41aefece0f86ee991285b498"
           , "03f16df0d21e2a447d820999c6b65794820cd1920cafccc3a7b83956f6148441ed"
           ]
-      scParams = SidechainParams 78 genesisHash genesisUtxo 2 3
+      scParams = SidechainParams 78 genesisHash genesisUtxo 2 3 governanceAuthority
       epoch = 123
       previousMRH = "abababababababababababababababababababababababababababababababab"
       withoutPreviousMRH = UpdateCommitteeHashMessage scParams pubKeys Nothing epoch

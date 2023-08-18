@@ -6,13 +6,10 @@ module Test.CommitteeCandidateValidator
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
-import Contract.Wallet
-  ( getWalletAddress
-  )
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
@@ -32,6 +29,7 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
 
 mockSpoPubKey ∷ ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
@@ -55,7 +53,7 @@ runRegisterWithCandidatePermissionInfo ∷
   SidechainParams →
   Contract TransactionHash
 runRegisterWithCandidatePermissionInfo cpti scParams = do
-  ownAddr ← liftedM "Cannot get own address" getWalletAddress
+  ownAddr ← getOwnWalletAddress
   ownUtxos ← utxosAt ownAddr
   registrationUtxo ← liftContractM "No UTxOs found at key wallet"
     $ Set.findMin

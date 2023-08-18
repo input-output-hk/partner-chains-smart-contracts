@@ -90,17 +90,16 @@ saveCheckpoint
             (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+    sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ InternalError $ NotFoundUtxo
@@ -137,7 +136,7 @@ saveCheckpoint
       $ serialiseCheckpointMessage checkpointMessage
 
   atmsLookupsAndConstraints ←
-    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints sidechainParams
       $ CommitteeATMSParams
           { currentCommitteeUtxo
           , committeeCertificateMint

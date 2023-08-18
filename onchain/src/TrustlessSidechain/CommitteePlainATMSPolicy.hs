@@ -33,13 +33,13 @@ import TrustlessSidechain.Types (
     plainSignatures
   ),
   CommitteeCertificateMint (
-    committeeOraclePolicy,
     thresholdDenominator,
     thresholdNumerator
   ),
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.Versioning (VersionOracle (..), VersionOracleConfig, getVersionedCurrencySymbol)
 
 -- * Creating the plain ATMS minting policy
 
@@ -56,10 +56,11 @@ import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 mkMintingPolicy ::
   (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
   CommitteeCertificateMint ->
+  VersionOracleConfig ->
   ATMSPlainMultisignature ->
   ScriptContext ->
   Bool
-mkMintingPolicy verifySig ccm atmspms ctx =
+mkMintingPolicy verifySig ccm versioningConfig atmspms ctx =
   traceIfFalse "error 'CommitteePlainATMSPolicy': current committee mismatch" isCurrentCommittee
     && traceIfFalse "error 'CommitteePlainATMSPolicy': committee signature invalid" signedByCurrentCommittee
   where
@@ -116,6 +117,12 @@ mkMintingPolicy verifySig ccm atmspms ctx =
       )
         + 1
 
+    committeeOracleCurrencySymbol :: CurrencySymbol
+    committeeOracleCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = 19}) -- get CommitteeOraclePolicy
+        ctx
     committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum =
       let go :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
@@ -124,7 +131,7 @@ mkMintingPolicy verifySig ccm atmspms ctx =
               , amt <-
                   Value.valueOf
                     (txOutValue o)
-                    (committeeOraclePolicy ccm)
+                    committeeOracleCurrencySymbol
                     UpdateCommitteeHash.initCommitteeOracleTn
               , UpdateCommitteeHash.initCommitteeOracleMintAmount == amt
               , -- We always expect this to be given as inline datum

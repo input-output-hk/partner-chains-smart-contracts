@@ -47,10 +47,10 @@ The arguments for each service are using the following scheme:
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
 
 ```
-nix run .#sidechain-main-cli -- burn --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+nix run .#sidechain-main-cli -- burn-v1 --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
 
-For more information about the arguments, please refer to `nix run .#sidechain-main-cli -- burn --help`
+For more information about the arguments, please refer to `nix run .#sidechain-main-cli -- burn-v1 --help`
 
 To use a configuration file instead, see [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
 
@@ -92,17 +92,24 @@ export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
 Available commands:
 
 ```
-  init-tokens-mint            Pre-mint tokens without actually initialising
-                              sidechain
+  init-tokens-mint            Pre-mint tokens without setting the inital committee
   init                        Initialise sidechain
   addresses                   Get the script addresses for a given sidechain
-  claim                       Claim a certain amount of FUEL tokens
-  burn                        Burn a certain amount of FUEL tokens
-  committee-hash              Update the committee hash
+  claim-v1                    Claim a FUEL tokens from a proof
+  burn-v1                     Burn a certain amount of FUEL tokens
+  claim-v2                    Claim FUEL tokens from thin air
+  burn-v2                     Burn a certain amount of FUEL tokens
   register                    Register a committee candidate
   deregister                  Deregister a committee member
   candidate-permission-token  Mint candidate permission tokens
-  save-checkpoint             Save a new checkpoint block
+  save-checkpoint             Saving a new checkpoint
+  committee-hash              Update the committee hash
+  save-root                   Saving a new merkle root
+  committee-handover          An alias for saving the merkle root, followed by
+                              updating the committee hash
+  insert-version              Initialize a new protocol version
+  update-version              Update an existing protocol version
+  invalidate-version          Invalidate a protocol version
 ```
 
 #### 3.1.1. Initialising the sidechain
@@ -120,7 +127,8 @@ nix run .#sidechain-main-cli -- init \
   --sidechain-genesis-hash 112233 \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
-  --sidechain-epoch 0
+  --sidechain-epoch 0 \
+  --version 1
 ```
 
 Normally, the protocol has to wait until the committee has reached the desired number of members.
@@ -140,7 +148,8 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
-  --sidechain-genesis-hash 112233
+  --sidechain-genesis-hash 112233 \
+  --version 1
 ```
 
 Alternatively, one may optionally mint candidate permission tokens in the same transaction as
@@ -174,7 +183,8 @@ nix run .#sidechain-main-cli -- init \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
   --sidechain-epoch 0 \
-  --use-init-tokens
+  --use-init-tokens \
+  --version 1
 ```
 
 #### 3.1.2. Get script addresses of a sidechain
@@ -195,7 +205,7 @@ nix run .#sidechain-main-cli -- addresses \
 #### 3.1.3. Claim FUEL tokens
 
 ```
-nix run .#sidechain-main-cli -- claim \
+nix run .#sidechain-main-cli -- claim-v1 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -208,10 +218,40 @@ nix run .#sidechain-main-cli -- claim \
     # ^ Optional flag to avoid a linear scan through the UTxO set
 ```
 
+Note: at the moment there also exists `claim-v2` command, which works with
+scripts in version 2 - see below for how versions are managed.  `claim-v2`
+exists for demonstration purposes only and does not require any proofs, allowing
+to claim FUEL out of thin air:
+
+```
+nix run .#sidechain-main-cli -- claim-v2 \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3
+  --amount 13
+```
+
 #### 3.1.4. Burn user owned FUEL tokens
 
 ```
-nix run .#sidechain-main-cli -- burn \
+nix run .#sidechain-main-cli -- burn-v1 \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --amount 5 \
+  --recipient aabbcc
+```
+
+Note: at the moment there also exists `burn-v2` command, which works with
+scripts in version 2 - see below for how versions are managed.  `burn-v2` exists
+for demonstration purposes only and uses same arguments as `burn-v1`.
+
+```
+nix run .#sidechain-main-cli -- burn-v2 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
@@ -395,6 +435,44 @@ nix run .#sidechain-main-cli -- save-checkpoint \
   --new-checkpoint-block-number 42 \
   --sidechain-epoch 5
 ```
+
+#### 3.1.8 Insert new protocol version
+
+```
+nix run .#sidechain-main-cli -- insert-version \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --version 2
+```
+
+#### 3.1.9 Update existing protocol version
+
+```
+nix run .#sidechain-main-cli -- update-version \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --old-version 1 \
+  --new-version 2
+```
+
+#### 3.1.10 Invalidate protocol version
+
+```
+nix run .#sidechain-main-cli -- invalidate-version \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --version 1
+```
+
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
@@ -407,6 +485,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
     "threshold": { "numerator": 2, "denominator": 3 },
     "atmsKind": "plain-ecdsa-secp256k1"
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c"
   },
   "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
@@ -417,7 +496,7 @@ You can also provide a configuration in `$CWD/config.json` in the following form
 and now you can call the CLI without these values:
 
 ```
-nix run .#sidechain-main-cli -- burn --amount 5 --recipient aabb
+nix run .#sidechain-main-cli -- burn-v1 --amount 5 --recipient aabb
 ```
 
 You can find a sample configuration file in `ctl/config.example.json`.

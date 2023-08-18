@@ -50,19 +50,19 @@ main =
         [ fitsInto
             "mkMintingPolicy (FUEL)"
             Compiled.mkMPFuelCode
-            1_039
+            1_561
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             (unversioned FUEL.serialisableMintingPolicy)
-            3_969
+            4_445
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            809
+            1_471
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             (unversioned MerkleRoot.serialisableMintingPolicy)
-            3_393
+            3_989
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -70,7 +70,7 @@ main =
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             (unversioned CCV.serialisableValidator)
-            2_854
+            2_873
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
@@ -78,7 +78,7 @@ main =
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
-            2_745
+            2_764
         , fitsInto
             "mkCommitteeOraclePolicy"
             Compiled.mkCommitteeOraclePolicyCode
@@ -114,19 +114,19 @@ main =
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
-            947
+            1407
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             (unversioned CPEATMSP.serialisableMintingPolicy)
-            3_443
+            3_880
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
-            947
+            1_396
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             (unversioned CPSATMSP.serialisableMintingPolicy)
-            3_443
+            3_880
         ]
     , testGroup
         "Distributed set"

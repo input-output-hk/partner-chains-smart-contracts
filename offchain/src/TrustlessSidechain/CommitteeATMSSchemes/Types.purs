@@ -22,7 +22,7 @@ import Contract.Prelude
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value (TokenName)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
@@ -36,19 +36,17 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
 -- | parameterize a committee certificate verification minting policy.
 newtype CommitteeCertificateMint = CommitteeCertificateMint
-  { committeeOraclePolicy ∷ CurrencySymbol
-  , thresholdNumerator ∷ BigInt
+  { thresholdNumerator ∷ BigInt
   , thresholdDenominator ∷ BigInt
   }
 
 instance ToData CommitteeCertificateMint where
   toData
     ( CommitteeCertificateMint
-        { committeeOraclePolicy, thresholdNumerator, thresholdDenominator }
+        { thresholdNumerator, thresholdDenominator }
     ) =
     Constr (BigNum.fromInt 0)
-      [ toData committeeOraclePolicy
-      , toData thresholdNumerator
+      [ toData thresholdNumerator
       , toData thresholdDenominator
       ]
 

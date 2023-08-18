@@ -17,6 +17,7 @@ import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
+import TrustlessSidechain.Governance (mkGovernanceAuthority)
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
@@ -71,13 +72,6 @@ import TrustlessSidechain.Types (
     transaction
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
-  FUELMint (
-    FUELMint,
-    dsKeyCurrencySymbol,
-    mptRootTokenCurrencySymbol,
-    sidechainParams
-  ),
-  FUELRedeemer (MainToSide, SideToMain),
   GenesisHash (GenesisHash),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
@@ -97,14 +91,9 @@ import TrustlessSidechain.Types (
     chainId,
     genesisHash,
     genesisUtxo,
+    governanceAuthority,
     thresholdDenominator,
     thresholdNumerator
-  ),
-  SignedMerkleRootMint (
-    SignedMerkleRootMint,
-    committeeCertificateVerificationCurrencySymbol,
-    sidechainParams,
-    validatorHash
   ),
   SignedMerkleRootRedeemer (
     SignedMerkleRootRedeemer,
@@ -154,11 +143,7 @@ tests =
     , dataEncoderGoldenTest "MerkleTreeEntry" sampleMerkleTreeEntry
     , dataEncoderGoldenTest "MerkleRootInsertionMessage" sampleMerkleRootInsertionMessage
     , dataEncoderGoldenTest "SignedMerkleRootRedeemer" sampleSignedMerkleRootRedeemer
-    , dataEncoderGoldenTest "SignedMerkleRootMint" sampleSignedMerkleRootMint
     , dataEncoderGoldenTest "CombinedMerkleProof" sampleCombinedMerkleProof
-    , dataEncoderGoldenTest "FUELReedemer1" sampleFUELReedemer1
-    , dataEncoderGoldenTest "FUELReedemer2" sampleFUELReedemer2
-    , dataEncoderGoldenTest "FUELMint" sampleFUELMint
     , dataEncoderGoldenTest "UpdateCommitteeDatum" sampleUpdateCommitteeDatum
     , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer" sampleUpdateCommitteeHashRedeemer
     , dataEncoderGoldenTest "UpdateCommitteeHash" sampleUpdateCommitteeHash
@@ -238,6 +223,7 @@ sampleSidechainParams =
     { chainId = 11
     , genesisHash = GenesisHash "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
     , genesisUtxo = sampleTxOutRef
+    , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     , thresholdNumerator = 2
     , thresholdDenominator = 3
     }
@@ -291,14 +277,6 @@ sampleSignedMerkleRootRedeemer =
     { previousMerkleRoot = Nothing
     }
 
-sampleSignedMerkleRootMint :: SignedMerkleRootMint
-sampleSignedMerkleRootMint =
-  SignedMerkleRootMint
-    { sidechainParams = sampleSidechainParams
-    , committeeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-    , validatorHash = "3689d804b3e43789fb0442314ba46aa1ccb9b3aa03fc5073ffa6486d"
-    }
-
 sampleCombinedMerkleProof :: CombinedMerkleProof
 sampleCombinedMerkleProof =
   CombinedMerkleProof
@@ -306,21 +284,11 @@ sampleCombinedMerkleProof =
     , merkleProof = sampleMerkleProof
     }
 
-sampleFUELReedemer1 :: FUELRedeemer
-sampleFUELReedemer1 =
-  MainToSide "dbc05b1ecb4fdaef943819c0b04e9ef6df4babd6"
-
+{-
 sampleFUELReedemer2 :: FUELRedeemer
 sampleFUELReedemer2 =
   SideToMain sampleMerkleTreeEntry sampleMerkleProof
-
-sampleFUELMint :: FUELMint
-sampleFUELMint =
-  FUELMint
-    { mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
-    , sidechainParams = sampleSidechainParams
-    , dsKeyCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
-    }
+-}
 
 sampleUpdateCommitteeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
 sampleUpdateCommitteeDatum =

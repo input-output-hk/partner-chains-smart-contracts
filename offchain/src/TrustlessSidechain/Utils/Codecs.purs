@@ -4,10 +4,12 @@ module TrustlessSidechain.Utils.Codecs
   , thresholdCodec
   , atmsKindCodec
   , scParamsCodec
+  , pubKeyHashCodec
   ) where
 
 import Contract.Prelude
 
+import Contract.Address (PubKeyHash)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -15,6 +17,10 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Contract.Transaction (TransactionHash(TransactionHash))
+import Ctl.Internal.Serialization.Hash
+  ( ed25519KeyHashFromBytes
+  , ed25519KeyHashToBytes
+  )
 import Ctl.Internal.Types.Transaction (TransactionInput(TransactionInput))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -32,6 +38,10 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
       , ATMSPoK
       , ATMSMultisignature
       )
+  )
+import TrustlessSidechain.Governance
+  ( GovernanceAuthority
+  , mkGovernanceAuthority
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -99,6 +109,13 @@ thresholdCodec = CA.object "threshold" $
     , denominator: CA.int
     }
 
+-- | JSON codec for PubKeyHash.
+governanceAuthorityCodec ∷ CA.JsonCodec GovernanceAuthority
+governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
+  (Just <<< mkGovernanceAuthority)
+  unwrap
+  pubKeyHashCodec
+
 scParamsCodec ∷ CA.JsonCodec SidechainParams
 scParamsCodec =
   wrapIso SidechainParams $
@@ -116,6 +133,7 @@ scParamsCodec =
               (Just <<< BigInt.fromInt)
               unsafeToInt
               CA.int
+        , governanceAuthority: governanceAuthorityCodec
         }
     )
   where
@@ -127,3 +145,10 @@ scParamsCodec =
 
   unsafeToInt ∷ BigInt → Int
   unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x
+
+-- | JSON codec for PubKeyHash.
+pubKeyHashCodec ∷ CA.JsonCodec PubKeyHash
+pubKeyHashCodec = CA.prismaticCodec "PubKeyHash"
+  (ed25519KeyHashFromBytes >=> wrap >>> pure)
+  (unwrap <<< ed25519KeyHashToBytes <<< unwrap)
+  byteArrayCodec

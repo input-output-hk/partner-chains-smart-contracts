@@ -7,11 +7,13 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.Transaction (awaitTxConfirmed)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
+import Data.Traversable (for)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipTest)
@@ -23,10 +25,12 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message
   , EcdsaSecp256k1PrivateKey
@@ -76,8 +80,13 @@ testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
+        pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         let
           keyCount = 80
@@ -97,10 +106,14 @@ testScenario1 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
-
+        { sidechainParams, transactionId, versioningTransactionIds } ←
+          initSidechain initScParams 1
+        awaitTxConfirmed transactionId
+        _ ← for versioningTransactionIds awaitTxConfirmed
         -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
         committeePlainEcdsaSecp256k1ATMSMint ←
@@ -109,7 +122,9 @@ testScenario1 =
 
         { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-            committeePlainEcdsaSecp256k1ATMSMint
+            { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+            , sidechainParams
+            }
 
         -- Running the tests
         -------------------------
@@ -146,6 +161,7 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              sidechainParams
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
@@ -196,6 +212,7 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              sidechainParams
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
@@ -239,6 +256,7 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+              sidechainParams
               $ CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
@@ -280,6 +298,7 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+                sidechainParams
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
@@ -320,6 +339,7 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
+                sidechainParams
                 $ CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint

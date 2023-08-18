@@ -18,11 +18,15 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction (TransactionHash)
-import Contract.TxConstraints (TxConstraints)
+import Contract.Transaction
+  ( TransactionHash
+  , mkTxUnspentOut
+  )
+import Contract.TxConstraints (InputWithScriptRef(..), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
@@ -33,13 +37,10 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
-  , SignedMerkleRootMint(SignedMerkleRootMint)
-  , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
-  , SignedMerkleRootMint(SignedMerkleRootMint)
   , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
@@ -67,6 +68,15 @@ import TrustlessSidechain.Utils.Logging
   , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( MerkleRootTokenPolicy
+      , MerkleRootTokenValidator
+      , CommitteeCertificateVerificationPolicy
+      )
+  , VersionOracle(..)
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷ SaveRootParams → Contract TransactionHash
@@ -90,17 +100,16 @@ saveRoot
             (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
   { merkleRootTokenCurrencySymbol } ← getMerkleRootTokenMintingPolicy
-    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+    sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ InternalError $ NotFoundUtxo
@@ -122,7 +131,6 @@ saveRoot
     { sidechainParams
     , merkleRoot
     , previousMerkleRoot
-    , committeeCertificateVerificationCurrencySymbol
     }
 
   -- Grab the lookups + constraints for the committee certificate
@@ -133,7 +141,7 @@ saveRoot
       serialiseMrimHash merkleRootInsertionMessage
 
   atmsLookupsAndConstraints ←
-    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints sidechainParams
       $ CommitteeATMSParams
           { currentCommitteeUtxo
           , committeeCertificateMint
@@ -163,23 +171,14 @@ saveRoot
 -- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
 -- | parameter from the given sidechain parameters
 getMerkleRootTokenMintingPolicy ∷
-  { sidechainParams ∷ SidechainParams
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-  } →
+  SidechainParams →
   Contract
     { merkleRootTokenMintingPolicy ∷ MintingPolicy
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
-getMerkleRootTokenMintingPolicy
-  { sidechainParams, committeeCertificateVerificationCurrencySymbol } = do
-  merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
-    sidechainParams
+getMerkleRootTokenMintingPolicy sidechainParams = do
 
-  policy ← merkleRootTokenMintingPolicy $ SignedMerkleRootMint
-    { sidechainParams
-    , committeeCertificateVerificationCurrencySymbol
-    , merkleRootValidatorHash
-    }
+  policy ← merkleRootTokenMintingPolicy sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM (show (InternalError (InvalidScript "MerkleRootPolicy"))) $
       Value.scriptCurrencySymbol policy
@@ -191,7 +190,6 @@ saveRootLookupsAndConstraints ∷
   { sidechainParams ∷ SidechainParams
   , merkleRoot ∷ RootHash
   , previousMerkleRoot ∷ Maybe RootHash
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   } →
   Contract
     { lookupsAndConstraints ∷
@@ -204,21 +202,11 @@ saveRootLookupsAndConstraints
   { sidechainParams
   , merkleRoot
   , previousMerkleRoot
-  , committeeCertificateVerificationCurrencySymbol
   } = do
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  merkleRootValidatorHash ← map Scripts.validatorHash $ merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootValidatorHash
-      }
-  rootTokenMP ← merkleRootTokenMintingPolicy smrm
+  rootTokenMP ← merkleRootTokenMintingPolicy sidechainParams
   rootTokenCS ←
     liftContractM
       (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
@@ -240,10 +228,36 @@ saveRootLookupsAndConstraints
   ---------------------------------------------------------
   maybePreviousMerkleRootUtxo ← findPreviousMerkleRootTokenUtxo
     previousMerkleRoot
-    smrm
+    sidechainParams
 
   -- Building the transaction
   ---------------------------------------------------------
+
+  ( committeeCertificateVerificationVersioningInput /\
+      committeeCertificateVerificationVersioningOutput
+  ) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1
+          , scriptId: CommitteeCertificateVerificationPolicy
+          }
+      )
+
+  (merkleRootValidatorVersioningInput /\ merkleRootValidatorVersioningOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenValidator }
+      )
+
+  (merkleRootPolicyVersioningInput /\ merkleRootPolicyVersioningOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+      )
+
   let
     value = Value.singleton rootTokenCS merkleRootTokenName one
 
@@ -253,27 +267,49 @@ saveRootLookupsAndConstraints
       , previousMerkleRoot
       }
 
-    redeemer = SignedMerkleRootRedeemer
+    redeemer = ExportTypes.SignedMerkleRootRedeemer
       { previousMerkleRoot
       }
 
     constraints ∷ TxConstraints Void Void
     constraints =
-      TxConstraints.mustMintValueWithRedeemer (wrap (toData redeemer)) value
+      TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+        (Scripts.mintingPolicyHash rootTokenMP)
+        (wrap (toData redeemer))
+        merkleRootTokenName
+        one
+        ( RefInput $ mkTxUnspentOut merkleRootPolicyVersioningInput
+            merkleRootPolicyVersioningOutput
+        )
         <> TxConstraints.mustPayToScript (Scripts.validatorHash rootTokenVal)
           unitDatum
           TxConstraints.DatumWitness
           value
+        <> TxConstraints.mustReferenceOutput merkleRootValidatorVersioningInput
+        <> TxConstraints.mustReferenceOutput
+          committeeCertificateVerificationVersioningInput
         <> case maybePreviousMerkleRootUtxo of
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
 
     lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.mintingPolicy rootTokenMP
-      <> case maybePreviousMerkleRootUtxo of
-        Nothing → mempty
-        Just { index: txORef, value: txOut } → Lookups.unspentOutputs
-          (Map.singleton txORef txOut)
+    lookups =
+      Lookups.unspentOutputs
+        ( Map.singleton merkleRootValidatorVersioningInput
+            merkleRootValidatorVersioningOutput
+        )
+        <> Lookups.unspentOutputs
+          ( Map.singleton committeeCertificateVerificationVersioningInput
+              committeeCertificateVerificationVersioningOutput
+          )
+        <> Lookups.unspentOutputs
+          ( Map.singleton merkleRootPolicyVersioningInput
+              merkleRootPolicyVersioningOutput
+          )
+        <> case maybePreviousMerkleRootUtxo of
+          Nothing → mempty
+          Just { index: txORef, value: txOut } → Lookups.unspentOutputs
+            (Map.singleton txORef txOut)
 
   pure
     { lookupsAndConstraints: { lookups, constraints }

@@ -45,25 +45,25 @@ import Contract.Transaction
   , TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  , mkTxUnspentOut
   , outputDatumDatum
   )
 import Contract.TxConstraints
-  ( TxConstraints
+  ( InputWithScriptRef(RefInput)
+  , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value
   ( CurrencySymbol
   )
 import Contract.Value as Value
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -83,6 +83,11 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
+  , VersionOracle(VersionOracle)
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `ATMSPlainSchnorrSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainSchnorrSecp256k1Multisignature =
@@ -107,22 +112,30 @@ instance ToData ATMSPlainSchnorrSecp256k1Multisignature where
 -- | `committeePlainSchnorrSecp256k1ATMS` grabs the minting policy for the committee plainSchnorrSecp256k1 ATMS
 -- | policy
 committeePlainSchnorrSecp256k1ATMS ∷
-  CommitteeCertificateMint → Contract MintingPolicy
-committeePlainSchnorrSecp256k1ATMS param = do
-  let
-    script =
-      decodeTextEnvelope
-        RawScripts.rawCommitteePlainSchnorrSecp256k1ATMSPolicy >>=
-        plutusScriptV2FromEnvelope
+  { committeeCertificateMint ∷ CommitteeCertificateMint
+  , sidechainParams ∷ SidechainParams
+  } →
+  Contract MintingPolicy
+committeePlainSchnorrSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
+  do
+    let
+      script =
+        decodeTextEnvelope
+          RawScripts.rawCommitteePlainSchnorrSecp256k1ATMSPolicy >>=
+          plutusScriptV2FromEnvelope
 
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied [ toData param ]
-  pure $ PlutusMintingPolicy applied
+    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+    unapplied ← Monad.liftContractM "Decoding text envelope failed." script
+    applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+      [ toData committeeCertificateMint, toData versionOracleConfig ]
+    pure $ PlutusMintingPolicy applied
 
 -- | `getCommitteePlainSchnorrSecp256k1ATMSPolicy` grabs the committee plainSchnorrSecp256k1 ATMS currency
 -- | symbol and policy
 getCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
-  CommitteeCertificateMint →
+  { committeeCertificateMint ∷ CommitteeCertificateMint
+  , sidechainParams ∷ SidechainParams
+  } →
   Contract
     { committeePlainSchnorrSecp256k1ATMSPolicy ∷ MintingPolicy
     , committeePlainSchnorrSecp256k1ATMSCurrencySymbol ∷ CurrencySymbol
@@ -145,11 +158,8 @@ getCommitteePlainSchnorrSecp256k1ATMSPolicy param = do
 committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams ∷
   SidechainParams → Contract CommitteeCertificateMint
 committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams sidechainParams = do
-  { committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
   pure $ CommitteeCertificateMint
-    { committeeOraclePolicy: committeeOracleCurrencySymbol
-    , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+    { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
     , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
     }
 
@@ -159,18 +169,24 @@ committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams sidechainParams = do
 -- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
 mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
-  CommitteeATMSParams
-    (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature)) →
+  { sidechainParams ∷ SidechainParams
+  , committeeATMSParams ∷
+      CommitteeATMSParams
+        (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
+  } →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
-  ( CommitteeATMSParams
-      { currentCommitteeUtxo
-      , committeeCertificateMint
-      , aggregateSignature: signatures
-      , message
-      }
-  ) = do
+  { committeeATMSParams:
+      ( CommitteeATMSParams
+          { currentCommitteeUtxo
+          , committeeCertificateMint
+          , aggregateSignature: signatures
+          , message
+          }
+      )
+  , sidechainParams
+  } = do
   let
     messageByteArray = Value.getTokenName message
 
@@ -191,7 +207,8 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy
   -------------------------------------------------------------
   { committeePlainSchnorrSecp256k1ATMSPolicy
-  } ← getCommitteePlainSchnorrSecp256k1ATMSPolicy committeeCertificateMint
+  } ← getCommitteePlainSchnorrSecp256k1ATMSPolicy
+    { committeeCertificateMint, sidechainParams }
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
   -- the current committee isn't as expected.
@@ -242,17 +259,58 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         , currentCommitteeSignatures: curCommitteeSignatures
         }
 
+  -- Versioning constraints and lookups
+
+  -- versioning constraints and lookups
+  (versioningCommitteeOraclePolicyInput /\ versioningCommitteeOraclePolicyOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+      )
+
+  ( committeeCertificateVerificationVersioningInput /\
+      committeeCertificateVerificationVersioningOutput
+  ) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1
+          , scriptId: CommitteeCertificateVerificationPolicy
+          }
+      )
+  let
+    versioningConstraints =
+      TxConstraints.mustReferenceOutput
+        versioningCommitteeOraclePolicyInput
+        <> TxConstraints.mustReferenceOutput
+          committeeCertificateVerificationVersioningInput
+    versioningLookups =
+      ScriptLookups.unspentOutputs
+        ( Map.singleton versioningCommitteeOraclePolicyInput
+            versioningCommitteeOraclePolicyOutput
+        )
+        <> ScriptLookups.unspentOutputs
+          ( Map.singleton committeeCertificateVerificationVersioningInput
+              committeeCertificateVerificationVersioningOutput
+          )
+
   pure
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeORef committeeTxOut)
-          <> ScriptLookups.mintingPolicy committeePlainSchnorrSecp256k1ATMSPolicy
+          <> versioningLookups
     , constraints:
-        TxConstraints.mustMintCurrencyWithRedeemer
+        TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
           redeemer
           message
           one
+          ( RefInput $ mkTxUnspentOut
+              committeeCertificateVerificationVersioningInput
+              committeeCertificateVerificationVersioningOutput
+          )
+          <> versioningConstraints
     -- Note: we used to include the current committee as reference input
     -- every time, but there are times when one wants to spend the output
     -- with the current committee and hence must provide a redeemer (and
@@ -275,8 +333,11 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
 -- | Note: this assumes that the current committee should be given as reference
 -- | input (instead of spending it) to make testing a bit more terse.
 runCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
-  CommitteeATMSParams
-    (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature)) →
+  { sidechainParams ∷ SidechainParams
+  , committeeATMSParams ∷
+      CommitteeATMSParams
+        (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
+  } →
   Contract TransactionHash
 runCommitteePlainSchnorrSecp256k1ATMSPolicy params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
@@ -287,7 +348,7 @@ runCommitteePlainSchnorrSecp256k1ATMSPolicy params = do
       { lookups: mempty
       , constraints:
           TxConstraints.mustReferenceOutput
-            (unwrap params).currentCommitteeUtxo.index
+            (unwrap params.committeeATMSParams).currentCommitteeUtxo.index
       }
 
     { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
@@ -315,27 +376,17 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
       CommitteeCertificateMint
         { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
 
   { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
     getCommitteePlainSchnorrSecp256k1ATMSPolicy
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams }
 
-  -- Getting the validator / minting policy for the merkle root token
+  -- minting policy for the merkle root token
   -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
 
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , committeeCertificateVerificationCurrencySymbol:
-          committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
+    sidechainParams
   merkleRootTokenCurrencySymbol ←
     Monad.liftContractM
       ( show $ InternalError $ InvalidScript

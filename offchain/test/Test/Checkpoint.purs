@@ -30,11 +30,13 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -97,10 +99,15 @@ saveCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if enough signatures are provided"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'saveCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 25
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -118,9 +125,11 @@ saveCheckpointTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         let
           newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
@@ -157,10 +166,15 @@ notEnoughSignaturesTest =
   Mote.Monad.test
     "Save checkpoint should fail if there are not enough signatures"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'notEnoughSignaturesTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -178,9 +192,11 @@ notEnoughSignaturesTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         let
           newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
@@ -225,10 +241,15 @@ outOfOrderCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block number is not strictly increasing"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'outOfOrderCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -246,9 +267,11 @@ outOfOrderCheckpointTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         let
           newCheckpointBlockHash =
@@ -286,10 +309,15 @@ invalidCheckpointBlockHashTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block hash is invalid"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'invalidCheckpointBlockHashTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -307,9 +335,11 @@ invalidCheckpointBlockHashTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         let
           newCheckpointBlockHash = hexToByteArrayUnsafe
@@ -349,10 +379,16 @@ signedByUnknownCommitteeTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint is signed by an unknown committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'signedByUnknownCommitteeTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -370,9 +406,11 @@ signedByUnknownCommitteeTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         newCommitteeKeys ← sequence $ Array.replicate 5 generatePrivKey
 
@@ -414,10 +452,15 @@ committeeChangeCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if the checkpoint is signed by the new committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "Checkpoint 'committeeChangeCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -435,9 +478,11 @@ committeeChangeCheckpointTest =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         newCommitteeKeys ← sequence $ Array.replicate 5 generatePrivKey
 

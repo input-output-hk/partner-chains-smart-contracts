@@ -22,7 +22,6 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -41,9 +40,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -112,8 +108,6 @@ updateCommitteeHash
   ) = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -121,11 +115,10 @@ updateCommitteeHash
             (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Update comittee lookups and constraints
@@ -154,12 +147,13 @@ updateCommitteeHash
       $
         updateCommitteeHashMessage
   committeeATMSLookupsAndConstraints ←
-    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints $ CommitteeATMSParams
-      { currentCommitteeUtxo
-      , committeeCertificateMint
-      , aggregateSignature
-      , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
-      }
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints sidechainParams $
+      CommitteeATMSParams
+        { currentCommitteeUtxo
+        , committeeCertificateMint
+        , aggregateSignature
+        , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
+        }
 
   let
     { lookups, constraints } = lookupsAndConstraints
@@ -214,19 +208,11 @@ updateCommitteeHashLookupsAndConstraints
   { committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  -- Getting the validator / minting policy for the merkle root token
+  -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
 
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
-      }
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
+    sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
       (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
@@ -283,7 +269,7 @@ updateCommitteeHashLookupsAndConstraints
   -------------------------------------------------------------
   maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
     previousMerkleRoot
-    smrm
+    sidechainParams
 
   -- Building the transaction.
   -------------------------------------------------------------

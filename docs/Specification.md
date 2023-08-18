@@ -8,7 +8,10 @@ This specification details the main chain contract of a trustless sidechain syst
 
 Mainchain utilizes the following components to handle interactions with a sidechain:
 
-- `FUELMintingPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
+- `FUELProxyPolicy`: minting policy validating the mint or burn of FUEL tokens on mainchain, delegating actual burning and minting conditions to versioned policies ([2.](#2-transfer-fuel-tokens-from-mainchain-to-sidechain), [3.2.](#32-individual-claiming))
+   + `FUELMintingPolicy.V1`: minting policy based on Merkle trees
+   + `FUELBurningPolicy.V1`: burning policy that allows to burn FUEL unconditionally
+   + `FUELMintingPolicy.V2` and `FUELBurningPolicy.V2`: policies that allow to mint and burn FUEL unconditionally.  They exist for demonstration purposes only and should be removed at some point in the future.
 - `MerkleRootTokenMintingPolicy`: minting policy for storing cross-chain transaction bundles' Merkle roots ([3.1.](#31-merkle-root-insertion))
 - `CommitteeCandidateValidator`: script address for committee candidates ([4.](#4-register-committee-candidate), [5.](#5-deregister-committee-membercandidate))
 - `CandidatePermissionToken`: a minting policy for permissioned committee candidates ([4.1](#41-candidate-permission-token))
@@ -21,6 +24,8 @@ Mainchain utilizes the following components to handle interactions with a sidech
 - `DsKeyPolicy`: tokens identifying the distributed set entries ([Distributed Set](./DistributedSet.md))
 - `CheckpointValidator`: validator handling checkpoints ([7.](#7-checkpointing))
 - `CheckpointPolicy`: oneshot token identifying the UTxO holding the checkpoint ([7.](#7-checkpointing))
+- `VersionOraclePolicy`: versioning tokens that store script ID and its version ([8.](#8-versioning-system))
+- `VersionOracleValidator`: validator that stores versioning tokens and manages updates and invalidation of versions
 
 All of these policies/validators are parameterised by the sidechain parameters, so we can get unique minting policy and validator script hashes.
 
@@ -39,6 +44,10 @@ data SidechainParams = SidechainParams
   , thresholdDenominator :: Integer
     -- ^ 'thresholdDenominator' is the denominator for the ratio of the
     -- committee needed to sign off committee handovers / merkle roots
+  , governanceAuthority :: GovernanceAuthority
+    -- ^ 'governanceAuthority' stores credentials of a governing body allowed to
+    -- make updates to versioned scripts.  For now we just use a master public
+    -- key, whose owner is allowed to make any decisions about script versions.
   }
 ```
 
@@ -72,6 +81,10 @@ data InitSidechainParams = InitSidechainParams
   , thresholdDenominator :: Integer
     -- ^ 'thresholdDenominator' is the denominator for the ratio of the
     -- committee needed to sign off committee handovers / merkle roots
+  , governanceAuthority :: GovernanceAuthority
+    -- ^ 'governanceAuthority' stores credentials of a governing body allowed to
+    -- make updates to versioned scripts.  For now we just use a master public
+    -- key, whose owner is allowed to make any decisions about script versions.
   }
 ```
 
@@ -450,5 +463,86 @@ data CheckpointRedeemer = CheckpointRedeemer
   , committeePubKeys ∷ [SidechainPublicKey]
   , newCheckpointBlockHash ∷ ByteString
   , newCheckpointBlockNumber ∷ Integer
+  }
+```
+
+### 8. Versioning system
+
+There is a versioning system in place that:
+
+  1. Acts as an oracle of available validators and policies.  These are
+     enumerated in the off-chain code by the `ScriptId` data type:
+     ```
+     data ScriptId
+       = FUELMintingPolicy
+       | MerkleRootTokenPolicy
+       | MerkleRootTokenValidator
+       | CommitteeCandidateValidator
+       | CandidatePermissionPolicy
+       | CommitteeNftPolicy
+       | CommitteeHashPolicy
+       | CommitteeHashValidator
+       | DSKeyPolicy
+       | DSConfPolicy
+       | DSConfValidator
+       | DSInsertValidator
+       | CheckpointValidator
+       | CheckpointPolicy
+       | FUELBurningPolicy
+       | VersionOraclePolicy -- not versioned
+       | VersionOracleValidator -- not versioned
+       | FUELProxyPolicy -- not versioned
+       | CommitteeCertificateVerificationPolicy
+       | CommitteeOraclePolicy -- (previously UpdateCommitteeHashPolicy)
+     ```
+
+  2. Allows to update existing scripts to newer versions.  In particular, it
+     allows to update fuel minting and burning policies in such a way that that
+     the FUEL currency symbol does not change.
+
+  3. Caches scripts so that they can attached to transactions as reference
+     outputs.  This is strictly necessary not to exceed transaction size limits.
+
+Each version defines a list of validators and policies to be stored in the
+versioning system.  During activation phase of sidechain initialization
+specified version of the scripts is placed in the versioning system.  During
+sidechain lifetime it is possible to:
+
+  1. Insert new script versions by calling insert version endpoint.  For
+     example, if sidechain was initialized with version 1 of the scripts it is
+     then possible to insert version 2 of the scripts and both version will
+     exist in parallel.  This can be used to allow claiming FUEL using several
+     different versions of the scripts.
+
+  2. Invalidate existing script versions.  Scripts from invalidated version will
+     no longer be available.  This can be used to disallow claiming FUEL using a
+     particular script version.
+
+  3. Update existing scripts to new versions.  This combines invalidation of an
+     existing version and insertion of a new one, possibly re-using existing
+     versioning tokens or burning excessive remaining ones.
+
+Note that none of the above three operations is atomic because
+insertion/invalidation/update of each scripts happens in a separate transaction
+(again, due to transaction size limits).  This could potentially lead to
+problems if user claims FUEL while an update is performed.  Resolving this is
+part of future work.
+
+All versioning operations must be approved by the [governance
+authority](./Governance.md).  The only exception to this rule is minting initial
+versioning tokens during sidechain initialization, in which case burning of
+genesis UTxO is required.
+
+Every on-chain script that relies on other currency symbols or validator
+addresses must be parameterized with versioning system configuration that stores
+information which `VersionOracleValidator` address and `VersionOraclePolicy`
+currency symbol are to be considered as trusted:
+
+```
+data VersionOracleConfig = VersionOracleConfig
+  { -- | VersionOracleValidator
+    versionOracleAddress :: Address
+  , -- | VersionOraclePolicy
+    versionOracleCurrencySymbol :: CurrencySymbol
   }
 ```

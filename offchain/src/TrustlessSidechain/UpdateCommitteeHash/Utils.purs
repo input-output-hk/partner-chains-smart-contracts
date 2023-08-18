@@ -27,7 +27,10 @@ import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData (class ToData)
 import Contract.PlutusData as PlutusData
-import Contract.Scripts (Validator(Validator), ValidatorHash)
+import Contract.Scripts
+  ( Validator(Validator)
+  , ValidatorHash
+  )
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)

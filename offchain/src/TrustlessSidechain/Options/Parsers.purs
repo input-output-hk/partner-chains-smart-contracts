@@ -3,6 +3,8 @@ module TrustlessSidechain.Options.Parsers
   , transactionInput
   , atmsKind
   , parseATMSKind
+  , pubKeyHash
+  , governanceAuthority
   , combinedMerkleProofParser
   , committeeSignature
   , parsePubKeyBytesAndSignatureBytes
@@ -26,7 +28,7 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address (Address, PubKeyHash(..))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
@@ -38,6 +40,7 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
 import Ctl.Internal.Serialization.Address as Serialization.Address
+import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
@@ -53,7 +56,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
       , ATMSMultisignature
       )
   )
-import TrustlessSidechain.FUELMintingPolicy (CombinedMerkleProof)
+import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
@@ -150,6 +154,19 @@ sidechainSignature ∷ ReadM EcdsaSecp256k1Signature
 sidechainSignature = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1Signature
   <=< hexToByteArray
+
+-- | Parses a PubKeyHash from hexadecimal representation.
+pubKeyHash ∷ ReadM PubKeyHash
+pubKeyHash = maybeReader
+  $ hexToByteArray
+  >=> ed25519KeyHashFromBytes
+  >=> PubKeyHash
+  >>> pure
+
+-- | Parses a GovernanceAuthority from hexadecimal representation.
+governanceAuthority ∷ ReadM Governance.GovernanceAuthority
+governanceAuthority =
+  Governance.mkGovernanceAuthority <$> pubKeyHash
 
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise

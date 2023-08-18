@@ -6,9 +6,11 @@ import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
 import Control.Monad.Error.Class (throwError)
 import Data.BigInt as BigInt
 import Data.List as List
+import Data.Symbol (SProxy(..))
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
+import Record as Record
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(CandidatePermissionMint)
   , CandidatePermissionMintParams(CandidatePermissionMintParams)
@@ -20,8 +22,10 @@ import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValid
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
-      ( ClaimActResp
-      , BurnActResp
+      ( ClaimActRespV1
+      , BurnActRespV1
+      , ClaimActRespV2
+      , BurnActRespV2
       , CommitteeCandidateRegResp
       , CandidatePermissionTokenResp
       , CommitteeCandidateDeregResp
@@ -31,14 +35,17 @@ import TrustlessSidechain.EndpointResp
       , InitResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
+      , InsertVersionResp
+      , UpdateVersionResp
+      , InvalidateVersionResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.FUELMintingPolicy
-  ( FuelMintOrFuelBurnParams(Burn, Mint)
-  , FuelParams(FuelParams)
-  , runFuelMP
-  )
+import TrustlessSidechain.FUELBurningPolicy.V1 as Burn.V1
+import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
+import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
+import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
+import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
@@ -53,8 +60,10 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
   ( Endpoint
-      ( ClaimAct
-      , BurnAct
+      ( BurnActV1
+      , BurnActV2
+      , ClaimActV1
+      , ClaimActV2
       , GetAddrs
       , CommitteeCandidateReg
       , CandidiatePermissionTokenAct
@@ -65,6 +74,9 @@ import TrustlessSidechain.Options.Types
       , Init
       , CommitteeHandover
       , SaveCheckpoint
+      , InsertVersion
+      , UpdateVersion
+      , InvalidateVersion
       )
   , Options
   , SidechainEndpointParams
@@ -73,6 +85,8 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Versioning as Versioning
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -122,39 +136,60 @@ runEndpoint sidechainEndpointParams endpoint =
     atmsKind = (unwrap sidechainEndpointParams).atmsKind
   in
     case endpoint of
-      ClaimAct
+      ClaimActV1
         { amount, recipient, merkleProof, index, previousMerkleRoot, dsUtxo } →
-        runFuelMP
-          ( FuelParams
-              { sidechainParams: scParams
-              , atmsKind
-              , fuelMintOrFuelBurnParams:
-                  Mint
-                    { amount
-                    , recipient
-                    , merkleProof
-                    , index
-                    , previousMerkleRoot
-                    , dsUtxo
-                    }
+        FUELProxyPolicy.mkFuelProxyMintLookupsAndConstraints scParams
+          ( FUELProxyPolicy.FuelMintParamsV1 $ Mint.V1.FuelMintParams
+              { amount
+              , recipient
+              , sidechainParams: scParams
+              , merkleProof
+              , index
+              , previousMerkleRoot
+              , dsUtxo
               }
           )
+          >>= submitAndAwaitTx mempty
           <#> unwrap
           >>> { transactionId: _ }
-          >>> ClaimActResp
+          >>> ClaimActRespV1
 
-      BurnAct { amount, recipient } →
-        runFuelMP
-          ( FuelParams
-              { sidechainParams: scParams
-              , atmsKind
-              , fuelMintOrFuelBurnParams: Burn { amount, recipient }
-              }
+      BurnActV1 { amount, recipient } →
+        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints scParams
+          ( FUELProxyPolicy.FuelBurnParamsV1 $ Burn.V1.FuelBurnParams
+              { amount, recipient, sidechainParams: scParams }
           )
+          >>= submitAndAwaitTx mempty
           <#> unwrap
           >>> { transactionId: _ }
           >>>
-            BurnActResp
+            BurnActRespV1
+
+      ClaimActV2
+        { amount } →
+        FUELProxyPolicy.mkFuelProxyMintLookupsAndConstraints scParams
+          ( FUELProxyPolicy.FuelMintParamsV2 $ Mint.V2.FuelMintParams
+              { amount
+              }
+          )
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> ClaimActRespV2
+
+      BurnActV2 { amount, recipient } →
+        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints scParams
+          ( FUELProxyPolicy.FuelBurnParamsV2 $
+              { recipient
+              , fuelBurnParams: Burn.V2.FuelBurnParams
+                  { amount }
+              }
+          )
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>>
+            BurnActRespV2
 
       CommitteeCandidateReg
         { spoPubKey
@@ -223,6 +258,7 @@ runEndpoint sidechainEndpointParams endpoint =
               , atmsKind
               , mCandidatePermissionTokenUtxo:
                   extraInfo.mCandidatePermissionTokenUtxo
+              , version: extraInfo.version
               }
         pure $ GetAddrsResp { sidechainAddresses }
 
@@ -283,7 +319,7 @@ runEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> SaveRootResp
 
-      InitTokens { initCandidatePermissionTokenMintInfo } → do
+      InitTokens { initCandidatePermissionTokenMintInfo, version } → do
         let
           sc = unwrap scParams
           isc =
@@ -308,14 +344,20 @@ runEndpoint sidechainEndpointParams endpoint =
                         , candidatePermissionTokenName
                         }
                     }
+            , initGovernanceAuthority: sc.governanceAuthority
             }
-        { transactionId, sidechainParams, sidechainAddresses } ←
-          initSidechainTokens isc
+        { transactionId
+        , sidechainParams
+        , sidechainAddresses
+        , versioningTransactionIds
+        } ←
+          initSidechainTokens isc version
 
         pure $ InitResp
           { transactionId: unwrap transactionId
           , sidechainParams
           , sidechainAddresses
+          , versioningTransactionIds: map unwrap versioningTransactionIds
           }
 
       Init
@@ -323,6 +365,7 @@ runEndpoint sidechainEndpointParams endpoint =
         , initSidechainEpoch
         , useInitTokens
         , initCandidatePermissionTokenMintInfo
+        , version
         } → do
         rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
           committeePubKeysInput
@@ -361,16 +404,25 @@ runEndpoint sidechainEndpointParams endpoint =
             , initSidechainEpoch
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator
+            , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        { transactionId, sidechainParams, sidechainAddresses } ←
-          if useInitTokens then paySidechainTokens isc
-          else initSidechain (wrap isc)
+        { transactionId
+        , sidechainParams
+        , sidechainAddresses
+        , versioningTransactionIds
+        } ←
+          if useInitTokens then do
+            resp ← paySidechainTokens isc version
+            pure $ Record.insert (SProxy ∷ _ "versioningTransactionIds") mempty
+              resp
+          else initSidechain (wrap isc) version
 
         pure $ InitResp
           { transactionId: unwrap transactionId
           , sidechainParams
           , sidechainAddresses
+          , versioningTransactionIds: map unwrap versioningTransactionIds
           }
 
       CommitteeHandover
@@ -457,6 +509,35 @@ runEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> SaveCheckpointResp
+
+      -- TODO: sanitize version arguments here, making sure they are not negative
+      -- (or perhaps come from a known range of versions?).  See Issue #9
+      InsertVersion
+        { version
+        } → do
+        txIds ← Versioning.insertVersion { sidechainParams: scParams, atmsKind }
+          version
+        let versioningTransactionIds = map unwrap txIds
+        pure $ InsertVersionResp { versioningTransactionIds }
+
+      UpdateVersion
+        { oldVersion
+        , newVersion
+        } → do
+        txIds ← Versioning.updateVersion { sidechainParams: scParams, atmsKind }
+          oldVersion
+          newVersion
+        let versioningTransactionIds = map unwrap txIds
+        pure $ UpdateVersionResp { versioningTransactionIds }
+
+      InvalidateVersion
+        { version
+        } → do
+        txIds ← Versioning.invalidateVersion
+          { sidechainParams: scParams, atmsKind }
+          version
+        let versioningTransactionIds = map unwrap txIds
+        pure $ InvalidateVersionResp { versioningTransactionIds }
 
 printEndpointResp ∷ EndpointResp → Contract Unit
 printEndpointResp =

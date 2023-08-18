@@ -1,16 +1,27 @@
+-- | `Utils.Address` provides some utility functions for handling addresses.
 module TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , getBech32BytesByteArray
   , bech32BytesFromAddress
   , addressFromBech32Bytes
   , byteArrayToBech32BytesUnsafe
+  , getOwnPaymentPubKeyHash
+  , getOwnWalletAddress
   ) where
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash
+  )
+import Contract.Monad (Contract, liftedM)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(..))
+import Contract.Wallet
+  ( getWalletAddresses
+  , ownPaymentPubKeyHashes
+  )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
 import Ctl.Internal.Serialization.Address
@@ -31,6 +42,11 @@ import Ctl.Internal.Serialization.Address
   , rewardAddressFromAddress
   , rewardAddressFromBytes
   , rewardAddressToAddress
+  )
+import Data.Array as Array
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress)
+  , OffchainError(InternalError)
   )
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
@@ -93,3 +109,17 @@ addressFromBech32Bytes bechBytes = do
       <|> (rewardAddressToAddress <$> rewardAddressFromBytes cborBytes)
 
   toPlutusAddress enterpriseAddr
+
+-- | Return a single own payment pub key hash without generating warnings.
+getOwnPaymentPubKeyHash ∷
+  Contract PaymentPubKeyHash
+getOwnPaymentPubKeyHash =
+  liftedM (show (InternalError NotFoundOwnPubKeyHash))
+    (ownPaymentPubKeyHashes >>= pure <<< Array.head)
+
+-- | Return a single own wallet address without generating warnings.
+getOwnWalletAddress ∷
+  Contract Address
+getOwnWalletAddress =
+  liftedM (show (InternalError NotFoundOwnAddress))
+    (getWalletAddresses >>= pure <<< Array.head)

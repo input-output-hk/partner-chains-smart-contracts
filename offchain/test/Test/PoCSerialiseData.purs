@@ -50,7 +50,10 @@ tests = Mote.Monad.group "PoCSerialiseData tests" do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      ]
   $ \alice → Wallet.withKeyWallet alice do
       -- 1.
       let

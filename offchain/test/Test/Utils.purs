@@ -23,6 +23,7 @@ import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
 import Contract.Monad (Contract, throwContractError)
 import Contract.Monad as Monad
+import Contract.PlutusData (PlutusData(..), fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
@@ -39,10 +40,12 @@ import Ctl.Internal.Serialization.Hash as Hash
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Const (Const)
+import Data.Function (on)
+import Data.List ((:))
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe as Maybe
-import Data.Set as Set
+import Data.Ord (compare)
 import Data.UInt as UInt
 import Effect.Exception as Exception
 import Mote.Monad (Mote)
@@ -95,9 +98,21 @@ paymentPubKeyHashToByteArray =
 getOwnTransactionInput ∷ Contract TransactionInput
 getOwnTransactionInput = do
   ownUtxos ← Monad.liftedM "Failed to query wallet utxos" getWalletUtxos
-  Monad.liftContractM "No utxo found in wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
+
+  case
+    List.sortBy
+      ( compare `on`
+          ( snd >>>
+              ( \( TransactionOutputWithRefScript
+                     { output: TransactionOutput { amount } }
+                 ) → Value.valueToCoin' amount
+              )
+          )
+      )
+      (Map.toUnfoldable ownUtxos)
+    of
+    (Tuple k _) : _ → pure k
+    _ → throwContractError "No utxo found in wallet"
 
 -- | `fails contract` executes `contract`, and
 -- |
@@ -256,4 +271,7 @@ dummySidechainParams = SidechainParams
       1
   , thresholdNumerator: BigInt.fromInt 2
   , thresholdDenominator: BigInt.fromInt 3
+  , governanceAuthority: Unsafe.unsafePartial $ fromJust $ fromData $ Bytes $
+      hexToByteArrayUnsafe
+        "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   }

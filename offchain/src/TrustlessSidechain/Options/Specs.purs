@@ -2,7 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Contract.Address (Address, PubKeyHash(..))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -18,6 +18,7 @@ import Contract.Wallet
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
+import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)
@@ -49,6 +50,7 @@ import Options.Applicative
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenMintInfo
   )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
   ( bech32AddressParser
@@ -58,6 +60,7 @@ import TrustlessSidechain.Options.Parsers
   , cborEncodedAddressParser
   , combinedMerkleProofParserWithPkh
   , denominator
+  , governanceAuthority
   , numerator
   , pubKeyBytesAndSignatureBytes
   , rootHash
@@ -71,8 +74,10 @@ import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
   , Config
   , Endpoint
-      ( ClaimAct
-      , BurnAct
+      ( ClaimActV1
+      , BurnActV1
+      , ClaimActV2
+      , BurnActV2
       , GetAddrs
       , CandidiatePermissionTokenAct
       , Init
@@ -83,6 +88,9 @@ import TrustlessSidechain.Options.Types
       , SaveRoot
       , CommitteeHandover
       , SaveCheckpoint
+      , InsertVersion
+      , UpdateVersion
+      , InvalidateVersion
       )
   , InputArgOrFile(InputFromArg, InputFromFile)
   , Options
@@ -114,12 +122,20 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig getAddrSpec)
             (progDesc "Get the script addresses for a given sidechain")
         )
-    , command "claim"
-        ( info (withCommonOpts maybeConfig claimSpec)
+    , command "claim-v1"
+        ( info (withCommonOpts maybeConfig claimSpecV1)
             (progDesc "Claim a FUEL tokens from a proof")
         )
-    , command "burn"
-        ( info (withCommonOpts maybeConfig burnSpec)
+    , command "burn-v1"
+        ( info (withCommonOpts maybeConfig burnSpecV1)
+            (progDesc "Burn a certain amount of FUEL tokens")
+        )
+    , command "claim-v2"
+        ( info (withCommonOpts maybeConfig claimSpecV2)
+            (progDesc "Claim FUEL tokens from thin air")
+        )
+    , command "burn-v2"
+        ( info (withCommonOpts maybeConfig burnSpecV2)
             (progDesc "Burn a certain amount of FUEL tokens")
         )
     , command "register"
@@ -151,6 +167,18 @@ optSpec maybeConfig =
     , command "save-checkpoint"
         ( info (withCommonOpts maybeConfig saveCheckpointSpec)
             (progDesc "Saving a new checkpoint")
+        )
+    , command "insert-version"
+        ( info (withCommonOpts maybeConfig insertVersionSpec)
+            (progDesc "Initialize a new protocol version")
+        )
+    , command "update-version"
+        ( info (withCommonOpts maybeConfig updateVersionSpec)
+            (progDesc "Update an existing protocol version")
+        )
+    , command "invalidate-version"
+        ( info (withCommonOpts maybeConfig invalidateVersionSpec)
+            (progDesc "Invalidate a protocol version")
         )
     ]
 
@@ -298,6 +326,21 @@ sidechainEndpointParamsSpec maybeConfig = ado
         (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]
 
+  governanceAuthority ← option governanceAuthority $ fold
+    [ short 'g'
+    , long "governance-authority"
+    , metavar "PUB_KEY_HASH"
+    , help "Public key hash of governance authority"
+    , maybe mempty value
+        ( maybeConfig >>= _.sidechainParameters >>= _.governanceAuthority >>=
+            -- parse ByteArray stored in Config into a PubKeyHash
+            ( ed25519KeyHashFromBytes >=> PubKeyHash
+                >>> Governance.mkGovernanceAuthority
+                >>> pure
+            )
+        )
+    ]
+
   { thresholdNumerator, thresholdDenominator } ←
     let
       thresholdNumeratorDenominatorOption = ado
@@ -331,15 +374,16 @@ sidechainEndpointParamsSpec maybeConfig = ado
             { chainId: BigInt.fromInt chainId
             , genesisHash
             , genesisUtxo
+            , governanceAuthority
             , thresholdNumerator
             , thresholdDenominator
             }
       , atmsKind
       }
 
--- | Parse all parameters for the `claim` endpoint
-claimSpec ∷ Parser Endpoint
-claimSpec = ado
+-- | Parse all parameters for the `claim-v1` endpoint
+claimSpecV1 ∷ Parser Endpoint
+claimSpecV1 = ado
   (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
     $ fold
         [ short 'p'
@@ -358,7 +402,7 @@ claimSpec = ado
     { transaction, merkleProof } = unwrap combinedMerkleProof
     { amount, index, previousMerkleRoot } = unwrap transaction
   in
-    ClaimAct
+    ClaimActV1
       { amount
       , recipient
       , merkleProof
@@ -367,16 +411,35 @@ claimSpec = ado
       , dsUtxo
       }
 
--- | Parse all parameters for the `burn` endpoint
-burnSpec ∷ Parser Endpoint
-burnSpec = ado
+-- | Parse all parameters for the `burn-v1` endpoint
+burnSpecV1 ∷ Parser Endpoint
+burnSpecV1 = ado
   amount ← parseAmount
   recipient ← option sidechainAddress $ fold
     [ long "recipient"
     , metavar "ADDRESS"
     , help "Address of the sidechain recipient"
     ]
-  in BurnAct { amount, recipient }
+  in BurnActV1 { amount, recipient }
+
+-- | Parse all parameters for the `claim-v2` endpoint
+claimSpecV2 ∷ Parser Endpoint
+claimSpecV2 = ado
+  amount ← parseAmount
+  in
+    ClaimActV2
+      { amount }
+
+-- | Parse all parameters for the `burn-v2` endpoint
+burnSpecV2 ∷ Parser Endpoint
+burnSpecV2 = ado
+  amount ← parseAmount
+  recipient ← option sidechainAddress $ fold
+    [ long "recipient"
+    , metavar "ADDRESS"
+    , help "Address of the sidechain recipient"
+    ]
+  in BurnActV2 { amount, recipient }
 
 -- | Token amount parser
 parseAmount ∷ Parser BigInt
@@ -737,10 +800,23 @@ initTokensSpec ∷ Parser Endpoint
 initTokensSpec = ado
   initCandidatePermissionTokenMintInfo ← optional
     initCandidatePermissionTokenMintHelper
+  version ← parseVersion
   in
     InitTokens
       { initCandidatePermissionTokenMintInfo
+      , version
       }
+
+parseVersion ∷ Parser Int
+parseVersion =
+  option
+    int
+    ( fold
+        [ long "version"
+        , metavar "INT"
+        , help "Protocol version"
+        ]
+    )
 
 -- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint
 -- candidate permission tokens), and parsers for the initial committee
@@ -760,13 +836,53 @@ initSpec = ado
     ]
   initCandidatePermissionTokenMintInfo ← optional
     initCandidatePermissionTokenMintHelper
+  version ← parseVersion
   in
     Init
       { committeePubKeysInput
       , initSidechainEpoch
       , useInitTokens
       , initCandidatePermissionTokenMintInfo
+      , version
       }
+
+insertVersionSpec ∷ Parser Endpoint
+insertVersionSpec = ado
+  version ← parseVersion
+  in InsertVersion { version }
+
+parseOldVersion ∷ Parser Int
+parseOldVersion =
+  option
+    int
+    ( fold
+        [ long "old-version"
+        , metavar "INT"
+        , help "Old protocol version"
+        ]
+    )
+
+parseNewVersion ∷ Parser Int
+parseNewVersion =
+  option
+    int
+    ( fold
+        [ long "new-version"
+        , metavar "INT"
+        , help "New protocol version"
+        ]
+    )
+
+updateVersionSpec ∷ Parser Endpoint
+updateVersionSpec = ado
+  newVersion ← parseNewVersion
+  oldVersion ← parseOldVersion
+  in UpdateVersion { newVersion, oldVersion }
+
+invalidateVersionSpec ∷ Parser Endpoint
+invalidateVersionSpec = ado
+  version ← parseVersion
+  in InvalidateVersion { version }
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado
@@ -812,7 +928,9 @@ getAddrSpec = ado
     , help
         "UTxO used to mint the candidate permission token to return its currency symbol"
     ]
+  version ← parseVersion
   in
     GetAddrs
       { mCandidatePermissionTokenUtxo
+      , version
       }

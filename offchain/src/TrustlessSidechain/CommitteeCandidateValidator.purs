@@ -19,7 +19,6 @@ import Contract.Monad
   ( Contract
   , liftContractE
   , liftContractM
-  , liftedM
   , throwContractError
   )
 import Contract.Numeric.BigNum as BigNum
@@ -46,10 +45,6 @@ import Contract.Transaction
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap, utxosAt)
 import Contract.Value as Value
-import Contract.Wallet
-  ( getWalletAddress
-  , ownPaymentPubKeyHash
-  )
 import Control.Alternative (guard)
 import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)
@@ -64,8 +59,12 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.Utils.Address
+  ( getOwnPaymentPubKeyHash
+  , getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Logging
-  ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress, InvalidScript)
+  ( InternalError(InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
@@ -170,9 +169,8 @@ register
   ) = do
   netId ← getNetworkId
 
-  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
-    ownPaymentPubKeyHash
-  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
+  ownPkh ← getOwnPaymentPubKeyHash
+  ownAddr ← getOwnWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
@@ -251,12 +249,9 @@ register
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-
+  ownPkh ← getOwnPaymentPubKeyHash
+  ownAddr ← getOwnWalletAddress
   netId ← getNetworkId
-
-  ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))
-    ownPaymentPubKeyHash
-  ownAddr ← liftedM (show (InternalError NotFoundOwnAddress)) getWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator

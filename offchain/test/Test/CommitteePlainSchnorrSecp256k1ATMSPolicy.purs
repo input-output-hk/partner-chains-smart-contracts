@@ -28,10 +28,12 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PrivateKey
@@ -84,8 +86,13 @@ testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainSchnorrSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 100_000_000
+        , BigInt.fromInt 100_000_000
+        , BigInt.fromInt 100_000_000
+        , BigInt.fromInt 100_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
+        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         let
           keyCount = 80
@@ -106,9 +113,11 @@ testScenario1 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainSchnorrSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                ownPaymentPubKeyHash
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
@@ -118,7 +127,9 @@ testScenario1 =
 
         { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
-            committeePlainSchnorrSecp256k1ATMSMint
+            { committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+            , sidechainParams
+            }
 
         -- Running the tests
         -------------------------
@@ -154,12 +165,14 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ CommitteeATMSParams
-                  { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
-                  , aggregateSignature: committeeSignatures
-                  , message: sidechainMessageTokenName
-                  }
+              $ { committeeATMSParams: CommitteeATMSParams
+                    { currentCommitteeUtxo: utxo
+                    , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+                    , aggregateSignature: committeeSignatures
+                    , message: sidechainMessageTokenName
+                    }
+                , sidechainParams
+                }
 
           Test.Utils.assertIHaveOutputWithAsset
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
@@ -204,12 +217,14 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ CommitteeATMSParams
-                  { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
-                  , aggregateSignature: committeeSignatures
-                  , message: sidechainMessageTokenName
-                  }
+              $ { committeeATMSParams: CommitteeATMSParams
+                    { currentCommitteeUtxo: utxo
+                    , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+                    , aggregateSignature: committeeSignatures
+                    , message: sidechainMessageTokenName
+                    }
+                , sidechainParams
+                }
 
           Test.Utils.assertIHaveOutputWithAsset
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
@@ -247,12 +262,14 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ CommitteeATMSParams
+              $ { committeeATMSParams: CommitteeATMSParams
                   { currentCommitteeUtxo: utxo
                   , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
                   , aggregateSignature: committeeSignatures
                   , message: sidechainMessageTokenName
                   }
+                , sidechainParams
+                }
 
           Test.Utils.assertIHaveOutputWithAsset
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
@@ -288,13 +305,15 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-                $ CommitteeATMSParams
+                $ { committeeATMSParams: CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint:
                         committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
+                  , sidechainParams
+                  }
             )
             # Test.Utils.fails
 
@@ -330,13 +349,15 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-                $ CommitteeATMSParams
+                $ { committeeATMSParams: CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
                     , committeeCertificateMint:
                         committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
+                  , sidechainParams
+                  }
             )
             # Test.Utils.fails
 

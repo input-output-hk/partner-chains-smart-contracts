@@ -27,10 +27,7 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData
-  ( Datum(Datum)
-  , PlutusData
-  )
+import Contract.PlutusData (Datum(Datum), PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
@@ -50,6 +47,7 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Data.Monoid (mempty)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(CandidatePermissionMint)
   , CandidatePermissionMintParams(CandidatePermissionMintParams)
@@ -76,16 +74,13 @@ import TrustlessSidechain.DistributedSet
   , DsKeyMint(DsKeyMint)
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.FUELMintingPolicy (FUELMint(FUELMint))
-import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
+import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.MerkleRoot
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
@@ -98,6 +93,7 @@ import TrustlessSidechain.Utils.Logging
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning as Versioning
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -113,6 +109,7 @@ type InitTokensParams r =
       Maybe
         CandidatePermissionTokenMintInfo
   , initATMSKind ∷ ATMSKinds
+  , initGovernanceAuthority ∷ Governance.GovernanceAuthority
   | r
   }
 
@@ -148,6 +145,7 @@ toSidechainParams isp = SidechainParams
   , genesisUtxo: isp.initUtxo
   , thresholdNumerator: isp.initThresholdNumerator
   , thresholdDenominator: isp.initThresholdDenominator
+  , governanceAuthority: isp.initGovernanceAuthority
   }
 
 -- | `initCommitteeHashMintLookupsAndConstraints` creates lookups and
@@ -256,6 +254,7 @@ initCheckpointLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCheckpointLookupsAndConstraints inp = do
+
   -- Get checkpoint / associated values
   -----------------------------------
   let
@@ -270,12 +269,11 @@ initCheckpointLookupsAndConstraints inp = do
       CommitteeCertificateMint
         { thresholdNumerator: inp.initThresholdNumerator
         , thresholdDenominator: inp.initThresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams: sc }
       inp.initATMSKind
 
   let
@@ -329,7 +327,7 @@ initCommitteeHashLookupsAndConstraints ∷
 initCommitteeHashLookupsAndConstraints isp = do
   -- Sidechain parameters
   -----------------------------------
-  let sc = toSidechainParams isp
+  let sp = toSidechainParams isp
 
   -- Getting the update committee hash policy
   -----------------------------------
@@ -338,7 +336,8 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Getting the merkle root token minting policy
   -----------------------------------
-  { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
+  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
+    sp
 
   -- Setting up the update committee hash validator
   -----------------------------------
@@ -347,20 +346,19 @@ initCommitteeHashLookupsAndConstraints isp = do
       CommitteeCertificateMint
         { thresholdNumerator: isp.initThresholdNumerator
         , thresholdDenominator: isp.initThresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
 
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams: sp }
       isp.initATMSKind
 
   let
     aggregatedKeys = isp.initAggregatedCommittee
     committeeHashParam = UpdateCommitteeHash
-      { sidechainParams: sc
+      { sidechainParams: sp
       , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol: merkleRootTokenMintingPolicyCurrencySymbol
+      , merkleRootTokenCurrencySymbol: merkleRootTokenCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       }
     committeeHashDatum = Datum
@@ -425,10 +423,6 @@ initDistributedSetLookupsAndContraints isp = do
   let
     sc = toSidechainParams isp
 
-  -- Getting the merkle root token minting policy / currency symbol
-  -----------------------------------
-  { merkleRootTokenMintingPolicyCurrencySymbol } ← getMerkleRootTokenPolicy isp
-
   -- Initializing the distributed set
   -----------------------------------
   -- Configuration policy of the distributed set
@@ -476,14 +470,7 @@ initDistributedSetLookupsAndContraints isp = do
           (unwrap DistributedSet.rootNode).nNext
 
   -- FUEL minting policy
-  fuelMintingPolicy ← FUELMintingPolicy.fuelMintingPolicy
-    ( FUELMint
-        { merkleRootTokenCurrencySymbol:
-            merkleRootTokenMintingPolicyCurrencySymbol
-        , sidechainParams: sc
-        , dsKeyCurrencySymbol: dsKeyPolicyCurrencySymbol
-        }
-    )
+  { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sc
 
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
@@ -546,6 +533,8 @@ initDistributedSetLookupsAndContraints isp = do
 -- |
 -- |      - Optionally, minting candidate permission tokens
 -- |
+-- |      - Minting and paying versioning tokens to versioning script
+-- |
 -- | Moreover, it returns the `SidechainParams` of this sidechain.
 -- |
 -- | To fully initialize the sidechain, this should be used with
@@ -558,13 +547,15 @@ initDistributedSetLookupsAndContraints isp = do
 initSidechainTokens ∷
   ∀ (r ∷ Row Type).
   InitTokensParams r →
+  Int →
   Contract
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
+    , versioningTransactionIds ∷ Array TransactionHash
     }
-initSidechainTokens isp = do
-  -- Querying the dstinguished 'InitSidechainParams.initUtxo'
+initSidechainTokens isp version = do
+  -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
     txIn = isp.initUtxo
@@ -578,6 +569,8 @@ initSidechainTokens isp = do
   -- Note: this uses the monoid instance of functions to monoids to run
   -- all functions to get the desired lookups and contraints.
   ----------------------------------------
+  -- TODO: lookups and constraints should be constructed depending on the
+  -- version argument.  See Issue #10
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
@@ -601,6 +594,12 @@ initSidechainTokens isp = do
   ----------------------------------------
   txId ← balanceSignAndSubmit "Init Sidechain tokens" lookups constraints
 
+  -- Mint and pay versioning tokens to versioning script
+  ----------------------------------------
+  versioningTransactionIds ← Versioning.insertVersion
+    { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
+    version
+
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses $
@@ -612,28 +611,31 @@ initSidechainTokens isp = do
               Nothing → Nothing
               Just { permissionToken: { candidatePermissionTokenUtxo } } →
                 Just candidatePermissionTokenUtxo
+        , version
         }
   pure
     { transactionId: txId
     , sidechainParams
     , sidechainAddresses
+    , versioningTransactionIds
     }
 
 -- | `paySidechainTokens` pays:
 -- | 1. NFT which identifies the committee hash to the update committee hash validator script.
--- | 1. NFT which identifies the current checkpoint to the checkpoint validator script.
+-- | 2. NFT which identifies the current checkpoint to the checkpoint validator script.
 -- |
 -- | This is meant to be used _after_ `initSidechainTokens`.
 -- |
 -- | Note: you must have the NFTs in your wallet already.
 paySidechainTokens ∷
   InitSidechainParams' →
+  Int →
   Contract
     { transactionId ∷ TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-paySidechainTokens isp = do
+paySidechainTokens isp version = do
   -- Grabbing the constraints / lookups for paying
   ----------------------------------------
   { constraints, lookups } ←
@@ -644,6 +646,8 @@ paySidechainTokens isp = do
   ----------------------------------------
   txId ← balanceSignAndSubmit "Pay Sidechain tokens" lookups constraints
 
+  -- Build sidechain addresses
+  ----------------------------------------
   let sidechainParams = toSidechainParams isp
 
   sidechainAddresses ←
@@ -656,6 +660,7 @@ paySidechainTokens isp = do
               Nothing → Nothing
               Just { permissionToken: { candidatePermissionTokenUtxo } } →
                 Just candidatePermissionTokenUtxo
+        , version
         }
   pure
     { transactionId: txId
@@ -678,19 +683,29 @@ paySidechainTokens isp = do
 -- |     - Mints various tokens for the distributed set (and pay to the required
 -- |       validators)
 -- |
+-- |     - Mints and pays versioning tokens to versioning script
+-- |
 -- |     - Optionally, mints candidate permission tokens
 -- |
 -- | For details, see `initSidechainTokens` and `paySidechainTokens`.
 initSidechain ∷
   InitSidechainParams →
+  Int →
   Contract
     { transactionId ∷ TransactionHash
+    , versioningTransactionIds ∷ Array TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-initSidechain (InitSidechainParams isp) = do
+initSidechain (InitSidechainParams isp) version = do
   -- Warning: this code is essentially duplicated code from
   -- `initSidechainTokens` and `paySidechainTokens`....
+
+  -- Mint and pay versioning tokens to versioning script
+  ----------------------------------------
+  versioningTxIds ← Versioning.insertVersion
+    { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
+    version
 
   -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
@@ -706,6 +721,8 @@ initSidechain (InitSidechainParams isp) = do
   -- Note: this uses the monoid instance of functions to monoids to run
   -- all functions to get the desired lookups and contraints.
   ----------------------------------------
+  -- TODO: lookups and constraints should be constructed depending on the
+  -- version argument.  See Issue #10
   { constraints, lookups } ←
     ( initDistributedSetLookupsAndContraints
         <> initCommitteeHashMintLookupsAndConstraints
@@ -732,69 +749,23 @@ initSidechain (InitSidechainParams isp) = do
   -----------------------------------------
   let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses
-      $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: isp.initATMSKind
-          , mCandidatePermissionTokenUtxo:
-              case isp.initCandidatePermissionTokenMintInfo of
-                Nothing → Nothing
-                Just { permissionToken: { candidatePermissionTokenUtxo } } →
-                  Just candidatePermissionTokenUtxo
-          }
+    GetSidechainAddresses.getSidechainAddresses $
+      SidechainAddressesEndpointParams
+        { sidechainParams
+        , atmsKind: isp.initATMSKind
+        , mCandidatePermissionTokenUtxo:
+            case isp.initCandidatePermissionTokenMintInfo of
+              Nothing → Nothing
+              Just { permissionToken: { candidatePermissionTokenUtxo } } →
+                Just candidatePermissionTokenUtxo
+        , version
+        }
   pure
     { transactionId: txId
+    , versioningTransactionIds: versioningTxIds
     , sidechainParams
     , sidechainAddresses
     }
-
--- | `getMerkleRootTokenPolicy` grabs the merkle root token policy and currency
--- | symbol (potentially throwing an error if this is not possible).
-getMerkleRootTokenPolicy ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
-  Contract
-    { merkleRootTokenMintingPolicy ∷ MintingPolicy
-    , merkleRootTokenMintingPolicyCurrencySymbol ∷ CurrencySymbol
-    }
-getMerkleRootTokenPolicy isp = do
-  let
-    sc = toSidechainParams isp
-
-  -- some awkwardness that we need the committee hash policy first.
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
-
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: isp.initThresholdNumerator
-        , thresholdDenominator: isp.initThresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
-        }
-
-  { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      committeeCertificateMint
-      isp.initATMSKind
-
-  -- Then, we get the merkle root token validator hash / minting policy..
-  merkleRootValidatorHash ← map Scripts.validatorHash $
-    MerkleRoot.merkleRootTokenValidator sc
-  merkleRootTokenMintingPolicy ← MerkleRoot.merkleRootTokenMintingPolicy $
-    SignedMerkleRootMint
-      { sidechainParams: sc
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootValidatorHash
-      }
-  merkleRootTokenMintingPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (show (InternalError (InvalidScript "DsKeyPolicy")))
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
-
-  pure
-    { merkleRootTokenMintingPolicy, merkleRootTokenMintingPolicyCurrencySymbol }
 
 getCheckpointPolicy ∷
   ∀ (r ∷ Row Type).

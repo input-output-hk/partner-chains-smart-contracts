@@ -4,8 +4,7 @@
 -- | module, there are some cyclic dependencies between `MerkleRoot` and
 -- | `UpdateCommitteeHash`.
 module TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  , SaveRootParams(SaveRootParams)
+  ( SaveRootParams(SaveRootParams)
   , MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
   ) where
@@ -14,40 +13,9 @@ import Contract.Prelude
 
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
-import Contract.Scripts (ValidatorHash)
-import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Data (productToData3)
-
--- | `SignedMerkleRootMint` parameterizes the onchain minting policy.
-newtype SignedMerkleRootMint = SignedMerkleRootMint
-  { -- | `sidechainParams` includes the `SidechainParams`
-    sidechainParams ∷ SidechainParams
-  , -- | `committeeCertificateVerificationCurrencySymbol` is the `CurrencySymbol` which
-    -- (uniquely) identifies the utxo for which the `UpdateCommitteeDatum`
-    -- resides.
-    committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-  , -- | `merkleRootValidatorHash` is used to ensure that the token is paid to
-    -- the "right" script
-    merkleRootValidatorHash ∷ ValidatorHash
-  }
-
-derive instance Generic SignedMerkleRootMint _
-
-derive instance Newtype SignedMerkleRootMint _
-
-instance ToData SignedMerkleRootMint where
-  toData
-    ( SignedMerkleRootMint
-        { sidechainParams
-        , committeeCertificateVerificationCurrencySymbol
-        , merkleRootValidatorHash
-        }
-    ) = productToData3 sidechainParams
-    committeeCertificateVerificationCurrencySymbol
-    merkleRootValidatorHash
 
 -- | `SignedMerkleRootRedeemer` is the redeemer for the update committee hash
 -- | validator

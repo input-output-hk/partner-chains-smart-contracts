@@ -38,7 +38,6 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
-  , SignedMerkleRootMint
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
@@ -47,19 +46,20 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMerkleRootTokenMintingPolicy` paramaterized by the given
 -- | `SignedMerkleRootMint`.
-merkleRootTokenMintingPolicy ∷ SignedMerkleRootMint → Contract MintingPolicy
+merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 merkleRootTokenMintingPolicy sp = do
   let
     script = decodeTextEnvelope RawScripts.rawMerkleRootTokenMintingPolicy
       >>= plutusScriptV2FromEnvelope
-
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
   unapplied ← Monad.liftContractM "Decoding text envelope failed." script
   applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
+    [ PlutusData.toData sp, PlutusData.toData versionOracleConfig ]
   pure $ PlutusMintingPolicy applied
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
@@ -87,19 +87,19 @@ merkleRootTokenValidator sp = do
 -- | such utxo it finds that satisifies the aforementioned properties.
 findMerkleRootTokenUtxo ∷
   TokenName →
-  SignedMerkleRootMint →
+  SidechainParams →
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findMerkleRootTokenUtxo merkleRoot smrm = do
+findMerkleRootTokenUtxo merkleRoot sp = do
   netId ← Address.getNetworkId
-  validator ← merkleRootTokenValidator (unwrap smrm).sidechainParams
+  validator ← merkleRootTokenValidator sp
   let validatorHash = Scripts.validatorHash validator
 
   validatorAddress ← Monad.liftContractM
     "error 'findMerkleRootTokenUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 
-  mintingPolicy ← merkleRootTokenMintingPolicy smrm
+  mintingPolicy ← merkleRootTokenMintingPolicy sp
   currencySymbol ←
     Monad.liftContractM
       "error 'findMerkleRootTokenUtxo': failed to get currency symbol for minting policy"
@@ -119,17 +119,17 @@ findMerkleRootTokenUtxo merkleRoot smrm = do
 -- | of whether it exists or not.
 findPreviousMerkleRootTokenUtxo ∷
   Maybe RootHash →
-  SignedMerkleRootMint →
+  SidechainParams →
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm =
+findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
   case maybeLastMerkleRoot of
     Nothing → pure Nothing
     Just lastMerkleRoot' → do
       lastMerkleRootTokenName ← Monad.liftContractM
         "error 'saveRoot': invalid lastMerkleRoot token name"
         (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
-      lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName smrm
+      lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName sp
       lkup' ←
         Monad.liftContractM
           "error 'findPreviousMerkleRootTokenUtxo': failed to find last merkle root"

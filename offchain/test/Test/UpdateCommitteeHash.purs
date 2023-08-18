@@ -15,7 +15,6 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Scripts as Scripts
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -34,10 +33,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
-  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -48,6 +45,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   , getUpdateCommitteeHashValidator
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -106,23 +104,15 @@ generateUchmSignatures
       committeeCertificateVerificationCurrencySymbol
   } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-      $ CommitteeCertificateMint
-          { committeeOraclePolicy: committeeOracleCurrencySymbol
-          , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+      { committeeCertificateMint: CommitteeCertificateMint
+          { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
           , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
           }
-
-  merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
-    sidechainParams
-
-  let
-    smrm = SignedMerkleRootMint
-      { sidechainParams: sidechainParams
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootValidatorHash: Scripts.validatorHash merkleRootTokenValidator
+      , sidechainParams
       }
+
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    smrm
+    sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
       "Failed to get merkleRootTokenCurrencySymbol"
@@ -235,10 +225,17 @@ tests = plutipGroup "Committee handover (committe hash update)" $ do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Simple update committee hash"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 40_000_000
+      , BigInt.fromInt 40_000_000
+      ]
   $ \alice → Wallet.withKeyWallet alice do
       logInfo' "UpdateCommitteeHash 'testScenario1'"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+      pkh ← getOwnPaymentPubKeyHash
       let
         keyCount = 40
       initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -255,9 +252,10 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
           }
 
-      { sidechainParams } ← initSidechain initScParams
+      { sidechainParams } ← initSidechain initScParams 1
       nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
       updateCommitteeHash
@@ -275,10 +273,16 @@ testScenario2 ∷ PlutipTest
 testScenario2 =
   Mote.Monad.test "Update committee hash without honest majority (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "UpdateCommitteeHash 'testScenario2'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 2
         -- woohoo!! smaller committee size so it's easy to remove the majority
@@ -299,9 +303,11 @@ testScenario2 =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams: scParams } ← initSidechain initScParams
+        { sidechainParams: scParams } ← initSidechain initScParams 1
         nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
         Test.Utils.fails
@@ -336,10 +342,16 @@ testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test "Update committee hash with out of order committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "UpdateCommitteeHash 'testScenario3'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 80
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -364,9 +376,11 @@ testScenario3 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
         nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
         nextNextCommitteePrvKeys ← sequence $ Array.replicate keyCount
           generatePrivKey
@@ -411,11 +425,16 @@ testScenario4 ∷ PlutipTest
 testScenario4 =
   Mote.Monad.test "Unsorted committee members (issue #277)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "UpdateCommitteeHash 'testScenario3'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
+        pkh ← getOwnPaymentPubKeyHash
         -- the committees as given in the test case
         let
           initCommitteePrvKeys =
@@ -456,9 +475,11 @@ testScenario4 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← initSidechain initScParams
+        { sidechainParams } ← initSidechain initScParams 1
 
         updateCommitteeHashWith
           { sidechainParams
@@ -491,10 +512,16 @@ testScenario5 =
   Mote.Monad.test
     "Update committee hash with the exact amount of signatures needed"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "UpdateCommitteeHash 'testScenario2'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+        ownPkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 4
         initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
@@ -512,9 +539,11 @@ testScenario5 =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
+                ownPkh
             }
 
-        { sidechainParams: scParams } ← initSidechain initScParams
+        { sidechainParams: scParams } ← initSidechain initScParams 1
         nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
 
         updateCommitteeHashWith

@@ -1,4 +1,5 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.FUELMintingPolicy (
@@ -6,6 +7,7 @@ module TrustlessSidechain.FUELMintingPolicy (
   mkMintingPolicy,
   mkMintingPolicyUntyped,
   serialisableMintingPolicy,
+  serialisableBurningPolicy,
   bech32AddrToPubKeyHash,
 ) where
 
@@ -21,7 +23,11 @@ import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTo
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (FUELMint, FUELRedeemer (MainToSide, SideToMain))
+import TrustlessSidechain.Types (
+  FUELMintingRedeemer (FUELMintingRedeemer),
+  SidechainParams,
+ )
+import TrustlessSidechain.Versioning (VersionOracle (..), VersionOracleConfig (..), getVersionedCurrencySymbol)
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
@@ -55,52 +61,49 @@ fuelTokenName = TokenName "FUEL"
   adversary can't impersonate the recipient to steal their FUEL.
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: FUELMint -> FUELRedeemer -> ScriptContext -> Bool
-mkMintingPolicy fm mode ctx = case mode of
-  MainToSide _ ->
-    traceIfFalse "Can't burn a positive amount" (fuelAmount < 0)
-  SideToMain mte mp ->
-    let cborMte :: BuiltinByteString
-        cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte
+mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> ScriptContext -> Bool
+mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
+  let cborMte :: BuiltinByteString
+      cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte
 
-        cborMteHashed = Builtins.blake2b_256 cborMte --  TODO: actually hash this later.
-        dsInserted :: BuiltinByteString
-        dsInserted
-          | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
-            , (tn, _amt) : _ <- AssocMap.toList tns =
-            unTokenName tn
-          | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
+      cborMteHashed = Builtins.blake2b_256 cborMte --  TODO: actually hash this later.
+      dsInserted :: BuiltinByteString
+      dsInserted
+        | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
+          , (tn, _amt) : _ <- AssocMap.toList tns =
+          unTokenName tn
+        | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
 
-        merkleRoot :: RootHash
-        merkleRoot =
-          let go :: [TxInInfo] -> TokenName
-              go (t : ts)
-                | o <- txInInfoResolved t
-                  , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
-                  , [(tn, _amt)] <- AssocMap.toList tns =
-                  tn
-                -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
-                -- can be rewritten as
-                -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
-                -- where from
-                -- 'TrustlessSidechain.MerkleRootTokenMintingPolicy.mkMintingPolicy'
-                -- we can be certain there is only ONE distinct TokenName for
-                -- each 'CurrencySymbol'
-                --
-                -- Actually, I suppose someone could mint multiple of the
-                -- token, then collect them all in a single transaction..
-                -- Either way, it doens't matter -- the existence of the token
-                -- is enough to conclude that the current committee has signed
-                -- it.
-                | otherwise = go ts
-              go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
-           in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
-     in traceIfFalse
-          "error 'FUELMintingPolicy' tx not signed by recipient"
-          (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
-          && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == get @"amount" mte)
-          && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
-          && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+      merkleRoot :: RootHash
+      merkleRoot =
+        let go :: [TxInInfo] -> TokenName
+            go (t : ts)
+              | o <- txInInfoResolved t
+                , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
+                , [(tn, _amt)] <- AssocMap.toList tns =
+                tn
+              -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
+              -- can be rewritten as
+              -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
+              -- where from
+              -- 'TrustlessSidechain.MerkleRootTokenMintingPolicy.mkMintingPolicy'
+              -- we can be certain there is only ONE distinct TokenName for
+              -- each 'CurrencySymbol'
+              --
+              -- Actually, I suppose someone could mint multiple of the
+              -- token, then collect them all in a single transaction..
+              -- Either way, it doens't matter -- the existence of the token
+              -- is enough to conclude that the current committee has signed
+              -- it.
+              | otherwise = go ts
+            go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
+         in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
+   in traceIfFalse
+        "error 'FUELMintingPolicy' tx not signed by recipient"
+        (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
+        && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == get @"amount" mte)
+        && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
+        && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
   where
     -- Aliases:
     info :: TxInfo
@@ -108,9 +111,17 @@ mkMintingPolicy fm mode ctx = case mode of
     ownCurrencySymbol :: CurrencySymbol
     ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
     merkleRootTnCurrencySymbol :: CurrencySymbol
-    merkleRootTnCurrencySymbol = get @"mptRootTokenCurrencySymbol" fm
+    merkleRootTnCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = 1}) -- get MerkleRoot CurrencySymbol
+        ctx
     dsKeyCurrencySymbol :: CurrencySymbol
-    dsKeyCurrencySymbol = get @"dsKeyCurrencySymbol" fm
+    dsKeyCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = 8}) -- get DSKeyPolicy CurrencySymbol
+        ctx
     minted :: Value
     minted = txInfoMint info
     fuelAmount :: Integer
@@ -124,11 +135,33 @@ mkMintingPolicy fm mode ctx = case mode of
 -- ctl hack
 -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
 {-# INLINEABLE mkMintingPolicyUntyped #-}
-mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
+mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped sp versioningConfig = mkUntypedMintingPolicy $ mkMintingPolicy (unsafeFromBuiltinData sp) (unsafeFromBuiltinData versioningConfig)
 
 serialisableMintingPolicy :: Versioned Script
 serialisableMintingPolicy = Versioned (fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+
+{-# INLINEABLE mkBurningPolicy #-}
+mkBurningPolicy :: SidechainParams -> () -> ScriptContext -> Bool
+mkBurningPolicy _ () (ScriptContext txInfo (Minting currSymbol)) =
+  traceIfFalse "Can't burn a negative amount" (fuelAmount > 0)
+  where
+    fuelAmount :: Integer
+    fuelAmount
+      | Just tns <- AssocMap.lookup currSymbol $ getValue (txInfoMint txInfo)
+        , [(tn, amount)] <- AssocMap.toList tns
+        , tn == fuelTokenName =
+        amount
+      | otherwise = traceError "error 'FUELBurningPolicy' illegal FUEL burning"
+mkBurningPolicy _ _ _ =
+  traceIfFalse "Can't burn FUEL" False
+
+{-# INLINEABLE mkBurningPolicyUntyped #-}
+mkBurningPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkBurningPolicyUntyped = mkUntypedMintingPolicy . mkBurningPolicy . unsafeFromBuiltinData
+
+serialisableBurningPolicy :: Versioned Script
+serialisableBurningPolicy = Versioned (fromCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])) PlutusV2
 
 {- | Deriving the public key hash from a bech32 binary
  -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019

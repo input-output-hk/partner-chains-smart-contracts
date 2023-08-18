@@ -81,7 +81,7 @@ Our current infrastructure (as of 2023-01-06) includes the following components:
   - off-chain code (written in PureScript, using CTL)
 - CTL runtime services
 
-Please note that the diagram below debicts a future architecture, it includes the browser SDK which
+Please note that the diagram below depicts a future architecture, it includes the browser SDK which
 is not implemented yet, and Kupo which is not a dependency of our currently used cardano-transaction-lib version.
 
 ![CLI architecture](Architecture/Architecture.svg)
@@ -96,7 +96,7 @@ interactions of components. For a more detailed explanation please refer to the 
 ### Sidechain lifecycle
 
 The mainchain contracts of the system goes through the following lifecycle stages:
-- _Adopted_: comittee member registration is open
+- _Adopted_: committee member registration is open
 - _Activated_: first committee is set, and the protocol has started
 - _Functional_: first Merkle root is inserted, and end-users can claim their tokens
 
@@ -111,6 +111,7 @@ The mainchain contracts of the system goes through the following lifecycle stage
     - initalising the distributed set for double spending prevention
     - candidate permission tokens are minted (if required)
     - mint NFTs for the checkpoint and committee hash validators
+    - mint versioning tokens
 
     The above mentioned NFTs are stored in the wallet of the stakeholder, who ran the initialisation script, so it will
     be his responsibility to _Activate_ the sidechain in the next step.
@@ -121,9 +122,10 @@ The mainchain contracts of the system goes through the following lifecycle stage
 2. _Activated_
 
     When enough committee candidate registrations have accumulated to start the protocol, the sidechain
-    has to be activated, using the aformentioned NFTs. Activation includes the following actions:
+    has to be activated, using the aforementioned NFTs. Activation includes the following actions:
     - initialising the first committee (storing the first committee hash)
     - storing the initial checkpoint
+    - versioning initial sidechain scripts
 
     After this step, the sidechain is decentralised, any further action requires the consensus of the committee.
     Merkle root insertion and committee handover is open.
@@ -142,7 +144,7 @@ The graph below explains the flow of data:
 3. The root of the Merkle tree is stored on the Cardano network
 4. A certificate is also generated
 5. The certificate together with the Merkle root can be used to mint FUEL tokens on the mainchain
-6. The idetifier of the transaction is stored in a distributed set, to avoid reusing of the same certificate
+6. The identifier of the transaction is stored in a distributed set, to avoid reusing of the same certificate
 
 ![Claiming](Architecture/Claiming.svg)
 
@@ -171,7 +173,7 @@ The flow of committee handover is the following:
 
 1. SPOs send their registration to the CommitteeCandidateValidator
 2. Registrations are verified on the Bridge
-3. Next committee members elected, signed by the current committe, and sent to the Cardano network
+3. Next committee members elected, signed by the current committee, and sent to the Cardano network
 4. Committee list hashed and stored on-chain
 
 ![Committee handover](Architecture/Committee.svg)
