@@ -49,12 +49,7 @@ import TrustlessSidechain.Types (
     sidechainEpoch,
     sidechainParams
   ),
-  CheckpointParameter (
-    checkpointAssetClass,
-    checkpointCommitteeCertificateVerificationCurrencySymbol,
-    checkpointCommitteeOracleCurrencySymbol,
-    checkpointSidechainParams
-  ),
+  CheckpointParameter,
   CheckpointRedeemer,
   SidechainParams,
   UpdateCommitteeDatum,
@@ -87,14 +82,14 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     minted = txInfoMint info
 
     sc :: SidechainParams
-    sc = checkpointSidechainParams checkpointParam
+    sc = get @"sidechainParams" checkpointParam
 
     -- Check if the transaction input value contains the current committee NFT
     containsCommitteeNft :: TxInInfo -> Bool
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in case AssocMap.lookup (checkpointCommitteeOracleCurrencySymbol checkpointParam) $ getValue outputValue of
+       in case AssocMap.lookup (get @"committeeOracleCurrencySymbol" checkpointParam) $ getValue outputValue of
             Just tns -> case AssocMap.lookup (TokenName "") tns of
               Just amount -> amount == 1
               Nothing -> False
@@ -123,7 +118,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
       _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
 
     outputContainsCheckpointNft :: Bool
-    outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (checkpointAssetClass checkpointParam) == 1
+    outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
@@ -134,7 +129,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
               , blockNumber = get @"blockNumber" outputDatum
               , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
-       in case AssocMap.lookup (checkpointCommitteeCertificateVerificationCurrencySymbol checkpointParam) $ getValue minted of
+       in case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
             Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
               Just amount -> amount > 0
               Nothing -> False

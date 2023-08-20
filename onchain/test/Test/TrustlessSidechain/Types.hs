@@ -56,10 +56,10 @@ import TrustlessSidechain.Types (
   ),
   CheckpointParameter (
     CheckpointParameter,
-    checkpointAssetClass,
-    checkpointCommitteeCertificateVerificationCurrencySymbol,
-    checkpointCommitteeOracleCurrencySymbol,
-    checkpointSidechainParams
+    assetClass,
+    committeeCertificateVerificationCurrencySymbol,
+    committeeOracleCurrencySymbol,
+    sidechainParams
   ),
   CheckpointRedeemer (
     CheckpointRedeemer,
@@ -339,10 +339,10 @@ sampleCheckpointRedeemer =
 sampleCheckpointParameter :: CheckpointParameter
 sampleCheckpointParameter =
   CheckpointParameter
-    { checkpointSidechainParams = sampleSidechainParams
-    , checkpointAssetClass = Value.assetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
-    , checkpointCommitteeOracleCurrencySymbol = "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084"
-    , checkpointCommitteeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    { sidechainParams = sampleSidechainParams
+    , assetClass = Value.assetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
+    , committeeOracleCurrencySymbol = "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084"
+    , committeeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     }
 
 sampleCheckpointMessage :: CheckpointMessage
