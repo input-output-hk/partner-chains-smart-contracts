@@ -861,19 +861,28 @@ instance HasField "newCheckpointBlockNumber" CheckpointRedeemer Integer where
   modify f (CheckpointRedeemer ncbh ncbn) =
     CheckpointRedeemer ncbh (f ncbn)
 
--- | 'Checkpoint' is used as the parameter for the validator.
+{- | 'Checkpoint' is used as the parameter for the validator.
+
+ @since Unreleased
+-}
 data CheckpointParameter = CheckpointParameter
-  { checkpointSidechainParams :: SidechainParams
-  , -- | 'checkpointAssetClass' is the 'AssetClass' of the NFT that is used to
+  { -- | @since Unreleased
+    sidechainParams :: SidechainParams
+  , -- | The 'AssetClass' of the NFT that is used to
     -- identify the transaction.
-    checkpointAssetClass :: AssetClass
-  , -- | 'checkpointCommitteeOracleCurrencySymbol' is the
-    -- currency symbol of the currency symbol which uniquely identifies the
+    --
+    -- @since Unreleased
+    assetClass :: AssetClass
+  , -- | The currency symbol which uniquely identifies the
     -- current committee.
-    checkpointCommitteeOracleCurrencySymbol :: CurrencySymbol
-  , -- | 'checkpointCommitteeCertificateVerificationCurrencySymbol' is the
-    -- currency symbol of the committee certificate verification minting policy
-    checkpointCommitteeCertificateVerificationCurrencySymbol :: CurrencySymbol
+    --
+    -- @since Unreleased
+    committeeOracleCurrencySymbol :: CurrencySymbol
+  , -- | The currency symbol of the committee certificate verification minting
+    -- policy.
+    --
+    -- @since Unreleased
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
 
 -- | @since Unreleased
@@ -881,13 +890,13 @@ instance ToData CheckpointParameter where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointParameter {..}) =
     productToData4
-      checkpointSidechainParams
-      checkpointAssetClass
-      checkpointCommitteeOracleCurrencySymbol
-      checkpointCommitteeCertificateVerificationCurrencySymbol
+      sidechainParams
+      assetClass
+      committeeOracleCurrencySymbol
+      committeeCertificateVerificationCurrencySymbol
 
 -- | @since Unreleased
-instance HasField "checkpointSidechainParams" CheckpointParameter SidechainParams where
+instance HasField "sidechainParams" CheckpointParameter SidechainParams where
   {-# INLINE get #-}
   get (CheckpointParameter x _ _ _) = x
   {-# INLINE modify #-}
@@ -895,7 +904,7 @@ instance HasField "checkpointSidechainParams" CheckpointParameter SidechainParam
     CheckpointParameter (f csp) cac ccocs chac
 
 -- | @since Unreleased
-instance HasField "checkpointAssetClass" CheckpointParameter AssetClass where
+instance HasField "assetClass" CheckpointParameter AssetClass where
   {-# INLINE get #-}
   get (CheckpointParameter _ x _ _) = x
   {-# INLINE modify #-}
@@ -903,7 +912,7 @@ instance HasField "checkpointAssetClass" CheckpointParameter AssetClass where
     CheckpointParameter csp (f cac) ccocs chac
 
 -- | @since Unreleased
-instance HasField "checkpointCommitteeOracleCurrencySymbol" CheckpointParameter CurrencySymbol where
+instance HasField "committeeOracleCurrencySymbol" CheckpointParameter CurrencySymbol where
   {-# INLINE get #-}
   get (CheckpointParameter _ _ x _) = x
   {-# INLINE modify #-}
@@ -911,7 +920,7 @@ instance HasField "checkpointCommitteeOracleCurrencySymbol" CheckpointParameter 
     CheckpointParameter csp cac (f ccocs) chac
 
 -- | @since Unreleased
-instance HasField "checkpointCommitteeCertificationVerificationCurrencySymbol" CheckpointParameter CurrencySymbol where
+instance HasField "committeeCertificateVerificationCurrencySymbol" CheckpointParameter CurrencySymbol where
   {-# INLINE get #-}
   get (CheckpointParameter _ _ _ x) = x
   {-# INLINE modify #-}
