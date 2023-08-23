@@ -23,6 +23,9 @@ or create a PR.
 - Try to slice your work into smaller PRs to make the review process smoother
 
 #### When creating a PR
+- Rebase PR branch on top of the latest changes in the branch you want to merge
+  against.  Make sure to communicate upstream rebase to all developers working
+  on this branch.
 - Every team member should be added to Pull Request reviewers (automatically added by CODEOWNERS)
 - Each PR with a new feature must include tests
 - In the description of the PR include at least the issue number, if the original issue has enough information about the feature.
@@ -48,6 +51,8 @@ or create a PR.
   could more than enough)
 - If a PR is urgent (hotfix) it can be merged, but it should still be reviewed after-the-fact (reach out to other team members on
   Slack to get their after-the-fact approval)
+- Use fast-forward merges only, avoid creating merge commits.  This may require
+  additional rebase if the branch has moved forward.
 
 ### When creating a GitHub release
 - Versioning must follow semantic versioning (details in the [coding standards](./onchain/STANDARDS.md#versioning-and-changelogging))
