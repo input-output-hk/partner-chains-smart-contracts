@@ -21,6 +21,9 @@ or create a PR.
 - Feel free to create draft PRs for a work in progress branch to get CI feedback, but don’t forget to change its status to
   `Ready for review` when appropriate (and follow other rules below)
 - Try to slice your work into smaller PRs to make the review process smoother
+- Ensure that commit messages clearly articulate the intent of introduced
+  changes.  Consider summarizing the most important code changes introduced by
+  the commit.
 
 #### When creating a PR
 - Rebase PR branch on top of the latest changes in the branch you want to merge
