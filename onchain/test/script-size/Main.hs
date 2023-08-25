@@ -90,19 +90,19 @@ main =
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            760
+            768
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             (unversioned UCH.serialisableCommitteeHashValidator)
-            3_445
+            3_472
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_549
+            1_557
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             (unversioned CV.serialisableCheckpointValidator)
-            4_267
+            4_305
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode

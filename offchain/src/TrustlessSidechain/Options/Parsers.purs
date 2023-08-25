@@ -7,11 +7,15 @@ module TrustlessSidechain.Options.Parsers
   , governanceAuthority
   , combinedMerkleProofParser
   , committeeSignature
+  , plutusDataParser
   , parsePubKeyBytesAndSignatureBytes
   , pubKeyBytesAndSignatureBytes
   , sidechainSignature
-  , sidechainPublicKey
+  , ecdsaSecp256k1PublicKey
+  , schnorrSecp256k1PrivateKey
   , bech32AddressParser
+  , bech32BytesParser
+  , ecdsaSecp256k1PrivateKey
   , sidechainAddress
   , combinedMerkleProofParserWithPkh
   , parseTokenName
@@ -29,7 +33,8 @@ module TrustlessSidechain.Options.Parsers
 import Contract.Prelude
 
 import Contract.Address (Address, PubKeyHash(PubKeyHash))
-import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
+import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
+import Contract.PlutusData (class FromData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
 import Contract.Transaction
@@ -60,12 +65,21 @@ import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.Utils.Address (addressFromBech32Bytes)
+import TrustlessSidechain.Utils.Address
+  ( Bech32Bytes
+  , addressFromBech32Bytes
+  , bech32BytesFromAddress
+  )
 import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
+  ( EcdsaSecp256k1PrivateKey
+  , EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PrivateKey
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
 -- | Wraps `parseATMSKind`
 atmsKind ∷ ReadM ATMSKinds
@@ -83,6 +97,18 @@ parseATMSKind str = case str of
   "multisignature" → Right ATMSMultisignature
   _ → Left
     "invalid ATMS kind expected either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
+
+-- | Parses a hex encoded cbor of plutus data
+parsePlutusData ∷ ∀ a. FromData a ⇒ String → Either String a
+parsePlutusData str = case hexToCborBytes str of
+  Nothing → Left "invalid hex string"
+  Just cborBytes → case PlutusData.deserializeData cborBytes of
+    Nothing → Left "invalid cbor"
+    Just x → Right x
+
+-- | Wraps `parsePlutusData`
+plutusDataParser ∷ ∀ a. FromData a ⇒ ReadM a
+plutusDataParser = eitherReader parsePlutusData
 
 -- | Parse a transaction input from a CLI format (e.g. `aabbcc#0`)
 transactionInput ∷ ReadM TransactionInput
@@ -103,11 +129,12 @@ cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
   maybe (readerError "Error while parsing supplied CBOR as Address.")
     pure
 
--- | `bech32AddressParser` parses a bech32 address
+-- | `bech32AddressParser` parses a human readable bech32 address into an
+-- | address
 -- TODO: this does *not* check if the network of the address coincides with the
 -- network that CTL is running on.
-bech32AddressParser ∷ ReadM Address
-bech32AddressParser = eitherReader \str → do
+parseHumanReadableBech32ToAddress ∷ String → Either String Address
+parseHumanReadableBech32ToAddress str = do
   addr ← case (Serialization.Address.addressFromBech32 str) of
     Just x → Right x
     Nothing → Left "bech32 address deserialization failed."
@@ -117,6 +144,22 @@ bech32AddressParser = eitherReader \str → do
     Nothing → Left "bech32 address conversion to plutus address failed"
 
   pure addr'
+
+-- | parses a human readable bech32 address to the bech32 bytes.
+parseHumanReadableBech32ToBech32Bytes ∷ String → Either String Bech32Bytes
+parseHumanReadableBech32ToBech32Bytes str = do
+  addr ← parseHumanReadableBech32ToAddress str
+  case bech32BytesFromAddress addr of
+    Nothing → Left "failed to get bech32 bytes from address"
+    Just x → pure x
+
+-- | Wraps `parseHumanReadableBech32ToAddress`
+bech32AddressParser ∷ ReadM Address
+bech32AddressParser = eitherReader parseHumanReadableBech32ToAddress
+
+-- | Wraps `parseHumanReadableBech32ToBech32Bytes  `
+bech32BytesParser ∷ ReadM Bech32Bytes
+bech32BytesParser = eitherReader parseHumanReadableBech32ToBech32Bytes
 
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
 combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>
@@ -143,9 +186,21 @@ byteArray = maybeReader hexToByteArray
 
 -- | Parses a EcdsaSecp256k1PubKey from hexadecimal representation.
 -- | See `EcdsaSecp256k1PubKey` for the invariants.
-sidechainPublicKey ∷ ReadM EcdsaSecp256k1PubKey
-sidechainPublicKey = maybeReader
+ecdsaSecp256k1PublicKey ∷ ReadM EcdsaSecp256k1PubKey
+ecdsaSecp256k1PublicKey = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1PubKey
+  <=< hexToByteArray
+
+-- | Parses a EcdsaSecp256k1PrivateKey from hexadecimal representation.
+ecdsaSecp256k1PrivateKey ∷ ReadM EcdsaSecp256k1PrivateKey
+ecdsaSecp256k1PrivateKey = maybeReader
+  $ Utils.Crypto.ecdsaSecp256k1PrivateKey
+  <=< hexToByteArray
+
+-- | Parses a schnorr private key from the hexadecimal representation
+schnorrSecp256k1PrivateKey ∷ ReadM SchnorrSecp256k1PrivateKey
+schnorrSecp256k1PrivateKey = maybeReader
+  $ Utils.SchnorrSecp256k1.parsePrivateKey
   <=< hexToByteArray
 
 -- | Parses a SidechainSignature from hexadecimal representation.

@@ -1,10 +1,11 @@
 module TrustlessSidechain.Options.Types
   ( InputArgOrFile(..)
   , Config(..)
-  , Endpoint(..)
   , Options(..)
   , RuntimeConfig(..)
   , SidechainEndpointParams(..)
+  , TxEndpoint(..)
+  , UtilsEndpoint(..)
   , CandidatePermissionTokenMintInit
   ) where
 
@@ -12,11 +13,13 @@ import Contract.Prelude
 
 import Contract.Address (Address, NetworkId)
 import Contract.Config (ContractParams, ServerConfig)
+import Contract.PlutusData (PlutusData)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (TokenName)
 import Ctl.Internal.Types.ByteArray (ByteArray)
 import Data.BigInt (BigInt)
 import Data.List (List)
+import Data.List.NonEmpty (NonEmptyList)
 import Node.Path (FilePath)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenInfo
@@ -25,8 +28,17 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
+import TrustlessSidechain.CommitteeCandidateValidator
+  ( BlockProducerRegistrationMsg
+  )
+import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry)
+import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
+import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHashMessage)
+import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
+import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 
 -- | `SidechainEndpointParams` is an offchain type for grabbing information
 -- | related to the sidechain.
@@ -39,11 +51,25 @@ newtype SidechainEndpointParams = SidechainEndpointParams
 derive instance Newtype SidechainEndpointParams _
 
 -- | CLI arguments providing an interface to contract endpoints
-type Options =
-  { sidechainEndpointParams ∷ SidechainEndpointParams
-  , endpoint ∷ Endpoint
-  , contractParams ∷ ContractParams
-  }
+data Options
+  =
+    -- | `TxOptions` are the options for endpoints which build / submit a
+    -- | transaction to the blockchain.
+    -- | In particular, these endpoints need to be in the `Contract` monad
+    TxOptions
+      { sidechainEndpointParams ∷ SidechainEndpointParams
+      , endpoint ∷ TxEndpoint
+      , contractParams ∷ ContractParams
+      }
+  |
+    -- | `UtilsOptions` are the options for endpoints for functionality
+    -- | related to signing messages such as: creating key pairs, creating
+    -- | messages to sign, signing messages, aggregating keys, etc.
+    -- | In particular, these endpoints do _not_ need to be in the `Contract`
+    -- | monad
+    UtilsOptions
+      { utilsOptions ∷ UtilsEndpoint
+      }
 
 -- | Sidechain configuration file including common parameters.
 -- Any parameter can be set `null` requiring a CLI argument instead
@@ -73,8 +99,50 @@ type Config =
     runtimeConfig ∷ Maybe RuntimeConfig
   }
 
--- | CLI arguments including required data to run each individual endpoint
-data Endpoint
+-- | Data for CLI endpoints which provide supporting utilities for the
+-- | sidechain
+data UtilsEndpoint
+  = EcdsaSecp256k1KeyGenAct
+  | EcdsaSecp256k1SignAct
+      { message ∷ ByteArray
+      , privateKey ∷ EcdsaSecp256k1PrivateKey
+      , noHashMessage ∷ Boolean
+      -- whether to hash the message or not before signing.
+      -- true ===> do NOT hash the message
+      -- false ===> hash the message
+      }
+  | SchnorrSecp256k1KeyGenAct
+  | SchnorrSecp256k1SignAct
+      { message ∷ ByteArray
+      , privateKey ∷ SchnorrSecp256k1PrivateKey
+      , noHashMessage ∷ Boolean
+      -- whether to hash the message or not before signing.
+      -- true ===> do NOT hash the message
+      -- false ===> hash the message
+      }
+
+  | CborUpdateCommitteeMessageAct
+      { updateCommitteeHashMessage ∷ UpdateCommitteeHashMessage PlutusData }
+  | CborBlockProducerRegistrationMessageAct
+      { blockProducerRegistrationMsg ∷ BlockProducerRegistrationMsg
+      }
+  | CborMerkleTreeEntryAct { merkleTreeEntry ∷ MerkleTreeEntry }
+  | CborMerkleTreeAct
+      { merkleTreeEntries ∷ NonEmptyList MerkleTreeEntry
+      }
+  | CborMerkleRootInsertionMessageAct
+      { merkleRootInsertionMessage ∷ MerkleRootInsertionMessage
+      }
+  | CborCombinedMerkleProofAct
+      { merkleTreeEntry ∷ MerkleTreeEntry
+      , merkleTree ∷ MerkleTree
+      }
+  | CborPlainAggregatePublicKeysAct
+      { publicKeys ∷ NonEmptyList ByteArray
+      }
+
+-- | Data for CLI endpoints which submit a transaction to the blockchain.
+data TxEndpoint
   = ClaimActV1
       { amount ∷ BigInt
       , recipient ∷ Address
