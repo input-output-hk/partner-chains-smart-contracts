@@ -156,6 +156,21 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
+-- TODO: we should have some sort of serialization test for this?
+-- See: #569 #570
+instance ToData BlockProducerRegistrationMsg where
+  toData
+    ( BlockProducerRegistrationMsg
+        { bprmSidechainParams
+        , bprmSidechainPubKey
+        , bprmInputUtxo
+        }
+    ) = Constr (BigNum.fromInt 0)
+    [ toData bprmSidechainParams
+    , toData bprmSidechainPubKey
+    , toData bprmInputUtxo
+    ]
+
 register ∷ RegisterParams → Contract TransactionHash
 register
   ( RegisterParams

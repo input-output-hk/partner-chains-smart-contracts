@@ -28,6 +28,10 @@ module TrustlessSidechain.Utils.Crypto
   , aggregateKeys
   , countEnoughSignatures
   , takeExactlyEnoughSignatures
+  , serialiseEcdsaSecp256k1PubKey
+  , serialiseEcdsaSecp256k1PrivateKey
+  , serialiseEcdsaSecp256k1SignatureToDer
+  , serialiseEcdsaSecp256k1Signature
   ) where
 
 import Contract.Prelude
@@ -68,6 +72,21 @@ instance Show EcdsaSecp256k1PubKey where
     "(byteArrayToEcdsaSecp256k1PubKeyUnsafe "
       <> show byteArray
       <> ")"
+
+-- | Hex serializes the raw bytes
+serialiseEcdsaSecp256k1PubKey ∷ EcdsaSecp256k1PubKey → String
+serialiseEcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey pubKey) =
+  ByteArray.byteArrayToHex pubKey
+
+-- | Hex serializes the raw bytes
+serialiseEcdsaSecp256k1PrivateKey ∷ EcdsaSecp256k1PrivateKey → String
+serialiseEcdsaSecp256k1PrivateKey (EcdsaSecp256k1PrivateKey privKey) =
+  ByteArray.byteArrayToHex privKey
+
+-- | Hex serializes the raw bytes
+serialiseEcdsaSecp256k1Signature ∷ EcdsaSecp256k1Signature → String
+serialiseEcdsaSecp256k1Signature (EcdsaSecp256k1Signature privKey) =
+  ByteArray.byteArrayToHex privKey
 
 -- | Smart constructor for `EcdsaSecp256k1PubKey` to ensure it is a valid
 -- | compressed (33 bytes) secp256k1 public key.
@@ -218,11 +237,18 @@ foreign import secKeyVerify ∷ ByteArray → Boolean
 foreign import sign ∷
   EcdsaSecp256k1Message → EcdsaSecp256k1PrivateKey → EcdsaSecp256k1Signature
 
+foreign import signatureExport ∷ EcdsaSecp256k1Signature → ByteArray
+
 foreign import verifyEcdsaSecp256k1Signature ∷
   EcdsaSecp256k1PubKey →
   EcdsaSecp256k1Message →
   EcdsaSecp256k1Signature →
   Boolean
+
+-- | Serialises a signature to DER format as hex encoded bytes
+serialiseEcdsaSecp256k1SignatureToDer ∷ EcdsaSecp256k1Signature → String
+serialiseEcdsaSecp256k1SignatureToDer = ByteArray.byteArrayToHex <<<
+  signatureExport
 
 generatePrivKey ∷ Contract EcdsaSecp256k1PrivateKey
 generatePrivKey =

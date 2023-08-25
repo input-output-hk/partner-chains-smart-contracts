@@ -40,6 +40,11 @@ exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
 exports.pubKeyVerify = (publicKey) =>
   secp.publicKeyVerify(publicKey);
 
+// Quoting the documentation: ``Export an ECDSA signature to DER format.''
+//  - https://github.com/cryptocoinjs/secp256k1-node/blob/HEAD/API.md#signatureexportsignature-output-uint8array--len-number--uint8array--len--new-uint8arraylen-uint8array
+exports.signatureExport = (signature) => {
+  return secp.signatureExport(signature, (len) => { return new Uint8Array(len); });
+};
 
 // This verifies that the given secret key (as an integer) is non zero and
 // lower than the secp256k1 curve's order..

@@ -2,10 +2,15 @@ module Main (main) where
 
 import Contract.Prelude
 
+import Contract.CborBytes (cborBytesToByteArray)
+import Contract.Hashing as Hashing
 import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
+import Contract.PlutusData as PlutusData
+import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
 import Data.BigInt as BigInt
 import Data.List as List
+import Data.List.Types as Data.List.Types
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
@@ -31,11 +36,23 @@ import TrustlessSidechain.EndpointResp
       , InitResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
+      , EcdsaSecp256k1KeyGenResp
+      , SchnorrSecp256k1KeyGenResp
+      , EcdsaSecp256k1SignResp
+      , SchnorrSecp256k1SignResp
+      , CborUpdateCommitteeMessageResp
+      , CborMerkleRootInsertionMessageResp
+      , CborBlockProducerRegistrationMessageResp
+      , CborMerkleTreeEntryResp
+      , CborMerkleTreeResp
+      , CborCombinedMerkleProofResp
+      , CborPlainAggregatePublicKeysResp
       )
   , stringifyEndpointResp
   )
 import TrustlessSidechain.FUELMintingPolicy
-  ( FuelMintOrFuelBurnParams(Burn, Mint)
+  ( CombinedMerkleProof(CombinedMerkleProof)
+  , FuelMintOrFuelBurnParams(Burn, Mint)
   , FuelParams(FuelParams)
   , runFuelMP
   )
@@ -50,9 +67,15 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Endpoint
+  ( Options
+      ( TxOptions
+      , UtilsOptions
+      )
+  , SidechainEndpointParams
+  , TxEndpoint
       ( ClaimAct
       , BurnAct
       , GetAddrs
@@ -66,46 +89,64 @@ import TrustlessSidechain.Options.Types
       , CommitteeHandover
       , SaveCheckpoint
       )
-  , Options
-  , SidechainEndpointParams
+  , UtilsEndpoint
+      ( EcdsaSecp256k1KeyGenAct
+      , SchnorrSecp256k1KeyGenAct
+      , EcdsaSecp256k1SignAct
+      , SchnorrSecp256k1SignAct
+      , CborUpdateCommitteeMessageAct
+      , CborBlockProducerRegistrationMessageAct
+      , CborMerkleRootInsertionMessageAct
+      , CborMerkleTreeEntryAct
+      , CborMerkleTreeAct
+      , CborCombinedMerkleProofAct
+      , CborPlainAggregatePublicKeysAct
+      )
   )
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
   -- Grab the CLI options
   -----------------------
-  opts ← getOptions
-  let scParams = (unwrap opts.sidechainEndpointParams).sidechainParams
+  allOpts ← getOptions
+  case allOpts of
+    TxOptions opts → do
+      let scParams = (unwrap opts.sidechainEndpointParams).sidechainParams
 
-  -- Do some validation on the CLI options
-  -----------------------
-  let numerator = (unwrap scParams).thresholdNumerator
-  let denominator = (unwrap scParams).thresholdDenominator
-  unless (gcd numerator denominator == one) $ throwError $ error
-    $ "Threshold numerator and denominator are not coprime.\n"
-    <> "Numerator: "
-    <> BigInt.toString numerator
-    <> "\nDenominator: "
-    <> BigInt.toString denominator
+      -- Do some validation on the CLI options
+      -----------------------
+      let numerator = (unwrap scParams).thresholdNumerator
+      let denominator = (unwrap scParams).thresholdDenominator
+      unless (gcd numerator denominator == one) $ throwError $ error
+        $ "Threshold numerator and denominator are not coprime.\n"
+        <> "Numerator: "
+        <> BigInt.toString numerator
+        <> "\nDenominator: "
+        <> BigInt.toString denominator
 
-  unless (numerator <= denominator) $ throwError $ error
-    $ "Threshold numerator is greater than denominator.\n"
-    <> "Numerator: "
-    <> BigInt.toString numerator
-    <> "\nDenominator: "
-    <> BigInt.toString denominator
+      unless (numerator <= denominator) $ throwError $ error
+        $ "Threshold numerator is greater than denominator.\n"
+        <> "Numerator: "
+        <> BigInt.toString numerator
+        <> "\nDenominator: "
+        <> BigInt.toString denominator
 
-  -- Running the program
-  -----------------------
-  launchAff_ $ runContract opts.contractParams do
-    endpointResp ← runEndpoint opts.sidechainEndpointParams opts.endpoint
+      -- Running the program
+      -----------------------
+      launchAff_ $ runContract opts.contractParams do
+        endpointResp ← runTxEndpoint opts.sidechainEndpointParams opts.endpoint
+        liftEffect $ printEndpointResp endpointResp
 
-    printEndpointResp endpointResp
+    UtilsOptions opts → do
+      endpointResp ← runUtilsEndpoint opts.utilsOptions
+      printEndpointResp endpointResp
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.
@@ -114,9 +155,9 @@ getOptions = do
   config ← ConfigFile.readConfigJson "./config.json"
   execParser (options config)
 
--- | Executes an endpoint and returns a response object
-runEndpoint ∷ SidechainEndpointParams → Endpoint → Contract EndpointResp
-runEndpoint sidechainEndpointParams endpoint =
+-- | Executes an transaction endpoint and returns a response object
+runTxEndpoint ∷ SidechainEndpointParams → TxEndpoint → Contract EndpointResp
+runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
     atmsKind = (unwrap sidechainEndpointParams).atmsKind
@@ -458,6 +499,158 @@ runEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> SaveCheckpointResp
 
-printEndpointResp ∷ EndpointResp → Contract Unit
+-- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
+-- | need to be in the Contract monad.
+runUtilsEndpoint ∷ UtilsEndpoint → Effect EndpointResp
+runUtilsEndpoint = case _ of
+  EcdsaSecp256k1KeyGenAct → do
+    privateKey ← Utils.Crypto.generateRandomPrivateKey
+    let publicKey = Utils.Crypto.toPubKeyUnsafe privateKey
+    pure $ EcdsaSecp256k1KeyGenResp
+      { privateKey
+      , publicKey
+      }
+  SchnorrSecp256k1KeyGenAct → do
+    privateKey ← Utils.SchnorrSecp256k1.generateRandomPrivateKey
+    let publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
+    pure $ SchnorrSecp256k1KeyGenResp
+      { privateKey
+      , publicKey
+      }
+
+  EcdsaSecp256k1SignAct
+    { message, privateKey, noHashMessage } → do
+    realMessage ←
+      if noHashMessage then case Utils.Crypto.ecdsaSecp256k1Message message of
+        Just realMsg → pure realMsg
+        Nothing → throwError $ error $
+          "Message invalid (should be 32 bytes)"
+      else pure
+        $ Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
+        $ Hashing.blake2b256Hash message
+
+    let signature = Utils.Crypto.sign realMessage privateKey
+    pure $
+      EcdsaSecp256k1SignResp
+        { publicKey: Utils.Crypto.toPubKeyUnsafe privateKey
+        , signature
+        , signedMessage:
+            Utils.Crypto.getEcdsaSecp256k1MessageByteArray realMessage
+        }
+
+  SchnorrSecp256k1SignAct
+    { message, privateKey, noHashMessage } → do
+    let
+      realMessage =
+        if noHashMessage then message
+        else Hashing.blake2b256Hash message
+
+    let signature = Utils.SchnorrSecp256k1.sign realMessage privateKey
+    pure $
+      SchnorrSecp256k1SignResp
+        { publicKey: Utils.SchnorrSecp256k1.toPubKey privateKey
+        , signature
+        , signedMessage: realMessage
+        }
+  CborUpdateCommitteeMessageAct
+    { updateCommitteeHashMessage
+    } → do
+    let
+      plutusData = PlutusData.toData updateCommitteeHashMessage
+    pure $
+      CborUpdateCommitteeMessageResp
+        { plutusData
+        }
+
+  CborBlockProducerRegistrationMessageAct
+    { blockProducerRegistrationMsg
+    } →
+    let
+      plutusData =
+        PlutusData.toData $
+          blockProducerRegistrationMsg
+    in
+      pure $
+        CborBlockProducerRegistrationMessageResp
+          { plutusData
+          }
+  CborMerkleTreeEntryAct
+    { merkleTreeEntry
+    } →
+    let
+      plutusData =
+        PlutusData.toData $ merkleTreeEntry
+    in
+      pure $
+        CborMerkleTreeEntryResp
+          { plutusData
+          }
+
+  CborMerkleTreeAct
+    { merkleTreeEntries
+    } → do
+    merkleTree ←
+      case
+        MerkleTree.fromList
+          $ map (cborBytesToByteArray <<< PlutusData.serializeData)
+          $ Data.List.Types.toList merkleTreeEntries
+        of
+        Left err → throwError $ error err
+        Right x → pure x
+    let merkleRootHash = MerkleTree.rootHash merkleTree
+    pure $
+      CborMerkleTreeResp
+        { merkleTree
+        , merkleRootHash
+        }
+
+  CborMerkleRootInsertionMessageAct
+    { merkleRootInsertionMessage
+    } → do
+    let plutusData = PlutusData.toData $ merkleRootInsertionMessage
+    pure $
+      CborMerkleRootInsertionMessageResp
+        { plutusData
+        }
+
+  CborCombinedMerkleProofAct
+    { merkleTreeEntry
+    , merkleTree
+    } →
+    let
+      cborMerkleTreeEntry = cborBytesToByteArray $ PlutusData.serializeData
+        merkleTreeEntry
+    in
+      case MerkleTree.lookupMp cborMerkleTreeEntry merkleTree of
+        Just merkleProof → do
+          let
+            combinedMerkleProof =
+              CombinedMerkleProof
+                { transaction: merkleTreeEntry
+                , merkleProof
+                }
+          pure $
+            CborCombinedMerkleProofResp
+              { combinedMerkleProof
+              }
+        Nothing → throwError $ error
+          "Merkle tree entry was not in the provided Merkle tree"
+  CborPlainAggregatePublicKeysAct
+    { publicKeys
+    } →
+    let
+      publicKeysArray ∷ Array ByteArray
+      publicKeysArray = List.toUnfoldable $ Data.List.Types.toList $ publicKeys
+
+      aggregatedPublicKeys ∷ ByteArray
+      aggregatedPublicKeys = Utils.Crypto.aggregateKeys publicKeysArray
+    in
+      pure $
+        CborPlainAggregatePublicKeysResp
+          { aggregatedPublicKeys:
+              PlutusData.toData aggregatedPublicKeys
+          }
+
+printEndpointResp ∷ EndpointResp → Effect Unit
 printEndpointResp =
   log <<< stringifyEndpointResp

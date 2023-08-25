@@ -15,6 +15,25 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
   onchain)
+* CLI flags for creating cbor encoded messages and cryptographic primitives has
+  been added to the Purescript CLI.
+  In particular,  the following CLI commands were added
+        ```
+        utils key-gen ecdsa-secp256k1
+        utils key-gen schnorr-secp256k1
+        utils sign ecdsa-secp256k1
+        utils sign schnorr-secp256k1
+        utils encode cbor-update-committee-message
+        utils encode cbor-block-producer-registration-message
+        utils encode cbor-merkle-root-insertion-message
+        utils encode cbor-merkle-tree-entry
+        utils encode cbor-merkle-tree
+        utils encode cbor-combined-merkle-proof
+        utils encode cbor-plain-aggregate-public-keys
+        ```
+    ([566](https://github.com/input-output-hk/trustless-sidechain/issues/566)
+    , [517](https://github.com/mlabs-haskell/trustless-sidechain/pull/517)
+    , offchain)
 
 ## Changed
 
