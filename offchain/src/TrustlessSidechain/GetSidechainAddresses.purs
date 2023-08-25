@@ -26,12 +26,14 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types (CheckpointParameter(..))
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -188,6 +190,20 @@ getSidechainAddresses
     validator ← Checkpoint.checkpointValidator checkpointParam
     getAddr validator
 
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      committeeCertificateMint
+  let
+    committeePlainEcdsaSecp256k1ATMSPolicyHex = currencySymbolToHex
+      committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+
+  { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+    CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+      committeeCertificateMint
+  let
+    committeePlainSchnorrSecp256k1ATMSPolicyHex = currencySymbolToHex
+      committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+
   let
     mintingPolicies =
       [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
@@ -202,6 +218,18 @@ getSidechainAddresses
             [ map ("CandidatePermissionTokenPolicy" /\ _)
                 mCandidatePermissionPolicyId
             ]
+        <>
+          ( case atmsKind of
+              ATMSPlainEcdsaSecp256k1 →
+                [ "CommitteePlainEcdsaSecp256k1ATMSPolicyId"
+                    /\ committeePlainEcdsaSecp256k1ATMSPolicyHex
+                ]
+              ATMSPlainSchnorrSecp256k1 →
+                [ "CommitteePlainSchnorrSecp256k1ATMSPolicyId"
+                    /\ committeePlainSchnorrSecp256k1ATMSPolicyHex
+                ]
+              _ → [ "UnimplementedATMSKind" /\ "unimplemented ATMS kind" ]
+          )
 
     addresses =
       [ "CommitteeCandidateValidator" /\ committeeCandidateValidatorAddr

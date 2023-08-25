@@ -15,6 +15,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
   onchain)
+* If the `addresses` subcommand has `--atms-kind plain-ecdsa-secp256k1`, then
+  the returned JSON object outputs also includes
+  `addresses.mintingPolicies.CommitteePlainEcdsaSecp256k1ATMSPolicyId`.
+  Otherwise, if the `addresses` subcommand has `--atms-kind plain-schnorr-secp256k1`, then
+  the returned JSON object outputs also includes
+  `addresses.mintingPolicies.CommitteePlainSchnorrSecp256k1ATMSPolicyId`.
+  ([578](https://github.com/input-output-hk/trustless-sidechain/issues/578),
+  [524](https://github.com/mlabs-haskell/trustless-sidechain/pull/524),
+  onchain)
 * CLI flags for creating cbor encoded messages and cryptographic primitives has
   been added to the Purescript CLI.
   In particular,  the following CLI commands were added
