@@ -63,7 +63,6 @@ import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   )
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
-import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.Options.Parsers
   ( bech32AddressParser
   , bech32BytesParser
@@ -445,16 +444,6 @@ sidechainParamsSpec maybeConfig = ado
     , help "Input UTxO to be spent with the first committee hash setup"
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
-    ]
-
-  atmsKind ← option Parsers.atmsKind $ fold
-    [ short 'm'
-    , long "atms-kind"
-    , metavar "ATMS_KIND"
-    , help
-        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
-    , maybe mempty value
-        (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
     ]
 
   governanceAuthority ← option governanceAuthority $ fold

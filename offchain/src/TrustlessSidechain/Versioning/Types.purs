@@ -67,6 +67,8 @@ data ScriptId
   | FUELProxyPolicy -- not versioned
   | CommitteeCertificateVerificationPolicy
   | CommitteeOraclePolicy -- (previously UpdateCommitteeHashPolicy)
+  | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- not versioned
+  | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- not versioned
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -115,6 +117,10 @@ instance FromData ScriptId where
     Just CommitteeCertificateVerificationPolicy
   fromData (Integer i) | i == BigInt.fromInt 19 =
     Just CommitteeOraclePolicy
+  fromData (Integer i) | i == BigInt.fromInt 20 =
+    Just CommitteePlainEcdsaSecp256k1ATMSPolicyId
+  fromData (Integer i) | i == BigInt.fromInt 21 =
+    Just CommitteePlainSchnorrSecp256k1ATMSPolicyId
 
   fromData _ = Nothing
 
@@ -139,6 +145,8 @@ instance ToData ScriptId where
   toData FUELProxyPolicy = Integer (BigInt.fromInt 17)
   toData CommitteeCertificateVerificationPolicy = Integer (BigInt.fromInt 18)
   toData CommitteeOraclePolicy = Integer (BigInt.fromInt 19)
+  toData CommitteePlainEcdsaSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 20)
+  toData CommitteePlainSchnorrSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 21)
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.

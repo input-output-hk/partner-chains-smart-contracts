@@ -34,12 +34,14 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointParameter(CheckpointParameter)
   )
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -56,21 +58,7 @@ import TrustlessSidechain.Utils.Logging
   )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
-  ( ScriptId
-      ( DSConfPolicy
-      , CandidatePermissionPolicy
-      , MerkleRootTokenPolicy
-      , CommitteeNftPolicy
-      , CheckpointPolicy
-      , FUELProxyPolicy
-      , VersionOraclePolicy
-      , CommitteeCandidateValidator
-      , CommitteeHashValidator
-      , DSConfValidator
-      , DSInsertValidator
-      , VersionOracleValidator
-      , CheckpointValidator
-      )
+  ( ScriptId(..)
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils
@@ -235,6 +223,20 @@ getSidechainAddresses
     versionedPolicies
   versionedAddresses ← Map.toUnfoldable <$> traverse getAddr versionedValidators
 
+  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      { committeeCertificateMint, sidechainParams: scParams }
+  let
+    committeePlainEcdsaSecp256k1ATMSPolicyId = currencySymbolToHex
+      committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+
+  { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+    CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+      { committeeCertificateMint, sidechainParams: scParams }
+  let
+    committeePlainSchnorrSecp256k1ATMSPolicyId = currencySymbolToHex
+      committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+
   let
     mintingPolicies =
       [ CommitteeNftPolicy /\ committeeNftPolicyId
@@ -249,6 +251,18 @@ getSidechainAddresses
                 mCandidatePermissionPolicyId
             ]
         <> versionedCurrencySymbols
+        <>
+          ( case atmsKind of
+              ATMSPlainEcdsaSecp256k1 →
+                [ CommitteePlainEcdsaSecp256k1ATMSPolicyId
+                    /\ committeePlainEcdsaSecp256k1ATMSPolicyId
+                ]
+              ATMSPlainSchnorrSecp256k1 →
+                [ CommitteePlainSchnorrSecp256k1ATMSPolicyId
+                    /\ committeePlainSchnorrSecp256k1ATMSPolicyId
+                ]
+              _ → []
+          )
 
     addresses =
       [ CommitteeCandidateValidator /\ committeeCandidateValidatorAddr
