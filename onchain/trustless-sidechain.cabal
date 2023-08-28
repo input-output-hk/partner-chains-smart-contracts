@@ -128,6 +128,7 @@ library
     , plutus-ledger-constraints
     , plutus-script-utils
     , plutus-shim-prelude
+    , QuickCheck
     , secp256k1-haskell
     , serialise
     , text
@@ -162,6 +163,10 @@ library quickcheck-extra
   import:          common-lang, common-optimized
   exposed-modules: Test.QuickCheck.Extra
   build-depends:
+    , bytestring
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-shim-prelude
     , QuickCheck
     , trustless-sidechain-prelude
 
@@ -307,6 +312,24 @@ test-suite quickcheck-extra-test
     , trustless-sidechain-prelude
 
   hs-source-dirs: test/quickcheck-extra-test
+
+test-suite roundtrip
+  import:         common-lang, common-optimized-parallel
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:  Laws
+  build-depends:
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , QuickCheck
+    , quickcheck-extra
+    , secp256k1-haskell
+    , tasty
+    , tasty-quickcheck
+    , trustless-sidechain
+    , trustless-sidechain-prelude
+
+  hs-source-dirs: test/roundtrip
 
 -- Benchmarks
 

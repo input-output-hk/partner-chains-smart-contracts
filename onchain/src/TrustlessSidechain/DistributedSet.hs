@@ -163,6 +163,12 @@ data DsConfDatum = DsConfDatum
   , -- | @since Unreleased
     fuelPolicy :: CurrencySymbol
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 instance Eq DsConfDatum where
   {-# INLINEABLE (==) #-}
@@ -233,6 +239,12 @@ newtype DsConfMint = DsConfMint
     txOutRef :: TxOutRef
   }
   deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance HasField "txOutRef" DsConfMint TxOutRef where

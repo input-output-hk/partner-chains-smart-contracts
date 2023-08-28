@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.Governance (
-  GovernanceAuthority,
+  GovernanceAuthority (GovernanceAuthority),
   isApprovedBy,
   mkGovernanceAuthority,
 ) where
@@ -14,7 +14,7 @@ import TrustlessSidechain.HaskellPrelude qualified as Prelude
 import TrustlessSidechain.PlutusPrelude
 
 newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
-  deriving newtype (Prelude.Eq, Prelude.Ord, ToData, FromData, UnsafeFromData)
+  deriving newtype (Prelude.Eq, Prelude.Ord, Prelude.Show, ToData, FromData, UnsafeFromData)
 
 PlutusTx.makeLift ''GovernanceAuthority
 
