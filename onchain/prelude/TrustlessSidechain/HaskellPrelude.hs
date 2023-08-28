@@ -108,6 +108,7 @@ module TrustlessSidechain.HaskellPrelude (
   -- ** Other
   Category.Category (..),
   Exts.IsString (..),
+  Coerce.Coercible,
 
   -- * Functions
 
@@ -275,6 +276,7 @@ module TrustlessSidechain.HaskellPrelude (
   Function.on,
   ifThenElse,
   Err.error,
+  Coerce.coerce,
 ) where
 
 import Control.Applicative (Applicative)
@@ -287,6 +289,7 @@ import Data.Bool (Bool (False, True), otherwise)
 import Data.Bool qualified as Bool
 import Data.ByteString qualified as ByteString
 import Data.Char qualified as Char
+import Data.Coerce qualified as Coerce
 import Data.Either qualified as Either
 import Data.Eq (Eq ((/=), (==)))
 import Data.Eq qualified as Eq

@@ -15,6 +15,18 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
   onchain)
+* `Eq` and `Show` instances for `UpdateCommitteeHash`, `SidechainParams`,
+  `CandidatePermissionMint`, `CommitteeCertificateMint`,
+  `BlockProducerRegistrationMsg`, `MerkleRootInsertionMessage`,
+  `SignedMerkleRootRedeemer`, `MerkleTreeEntry`, `CombinedMerkleProof`,
+  `FUELRedeemer`, `UpdateCommitteeDatum`, `ATMSPlainAggregatePubKey`,
+  `UpdateCommitteeHashMessage`, `UpdateCommitteeHashRedeemer`,
+  `ATMSPlainMultisignature`,  `CheckpointParameter`, `DsConfDatum`,
+  `DsConfMint`,
+  `BlockProducerRegistration` and `FUELMint`.
+* Roundtrip tests for `Data` encodings of onchain types
+  ([568](https://github.com/input-output-hk/trustless-sidechain/issues/568),
+  [522](https://github.com/mlabs-haskell/trustless-sidechain/pull/522),
 * If the `addresses` subcommand has `--atms-kind plain-ecdsa-secp256k1`, then
   the returned JSON object outputs also includes
   `addresses.mintingPolicies.CommitteePlainEcdsaSecp256k1ATMSPolicyId`.
@@ -74,6 +86,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([562](https://github.com/input-output-hk/trustless-sidechain/issues/562),
   [511](https://github.com/mlabs-haskell/trustless-sidechain/pull/511),
   offchain)
+* `TrustlessSidechain.HaskellPrelude` now exports `Coercible` and `coerce`.
 
 ## Fixed
 

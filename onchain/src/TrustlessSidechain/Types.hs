@@ -46,6 +46,12 @@ data SidechainParams = SidechainParams
     -- committee needed to sign off committee handovers / merkle roots
     thresholdDenominator :: Integer
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
@@ -119,6 +125,12 @@ data CandidatePermissionMint = CandidatePermissionMint
   , -- | @since Unreleased
     utxo :: TxOutRef
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData CandidatePermissionMint where
@@ -172,6 +184,12 @@ data BlockProducerRegistration = BlockProducerRegistration
     -- | @since Unreleased
     ownPkh :: PubKeyHash
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
@@ -234,6 +252,12 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
     -- | @since Unreleased
     inputUtxo :: TxOutRef
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
@@ -286,6 +310,12 @@ data MerkleTreeEntry = MerkleTreeEntry
     -- | @since Unreleased
     previousMerkleRoot :: Maybe LedgerBytes
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
@@ -337,6 +367,12 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   , -- | @since Unreleased
     previousMerkleRoot :: Maybe LedgerBytes
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
@@ -365,15 +401,26 @@ instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe LedgerB
     MerkleRootInsertionMessage sp mr (f pmr)
 
 {- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
- minting policy
+ minting policy.
+
+ @since Unreleased
 -}
 newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
   { previousMerkleRoot :: Maybe LedgerBytes
   }
   deriving newtype
-    ( ToData
-    , FromData
-    , UnsafeFromData
+    ( -- | @since Unreleased
+      ToData
+    , -- | @since Unreleased
+      FromData
+    , -- | @since Unreleased
+      UnsafeFromData
+    )
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
     )
 
 instance HasField "previousMerkleRoot" SignedMerkleRootRedeemer (Maybe LedgerBytes) where
@@ -395,6 +442,12 @@ data SignedMerkleRootMint = SignedMerkleRootMint
     -- to ensure that this token gets minted to the "right" place.
     validatorHash :: ValidatorHash
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData SignedMerkleRootMint where
@@ -454,6 +507,12 @@ data CombinedMerkleProof = CombinedMerkleProof
   , -- | @since Unreleased
     merkleProof :: MerkleProof
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
@@ -484,6 +543,12 @@ data FUELRedeemer
     -- the proof tha this actually happened on the sidechain (hence the
     -- 'MerkleProof')
     SideToMain MerkleTreeEntry MerkleProof
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- Recipient address is in FUELRedeemer just for reference on the mainchain,
 -- it's actually useful (and verified) on the sidechain, so it needs to be
@@ -523,6 +588,12 @@ data FUELMint = FUELMint
     -- | @since Unreleased
     dsKeyCurrencySymbol :: CurrencySymbol
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData FUELMint where
@@ -574,11 +645,19 @@ instance HasField "dsKeyCurrencySymbol" FUELMint CurrencySymbol where
 
  The actual representation of the committee's public key depends on the ATMS
  implementation.
+
+ @since Unreleased
 -}
 data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
   { aggregateCommitteePubKeys :: aggregatePubKeys
   , sidechainEpoch :: Integer
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData aggregatePubKeys => ToData (UpdateCommitteeDatum aggregatePubKeys) where
@@ -612,8 +691,28 @@ instance HasField "sidechainEpoch" (UpdateCommitteeDatum aggregatePubKeys) Integ
   modify f (UpdateCommitteeDatum ch se) =
     UpdateCommitteeDatum ch (f se)
 
+-- | @since Unreleased
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
-  deriving newtype (FromData, ToData, UnsafeFromData, Eq, Ord, IsString)
+  deriving newtype
+    ( -- | @since Unreleased
+      FromData
+    , -- | @since Unreleased
+      ToData
+    , -- | @since Unreleased
+      UnsafeFromData
+    , -- | @since Unreleased
+      Eq
+    , -- | @since Unreleased
+      Ord
+    , -- | @since Unreleased
+      IsString
+    )
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | 'UpdateCommitteeHash' is used as the parameter for the validator.
 data UpdateCommitteeHash = UpdateCommitteeHash
@@ -630,12 +729,22 @@ data UpdateCommitteeHash = UpdateCommitteeHash
     -- root token. This is needed for verifying that the previous merkle root is verified.
     mptRootTokenCurrencySymbol :: CurrencySymbol
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData UpdateCommitteeHash where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHash {..}) =
-    productToData4 sidechainParams committeeOracleCurrencySymbol committeeCertificateVerificationCurrencySymbol mptRootTokenCurrencySymbol
+    productToData4
+      sidechainParams
+      committeeOracleCurrencySymbol
+      committeeCertificateVerificationCurrencySymbol
+      mptRootTokenCurrencySymbol
 
 -- | @since Unreleased
 instance HasField "sidechainParams" UpdateCommitteeHash SidechainParams where
@@ -681,15 +790,24 @@ instance UnsafeFromData UpdateCommitteeHash where
 {- | = Important note
 
  The 'Data' serializations for this type /cannot/ be changed.
+
+ @since Unreleased
 -}
 data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { sidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
+    -- | @since Unreleased
     newAggregateCommitteePubKeys :: aggregatePubKeys
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
   , validatorAddress :: Address
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData aggregatePubKeys => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
@@ -747,13 +865,23 @@ instance HasField "validatorAddress" (UpdateCommitteeHashMessage aggregatePubKey
   modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
     UpdateCommitteeHashMessage sp nacpks pmr se (f va)
 
+-- | @since Unreleased
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { previousMerkleRoot :: Maybe LedgerBytes
   }
   deriving newtype
-    ( ToData
-    , FromData
-    , UnsafeFromData
+    ( -- | @since Unreleased
+      ToData
+    , -- | @since Unreleased
+      FromData
+    , -- | @since Unreleased
+      UnsafeFromData
+    )
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
     )
 
 -- | Datum for a checkpoint
@@ -805,17 +933,31 @@ data CommitteeCertificateMint = CommitteeCertificateMint
   , thresholdNumerator :: Integer
   , thresholdDenominator :: Integer
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
 
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the
  "TrustlessSidechain.CommitteePlainATMSPolicy".
+
+ @since Unreleased
 -}
 data ATMSPlainMultisignature = ATMSPlainMultisignature
   { plainPublicKeys :: [LedgerBytes]
   , plainSignatures :: [LedgerBytes]
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
 
@@ -884,6 +1026,12 @@ data CheckpointParameter = CheckpointParameter
     -- @since Unreleased
     committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData CheckpointParameter where
