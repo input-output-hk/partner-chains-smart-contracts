@@ -48,3 +48,12 @@ or create a PR.
   could more than enough)
 - If a PR is urgent (hotfix) it can be merged, but it should still be reviewed after-the-fact (reach out to other team members on
   Slack to get their after-the-fact approval)
+
+### When creating a GitHub release
+- Versioning must follow semantic versioning (details in the [coding standards](./onchain/STANDARDS.md#versioning-and-changelogging))
+- `Unreleased` section of the Changelog is updated
+- In code `@since Unreleased` headers are updated
+- Versions are bumped in `flake.nix`, `onchain/trustless-sidechain.cabal`, `offchain/package.json`
+- Push a git tag with the version (e.g. `v3.0.0`)
+- Create a GitHub release with a short description of the major changes, and a link to the Changelog
+- Build and upload an bundled JS artifact for the CLI
