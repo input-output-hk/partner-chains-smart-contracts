@@ -29,6 +29,7 @@
 
   outputs = { self, nixpkgs, haskell-nix, CHaP, cardano-transaction-lib, plutip, ... }@inputs:
     let
+      version = "3.0.0";
       vasilDevRuntimeConfig = {
         network = {
           name = "vasil-dev";
@@ -239,7 +240,6 @@
       ctlBundleCliFor = system:
         let
           name = "trustless-sidechain-cli";
-          version = "3.0.0";
           src = ./offchain;
           pkgs = import nixpkgs {
             inherit system;
@@ -332,6 +332,16 @@
           '';
         };
       });
-      herculesCI.ciSystems = [ "x86_64-linux" ];
+      herculesCI = {
+        ciSystems = [ "x86_64-linux" ];
+
+        github-releases.filesPerSystem = ({ self, ... }:
+          [
+            {
+              label = "trustless-sidechain-cli-${version}.tar";
+              path = "${self.packages.ctl-bundle-cli}/trustless-sidechain-cli-${version}.tar";
+            }
+          ]);
+      };
     };
 }
