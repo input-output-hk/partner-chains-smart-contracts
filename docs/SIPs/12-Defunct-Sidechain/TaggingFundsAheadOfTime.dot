@@ -1,0 +1,14 @@
+digraph {
+  node [shape=record]
+
+  UserWallet [label = "User wallet"];
+  InputLockBox [label = "Lock box with tokens and\nthe user's wallet's address as the reclaim address"];
+  InputCommitteeUTxO [ label = "Committee UTxO identified by `CommitteeOraclePolicy`\nwith `UpdateCommitteeDatum GarbageAggregatePubKeys` as the committee."];
+
+  Transaction [ label = "Transaction", shape=diamond];
+
+  InputCommitteeUTxO -> Transaction [ label = "reference input" ];
+  InputLockBox -> Transaction [ label = "input" ];
+  InputLockBox -> UserWallet [ style=dashed, label = "pays tokens to" ];
+  Transaction -> UserWallet [ label = "output" ];
+}

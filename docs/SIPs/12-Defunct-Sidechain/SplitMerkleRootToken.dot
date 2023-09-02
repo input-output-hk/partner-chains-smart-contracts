@@ -1,0 +1,13 @@
+digraph {
+  node [shape=record]
+
+  InputMerkleRoot [ label = "UTxO with a signed Merkle root `A`"];
+  OutputMerkleRootB [ label = "UTxO with a signed sub-Merkle root `B`"];
+  OutputMerkleRootC [ label = "UTxO with a signed sub-Merkle root `C`"];
+
+  Transaction [ label = "Transaction", shape=diamond];
+
+  InputMerkleRoot -> Transaction [ label = "input" ];
+  Transaction -> OutputMerkleRootB [ label = "output" ];
+  Transaction -> OutputMerkleRootC [ label = "output" ];
+}

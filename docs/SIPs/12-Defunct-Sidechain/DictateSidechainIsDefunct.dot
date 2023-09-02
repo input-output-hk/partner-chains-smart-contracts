@@ -1,0 +1,14 @@
+strict digraph {
+  node [shape=record]
+  graph [nodesep="1", ranksep="1"]
+
+  InputCommitteeUTxO [ label = "Committee UTxO identified by `CommitteeOraclePolicy`"];
+
+  Transaction [ shape=diamond ];
+
+  OutputCommitteeUTxO [ label = "Committee UTxO identified by `CommitteeOraclePolicy`\nwith `UpdateCommitteeDatum GarbageAggregatePubKeys` as the committee."];
+
+  InputCommitteeUTxO -> Transaction [label = "input"];
+
+  Transaction -> OutputCommitteeUTxO [label = "output"];
+}
