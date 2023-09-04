@@ -65,8 +65,7 @@ import TrustlessSidechain.Types (
     ownPkh,
     sidechainPubKey,
     sidechainSignature,
-    spoPubKey,
-    spoSignature
+    stakeOwnership
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -130,6 +129,7 @@ import TrustlessSidechain.Types (
     validatorHash
   ),
   SignedMerkleRootRedeemer (SignedMerkleRootRedeemer),
+  StakeOwnership (AdaBasedStaking, TokenBasedStaking),
   UpdateCommitteeDatum (UpdateCommitteeDatum),
   UpdateCommitteeHash (
     UpdateCommitteeHash,
@@ -379,15 +379,22 @@ genBPRM = do
   ArbitraryTxOutRef tout <- arbitrary
   pure . BlockProducerRegistrationMsg sp spk $ tout
 
+genSO :: Gen StakeOwnership
+genSO = oneof [arbitraryAdaBasedCreds, pure TokenBasedStaking]
+  where
+    arbitraryAdaBasedCreds = do
+      ArbitraryPubKey pk <- arbitrary
+      ArbitrarySignature sig <- arbitrary
+      pure $ AdaBasedStaking pk sig
+
 genBPR :: Gen BlockProducerRegistration
 genBPR = do
-  ArbitraryPubKey spk <- arbitrary
+  so <- genSO
   sidePk <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
-  ArbitrarySignature ssig <- arbitrary
   ArbitrarySignature sideSig <- arbitrary
   ArbitraryTxOutRef iu <- arbitrary
   ArbitraryPubKeyHash pkh <- arbitrary
-  pure . BlockProducerRegistration spk sidePk ssig sideSig iu $ pkh
+  pure . BlockProducerRegistration so sidePk sideSig iu $ pkh
 
 genPK :: Gen EcdsaSecp256k1PubKey
 genPK = do
@@ -603,15 +610,22 @@ shrinkBPRM (BlockProducerRegistrationMsg {..}) = do
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
   pure . BlockProducerRegistrationMsg sp' spk' $ tout'
 
+shrinkSO :: StakeOwnership -> [StakeOwnership]
+shrinkSO = \case
+  AdaBasedStaking pk sig -> do
+    ArbitraryPubKey pk' <- shrink (ArbitraryPubKey pk)
+    ArbitrarySignature sig' <- shrink (ArbitrarySignature sig)
+    pure $ AdaBasedStaking pk' sig'
+  TokenBasedStaking -> pure TokenBasedStaking
+
 shrinkBPR :: BlockProducerRegistration -> [BlockProducerRegistration]
 shrinkBPR (BlockProducerRegistration {..}) = do
-  ArbitraryPubKey spk' <- shrink (ArbitraryPubKey spoPubKey)
+  so' <- shrinkSO stakeOwnership
   EcdsaSecp256k1PubKey sidePk' <- shrinkPK (EcdsaSecp256k1PubKey sidechainPubKey)
-  ArbitrarySignature ssig' <- shrink (ArbitrarySignature spoSignature)
   ArbitrarySignature sideSig' <- shrink (ArbitrarySignature sidechainSignature)
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
   ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash ownPkh)
-  pure . BlockProducerRegistration spk' sidePk' ssig' sideSig' tout' $ pkh'
+  pure . BlockProducerRegistration so' sidePk' sideSig' tout' $ pkh'
 
 -- We don't shrink these, as it wouldn't make much sense to
 shrinkPK :: EcdsaSecp256k1PubKey -> [EcdsaSecp256k1PubKey]
