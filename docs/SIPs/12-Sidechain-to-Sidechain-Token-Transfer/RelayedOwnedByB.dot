@@ -1,0 +1,33 @@
+digraph {
+  node [shape=square]
+  rankdir=LR
+
+  subgraph cluster_sidechain_a {
+    label="Sidechain A"
+    wa_wm_sbt [label = "Wa(Wm(SbT))", style = "rounded"]
+  }
+
+  subgraph cluster_mainchain {
+    label="Mainchain"
+
+    wm_sbt [label = "Wm(SbT)", style = "rounded"]
+
+    m_lb [ label = "LockBox"]
+  }
+
+  subgraph cluster_sidechain_b {
+    label="Sidechain B"
+    sbt [label = "SbT", style = "rounded"]
+
+    b_lb [label = "LockBox"]
+  }
+
+  wa_wm_sbt -> m_lb [label = "burn", style = "dashed"]
+
+  m_lb -> wm_sbt [label = "unlock"]
+
+  wm_sbt -> b_lb [label = "burn", style = "dashed"]
+
+  b_lb -> sbt [label = "unlock"]
+
+}
