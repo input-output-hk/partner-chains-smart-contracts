@@ -162,18 +162,39 @@ instance HasField "utxo" CandidatePermissionMint TxOutRef where
   {-# INLINE modify #-}
   modify f (CandidatePermissionMint sp u) = CandidatePermissionMint sp (f u)
 
+{- Sum type distinguishing different Stake ownership models
+ Ada based staking requires the SPO public key and the signature on
+ the @BlockProducerRegistrationMsg@, while a native token based staking model
+ only requires the own Cardano payment public key hash
+
+-}
+data StakeOwnership
+  = -- | Ada stake based configuration comprises the SPO public key and signature
+    AdaBasedStaking PubKey Signature
+  | -- | Token based staking configuration
+    TokenBasedStaking
+  deriving stock
+    ( -- | @since Unreleased
+      TSPrelude.Eq
+    , -- | @since Unreleased
+      TSPrelude.Show
+    )
+
+PlutusTx.makeIsDataIndexed
+  ''StakeOwnership
+  [ ('AdaBasedStaking, 0)
+  , ('TokenBasedStaking, 1)
+  ]
+
 {-
  The 'Data' serializations for this type /cannot/ change.
 -}
 data BlockProducerRegistration = BlockProducerRegistration
-  { -- | SPO cold verification key hash
+  { -- | Verification keys required by the stake ownership model
     -- | @since Unreleased
-    spoPubKey :: PubKey -- own cold verification key hash
+    stakeOwnership :: StakeOwnership
   , -- | public key in the sidechain's desired format
     sidechainPubKey :: LedgerBytes
-  , -- | Signature of the SPO
-    -- | @since Unreleased
-    spoSignature :: Signature
   , -- | Signature of the sidechain
     -- | @since Unreleased
     sidechainSignature :: Signature
@@ -194,52 +215,44 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 -- | @since Unreleased
-instance HasField "spoPubKey" BlockProducerRegistration PubKey where
+instance HasField "spoPubKey" BlockProducerRegistration StakeOwnership where
   {-# INLINE get #-}
-  get (BlockProducerRegistration x _ _ _ _ _) = x
+  get (BlockProducerRegistration x _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration (f sPK) scPK sS scS u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh) =
+    BlockProducerRegistration (f so) scPK scS u pkh
 
 -- | @since Unreleased
 instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration LedgerBytes where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ x _ _ _ _) = x
+  get (BlockProducerRegistration _ x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration sPK (f scPK) sS scS u pkh
-
--- | @since Unreleased
-instance HasField "spoSignature" BlockProducerRegistration Signature where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration sPK scPK (f sS) scS u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh) =
+    BlockProducerRegistration so (f scPK) scS u pkh
 
 -- | @since Unreleased
 instance HasField "sidechainSignature" BlockProducerRegistration Signature where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ x _ _) = x
+  get (BlockProducerRegistration _ _ x _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration sPK scPK sS (f scS) u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh) =
+    BlockProducerRegistration so scPK (f scS) u pkh
 
 -- | @since Unreleased
 instance HasField "inputUtxo" BlockProducerRegistration TxOutRef where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ _ x _) = x
+  get (BlockProducerRegistration _ _ _ x _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration sPK scPK sS scS (f u) pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh) =
+    BlockProducerRegistration so scPK scS (f u) pkh
 
 -- | @since Unreleased
 instance HasField "ownPkh" BlockProducerRegistration PubKeyHash where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ _ _ x) = x
+  get (BlockProducerRegistration _ _ _ _ x) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration sPK scPK sS scS u pkh) =
-    BlockProducerRegistration sPK scPK sS scS u (f pkh)
+  modify f (BlockProducerRegistration so scPK scS u pkh) =
+    BlockProducerRegistration so scPK scS u (f pkh)
 
 {- | = Important note
 

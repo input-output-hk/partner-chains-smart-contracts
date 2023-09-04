@@ -70,7 +70,7 @@ main =
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             (unversioned CCV.serialisableValidator)
-            2_854
+            2_933
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
