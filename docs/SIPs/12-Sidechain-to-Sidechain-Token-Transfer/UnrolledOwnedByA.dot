@@ -1,0 +1,24 @@
+digraph {
+  node [shape=square style=rounded]
+  rankdir=LR
+
+  subgraph cluster_mainchain {
+    label="Mainchain"
+
+    wm_sat [label = "Wm(SaT)"]
+
+  }
+
+  subgraph cluster_sidechain_a {
+    label="Sidechain A"
+    sat [label = "SaT"]
+  }
+
+  subgraph cluster_sidechain_b {
+    label="Sidechain B"
+    wb_sat [label = "Wb(SaT)"]
+  }
+
+  wm_sat -> sat -> wb_sat
+  wb_sat -> sat -> wm_sat
+}

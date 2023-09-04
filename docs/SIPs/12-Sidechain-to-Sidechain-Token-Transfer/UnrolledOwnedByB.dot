@@ -1,0 +1,24 @@
+digraph {
+  node [shape=square style=rounded]
+  rankdir=LR
+
+  subgraph cluster_mainchain {
+    label="Mainchain"
+
+    wm_wa_sbt [label = "Wm(Wa(SbT))\n(discouraged)"]
+
+  }
+
+  subgraph cluster_sidechain_a {
+    label="Sidechain A"
+    wa_sbt [label = "Wa(SbT)"]
+  }
+
+  subgraph cluster_sidechain_b {
+    label="Sidechain B"
+    sbt [label = "SbT"]
+  }
+
+  wm_wa_sbt -> wa_sbt -> sbt
+  sbt -> wa_sbt -> wm_wa_sbt
+}
