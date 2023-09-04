@@ -30,6 +30,9 @@ cradle:
     - path: "./test/quickcheck-extra-test"
       component: "test:quickcheck-extra-test"
 
+    - path: "./test/roundtrip"
+      component: "test:roundtrip"
+
     - path: "./bench"
       component: "bench:bench-ctl"
 
