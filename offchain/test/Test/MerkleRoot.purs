@@ -11,7 +11,7 @@ import Contract.Prelude
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
@@ -26,10 +26,11 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
-import TrustlessSidechain.FUELMintingPolicy
+import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
   )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
@@ -39,7 +40,11 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (Bech32Bytes, bech32BytesFromAddress)
+import TrustlessSidechain.Utils.Address
+  ( Bech32Bytes
+  , bech32BytesFromAddress
+  , getOwnPaymentPubKeyHash
+  )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
 
@@ -109,7 +114,7 @@ saveRoot
       "error 'Test.MerkleRoot.testScenario': failed to create merkle root insertion message"
       $ MerkleRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
-          { sidechainParams: sidechainParams
+          { sidechainParams
           , merkleRoot
           , previousMerkleRoot
           }
@@ -143,7 +148,7 @@ saveRoot
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Saving a Merkle root"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 50_000_000, BigInt.fromInt 50_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       Log.logInfo' "MerkleRoot testScenario1"
 
@@ -152,7 +157,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       let
         committeeSize = 100
       genesisUtxo ← Test.Utils.getOwnTransactionInput
-
+      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
       initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
         Crypto.generatePrivKey
       let
@@ -169,16 +174,14 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
+              ownPaymentPubKeyHash
           }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownPaymentPubKeyHash ← liftedM
-        "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
-        Wallet.ownPaymentPubKeyHash
-
       ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
         paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
       let
@@ -246,7 +249,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
 testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "Saving two merkle roots"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigInt.fromInt 50_000_000, BigInt.fromInt 50_000_000 ]
   $ \alice → Wallet.withKeyWallet alice do
       Log.logInfo' "MerkleRoot testScenario2"
 
@@ -259,7 +262,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
       -- committee hash endpoint! Some room for optimization is certainly
       -- a possibility..
       genesisUtxo ← Test.Utils.getOwnTransactionInput
-
+      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
       initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
         Crypto.generatePrivKey
       let
@@ -276,16 +279,14 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
+              ownPaymentPubKeyHash
           }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownPaymentPubKeyHash ← liftedM
-        "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
-        Wallet.ownPaymentPubKeyHash
-
       ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
         paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
@@ -335,16 +336,15 @@ testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigInt.fromInt 50_000_000, BigInt.fromInt 50_000_000 ]
     $ \alice → Wallet.withKeyWallet alice do
         Log.logInfo' "MerkleRoot testScenario2"
-
         -- 1. Setting up the sidechain
         ---------------------------
         let
           committeeSize = 100
         genesisUtxo ← Test.Utils.getOwnTransactionInput
-
+        pkh ← getOwnPaymentPubKeyHash
         -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
         duplicated1PrvKey ← Crypto.generatePrivKey
         duplicated2PrvKey ← Crypto.generatePrivKey
@@ -368,19 +368,17 @@ testScenario3 =
             , initThresholdDenominator: BigInt.fromInt 100000
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
             }
 
-        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams
+        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------
-        ownPaymentPubKeyHash ← liftedM
-          "error 'testScenario1': 'Contract.Wallet.ownPaymentPubKeyHash' failed"
-          Wallet.ownPaymentPubKeyHash
 
         ownRecipient ← liftContractM "Could not convert address to bech 32 bytes"
-          $
-            paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+          $ paymentPubKeyHashToBech32Bytes pkh
 
         { merkleRoot: merkleRoot1 } ←
           saveRoot

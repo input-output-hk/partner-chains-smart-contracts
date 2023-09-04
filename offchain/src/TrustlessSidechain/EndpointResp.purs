@@ -20,9 +20,10 @@ import TrustlessSidechain.Utils.Codecs (scParamsCodec)
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
-  = MintActResp { transactionId ∷ ByteArray }
-  | ClaimActResp { transactionId ∷ ByteArray }
-  | BurnActResp { transactionId ∷ ByteArray }
+  = ClaimActRespV1 { transactionId ∷ ByteArray }
+  | BurnActRespV1 { transactionId ∷ ByteArray }
+  | ClaimActRespV2 { transactionId ∷ ByteArray }
+  | BurnActRespV2 { transactionId ∷ ByteArray }
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CandidatePermissionTokenResp
       { transactionId ∷ ByteArray
@@ -38,15 +39,20 @@ data EndpointResp
       }
   | InitTokensResp
       { transactionId ∷ ByteArray
+      , versioningTransactionIds ∷ Array ByteArray
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
   | InitResp
       { transactionId ∷ ByteArray
+      , versioningTransactionIds ∷ Array ByteArray
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
   | SaveCheckpointResp { transactionId ∷ ByteArray }
+  | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
+  | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
+  | InvalidateVersionResp { versioningTransactionIds ∷ Array ByteArray }
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
@@ -57,19 +63,24 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
 
   enc ∷ EndpointResp → Json
   enc = case _ of
-    MintActResp { transactionId } →
+    ClaimActRespV1 { transactionId } →
       J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "MintAct"
+        [ "endpoint" /\ J.fromString "ClaimActV1"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
-    ClaimActResp { transactionId } →
+    BurnActRespV1 { transactionId } →
       J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "ClaimAct"
+        [ "endpoint" /\ J.fromString "BurnActV1"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
-    BurnActResp { transactionId } →
+    ClaimActRespV2 { transactionId } →
       J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "BurnAct"
+        [ "endpoint" /\ J.fromString "ClaimActV2"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+    BurnActRespV2 { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "BurnActV2"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
     CommitteeCandidateRegResp { transactionId } →
@@ -98,15 +109,21 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         [ "endpoint" /\ J.fromString "GetAddrs"
         , "addresses" /\ J.fromObject
             ( Object.fromFoldable
-                (map (rmap J.fromString) sidechainAddresses.addresses)
+                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                    sidechainAddresses.addresses
+                )
             )
         , "cborEncodedAddresses" /\ J.fromObject
             ( Object.fromFoldable
-                (map (rmap J.fromString) sidechainAddresses.cborEncodedAddresses)
+                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                    sidechainAddresses.cborEncodedAddresses
+                )
             )
         , "mintingPolicies" /\ J.fromObject
             ( Object.fromFoldable
-                (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
+                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                    sidechainAddresses.mintingPolicies
+                )
             )
         ]
     CommitteeHashResp { transactionId } →
@@ -127,48 +144,92 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
         ]
-    InitTokensResp { transactionId, sidechainParams, sidechainAddresses } →
+    InitTokensResp
+      { transactionId
+      , sidechainParams
+      , sidechainAddresses
+      , versioningTransactionIds
+      } →
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "Init"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          , "versioningTransactionIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
           , "addresses" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.addresses)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.addresses
+                  )
               )
           , "cborEncodedAddresses" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.cborEncodedAddresses)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.cborEncodedAddresses
+                  )
               )
           , "mintingPolicies" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.mintingPolicies
+                  )
               )
           ]
-    InitResp { transactionId, sidechainParams, sidechainAddresses } →
+    InitResp
+      { transactionId
+      , versioningTransactionIds
+      , sidechainParams
+      , sidechainAddresses
+      } →
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "Init"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          , "versioningTransactionIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
           , "addresses" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.addresses)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.addresses
+                  )
               )
           , "cborEncodedAddresses" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.cborEncodedAddresses)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.cborEncodedAddresses
+                  )
               )
           , "mintingPolicies" /\ J.fromObject
               ( Object.fromFoldable
-                  (map (rmap J.fromString) sidechainAddresses.mintingPolicies)
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.mintingPolicies
+                  )
               )
           ]
     SaveCheckpointResp { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "SaveCheckpoint"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+    InsertVersionResp { versioningTransactionIds } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "InitVersion"
+        , "versioningTransactionIds" /\ J.fromArray
+            (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
+        ]
+    UpdateVersionResp { versioningTransactionIds } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "UpdateVersion"
+        , "versioningTransactionIds" /\ J.fromArray
+            (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
+        ]
+    InvalidateVersionResp { versioningTransactionIds } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "InvalidateVersion"
+        , "versioningTransactionIds" /\ J.fromArray
+            (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
         ]
 
 -- | Encode the endpoint response to a json object

@@ -27,11 +27,11 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
-import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry(MerkleTreeEntry))
-import TrustlessSidechain.InitSidechain as InitSidechain
-import TrustlessSidechain.MerkleRoot.Types
-  ( SignedMerkleRootMint(SignedMerkleRootMint)
+import TrustlessSidechain.FUELMintingPolicy.V1
+  ( MerkleTreeEntry(MerkleTreeEntry)
   )
+import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHash(UpdateCommitteeHash)
@@ -39,6 +39,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `tests` aggregates all MerkleRootChaining tests together conveniently
@@ -81,22 +82,26 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
 
-      { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69_420
-          , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
-              $ map unwrap
-              $ map
-                  Utils.Crypto.toPubKeyUnsafe
-                  committee1PrvKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          }
+      let
+        isp =
+          InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69_420
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+                $ map unwrap
+                $ map
+                    Utils.Crypto.toPubKeyUnsafe
+                    committee1PrvKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                ownPaymentPubKeyHash
+            }
+      { sidechainParams } ← InitSidechain.initSidechain isp 1
 
       -- 2. Saving a merkle root.
       -------------------------------
@@ -229,23 +234,27 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       let keyCount = 80
       committee1PrvKeys ← sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
+      let
+        isp =
+          InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69_420
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+                $ map unwrap
+                $ map
+                    Utils.Crypto.toPubKeyUnsafe
+                    committee1PrvKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                ownPaymentPubKeyHash
+            }
 
-      { sidechainParams } ← InitSidechain.initSidechain $
-        InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69_420
-          , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
-              $ map unwrap
-              $ map
-                  Utils.Crypto.toPubKeyUnsafe
-                  committee1PrvKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          }
+      { sidechainParams } ← InitSidechain.initSidechain isp 1
 
       -- 2. Saving a merkle root
       -------------------------------
@@ -286,24 +295,19 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           committeeCertificateVerificationCurrencySymbol
       } ←
         CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-          $ CommitteeCertificateMint
-              { committeeOraclePolicy: committeeOracleCurrencySymbol
-              , thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+          { committeeCertificateMint: CommitteeCertificateMint
+              { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
               , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
               }
+          , sidechainParams
+          }
 
       merkleRootTokenValidator ← MerkleRoot.Utils.merkleRootTokenValidator
         sidechainParams
 
-      let
-        smrm = SignedMerkleRootMint
-          { sidechainParams: sidechainParams
-          , committeeCertificateVerificationCurrencySymbol
-          , merkleRootValidatorHash: Scripts.validatorHash
-              merkleRootTokenValidator
-          }
       merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-        smrm
+        sidechainParams
+
       merkleRootTokenCurrencySymbol ←
         liftContractM
           "Failed to get merkleRootTokenCurrencySymbol"

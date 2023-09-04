@@ -3,7 +3,7 @@ module Test.ConfigFile (tests) where
 import Contract.Prelude
 
 import Contract.Address (NetworkId(TestnetId))
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -67,6 +67,8 @@ test1 =
                           )
                       , threshold: (Just { denominator: 3, numerator: 2 })
                       , atmsKind: Just ATMSPlainEcdsaSecp256k1
+                      , governanceAuthority: hexToByteArray
+                          "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
                       }
                   )
               , stakeSigningKeyFile: Nothing

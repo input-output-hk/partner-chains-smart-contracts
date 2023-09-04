@@ -251,7 +251,6 @@ register
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-
   netId ← getNetworkId
 
   ownPkh ← liftedM (show (InternalError NotFoundOwnPubKeyHash))

@@ -56,6 +56,7 @@ configCodec =
             , numerator ∷ Int
             }
       , atmsKind ∷ Maybe ATMSKinds
+      , governanceAuthority ∷ Maybe ByteArray
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
@@ -64,6 +65,7 @@ configCodec =
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
         , atmsKind: CAC.maybe atmsKindCodec
+        , governanceAuthority: CAC.maybe byteArrayCodec
         }
     )
 

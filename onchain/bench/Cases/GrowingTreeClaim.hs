@@ -1,3 +1,7 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cases.GrowingTreeClaim (growingTreeClaim) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
@@ -36,6 +40,7 @@ import TrustlessSidechain.Types (
     chainId,
     genesisHash,
     genesisUtxo,
+    governanceAuthority,
     thresholdDenominator,
     thresholdNumerator
   ),
@@ -66,6 +71,7 @@ growingTreeClaim = do
   -- problem.
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
   addr <- Bench.readAddr
+  governanceAuthority <- Bench.readGovernanceAuthority
 
   -- Benchmark suite
   --------------------
@@ -94,6 +100,7 @@ growingTreeClaim = do
             , genesisUtxo = txOutRef
             , thresholdNumerator = 2
             , thresholdDenominator = 3
+            , governanceAuthority
             }
 
     -- Iniatialising the sidechain:

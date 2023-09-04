@@ -3,6 +3,7 @@
 module TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
+  , SidechainAddressesExtra
   , getSidechainAddresses
   , currencySymbolToHex
   ) where
@@ -21,6 +22,9 @@ import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
+import Data.BigInt as BigInt
+import Data.Map as Map
+import Data.TraversableWithIndex (traverseWithIndex)
 import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
@@ -33,9 +37,7 @@ import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.FUELMintingPolicy as FUELMintingPolicy
-import TrustlessSidechain.MerkleRoot as MerkleRoot
-import TrustlessSidechain.MerkleRoot.Utils (merkleRootTokenValidator)
+import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
@@ -46,6 +48,13 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )
+import TrustlessSidechain.Versioning as Versioning
+import TrustlessSidechain.Versioning.Types (ScriptId(..), VersionOracle(..))
+import TrustlessSidechain.Versioning.Utils
+  ( getVersionOraclePolicy
+  , getVersionedCurrencySymbol
+  , versionOracleValidator
+  )
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a
@@ -54,11 +63,20 @@ import TrustlessSidechain.Utils.Logging
 -- | See `getSidechainAddresses` for more details.
 type SidechainAddresses =
   { -- bech32 addresses
-    addresses ∷ Array (Tuple String String)
+    addresses ∷ Array (Tuple ScriptId String)
   , --  currency symbols
-    mintingPolicies ∷ Array (Tuple String String)
+    mintingPolicies ∷ Array (Tuple ScriptId String)
   , -- cbor of the Plutus Address type.
-    cborEncodedAddresses ∷ Array (Tuple String String)
+    cborEncodedAddresses ∷ Array (Tuple ScriptId String)
+  }
+
+-- | `SidechainAddressesExtra` provides extra information for creating more
+-- | addresses related to the sidechain.
+-- | In particular, this allows us to optionally grab the minting policy of the
+-- | candidate permission token.
+type SidechainAddressesExtra =
+  { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+  , version ∷ Int
   }
 
 -- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
@@ -69,7 +87,7 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   , -- Used to optionally grab the minting policy of candidate permission
     -- token.
     mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
-
+  , version ∷ Int
   }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
@@ -81,49 +99,35 @@ getSidechainAddresses ∷
   SidechainAddressesEndpointParams → Contract SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
-      { sidechainParams: scParams, atmsKind, mCandidatePermissionTokenUtxo }
+      { sidechainParams: scParams
+      , atmsKind
+      , mCandidatePermissionTokenUtxo
+      , version
+      }
   ) = do
+
   -- Minting policies
-  { fuelMintingPolicyCurrencySymbol } ← FUELMintingPolicy.getFuelMintingPolicy
-    { atmsKind
-    , sidechainParams: scParams
-    }
-  let fuelMintingPolicyId = currencySymbolToHex fuelMintingPolicyCurrencySymbol
-
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
-
   let
     committeeCertificateMint =
       CommitteeCertificateMint
         { thresholdNumerator: (unwrap scParams).thresholdNumerator
         , thresholdDenominator: (unwrap scParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams: scParams }
       atmsKind
 
-  { merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.getMerkleRootTokenMintingPolicy
-      { sidechainParams: scParams
-      , committeeCertificateVerificationCurrencySymbol
-      }
-  let
-    merkleRootTokenMintingPolicyId = currencySymbolToHex
-      merkleRootTokenCurrencySymbol
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
 
   let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
-  { dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
-
-  let dsKeyPolicyPolicyId = currencySymbolToHex dsKeyPolicyCurrencySymbol
 
   dsConfPolicy ← DistributedSet.dsConfPolicy
     (wrap (unwrap scParams).genesisUtxo)
-  dsConfPolicyId ← getCurrencySymbolHex "DsConfPolicy" dsConfPolicy
+  dsConfPolicyId ← getCurrencySymbolHex DSConfPolicy dsConfPolicy
 
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
     Nothing → pure Nothing
@@ -135,7 +139,7 @@ getSidechainAddresses
               , candidatePermissionTokenUtxo: permissionTokenUtxo
               }
       candidatePermissionPolicyId ← getCurrencySymbolHex
-        "CandidatePermissionPolicy"
+        CandidatePermissionPolicy
         candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
@@ -143,14 +147,21 @@ getSidechainAddresses
     Checkpoint.getCheckpointPolicy scParams
   let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
 
+  { versionOracleCurrencySymbol } ← getVersionOraclePolicy scParams
+  let versionOraclePolicyId = currencySymbolToHex versionOracleCurrencySymbol
+
+  { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy scParams
+  let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
+
   -- Validators
   committeeCandidateValidatorAddr ← do
     validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
       scParams
     getAddr validator
-  merkleRootTokenValidatorAddr ← do
-    validator ← merkleRootTokenValidator scParams
-    getAddr validator
+
+  merkleRootTokenCurrencySymbol ←
+    getVersionedCurrencySymbol scParams $ VersionOracle
+      { version: BigInt.fromInt version, scriptId: MerkleRootTokenPolicy }
 
   { committeeHashValidatorAddr, committeeHashValidatorCborAddress } ←
     do
@@ -188,32 +199,45 @@ getSidechainAddresses
     validator ← Checkpoint.checkpointValidator checkpointParam
     getAddr validator
 
+  veresionOracleValidatorAddr ← do
+    validator ← versionOracleValidator scParams versionOracleCurrencySymbol
+    getAddr validator
+
+  { versionedPolicies, versionedValidators } ←
+    Versioning.getVersionedPoliciesAndValidators
+      { sidechainParams: scParams, atmsKind }
+      version
+  versionedCurrencySymbols ← Map.toUnfoldable <$> traverseWithIndex
+    getCurrencySymbolHex
+    versionedPolicies
+  versionedAddresses ← Map.toUnfoldable <$> traverse getAddr versionedValidators
+
   let
     mintingPolicies =
-      [ "FuelMintingPolicyId" /\ fuelMintingPolicyId
-      , "MerkleRootTokenMintingPolicyId" /\ merkleRootTokenMintingPolicyId
-      , "CommitteeNftPolicyId" /\ committeeNftPolicyId
-      , "DSKeyPolicy" /\ dsKeyPolicyPolicyId
-      , "DSConfPolicy" /\ dsConfPolicyId
-      , "CheckpointPolicy" /\ checkpointPolicyId
+      [ CommitteeNftPolicy /\ committeeNftPolicyId
+      , DSConfPolicy /\ dsConfPolicyId
+      , CheckpointPolicy /\ checkpointPolicyId
+      , FUELProxyPolicy /\ fuelProxyPolicyId
+      , VersionOraclePolicy /\ versionOraclePolicyId
       ]
         <>
           Array.catMaybes
-            [ map ("CandidatePermissionTokenPolicy" /\ _)
+            [ map (CandidatePermissionPolicy /\ _)
                 mCandidatePermissionPolicyId
             ]
+        <> versionedCurrencySymbols
 
     addresses =
-      [ "CommitteeCandidateValidator" /\ committeeCandidateValidatorAddr
-      , "MerkleRootTokenValidator" /\ merkleRootTokenValidatorAddr
-      , "CommitteeHashValidator" /\ committeeHashValidatorAddr
-      , "DSConfValidator" /\ dsConfValidatorAddr
-      , "DSInsertValidator" /\ dsInsertValidatorAddr
-      , "CheckpointValidator" /\ checkpointValidatorAddr
-      ]
+      [ CommitteeCandidateValidator /\ committeeCandidateValidatorAddr
+      , CommitteeHashValidator /\ committeeHashValidatorAddr
+      , DSConfValidator /\ dsConfValidatorAddr
+      , DSInsertValidator /\ dsInsertValidatorAddr
+      , VersionOracleValidator /\ veresionOracleValidatorAddr
+      , CheckpointValidator /\ checkpointValidatorAddr
+      ] <> versionedAddresses
 
     cborEncodedAddresses =
-      [ "CommitteeHashValidator" /\ committeeHashValidatorCborAddress
+      [ CommitteeHashValidator /\ committeeHashValidatorCborAddress
       ]
 
   pure
@@ -242,9 +266,9 @@ getCborEncodedAddress =
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
-getCurrencySymbolHex ∷ String → MintingPolicy → Contract String
+getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
 getCurrencySymbolHex name mp = do
-  cs ← Monad.liftContractM (show (InternalError (InvalidScript name))) $
+  cs ← Monad.liftContractM (show (InternalError (InvalidScript $ show name))) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
 

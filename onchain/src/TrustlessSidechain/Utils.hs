@@ -4,9 +4,13 @@ module TrustlessSidechain.Utils (
   verifyMultisig,
   aggregateKeys,
   aggregateCheck,
+  fromSingleton,
+  currencySymbolValueOf,
 ) where
 
+import Ledger.Value
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
+import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey))
@@ -58,3 +62,16 @@ aggregateKeys = LedgerBytes . Builtins.blake2b_256 . mconcat . map (getLedgerByt
 {-# INLINEABLE aggregateCheck #-}
 aggregateCheck :: [EcdsaSecp256k1PubKey] -> LedgerBytes -> Bool
 aggregateCheck pubKeys avk = aggregateKeys pubKeys == avk
+
+-- | Unwrap a singleton list, or produce an error if not possible.
+{-# INLINEABLE fromSingleton #-}
+fromSingleton :: BuiltinString -> [a] -> a
+fromSingleton _ [x] = x
+fromSingleton msg _ = traceError msg
+
+-- | Get amount of given currency in a value, ignoring token names.
+{-# INLINEABLE currencySymbolValueOf #-}
+currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
+currencySymbolValueOf v c = case Map.lookup c (getValue v) of
+  Nothing -> traceError "ERROR-CURRENCY-LOOKUP-01"
+  Just x -> sum (Map.elems x)

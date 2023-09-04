@@ -87,10 +87,8 @@ import TrustlessSidechain.Types (
   CheckpointParameter,
   CheckpointRedeemer,
   CommitteeCertificateMint,
-  FUELMint,
-  FUELRedeemer,
+  FUELMintingRedeemer,
   SidechainParams,
-  SignedMerkleRootMint,
   SignedMerkleRootRedeemer,
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
@@ -100,6 +98,9 @@ import TrustlessSidechain.UpdateCommitteeHash (
   InitCommitteeHashMint,
   mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
+ )
+import TrustlessSidechain.Versioning (
+  VersionOracleConfig,
  )
 
 toData3CPS :: CompiledCode (Generated.Baz -> BuiltinData)
@@ -228,8 +229,9 @@ mkCCVCode = $$(compile [||mkCommitteeCandidateValidator||])
 
 mkMPFuelCode ::
   CompiledCode
-    ( FUELMint ->
-      FUELRedeemer ->
+    ( SidechainParams ->
+      VersionOracleConfig ->
+      FUELMintingRedeemer ->
       ScriptContext ->
       Bool
     )
@@ -237,7 +239,8 @@ mkMPFuelCode = $$(compile [||FUEL.mkMintingPolicy||])
 
 mkMPMerkleRootCode ::
   CompiledCode
-    ( SignedMerkleRootMint ->
+    ( SidechainParams ->
+      VersionOracleConfig ->
       SignedMerkleRootRedeemer ->
       ScriptContext ->
       Bool
@@ -285,9 +288,9 @@ mkDsKeyPolicyCode ::
 mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
 
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode ::
-  CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool)
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsaSecp256k1ATMSPolicy.mkMintingPolicy||])
 
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
-  CompiledCode (CommitteeCertificateMint -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool)
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])

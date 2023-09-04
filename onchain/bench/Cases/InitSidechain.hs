@@ -1,3 +1,7 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cases.InitSidechain (initSidechainBench) where
 
 import Bench (Bench, bcfgSigningKeyFilePath)
@@ -24,6 +28,7 @@ import TrustlessSidechain.Types (
     chainId,
     genesisHash,
     genesisUtxo,
+    governanceAuthority,
     thresholdDenominator,
     thresholdNumerator
   ),
@@ -36,8 +41,8 @@ initSidechainBench = do
 
   signingKeyFile <- Reader.asks bcfgSigningKeyFilePath
 
-  -- TODO: urgh, we really shouldn't do this so fix this later...
-  addr <- IO.Class.liftIO $ SystemIO.readFile "payment.addr"
+  addr <- Bench.readAddr
+  governanceAuthority <- Bench.readGovernanceAuthority
 
   -- Benchmark suite
   --------------------
@@ -67,6 +72,7 @@ initSidechainBench = do
               , genesisUtxo = txOutRef
               , thresholdNumerator = 2
               , thresholdDenominator = 3
+              , governanceAuthority
               }
 
       --  Building the initial committee:

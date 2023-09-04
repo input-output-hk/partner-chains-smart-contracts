@@ -1,9 +1,8 @@
 module Test.InitSidechain
   ( generateInitCommittee
-  , tests
   , testScenario1
   , testScenario2
-  , testScenario3
+  , tests
   ) where
 
 import Contract.Prelude
@@ -29,7 +28,10 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -66,7 +68,10 @@ generateInitCommittee committeeSize = do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Calling `initSidechain`"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+      [ BigInt.fromInt 50_000_000
+      , BigInt.fromInt 50_000_000
+      , BigInt.fromInt 10_000_000
+      ]
   $ \alice →
       Wallet.withKeyWallet alice do
         Log.logInfo' "InitSidechain 'testScenario1'"
@@ -75,6 +80,8 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
         let committeeSize = 25
         committeePrvKeys ← sequence $ Array.replicate committeeSize
           Crypto.generatePrivKey
+        initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+          <$> getOwnPaymentPubKeyHash
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
           initScParams = InitSidechain.InitSidechainParams
@@ -88,9 +95,10 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority
             }
 
-        void $ InitSidechain.initSidechain initScParams
+        void $ InitSidechain.initSidechain initScParams 1
 
 -- | `testScenario2` initalizes the sidechain endpoint in two parts:
 -- |
@@ -104,7 +112,10 @@ testScenario2 ∷ PlutipTest
 testScenario2 =
   Mote.Monad.test "Calling `initSidechain` as the two step process"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 10_000_000
+        ]
     $ \alice →
         Wallet.withKeyWallet alice do
           Log.logInfo' "InitSidechain 'testScenario2'"
@@ -113,6 +124,8 @@ testScenario2 =
           let committeeSize = 25
           committeePrvKeys ← sequence $ Array.replicate committeeSize
             Crypto.generatePrivKey
+          initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            <$> getOwnPaymentPubKeyHash
           let
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
             initScParams =
@@ -126,11 +139,12 @@ testScenario2 =
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority
               }
 
           void do
-            _sc ← InitSidechain.initSidechainTokens initScParams
-            InitSidechain.paySidechainTokens initScParams
+            _sc ← InitSidechain.initSidechainTokens initScParams 1
+            InitSidechain.paySidechainTokens initScParams 1
 
 -- | `testScenario3` is a bit more complicated (but this should fail!) than
 -- | `testScenario2`. It takes two distinct wallets, say Alice and Bob, grabs a
@@ -141,8 +155,14 @@ testScenario2 =
 testScenario3 ∷ PlutipTest
 testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
   $ Test.PlutipTest.mkPlutipConfigTest
-      ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ] /\
-          [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+      ( [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 10_000_000
+        ] /\
+          [ BigInt.fromInt 50_000_000
+          , BigInt.fromInt 50_000_000
+          , BigInt.fromInt 10_000_000
+          ]
       )
   $ \(alice /\ bob) → do
       aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
@@ -158,6 +178,8 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
         let committeeSize = 1000
         committeePrvKeys ← sequence $ Array.replicate committeeSize
           Crypto.generatePrivKey
+        initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+          <$> getOwnPaymentPubKeyHash
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
           initScParams = InitSidechain.InitSidechainParams
@@ -171,9 +193,10 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority
             }
 
-        void $ InitSidechain.initSidechain initScParams
+        void $ InitSidechain.initSidechain initScParams 1
       case result of
         Right _ →
           Monad.throwContractError $ Exception.error
@@ -187,7 +210,10 @@ testScenario4 ∷ PlutipTest
 testScenario4 =
   Mote.Monad.test "Calling `initSidechain` with candidate permission tokens"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 10_000_000
+        ]
     $ \alice →
         Wallet.withKeyWallet alice do
           Log.logInfo' "InitSidechain 'testScenario1'"
@@ -196,6 +222,8 @@ testScenario4 =
           let committeeSize = 25
           committeePrvKeys ← sequence $ Array.replicate committeeSize
             Crypto.generatePrivKey
+          initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            <$> getOwnPaymentPubKeyHash
           let
             permissionToken =
               { candidatePermissionTokenUtxo: genesisUtxo
@@ -217,9 +245,10 @@ testScenario4 =
                     { amount: one
                     , permissionToken
                     }
+              , initGovernanceAuthority
               }
 
-          { sidechainParams: sc } ← InitSidechain.initSidechain initScParams
+          { sidechainParams: sc } ← InitSidechain.initSidechain initScParams 1
           Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
             permissionToken
 
@@ -231,7 +260,10 @@ testScenario5 = do
   Mote.Monad.test
     "Calling `initSidechain` as the two step process with candidate permission tokens"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 10_000_000
+        ]
     $ \alice →
         Wallet.withKeyWallet alice do
           Log.logInfo' "InitSidechain 'testScenario2'"
@@ -240,6 +272,8 @@ testScenario5 = do
           let committeeSize = 25
           committeePrvKeys ← sequence $ Array.replicate committeeSize
             Crypto.generatePrivKey
+          initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            <$> getOwnPaymentPubKeyHash
           let
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
             permissionToken =
@@ -261,11 +295,12 @@ testScenario5 = do
                     { amount: one
                     , permissionToken
                     }
+              , initGovernanceAuthority
               }
 
           void do
-            { sidechainParams: sc } ← InitSidechain.initSidechainTokens
-              initScParams
+            { sidechainParams: sc } ←
+              InitSidechain.initSidechainTokens initScParams 1
             Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
               permissionToken
-            InitSidechain.paySidechainTokens initScParams
+            InitSidechain.paySidechainTokens initScParams 1

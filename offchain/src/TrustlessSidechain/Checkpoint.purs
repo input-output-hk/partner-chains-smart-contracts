@@ -55,6 +55,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
@@ -90,17 +91,16 @@ saveCheckpoint
             (unwrap sidechainParams).thresholdNumerator
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
-        , committeeOraclePolicy: committeeOracleCurrencySymbol
         }
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      committeeCertificateMint
+      { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
   { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    { sidechainParams, committeeCertificateVerificationCurrencySymbol }
+    sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ InternalError $ NotFoundUtxo
@@ -137,13 +137,13 @@ saveCheckpoint
       $ serialiseCheckpointMessage checkpointMessage
 
   atmsLookupsAndConstraints ←
-    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints
-      $ CommitteeATMSParams
-          { currentCommitteeUtxo
-          , committeeCertificateMint
-          , aggregateSignature
-          , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
-          }
+    CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints sidechainParams $
+      CommitteeATMSParams
+        { currentCommitteeUtxo
+        , committeeCertificateMint
+        , aggregateSignature
+        , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
+        }
 
   -- Build / submit the transaction
   ------------------------------------
@@ -219,6 +219,11 @@ saveCheckpointLookupsAndConstraints
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
+    liftContractM ("Failed to find checkpoint UTxO") checkpointUtxoLookup
+
+  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
+    sidechainParams
+  merkleRootTokenCurrencySymbol ←
     liftContractM
       (show $ InternalError $ NotFoundUtxo "Failed to find checkpoint UTxO")
       checkpointUtxoLookup

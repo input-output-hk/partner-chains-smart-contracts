@@ -23,6 +23,7 @@ import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
 import Contract.Monad (Contract, throwContractError)
 import Contract.Monad as Monad
+import Contract.PlutusData (PlutusData(..), fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
@@ -256,4 +257,7 @@ dummySidechainParams = SidechainParams
       1
   , thresholdNumerator: BigInt.fromInt 2
   , thresholdDenominator: BigInt.fromInt 3
+  , governanceAuthority: Unsafe.unsafePartial $ fromJust $ fromData $ Bytes $
+      hexToByteArrayUnsafe
+        "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   }

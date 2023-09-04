@@ -36,19 +36,17 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
 -- | `CommitteeCertificateMint` corresponds to the onchain type that is used to
 -- | parameterize a committee certificate verification minting policy.
 newtype CommitteeCertificateMint = CommitteeCertificateMint
-  { committeeOraclePolicy ∷ CurrencySymbol
-  , thresholdNumerator ∷ BigInt
+  { thresholdNumerator ∷ BigInt
   , thresholdDenominator ∷ BigInt
   }
 
 instance ToData CommitteeCertificateMint where
   toData
     ( CommitteeCertificateMint
-        { committeeOraclePolicy, thresholdNumerator, thresholdDenominator }
+        { thresholdNumerator, thresholdDenominator }
     ) =
     Constr (BigNum.fromInt 0)
-      [ toData committeeOraclePolicy
-      , toData thresholdNumerator
+      [ toData thresholdNumerator
       , toData thresholdDenominator
       ]
 
