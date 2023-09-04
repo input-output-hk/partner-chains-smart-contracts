@@ -29,8 +29,7 @@ import TrustlessSidechain.Types (
     ownPkh,
     sidechainPubKey,
     sidechainSignature,
-    spoPubKey,
-    spoSignature
+    stakeOwnership
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
@@ -99,6 +98,7 @@ import TrustlessSidechain.Types (
     SignedMerkleRootRedeemer,
     previousMerkleRoot
   ),
+  StakeOwnership (AdaBasedStaking, TokenBasedStaking),
   UpdateCommitteeDatum (
     UpdateCommitteeDatum,
     aggregateCommitteePubKeys,
@@ -138,7 +138,8 @@ tests =
     "Golden tests of ToData encoded data"
     [ dataEncoderGoldenTest "SidechainParams" sampleSidechainParams
     , dataEncoderGoldenTest "CandidatePermissionMint" sampleCandidatePermissionMint
-    , dataEncoderGoldenTest "BlockProducerRegistration" sampleBlockProducerRegistration
+    , dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
+    , dataEncoderGoldenTest "BlockProducerRegistration2" sampleBlockProducerRegistration2
     , dataEncoderGoldenTest "BlockProducerRegistrationMsg" sampleBlockProducerRegistrationMsg
     , dataEncoderGoldenTest "MerkleTreeEntry" sampleMerkleTreeEntry
     , dataEncoderGoldenTest "MerkleRootInsertionMessage" sampleMerkleRootInsertionMessage
@@ -235,12 +236,21 @@ sampleCandidatePermissionMint =
     , utxo = sampleTxOutRef
     }
 
-sampleBlockProducerRegistration :: BlockProducerRegistration
-sampleBlockProducerRegistration =
+sampleBlockProducerRegistration1 :: BlockProducerRegistration
+sampleBlockProducerRegistration1 =
   BlockProducerRegistration
-    { spoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
+    { stakeOwnership = AdaBasedStaking "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58" (Signature . getLedgerBytes $ "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00")
     , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , spoSignature = Signature . getLedgerBytes $ "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
+    , sidechainSignature = Signature . getLedgerBytes $ "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
+    , inputUtxo = sampleTxOutRef
+    , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    }
+
+sampleBlockProducerRegistration2 :: BlockProducerRegistration
+sampleBlockProducerRegistration2 =
+  BlockProducerRegistration
+    { stakeOwnership = TokenBasedStaking
+    , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
     , sidechainSignature = Signature . getLedgerBytes $ "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
     , inputUtxo = sampleTxOutRef
     , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
