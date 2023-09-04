@@ -20,8 +20,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   followed by a positive integer as an argument.  `update-version` requires
   `--old-version` and `--new-version` options, each followed by a positive
   integer.
+  ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
 * Added `claim-v2` and `burn-v2` commands for claiming and burning fuel using
   version 2 of the scripts.
+  ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
 
 ## Changed
 
@@ -55,8 +57,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   offchain)
 * Commands `claim` and `burn` have been renamed to `claim-v1` and `burn-v1`,
   respectively.
+  ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
 * Commands `init` and `init-tokens-mint` now require `--version` flag followed
   by a positive integer as an argument.
+  ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
 
 ## Fixed
 
