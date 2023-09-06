@@ -4,6 +4,7 @@ module TrustlessSidechain.CommitteeCandidateValidator
   , getCommitteeCandidateValidator
   , BlockProducerRegistration(..)
   , BlockProducerRegistrationMsg(..)
+  , StakeOwnership(..)
   , register
   , deregister
   ) where
@@ -71,9 +72,8 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PubKey
+  , stakeOwnership ∷ StakeOwnership
   , sidechainPubKey ∷ ByteArray
-  , spoSig ∷ Signature
   , sidechainSig ∷ ByteArray
   , inputUtxo ∷ TransactionInput
   , permissionToken ∷ Maybe CandidatePermissionTokenInfo
@@ -81,7 +81,7 @@ newtype RegisterParams = RegisterParams
 
 newtype DeregisterParams = DeregisterParams
   { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ PubKey
+  , spoPubKey ∷ Maybe PubKey
   }
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
@@ -94,13 +94,41 @@ getCommitteeCandidateValidator sp = do
   applied ← liftContractE $ applyArgs unapplied [ toData sp ]
   pure $ Validator applied
 
+data StakeOwnership
+  = -- | Ada stake based configuration comprises the SPO public key and signature
+    AdaBasedStaking PubKey Signature
+  | -- | Token based staking configuration
+    TokenBasedStaking
+
+derive instance Generic StakeOwnership _
+
+derive instance Eq StakeOwnership
+
+instance ToData StakeOwnership where
+  toData (AdaBasedStaking pk sig) =
+    Constr (BigNum.fromInt 0) [ toData pk, toData sig ]
+  toData TokenBasedStaking =
+    Constr (BigNum.fromInt 1) []
+
+instance FromData StakeOwnership where
+  fromData plutusData = case plutusData of
+    Constr n args
+      | n == BigNum.fromInt 0 → case args of
+          [ x1, x2 ] → do
+            x1' ← fromData x1
+            x2' ← fromData x2
+            pure $ AdaBasedStaking x1' x2'
+          _ → Nothing
+
+      | n == BigNum.fromInt 1 → pure TokenBasedStaking
+    _ → Nothing
+
 newtype BlockProducerRegistration = BlockProducerRegistration
-  { bprSpoPubKey ∷ PubKey -- own cold verification key hash
-  , bprSidechainPubKey ∷ ByteArray -- public key in the sidechain's desired format
-  , bprSpoSignature ∷ Signature -- Signature of the SPO
-  , bprSidechainSignature ∷ ByteArray -- Signature of the sidechain candidate
-  , bprInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
-  , bprOwnPkh ∷ PaymentPubKeyHash -- Owner public key hash
+  { stakeOwnership ∷ StakeOwnership -- Verification keys required by the stake ownership model
+  , sidechainPubKey ∷ ByteArray -- public key in the sidechain's desired format
+  , sidechainSignature ∷ ByteArray -- Signature of the sidechain candidate
+  , inputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
+  , ownPkh ∷ PaymentPubKeyHash -- Owner public key hash
   }
 
 derive instance Generic BlockProducerRegistration _
@@ -115,41 +143,37 @@ instance Show BlockProducerRegistration where
 instance ToData BlockProducerRegistration where
   toData
     ( BlockProducerRegistration
-        { bprSpoPubKey
-        , bprSidechainPubKey
-        , bprSpoSignature
-        , bprSidechainSignature
-        , bprInputUtxo
-        , bprOwnPkh
+        { stakeOwnership
+        , sidechainPubKey
+        , sidechainSignature
+        , inputUtxo
+        , ownPkh
         }
     ) =
     Constr (BigNum.fromInt 0)
-      [ toData bprSpoPubKey
-      , toData bprSidechainPubKey
-      , toData bprSpoSignature
-      , toData bprSidechainSignature
-      , toData bprInputUtxo
-      , toData bprOwnPkh
+      [ toData stakeOwnership
+      , toData sidechainPubKey
+      , toData sidechainSignature
+      , toData inputUtxo
+      , toData ownPkh
       ]
 
 instance FromData BlockProducerRegistration where
   fromData plutusData = case plutusData of
-    Constr n [ x1, x2, x3, x4, x5, x6 ] → do
+    Constr n [ x1, x2, x3, x4, x5 ] → do
       guard (n == BigNum.fromInt 0)
       x1' ← fromData x1
       x2' ← fromData x2
       x3' ← fromData x3
       x4' ← fromData x4
       x5' ← fromData x5
-      x6' ← fromData x6
       pure
         ( BlockProducerRegistration
-            { bprSpoPubKey: x1'
-            , bprSidechainPubKey: x2'
-            , bprSpoSignature: x3'
-            , bprSidechainSignature: x4'
-            , bprInputUtxo: x5'
-            , bprOwnPkh: x6'
+            { stakeOwnership: x1'
+            , sidechainPubKey: x2'
+            , sidechainSignature: x3'
+            , inputUtxo: x4'
+            , ownPkh: x5'
             }
         )
     _ → Nothing
@@ -198,9 +222,8 @@ register ∷ RegisterParams → Contract TransactionHash
 register
   ( RegisterParams
       { sidechainParams
-      , spoPubKey
+      , stakeOwnership
       , sidechainPubKey
-      , spoSig
       , sidechainSig
       , inputUtxo
       , permissionToken
@@ -224,7 +247,8 @@ register
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
 
-  ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
+  ownRegistrations ← findOwnRegistrations ownPkh (getSPOPubKey stakeOwnership)
+    valUtxos
 
   maybeCandidatePermissionMintingPolicy ← case permissionToken of
     Just
@@ -252,12 +276,11 @@ register
             candidatePermissionTokenName
             one
     datum = BlockProducerRegistration
-      { bprSpoPubKey: spoPubKey
-      , bprSidechainPubKey: sidechainPubKey
-      , bprSpoSignature: spoSig
-      , bprSidechainSignature: sidechainSig
-      , bprInputUtxo: inputUtxo
-      , bprOwnPkh: ownPkh
+      { stakeOwnership
+      , sidechainPubKey
+      , sidechainSignature: sidechainSig
+      , inputUtxo: inputUtxo
+      , ownPkh
       }
 
     lookups ∷ Lookups.ScriptLookups Void
@@ -327,7 +350,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 -- | the registration UTxOs of the committee member/candidate
 findOwnRegistrations ∷
   PaymentPubKeyHash →
-  PubKey →
+  Maybe PubKey →
   UtxoMap →
   Contract (Array TransactionInput)
 findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
@@ -337,6 +360,13 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
         pure do
           Datum d ← outputDatumDatum out.datum
           BlockProducerRegistration r ← fromData d
-          guard (r.bprSpoPubKey == spoPubKey && r.bprOwnPkh == ownPkh)
+          guard
+            ( (getSPOPubKey r.stakeOwnership == spoPubKey) &&
+                (r.ownPkh == ownPkh)
+            )
           pure input
   pure $ catMaybes mayTxIns
+
+getSPOPubKey ∷ StakeOwnership → Maybe PubKey
+getSPOPubKey (AdaBasedStaking pk _) = Just pk
+getSPOPubKey _ = Nothing

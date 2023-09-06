@@ -232,9 +232,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
             BurnActRespV2
 
       CommitteeCandidateReg
-        { spoPubKey
+        { stakeOwnership
         , sidechainPubKey
-        , spoSig
         , sidechainSig
         , inputUtxo
         , permissionToken
@@ -242,9 +241,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
         let
           params = CommitteeCandidateValidator.RegisterParams
             { sidechainParams: scParams
-            , spoPubKey
+            , stakeOwnership
             , sidechainPubKey
-            , spoSig
             , sidechainSig
             , inputUtxo
             , permissionToken

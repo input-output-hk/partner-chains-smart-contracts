@@ -10,6 +10,7 @@ import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
+import Contract.Wallet (getWalletAddress)
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
@@ -25,6 +26,7 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
+  , StakeOwnership(..)
   , deregister
   , register
   )
@@ -60,10 +62,9 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
     $ Map.keys ownUtxos
   register $ RegisterParams
     { sidechainParams: scParams
-    , spoPubKey: mockSpoPubKey
+    , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
     , sidechainPubKey: hexToByteArrayUnsafe
         "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
-    , spoSig: hexToByteArrayUnsafe ""
     , sidechainSig: hexToByteArrayUnsafe
         "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
     , inputUtxo: registrationUtxo
@@ -73,7 +74,7 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
 runDeregister ∷ SidechainParams → Contract Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
-    { sidechainParams: scParams, spoPubKey: mockSpoPubKey }
+    { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
 
 -- Register then Deregister
 testScenarioSuccess1 ∷ PlutipTest

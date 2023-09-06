@@ -30,6 +30,7 @@ import Options.Applicative
   , action
   , command
   , flag
+  , flag'
   , fullDesc
   , header
   , help
@@ -54,6 +55,7 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
+  , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
@@ -586,19 +588,30 @@ parseAmount = option bigInt $ fold
   , help "Amount of FUEL token to be burnt/minted"
   ]
 
+-- | Parse a stake ownership variant
+stakeOwnershipSpec ∷ Parser StakeOwnership
+stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
+
+  where
+  parseAdaBasedStaking = ado
+    _ ← flag' unit (long "ada-based-staking")
+    pk ← parseSpoPubKey
+    sig ← option byteArray $ fold
+      [ long "spo-signature"
+      , metavar "SIGNATURE"
+      , help "SPO signature"
+      ]
+    in AdaBasedStaking pk sig
+  parseTokenBasedStaking = flag' TokenBasedStaking
+    (long "native-token-based-staking")
+
 -- | Parse all parameters for the `register` endpoint
 regSpec ∷ Parser TxEndpoint
 regSpec = ado
-  spoPubKey ← parseSpoPubKey
   sidechainPubKey ← option byteArray $ fold
     [ long "sidechain-public-key"
     , metavar "PUBLIC_KEY"
     , help "Sidechain public key value"
-    ]
-  spoSig ← option byteArray $ fold
-    [ long "spo-signature"
-    , metavar "SIGNATURE"
-    , help "SPO signature"
     ]
   sidechainSig ← option byteArray $ fold
     [ long "sidechain-signature"
@@ -610,6 +623,7 @@ regSpec = ado
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO to be spend with the commitee candidate registration"
     ]
+  stakeOwnership ← stakeOwnershipSpec
   permissionToken ← optional $ ado
     permissionTokenUtxo ← option transactionInput $ fold
       [ long "candidate-permission-token-utxo"
@@ -629,9 +643,8 @@ regSpec = ado
       }
   in
     CommitteeCandidateReg
-      { spoPubKey
+      { stakeOwnership
       , sidechainPubKey
-      , spoSig
       , sidechainSig
       , inputUtxo
       , permissionToken
@@ -639,7 +652,8 @@ regSpec = ado
 
 -- | Parse all parameters for the `deregister` endpoint
 deregSpec ∷ Parser TxEndpoint
-deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$> parseSpoPubKey
+deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$>
+  optional parseSpoPubKey
 
 -- | SPO public key CLI parser
 parseSpoPubKey ∷ Parser ByteArray
