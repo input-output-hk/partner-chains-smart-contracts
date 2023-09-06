@@ -28,12 +28,13 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg
+  , StakeOwnership
   )
 import TrustlessSidechain.FUELMintingPolicy (MerkleTreeEntry)
 import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (PubKey, Signature)
+import TrustlessSidechain.Types (PubKey)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHashMessage)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
@@ -147,18 +148,15 @@ data TxEndpoint
       }
   | BurnAct { amount ∷ BigInt, recipient ∷ ByteArray }
   | CommitteeCandidateReg
-      { spoPubKey ∷ PubKey
+      { stakeOwnership ∷ StakeOwnership
       , sidechainPubKey ∷ ByteArray
-      , spoSig ∷ Signature
       , sidechainSig ∷ ByteArray
       , inputUtxo ∷ TransactionInput
-      , permissionToken ∷
-          Maybe
-            CandidatePermissionTokenInfo
+      , permissionToken ∷ Maybe CandidatePermissionTokenInfo
       }
   | CandidiatePermissionTokenAct
       CandidatePermissionTokenMintInfo
-  | CommitteeCandidateDereg { spoPubKey ∷ PubKey }
+  | CommitteeCandidateDereg { spoPubKey ∷ Maybe PubKey }
   | CommitteeHash
       { newCommitteePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , committeeSignaturesInput ∷
