@@ -95,6 +95,14 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
 
+* Modified `BlockProducerRegistration` data type according to SIP-11
+  ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
+  [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
+* Added CLI arguments `--ada-based-staking` and `--native-token-based-staking` to `register`
+  and `deregister` commands, and changed `--spo-public-key` and `--spo-signature` to be only
+  required for Ada based staking model
+  ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
+  [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
 * Efficient versions of `Data` encoding functions for product types used where
   possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
