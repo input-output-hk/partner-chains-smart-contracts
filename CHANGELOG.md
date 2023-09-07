@@ -87,16 +87,16 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   been added to the Purescript CLI.
   In particular, the following CLI commands were added
   `utils key-gen ecdsa-secp256k1
-  utils key-gen schnorr-secp256k1
-  utils sign ecdsa-secp256k1
-  utils sign schnorr-secp256k1
-  utils encode cbor-update-committee-message
-  utils encode cbor-block-producer-registration-message
-  utils encode cbor-merkle-root-insertion-message
-  utils encode cbor-merkle-tree-entry
-  utils encode cbor-merkle-tree
-  utils encode cbor-combined-merkle-proof
-  utils encode cbor-plain-aggregate-public-keys`
+utils key-gen schnorr-secp256k1
+utils sign ecdsa-secp256k1
+utils sign schnorr-secp256k1
+utils encode cbor-update-committee-message
+utils encode cbor-block-producer-registration-message
+utils encode cbor-merkle-root-insertion-message
+utils encode cbor-merkle-tree-entry
+utils encode cbor-merkle-tree
+utils encode cbor-combined-merkle-proof
+utils encode cbor-plain-aggregate-public-keys`
   ([566](https://github.com/input-output-hk/trustless-sidechain/issues/566)
   , [517](https://github.com/mlabs-haskell/trustless-sidechain/pull/517)
   , offchain)
@@ -109,6 +109,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 - Commands `init` and `init-tokens-mint` now require `--version` flag followed
   by a positive integer as an argument.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
+- Efficient versions of `Data` encoding functions for product types used where
+- Modified `BlockProducerRegistration` data type according to SIP-11
+  ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
+  [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
+- Added CLI arguments `--ada-based-staking` and `--native-token-based-staking` to `register`
+  and `deregister` commands, and changed `--spo-public-key` and `--spo-signature` to be only
+  required for Ada based staking model
+  ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
+  [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
 - Efficient versions of `Data` encoding functions for product types used where
   possible ([484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
