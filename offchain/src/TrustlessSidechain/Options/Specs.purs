@@ -588,13 +588,13 @@ parseAmount = option bigInt $ fold
   , help "Amount of FUEL token to be burnt/minted"
   ]
 
--- | Parse a stake ownership variant
+-- | Parse required data for a stake ownership variant
 stakeOwnershipSpec ∷ Parser StakeOwnership
 stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
 
   where
   parseAdaBasedStaking = ado
-    _ ← flag' unit (long "ada-based-staking")
+    parseAdaBasedStakingFlag
     pk ← parseSpoPubKey
     sig ← option byteArray $ fold
       [ long "spo-signature"
@@ -602,8 +602,23 @@ stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
       , help "SPO signature"
       ]
     in AdaBasedStaking pk sig
-  parseTokenBasedStaking = flag' TokenBasedStaking
-    (long "native-token-based-staking")
+  parseTokenBasedStaking = ado
+    parseTokenBasedStakingFlag
+    in TokenBasedStaking
+
+parseAdaBasedStakingFlag ∷ Parser Unit
+parseAdaBasedStakingFlag =
+  flag' unit $ fold
+    [ long "ada-based-staking"
+    , help "Using Ada based staking model"
+    ]
+
+parseTokenBasedStakingFlag ∷ Parser Unit
+parseTokenBasedStakingFlag =
+  flag' unit $ fold
+    [ long "native-token-based-staking"
+    , help "Using native token based staking model"
+    ]
 
 -- | Parse all parameters for the `register` endpoint
 regSpec ∷ Parser TxEndpoint
@@ -653,7 +668,16 @@ regSpec = ado
 -- | Parse all parameters for the `deregister` endpoint
 deregSpec ∷ Parser TxEndpoint
 deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$>
-  optional parseSpoPubKey
+  (parseAdaBasedStaking <|> parseTokenBasedStaking)
+
+  where
+  parseAdaBasedStaking = ado
+    parseAdaBasedStakingFlag
+    pk ← parseSpoPubKey
+    in Just pk
+  parseTokenBasedStaking = ado
+    parseTokenBasedStakingFlag
+    in Nothing
 
 -- | SPO public key CLI parser
 parseSpoPubKey ∷ Parser ByteArray
