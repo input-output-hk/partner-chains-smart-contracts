@@ -372,6 +372,7 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
           pure input
   pure $ catMaybes mayTxIns
 
+-- | Return SPO public key if StakeOwnership is ada based staking. Otherwise, it returns Nothing.
 getSPOPubKey ∷ StakeOwnership → Maybe PubKey
 getSPOPubKey (AdaBasedStaking pk _) = Just pk
 getSPOPubKey _ = Nothing
