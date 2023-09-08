@@ -11,6 +11,7 @@ import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSec
 import Test.ConfigFile as ConfigFile
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
+import Test.Data as Data
 import Test.InitSidechain as InitSidechain
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
@@ -71,3 +72,6 @@ main = do
           PoCSerialiseData.tests
           PoCECDSA.testScenario
           PoCSchnorrSecp256k1.tests
+
+        group "Roundtrips" $ do
+          Data.tests

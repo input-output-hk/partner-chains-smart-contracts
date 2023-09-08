@@ -810,7 +810,34 @@ data CommitteeCertificateMint = CommitteeCertificateMint
       TSPrelude.Show
     )
 
-PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
+-- | @since Unreleased
+instance ToData CommitteeCertificateMint where
+  toBuiltinData (CommitteeCertificateMint {..}) =
+    productToData2 thresholdNumerator thresholdDenominator
+
+-- | @since Unreleased
+instance FromData CommitteeCertificateMint where
+  fromBuiltinData = productFromData2 CommitteeCertificateMint
+
+-- | @since Unreleased
+instance UnsafeFromData CommitteeCertificateMint where
+  unsafeFromBuiltinData = productUnsafeFromData2 CommitteeCertificateMint
+
+-- | @since Unreleased
+instance HasField "thresholdNumerator" CommitteeCertificateMint Integer where
+  {-# INLINE get #-}
+  get (CommitteeCertificateMint x _) = x
+  {-# INLINE modify #-}
+  modify f (CommitteeCertificateMint tn td) =
+    CommitteeCertificateMint (f tn) td
+
+-- | @since Unreleased
+instance HasField "thresholdDenominator" CommitteeCertificateMint Integer where
+  {-# INLINE get #-}
+  get (CommitteeCertificateMint _ x) = x
+  {-# INLINE modify #-}
+  modify f (CommitteeCertificateMint tn td) =
+    CommitteeCertificateMint tn (f td)
 
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the

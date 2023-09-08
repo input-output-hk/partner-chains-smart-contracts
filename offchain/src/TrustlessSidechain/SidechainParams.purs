@@ -3,9 +3,16 @@ module TrustlessSidechain.SidechainParams where
 import Contract.Prelude
 
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  , PlutusData(Constr)
+  , fromData
+  , toData
+  )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
+import Control.Alternative (guard)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.Governance as Governance
 
@@ -33,6 +40,8 @@ derive instance Generic SidechainParams _
 
 derive instance Newtype SidechainParams _
 
+derive newtype instance Eq SidechainParams
+
 instance ToData SidechainParams where
   toData
     ( SidechainParams
@@ -52,6 +61,26 @@ instance ToData SidechainParams where
       , toData thresholdDenominator
       , toData governanceAuthority
       ]
+
+instance FromData SidechainParams where
+  fromData = case _ of
+    Constr ix [ cid, gh, gu, tn, td, ga ] → do
+      guard (ix == BigNum.fromInt 0)
+      chainId ← fromData cid
+      genesisHash ← fromData gh
+      genesisUtxo ← fromData gu
+      thresholdNumerator ← fromData tn
+      thresholdDenominator ← fromData td
+      governanceAuthority ← fromData ga
+      pure $ SidechainParams
+        { chainId
+        , genesisHash
+        , genesisUtxo
+        , thresholdNumerator
+        , thresholdDenominator
+        , governanceAuthority
+        }
+    _ → Nothing
 
 instance Show SidechainParams where
   show = genericShow

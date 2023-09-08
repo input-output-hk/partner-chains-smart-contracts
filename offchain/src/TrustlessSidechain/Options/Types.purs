@@ -26,12 +26,11 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
-import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
-import TrustlessSidechain.MerkleTree (MerkleProof, RootHash)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry)
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)

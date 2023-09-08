@@ -22,6 +22,8 @@ derive newtype instance FromData GovernanceAuthority
 instance Show GovernanceAuthority where
   show = genericShow
 
+derive newtype instance Eq GovernanceAuthority
+
 mkGovernanceAuthority ∷ PubKeyHash → GovernanceAuthority
 mkGovernanceAuthority = GovernanceAuthority
 

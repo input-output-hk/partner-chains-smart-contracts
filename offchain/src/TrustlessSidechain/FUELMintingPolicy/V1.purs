@@ -124,7 +124,11 @@ instance FromData MerkleTreeEntry where
   fromData _ = Nothing
 
 derive instance Generic MerkleTreeEntry _
+
 derive instance Newtype MerkleTreeEntry _
+
+derive newtype instance Eq MerkleTreeEntry
+
 instance ToData MerkleTreeEntry where
   toData
     ( MerkleTreeEntry
@@ -146,6 +150,8 @@ newtype CombinedMerkleProof = CombinedMerkleProof
   { transaction ∷ MerkleTreeEntry
   , merkleProof ∷ MerkleProof
   }
+
+derive newtype instance Eq CombinedMerkleProof
 
 -- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
 -- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.

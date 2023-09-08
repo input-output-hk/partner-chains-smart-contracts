@@ -25,6 +25,44 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
   onchain)
 - `Eq` and `Show` instances for `UpdateCommitteeHash`, `SidechainParams`,
+- `ToData` instance for `Node`
+  ([569](https://github.com/input-output-hk/trustless-sidechain/issues/569),
+  [532](https://github.com/mlabs-haskell/trustless-sidechain/pull/532),
+  offchain)
+- `FromData` instances for `SidechainParams`, `MerkleRootInsertionMessage`,
+  `FUELMint`, `UpdateCommitteeHash`, `UpdateCommitteeHashMessage`,
+  `CommitteeCertificateMint`, `CheckpointParameter`, `Node`,
+  `BlockProducerRegistrationMsg`,
+  `SignedMerkleRootRedeemer`, `SignedMerkleRootMint` and `CandidatePermissionMint`
+  ([569](https://github.com/input-output-hk/trustless-sidechain/issues/569),
+  [532](https://github.com/mlabs-haskell/trustless-sidechain/pull/532),
+  offchain)
+- `Eq` instances for `SidechainParams`, `MerkleTreeEntry`, `DsConfMint`,
+  `MerkleRootInsertionMessage`, `SignedMerkleRootRedeemer`, `DsConfDatum`,
+  `SignedMerkleRootMint`, `CombinedMerkleProof`, `FUELMint`, `Ds`, `DsDatum`,
+  `UpdateCommitteeDatum`, `UpdateCommitteeHash`, `UpdateCommitteeHashMessage`,
+  `DsKeyMint`, `Node`, `BlockProducerRegistrationMsg`,
+  `UpdateCommitteeRedeemer`, `CommitteeCertificateMint`, `CheckpointParameter`,
+  `BlockProducerRegistration` and `CandidatePermissionMint`
+  ([569](https://github.com/input-output-hk/trustless-sidechain/issues/569),
+  [532](https://github.com/mlabs-haskell/trustless-sidechain/pull/532),
+  offchain)
+- `Show` instances for `BlockProducerRegistration`, `Ds`, `DsDatum`,
+  `DsConfMint`, `DsKeyMint`, `Node`, `BlockProducerRegistrationMsg`,
+  `MerkleRootInsertionMessage`, `SignedMerkleRootRedeemer`,
+  `SignedMerkleRootMint`, `FUELMint`, `UpdateCommitteeDatum`,
+  `CommitteeCertificateMint`, `DsConfDatum`,
+  `UpdateCommitteeHash`, `UpdateCommitteeHashMessage`, `UpdateCommitteeRedeemer`
+  and `CandidatePermissionMint`
+  ([569](https://github.com/input-output-hk/trustless-sidechain/issues/569),
+  [532](https://github.com/mlabs-haskell/trustless-sidechain/pull/532),
+  offchain)
+- `Generic` instances for `UpdateCommitteeDatum` and
+  `BlockProducerRegistrationMsg`
+  ([569](https://github.com/input-output-hk/trustless-sidechain/issues/569),
+  [532](https://github.com/mlabs-haskell/trustless-sidechain/pull/532),
+  offchain)
+- `Eq` and `Show` instances for `UpdateCommitteeHash`, `SidechainParams`,
   `CandidatePermissionMint`, `CommitteeCertificateMint`,
   `BlockProducerRegistrationMsg`, `MerkleRootInsertionMessage`,
   `SignedMerkleRootRedeemer`, `MerkleTreeEntry`, `CombinedMerkleProof`,
@@ -48,18 +86,17 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 - CLI flags for creating cbor encoded messages and cryptographic primitives has
   been added to the Purescript CLI.
   In particular, the following CLI commands were added
-  `      utils key-gen ecdsa-secp256k1
-      utils key-gen schnorr-secp256k1
-      utils sign ecdsa-secp256k1
-      utils sign schnorr-secp256k1
-      utils encode cbor-update-committee-message
-      utils encode cbor-block-producer-registration-message
-      utils encode cbor-merkle-root-insertion-message
-      utils encode cbor-merkle-tree-entry
-      utils encode cbor-merkle-tree
-      utils encode cbor-combined-merkle-proof
-      utils encode cbor-plain-aggregate-public-keys
-     `
+  `utils key-gen ecdsa-secp256k1
+  utils key-gen schnorr-secp256k1
+  utils sign ecdsa-secp256k1
+  utils sign schnorr-secp256k1
+  utils encode cbor-update-committee-message
+  utils encode cbor-block-producer-registration-message
+  utils encode cbor-merkle-root-insertion-message
+  utils encode cbor-merkle-tree-entry
+  utils encode cbor-merkle-tree
+  utils encode cbor-combined-merkle-proof
+  utils encode cbor-plain-aggregate-public-keys`
   ([566](https://github.com/input-output-hk/trustless-sidechain/issues/566)
   , [517](https://github.com/mlabs-haskell/trustless-sidechain/pull/517)
   , offchain)

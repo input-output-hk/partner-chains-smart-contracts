@@ -118,7 +118,13 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             (unversioned CPEATMSP.serialisableMintingPolicy)
+<<<<<<< HEAD
             3_880
+||||||| parent of 24f34dfd (Adding offchain roundtrip tests for data types with ToData and FromData instances)
+            3_443
+=======
+            3_403
+>>>>>>> 24f34dfd (Adding offchain roundtrip tests for data types with ToData and FromData instances)
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
@@ -126,7 +132,13 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             (unversioned CPSATMSP.serialisableMintingPolicy)
+<<<<<<< HEAD
             3_880
+||||||| parent of 24f34dfd (Adding offchain roundtrip tests for data types with ToData and FromData instances)
+            3_443
+=======
+            3_403
+>>>>>>> 24f34dfd (Adding offchain roundtrip tests for data types with ToData and FromData instances)
         ]
     , testGroup
         "Distributed set"

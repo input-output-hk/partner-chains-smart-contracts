@@ -107,6 +107,11 @@ derive instance Generic BlockProducerRegistration _
 
 derive instance Newtype BlockProducerRegistration _
 
+derive newtype instance Eq BlockProducerRegistration
+
+instance Show BlockProducerRegistration where
+  show = genericShow
+
 instance ToData BlockProducerRegistration where
   toData
     ( BlockProducerRegistration
@@ -155,8 +160,13 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   }
 
--- TODO: we should have some sort of serialization test for this?
--- See: #569 #570
+derive instance Eq BlockProducerRegistrationMsg
+
+derive instance Generic BlockProducerRegistrationMsg _
+
+instance Show BlockProducerRegistrationMsg where
+  show = genericShow
+
 instance ToData BlockProducerRegistrationMsg where
   toData
     ( BlockProducerRegistrationMsg
@@ -169,6 +179,20 @@ instance ToData BlockProducerRegistrationMsg where
     , toData bprmSidechainPubKey
     , toData bprmInputUtxo
     ]
+
+instance FromData BlockProducerRegistrationMsg where
+  fromData = case _ of
+    Constr ix [ sp, spk, iu ] → do
+      guard (BigNum.fromInt 0 == ix)
+      bprmSidechainParams ← fromData sp
+      bprmSidechainPubKey ← fromData spk
+      bprmInputUtxo ← fromData iu
+      pure $ BlockProducerRegistrationMsg
+        { bprmSidechainParams
+        , bprmSidechainPubKey
+        , bprmInputUtxo
+        }
+    _ → Nothing
 
 register ∷ RegisterParams → Contract TransactionHash
 register

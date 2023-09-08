@@ -25,6 +25,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
+  , productFromData4
   , productToData2
   , productToData4
   )
@@ -59,6 +60,8 @@ derive instance Generic CheckpointParameter _
 
 derive instance Newtype CheckpointParameter _
 
+derive newtype instance Eq CheckpointParameter
+
 instance ToData CheckpointParameter where
   toData
     ( CheckpointParameter
@@ -71,6 +74,18 @@ instance ToData CheckpointParameter where
     checkpointAssetClass
     committeeOracleCurrencySymbol
     committeeCertificateVerificationCurrencySymbol
+
+instance FromData CheckpointParameter where
+  fromData = productFromData4 $
+    \sidechainParams
+     checkpointAssetClass
+     committeeOracleCurrencySymbol
+     committeeCertificateVerificationCurrencySymbol → CheckpointParameter
+      { sidechainParams
+      , checkpointAssetClass
+      , committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
+      }
 
 derive newtype instance Show CheckpointParameter
 
