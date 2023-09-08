@@ -9,6 +9,7 @@ import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import Test.ConfigFile as ConfigFile
+import Test.Data as Data
 import Test.FUELMintingPolicy as FUELMintingPolicy
 import Test.InitSidechain as InitSidechain
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
@@ -67,3 +68,6 @@ main = do
           PoCSerialiseData.tests
           PoCECDSA.testScenario
           PoCSchnorrSecp256k1.tests
+
+        group "Roundtrips" $ do
+          Data.tests

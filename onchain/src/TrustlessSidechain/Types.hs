@@ -940,7 +940,42 @@ data CommitteeCertificateMint = CommitteeCertificateMint
       TSPrelude.Show
     )
 
-PlutusTx.makeIsDataIndexed ''CommitteeCertificateMint [('CommitteeCertificateMint, 0)]
+-- | @since Unreleased
+instance ToData CommitteeCertificateMint where
+  toBuiltinData (CommitteeCertificateMint {..}) =
+    productToData3 committeeOraclePolicy thresholdNumerator thresholdDenominator
+
+-- | @since Unreleased
+instance FromData CommitteeCertificateMint where
+  fromBuiltinData = productFromData3 CommitteeCertificateMint
+
+-- | @since Unreleased
+instance UnsafeFromData CommitteeCertificateMint where
+  unsafeFromBuiltinData = productUnsafeFromData3 CommitteeCertificateMint
+
+-- | @since Unreleased
+instance HasField "committeeOraclePolicy" CommitteeCertificateMint CurrencySymbol where
+  {-# INLINE get #-}
+  get (CommitteeCertificateMint x _ _) = x
+  {-# INLINE modify #-}
+  modify f (CommitteeCertificateMint cop tn td) =
+    CommitteeCertificateMint (f cop) tn td
+
+-- | @since Unreleased
+instance HasField "thresholdNumerator" CommitteeCertificateMint Integer where
+  {-# INLINE get #-}
+  get (CommitteeCertificateMint _ x _) = x
+  {-# INLINE modify #-}
+  modify f (CommitteeCertificateMint cop tn td) =
+    CommitteeCertificateMint cop (f tn) td
+
+-- | @since Unreleased
+instance HasField "thresholdDenominator" CommitteeCertificateMint Integer where
+  {-# INLINE get #-}
+  get (CommitteeCertificateMint _ _ x) = x
+  {-# INLINE modify #-}
+  modify f (CommitteeCertificateMint cop tn td) =
+    CommitteeCertificateMint cop tn (f td)
 
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the

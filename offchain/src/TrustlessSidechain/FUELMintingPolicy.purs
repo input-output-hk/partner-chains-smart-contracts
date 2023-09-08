@@ -79,7 +79,7 @@ import TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , bech32BytesFromAddress
   )
-import TrustlessSidechain.Utils.Data (productToData3)
+import TrustlessSidechain.Utils.Data (productFromData3, productToData3)
 import TrustlessSidechain.Utils.Logging
   ( InternalError
       ( NotFoundOwnPubKeyHash
@@ -103,6 +103,11 @@ derive instance Generic FUELMint _
 
 derive instance Newtype FUELMint _
 
+derive newtype instance Eq FUELMint
+
+instance Show FUELMint where
+  show = genericShow
+
 instance ToData FUELMint where
   toData
     ( FUELMint
@@ -110,6 +115,16 @@ instance ToData FUELMint where
     ) = productToData3 merkleRootTokenCurrencySymbol
     sidechainParams
     dsKeyCurrencySymbol
+
+instance FromData FUELMint where
+  fromData = productFromData3 $
+    \merkleRootTokenCurrencySymbol
+     sidechainParams
+     dsKeyCurrencySymbol → FUELMint
+      { merkleRootTokenCurrencySymbol
+      , sidechainParams
+      , dsKeyCurrencySymbol
+      }
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:
@@ -139,7 +154,11 @@ instance FromData MerkleTreeEntry where
   fromData _ = Nothing
 
 derive instance Generic MerkleTreeEntry _
+
 derive instance Newtype MerkleTreeEntry _
+
+derive newtype instance Eq MerkleTreeEntry
+
 instance ToData MerkleTreeEntry where
   toData
     ( MerkleTreeEntry
@@ -161,6 +180,8 @@ newtype CombinedMerkleProof = CombinedMerkleProof
   { transaction ∷ MerkleTreeEntry
   , merkleProof ∷ MerkleProof
   }
+
+derive newtype instance Eq CombinedMerkleProof
 
 -- | `combinedMerkleProofToFuelParams` converts `SidechainParams` and
 -- | `CombinedMerkleProof` to a `Mint` of `FuelParams`.

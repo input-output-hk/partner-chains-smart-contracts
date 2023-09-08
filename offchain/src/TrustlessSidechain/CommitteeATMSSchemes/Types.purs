@@ -19,14 +19,20 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
 
 import Contract.Prelude
 
-import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData (class ToData, PlutusData(Constr), toData)
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  )
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.Data
+  ( productFromData3
+  , productToData3
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PublicKey
@@ -45,16 +51,27 @@ instance ToData CommitteeCertificateMint where
   toData
     ( CommitteeCertificateMint
         { committeeOraclePolicy, thresholdNumerator, thresholdDenominator }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData committeeOraclePolicy
-      , toData thresholdNumerator
-      , toData thresholdDenominator
-      ]
+    ) = productToData3 committeeOraclePolicy thresholdNumerator
+    thresholdDenominator
+
+instance FromData CommitteeCertificateMint where
+  fromData = productFromData3 $
+    \committeeOraclePolicy
+     thresholdNumerator
+     thresholdDenominator → CommitteeCertificateMint
+      { committeeOraclePolicy
+      , thresholdNumerator
+      , thresholdDenominator
+      }
 
 derive instance Generic CommitteeCertificateMint _
 
 derive instance Newtype CommitteeCertificateMint _
+
+derive newtype instance Eq CommitteeCertificateMint
+
+instance Show CommitteeCertificateMint where
+  show = genericShow
 
 -- | `CommitteeATMSParams` is a type to bundle up all the required data
 -- | when building the transaction for a committee ATMS scheme (this is used

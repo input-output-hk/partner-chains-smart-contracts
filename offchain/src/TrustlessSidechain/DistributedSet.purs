@@ -85,6 +85,11 @@ derive newtype instance ToData Ds
 
 derive newtype instance FromData Ds
 
+derive newtype instance Eq Ds
+
+instance Show Ds where
+  show = genericShow
+
 -- | `dsConf` accesses the underlying `ByteArray` of `Ds`
 dsConf ∷ Ds → CurrencySymbol
 dsConf (Ds currencySymbol) = currencySymbol
@@ -100,6 +105,11 @@ derive instance Newtype DsDatum _
 derive newtype instance ToData DsDatum
 
 derive newtype instance FromData DsDatum
+
+derive newtype instance Eq DsDatum
+
+instance Show DsDatum where
+  show = genericShow
 
 -- | `dsNext` accesses the underlying `ByteArray` of `DsDatum`
 dsNext ∷ DsDatum → ByteArray
@@ -125,6 +135,11 @@ instance FromData DsConfDatum where
         }
     )
 
+derive newtype instance Eq DsConfDatum
+
+instance Show DsConfDatum where
+  show = genericShow
+
 instance ToData DsConfDatum where
   toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) =
     productToData2 dscKeyPolicy dscFUELPolicy
@@ -141,6 +156,11 @@ derive instance Newtype DsConfMint _
 derive newtype instance ToData DsConfMint
 
 derive newtype instance FromData DsConfMint
+
+derive newtype instance Eq DsConfMint
+
+instance Show DsConfMint where
+  show = genericShow
 
 -- | `dscmTxOutRef` accesses the underlying `TransactionInput` of `DsConfMint`
 dscmTxOutRef ∷ DsConfMint → TransactionInput
@@ -169,6 +189,11 @@ instance ToData DsKeyMint where
   toData (DsKeyMint { dskmValidatorHash, dskmConfCurrencySymbol }) =
     productToData2 dskmValidatorHash dskmConfCurrencySymbol
 
+derive newtype instance Eq DsKeyMint
+
+instance Show DsKeyMint where
+  show = genericShow
+
 -- | `Node` is an internal type to represent the nodes in the distributed set.
 newtype Node = Node
   { nKey ∷ ByteArray
@@ -178,6 +203,22 @@ newtype Node = Node
 derive instance Generic Node _
 
 derive instance Newtype Node _
+
+instance ToData Node where
+  toData (Node { nKey, nNext }) =
+    productToData2 nKey nNext
+
+instance FromData Node where
+  fromData = productFromData2 $ \nKey nNext →
+    Node
+      { nKey
+      , nNext
+      }
+
+derive newtype instance Eq Node
+
+instance Show Node where
+  show = genericShow
 
 -- | `mkNode` is a wrapper to create a Node from a string (a key) and the
 -- | datum.

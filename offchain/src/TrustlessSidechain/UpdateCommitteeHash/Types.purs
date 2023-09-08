@@ -29,6 +29,8 @@ import TrustlessSidechain.Utils.Crypto
   )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
+  , productFromData4
+  , productFromData5
   , productToData2
   , productToData4
   , productToData5
@@ -43,6 +45,13 @@ newtype UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
   { aggregatePubKeys ∷ aggregatePubKeys
   , sidechainEpoch ∷ BigInt
   }
+
+derive newtype instance (Eq a) ⇒ Eq (UpdateCommitteeDatum a)
+
+derive instance Generic (UpdateCommitteeDatum a) _
+
+instance (Show a) ⇒ Show (UpdateCommitteeDatum a) where
+  show = genericShow
 
 instance
   ToData aggregatePubKeys ⇒
@@ -69,9 +78,14 @@ newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
   { previousMerkleRoot ∷ Maybe RootHash
   }
 
+derive newtype instance Eq UpdateCommitteeHashRedeemer
+
 derive instance Generic UpdateCommitteeHashRedeemer _
 
 derive instance Newtype UpdateCommitteeHashRedeemer _
+
+instance Show UpdateCommitteeHashRedeemer where
+  show = genericShow
 
 instance ToData UpdateCommitteeHashRedeemer where
   toData (UpdateCommitteeHashRedeemer { previousMerkleRoot }) = toData
@@ -90,9 +104,14 @@ newtype UpdateCommitteeHash = UpdateCommitteeHash
   , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
   }
 
+derive newtype instance Eq UpdateCommitteeHash
+
 derive instance Generic UpdateCommitteeHash _
 
 derive instance Newtype UpdateCommitteeHash _
+
+instance Show UpdateCommitteeHash where
+  show = genericShow
 
 instance ToData UpdateCommitteeHash where
   toData
@@ -106,6 +125,18 @@ instance ToData UpdateCommitteeHash where
     committeeOracleCurrencySymbol
     committeeCertificateVerificationCurrencySymbol
     merkleRootTokenCurrencySymbol
+
+instance FromData UpdateCommitteeHash where
+  fromData = productFromData4 $
+    \sidechainParams
+     committeeOracleCurrencySymbol
+     committeeCertificateVerificationCurrencySymbol
+     merkleRootTokenCurrencySymbol → UpdateCommitteeHash
+      { sidechainParams
+      , committeeOracleCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
+      , merkleRootTokenCurrencySymbol
+      }
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -139,6 +170,13 @@ newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   , validatorAddress ∷ Address
   }
 
+derive newtype instance (Eq a) ⇒ Eq (UpdateCommitteeHashMessage a)
+
+derive instance Generic (UpdateCommitteeHashMessage a) _
+
+instance (Show a) ⇒ Show (UpdateCommitteeHashMessage a) where
+  show = genericShow
+
 instance
   ToData aggregatePubKeys ⇒
   ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
@@ -156,3 +194,21 @@ instance
     previousMerkleRoot
     sidechainEpoch
     validatorAddress
+
+instance
+  ( FromData aggregatePubKeys
+  ) ⇒
+  FromData (UpdateCommitteeHashMessage aggregatePubKeys) where
+  fromData = productFromData5 $
+    \sidechainParams
+     newAggregatePubKeys
+     previousMerkleRoot
+     sidechainEpoch
+     validatorAddress →
+      UpdateCommitteeHashMessage
+        { sidechainParams
+        , newAggregatePubKeys
+        , previousMerkleRoot
+        , sidechainEpoch
+        , validatorAddress
+        }
