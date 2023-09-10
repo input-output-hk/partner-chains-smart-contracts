@@ -17,9 +17,9 @@ import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.Monad as Monad
 import Contract.PlutusData
-  ( Datum(..)
-  , OutputDatum(..)
-  , Redeemer(..)
+  ( Datum(Datum)
+  , OutputDatum(OutputDatum)
+  , Redeemer(Redeemer)
   , fromData
   , toData
   )
@@ -34,14 +34,14 @@ import Contract.Scripts
   )
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef)
-  , TransactionInput(..)
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionInput(TransactionInput)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , mkTxUnspentOut
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
-  , InputWithScriptRef(..)
+  , InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -57,7 +57,7 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.ScriptCache as ScriptCache
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -65,10 +65,10 @@ import TrustlessSidechain.Utils.Scripts
 import TrustlessSidechain.Versioning.Types
   ( class Versionable
   , ScriptId
-  , VersionOracle(..)
-  , VersionOracleConfig(..)
-  , VersionOraclePolicyRedeemer(..)
-  , VersionOracleValidatorRedeemer(..)
+  , VersionOracle(VersionOracle)
+  , VersionOracleConfig(VersionOracleConfig)
+  , VersionOraclePolicyRedeemer(MintVersionOracle, BurnVersionOracle)
+  , VersionOracleValidatorRedeemer(UpdateVersionOracle, InvalidateVersionOracle)
   , toPlutusScript
   , toScriptHash
   )

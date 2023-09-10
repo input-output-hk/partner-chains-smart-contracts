@@ -24,7 +24,7 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 import TrustlessSidechain.Versioning (
-  VersionOracle (..),
+  VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
   getVersionedCurrencySymbol,
  )

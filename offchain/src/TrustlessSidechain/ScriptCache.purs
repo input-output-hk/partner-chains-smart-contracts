@@ -11,7 +11,7 @@ module TrustlessSidechain.ScriptCache
 import Contract.Prelude
 
 import Contract.Address
-  ( PaymentPubKeyHash(..)
+  ( PaymentPubKeyHash(PaymentPubKeyHash)
   , getNetworkId
   , validatorHashEnterpriseAddress
   )
@@ -21,14 +21,14 @@ import Contract.Monad (Contract, liftContractM, liftedE)
 import Contract.PlutusData (PlutusData, toData, unitDatum)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator(..)
+  ( MintingPolicy(PlutusMintingPolicy, NativeMintingPolicy)
+  , Validator(Validator)
   , validatorHash
   )
 import Contract.Transaction
-  ( ScriptRef(..)
+  ( ScriptRef(PlutusScriptRef, NativeScriptRef)
   , TransactionInput(TransactionInput)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , awaitTxConfirmed
   , balanceTxWithConstraints
   , signTransaction
@@ -44,7 +44,7 @@ import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
-import TrustlessSidechain.SidechainParams (SidechainParams(..))
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts

@@ -22,7 +22,7 @@ import Contract.Transaction
   ( TransactionHash
   , mkTxUnspentOut
   )
-import Contract.TxConstraints (InputWithScriptRef(..), TxConstraints)
+import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
@@ -74,7 +74,7 @@ import TrustlessSidechain.Versioning.Types
       , MerkleRootTokenValidator
       , CommitteeCertificateVerificationPolicy
       )
-  , VersionOracle(..)
+  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 

@@ -7,7 +7,7 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 import Contract.Prelude
 
 import Contract.Monad (Contract, liftContractE, liftContractM)
-import Contract.PlutusData (Redeemer(..), toData)
+import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
@@ -15,7 +15,7 @@ import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction (mkTxUnspentOut)
 import Contract.TxConstraints
-  ( InputWithScriptRef(..)
+  ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -33,7 +33,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
-  , VersionOracle(..)
+  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 

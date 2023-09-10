@@ -9,7 +9,7 @@ import Contract.Prelude
 import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.Monad as Monad
 import Contract.PlutusData
-  ( Redeemer(..)
+  ( Redeemer(Redeemer)
   , toData
   )
 import Contract.PlutusData as PlutusData
@@ -24,7 +24,7 @@ import Contract.TextEnvelope
   )
 import Contract.Transaction (mkTxUnspentOut)
 import Contract.TxConstraints
-  ( InputWithScriptRef(..)
+  ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -38,7 +38,7 @@ import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
-  , VersionOracle(..)
+  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 

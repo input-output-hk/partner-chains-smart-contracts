@@ -11,19 +11,22 @@ import Contract.Prelude
 
 import Contract.Address
   ( Address
-  , PaymentPubKeyHash(..)
-  , StakePubKeyHash(..)
+  , PaymentPubKeyHash(PaymentPubKeyHash)
+  , StakePubKeyHash(StakePubKeyHash)
   , toPubKeyHash
   , toStakingCredential
   )
-import Contract.Credential (Credential(..), StakingCredential(..))
+import Contract.Credential
+  ( Credential(PubKeyCredential)
+  , StakingCredential(StakingHash)
+  )
 import Contract.Hashing (blake2b256Hash)
 import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , Datum(..)
+  , Datum(Datum)
   , PlutusData(Constr)
   , fromData
   , toData
@@ -42,8 +45,8 @@ import Contract.Transaction
   , mkTxUnspentOut
   )
 import Contract.TxConstraints
-  ( DatumPresence(..)
-  , InputWithScriptRef(..)
+  ( DatumPresence(DatumInline)
+  , InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -83,7 +86,7 @@ import TrustlessSidechain.Versioning.Types
       , MerkleRootTokenPolicy
       , DSKeyPolicy
       )
-  , VersionOracle(..)
+  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 

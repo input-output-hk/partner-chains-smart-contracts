@@ -27,7 +27,7 @@ import TrustlessSidechain.Types (
   FUELMintingRedeemer (FUELMintingRedeemer),
   SidechainParams,
  )
-import TrustlessSidechain.Versioning (VersionOracle (..), VersionOracleConfig (..), getVersionedCurrencySymbol)
+import TrustlessSidechain.Versioning (VersionOracle (VersionOracle, scriptId, version), VersionOracleConfig, getVersionedCurrencySymbol)
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).

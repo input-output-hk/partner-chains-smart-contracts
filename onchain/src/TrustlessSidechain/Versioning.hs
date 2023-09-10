@@ -135,7 +135,7 @@ PlutusTx.makeIsDataIndexed
 {- | Manages minting and burning of versioning tokens.  (Note that these are
  ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
  versioning tokens during sidechain initialization, other than the usual
- equirement of burning a genesis UTxO.
+ requirement of burning a genesis UTxO.
 -}
 mkVersionOraclePolicy ::
   SidechainParams ->
@@ -292,13 +292,16 @@ mkVersionOracleValidator
       && fromSingleton "ERROR-VERSION-ORACLE-05" versionInputPresent
       && fromSingleton "ERROR-VERSION-ORACLE-06" verifyOut
     where
+      versionAsset :: AssetClass
       versionAsset = AssetClass (versionToken, versionOracleTokenName)
 
       -- Check that transaction was approved by governance authority
+      signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority = txInfo `Governance.isApprovedBy` governanceAuthority
 
       -- Check that the script version to be invalidated is present in exactly
       -- one transaction input.
+      versionInputPresent :: [Bool]
       versionInputPresent =
         [ True
         | TxInInfo _ (TxOut _ value (OutputDatum (Datum datum)) _) <-
@@ -314,6 +317,7 @@ mkVersionOracleValidator
 
       -- Check that this transaction produces exactly one output containing new
       -- reference script with attached datum
+      verifyOut :: [Bool]
       verifyOut =
         [ True
         | (TxOut _ value (OutputDatum (Datum datum)) (Just scriptHash')) <-

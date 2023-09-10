@@ -9,7 +9,7 @@ module TrustlessSidechain.CommitteePlainATMSPolicy (
   aggregateKeys,
 ) where
 
-import Ledger.Value (CurrencySymbol, TokenName (..))
+import Ledger.Value (CurrencySymbol, TokenName (unTokenName))
 import Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
@@ -39,7 +39,7 @@ import TrustlessSidechain.Types (
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Versioning (VersionOracle (..), VersionOracleConfig, getVersionedCurrencySymbol)
+import TrustlessSidechain.Versioning (VersionOracle (VersionOracle, scriptId, version), VersionOracleConfig, getVersionedCurrencySymbol)
 
 -- * Creating the plain ATMS minting policy
 

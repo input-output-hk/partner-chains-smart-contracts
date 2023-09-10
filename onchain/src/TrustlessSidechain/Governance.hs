@@ -7,7 +7,7 @@ module TrustlessSidechain.Governance (
   mkGovernanceAuthority,
 ) where
 
-import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Api (PubKeyHash, TxInfo)
 import Plutus.V2.Ledger.Contexts (txSignedBy)
 import PlutusTx (makeLift)
 import TrustlessSidechain.PlutusPrelude

@@ -28,7 +28,7 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Contract.Address (Address, PubKeyHash(..))
+import Contract.Address (Address, PubKeyHash(PubKeyHash))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, hexToByteArray)

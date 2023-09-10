@@ -14,7 +14,7 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , PlutusData(Constr)
-  , Redeemer(..)
+  , Redeemer(Redeemer)
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)

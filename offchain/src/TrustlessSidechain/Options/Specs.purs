@@ -2,7 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Contract.Address (Address, PubKeyHash(..))
+import Contract.Address (Address, PubKeyHash(PubKeyHash))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig

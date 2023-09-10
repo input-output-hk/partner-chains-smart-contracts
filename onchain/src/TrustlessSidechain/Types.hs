@@ -1,7 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-specialise #-}
@@ -29,7 +27,19 @@ newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
     ( Eq
     , Ord
     )
-  deriving (IsString, ToData, FromData, UnsafeFromData, TSPrelude.Show) via LedgerBytes
+  deriving (IsString, TSPrelude.Show) via LedgerBytes
+
+-- | @since Unreleased
+instance ToData GenesisHash where
+  toBuiltinData (GenesisHash x) = toBuiltinData x
+
+-- | @since Unreleased
+instance FromData GenesisHash where
+  fromBuiltinData x = GenesisHash <$> fromBuiltinData x
+
+-- | @since Unreleased
+instance UnsafeFromData GenesisHash where
+  unsafeFromBuiltinData = GenesisHash . unsafeFromBuiltinData
 
 PlutusTx.makeLift ''GenesisHash
 
@@ -54,6 +64,8 @@ data SidechainParams = SidechainParams
   , -- | 'governanceAuthority' stores credentials of a governing body allowed to
     -- make updates to versioned scripts.  For now we just use a master public
     -- key, whose owner is allowed to make any decisions about script versions.
+    --
+    -- @since Unreleased
     governanceAuthority :: Governance.GovernanceAuthority
   }
 
@@ -432,11 +444,14 @@ instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
 
 {- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
  So, this includes which transaction in the sidechain we are transferring over
- to the main chain (hence the 'MerkleTreeEntry'), and the proof tha this
+ to the main chain (hence the 'MerkleTreeEntry'), and the proof that this
  actually happened on the sidechain (hence the 'MerkleProof')
+
+ @since Unreleased
 -}
 data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
 
+-- | @since Unreleased
 PlutusTx.makeIsDataIndexed ''FUELMintingRedeemer [('FUELMintingRedeemer, 0)]
 
 -- * Update Committee Hash data

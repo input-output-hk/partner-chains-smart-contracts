@@ -15,12 +15,12 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Integer, Constr)
   , fromData
   , toData
   )
 import Contract.Scripts
-  ( MintingPolicy(..)
+  ( MintingPolicy(PlutusMintingPolicy)
   , PlutusScript
   , ScriptHash
   , Validator
@@ -69,29 +69,9 @@ data ScriptId
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
-
+derive instance Generic ScriptId _
 instance Show ScriptId where
-  show FUELMintingPolicy = "FUELMintingPolicy"
-  show MerkleRootTokenPolicy = "MerkleRootTokenPolicy"
-  show MerkleRootTokenValidator = "MerkleRootTokenValidator"
-  show CommitteeCandidateValidator = "CommitteeCandidateValidator"
-  show CandidatePermissionPolicy = "CandidatePermissionPolicy"
-  show CommitteeNftPolicy = "CommitteeNftPolicy"
-  show CommitteeHashPolicy = "CommitteeHashPolicy"
-  show CommitteeHashValidator = "CommitteeHashValidator"
-  show DSKeyPolicy = "DSKeyPolicy"
-  show DSConfPolicy = "DSConfPolicy"
-  show DSConfValidator = "DSConfValidator"
-  show DSInsertValidator = "DSInsertValidator"
-  show CheckpointValidator = "CheckpointValidator"
-  show CheckpointPolicy = "CheckpointPolicy"
-  show FUELBurningPolicy = "FUELBurningPolicy"
-  show VersionOraclePolicy = "VersionOraclePolicy"
-  show VersionOracleValidator = "VersionOracleValidator"
-  show FUELProxyPolicy = "FUELProxyPolicy"
-  show CommitteeCertificateVerificationPolicy =
-    "CommitteeCertificateVerificationPolicy"
-  show CommitteeOraclePolicy = "CommitteeOraclePolicy"
+  show = genericShow
 
 instance FromData ScriptId where
   fromData (Integer i) | i == BigInt.fromInt 0 =

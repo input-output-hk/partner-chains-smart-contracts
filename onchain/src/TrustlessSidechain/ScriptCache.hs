@@ -1,18 +1,14 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- | 'TrustlessSidechain.ScriptCache' module provides a simple on-chain script
  for storing UTxOs with attached reference scripts.  It acts as a cache for
  minting policies of tokens minted during sidechain initialization.
 -}
-module TrustlessSidechain.ScriptCache where
+module TrustlessSidechain.ScriptCache (serialisableScriptCache) where
 
-import Data.String
-import Ledger
+import Ledger (Language (PlutusV2), PubKeyHash, Script, ScriptContext (ScriptContext), Versioned (Versioned), fromCompiledCode, txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
-import PlutusTx.Prelude
+import TrustlessSidechain.PlutusPrelude
 
 {- | Script cache parameterized by a public key hash.  Spending from the script
  is only permitted when the transaction is signed by pub key hash used as the
