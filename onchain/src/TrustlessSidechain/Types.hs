@@ -686,6 +686,8 @@ instance HasField "blockNumber" CheckpointDatum Integer where
 {- | 'CommitteeCertificateMint' is the type to parameterize committee
  certificate verification minting policies.
  See SIP05 in @docs/SIPs/@ for details.
+
+ @since Unreleased
 -}
 data CommitteeCertificateMint = CommitteeCertificateMint
   { thresholdNumerator :: Integer

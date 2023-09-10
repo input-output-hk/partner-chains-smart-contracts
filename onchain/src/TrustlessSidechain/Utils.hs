@@ -8,7 +8,7 @@ module TrustlessSidechain.Utils (
   currencySymbolValueOf,
 ) where
 
-import Ledger.Value
+import Ledger.Value (CurrencySymbol, Value, getValue)
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
 import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Builtins qualified as Builtins

@@ -17,18 +17,15 @@ module TrustlessSidechain.Versioning (
   VersionOracleConfig (..),
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
+import Ledger (AssetClass, Language (PlutusV2), Versioned (Versioned), scriptHashAddress)
 import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
-import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Value
-import Plutus.V2.Ledger.Api
-import Plutus.V2.Ledger.Contexts (getContinuingOutputs)
-import PlutusTx
-import PlutusTx.Builtins
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
+import Plutus.V2.Ledger.Api (Address, CurrencySymbol (CurrencySymbol), Datum (Datum), OutputDatum (OutputDatum), Script, ScriptContext (ScriptContext), ScriptHash (ScriptHash), ScriptPurpose (Minting, Spending), TokenName (TokenName), TxInInfo (TxInInfo), TxOut (TxOut), ValidatorHash (ValidatorHash), fromCompiledCode, txInInfoOutRef, txInfoInputs, txInfoOutputs, txOutValue)
+import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
+import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types
+import TrustlessSidechain.Types (SidechainParams (SidechainParams), genesisUtxo, governanceAuthority)
 import TrustlessSidechain.Utils (fromSingleton)
 
 -- Note [Versioned script identifiers]
@@ -68,25 +65,34 @@ import TrustlessSidechain.Utils (fromSingleton)
 
 {- | Datum attached to 'VersionOraclePolicy' tokens stored on the
  'VersionOracleValidator' script.
+
+ @since Unreleased
 -}
 data VersionOracle = VersionOracle
   { -- | Version of the script.
+    -- @since Unreleased
     version :: Integer
   , -- | Unique identifier of the validator.
+    -- @since Unreleased
     scriptId :: Integer
   }
 
+-- | @since Unreleased
 PlutusTx.makeIsDataIndexed ''VersionOracle [('VersionOracle, 0)]
 
+-- | @since Unreleased
 instance Eq VersionOracle where
   VersionOracle v s == VersionOracle v' s' = v == v' && s == s'
 
 {- | Configuration of the versioning system.  Contains currency symbol of
  VersionOraclePolicy tokens.  Required to identify versioning tokens that can be
  trusted.
+
+ @since Unreleased
 -}
 newtype VersionOracleConfig = VersionOracleConfig
-  { versionOracleCurrencySymbol :: CurrencySymbol
+  { -- | @since Unreleased
+    versionOracleCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeIsDataIndexed ''VersionOracleConfig [('VersionOracleConfig, 0)]
@@ -149,6 +155,7 @@ mkVersionOraclePolicy
     traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
     where
       -- Ensure that the genesis UTxO is used by the transaction.
+      isGenesisUtxoUsed :: Bool
       isGenesisUtxoUsed =
         genesisUtxo `elem` map txInInfoOutRef (txInfoInputs txInfo)
 mkVersionOraclePolicy
@@ -158,14 +165,17 @@ mkVersionOraclePolicy
     fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
       && traceIfFalse "ERROR-VERSION-POLICY-03" signedByGovernanceAuthority
     where
+      versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
 
       -- Check that transaction was approved by governance authority
+      signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` governanceAuthority
 
       -- Check that this transaction mints a token with correct datum and script
       -- hash.
+      verifyOut :: [Bool]
       verifyOut =
         [ True
         | (TxOut _ value (OutputDatum (Datum datum)) (Just scriptHash')) <-
@@ -186,14 +196,17 @@ mkVersionOraclePolicy
       && traceIfFalse "ERROR-VERSION-POLICY-05" versionOutputAbsent
       && traceIfFalse "ERROR-VERSION-POLICY-06" signedByGovernanceAuthority
     where
+      versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
 
       -- Check that transaction was approved by governance authority
+      signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` governanceAuthority
 
       -- Check that the script version to be invalidated is present in exactly
       -- one transaction input.
+      versionInputPresent :: [Bool]
       versionInputPresent =
         [ True
         | TxInInfo _ (TxOut _ value (OutputDatum (Datum datum)) _) <-
@@ -208,6 +221,7 @@ mkVersionOraclePolicy
 
       -- Check that the script version to be invalidated is absent from
       -- transaction outputs.
+      versionOutputAbsent :: Bool
       versionOutputAbsent =
         null
           [ ()
