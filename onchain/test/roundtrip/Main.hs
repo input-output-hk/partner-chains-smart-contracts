@@ -616,7 +616,7 @@ shrinkSO = \case
     ArbitraryPubKey pk' <- shrink (ArbitraryPubKey pk)
     ArbitrarySignature sig' <- shrink (ArbitrarySignature sig)
     pure $ AdaBasedStaking pk' sig'
-  TokenBasedStaking -> pure TokenBasedStaking
+  TokenBasedStaking -> []
 
 shrinkBPR :: BlockProducerRegistration -> [BlockProducerRegistration]
 shrinkBPR (BlockProducerRegistration {..}) = do

@@ -105,6 +105,9 @@ derive instance Generic StakeOwnership _
 
 derive instance Eq StakeOwnership
 
+instance Show StakeOwnership where
+  show = genericShow
+
 instance ToData StakeOwnership where
   toData (AdaBasedStaking pk sig) =
     Constr (BigNum.fromInt 0) [ toData pk, toData sig ]
