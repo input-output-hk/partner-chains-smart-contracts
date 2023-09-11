@@ -2,23 +2,15 @@ module Test.Data (tests) where
 
 import Contract.Prelude
 
-import Contract.Prim.ByteArray
-  ( ByteArray
-  , byteArrayFromIntArrayUnsafe
-  )
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
+import Control.Alt ((<|>))
 import Data.Array.NonEmpty as NE
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String.CodeUnits (fromCharArray)
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
-import Test.QuickCheck.Gen
-  ( Gen
-  , arrayOf
-  , chooseInt
-  , elements
-  , vectorOf
-  )
+import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
@@ -49,6 +41,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistration(BlockProducerRegistration)
   , BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
+  , StakeOwnership(..)
   )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -75,18 +68,14 @@ import TrustlessSidechain.MerkleTree
   , Up(Up)
   , byteArrayToRootHashUnsafe
   )
-import TrustlessSidechain.SidechainParams
-  ( SidechainParams(SidechainParams)
-  )
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
-import TrustlessSidechain.Utils.Address
-  ( byteArrayToBech32BytesUnsafe
-  )
+import TrustlessSidechain.Utils.Address (byteArrayToBech32BytesUnsafe)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , ecdsaSecp256k1PubKey
@@ -334,21 +323,28 @@ genMTE = do
     , previousMerkleRoot
     }
 
+genSO ∷ Gen StakeOwnership
+genSO =
+  ( ado
+      ArbitraryPubKey pk ← arbitrary
+      ArbitrarySignature sig ← arbitrary
+      in AdaBasedStaking pk sig
+  )
+    <|> pure TokenBasedStaking
+
 genBPR ∷ Gen BlockProducerRegistration
 genBPR = do
-  ArbitraryPubKey bprSpoPubKey ← arbitrary
-  bprSidechainPubKey ← genGH
-  ArbitrarySignature bprSpoSignature ← arbitrary
-  bprSidechainSignature ← genGH
-  ArbitraryTransactionInput bprInputUtxo ← arbitrary
-  ArbitraryPaymentPubKeyHash bprOwnPkh ← arbitrary
+  stakeOwnership ← genSO
+  sidechainPubKey ← genGH
+  sidechainSignature ← genGH
+  ArbitraryTransactionInput inputUtxo ← arbitrary
+  ArbitraryPaymentPubKeyHash ownPkh ← arbitrary
   pure $ BlockProducerRegistration
-    { bprSpoPubKey
-    , bprSidechainPubKey
-    , bprSpoSignature
-    , bprSidechainSignature
-    , bprInputUtxo
-    , bprOwnPkh
+    { stakeOwnership
+    , sidechainPubKey
+    , sidechainSignature
+    , inputUtxo
+    , ownPkh
     }
 
 genCPM ∷ Gen CandidatePermissionMint
