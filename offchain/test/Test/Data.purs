@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import Contract.Address (PaymentPubKeyHash(..))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
+import Control.Alt ((<|>))
 import Data.Array.NonEmpty as NE
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -41,6 +42,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistration(BlockProducerRegistration)
   , BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
+  , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -299,21 +301,28 @@ genMTE = do
     , previousMerkleRoot
     }
 
+genSO ∷ Gen StakeOwnership
+genSO =
+  ( ado
+      ArbitraryPubKey pk ← arbitrary
+      ArbitrarySignature sig ← arbitrary
+      in AdaBasedStaking pk sig
+  )
+    <|> pure TokenBasedStaking
+
 genBPR ∷ Gen BlockProducerRegistration
 genBPR = do
-  ArbitraryPubKey bprSpoPubKey ← arbitrary
-  bprSidechainPubKey ← genGH
-  ArbitrarySignature bprSpoSignature ← arbitrary
-  bprSidechainSignature ← genGH
-  ArbitraryTransactionInput bprInputUtxo ← arbitrary
-  ArbitraryPaymentPubKeyHash bprOwnPkh ← arbitrary
+  stakeOwnership ← genSO
+  sidechainPubKey ← genGH
+  sidechainSignature ← genGH
+  ArbitraryTransactionInput inputUtxo ← arbitrary
+  ArbitraryPaymentPubKeyHash ownPkh ← arbitrary
   pure $ BlockProducerRegistration
-    { bprSpoPubKey
-    , bprSidechainPubKey
-    , bprSpoSignature
-    , bprSidechainSignature
-    , bprInputUtxo
-    , bprOwnPkh
+    { stakeOwnership
+    , sidechainPubKey
+    , sidechainSignature
+    , inputUtxo
+    , ownPkh
     }
 
 genCPM ∷ Gen CandidatePermissionMint
