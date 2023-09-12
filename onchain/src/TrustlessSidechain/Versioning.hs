@@ -78,7 +78,20 @@ data VersionOracle = VersionOracle
   }
 
 -- | @since Unreleased
-PlutusTx.makeIsDataIndexed ''VersionOracle [('VersionOracle, 0)]
+instance ToData VersionOracle where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (VersionOracle {..}) =
+    productToData2 version scriptId
+
+-- | @since Unreleased
+instance FromData VersionOracle where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 VersionOracle
+
+-- | @since Unreleased
+instance UnsafeFromData VersionOracle where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 VersionOracle
 
 -- | @since Unreleased
 instance Eq VersionOracle where
@@ -95,7 +108,21 @@ newtype VersionOracleConfig = VersionOracleConfig
     versionOracleCurrencySymbol :: CurrencySymbol
   }
 
-PlutusTx.makeIsDataIndexed ''VersionOracleConfig [('VersionOracleConfig, 0)]
+-- | @since Unreleased
+instance ToData VersionOracleConfig where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (VersionOracleConfig {..}) =
+    toBuiltinData versionOracleCurrencySymbol
+
+-- | @since Unreleased
+instance FromData VersionOracleConfig where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = VersionOracleConfig <$> fromBuiltinData x
+
+-- | @since Unreleased
+instance UnsafeFromData VersionOracleConfig where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
 
 {- | Token name for versioning tokens.  Must match definition in off-chain
  | module.
@@ -105,14 +132,19 @@ versionOracleTokenName = TokenName "Version oracle"
 
 {- | Redeemer for the versioning oracle minting policy that instructs the script
  whether to mint or burn versioning tokens.
+
+ @since Unreleased
 -}
 data VersionOraclePolicyRedeemer
   = -- | Mint initial versioning tokens.  Used during sidechain initialization.
+    -- @since Unreleased
     InitializeVersionOracle
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.
+    -- @since Unreleased
     MintVersionOracle VersionOracle ScriptHash
   | -- | Burn existing versioning token.
+    -- @since Unreleased
     BurnVersionOracle VersionOracle
 
 PlutusTx.makeIsDataIndexed
@@ -125,11 +157,15 @@ PlutusTx.makeIsDataIndexed
 {- | Redeemer for versioning oracle validator script.  Used when existing
  versioning tokens are spent from the script, either to be burned or updated
  with a new script and datum.
+
+ @since Unreleased
 -}
 data VersionOracleValidatorRedeemer
   = -- | Invalidate existing versioning token.
+    -- @since Unreleased
     InvalidateVersionOracle VersionOracle
   | -- | Update existing versioning token.
+    -- @since Unreleased
     UpdateVersionOracle VersionOracle ScriptHash
 
 PlutusTx.makeIsDataIndexed

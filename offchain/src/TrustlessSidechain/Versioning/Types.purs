@@ -31,6 +31,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import TrustlessSidechain.Utils.Data (productFromData2, productToData2)
 
 -- | 'ScriptId' lists IDs of all scripts that are used by the sidechain, most of
 -- | which are versioned using the versioning system.  Note that the list of
@@ -152,14 +153,10 @@ instance Show VersionOracle where
   show = genericShow
 
 instance FromData VersionOracle where
-  fromData (Constr n [ v, sId ]) | n == (BigNum.fromInt 0) =
-    VersionOracle <$>
-      ({ version: _, scriptId: _ } <$> fromData v <*> fromData sId)
-  fromData _ = Nothing
+  fromData = productFromData2 (\v s → VersionOracle { version: v, scriptId: s })
 
 instance ToData VersionOracle where
-  toData (VersionOracle { version, scriptId }) = Constr (BigNum.fromInt 0)
-    [ toData version, toData scriptId ]
+  toData (VersionOracle { version, scriptId }) = productToData2 version scriptId
 
 -- | Redeemer for the version oracle minting policy that instructs the script
 -- | whether to mint or burn version tokens.
@@ -223,8 +220,8 @@ derive instance Generic VersionOracleConfig _
 derive instance Newtype VersionOracleConfig _
 
 instance FromData VersionOracleConfig where
-  fromData (Constr n [ currencySymbol ]) | n == (BigNum.fromInt 0) = do
-    versionOracleCurrencySymbol ← fromData currencySymbol
+  fromData x = do
+    versionOracleCurrencySymbol ← fromData x
     pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
   fromData _ = Nothing
@@ -232,9 +229,7 @@ instance FromData VersionOracleConfig where
 instance ToData VersionOracleConfig where
   toData
     ( VersionOracleConfig { versionOracleCurrencySymbol }
-    ) =
-    Constr (BigNum.fromInt 0)
-      [ toData versionOracleCurrencySymbol ]
+    ) = toData versionOracleCurrencySymbol
 
 -- | Class of types that can be versioned.  Allows uniform handling of
 -- | validators and minting policies when building lookups and constraints for
