@@ -87,6 +87,7 @@ library
     TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
     TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
     TrustlessSidechain.DistributedSet
+    TrustlessSidechain.DummyMintingPolicy
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
     TrustlessSidechain.Governance
@@ -216,7 +217,6 @@ executable trustless-sidechain-serialise
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-  other-modules:  Test.TrustlessSidechain.DummyMintingPolicy
   hs-source-dirs: app/serialise test
 
 executable trustless-sidechain-merkle-tree
@@ -238,7 +238,6 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Test.TrustlessSidechain.DummyMintingPolicy
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig

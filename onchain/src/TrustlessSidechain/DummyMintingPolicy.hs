@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.TrustlessSidechain.DummyMintingPolicy (
+module TrustlessSidechain.DummyMintingPolicy (
   serialisableDummyMintingPolicy,
 ) where
 

@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.TrustlessSidechain.DummyMintingPolicy () -- force compilation
 import Test.TrustlessSidechain.MerkleProofSerialisation qualified as MerkleProofSerialisation
 import Test.TrustlessSidechain.MerkleTree qualified as MerkleTree
 import Test.TrustlessSidechain.MultiSig qualified as MultiSig

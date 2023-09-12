@@ -27,16 +27,16 @@ import System.FilePath qualified as FilePath
 import System.IO (FilePath, Handle, print)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
-import Test.TrustlessSidechain.DummyMintingPolicy as DummyMintingPolicy
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
+import TrustlessSidechain.DummyMintingPolicy as DummyMintingPolicy
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
@@ -211,8 +211,8 @@ main =
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)
-            -- Versioning System
-          , ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)
+          , -- Versioning System
+            ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)
           , ("VersionOracleValidator", Versioning.serialisableVersionOracleValidator)
           , ("FUELProxyPolicy", FUELProxyPolicy.serialisableFuelProxyPolicy)
           , -- ATMS schemes
