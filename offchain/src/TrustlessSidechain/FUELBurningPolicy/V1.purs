@@ -79,7 +79,7 @@ data FuelBurnParams = FuelBurnParams
   , sidechainParams ∷ SidechainParams
   }
 
--- | Mint FUEL tokens using the Active Bridge configuration, verifying the
+-- | Burn FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
 mkBurnFuelLookupAndConstraints ∷
   SidechainParams →
