@@ -107,7 +107,7 @@ rawInsertValidator =
 
 rawDsConfValidator ∷ String
 rawDsConfValidator =
-  """{"cborHex":"4d4c01000023222212001375c003","description":"","type":"PlutusScriptV2"}"""
+  """{"cborHex":"4b4a0100002322226375c003","description":"","type":"PlutusScriptV2"}"""
 
 rawDsConfPolicy ∷ String
 rawDsConfPolicy =

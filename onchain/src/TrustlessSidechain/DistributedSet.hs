@@ -69,6 +69,7 @@ import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 
@@ -424,12 +425,13 @@ mkInsertValidator ds _dat _red ctx =
                               go [] = []
                            in go (txInfoOutputs info)
 
-              -- the total number tokens which are prefixes is @1 + the number of
-              -- minted tokens@ since we know that there is only one input with this
-              -- token.
+              -- the total number distributed set key tokens in this
+              -- transaction which is @1 + the number of minted tokens@ since
+              -- we know that there is only one input with this token; and we
+              -- mint the rest of the tokens
               --
-              -- In erroneous cases, we return @-1@ which will always be @False@ in the
-              -- above predicate
+              -- In erroneous cases, we return @-1@ which will always be
+              -- @False@ in the below predicate
               totalKeys :: Integer
               totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
                 Just mp
@@ -493,11 +495,7 @@ mkInsertValidator ds _dat _red ctx =
  at. This will always error.
 -}
 mkDsConfValidator :: Ds -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkDsConfValidator _ds _dat _red _ctx = ()
-
--- TODO: when we get reference inputs, we need to change the above line
--- of code to the following line of code
--- > mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
+mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 
 {- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
  the various minting policies that the distributed set depends on
