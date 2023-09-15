@@ -1,4 +1,5 @@
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -50,6 +51,7 @@ import Plutus.Script.Utils.V2.Typed.Scripts (
   mkUntypedMintingPolicy,
   mkUntypedValidator,
  )
+import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   Datum (getDatum),
@@ -477,14 +479,30 @@ mkInsertValidator ds _dat _red ctx =
     keyCurrencySymbol :: CurrencySymbol
     keyCurrencySymbol = get @"keyPolicy" conf
 
-    -- Given a value, gets the token name (of the "continuing" token name)
+    -- Given a value, gets the token name (of the "continuing" token name). Also
+    -- verifies that the 'Value' is 'relatively small': namely, that it has only
+    -- two 'CurrencySymbol's (Ada and the 'keyCurrencySymbol'), with only one
+    -- 'TokenName' mapping for each.
     getKeyTn :: Value -> BuiltinByteString
-    getKeyTn v
-      | Just tns <- AssocMap.lookup keyCurrencySymbol $ getValue v
-        , [(tn, amt)] <- AssocMap.toList tns
-        , amt == 1 =
-        unTokenName tn
-    getKeyTn _ = traceError "error 'mkInsertValidator': 'getKeyTn' failed"
+    getKeyTn v = case AssocMap.toList . Value.getValue $ v of
+      -- Note from Koz: We assume that Ada comes first here. Furthermore, we
+      -- also assume that the Ada 'entry' is special in that it's associated
+      -- with one, and only one, 'TokenName'.
+      [_, (cs, innerMap)] -> case AssocMap.toList innerMap of
+        [(tn, amt)] ->
+          if
+              | cs /= keyCurrencySymbol ->
+                traceError "error 'mkInsertValidator': No mapping for keyCurrencySymbol at output."
+              | amt /= 1 ->
+                traceError "error 'mkInsertValidator': Amount for keyCurrencySymbol is 'too large'."
+              | otherwise -> unTokenName tn
+        -- Note from Koz: It would seem to be a better idea to fuse these two
+        -- error cases together, but it is not so: we'd have to drag in some way
+        -- of mapping AssocMap.toList over the entire 'outer map', which
+        -- actually makes the whole function bigger by a non-trivial amount.
+        -- Yes, it doesn't make much sense to me either.
+        _ -> traceError "error 'mkInsertValidator': Value at output is 'too large'."
+      _ -> traceError "error 'mkInsertValidator': Value at output is 'too large'."
 
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.

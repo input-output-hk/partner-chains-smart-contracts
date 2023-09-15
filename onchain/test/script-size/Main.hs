@@ -66,7 +66,7 @@ main =
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
-            201
+            200
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             (unversioned CCV.serialisableValidator)
@@ -133,11 +133,11 @@ main =
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_667
+            1_710
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             (unversioned DS.serialisableInsertValidator)
-            4_049
+            4_095
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
