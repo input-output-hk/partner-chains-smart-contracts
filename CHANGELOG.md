@@ -150,6 +150,11 @@ utils encode cbor-plain-aggregate-public-keys`
 
 ## Fixed
 
+- Distributed set is no longer vulnerable to token dusting in
+  `mkInsertValidator`
+  ([38](https://github.com/input-output-hk/trustless-sidechain/38),
+  [537](https://github.com/mlabs-haskell/trustless-sidechain/pull/537),
+  onchain)
 - Types whose `Data` encodings cannot change have been noted as such (
   [484](https://github.com/mlabs-haskell/trustless-sidechain/issues/484),
   [504](https://github.com/mlabs-haskell/trustless-sidechain/pull/504),
