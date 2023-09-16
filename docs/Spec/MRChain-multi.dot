@@ -18,7 +18,7 @@ strict digraph {
     "]
 
   cHashUpd1 [label =
-    "Update committee hash tx\l
+    "Update committee tx\l
       (from SC ep. 1 to SC ep. 2) |
       redeemer: last roothash\l
       refInput: last roothash utxo\l
@@ -32,7 +32,7 @@ strict digraph {
     "]
 
   cHashUpd2 [label =
-    "Update committee hash tx\l
+    "Update committee tx\l
       (from SC ep. 2 to SC ep. 3) |
       redeemer: last roothash\l
       refInput: last roothash utxo\l

@@ -3,7 +3,7 @@ strict digraph {
 
   pubKey [
     label = "UTxO with datum |
-        committee hash\l
+        committee aggregate public keys\l
         sidechain epoch\l
     "]
 
@@ -13,13 +13,13 @@ strict digraph {
 
   newPubKey [
     label = "UTxO with datum |
-        committee hash\l
+        aggregate public keys \l
         sidechain epoch\l
     "]
 
   tx [label = "Verification key update tx |
         redeemer: UpdateCommitteeRedeemer\l
-        tx in: committee hash UTxO\l
+        tx in: aggregate public keys UTxO\l
       "]
 
   merkleRoot -> tx [style = dashed, label = "references"]
