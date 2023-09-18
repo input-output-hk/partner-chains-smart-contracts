@@ -58,7 +58,7 @@ and "wallet Identity" is a functional approximation for user identity therefore 
 
 But the first statement is false, and thus the conclusion is false. It will be fine for plutip tests because KeyWallet is single-address, but it will fail if any action on-chain or off-chain falls prey to this.  
 
-In the repo as released to open source, only key wallets are supported, so this does not cause any problem, thus the urgency is Moderate.  
+In the repo as released to open source, these warnings have no impact, as we are not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
 ### Issue #2 Distributed Set Issue
 **Description**  
 It is possible for a malicious user to submit a transaction to make a node in the distributed set unspendable, so this would block people from claiming their sidechain token.  
@@ -78,9 +78,10 @@ A malicious user could potentially block random token claims (but be unable to t
 - cannot be targeted
 - cost of initiating the attack
 - cannot actually gain funds or release them (cannot be used for ransoming)
-- as the sidechain grows, the chances of a successful attack decrease
-- In order to initiate this attack, a malicious user would have to:  
-    Actively modify the off-chain code, to include sidechain tokens into the distributed set element.  
-    Mint enough sidechain tokens.   
-    Issue a claim of their own tokens, and use this transaction to put sidechain tokens into the distributed set element UTXO.  
+- as the sidechain grows, the chances of a successful attack decrease.  
+
+In order to initiate this attack, a malicious user would have to:  
+1. Actively modify the off-chain code, to include sidechain tokens into the distributed set element.  
+2. Mint enough sidechain tokens.   
+2. Issue a claim of their own tokens, and use this transaction to put sidechain tokens into the distributed set element UTXO.  
 
