@@ -19,7 +19,7 @@ This specification details the main chain contract of a trustless sidechain syst
 
 If you decide to investigate further, or add your own development, start with the [development instructions](DEVELOPMENT.md) and go from there.
 
-## Hardware and OS Requirements
+## Hardware and OS requirements
 Trustless Sidechain CTL should run on any modern OS and hardware combination capable of running a Node installation:
 - Linux
 - macOS
@@ -59,29 +59,29 @@ and "wallet Identity" is a functional approximation for user identity therefore 
 
 But the first statement is false, and thus the conclusion is false. It will be fine for Plutip tests because KeyWallet is single-address, but it will fail if any action on-chain or off-chain falls prey to this.  
 
-In the repo as released to open source, these warnings have no impact, as we are not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
-### Issue #2 Distributed Set Issue
+In this open-source version of the repository, these warnings have no impact, as the project is not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
+### Issue #2 distributed set sssue
 **Description**  
 It is possible for a malicious user to submit a transaction to make a node in the distributed set unspendable, so this would block people from claiming their sidechain token.  
 
-**How To Reproduce**    
+**How to reproduce**    
 An attacker legitimately gets a transaction from the signed Merkle root insertion.  
 When the attacker claims their sidechain token, instead of using the off-chain interface to build the transaction, they build their own transaction by constructing it identically to the off-chain transaction, but paying multiple tokens to the distributed set output as well.  
 Now, if an honest person wants to claim some sidechain tokens and it happens that they need to consume the distributed set node to which the attacker paid multiple extra tokens, the honest person will not be able to spend that node because Plutus must decode the entire ScriptContext before doing any of the actual logic that takes up extra ExUnits. Hence, provided the attacker has paid sufficient extra tokens to the UTXO, the honest node will not be able to spend the output since the validator will spend all of its ExUnits trying to parse through the ScriptContext (and failing).  
 
-**Expected Behaviour**  
+**Expected behaviour**  
 The above should be impossible. A way to fix this would be to verify on-chain that the values at the UTXOs in the distributed set are 'relatively small'.  
   
 **Conclusion**  
 Impact: low  
 Severity: low  
-A malicious user could potentially block random token claims (but be unable to target it). The incentive to do this attack is low, because:  
-- cannot be targeted
-- cost of initiating the attack
+A malicious user could potentially block random token claims (but be unable to target them). The incentive to do this attack is low, because:  
+- the attack cannot be targeted
+- high cost of initiating the attack
 - cannot actually gain funds or release them (cannot be used for ransoming)
 - as the sidechain grows, the chances of a successful attack decrease.  
 
-In order to initiate this attack, a malicious user would have to:  
+To initiate this attack, a malicious user would have to:  
 1. Actively modify the off-chain code, to include sidechain tokens into the distributed set element.  
 2. Mint enough sidechain tokens.   
 2. Issue a claim of their own tokens, and use this transaction to put sidechain tokens into the distributed set element UTXO.  
