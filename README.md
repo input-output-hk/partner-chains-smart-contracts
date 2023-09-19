@@ -56,7 +56,7 @@ PKH == "wallet identity"
 
 and "wallet Identity" is a functional approximation for user identity therefore PKH is a functional approximation for user identity.  
 
-But the first statement is false, and thus the conclusion is false. It will be fine for plutip tests because KeyWallet is single-address, but it will fail if any action on-chain or off-chain falls prey to this.  
+But the first statement is false, and thus the conclusion is false. It will be fine for Plutip tests because KeyWallet is single-address, but it will fail if any action on-chain or off-chain falls prey to this.  
 
 In the repo as released to open source, these warnings have no impact, as we are not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
 ### Issue #2 Distributed Set Issue
