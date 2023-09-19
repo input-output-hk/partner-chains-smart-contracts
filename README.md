@@ -48,7 +48,8 @@ Several warnings from CTL like the following appear:
     This function returns only one `PaymentPubKeyHash` even in case multiple `PaymentPubKeysHash`es are available. Use `ownPaymentPubKeysHashes` instead
 ```
 **Conclusion**  
-This can't necessarily be ignored.
+Impact: zero  
+Severity: low  
 Essentially, there are multi-address wallets on Cardano (Eternl is the big one). These will essentially create a new address for every transaction; any 'change' UTXOs will be sent to a new address. This means that you can't necessarily tie multiple transactions to the same wallet via payment public key hash (PKH). Other wallets (eg Nami) are single-address. With these wallets, a payment PKH is functionally a 1:1 mapping to wallet 'identity'.  
 The problem is the assumption that:  
 
