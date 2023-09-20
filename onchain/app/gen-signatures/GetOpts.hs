@@ -69,8 +69,8 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
 import System.IO.Error (userError)
-import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Governance (GovernanceAuthority, mkGovernanceAuthority)
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
  )
