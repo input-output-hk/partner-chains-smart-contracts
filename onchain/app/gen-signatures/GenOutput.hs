@@ -162,8 +162,8 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                 sidechainParamFlags
                   <> [ ["--spo-public-key", show $ OffChain.toSpoPubKey rcSpoPrivKey]
                      , ["--sidechain-public-key", show $ OffChain.toSidechainPubKey rcSidechainPrivKey]
-                     , ["--spo-signature", OffChain.showSig $ OffChain.signWithSPOKey rcSpoPrivKey msg]
-                     , ["--sidechain-signature", OffChain.showSig $ OffChain.signWithSidechainKey rcSidechainPrivKey msg]
+                     , ["--spo-signature", show $ OffChain.signWithSPOKey rcSpoPrivKey msg]
+                     , ["--sidechain-signature", show $ OffChain.signWithSidechainKey rcSidechainPrivKey msg]
                      , ["--registration-utxo", OffChain.showTxOutRef rcRegistrationUtxo]
                      ]
           DeregistrationCommand {..} ->

@@ -49,8 +49,7 @@ module Compiled (
 
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
-import Plutus.V2.Ledger.Api (LedgerBytes)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import Plutus.V2.Ledger.Api (LedgerBytes, ScriptContext)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (

@@ -14,7 +14,7 @@ import Data.ByteString.Lazy qualified as Lazy
 import Options.Applicative (Parser, ParserInfo)
 import Options.Applicative qualified as Applicative
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
+import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString), BuiltinData (BuiltinData))
 import PlutusTx.IsData.Class (FromData, ToData)
 import PlutusTx.IsData.Class qualified as IsData
 import System.IO (FilePath, Handle, IOMode (ReadMode, WriteMode))
@@ -140,6 +140,7 @@ readBuiltinDataCbor opt handle = case opt of
                     Exception.throwIO $
                       userError ("BuiltinData deserialization failed: " <> show builtinData)
             )
+          . BuiltinData
           . Serialise.deserialise
 
 -- * Writers

@@ -5,16 +5,14 @@ module TrustlessSidechain.PoCECDSA (
   serialisableValidator,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as ScriptUtils
-import Plutus.V2.Ledger.Api (
-  Script,
-  fromCompiledCode,
- )
-import Plutus.V2.Ledger.Contexts as V2
+import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
+import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedValidator,
+ )
 
 data ECDSARed = ECDSARed
   { msg :: BuiltinByteString
@@ -26,7 +24,7 @@ data ECDSARed = ECDSARed
 PlutusTx.unstableMakeIsData ''ECDSARed
 
 {-# INLINEABLE mkValidator #-}
-mkValidator :: () -> ECDSARed -> V2.ScriptContext -> Bool
+mkValidator :: () -> ECDSARed -> ScriptContext -> Bool
 mkValidator _ (ECDSARed msg' sig' pk') _ =
   traceIfFalse "signature check failed"
     . verifyEcdsaSecp256k1Signature pk' msg'
@@ -34,8 +32,8 @@ mkValidator _ (ECDSARed msg' sig' pk') _ =
 
 {-# INLINEABLE untypedValidator #-}
 untypedValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-untypedValidator = ScriptUtils.mkUntypedValidator mkValidator
+untypedValidator = mkUntypedValidator mkValidator
 
-serialisableValidator :: Versioned Script
+serialisableValidator :: Script
 serialisableValidator =
-  Versioned (fromCompiledCode $$(PlutusTx.compile [||untypedValidator||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||untypedValidator||])

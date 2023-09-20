@@ -15,7 +15,6 @@ module TrustlessSidechain.OffChain (
   showBS,
   showBuiltinBS,
   showScPubKeyAndSig,
-  showSig,
   showThreshold,
   showMerkleTree,
   showMerkleProof,
@@ -62,8 +61,6 @@ import Data.List qualified as List
 import Data.String qualified as HaskellString
 import Data.Text qualified as Text
 import GHC.Err (undefined)
-import Ledger (Signature (Signature))
-import Ledger.Crypto qualified as Crypto
 import Plutus.V2.Ledger.Api (
   BuiltinByteString,
   LedgerBytes (LedgerBytes),
@@ -79,6 +76,8 @@ import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
   CombinedMerkleProof,
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
+  PubKey (PubKey),
+  Signature (Signature),
  )
 
 -- * Bech32 addresses
@@ -200,8 +199,10 @@ instance ToJSON SidechainCommitteeMember where
       ]
   toEncoding (SidechainCommitteeMember {..}) =
     Aeson.pairs
-      ( "private-key" Aeson..= showSecpPrivKey scmPrivateKey
-          <> "public-key" Aeson..= show scmPublicKey
+      ( "private-key"
+          Aeson..= showSecpPrivKey scmPrivateKey
+          <> "public-key"
+          Aeson..= show scmPublicKey
       )
 
 -- | Parses a hex encoded string into a sidechain private key
@@ -277,10 +278,11 @@ generateRandomSecpPrivKey =
 signWithSPOKey ::
   SignKeyDSIGN Ed25519DSIGN ->
   BlockProducerRegistrationMsg ->
-  Crypto.Signature
+  Signature
 signWithSPOKey skey msg =
   let serialised = Builtins.fromBuiltin $ Builtins.serialiseData $ toBuiltinData msg
-   in Crypto.Signature
+   in Signature
+        . LedgerBytes
         . Builtins.toBuiltin
         . rawSerialiseSigDSIGN
         $ signDSIGN () serialised skey
@@ -293,12 +295,13 @@ signWithSidechainKey ::
   ToData a =>
   SECP.SecKey ->
   a ->
-  Crypto.Signature
+  Signature
 signWithSidechainKey skey msg =
   let serialised = Builtins.serialiseData $ toBuiltinData msg
       hashedMsg = blake2b_256 $ Builtins.fromBuiltin serialised
       ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
-   in Crypto.Signature
+   in Signature
+        . LedgerBytes
         . Builtins.toBuiltin
         . SECP.getCompactSig
         . SECP.exportCompactSig
@@ -333,11 +336,7 @@ showScPubKeyAndSig ::
   Signature ->
   HaskellString.String
 showScPubKeyAndSig sckey sig =
-  concat [show sckey, ":", showSig sig]
-
--- | Serialise signature
-showSig :: Signature -> HaskellString.String
-showSig (Signature sig) = showBuiltinBS sig
+  concat [show sckey, ":", show sig]
 
 {- | 'showThreshold' shows integers @n@ and @m@ as
  > n/m
@@ -382,15 +381,15 @@ showHexOfCborBuiltinData = showBuiltinBS . Builtins.serialiseData . toBuiltinDat
 -- * Converting private keys to public keys
 
 -- | Derive Ed25519DSIGN public key from the private key
-toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
+toSpoPubKey :: SignKeyDSIGN Ed25519DSIGN -> PubKey
 toSpoPubKey =
   vKeyToSpoPubKey
     . deriveVerKeyDSIGN
 
 -- | Converts Ed25519DSIGN public key to a PubKey.
-vKeyToSpoPubKey :: VerKeyDSIGN Ed25519DSIGN -> Crypto.PubKey
+vKeyToSpoPubKey :: VerKeyDSIGN Ed25519DSIGN -> PubKey
 vKeyToSpoPubKey =
-  Crypto.PubKey
+  PubKey
     . LedgerBytes
     . Builtins.toBuiltin
     . rawSerialiseVerKeyDSIGN @Ed25519DSIGN

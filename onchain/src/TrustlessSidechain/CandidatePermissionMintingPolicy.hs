@@ -6,17 +6,17 @@ module TrustlessSidechain.CandidatePermissionMintingPolicy (
   serialisableCandidatePermissionMintingPolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
-import Plutus.V2.Ledger.Contexts (
+import Plutus.V2.Ledger.Api (
+  Script,
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
   TxInfo (txInfoInputs),
   TxOutRef,
+  fromCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (CandidatePermissionMint)
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
@@ -30,7 +30,9 @@ mkCandidatePermissionMintingPolicy ::
   Bool
 mkCandidatePermissionMintingPolicy cpm _red ctx =
   traceIfFalse "error 'mkCandidatePermissionMintingPolicy' CandidatePermissionMintingPolicy 'cpmUtxo' not consumed" $
-    go $ txInfoInputs $ scriptContextTxInfo ctx
+    go $
+      txInfoInputs $
+        scriptContextTxInfo ctx
   where
     utxo :: TxOutRef
     utxo = get @"utxo" cpm
@@ -45,10 +47,10 @@ mkCandidatePermissionMintingPolicy cpm _red ctx =
 -- Ctl hack..
 mkCandidatePermissionMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCandidatePermissionMintingPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy
+  mkUntypedMintingPolicy
     . mkCandidatePermissionMintingPolicy
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCandidatePermissionMintingPolicy :: Versioned Ledger.Script
+serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])

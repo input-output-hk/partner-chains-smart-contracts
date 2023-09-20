@@ -12,7 +12,7 @@ maintainer:         TODO
 copyright:          TODO
 category:           TODO
 build-type:         Simple
-tested-with:        GHC ==8.10.4
+tested-with:        GHC ==8.10.7
 extra-source-files: README.md
 
 source-repository head
@@ -98,6 +98,7 @@ library
     TrustlessSidechain.PoCReferenceScript
     TrustlessSidechain.PoCSchnorr
     TrustlessSidechain.PoCSerialiseData
+    TrustlessSidechain.ScriptUtils
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
 
@@ -112,15 +113,16 @@ library
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , cardano-ledger-alonzo
     , cryptonite
     , deepseq
     , either
-    , playground-common
+    , lens
+    , plutonomy
     , plutus-core
-    , plutus-ledger
     , plutus-ledger-api
-    , plutus-script-utils
     , plutus-shim-prelude
+    , plutus-tx-plugin
     , QuickCheck
     , secp256k1-haskell
     , serialise
@@ -157,7 +159,6 @@ library quickcheck-extra
   exposed-modules: Test.QuickCheck.Extra
   build-depends:
     , bytestring
-    , plutus-ledger
     , plutus-ledger-api
     , plutus-shim-prelude
     , QuickCheck
@@ -186,7 +187,6 @@ executable trustless-sidechain-gen-signatures
     , either
     , optparse-applicative
     , plutus-core
-    , plutus-ledger
     , plutus-ledger-api
     , secp256k1-haskell
     , serialise
@@ -205,8 +205,7 @@ executable trustless-sidechain-serialise
     , cardano-api
     , filepath
     , plutonomy
-    , plutus-ledger
-    , serialise
+    , plutus-ledger-api
     , trustless-sidechain
     , trustless-sidechain-prelude
 
@@ -241,7 +240,6 @@ test-suite trustless-sidechain-test
     , base16-bytestring
     , bytestring
     , plutus-core
-    , plutus-ledger
     , plutus-ledger-api
     , plutus-shim-prelude
     , QuickCheck
@@ -273,7 +271,6 @@ test-suite script-size
 
   build-depends:
     , plutus-core
-    , plutus-ledger
     , plutus-ledger-api
     , plutus-shim-prelude
     , plutus-tx

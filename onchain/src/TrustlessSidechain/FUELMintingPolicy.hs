@@ -9,9 +9,19 @@ module TrustlessSidechain.FUELMintingPolicy (
   bech32AddrToPubKeyHash,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
-import Plutus.V2.Ledger.Api
+import Plutus.V2.Ledger.Api (
+  CurrencySymbol,
+  LedgerBytes (LedgerBytes),
+  PubKeyHash (PubKeyHash),
+  Script,
+  ScriptContext (scriptContextTxInfo),
+  TokenName (TokenName, unTokenName),
+  TxInInfo (txInInfoResolved),
+  TxInfo (txInfoMint, txInfoReferenceInputs),
+  TxOut (txOutValue),
+  Value (getValue),
+  fromCompiledCode,
+ )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -21,6 +31,7 @@ import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTo
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (FUELMint, FUELRedeemer (MainToSide, SideToMain))
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
@@ -127,8 +138,8 @@ mkMintingPolicy fm mode ctx = case mode of
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped = mkUntypedMintingPolicy . mkMintingPolicy . unsafeFromBuiltinData
 
-serialisableMintingPolicy :: Versioned Script
-serialisableMintingPolicy = Versioned (fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+serialisableMintingPolicy :: Script
+serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 {- | Deriving the public key hash from a bech32 binary
  -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019

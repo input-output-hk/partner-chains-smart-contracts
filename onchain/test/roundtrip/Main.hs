@@ -12,6 +12,7 @@ import Plutus.V2.Ledger.Api (
   ValidatorHash,
  )
 import Test.QuickCheck (
+  Arbitrary (arbitrary, shrink),
   Gen,
   NonNegative (NonNegative),
   Positive (Positive),
@@ -30,9 +31,7 @@ import Test.QuickCheck.Extra (
   ArbitraryAssetClass (ArbitraryAssetClass),
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
-  ArbitraryPubKey (ArbitraryPubKey),
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
-  ArbitrarySignature (ArbitrarySignature),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
   ArbitraryValidatorHash (ArbitraryValidatorHash),
   DA,
@@ -114,6 +113,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     recipient
   ),
+  PubKey (PubKey),
   SidechainParams (
     SidechainParams,
     chainId,
@@ -122,6 +122,7 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
+  Signature (Signature),
   SignedMerkleRootMint (
     SignedMerkleRootMint,
     committeeCertificateVerificationCurrencySymbol,
@@ -364,7 +365,8 @@ genMRIM = do
 -- | Generates a Merkle root, which is a 256-bit hash.
 genMR :: Gen LedgerBytes
 genMR =
-  LedgerBytes . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+  LedgerBytes
+    . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
     . fromList @ByteString
     <$> vectorOf 32 arbitrary
 
@@ -680,3 +682,71 @@ shrinkCPM (CandidatePermissionMint {..}) = do
   sp' <- shrinkSP sidechainParams
   ArbitraryTxOutRef x' <- shrink (ArbitraryTxOutRef utxo)
   pure . CandidatePermissionMint sp' $ x'
+
+{- | Wrapper for 'PubKey' to provide QuickCheck instances.
+
+ @since Unreleased
+-}
+newtype ArbitraryPubKey = ArbitraryPubKey PubKey
+  deriving
+    ( -- | @since Unreleased
+      Eq
+    , -- | @since Unreleased
+      Ord
+    , -- | @since Unreleased
+      PTPrelude.Eq
+    , -- | @since Unreleased
+      PTPrelude.Ord
+    )
+    via PubKey
+  deriving stock
+    ( -- | @since Unreleased
+      Show
+    )
+
+{- | Does not shrink, as this wouldn't make much sense.
+
+ @since Unreleased
+-}
+instance Arbitrary ArbitraryPubKey where
+  arbitrary =
+    ArbitraryPubKey
+      . PubKey
+      . LedgerBytes
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      <$> vectorOf 64 arbitrary
+
+{- | Wrapper for 'Signature' to provide QuickCheck instances.
+
+ @since Unreleased
+-}
+newtype ArbitrarySignature = ArbitrarySignature Signature
+  deriving
+    ( -- | @since Unreleased
+      Eq
+    , -- | @since Unreleased
+      Ord
+    , -- | @since Unreleased
+      PTPrelude.Eq
+    , -- | @since Unreleased
+      PTPrelude.Ord
+    )
+    via Signature
+  deriving stock
+    ( -- | @since Unreleased
+      Show
+    )
+
+{- | Does not shrink, as this wouldn't make much sense.
+
+ @since Unreleased
+-}
+instance Arbitrary ArbitrarySignature where
+  arbitrary =
+    ArbitrarySignature
+      . Signature
+      . LedgerBytes
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      <$> vectorOf 64 arbitrary

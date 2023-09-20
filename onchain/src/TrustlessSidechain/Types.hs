@@ -5,10 +5,9 @@
 
 module TrustlessSidechain.Types where
 
-import Ledger.Crypto (PubKey, PubKeyHash, Signature)
-import Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (Address, LedgerBytes (LedgerBytes), ValidatorHash)
-import Plutus.V2.Ledger.Tx (TxOutRef)
+import Plutus.V1.Ledger.Crypto (PubKeyHash)
+import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
+import Plutus.V2.Ledger.Api (Address, LedgerBytes (LedgerBytes), TxOutRef, ValidatorHash)
 import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
@@ -98,6 +97,56 @@ instance HasField "thresholdDenominator" SidechainParams Integer where
 newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
   { -- | @since Unreleased
     getEcdsaSecp256k1PubKey :: LedgerBytes
+  }
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
+  deriving newtype
+    ( Eq
+    , Ord
+    , ToData
+    , FromData
+    , UnsafeFromData
+    )
+  deriving
+    ( -- | @since Unreleased
+      IsString
+    , TSPrelude.Show
+    )
+    via LedgerBytes
+
+{- | Ed25519 public key
+ = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
+newtype PubKey = PubKey
+  -- TODO: rename to Ed25519PubKEy
+  { -- | @since Unreleased
+    getPubKey :: LedgerBytes
+  }
+  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
+  deriving newtype
+    ( Eq
+    , Ord
+    , ToData
+    , FromData
+    , UnsafeFromData
+    )
+  deriving
+    ( -- | @since Unreleased
+      IsString
+    , TSPrelude.Show
+    )
+    via LedgerBytes
+
+{- | Ed25519 signature
+ = Important note
+
+ The 'Data' serializations for this type /cannot/ change.
+-}
+newtype Signature = Signature
+  -- TODO: rename to Ed25519Signature
+  { -- | @since Unreleased
+    getSignature :: LedgerBytes
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype

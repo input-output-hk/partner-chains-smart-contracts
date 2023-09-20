@@ -19,30 +19,26 @@
 -}
 module TrustlessSidechain.PoCReferenceInput (
   mkPoCToReferenceInputValidator,
-  mkPoCToReferenceInputValidatorUntyped,
   serialisablePoCToReferenceInputValidator,
   mkPoCReferenceInputValidator,
-  mkPoCReferenceInputValidatorUntyped,
   serialisablePoCReferenceInputValidator,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
-import Plutus.V2.Ledger.Api (Address, Datum (getDatum), Script)
-import Plutus.V2.Ledger.Api qualified as Api
-import Plutus.V2.Ledger.Contexts (
+import Plutus.V2.Ledger.Api (
+  Address,
+  Datum (getDatum),
+  OutputDatum (OutputDatumHash),
+  Script,
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum),
+  fromCompiledCode,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (
-  OutputDatum (OutputDatumHash),
- )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedValidator)
 
 -- * To Reference
 
@@ -56,16 +52,16 @@ mkPoCToReferenceInputValidator _dat _red _ctx =
   traceError "error 'mkPoCToReferenceInputValidator' attempt to spend"
 
 -- | 'mkPoCToReferenceInputValidatorUntyped' is an untyped script of 'mkPoCToReferenceInputValidator'
-mkPoCToReferenceInputValidatorUntyped :: UntypedValidator
+mkPoCToReferenceInputValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkPoCToReferenceInputValidatorUntyped =
-  Validators.mkUntypedValidator mkPoCToReferenceInputValidator
+  mkUntypedValidator mkPoCToReferenceInputValidator
 
 {- | 'serialisablePoCToReferenceInputValidator' is a serialisable untyped script of
  'mkPoCToReferenceInputValidator'
 -}
-serialisablePoCToReferenceInputValidator :: Versioned Script
+serialisablePoCToReferenceInputValidator :: Script
 serialisablePoCToReferenceInputValidator =
-  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])
 
 -- * Reference
 
@@ -91,13 +87,13 @@ mkPoCReferenceInputValidator addr _dat red ctx
     info = scriptContextTxInfo ctx
 
 -- | 'mkPoCReferenceInputValidatorUntyped' is an untyped script of 'mkPoCReferenceInputValidator'
-mkPoCReferenceInputValidatorUntyped :: BuiltinData -> UntypedValidator
+mkPoCReferenceInputValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkPoCReferenceInputValidatorUntyped =
-  Validators.mkUntypedValidator . mkPoCReferenceInputValidator . PlutusTx.unsafeFromBuiltinData
+  mkUntypedValidator . mkPoCReferenceInputValidator . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisablePoCReferenceInputValidator' is a serialisable untyped script of
  'mkPoCReferenceInputValidator'
 -}
-serialisablePoCReferenceInputValidator :: Versioned Script
+serialisablePoCReferenceInputValidator :: Script
 serialisablePoCReferenceInputValidator =
-  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])

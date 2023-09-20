@@ -14,7 +14,7 @@ import Data.Wrappers (
   productToData2,
   productUnsafeFromData2,
  )
-import Ledger.Value (CurrencySymbol)
+import Plutus.V1.Ledger.Value (CurrencySymbol)
 import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.PlutusPrelude hiding (
   productFromData2,

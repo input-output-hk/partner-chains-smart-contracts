@@ -12,23 +12,16 @@
 -}
 module TrustlessSidechain.PoCSerialiseData (
   mkPoCSerialiseData,
-  mkPoCSerialiseDataUntyped,
   serialisablePoCSerialiseData,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
-import Plutus.V2.Ledger.Api (
-  Script,
- )
-import Plutus.V2.Ledger.Api qualified as Api
-import Plutus.V2.Ledger.Contexts (
-  ScriptContext,
- )
+import Plutus.V2.Ledger.Api (Script, ScriptContext, fromCompiledCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedValidator,
+ )
 
 {- | 'mkPoCSerialiseData' is a validator script which succeeds iff the datum
  BuiltinByteString is the same as the @'PlutusTx.Builtins.serialiseData'
@@ -40,12 +33,11 @@ mkPoCSerialiseData dat red _cxt = dat == Builtins.serialiseData red
 {- | 'mkPoCSerialiseDataUntyped' is an untyped script of
  'mkPoCSerialiseData'
 -}
-mkPoCSerialiseDataUntyped :: UntypedValidator
-mkPoCSerialiseDataUntyped = Validators.mkUntypedValidator mkPoCSerialiseData
+mkPoCSerialiseDataUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkPoCSerialiseDataUntyped = mkUntypedValidator mkPoCSerialiseData
 
 {- | 'serialisablePoCSerialiseData' is a serialisable untyped script of
  'mkPoCSerialiseData'
 -}
-serialisablePoCSerialiseData :: Versioned Script
-serialisablePoCSerialiseData =
-  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])) PlutusV2
+serialisablePoCSerialiseData :: Script
+serialisablePoCSerialiseData = fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])

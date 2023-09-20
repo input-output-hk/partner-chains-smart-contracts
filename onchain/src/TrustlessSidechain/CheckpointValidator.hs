@@ -15,30 +15,28 @@ module TrustlessSidechain.CheckpointValidator (
   serialisableCheckpointValidator,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
-import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
+import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
-  TokenName (TokenName),
-  Value (getValue),
- )
-import Plutus.V2.Ledger.Contexts (
+  OutputDatum (OutputDatum),
+  Script,
   ScriptContext (scriptContextTxInfo),
+  TokenName (TokenName),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
   TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
   TxOutRef,
+  Value (getValue),
+  fromCompiledCode,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy, mkUntypedValidator)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
   CheckpointDatum,
@@ -202,20 +200,20 @@ mkCheckpointPolicy ichm _red ctx =
 -- CTL hack
 mkCheckpointPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCheckpointPolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy
+  mkUntypedMintingPolicy
     . mkCheckpointPolicy
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCheckpointPolicy :: Versioned Ledger.Script
+serialisableCheckpointPolicy :: Script
 serialisableCheckpointPolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])
 
 mkCheckpointValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCheckpointValidatorUntyped =
-  ScriptUtils.mkUntypedValidator
+  mkUntypedValidator
     . mkCheckpointValidator
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCheckpointValidator :: Versioned Ledger.Script
+serialisableCheckpointValidator :: Script
 serialisableCheckpointValidator =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])

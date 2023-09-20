@@ -20,10 +20,8 @@ module Test.QuickCheck.Extra (
   -- * Wrappers
   ArbitraryBytes (..),
   ArbitraryTxOutRef (..),
-  ArbitraryPubKey (..),
   ArbitraryCurrencySymbol (..),
   ArbitraryValidatorHash (..),
-  ArbitrarySignature (..),
   ArbitraryPubKeyHash (..),
   ArbitraryAddress (..),
   ArbitraryCredential (..),
@@ -41,11 +39,9 @@ import Data.Bits (
 import Data.List (drop)
 import GHC.Err (undefined)
 import GHC.Exts (fromList, toList)
-import Ledger.Crypto (
-  PubKey (PubKey),
-  Signature (Signature),
+import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
  )
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Plutus.V2.Ledger.Api (
   Address (Address),
   Credential (PubKeyCredential, ScriptCredential),
@@ -442,7 +438,8 @@ newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
 -}
 instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
-    ArbitraryPubKeyHash . PubKeyHash
+    ArbitraryPubKeyHash
+      . PubKeyHash
       . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
@@ -463,57 +460,6 @@ instance Function ArbitraryPubKeyHash where
       outOf =
         ArbitraryPubKeyHash
           . PubKeyHash
-          . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-          . fromList @ByteString
-
-{- | Wrapper for 'Signature' to provide QuickCheck instances.
-
- @since Unreleased
--}
-newtype ArbitrarySignature = ArbitrarySignature Signature
-  deriving
-    ( -- | @since Unreleased
-      Eq
-    , -- | @since Unreleased
-      Ord
-    , -- | @since Unreleased
-      PTPrelude.Eq
-    , -- | @since Unreleased
-      PTPrelude.Ord
-    )
-    via Signature
-  deriving stock
-    ( -- | @since Unreleased
-      Show
-    )
-
-{- | Does not shrink, as this wouldn't make much sense.
-
- @since Unreleased
--}
-instance Arbitrary ArbitrarySignature where
-  arbitrary =
-    ArbitrarySignature . Signature
-      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-      . fromList @ByteString
-      <$> vectorOf 64 arbitrary
-
--- | @since Unreleased
-instance CoArbitrary ArbitrarySignature where
-  coarbitrary (ArbitrarySignature (Signature bbs)) =
-    coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
-
--- | @since Unreleased
-instance Function ArbitrarySignature where
-  function = functionMap into outOf
-    where
-      into :: ArbitrarySignature -> [Word8]
-      into (ArbitrarySignature (Signature bbs)) =
-        toList . PTPrelude.fromBuiltin $ bbs
-      outOf :: [Word8] -> ArbitrarySignature
-      outOf =
-        ArbitrarySignature
-          . Signature
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
@@ -620,60 +566,6 @@ instance Function ArbitraryValidatorHash where
       outOf =
         ArbitraryValidatorHash
           . ValidatorHash
-          . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-          . fromList @ByteString
-
-{- | Wrapper for 'PubKey' to provide QuickCheck instances.
-
- @since Unreleased
--}
-newtype ArbitraryPubKey = ArbitraryPubKey PubKey
-  deriving
-    ( -- | @since Unreleased
-      Eq
-    , -- | @since Unreleased
-      Ord
-    , -- | @since Unreleased
-      PTPrelude.Eq
-    , -- | @since Unreleased
-      PTPrelude.Ord
-    )
-    via PubKey
-  deriving stock
-    ( -- | @since Unreleased
-      Show
-    )
-
-{- | Does not shrink, as this wouldn't make much sense.
-
- @since Unreleased
--}
-instance Arbitrary ArbitraryPubKey where
-  arbitrary =
-    ArbitraryPubKey
-      . PubKey
-      . LedgerBytes
-      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-      . fromList @ByteString
-      <$> vectorOf 64 arbitrary
-
--- | @since Unreleased
-instance CoArbitrary ArbitraryPubKey where
-  coarbitrary (ArbitraryPubKey (PubKey (LedgerBytes bbs))) =
-    coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
-
--- | @since Unreleased
-instance Function ArbitraryPubKey where
-  function = functionMap into outOf
-    where
-      into :: ArbitraryPubKey -> [Word8]
-      into (ArbitraryPubKey (PubKey (LedgerBytes bbs))) =
-        toList . PTPrelude.fromBuiltin $ bbs
-      outOf :: [Word8] -> ArbitraryPubKey
-      outOf =
-        ArbitraryPubKey
-          . PubKey
-          . LedgerBytes
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
@@ -806,7 +698,10 @@ instance Arbitrary ArbitraryBytes where
       <$> arbitrary @[Word8]
   shrink (ArbitraryBytes (LedgerBytes bs)) = do
     shrunk <- shrink . toList . PTPrelude.fromBuiltin $ bs
-    pure . ArbitraryBytes . LedgerBytes . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+    pure
+      . ArbitraryBytes
+      . LedgerBytes
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
       $ shrunk
 

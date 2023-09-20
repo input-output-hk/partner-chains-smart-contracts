@@ -62,7 +62,11 @@ renderEstimates ::
   (HString.String, Integer) ->
   HString.String
 renderEstimates (tName, tEstimate) (mName, mEstimate) =
-  "Target: " <> tName <> "; size " <> TSPrelude.show tEstimate <> "\n"
+  "Target: "
+    <> tName
+    <> "; size "
+    <> TSPrelude.show tEstimate
+    <> "\n"
     <> "Measured: "
     <> mName
     <> "; size "
