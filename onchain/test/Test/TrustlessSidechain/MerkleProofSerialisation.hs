@@ -44,7 +44,7 @@ unsafeFromHex :: ByteString -> ByteString
 unsafeFromHex bs = case Bytes.fromHex bs of
   Right bs' -> case Bytes.getLedgerBytes bs' of
     BuiltinByteString bs'' -> bs''
-  Left err -> TSPrelude.error err
+  Left err -> TSPrelude.error (TSPrelude.show err)
 
 {- | 'testSide' includes some integration tests with the mamba people for #249
  for the 'Side' type

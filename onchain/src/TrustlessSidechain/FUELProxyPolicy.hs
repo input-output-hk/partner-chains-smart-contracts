@@ -14,13 +14,12 @@ module TrustlessSidechain.FUELProxyPolicy (
   serialisableFuelProxyPolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts (
-  mkUntypedMintingPolicy,
- )
 import Plutus.V2.Ledger.Api
 import PlutusTx
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedMintingPolicy,
+ )
 import TrustlessSidechain.Types
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 import TrustlessSidechain.Versioning (
@@ -132,8 +131,6 @@ mkFuelProxyPolicyUntyped params versioningConfig =
       (unsafeFromBuiltinData params)
       (unsafeFromBuiltinData versioningConfig)
 
-serialisableFuelProxyPolicy :: Versioned Script
+serialisableFuelProxyPolicy :: Script
 serialisableFuelProxyPolicy =
-  Versioned
-    (fromCompiledCode $$(PlutusTx.compile [||mkFuelProxyPolicyUntyped||]))
-    PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkFuelProxyPolicyUntyped||])

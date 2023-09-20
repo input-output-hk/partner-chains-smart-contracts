@@ -1,4 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {- | The module 'GetOpts' provides functionality / data types to parse the command line
@@ -20,13 +22,12 @@ import Cardano.Crypto.DSIGN.Class (
   genKeyDSIGN,
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Codec.Serialise qualified
+import Codec.Serialise qualified as Serialise
 import Control.Exception (ioError)
 import Control.Monad (MonadPlus (mzero), guard, join, return)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson (FromJSON (parseJSON))
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Extras (tryDecode)
 import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
 import Data.Bifunctor qualified as Bifunctor
@@ -39,6 +40,7 @@ import Data.Either.Combinators (mapLeft)
 import Data.List qualified as List
 import Data.String qualified as HString
 import Data.Text qualified as Text
+import Data.Text.Encoding (encodeUtf8)
 import Options.Applicative (
   auto,
   command,
@@ -59,7 +61,6 @@ import Options.Applicative (
 import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
   Address,
-  BuiltinData,
   FromData (fromBuiltinData),
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
@@ -67,6 +68,7 @@ import Plutus.V2.Ledger.Api (
   TxOutRef (TxOutRef),
  )
 import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString), BuiltinData (BuiltinData))
 import System.IO (FilePath)
 import System.IO.Error (userError)
 import TrustlessSidechain.Governance (GovernanceAuthority, mkGovernanceAuthority)
@@ -222,7 +224,9 @@ instance FromJSON MerkleTreeEntryJson where
           (LedgerBytes . bech32RecipientBytes)
           (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
         -- parse the bech32 type, then grab the byte output
-        <*> v Aeson..:? "previousMerkleRoot"
+        <*> fmap
+          (fmap (LedgerBytes . BuiltinByteString . encodeUtf8))
+          (v Aeson..:? "previousMerkleRoot")
 
 -- * CLI parser
 
@@ -397,7 +401,7 @@ parsePreviousMerkleRoot =
 parseMerkleTree :: OptParse.ReadM MerkleTree
 parseMerkleTree = eitherReader $ \str -> do
   binary <- mapLeft ("Invalid merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
-  builtindata :: Builtins.BuiltinData <- mapLeft show $ Codec.Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
+  builtindata :: Builtins.BuiltinData <- mapLeft show $ fmap BuiltinData $ Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
   maybe (Left "'fromBuiltinData' for merkle tree failed") Right $ fromBuiltinData builtindata
 
 {- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
@@ -523,7 +527,7 @@ parseAddress = eitherReader $ \(str :: HString.String) -> do
   builtinData :: BuiltinData <-
     fmap Builtins.dataToBuiltinData $
       Bifunctor.first show $
-        Codec.Serialise.deserialiseOrFail $
+        Serialise.deserialiseOrFail $
           ByteString.Lazy.fromStrict decoded
   case fromBuiltinData builtinData of
     Nothing -> Left "Invalid `Address`"
@@ -980,3 +984,6 @@ sidechainPrivateKeyToPublicKeyCommand =
               ]
         pure $ pure $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
         <**> helper
+
+tryDecode :: Text -> Either HString.String ByteString
+tryDecode = Base16.decode . encodeUtf8

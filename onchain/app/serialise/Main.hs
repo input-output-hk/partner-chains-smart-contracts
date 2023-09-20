@@ -2,20 +2,15 @@
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
 
-import Cardano.Api (PlutusScriptV2, writeFileTextEnvelope)
-import Cardano.Api.SerialiseTextEnvelope (serialiseToTextEnvelope)
-import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
-import Codec.Serialise (serialise)
+import Cardano.Api (PlutusScriptV2, serialiseToTextEnvelope, writeFileTextEnvelope)
+import Cardano.Api.Shelley (PlutusScript)
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
-import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
-import Data.ByteString.Short (toShort)
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.String qualified as HString
-import Ledger (Script, Versioned (unversioned), scriptHash)
-import Plutonomy.UPLC qualified
+import Plutus.V2.Ledger.Api (Script)
 import System.Console.GetOpt (
   ArgDescr (NoArg, OptArg, ReqArg),
   ArgOrder (RequireOrder),
@@ -46,6 +41,7 @@ import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSchnorr qualified as PoCSchnorr
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
 import TrustlessSidechain.ScriptCache qualified as ScriptCache
+import TrustlessSidechain.ScriptUtils (scriptToPlutusScript)
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Versioning qualified as Versioning
 
@@ -117,22 +113,13 @@ getOpts =
 
 -- Note: CTL uses the usual TextEnvelope format now.
 
-versionedScriptToPlutusScript :: Versioned Script -> PlutusScript PlutusScriptV2
-versionedScriptToPlutusScript =
-  PlutusScriptSerialised @PlutusScriptV2
-    . toShort
-    . toStrict
-    . serialise
-    . Plutonomy.UPLC.optimizeUPLC
-    . unversioned
-
-serialiseScript :: FilePath -> FilePath -> Versioned Script -> IO ()
+serialiseScript :: FilePath -> FilePath -> Script -> IO ()
 serialiseScript outputDir name script =
   let out :: PlutusScript PlutusScriptV2
-      out = versionedScriptToPlutusScript script
+      out = scriptToPlutusScript script
       file = outputDir FilePath.</> name
    in do
-        IO.putStrLn $ "serialising " <> file <> ",\thash = " <> show (scriptHash script)
+        IO.putStrLn $ "serialising " <> file
         writeFileTextEnvelope file Nothing out >>= either print pure
 
 --
@@ -142,7 +129,7 @@ serialiseScriptsToPurescript ::
   -- | Name of the script, and the associated script
   -- Entries should be unique w.r.t the name; and the name should be
   -- characters for a valid purescript identifier
-  [(HString.String, Versioned Script)] ->
+  [(HString.String, Script)] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.
@@ -191,7 +178,7 @@ serialiseScriptsToPurescript moduleName plutusScripts handle = do
       ByteString.Lazy.Char8.concat
         [ "  "
         , ByteString.Lazy.Char8.replicate 3 '"'
-        , Aeson.encode $ serialiseToTextEnvelope Nothing $ versionedScriptToPlutusScript script
+        , Aeson.encode $ serialiseToTextEnvelope Nothing $ scriptToPlutusScript script
         , ByteString.Lazy.Char8.replicate 3 '"'
         ]
 

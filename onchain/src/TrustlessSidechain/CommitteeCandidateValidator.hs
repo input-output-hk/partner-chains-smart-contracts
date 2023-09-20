@@ -10,9 +10,7 @@ module TrustlessSidechain.CommitteeCandidateValidator (
   serialisableValidator,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as ScriptUtils
+import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
 import Plutus.V2.Ledger.Contexts (
   ScriptContext (scriptContextTxInfo),
   TxInfo,
@@ -20,6 +18,7 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedValidator)
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,
@@ -37,7 +36,7 @@ mkCommitteeCandidateValidator _ datum _ ctx =
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-    pkh :: Ledger.PubKeyHash
+    pkh :: PubKeyHash
     pkh = get @"ownPkh" datum
     isSigned :: Bool
     isSigned = txSignedBy info pkh
@@ -50,10 +49,10 @@ committeeCandidateValidatorUntyped ::
   BuiltinData ->
   ()
 committeeCandidateValidatorUntyped =
-  ScriptUtils.mkUntypedValidator
+  mkUntypedValidator
     . mkCommitteeCandidateValidator
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableValidator :: Versioned Ledger.Script
+serialisableValidator :: Script
 serialisableValidator =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])

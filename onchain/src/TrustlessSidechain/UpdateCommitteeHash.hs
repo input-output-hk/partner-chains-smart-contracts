@@ -5,31 +5,29 @@
 
 module TrustlessSidechain.UpdateCommitteeHash where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
-import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
+import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
-  TokenName (TokenName),
-  Value (getValue),
- )
-import Plutus.V2.Ledger.Contexts (
+  OutputDatum (OutputDatum),
+  Script,
   ScriptContext (scriptContextTxInfo),
+  TokenName (TokenName),
   TxInInfo (txInInfoOutRef, txInInfoResolved),
   TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
+  Value (getValue),
+  fromCompiledCode,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (OutputDatum))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy, mkUntypedValidator)
 import TrustlessSidechain.Types (
   UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
   UpdateCommitteeHash (
@@ -192,16 +190,16 @@ mkCommitteeOraclePolicy ichm _red ctx =
 -- CTL hack
 mkCommitteeOraclePolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeOraclePolicyUntyped =
-  ScriptUtils.mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData
+  mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeOraclePolicy :: Versioned Ledger.Script
+serialisableCommitteeOraclePolicy :: Script
 serialisableCommitteeOraclePolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
 
 mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeHashValidatorUntyped =
-  ScriptUtils.mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+  mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeHashValidator :: Versioned Ledger.Script
+serialisableCommitteeHashValidator :: Script
 serialisableCommitteeHashValidator =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

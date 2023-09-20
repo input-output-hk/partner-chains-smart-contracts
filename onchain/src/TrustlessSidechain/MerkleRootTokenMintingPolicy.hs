@@ -10,19 +10,18 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
   serialisableMintingPolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger qualified
-import Ledger.Value (TokenName (TokenName, unTokenName), Value (getValue))
-import Ledger.Value qualified as Value
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
+import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
   Script,
   ScriptContext,
+  TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutValue),
+  Value (getValue),
+  fromCompiledCode,
   scriptContextTxInfo,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -31,6 +30,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
@@ -155,7 +155,7 @@ mkMintingPolicy
                             go (txOut : txOuts) =
                               ( ( txOutAddress txOut == merkleRootTokenValidatorAddress
                                     && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
-                                      > 0
+                                    > 0
                                 )
                                   || go txOuts
                               )
@@ -166,11 +166,11 @@ mkMintingPolicy
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped sp versioningConfig =
-  ScriptUtils.mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
+  mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
-serialisableMintingPolicy :: Versioned Script
+serialisableMintingPolicy :: Script
 serialisableMintingPolicy =
-  Versioned (Ledger.fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 -- Helpers
 

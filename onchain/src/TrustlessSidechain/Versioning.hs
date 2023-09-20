@@ -38,14 +38,14 @@ module TrustlessSidechain.Versioning (
   committeeOraclePolicyId,
 ) where
 
-import Ledger (AssetClass, Language (PlutusV2), Versioned (Versioned), scriptHashAddress)
-import Plutus.Script.Utils.V2.Typed.Scripts (mkUntypedMintingPolicy)
+import Plutus.V1.Ledger.Address (scriptHashAddress)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
 import Plutus.V2.Ledger.Api (Address, CurrencySymbol (CurrencySymbol), Datum (Datum), OutputDatum (OutputDatum), Script, ScriptContext (ScriptContext), ScriptHash (ScriptHash), ScriptPurpose (Minting, Spending), TokenName (TokenName), TxInInfo (TxInInfo), TxOut (TxOut), ValidatorHash (ValidatorHash), fromCompiledCode, txInInfoOutRef, txInfoInputs, txInfoOutputs, txOutValue)
 import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (SidechainParams (SidechainParams), genesisUtxo, governanceAuthority)
 import TrustlessSidechain.Utils (fromSingleton)
 
@@ -324,13 +324,10 @@ mkVersionOraclePolicyUntyped params =
       (unsafeFromBuiltinData params)
 
 serialisableVersionOraclePolicy ::
-  Versioned Script
+  Script
 serialisableVersionOraclePolicy =
-  Versioned
-    ( fromCompiledCode
-        $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
-    )
-    PlutusV2
+  fromCompiledCode
+    $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
 
 {- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
  scripts as well as a script caching system.  UTxOs on the script are managed
@@ -450,13 +447,10 @@ mkVersionOracleValidatorUntyped params currSymbol datum redeemer scriptContext =
       (PlutusTx.unsafeFromBuiltinData scriptContext)
 
 serialisableVersionOracleValidator ::
-  Versioned Script
+  Script
 serialisableVersionOracleValidator =
-  Versioned
-    ( fromCompiledCode
-        $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
-    )
-    PlutusV2
+  fromCompiledCode
+    $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
 
 {- | Searches for a specified validator script passed as a reference input.
  Note that if requested script ID corresponds to a minting policy this

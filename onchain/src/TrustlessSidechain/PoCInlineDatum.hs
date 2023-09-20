@@ -12,27 +12,25 @@
 -}
 module TrustlessSidechain.PoCInlineDatum (
   mkPoCInlineDatumValidator,
-  mkPoCInlineDatumValidatorUntyped,
   serialisablePoCInlineDatumValidator,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators (UntypedValidator)
-import Plutus.Script.Utils.V2.Typed.Scripts.Validators qualified as Validators
-import Plutus.V2.Ledger.Api (Datum (getDatum), Script)
-import Plutus.V2.Ledger.Api qualified as Api
-import Plutus.V2.Ledger.Contexts (
+import Plutus.V2.Ledger.Api (
+  Datum (getDatum),
+  OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
+  Script,
   ScriptContext,
   TxInInfo (txInInfoResolved),
   TxOut (txOutDatum),
+  fromCompiledCode,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
-import Plutus.V2.Ledger.Tx (
-  OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
- )
 import PlutusTx qualified
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedValidator,
+ )
 
 {- | 'mkPoCInlineDatumValidator'
  A script which verifies that its inline datum is the redeemer.
@@ -53,12 +51,12 @@ mkPoCInlineDatumValidator _dat red ctx =
     Nothing -> traceError "error 'mkPoCInlineDatum': 'findOwnInput' failed"
 
 -- | 'mkPoCInlineDatumValidatorUntyped' is an untyped script of 'mkPoCInlineDatumValidator'
-mkPoCInlineDatumValidatorUntyped :: UntypedValidator
-mkPoCInlineDatumValidatorUntyped = Validators.mkUntypedValidator mkPoCInlineDatumValidator
+mkPoCInlineDatumValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkPoCInlineDatumValidatorUntyped = mkUntypedValidator mkPoCInlineDatumValidator
 
 {- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
  'mkPoCInlineDatumValidator'
 -}
-serialisablePoCInlineDatumValidator :: Versioned Script
+serialisablePoCInlineDatumValidator :: Script
 serialisablePoCInlineDatumValidator =
-  Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])

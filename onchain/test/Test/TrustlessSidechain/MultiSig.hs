@@ -144,7 +144,9 @@ instance Arbitrary SufficientVerification where
 
 showSufficientVerification :: SufficientVerification -> HString.String
 showSufficientVerification (SufficientVerification pks enough msg sigs) =
-  "Pubkeys: " <> TSPrelude.show pks <> "\n"
+  "Pubkeys: "
+    <> TSPrelude.show pks
+    <> "\n"
     <> "Pubkeys length: "
     <> TSPrelude.show (length pks)
     <> "\n"
@@ -192,7 +194,9 @@ instance Arbitrary InsufficientVerification where
 
 showInsufficientVerification :: InsufficientVerification -> HString.String
 showInsufficientVerification (InsufficientVerification pks enough msg sigs) =
-  "Pubkeys: " <> TSPrelude.show pks <> "\n"
+  "Pubkeys: "
+    <> TSPrelude.show pks
+    <> "\n"
     <> "Pubkeys length: "
     <> TSPrelude.show (TSPrelude.length pks)
     <> "\n"

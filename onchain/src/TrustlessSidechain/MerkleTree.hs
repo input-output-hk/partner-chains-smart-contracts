@@ -67,7 +67,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))
 import PlutusTx.ErrorCodes qualified
 import PlutusTx.Trace qualified as Trace
-import Schema qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 
@@ -79,7 +78,6 @@ import TrustlessSidechain.PlutusPrelude
 -}
 newtype RootHash = RootHash {unRootHash :: LedgerBytes}
   deriving stock (TSPrelude.Eq, Generic)
-  deriving anyclass (Schema.ToSchema)
   deriving newtype (FromData, ToData, UnsafeFromData, TSPrelude.Ord)
   deriving (IsString, TSPrelude.Show) via LedgerBytes
 
@@ -130,7 +128,6 @@ instance Eq RootHash where
 -}
 data Side = L | R
   deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
-  deriving anyclass (Schema.ToSchema)
 
 instance ToData Side where
   {-# INLINEABLE toBuiltinData #-}
@@ -179,7 +176,6 @@ instance UnsafeFromData Side where
 -}
 data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
-  deriving anyclass (Schema.ToSchema)
 
 -- | 'pureScriptShowUp' shows Up in a purescript friendly way.
 pureScriptShowUp :: Up -> HaskellString.String
@@ -210,7 +206,6 @@ makeIsDataIndexed ''Up [('Up, 0)]
 -}
 newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
-  deriving anyclass (Schema.ToSchema)
   deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | 'pureScriptShowMerkleProof' shows the MerkleProof in a purescript friendly way.

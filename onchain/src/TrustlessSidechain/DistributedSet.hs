@@ -43,14 +43,7 @@ module TrustlessSidechain.DistributedSet (
   serialisableDsKeyPolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Ledger.Address (scriptHashAddress)
-import Plutus.Script.Utils.V2.Typed.Scripts (
-  UntypedMintingPolicy,
-  UntypedValidator,
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
- )
+import Plutus.V1.Ledger.Address (scriptHashAddress)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
@@ -66,14 +59,18 @@ import Plutus.V2.Ledger.Api (
   TxOutRef,
   ValidatorHash,
   Value (getValue),
+  fromCompiledCode,
  )
-import Plutus.V2.Ledger.Api qualified as Api
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+ )
 
 {- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
  for the distributed set. (See Note [How This All Works]. Moreover, this
@@ -484,7 +481,7 @@ mkInsertValidator ds _dat _red ctx =
     -- two 'CurrencySymbol's (Ada and the 'keyCurrencySymbol'), with only one
     -- 'TokenName' mapping for each.
     getKeyTn :: Value -> BuiltinByteString
-    getKeyTn v = case AssocMap.toList . Value.getValue $ v of
+    getKeyTn v = case AssocMap.toList . getValue $ v of
       -- Note from Koz: We assume that Ada comes first here. Furthermore, we
       -- also assume that the Ada 'entry' is special in that it's associated
       -- with one, and only one, 'TokenName'.
@@ -626,47 +623,47 @@ mkDsKeyPolicy dskm _red ctx = case ins of
 {- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
  needed for ctl)
 -}
-mkInsertValidatorUntyped :: BuiltinData -> UntypedValidator
+mkInsertValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkInsertValidatorUntyped = mkUntypedValidator . mkInsertValidator . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisableInsertValidator' is a serialisable version of the validator
  (this is needed for ctl)
 -}
-serialisableInsertValidator :: Versioned Script
-serialisableInsertValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])) PlutusV2
+serialisableInsertValidator :: Script
+serialisableInsertValidator = fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
 
 {- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
  needed for ctl)
 -}
-mkDsConfValidatorUntyped :: BuiltinData -> UntypedValidator
+mkDsConfValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfValidatorUntyped = mkDsConfValidator . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisableDsConfValidator' creates a serialisable version of the
  validator (this is needed for ctl)
 -}
-serialisableDsConfValidator :: Versioned Script
-serialisableDsConfValidator = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])) PlutusV2
+serialisableDsConfValidator :: Script
+serialisableDsConfValidator = fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
 
 {- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
  needed for ctl)
 -}
-mkDsConfPolicyUntyped :: BuiltinData -> UntypedMintingPolicy
+mkDsConfPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfPolicyUntyped = mkUntypedMintingPolicy . mkDsConfPolicy . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
  policy (this is needed for ctl)
 -}
-serialisableDsConfPolicy :: Versioned Script
-serialisableDsConfPolicy = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])) PlutusV2
+serialisableDsConfPolicy :: Script
+serialisableDsConfPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
 
 {- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
  needed for ctl)
 -}
-mkDsKeyPolicyUntyped :: BuiltinData -> UntypedMintingPolicy
+mkDsKeyPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsKeyPolicyUntyped = mkUntypedMintingPolicy . mkDsKeyPolicy . PlutusTx.unsafeFromBuiltinData
 
 {- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
  policy (this is needed for ctl)
 -}
-serialisableDsKeyPolicy :: Versioned Script
-serialisableDsKeyPolicy = Versioned (Api.fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])) PlutusV2
+serialisableDsKeyPolicy :: Script
+serialisableDsKeyPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])

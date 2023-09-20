@@ -113,8 +113,6 @@ module TrustlessSidechain.PoCSchnorr (
   serialisablePolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Versioned (Versioned))
-import Plutus.Script.Utils.V2.Typed.Scripts qualified as ScriptUtils
 import Plutus.V2.Ledger.Api (
   Script,
   ScriptContext,
@@ -123,6 +121,9 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedMintingPolicy,
+ )
 
 data SchnorrRedeemer = SchnorrRedeemer
   { -- | arbitrary byte array
@@ -148,8 +149,8 @@ mkPolicy redeemer _context =
 
 -- CTL hack
 untypedPolicy :: BuiltinData -> BuiltinData -> ()
-untypedPolicy = ScriptUtils.mkUntypedMintingPolicy mkPolicy
+untypedPolicy = mkUntypedMintingPolicy mkPolicy
 
-serialisablePolicy :: Versioned Script
+serialisablePolicy :: Script
 serialisablePolicy =
-  Versioned (fromCompiledCode $$(PlutusTx.compile [||untypedPolicy||])) PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||untypedPolicy||])

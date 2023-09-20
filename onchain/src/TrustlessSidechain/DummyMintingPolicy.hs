@@ -6,13 +6,15 @@ module TrustlessSidechain.DummyMintingPolicy (
   serialisableDummyMintingPolicy,
 ) where
 
-import Ledger (Language (PlutusV2), Script, Versioned (Versioned), fromCompiledCode)
-import Plutus.Script.Utils.V2.Typed.Scripts (
-  mkUntypedMintingPolicy,
+import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
+import Plutus.V2.Ledger.Contexts (
+  ScriptContext (ScriptContext),
+  ScriptPurpose (Minting),
+  txInfoMint,
  )
-import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext), ScriptPurpose (Minting), txInfoMint)
 import PlutusTx (compile)
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (SidechainParams)
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 
@@ -46,8 +48,6 @@ mkDummyMintingPolicyUntyped ::
 mkDummyMintingPolicyUntyped params =
   mkUntypedMintingPolicy $ mkDummyMintingPolicy (unsafeFromBuiltinData params)
 
-serialisableDummyMintingPolicy :: Versioned Script
+serialisableDummyMintingPolicy :: Script
 serialisableDummyMintingPolicy =
-  Versioned
-    (fromCompiledCode $$(PlutusTx.compile [||mkDummyMintingPolicyUntyped||]))
-    PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkDummyMintingPolicyUntyped||])

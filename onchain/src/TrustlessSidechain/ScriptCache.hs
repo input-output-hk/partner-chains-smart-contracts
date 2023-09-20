@@ -6,7 +6,8 @@
 -}
 module TrustlessSidechain.ScriptCache (serialisableScriptCache) where
 
-import Ledger (Language (PlutusV2), PubKeyHash, Script, ScriptContext (ScriptContext), Versioned (Versioned), fromCompiledCode, txSignedBy)
+import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
+import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext), txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import TrustlessSidechain.PlutusPrelude
 
@@ -36,8 +37,6 @@ mkScriptCacheUntyped pkh datum redeemer sc =
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (PlutusTx.unsafeFromBuiltinData sc)
 
-serialisableScriptCache :: Versioned Script
+serialisableScriptCache :: Script
 serialisableScriptCache =
-  Versioned
-    (fromCompiledCode $$(PlutusTx.compile [||mkScriptCacheUntyped||]))
-    PlutusV2
+  fromCompiledCode $$(PlutusTx.compile [||mkScriptCacheUntyped||])

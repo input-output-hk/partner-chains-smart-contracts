@@ -1,8 +1,8 @@
 module Main (main) where
 
 import Compiled qualified
-import Ledger.Scripts (fromCompiledCode, unversioned)
 import Legacy qualified
+import Plutus.V1.Ledger.Api (fromCompiledCode)
 import Sizer (fitsInto, fitsUnder, scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
@@ -53,23 +53,23 @@ main =
             1_561
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
-            (unversioned FUEL.serialisableMintingPolicy)
-            4_445
+            FUEL.serialisableMintingPolicy
+            4_448
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
             1_471
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
-            (unversioned MerkleRoot.serialisableMintingPolicy)
-            3_989
+            MerkleRoot.serialisableMintingPolicy
+            3_892
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
             200
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
-            (unversioned CCV.serialisableValidator)
+            CCV.serialisableValidator
             2_952
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
@@ -77,7 +77,7 @@ main =
             147
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
-            (unversioned CPMP.serialisableCandidatePermissionMintingPolicy)
+            CPMP.serialisableCandidatePermissionMintingPolicy
             2_764
         , fitsInto
             "mkCommitteeOraclePolicy"
@@ -85,7 +85,7 @@ main =
             400
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
-            (unversioned UCH.serialisableCommitteeOraclePolicy)
+            UCH.serialisableCommitteeOraclePolicy
             2_853
         , fitsInto
             "mkUpdateCommitteeHashValidator"
@@ -93,23 +93,23 @@ main =
             768
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
-            (unversioned UCH.serialisableCommitteeHashValidator)
-            3_472
+            UCH.serialisableCommitteeHashValidator
+            3_499
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
             1_557
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
-            (unversioned CV.serialisableCheckpointValidator)
-            4_305
+            CV.serialisableCheckpointValidator
+            4_303
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
             400
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
-            (unversioned CV.serialisableCheckpointPolicy)
+            CV.serialisableCheckpointPolicy
             2_853
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
@@ -117,16 +117,16 @@ main =
             1407
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
-            (unversioned CPEATMSP.serialisableMintingPolicy)
-            3_758
+            CPEATMSP.serialisableMintingPolicy
+            3_766
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
             1_396
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
-            (unversioned CPSATMSP.serialisableMintingPolicy)
-            3_758
+            CPSATMSP.serialisableMintingPolicy
+            3_766
         ]
     , testGroup
         "Distributed set"
@@ -136,7 +136,7 @@ main =
             1_710
         , scriptFitsInto
             "mkInsertValidator (serialized)"
-            (unversioned DS.serialisableInsertValidator)
+            DS.serialisableInsertValidator
             4_095
         , fitsInto
             "mkDsConfPolicy"
@@ -144,7 +144,7 @@ main =
             457
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
-            (unversioned DS.serialisableDsConfPolicy)
+            DS.serialisableDsConfPolicy
             2_884
         , fitsInto
             "mkDsKeyPolicy"
@@ -152,7 +152,7 @@ main =
             1_231
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
-            (unversioned DS.serialisableDsKeyPolicy)
+            DS.serialisableDsKeyPolicy
             3_630
         ]
     , testGroup

@@ -18,7 +18,7 @@ import Data.Wrappers (
   directProductToData3,
   directProductUnsafeFromData3,
  )
-import Ledger.Value (CurrencySymbol)
+import Plutus.V1.Ledger.Value (CurrencySymbol)
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
   BuiltinList,
