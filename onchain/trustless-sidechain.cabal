@@ -217,7 +217,7 @@ executable trustless-sidechain-serialise
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-  hs-source-dirs: app/serialise test
+  hs-source-dirs: app/serialise
 
 executable trustless-sidechain-merkle-tree
   import:         common-lang, common-optimized-parallel, common-script-lang
