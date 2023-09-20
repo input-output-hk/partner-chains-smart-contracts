@@ -34,7 +34,7 @@ In order to run Trustless Sidechain CTL you also need to set up the runtime depe
 
 ## Known issues
 There are two known issues with the trustless sidechain as released.
-### Issue #1 CTL warnings regarding certain definitions
+### Issue #46 CTL warnings regarding certain definitions
 **Description**  
 Several warnings from CTL like the following appear:
 ```bash
@@ -60,7 +60,7 @@ and "wallet Identity" is a functional approximation for user identity therefore 
 But the first statement is false, and thus the conclusion is false. It will be fine for Plutip tests because KeyWallet is single-address, but it will fail if any action on-chain or off-chain falls prey to this.  
 
 In this open-source version of the repository, these warnings have no impact, as the project is not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
-### Issue #2 distributed set sssue
+### Issue #38 distributed set issue
 **Description**  
 It is possible for a malicious user to submit a transaction to make a node in the distributed set unspendable, so this would block people from claiming their sidechain token.  
 
