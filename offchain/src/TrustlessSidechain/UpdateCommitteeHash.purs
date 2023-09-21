@@ -15,9 +15,9 @@ import Contract.Monad
   )
 import Contract.PlutusData
   ( class ToData
-  , Datum(..)
+  , Datum(Datum)
   , PlutusData
-  , Redeemer(..)
+  , Redeemer(Redeemer)
   , toData
   )
 import Contract.ScriptLookups (ScriptLookups)
@@ -27,7 +27,7 @@ import Contract.Transaction
   , TransactionInput
   , TransactionOutputWithRefScript
   )
-import Contract.TxConstraints (DatumPresence(..), TxConstraints)
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value

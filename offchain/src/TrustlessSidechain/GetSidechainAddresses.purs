@@ -25,10 +25,14 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.TraversableWithIndex (traverseWithIndex)
-import TrustlessSidechain.CandidatePermissionToken (CandidatePermissionMint(..))
+import TrustlessSidechain.CandidatePermissionToken
+  ( CandidatePermissionMint(CandidatePermissionMint)
+  )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.Checkpoint.Types (CheckpointParameter(..))
+import TrustlessSidechain.Checkpoint.Types
+  ( CheckpointParameter(CheckpointParameter)
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -40,7 +44,9 @@ import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (assetClass)
-import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHash(..))
+import TrustlessSidechain.UpdateCommitteeHash.Types
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
@@ -49,7 +55,24 @@ import TrustlessSidechain.Utils.Logging
   , OffchainError(InternalError)
   )
 import TrustlessSidechain.Versioning as Versioning
-import TrustlessSidechain.Versioning.Types (ScriptId(..), VersionOracle(..))
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( DSConfPolicy
+      , CandidatePermissionPolicy
+      , MerkleRootTokenPolicy
+      , CommitteeNftPolicy
+      , CheckpointPolicy
+      , FUELProxyPolicy
+      , VersionOraclePolicy
+      , CommitteeCandidateValidator
+      , CommitteeHashValidator
+      , DSConfValidator
+      , DSInsertValidator
+      , VersionOracleValidator
+      , CheckpointValidator
+      )
+  , VersionOracle(VersionOracle)
+  )
 import TrustlessSidechain.Versioning.Utils
   ( getVersionOraclePolicy
   , getVersionedCurrencySymbol

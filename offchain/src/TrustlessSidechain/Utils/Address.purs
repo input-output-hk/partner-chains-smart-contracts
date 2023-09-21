@@ -17,7 +17,7 @@ import Contract.Address
   )
 import Contract.Monad (Contract, liftedM)
 import Contract.PlutusData (class FromData, class ToData)
-import Contract.Prim.ByteArray (ByteArray, CborBytes(..))
+import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
 import Contract.Wallet
   ( getWalletAddresses
   , ownPaymentPubKeyHashes

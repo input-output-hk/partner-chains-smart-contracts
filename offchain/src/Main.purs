@@ -6,7 +6,7 @@ import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
 import Control.Monad.Error.Class (throwError)
 import Data.BigInt as BigInt
 import Data.List as List
-import Data.Symbol (SProxy(..))
+import Data.Symbol (SProxy(SProxy))
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
