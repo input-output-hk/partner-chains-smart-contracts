@@ -224,8 +224,6 @@ instance FromData VersionOracleConfig where
     versionOracleCurrencySymbol ← fromData x
     pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
-  fromData _ = Nothing
-
 instance ToData VersionOracleConfig where
   toData
     ( VersionOracleConfig { versionOracleCurrencySymbol }
