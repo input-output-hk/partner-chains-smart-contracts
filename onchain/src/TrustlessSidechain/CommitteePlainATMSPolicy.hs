@@ -39,7 +39,12 @@ import TrustlessSidechain.Types (
   UpdateCommitteeDatum (aggregateCommitteePubKeys),
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
-import TrustlessSidechain.Versioning (VersionOracle (VersionOracle, scriptId, version), VersionOracleConfig, getVersionedCurrencySymbol)
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracleConfig,
+  committeeOraclePolicyId,
+  getVersionedCurrencySymbol,
+ )
 
 -- * Creating the plain ATMS minting policy
 
@@ -121,7 +126,7 @@ mkMintingPolicy verifySig ccm versioningConfig atmspms ctx =
     committeeOracleCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
-        (VersionOracle {version = 1, scriptId = 19}) -- get CommitteeOraclePolicy
+        (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
         ctx
     committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum =

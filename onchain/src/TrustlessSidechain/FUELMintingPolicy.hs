@@ -27,7 +27,13 @@ import TrustlessSidechain.Types (
   FUELMintingRedeemer (FUELMintingRedeemer),
   SidechainParams,
  )
-import TrustlessSidechain.Versioning (VersionOracle (VersionOracle, scriptId, version), VersionOracleConfig, getVersionedCurrencySymbol)
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracleConfig,
+  dsKeyPolicyId,
+  getVersionedCurrencySymbol,
+  merkleRootTokenPolicyId,
+ )
 
 {- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
  the side chain).
@@ -114,13 +120,13 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
     merkleRootTnCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
-        (VersionOracle {version = 1, scriptId = 1}) -- get MerkleRoot CurrencySymbol
+        (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
         ctx
     dsKeyCurrencySymbol :: CurrencySymbol
     dsKeyCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
-        (VersionOracle {version = 1, scriptId = 8}) -- get DSKeyPolicy CurrencySymbol
+        (VersionOracle {version = 1, scriptId = dsKeyPolicyId})
         ctx
     minted :: Value
     minted = txInfoMint info

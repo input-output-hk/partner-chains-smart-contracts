@@ -43,7 +43,14 @@ import TrustlessSidechain.Types (
   SignedMerkleRootRedeemer,
   merkleRoot,
  )
-import TrustlessSidechain.Versioning qualified as Versioning
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracleConfig,
+  committeeCertificateVerificationPolicyId,
+  getVersionedCurrencySymbol,
+  getVersionedValidatorAddress,
+  merkleRootTokenValidatorId,
+ )
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -67,7 +74,7 @@ serialiseMrimHash =
       and At least one token is paid to 'validatorHash'
 -}
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> Versioning.VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
   sp
   versionOracleConfig
@@ -84,9 +91,23 @@ mkMintingPolicy
       ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
 
       merkleRootTokenValidatorAddress =
-        Versioning.getVersionedValidatorAddress versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 2}) ctx
+        getVersionedValidatorAddress
+          versionOracleConfig
+          ( VersionOracle
+              { version = 1
+              , scriptId = merkleRootTokenValidatorId
+              }
+          )
+          ctx
       committeeCertificateVerificationPolicy =
-        Versioning.getVersionedCurrencySymbol versionOracleConfig (Versioning.VersionOracle {version = 1, scriptId = 18}) ctx
+        getVersionedCurrencySymbol
+          versionOracleConfig
+          ( VersionOracle
+              { version = 1
+              , scriptId = committeeCertificateVerificationPolicyId
+              }
+          )
+          ctx
 
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the

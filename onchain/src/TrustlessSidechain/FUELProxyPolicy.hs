@@ -26,6 +26,8 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
+  fuelBurningPolicyId,
+  fuelMintingPolicyId,
   getVersionedCurrencySymbol,
  )
 
@@ -71,7 +73,7 @@ mkFuelProxyPolicy
       coreCurrSymbol =
         getVersionedCurrencySymbol
           versioningConfig
-          (VersionOracle {version, scriptId = 0}) -- get FUELMintingPolicy
+          (VersionOracle {version, scriptId = fuelMintingPolicyId})
           sc
 
       -- Amount of minted tokens.
@@ -96,7 +98,7 @@ mkFuelProxyPolicy
       coreCurrSymbol =
         getVersionedCurrencySymbol
           versioningConfig
-          (VersionOracle {version, scriptId = 14}) -- get FUELBurningPolicy
+          (VersionOracle {version, scriptId = fuelBurningPolicyId})
           sc
 
       -- Amount of burned tokens.

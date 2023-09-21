@@ -15,6 +15,27 @@ module TrustlessSidechain.Versioning (
   getVersionedCurrencySymbol,
   VersionOracle (..),
   VersionOracleConfig (..),
+  -- | Script IDs
+  fuelMintingPolicyId,
+  merkleRootTokenPolicyId,
+  merkleRootTokenValidatorId,
+  committeeCandidateValidatorId,
+  candidatePermissionPolicyId,
+  committeeNftPolicyId,
+  committeeHashPolicyId,
+  committeeHashValidatorId,
+  dsKeyPolicyId,
+  dsConfPolicyId,
+  dsConfValidatorId,
+  dsInsertValidatorId,
+  checkpointValidatorId,
+  checkpointPolicyId,
+  fuelBurningPolicyId,
+  versionOraclePolicyId,
+  versionOracleValidatorId,
+  fuelProxyPolicyId,
+  committeeCertificateVerificationPolicyId,
+  committeeOraclePolicyId,
 ) where
 
 import Ledger (AssetClass, Language (PlutusV2), Versioned (Versioned), scriptHashAddress)
@@ -35,33 +56,54 @@ import TrustlessSidechain.Utils (fromSingleton)
 -- addition of new versioned scripts without any changes to existing code, i.e.
 -- minting policies and validator hashes must remain stable when new script is
 -- being added.  For this purpose we use integers as script identifiers, with
--- each known script being assigned its own number:
---
---  0 - FUELMintingPolicy
---  1 - MerkleRootTokenPolicy
---  2 - MerkleRootTokenValidator
---  3 - CommitteeCandidateValidator
---  4 - CandidatePermissionPolicy
---  5 - CommitteeNftPolicy
---  6 - CommitteeHashPolicy
---  7 - CommitteeHashValidator
---  8 - DSKeyPolicy
---  9 - DSConfPolicy
--- 10 - DSConfValidator
--- 11 - DSInsertValidator
--- 12 - CheckpointValidator
--- 13 - CheckpointPolicy
--- 14 - FUELBurningPolicy
--- 15 - VersionOraclePolicy
--- 16 - VersionOracleValidator
--- 17 - FUELProxyPolicy
--- 18 - CommitteeCertificateVerificationPolicy
--- 19 - CommitteeOraclePolicy (previously UpdateCommitteeHashPolicy)
+-- each known script being assigned its own number.  In the off-chain code we
+-- decode these integers into an ADT using hand-written ToData/FromData
+-- instances since it's not a problem to have changes there and it is safer and
+-- more descriptive to operate on an ADT.  Integers defined in on-chain code
+-- need to match instances in the off-chain portion of the code.
 
--- In the off-chain code we decode these integers into an ADT using hand-written
--- ToData/FromData instances since it's not a problem to have changes there and
--- it is safer and more descriptive to operate on an ADT.  Integers above need
--- to match these instances in the off-chain portion of the code.
+-- See Note [Versioned script identifiers]
+fuelMintingPolicyId
+  , merkleRootTokenPolicyId
+  , merkleRootTokenValidatorId
+  , committeeCandidateValidatorId
+  , candidatePermissionPolicyId
+  , committeeNftPolicyId
+  , committeeHashPolicyId
+  , committeeHashValidatorId
+  , dsKeyPolicyId
+  , dsConfPolicyId
+  , dsConfValidatorId
+  , dsInsertValidatorId
+  , checkpointValidatorId
+  , checkpointPolicyId
+  , fuelBurningPolicyId
+  , versionOraclePolicyId
+  , versionOracleValidatorId
+  , fuelProxyPolicyId
+  , committeeCertificateVerificationPolicyId
+  , committeeOraclePolicyId ::
+    Integer
+fuelMintingPolicyId = 0
+merkleRootTokenPolicyId = 1
+merkleRootTokenValidatorId = 2
+committeeCandidateValidatorId = 3
+candidatePermissionPolicyId = 4
+committeeNftPolicyId = 5
+committeeHashPolicyId = 6
+committeeHashValidatorId = 7
+dsKeyPolicyId = 8
+dsConfPolicyId = 9
+dsConfValidatorId = 10
+dsInsertValidatorId = 11
+checkpointValidatorId = 12
+checkpointPolicyId = 13
+fuelBurningPolicyId = 14
+versionOraclePolicyId = 15
+versionOracleValidatorId = 16
+fuelProxyPolicyId = 17
+committeeCertificateVerificationPolicyId = 18
+committeeOraclePolicyId = 19
 
 {- | Datum attached to 'VersionOraclePolicy' tokens stored on the
  'VersionOracleValidator' script.
