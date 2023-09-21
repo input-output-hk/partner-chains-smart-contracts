@@ -10,8 +10,8 @@ module TrustlessSidechain.Governance (
 import Plutus.V2.Ledger.Api (PubKeyHash, TxInfo)
 import Plutus.V2.Ledger.Contexts (txSignedBy)
 import PlutusTx (makeLift)
+import TrustlessSidechain.HaskellPrelude qualified as Prelude
 import TrustlessSidechain.PlutusPrelude
-import Prelude qualified
 
 newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
   deriving newtype (Prelude.Eq, Prelude.Ord, ToData, FromData, UnsafeFromData)
