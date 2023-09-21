@@ -8,22 +8,19 @@ import Contract.Prelude
 
 import Contract.Address (PubKeyHash)
 import Contract.Monad (Contract)
-import Contract.PlutusData (class FromData, class ToData, fromData, toData)
+import Contract.PlutusData (class FromData, class ToData)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints as Constraints
 
 newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
 
 derive instance Newtype GovernanceAuthority _
+derive instance Generic GovernanceAuthority _
+derive newtype instance ToData GovernanceAuthority
+derive newtype instance FromData GovernanceAuthority
 
 instance Show GovernanceAuthority where
-  show (GovernanceAuthority pkh) = show pkh
-
-instance ToData GovernanceAuthority where
-  toData (GovernanceAuthority pkh) = toData pkh
-
-instance FromData GovernanceAuthority where
-  fromData pkh = GovernanceAuthority <$> fromData pkh
+  show = genericShow
 
 mkGovernanceAuthority ∷ PubKeyHash → GovernanceAuthority
 mkGovernanceAuthority = GovernanceAuthority
