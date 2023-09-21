@@ -95,6 +95,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
 
+* Removed `plutus-apps` dependencies
+  ([540](https://github.com/mlabs-haskell/trustless-sidechain/pull/540), onchain)
 * Modified `BlockProducerRegistration` data type according to SIP-11
   ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
   [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
