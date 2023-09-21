@@ -110,6 +110,8 @@ utils encode cbor-plain-aggregate-public-keys`
   by a positive integer as an argument.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
 - Efficient versions of `Data` encoding functions for product types used where
+- Removed `plutus-apps` dependencies
+  ([540](https://github.com/mlabs-haskell/trustless-sidechain/pull/540), onchain)
 - Modified `BlockProducerRegistration` data type according to SIP-11
   ([43](https://github.com/input-output-hk/trustless-sidechain/issues/43),
   [533](https://github.com/mlabs-haskell/trustless-sidechain/pull/533), onchain and offchain)
