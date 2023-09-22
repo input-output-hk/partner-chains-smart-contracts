@@ -5,6 +5,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v4.0.0
+
 ## Added
 
 * `HasField` type class for easier onchain record handling
