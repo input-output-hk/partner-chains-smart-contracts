@@ -80,13 +80,13 @@ import TrustlessSidechain.ScriptUtils (
 newtype Ds = Ds
   { -- | The 'CurrencySymbol' which identifies the utxo with 'DsConfDatum'.
     -- |
-    -- | @since Unreleased
+    -- | @since v4.0.0
     identitySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (FromData, ToData, UnsafeFromData)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "identitySymbol" Ds CurrencySymbol where
   {-# INLINE get #-}
   get (Ds x) = x
@@ -95,13 +95,13 @@ instance HasField "identitySymbol" Ds CurrencySymbol where
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
-  { -- | @since Unreleased
+  { -- | @since v4.0.0
     next :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq, FromData, ToData, UnsafeFromData)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "next" DsDatum BuiltinByteString where
   {-# INLINE get #-}
   get (DsDatum x) = x
@@ -112,9 +112,9 @@ instance HasField "next" DsDatum BuiltinByteString where
  See: Note [How This All Works].
 -}
 data Node = Node
-  { -- | @since Unreleased
+  { -- | @since v4.0.0
     key :: BuiltinByteString
-  , -- | @since Unreleased
+  , -- | @since v4.0.0
     next :: BuiltinByteString
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
@@ -125,31 +125,31 @@ instance Eq Node where
     get @"key" a == get @"key" b
       && get @"next" a == get @"next" b
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "key" Node BuiltinByteString where
   {-# INLINE get #-}
   get (Node x _) = x
   {-# INLINE modify #-}
   modify f (Node k n) = Node (f k) n
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "next" Node BuiltinByteString where
   {-# INLINE get #-}
   get (Node _ x) = x
   {-# INLINE modify #-}
   modify f (Node k n) = Node k (f n)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance ToData Node where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (Node {..}) = productToData2 key next
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance FromData Node where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 Node
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance UnsafeFromData Node where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 Node
@@ -158,15 +158,15 @@ instance UnsafeFromData Node where
  minting policies needed by the distributed set.
 -}
 data DsConfDatum = DsConfDatum
-  { -- | @since Unreleased
+  { -- | @since v4.0.0
     keyPolicy :: CurrencySymbol
-  , -- | @since Unreleased
+  , -- | @since v4.0.0
     fuelPolicy :: CurrencySymbol
   }
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       TSPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       TSPrelude.Show
     )
 
@@ -176,31 +176,31 @@ instance Eq DsConfDatum where
     get @"keyPolicy" a == get @"keyPolicy" b
       && get @"fuelPolicy" a == get @"fuelPolicy" b
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "keyPolicy" DsConfDatum CurrencySymbol where
   {-# INLINE get #-}
   get (DsConfDatum x _) = x
   {-# INLINE modify #-}
   modify f (DsConfDatum kp fp) = DsConfDatum (f kp) fp
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "fuelPolicy" DsConfDatum CurrencySymbol where
   {-# INLINE get #-}
   get (DsConfDatum _ x) = x
   {-# INLINE modify #-}
   modify f (DsConfDatum kp fp) = DsConfDatum kp (f fp)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance ToData DsConfDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (DsConfDatum {..}) = productToData2 keyPolicy fuelPolicy
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance FromData DsConfDatum where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 DsConfDatum
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance UnsafeFromData DsConfDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DsConfDatum
@@ -216,17 +216,17 @@ newtype Ib a = Ib {unIb :: (a, a)}
 instance TSPrelude.Foldable Ib where
   foldMap f (Ib (a, b)) = f a TSPrelude.<> f b
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance (ToData a) => ToData (Ib a) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (Ib (x, y)) = productToData2 x y
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance (PlutusTx.FromData a) => PlutusTx.FromData (Ib a) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 (curry Ib)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 (curry Ib)
@@ -235,18 +235,18 @@ instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
  set. See 'mkDsConfPolicy' for more details.
 -}
 newtype DsConfMint = DsConfMint
-  { -- | @since Unreleased
+  { -- | @since v4.0.0
     txOutRef :: TxOutRef
   }
   deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       TSPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "txOutRef" DsConfMint TxOutRef where
   {-# INLINE get #-}
   get (DsConfMint x) = x
@@ -265,41 +265,41 @@ data DsKeyMint = DsKeyMint
     -- | instead (since the offchain code will always immediately convert this
     -- | into an 'Address').
     -- |
-    -- | @since Unreleased
+    -- | @since v4.0.0
     validatorHash :: ValidatorHash
   , -- | The currency symbol to identify a utxo with 'DsConfDatum'
     -- |
-    -- | @since Unreleased
+    -- | @since v4.0.0
     confCurrencySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "validatorHash" DsKeyMint ValidatorHash where
   {-# INLINE get #-}
   get (DsKeyMint x _) = x
   {-# INLINE modify #-}
   modify f (DsKeyMint vh ccs) = DsKeyMint (f vh) ccs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "confCurrencySymbol" DsKeyMint CurrencySymbol where
   {-# INLINE get #-}
   get (DsKeyMint _ x) = x
   {-# INLINE modify #-}
   modify f (DsKeyMint vh ccs) = DsKeyMint vh (f ccs)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance ToData DsKeyMint where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (DsKeyMint {..}) =
     productToData2 validatorHash confCurrencySymbol
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance FromData DsKeyMint where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 DsKeyMint
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance UnsafeFromData DsKeyMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DsKeyMint

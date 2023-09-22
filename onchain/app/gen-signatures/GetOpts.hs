@@ -175,7 +175,7 @@ data GenCliCommand
       { -- | the current committee's (as stored on chain) private keys
         uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
       , -- | new committee public keys
-        -- | @since Unreleased
+        -- | @since v4.0.0
         uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | Sidechain epoch of the committee handover (needed to
         -- create the message we wish to sign
@@ -197,7 +197,7 @@ data GenCliCommand
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
       { -- | initial committee public keys
-        -- | @since Unreleased
+        -- | @since v4.0.0
         iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
       , -- | inital sidechain epoch
         iscSidechainEpoch :: Integer

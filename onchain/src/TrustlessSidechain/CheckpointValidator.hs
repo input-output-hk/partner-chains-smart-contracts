@@ -137,7 +137,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
 newtype InitCheckpointMint = InitCheckpointMint
   { -- | 'TxOutRef' is the output reference to mint the NFT initially.
     -- |
-    -- | @since Unreleased
+    -- | @since v4.0.0
     txOutRef :: TxOutRef
   }
   deriving newtype
@@ -149,7 +149,7 @@ newtype InitCheckpointMint = InitCheckpointMint
 
 PlutusTx.makeLift ''InitCheckpointMint
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance HasField "txOutRef" InitCheckpointMint TxOutRef where
   {-# INLINE get #-}
   get (InitCheckpointMint x) = x
