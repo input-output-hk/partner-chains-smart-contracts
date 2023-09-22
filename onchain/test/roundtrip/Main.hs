@@ -685,28 +685,28 @@ shrinkCPM (CandidatePermissionMint {..}) = do
 
 {- | Wrapper for 'PubKey' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryPubKey = ArbitraryPubKey PubKey
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via PubKey
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink, as this wouldn't make much sense.
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryPubKey where
   arbitrary =
@@ -719,28 +719,28 @@ instance Arbitrary ArbitraryPubKey where
 
 {- | Wrapper for 'Signature' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitrarySignature = ArbitrarySignature Signature
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via Signature
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink, as this wouldn't make much sense.
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitrarySignature where
   arbitrary =

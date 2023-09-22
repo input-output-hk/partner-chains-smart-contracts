@@ -21,7 +21,7 @@ import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 
 {- | Verifies that @'fromData' '.' 'toData'@ @=@ @'Just'@.
 
- @since Unreleased
+ @since v4.0.0
 -}
 toDataSafeLaws ::
   forall (a :: Type).
@@ -36,7 +36,7 @@ toDataSafeLaws = toDataSafeLaws' @a arbitrary shrink show
 
 {- | Verified that @'unsafeFromData' '.' 'toData'@ @=@ @'id'@.
 
- @since Unreleased
+ @since v4.0.0
 -}
 toDataUnsafeLaws ::
   forall (a :: Type).
@@ -52,7 +52,7 @@ toDataUnsafeLaws = toDataUnsafeLaws' @a arbitrary shrink show
 {- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
  prettyprinter.
 
- @since Unreleased
+ @since v4.0.0
 -}
 toDataSafeLaws' ::
   forall (a :: Type).
@@ -79,7 +79,7 @@ toDataSafeLaws' gen shr pprint = forAllShrinkShow gen shr pprint $ \x ->
 {- | As 'toDataUnsafeLaws', but allows a custom generator, shrinker and
  prettyprinter.
 
- @since Unreleased
+ @since v4.0.0
 -}
 toDataUnsafeLaws' ::
   forall (a :: Type).

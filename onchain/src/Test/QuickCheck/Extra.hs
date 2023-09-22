@@ -80,26 +80,26 @@ import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 {- | Wrapper for 'AssetClass' to provide QuickCheck instances. Currently will
  not generate the ADA asset class.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryAssetClass = ArbitraryAssetClass AssetClass
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via AssetClass
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryAssetClass where
   arbitrary =
     ArbitraryAssetClass . AssetClass <$> do
@@ -112,13 +112,13 @@ instance Arbitrary ArbitraryAssetClass where
       ArbitraryTokenName tok' <- shrink (ArbitraryTokenName tok)
       pure (sym', tok')
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryAssetClass where
   coarbitrary (ArbitraryAssetClass (AssetClass (sym, tok))) =
     coarbitrary (ArbitraryCurrencySymbol sym)
       . coarbitrary (ArbitraryTokenName tok)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryAssetClass where
   function = functionMap into outOf
     where
@@ -138,26 +138,26 @@ instance Function ArbitraryAssetClass where
  somewhat limited, but anything more would complicate the shrinker too much,
  as it would require re-encoding.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryTokenName = ArbitraryTokenName TokenName
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via TokenName
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryTokenName where
   arbitrary =
     ArbitraryTokenName . TokenName <$> do
@@ -171,12 +171,12 @@ instance Arbitrary ArbitraryTokenName where
       let asBS = fromList @ByteString shrunk
       pure . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString $ asBS
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryTokenName where
   coarbitrary (ArbitraryTokenName (TokenName bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryTokenName where
   function = functionMap into outOf
     where
@@ -192,58 +192,58 @@ instance Function ArbitraryTokenName where
 
 {- | Similar to 'A', but with 'Data'-related instances included.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype DA = DA A
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Show
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Arbitrary
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       CoArbitrary
     )
     via A
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.ToData
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.FromData
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.UnsafeFromData
     )
     via Integer
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function DA where
   function = functionMap (coerce @DA @A) coerce
 
 {- | Wrapper for 'StakingCredential' to provide Quickcheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryStakingCredential = ArbitraryStakingCredential StakingCredential
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
     )
     via StakingCredential
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryStakingCredential where
   arbitrary = ArbitraryStakingCredential <$> oneof [sh, sp]
     where
@@ -272,13 +272,13 @@ instance Arbitrary ArbitraryStakingCredential where
         guard (k' >= 0)
         pure . StakingPtr i' j' $ k'
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryStakingCredential where
   coarbitrary (ArbitraryStakingCredential sc) = case sc of
     StakingHash cred -> variant (0 :: Int) . coarbitrary (ArbitraryCredential cred)
     StakingPtr i j k -> variant (1 :: Int) . coarbitrary i . coarbitrary j . coarbitrary k
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryStakingCredential where
   function = functionMap into outOf
     where
@@ -294,24 +294,24 @@ instance Function ArbitraryStakingCredential where
 
 {- | Wrapper for 'Credential' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryCredential = ArbitraryCredential Credential
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
     )
     via Credential
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryCredential where
   arbitrary = ArbitraryCredential <$> oneof [pkc, sc]
     where
@@ -336,13 +336,13 @@ instance Arbitrary ArbitraryCredential where
           ArbitraryValidatorHash vh' <- shrink (ArbitraryValidatorHash vh)
           pure vh'
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryCredential where
   coarbitrary (ArbitraryCredential cred) = case cred of
     PubKeyCredential pkh -> variant (0 :: Int) . coarbitrary (ArbitraryPubKeyHash pkh)
     ScriptCredential vh -> variant (1 :: Int) . coarbitrary (ArbitraryValidatorHash vh)
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryCredential where
   function = functionMap into outOf
     where
@@ -358,26 +358,26 @@ instance Function ArbitraryCredential where
 
 {- | Wrapper for 'Address' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryAddress = ArbitraryAddress Address
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
     )
     via Address
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink, as it wouldn't make sense to.
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryAddress where
   arbitrary =
@@ -388,13 +388,13 @@ instance Arbitrary ArbitraryAddress where
         Nothing -> Nothing
         Just (ArbitraryStakingCredential sc) -> Just sc
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryAddress where
   coarbitrary (ArbitraryAddress (Address cred scred)) =
     let scred' = fmap ArbitraryStakingCredential scred
      in coarbitrary (ArbitraryCredential cred) . coarbitrary scred'
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryAddress where
   function = functionMap into outOf
     where
@@ -413,28 +413,28 @@ instance Function ArbitraryAddress where
 
 {- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via PubKeyHash
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink, as it doesn't make much sense to.
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
@@ -444,12 +444,12 @@ instance Arbitrary ArbitraryPubKeyHash where
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryPubKeyHash where
   coarbitrary (ArbitraryPubKeyHash (PubKeyHash bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryPubKeyHash where
   function = functionMap into outOf
     where
@@ -465,29 +465,29 @@ instance Function ArbitraryPubKeyHash where
 
 {- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via CurrencySymbol
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
  much sense to).
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
@@ -497,12 +497,12 @@ instance Arbitrary ArbitraryCurrencySymbol where
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryCurrencySymbol where
   coarbitrary (ArbitraryCurrencySymbol (CurrencySymbol bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryCurrencySymbol where
   function = functionMap into outOf
     where
@@ -518,29 +518,29 @@ instance Function ArbitraryCurrencySymbol where
 
 {- | Wrapper for 'ValidatorHash' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryValidatorHash = ArbitraryValidatorHash ValidatorHash
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via ValidatorHash
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink (it wouldn't make
  much sense to).
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryValidatorHash where
   arbitrary =
@@ -550,12 +550,12 @@ instance Arbitrary ArbitraryValidatorHash where
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryValidatorHash where
   coarbitrary (ArbitraryValidatorHash (ValidatorHash bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryValidatorHash where
   function = functionMap into outOf
     where
@@ -571,28 +571,28 @@ instance Function ArbitraryValidatorHash where
 
 {- | Wrapper for 'TxId' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryTxId = ArbitraryTxId TxId
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via TxId
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
 {- | Does not shrink, as this is a fixed-width hash.
 
- @since Unreleased
+ @since v4.0.0
 -}
 instance Arbitrary ArbitraryTxId where
   arbitrary =
@@ -601,12 +601,12 @@ instance Arbitrary ArbitraryTxId where
       let bs = fromList @ByteString xs
       pure . TxId . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString $ bs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryTxId where
   coarbitrary (ArbitraryTxId (TxId bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryTxId where
   function = functionMap into outOf
     where
@@ -621,24 +621,24 @@ instance Function ArbitraryTxId where
 
 {- | Wrapper for 'TxOutRef' to provide QuickCheck instances.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryTxOutRef = ArbitraryTxOutRef TxOutRef
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
     )
     via TxOutRef
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryTxOutRef where
   arbitrary =
     ArbitraryTxOutRef <$> do
@@ -650,12 +650,12 @@ instance Arbitrary ArbitraryTxOutRef where
       NonNegative tidx' <- shrink . NonNegative $ tidx
       pure . TxOutRef tid $ tidx'
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryTxOutRef where
   coarbitrary (ArbitraryTxOutRef (TxOutRef tid tidx)) =
     coarbitrary (ArbitraryTxId tid) . variant tidx
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryTxOutRef where
   function = functionMap into outOf
     where
@@ -669,26 +669,26 @@ instance Function ArbitraryTxOutRef where
 {- | Wrapper for 'LedgerBytes' to provide QuickCheck instances. This assumes any
  kind of bytestring is OK.
 
- @since Unreleased
+ @since v4.0.0
 -}
 newtype ArbitraryBytes = ArbitraryBytes LedgerBytes
   deriving
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       Ord
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Eq
-    , -- | @since Unreleased
+    , -- | @since v4.0.0
       PTPrelude.Ord
     )
     via LedgerBytes
   deriving stock
-    ( -- | @since Unreleased
+    ( -- | @since v4.0.0
       Show
     )
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Arbitrary ArbitraryBytes where
   arbitrary =
     ArbitraryBytes
@@ -705,12 +705,12 @@ instance Arbitrary ArbitraryBytes where
       . fromList @ByteString
       $ shrunk
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance CoArbitrary ArbitraryBytes where
   coarbitrary (ArbitraryBytes (LedgerBytes bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
--- | @since Unreleased
+-- | @since v4.0.0
 instance Function ArbitraryBytes where
   function = functionMap into outOf
     where

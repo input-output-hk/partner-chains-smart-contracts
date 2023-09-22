@@ -156,7 +156,7 @@ instance FromJSON Bech32Recipient where
 -- | SidechainCommitteeMember is a sidechain (SECP) public and private key pair
 data SidechainCommitteeMember = SidechainCommitteeMember
   { scmPrivateKey :: SECP.SecKey
-  , -- | @since Unreleased
+  , -- | @since v4.0.0
     scmPublicKey :: EcdsaSecp256k1PubKey
   }
 
