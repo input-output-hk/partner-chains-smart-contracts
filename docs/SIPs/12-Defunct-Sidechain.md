@@ -10,7 +10,7 @@ Provide a design document which extends the sidechain bridge with the means of
 ### Acceptance Criteria
 
 A new module type is created for 'defunct chain reclamation' strategies, the
-    default module is no reclamation strategy
+    default module is no reclamation strategy.
 A second module is added which allows for a chain to use oracle-based
     reclamations, where a single oracle will dictate if a chain is defunct, and the
     fund-release distribution, associating assets with cardano layer 1 addresses.
@@ -42,7 +42,7 @@ Thus, whenever we refer to a sidechain we will implicitly assume we are discussi
 
 We will discuss the defunct sidechain reclamation strategy in three stages.
 
-1. Dicatating that the sidechain is defunct.
+1. Dictating that the sidechain is defunct.
 
 2. Creating the final fund-release distribution to reclaim funds just before
    the sidechain is declared defunct.
@@ -163,12 +163,12 @@ Certainly, the sidechain nodes are aware of the distribution of wrapped tokens
 We propose for the sidechain nodes to create a Merkle root which uses the
     sidechain's distribution of wrapped tokens to pay the original token back
     to the corresponding mainchain public keys.
-One wrinkle in this is that sidechain nodes are not aware of the
-    each sidechain user's corresponding public key on the mainchain (and indeed
-    such a correspondence may not always exist);
-    but we make the reasonable assumption that every sidechain user knows the
-    private key of their own public key (and the mainchain supports the same
-    cryptographic primitives that the sidechain does).
+One wrinkle in this is that sidechain nodes are not aware of each sidechain
+    user's corresponding public key on the mainchain (and indeed such a
+    correspondence may not always exist); but we make the reasonable assumption
+    that every sidechain user knows the private key of their own public key
+    (and the mainchain supports the same cryptographic primitives that the
+    sidechain does).
 In which case, instead of paying to a mainchain public key, the sidechain
     creates transactions which pay to a validator address which succeeds only
     if the sidechain's public key has signed the transaction in a reasonable
@@ -372,8 +372,8 @@ This requires the following changes.
       satisfied.
 
        - There is a unique `MerkleRootTokenMintingPolicy` in the transaction
-          inputs (or reference inputs -- depending on the desired behavior)
-          with token name say `A`.
+          inputs with token name say `A` (must be consumed to prevent double
+          spending).
 
         - There exists exactly 2 `MerkleRootTokenValidator` transaction outputs
           each with exactly one `MerkleRootTokenMintingPolicy` with token names
@@ -415,7 +415,7 @@ This extension suggests to include the following signed data in every
   _committee end of life_.
   Note that this time must be _at least_ the time when the new committee should
   be submitted plus the liveness parameter of the mainchain to ensure that this
-  provides sufficient time for the a new committee to be posted to the
+  provides sufficient time for the new committee to be posted to the
   mainchain.
 
 Then, when consuming the committee UTxO with the aforementioned data, we have
@@ -451,25 +451,19 @@ two cases:
 To this end, we will modify the existing validator address `UpdateCommitteeValidator`
     to permit claiming the validator when the new committee failed to create
     another new committee UTxO.
-So, we will modify `UpdateCommitteeValidator` to take the following data type as
-    datum.
+So, we will add an optional `FundReclaimParams` to the `UpdateCommitteeValidator` data type.
 ```diff
-- data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
-+ data UpdateCommitteeDatum aggregatePubKeys
-+  = UpdateCommitteeDatum
-      { aggregateCommitteePubKeys :: aggregatePubKeys
-      , sidechainEpoch :: Integer
-      }
-+  | UpdateCommitteeWithFundReclaimDatum
-+     { aggregateCommitteePubKeys :: aggregatePubKeys
-+     , sidechainEpoch :: Integer
++ data FundReclaimParams = FundReclaimParams
 +     , committeeEndOfLife :: POSIXTime
 +     , fundReclaimDistribution :: MerkleRoot
 +     }
++
+  data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
+      { aggregateCommitteePubKeys :: aggregatePubKeys
+      , sidechainEpoch :: Integer
++     , fundReclaimParams :: Maybe FundReclaimParams
+      }
 ```
-
-Note that we use the convenient record syntax in this specification, but an
-    implementation is encouraged to avoid the partial record functions.
 
 The datum always contain the aggregated committee public keys and sidechain epoch (as before),
     but optionally may include the committee end of life and the Merkle root of
@@ -493,29 +487,19 @@ Moreover, we will modify the `UpdateCommitteeMessage` type to (optionally)
     allow the committee to sign the committee end of life, and the final fund
     distribution.
 ```diff
-- data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
-+ data UpdateCommitteeMessage aggregatePubKeys
-+   = UpdateCommitteeMessage
+  data UpdateCommitteeMessage aggregatePubKeys = UpdateCommitteeMessage
         { sidechainParams :: SidechainParams
         , newAggregateCommitteePubKeys :: aggregatePubKeys
         , previousMerkleRoot :: Maybe ByteString
         , newSidechainEpoch :: Integer
         , newValidatorAddress :: Address
++       , fundReclaimParams :: Maybe FundReclaimParams
         }
-+   | UpdateCommitteeWithFundReclaimMessage
-+       { sidechainParams :: SidechainParams
-+       , newAggregateCommitteePubKeys :: aggregatePubKeys
-+       , previousMerkleRoot :: Maybe ByteString
-+       , newSidechainEpoch :: Integer
-+       , newValidatorAddress :: Address
-+       , committeeEndOfLife :: POSIXTime
-+       , fundReclaimMerkleRoot :: MerkleRoot
-+       }
 ```
 
 Then, `UpdateCommitteeValidator`'s verifications correspond to the following
     cases.
-- **Committee update.**  If the redeemer is `UpdateCommittee`, we are in the
+- **Committee update.**  If the redeemer is has `UpdateCommittee`, we are in the
   committee update case which is essentially identical to the current
   implementation of `UpdateCommitteeValidator` except it verifies that the new
   `UpdateCommitteeValidator`'s datum includes the signed `committeeEndOfLife`
@@ -549,8 +533,9 @@ Then, `UpdateCommitteeValidator`'s verifications correspond to the following
     - `previousMerkleRoot` provided in the redeemer is `previousMerkleRoot` in
     the signed `msg`, and this Merkle root is referenced in this transaction.
 
-    - If `msg` has the `committeeEndOfLife` and `fundReclaimDistribution` field,
-    then this must match the corresponding fields in `newUpdateCommitteeDatum`.
+    - If the `fundReclaimParams` field of the `msg` is `Just FundReclaimParams`
+      with `committeeEndOfLife` and `fundReclaimDistribution` field, then this
+      must match the corresponding fields in `newUpdateCommitteeDatum`.
 
 - **Defunct sidechain reclaim.** If the redeemer is `DefunctCommittee`, then
   we are in the case when the sidechain is defunct since no new committee has
@@ -610,7 +595,25 @@ Finally, the lock box must be changed so that it allows claiming from either
    sidechain reclaim.
 
 #### Optimization: better data encodings
-Clearly, the arms of the sum types `UpdateCommitteeDatum`,
+Instead of adding a new `fundReclaimParams :: Maybe FundReclaimParams` to
+    `UpdateCommitteeDatum` and `UpdateCommitteeMessage`, we could make these sum
+    types with two arms each. As an example an `UpdateCommitteeDatum` could be:
+```diff
+- data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
++ data UpdateCommitteeDatum aggregatePubKeys
++  = UpdateCommitteeDatum
+      { aggregateCommitteePubKeys :: aggregatePubKeys
+      , sidechainEpoch :: Integer
+      }
++  | UpdateCommitteeWithFundReclaimDatum
++     { aggregateCommitteePubKeys :: aggregatePubKeys
++     , sidechainEpoch :: Integer
++     , committeeEndOfLife :: POSIXTime
++     , fundReclaimDistribution :: MerkleRoot
++     }
+```
+
+With this design, the arms of the sum types `UpdateCommitteeDatum`,
     `UpdateCommitteeMessage`, and `UpdateCommitteeHashRedeemer` all have different
     lengths and hence one may encode each arm of the sum type as simply a list
     where the length of the list is used to distinguish which arm of the sum
