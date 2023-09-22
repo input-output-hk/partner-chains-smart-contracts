@@ -106,7 +106,7 @@ Then, exactly like the committee update, a committee update transaction
 
 The following diagram depicts this transaction.
 
-![./12-Defunct-Sidechain/DictateSidechainIsDefunct.svg](./12-Defunct-Sidechain/DictateSidechainIsDefunct.svg)
+![./13-Defunct-Sidechain/DictateSidechainIsDefunct.svg](./13-Defunct-Sidechain/DictateSidechainIsDefunct.svg)
 
 **Workflow: Dictating that the sidechain is defunct**
 1. Committee members sign `UpdateCommitteeHashMessage GarbageAggregatePubKeys`
@@ -230,7 +230,7 @@ In other words, this verifies that the sidechain user trusts the given
 
 The following diagram depicts the transactions for this entire workflow (some
     details regarding claiming from a lock box are omitted).
-![./12-Defunct-Sidechain/FundReclaim.svg](./12-Defunct-Sidechain/FundReclaim.svg)
+![./13-Defunct-Sidechain/FundReclaim.svg](./13-Defunct-Sidechain/FundReclaim.svg)
 
 ### Alternate designs
 One could instead change the signed message to be
@@ -345,7 +345,7 @@ Recall that on the blockchain, a Merkle root `merkleRoot` is stored at
 Then, if we assume that the Merkle root `A` has as children `B` and `C`,
     we would like to create a transaction which does the following.
 
-![./12-Defunct-Sidechain/SplitMerkleRootToken.svg](./12-Defunct-Sidechain/SplitMerkleRootToken.svg)
+![./13-Defunct-Sidechain/SplitMerkleRootToken.svg](./13-Defunct-Sidechain/SplitMerkleRootToken.svg)
 
 So, participants now only need to verify that their tokens are in
     `B` or `C`, and hence participants require shorter Merkle proofs in order to
@@ -569,7 +569,7 @@ Then, `UpdateCommitteeValidator`'s verifications correspond to the following
 
 The defunct sidechain reclaim case is depicted below.
 
-![./12-Defunct-Sidechain/CommitteeUpdateWithReclaim.svg](./12-Defunct-Sidechain/CommitteeUpdateWithReclaim.svg)
+![./13-Defunct-Sidechain/CommitteeUpdateWithReclaim.svg](./13-Defunct-Sidechain/CommitteeUpdateWithReclaim.svg)
 
 Now we discuss `FanoutToken` which will be the Merkle root
     that allows claiming from lock boxes.
@@ -773,4 +773,4 @@ The functionality of a lock box with tagging will be slightly different from
           `lockBoxMcCurrencySymbol` and token name `lockBoxMcTokenName`.
 
 The final case can be depicted with the following transaction.
-![./12-Defunct-Sidechain/TaggingFundsAheadOfTime.svg](./12-Defunct-Sidechain/TaggingFundsAheadOfTime.svg)
+![./13-Defunct-Sidechain/TaggingFundsAheadOfTime.svg](./13-Defunct-Sidechain/TaggingFundsAheadOfTime.svg)
