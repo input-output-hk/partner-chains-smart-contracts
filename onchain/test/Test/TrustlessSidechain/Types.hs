@@ -10,8 +10,9 @@ import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Ledger.Crypto (Signature (Signature))
 import Plutus.V1.Ledger.Address (scriptHashAddress)
+import Plutus.V1.Ledger.Api (LedgerBytes (getLedgerBytes))
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Tx (TxId (TxId), TxOutRef (TxOutRef))
+import Plutus.V2.Ledger.Tx (TxOutRef (TxOutRef))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
@@ -72,7 +73,6 @@ import TrustlessSidechain.Types (
     transaction
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
-  GenesisHash (GenesisHash),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -157,7 +157,7 @@ tests =
 -- * Sample data - building blocks
 
 sampleTxOutRef :: TxOutRef
-sampleTxOutRef = TxOutRef (TxId "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa") 4
+sampleTxOutRef = TxOutRef "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa" 4
 
 sampleCommitteePubKeys :: [EcdsaSecp256k1PubKey]
 sampleCommitteePubKeys =
@@ -221,7 +221,7 @@ sampleSidechainParams :: SidechainParams
 sampleSidechainParams =
   SidechainParams
     { chainId = 11
-    , genesisHash = GenesisHash "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
+    , genesisHash = "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
     , genesisUtxo = sampleTxOutRef
     , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     , thresholdNumerator = 2
@@ -240,8 +240,8 @@ sampleBlockProducerRegistration =
   BlockProducerRegistration
     { spoPubKey = "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58"
     , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , spoSignature = Signature "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
-    , sidechainSignature = Signature "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
+    , spoSignature = Signature . getLedgerBytes $ "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
+    , sidechainSignature = Signature . getLedgerBytes $ "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
     , inputUtxo = sampleTxOutRef
     , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
     }
