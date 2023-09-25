@@ -1,6 +1,7 @@
 { name = "sidechain-main-cli"
 , dependencies =
   [ "aeson"
+  , "aff"
   , "argonaut"
   , "argonaut-core"
   , "arrays"
@@ -8,6 +9,7 @@
   , "bigints"
   , "cardano-transaction-lib"
   , "codec-argonaut"
+  , "console"
   , "const"
   , "control"
   , "datetime"

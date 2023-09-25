@@ -6,7 +6,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 # Unreleased
 
 ## Added
-
+* Improved error messages
 * Script versioning system with three new commands: `insert-version`,
   `invalidate-version`, and `update-version`. First two require `--version`
   followed by a positive integer as an argument. `update-version` requires

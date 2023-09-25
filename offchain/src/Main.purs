@@ -4,7 +4,7 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
+import Contract.Monad (Contract, liftContractE, runContract)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
@@ -13,7 +13,9 @@ import Data.BigInt as BigInt
 import Data.List as List
 import Data.List.Types as Data.List.Types
 import Data.Symbol (SProxy(SProxy))
+import Effect.Aff (runAff_)
 import Effect.Class (liftEffect)
+import Effect.Console as Console
 import Effect.Exception (error)
 import Options.Applicative (execParser)
 import Record as Record
@@ -138,9 +140,12 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 import TrustlessSidechain.Versioning as Versioning
 
+foreign import installSourceMapSupport ∷ Effect Unit
+
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
 main = do
+  installSourceMapSupport
   -- Grab the CLI options
   -----------------------
   allOpts ← getOptions
@@ -168,7 +173,11 @@ main = do
 
       -- Running the program
       -----------------------
-      launchAff_ $ runContract opts.contractParams do
+      runAff_
+        ( \x → case x of
+            Left e → Console.log (show e)
+            _ → pure unit
+        ) $ runContract opts.contractParams do
         endpointResp ← runTxEndpoint opts.sidechainEndpointParams opts.endpoint
         liftEffect $ printEndpointResp endpointResp
 

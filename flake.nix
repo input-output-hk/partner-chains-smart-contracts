@@ -261,6 +261,7 @@
         inherit name src version;
         buildInputs = [
           project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
+          project.nodePackages.source-map-support
         ];
         runtimeInputs = [project.nodejs];
         unpackPhase = ''
@@ -268,7 +269,7 @@
           ln -s ${project.nodeModules}/lib/node_modules node_modules
         '';
         buildPhase = ''
-          purs bundle "output/*/*.js" -m Main --main Main -o main.js
+          purs bundle "output/*/*.js" -m Main --main Main -o main.js --source-maps
         '';
         installPhase = ''
           mkdir -p $out
