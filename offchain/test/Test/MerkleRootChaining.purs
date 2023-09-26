@@ -5,8 +5,8 @@ module Test.MerkleRootChaining (tests) where
 import Contract.Prelude
 
 import Contract.Log as Log
-import Contract.PlutusData (toData)
 import Contract.Monad (liftContractM)
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet

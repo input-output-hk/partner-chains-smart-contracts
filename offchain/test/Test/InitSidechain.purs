@@ -161,8 +161,10 @@ testScenario3 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 10_000_000
         ] /\
-          [ BigInt.fromInt 50_000_000, BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000 ]
+          [ BigInt.fromInt 50_000_000
+          , BigInt.fromInt 50_000_000
+          , BigInt.fromInt 50_000_000
+          ]
       )
   $ \(alice /\ bob) → do
       aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM

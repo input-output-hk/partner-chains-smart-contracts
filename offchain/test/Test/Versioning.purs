@@ -30,7 +30,11 @@ import TrustlessSidechain.MerkleRoot
   ( getMerkleRootTokenMintingPolicy
   )
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe, aggregateKeys)
+import TrustlessSidechain.Utils.Crypto
+  ( aggregateKeys
+  , generatePrivKey
+  , toPubKeyUnsafe
+  )
 import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils as Versioning

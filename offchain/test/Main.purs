@@ -9,9 +9,9 @@ import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import Test.ConfigFile as ConfigFile
+import Test.Data as Data
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
-import Test.Data as Data
 import Test.InitSidechain as InitSidechain
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot

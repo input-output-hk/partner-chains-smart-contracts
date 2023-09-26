@@ -165,9 +165,11 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ { committeeATMSParams: CommitteeATMSParams
+              $
+                { committeeATMSParams: CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+                    , committeeCertificateMint:
+                        committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
@@ -217,9 +219,11 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ { committeeATMSParams: CommitteeATMSParams
+              $
+                { committeeATMSParams: CommitteeATMSParams
                     { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+                    , committeeCertificateMint:
+                        committeePlainSchnorrSecp256k1ATMSMint
                     , aggregateSignature: committeeSignatures
                     , message: sidechainMessageTokenName
                     }
@@ -262,12 +266,14 @@ testScenario1 =
               sidechainParams
           _ ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $ { committeeATMSParams: CommitteeATMSParams
-                  { currentCommitteeUtxo: utxo
-                  , committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
-                  , aggregateSignature: committeeSignatures
-                  , message: sidechainMessageTokenName
-                  }
+              $
+                { committeeATMSParams: CommitteeATMSParams
+                    { currentCommitteeUtxo: utxo
+                    , committeeCertificateMint:
+                        committeePlainSchnorrSecp256k1ATMSMint
+                    , aggregateSignature: committeeSignatures
+                    , message: sidechainMessageTokenName
+                    }
                 , sidechainParams
                 }
 
@@ -305,13 +311,14 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-                $ { committeeATMSParams: CommitteeATMSParams
-                    { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint:
-                        committeePlainSchnorrSecp256k1ATMSMint
-                    , aggregateSignature: committeeSignatures
-                    , message: sidechainMessageTokenName
-                    }
+                $
+                  { committeeATMSParams: CommitteeATMSParams
+                      { currentCommitteeUtxo: utxo
+                      , committeeCertificateMint:
+                          committeePlainSchnorrSecp256k1ATMSMint
+                      , aggregateSignature: committeeSignatures
+                      , message: sidechainMessageTokenName
+                      }
                   , sidechainParams
                   }
             )
@@ -349,13 +356,14 @@ testScenario1 =
               sidechainParams
           void
             ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-                $ { committeeATMSParams: CommitteeATMSParams
-                    { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint:
-                        committeePlainSchnorrSecp256k1ATMSMint
-                    , aggregateSignature: committeeSignatures
-                    , message: sidechainMessageTokenName
-                    }
+                $
+                  { committeeATMSParams: CommitteeATMSParams
+                      { currentCommitteeUtxo: utxo
+                      , committeeCertificateMint:
+                          committeePlainSchnorrSecp256k1ATMSMint
+                      , aggregateSignature: committeeSignatures
+                      , message: sidechainMessageTokenName
+                      }
                   , sidechainParams
                   }
             )

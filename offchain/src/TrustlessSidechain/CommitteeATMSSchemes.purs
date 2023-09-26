@@ -108,12 +108,13 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
 atmsCommitteeCertificateVerificationMintingPolicy params sig =
-  atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params $ case sig of
-    PlainEcdsaSecp256k1 _ → ATMSPlainEcdsaSecp256k1
-    PlainSchnorrSecp256k1 _ → ATMSPlainSchnorrSecp256k1
-    Dummy → ATMSDummy
-    PoK → ATMSPoK
-    Multisignature → ATMSMultisignature
+  atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params $
+    case sig of
+      PlainEcdsaSecp256k1 _ → ATMSPlainEcdsaSecp256k1
+      PlainSchnorrSecp256k1 _ → ATMSPlainSchnorrSecp256k1
+      Dummy → ATMSDummy
+      PoK → ATMSPoK
+      Multisignature → ATMSMultisignature
 
 -- | `atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind` is
 -- | essentially `atmsCommitteeCertificateVerificationMintingPolicy` but with

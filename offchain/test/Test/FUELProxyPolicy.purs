@@ -4,8 +4,8 @@ import Contract.Prelude
 
 import Contract.Address (pubKeyHashAddress)
 import Contract.Monad (liftContractM)
-import Contract.PlutusData (toData)
 import Contract.PlutusData (serializeData) as PlutusData
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
@@ -42,7 +42,11 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Crypto (generatePrivKey, toPubKeyUnsafe, aggregateKeys)
+import TrustlessSidechain.Utils.Crypto
+  ( aggregateKeys
+  , generatePrivKey
+  , toPubKeyUnsafe
+  )
 import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 import TrustlessSidechain.Versioning as Versioning
 

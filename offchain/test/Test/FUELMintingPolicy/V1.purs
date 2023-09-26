@@ -44,12 +44,12 @@ import TrustlessSidechain.MerkleTree
   , lookupMp
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
