@@ -115,6 +115,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
       _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
 
+    -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
     outputContainsCheckpointNft :: Bool
     outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
 
@@ -127,7 +128,8 @@ mkCheckpointValidator checkpointParam datum _red ctx =
               , blockNumber = get @"blockNumber" outputDatum
               , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
-       in case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
+       in -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+          case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
             Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
               Just amount -> amount > 0
               Nothing -> False

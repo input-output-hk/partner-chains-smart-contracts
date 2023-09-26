@@ -67,8 +67,8 @@ data ScriptId
   | FUELProxyPolicy -- not versioned
   | CommitteeCertificateVerificationPolicy
   | CommitteeOraclePolicy -- (previously UpdateCommitteeHashPolicy)
-  | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- not versioned
-  | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- not versioned
+  | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+  | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
