@@ -49,8 +49,7 @@ import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
--- | `RawScripts.rawMerkleRootTokenMintingPolicy` paramaterized by the given
--- | `SignedMerkleRootMint`.
+-- | `RawScripts.rawMerkleRootTokenMintingPolicy`
 merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 merkleRootTokenMintingPolicy sp = do
   let

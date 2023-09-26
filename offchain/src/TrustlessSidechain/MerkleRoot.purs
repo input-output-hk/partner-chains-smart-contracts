@@ -168,8 +168,8 @@ saveRoot
 
   balanceSignAndSubmit "Save Merkle root" lookups constraints
 
--- | `getMerkleRootTokenMintingPolicy` creates the `SignedMerkleRootMint`
--- | parameter from the given sidechain parameters
+-- | `getMerkleRootTokenMintingPolicy` gets the minting policy and currency
+-- | symbol of the MerkleRootToken
 getMerkleRootTokenMintingPolicy ∷
   SidechainParams →
   Contract

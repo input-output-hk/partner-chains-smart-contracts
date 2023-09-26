@@ -33,7 +33,6 @@ change or not.
 | `SidechainParams` | TH derived | Mimicked | No |
 | `SidechainPubKey` | `newtype` derived | `newtype` derived | No |
 | `SignedMerkleRoot` | Product | Product | Yes |
-| `SignedMerkleRootMint` | Product | Product | Yes |
 | `Up` | TH derived | Mimicked | No |
 | `UpdateCommitteeHash` | Product | Product | Yes |
 | `UpdateCommitteeHashDatum` | Product | Product | Yes |
