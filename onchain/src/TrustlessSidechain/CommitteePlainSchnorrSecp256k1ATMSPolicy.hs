@@ -36,7 +36,7 @@ mkMintingPolicy =
 -- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped ccm versionOracleConfig =
-  mkUntypedMintingPolicy $
+  mkUntypedMintingPolicy
     (mkMintingPolicy (unsafeFromBuiltinData ccm) (unsafeFromBuiltinData versionOracleConfig))
 
 serialisableMintingPolicy :: Script
