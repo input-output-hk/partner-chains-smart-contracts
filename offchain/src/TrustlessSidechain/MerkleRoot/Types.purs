@@ -19,8 +19,6 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Scripts (ValidatorHash)
-import Contract.Value (CurrencySymbol)
 import Control.Alternative (guard)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.MerkleTree (RootHash)
