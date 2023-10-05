@@ -35,6 +35,8 @@ In order to run Trustless Sidechain CTL you also need to set up the runtime depe
 ## Known issues
 There are two known issues with the trustless sidechain as released.
 ### Issue #46 CTL warnings regarding certain definitions
+Please note that this issue has been fixed in a later version of this repository.  
+  
 **Description**  
 Several warnings from CTL like the following appear:
 ```bash
