@@ -23,10 +23,6 @@ import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productFromData4
@@ -137,21 +133,6 @@ instance FromData UpdateCommitteeHash where
       , committeeCertificateVerificationCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }
-
--- | `UpdateCommitteeHashParams` is the offchain parameter for the update
--- | committee hash endpoint.
-newtype UpdateCommitteeHashParams = UpdateCommitteeHashParams
-  { sidechainParams ∷ SidechainParams
-  , newCommitteePubKeys ∷ Array EcdsaSecp256k1PubKey
-  , committeeSignatures ∷
-      Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
-  , previousMerkleRoot ∷ Maybe RootHash
-  , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
-  }
-
-derive newtype instance Show UpdateCommitteeHashParams
-
-derive instance Newtype UpdateCommitteeHashParams _
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
 -- | signed by the committee (technically, if `uchm` is an
