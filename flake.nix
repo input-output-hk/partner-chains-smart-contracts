@@ -96,7 +96,8 @@
               haskellPackages.apply-refact
               haskellPackages.cabal-fmt
               haskellPackages.fourmolu
-              nixpkgs-fmt
+              #nixpkgs-fmt
+              alejandra
               graphviz
             ];
             shellHook = ''
@@ -279,8 +280,8 @@
 
       packages = perSystem
         (system: self.flake.${system}.packages // {
-          ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
-          ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
+          # ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
+          # ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           sidechain-main-cli = ctlMainFor system;
           # TODO: Fix web bundling
           # ctl-bundle-web = (psProjectFor system).bundlePursProject {
@@ -300,6 +301,7 @@
           program = "${ctlMainFor system}/bin/sidechain-main-cli";
         };
       });
+
 
       # This is used for nix build .#check.<system> because nix flake check
       # does not work with haskell.nix import-from-derivtion.
@@ -332,6 +334,6 @@
           '';
         };
       });
-      herculesCI.ciSystems = [ "x86_64-linux" ];
+      _packages.x86_64-linux = builtins.removeAttrs self.packages.x86_64-linux [ "ctl-runtime" "ctl-runtime-preview" ];
     };
 }
