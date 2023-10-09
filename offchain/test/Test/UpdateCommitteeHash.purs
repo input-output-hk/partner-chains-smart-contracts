@@ -429,6 +429,8 @@ testScenario4 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 40_000_000
         ]
     $ \alice → Wallet.withKeyWallet alice do
         logInfo' "UpdateCommitteeHash 'testScenario3'"
