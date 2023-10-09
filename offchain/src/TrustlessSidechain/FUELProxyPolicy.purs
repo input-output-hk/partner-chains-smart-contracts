@@ -66,7 +66,7 @@ fuelProxyTokenName ∷ TokenName
 fuelProxyTokenName =
   Unsafe.unsafePartial $ Maybe.fromJust
     $ Value.mkTokenName
-    =<< byteArrayFromAscii "FUEL proxy"
+    =<< byteArrayFromAscii "FUEL"
 
 -- | Deserialize minting policy script, applying it to all required parameters.
 decodeFuelProxyPolicy ∷ SidechainParams → Contract MintingPolicy
