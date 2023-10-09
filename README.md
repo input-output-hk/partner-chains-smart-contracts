@@ -35,8 +35,7 @@ In order to run Trustless Sidechain CTL you also need to set up the runtime depe
 ## Known issues
 There are two known issues with the trustless sidechain as released.
 ### Issue #46 CTL warnings regarding certain definitions
-Please note that this issue has been fixed in a later version of this repository.  
-  
+
 **Description**  
 Several warnings from CTL like the following appear:
 ```bash
@@ -63,6 +62,8 @@ But the first statement is false, and thus the conclusion is false. It will be f
 
 In this open-source version of the repository, these warnings have no impact, as the project is not supporting light-wallets yet. If someone decides to implement light wallet integration, multi-address wallets would not work properly.
 ### Issue #38 distributed set issue
+Please note that this issue has been fixed in a later version of this repository.  
+
 **Description**  
 It is possible for a malicious user to submit a transaction to make a node in the distributed set unspendable, so this would block people from claiming their sidechain token.  
 
