@@ -41,7 +41,7 @@ format:
 
 spago2nix:
 	@spago2nix generate
-	@nixpkgs-fmt spago-packages.nix
+	@alejandra spago-packages.nix
 
 update-scripts: ${raw-scripts-purs}
 
