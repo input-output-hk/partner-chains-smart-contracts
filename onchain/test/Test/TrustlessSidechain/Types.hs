@@ -265,7 +265,7 @@ sampleBlockProducerRegistrationMsg =
 sampleMerkleTreeEntry :: MerkleTreeEntry
 sampleMerkleTreeEntry =
   MerkleTreeEntry
-    { index = -8858258933817599851
+    { index = 7599851
     , amount = 8887194232705394223
     , recipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
