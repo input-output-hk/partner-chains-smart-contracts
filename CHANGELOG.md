@@ -16,6 +16,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Added `claim-v2` and `burn-v2` commands for claiming and burning fuel using
   version 2 of the scripts.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
+* D Parameter storage and management system, with `insert-d-parameter`,
+  `update-d-parameter` and `remove-d-parameter` commands
+  ([607](https://github.com/input-output-hk/trustless-sidechain/pull/607))
 
 ## Changed
 
