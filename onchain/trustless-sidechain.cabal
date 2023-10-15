@@ -96,6 +96,7 @@ library
     TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain
+    TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.PoCECDSA
     TrustlessSidechain.PoCInlineDatum
     TrustlessSidechain.PoCReferenceInput

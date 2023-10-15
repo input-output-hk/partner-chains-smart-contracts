@@ -71,6 +71,8 @@ data ScriptId
   | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
   | DParameterPolicy
   | DParameterValidator
+  | PermissionedCandidatesPolicy
+  | PermissionedCandidatesValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -127,7 +129,10 @@ instance FromData ScriptId where
     Just DParameterPolicy
   fromData (Integer i) | i == BigInt.fromInt 23 =
     Just DParameterValidator
-
+  fromData (Integer i) | i == BigInt.fromInt 24 =
+    Just PermissionedCandidatesPolicy
+  fromData (Integer i) | i == BigInt.fromInt 25 =
+    Just PermissionedCandidatesValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -155,6 +160,8 @@ instance ToData ScriptId where
   toData CommitteePlainSchnorrSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 21)
   toData DParameterPolicy = Integer (BigInt.fromInt 22)
   toData DParameterValidator = Integer (BigInt.fromInt 23)
+  toData PermissionedCandidatesPolicy = Integer (BigInt.fromInt 24)
+  toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.

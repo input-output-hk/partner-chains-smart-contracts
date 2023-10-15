@@ -12,7 +12,6 @@ import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction (TransactionHash)
 import Data.Array as Array
 import Data.Map as Map
-import Data.Set (singleton)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Tx as Utils.Tx
@@ -32,8 +31,7 @@ insertVersion { sidechainParams: sp, atmsKind } version = do
     { sidechainParams: sp, atmsKind }
     version
 
-  let forbiddenUtxos = singleton (unwrap sp).genesisUtxo
-
+  let forbiddenUtxos = mempty
   validatorsTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
@@ -46,7 +44,6 @@ insertVersion { sidechainParams: sp, atmsKind } version = do
           Utils.Tx.submitAndAwaitTx forbiddenUtxos
       )
       $ Map.toUnfoldable versionedPolicies
-
   pure (validatorsTxIds <> policiesTxIds)
 
 invalidateVersion ∷

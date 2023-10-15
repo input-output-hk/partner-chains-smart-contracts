@@ -40,6 +40,8 @@ module TrustlessSidechain.Versioning (
   committeePlainSchnorrSecp256k1ATMSPolicyId,
   dParameterPolicyId,
   dParameterValidatorId,
+  permissionedCandidatesPolicyId,
+  permissionedCandidatesValidatorId,
 ) where
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
@@ -90,7 +92,9 @@ fuelMintingPolicyId
   , committeePlainEcdsaSecp256k1ATMSPolicyId
   , committeePlainSchnorrSecp256k1ATMSPolicyId
   , dParameterPolicyId
-  , dParameterValidatorId ::
+  , dParameterValidatorId
+  , permissionedCandidatesPolicyId
+  , permissionedCandidatesValidatorId ::
     Integer
 fuelMintingPolicyId = 0
 merkleRootTokenPolicyId = 1
@@ -116,6 +120,8 @@ committeePlainEcdsaSecp256k1ATMSPolicyId = 20
 committeePlainSchnorrSecp256k1ATMSPolicyId = 21
 dParameterPolicyId = 22
 dParameterValidatorId = 23
+permissionedCandidatesPolicyId = 24
+permissionedCandidatesValidatorId = 25
 
 {- | Datum attached to 'VersionOraclePolicy' tokens stored on the
  'VersionOracleValidator' script.

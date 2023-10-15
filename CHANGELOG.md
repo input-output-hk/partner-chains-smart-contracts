@@ -19,6 +19,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * D Parameter storage and management system, with `insert-d-parameter`,
   `update-d-parameter` and `remove-d-parameter` commands
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/607))
+* Permissioned candidates storage and management system, with
+  `insert-permissioned-candidates`, `update-permissioned-candidates` and
+  `remove-permissioned-candidates` commands
+  ([607](https://github.com/input-output-hk/trustless-sidechain/pull/608))
 
 ## Changed
 

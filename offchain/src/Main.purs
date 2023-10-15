@@ -8,6 +8,7 @@ import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Data.List.Types as Data.List.Types
@@ -58,6 +59,9 @@ import TrustlessSidechain.EndpointResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , RemoveDParameterResp
+      , InsertPermissionedCandidatesResp
+      , UpdatePermissionedCandidatesResp
+      , RemovePermissionedCandidatesResp
       )
   , stringifyEndpointResp
   )
@@ -106,6 +110,9 @@ import TrustlessSidechain.Options.Types
       , InsertDParameter
       , UpdateDParameter
       , RemoveDParameter
+      , InsertPermissionedCandidates
+      , UpdatePermissionedCandidates
+      , RemovePermissionedCandidates
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -121,6 +128,7 @@ import TrustlessSidechain.Options.Types
       , CborPlainAggregatePublicKeysAct
       )
   )
+import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
@@ -608,6 +616,34 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemoveDParameterResp
+
+      InsertPermissionedCandidates
+        { permissionedCandidates } →
+        PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
+          scParams
+          { candidates: Array.fromFoldable permissionedCandidates }
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> InsertPermissionedCandidatesResp
+
+      UpdatePermissionedCandidates
+        { permissionedCandidates } →
+        PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+          scParams
+          { candidates: Array.fromFoldable permissionedCandidates }
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> UpdatePermissionedCandidatesResp
+
+      RemovePermissionedCandidates →
+        PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
+          scParams
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> RemovePermissionedCandidatesResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

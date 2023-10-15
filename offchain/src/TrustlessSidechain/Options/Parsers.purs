@@ -29,6 +29,7 @@ module TrustlessSidechain.Options.Parsers
   , denominator
   , epoch
   , blockHash
+  , permissionedCandidateKeys
   ) where
 
 import Contract.Prelude
@@ -342,6 +343,38 @@ parsePubKeyBytesAndSignatureBytes str =
     [ l ] → ado
       l' ← hexToByteArray $ l
       in l' /\ Nothing
+    _ → Nothing
+
+permissionedCandidateKeys ∷
+  ReadM
+    { mainchainKey ∷ ByteArray
+    , sidechainKey ∷ ByteArray
+    , authorityDiscoveryKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
+permissionedCandidateKeys = maybeReader parsePermissionedCandidateKeys
+
+parsePermissionedCandidateKeys ∷
+  String →
+  Maybe
+    { mainchainKey ∷ ByteArray
+    , sidechainKey ∷ ByteArray
+    , authorityDiscoveryKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
+parsePermissionedCandidateKeys str =
+  case split (Pattern ":") str of
+    [ mainchainKey', sidechainKey', authorityDiscoveryKey', grandpaKey' ] → do
+      mainchainKey ← hexToByteArray mainchainKey'
+      sidechainKey ← hexToByteArray sidechainKey'
+      authorityDiscoveryKey ← hexToByteArray authorityDiscoveryKey'
+      grandpaKey ← hexToByteArray grandpaKey'
+      pure $
+        { mainchainKey
+        , sidechainKey
+        , authorityDiscoveryKey
+        , grandpaKey
+        }
     _ → Nothing
 
 -- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for

@@ -236,6 +236,25 @@ data TxEndpoint
       , registeredCandidatesCount ∷ BigInt
       }
   | RemoveDParameter
+  | InsertPermissionedCandidates
+      { permissionedCandidates ∷
+          List
+            { mainchainKey ∷ ByteArray
+            , sidechainKey ∷ ByteArray
+            , authorityDiscoveryKey ∷ ByteArray
+            , grandpaKey ∷ ByteArray
+            }
+      }
+  | UpdatePermissionedCandidates
+      { permissionedCandidates ∷
+          List
+            { mainchainKey ∷ ByteArray
+            , sidechainKey ∷ ByteArray
+            , authorityDiscoveryKey ∷ ByteArray
+            , grandpaKey ∷ ByteArray
+            }
+      }
+  | RemovePermissionedCandidates
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain

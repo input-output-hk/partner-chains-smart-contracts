@@ -1229,3 +1229,158 @@ instance UnsafeFromData DParameterValidatorRedeemer where
           0 -> UpdateDParameter
           1 -> RemoveDParameter
           _ -> error ()
+
+{- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
+burn PermissionedCandidates tokens
+
+@since Unreleased
+-}
+data PermissionedCandidatesPolicyRedeemer
+  = -- | @since Unreleased
+    PermissionedCandidatesMint
+  | -- | @since Unreleased
+    PermissionedCandidatesBurn
+
+-- | @since Unreleased
+instance ToData PermissionedCandidatesPolicyRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData PermissionedCandidatesMint = BuiltinData $ PlutusTx.I 0
+  toBuiltinData PermissionedCandidatesBurn = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData PermissionedCandidatesPolicyRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just PermissionedCandidatesMint
+      1 -> Just PermissionedCandidatesBurn
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> PermissionedCandidatesMint
+          1 -> PermissionedCandidatesBurn
+          _ -> error ()
+
+{- | 'PermissionedCandidateKeys' stores the keys of some permissioned candiate.
+
+@since Unreleased
+-}
+data PermissionedCandidateKeys = PermissionedCandidateKeys
+  { -- | @since Unreleased
+    mainchainKey :: LedgerBytes
+  , -- | @since Unreleased
+    sidechainKey :: LedgerBytes
+  , -- | @since Unreleased
+    authorityDiscoveryKey :: LedgerBytes
+  , -- | @since Unreleased
+    grandpaKey :: LedgerBytes
+  }
+
+-- | @since Unreleased
+instance ToData PermissionedCandidateKeys where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (PermissionedCandidateKeys m s a g) =
+    productToData4 m s a g
+
+-- | @since Unreleased
+instance FromData PermissionedCandidateKeys where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData4 PermissionedCandidateKeys
+
+-- | @since Unreleased
+instance UnsafeFromData PermissionedCandidateKeys where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData4 PermissionedCandidateKeys
+
+-- | @since Unreleased
+instance HasField "mainchainKey" PermissionedCandidateKeys LedgerBytes where
+  {-# INLINE get #-}
+  get (PermissionedCandidateKeys m _ _ _) = m
+  {-# INLINE modify #-}
+  modify f (PermissionedCandidateKeys m s a g) =
+    PermissionedCandidateKeys (f m) s a g
+
+-- | @since Unreleased
+instance HasField "sidechainKey" PermissionedCandidateKeys LedgerBytes where
+  {-# INLINE get #-}
+  get (PermissionedCandidateKeys _ s _ _) = s
+  {-# INLINE modify #-}
+  modify f (PermissionedCandidateKeys m s a g) =
+    PermissionedCandidateKeys m (f s) a g
+
+-- | @since Unreleased
+instance HasField "authorityDiscoveryKey" PermissionedCandidateKeys LedgerBytes where
+  {-# INLINE get #-}
+  get (PermissionedCandidateKeys _ _ a _) = a
+  {-# INLINE modify #-}
+  modify f (PermissionedCandidateKeys m s a g) =
+    PermissionedCandidateKeys m s (f a) g
+
+-- | @since Unreleased
+instance HasField "grandpaKey" PermissionedCandidateKeys LedgerBytes where
+  {-# INLINE get #-}
+  get (PermissionedCandidateKeys _ _ _ g) = g
+  {-# INLINE modify #-}
+  modify f (PermissionedCandidateKeys m s a g) =
+    PermissionedCandidateKeys m s a (f g)
+
+{- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
+   candidates' keys.
+
+@since Unreleased
+-}
+newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
+  { candidates :: [PermissionedCandidateKeys]
+  }
+  deriving newtype (ToData, FromData, UnsafeFromData)
+
+-- | @since Unreleased
+instance HasField "candidates" PermissionedCandidatesValidatorDatum [PermissionedCandidateKeys] where
+  {-# INLINE get #-}
+  get (PermissionedCandidatesValidatorDatum candidates) = candidates
+  {-# INLINE modify #-}
+  modify f (PermissionedCandidatesValidatorDatum candidates) =
+    PermissionedCandidatesValidatorDatum (f candidates)
+
+{- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
+update the list of permissioned candidates or remove the list altogether.
+
+@since Unreleased
+-}
+data PermissionedCandidatesValidatorRedeemer
+  = -- | @since Unreleased
+    UpdatePermissionedCandidates
+  | -- | @since Unreleased
+    RemovePermissionedCandidates
+
+-- | @since Unreleased
+instance ToData PermissionedCandidatesValidatorRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData UpdatePermissionedCandidates = BuiltinData $ PlutusTx.I 0
+  toBuiltinData RemovePermissionedCandidates = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData PermissionedCandidatesValidatorRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just UpdatePermissionedCandidates
+      1 -> Just RemovePermissionedCandidates
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> UpdatePermissionedCandidates
+          1 -> RemovePermissionedCandidates
+          _ -> error ()

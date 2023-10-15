@@ -19,6 +19,7 @@ import Test.MerkleRoot as MerkleRoot
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options.Parsers as Options.Parsers
+import Test.PermissionedCandidates as PermissionedCandidates
 import Test.PoCECDSA as PoCECDSA
 import Test.PoCInlineDatum as PoCInlineDatum
 import Test.PoCReferenceInput as PoCReferenceInput
@@ -66,6 +67,7 @@ main = do
           Checkpoint.tests
           Versioning.tests
           DParameter.tests
+          PermissionedCandidates.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

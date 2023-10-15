@@ -35,6 +35,7 @@ import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
+import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
@@ -225,6 +226,9 @@ main =
           , -- Scripts for DParameter
             ("DParameterMintingPolicy", DParameter.serialisableMintingPolicy)
           , ("DParameterValidator", DParameter.serialisableValidator)
+          , -- Scripts for PermissionedCandidates
+            ("PermissionedCandidatesMintingPolicy", PermissionedCandidates.serialisableMintingPolicy)
+          , ("PermissionedCandidatesValidator", PermissionedCandidates.serialisableValidator)
           ]
         plutusScriptsDotPlutus = fmap (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
      in case options of

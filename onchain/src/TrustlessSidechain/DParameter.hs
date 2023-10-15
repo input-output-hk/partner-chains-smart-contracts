@@ -38,7 +38,8 @@ import TrustlessSidechain.Versioning (
   getVersionedValidatorAddress,
  )
 
--- OnChain error descriptions
+-- OnChain error descriptions:
+--
 --   ERROR-DPARAMETER-POLICY-01: transaction not signed by the governance
 --   authority
 --
@@ -111,7 +112,7 @@ mkMintingPolicy sp _ DParameterBurn (ScriptContext txInfo (Minting cs)) =
     signedByGovernanceAuthority =
       txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
-    -- Amount of DParameterToken sent outputed by this transaction
+    -- Amount of DParameterToken sent output by this transaction
     outAmount :: Integer
     outAmount =
       sum
@@ -119,7 +120,7 @@ mkMintingPolicy sp _ DParameterBurn (ScriptContext txInfo (Minting cs)) =
         | (TxOut _ value _ _) <-
             txInfoOutputs txInfo
         ]
-    -- Check wether this transaction outputed any DParameter tokens
+    -- Check wether this transaction output any DParameter tokens
     noOutputsWithDParameterToken :: Bool
     noOutputsWithDParameterToken = outAmount == 0
 mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-05"
@@ -190,7 +191,7 @@ dParameterValidator
               txInfoInputs txInfo
           ]
 
-      -- Check wether the same amount of DParameter token is spent as is outputed
+      -- Check wether the same amount of DParameter token is spent as is output
       -- back to the validator address
       amountsMatch :: Bool
       amountsMatch = inAmount == outAmount

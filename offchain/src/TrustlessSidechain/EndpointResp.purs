@@ -122,6 +122,12 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | RemoveDParameterResp
       { transactionId ∷ ByteArray }
+  | InsertPermissionedCandidatesResp
+      { transactionId ∷ ByteArray }
+  | UpdatePermissionedCandidatesResp
+      { transactionId ∷ ByteArray }
+  | RemovePermissionedCandidatesResp
+      { transactionId ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -409,6 +415,27 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "RemoveDParameter"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    InsertPermissionedCandidatesResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "InsertPermissionedCandidates"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    UpdatePermissionedCandidatesResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    RemovePermissionedCandidatesResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "RemovePermissionedCandidates"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
