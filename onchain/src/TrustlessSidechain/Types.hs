@@ -8,7 +8,7 @@ module TrustlessSidechain.Types where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (Address, LedgerBytes (LedgerBytes), TxOutRef)
+import Plutus.V2.Ledger.Api (Address, BuiltinData (BuiltinData), LedgerBytes (LedgerBytes), TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
@@ -109,6 +109,13 @@ instance HasField "thresholdDenominator" SidechainParams Integer where
   get = thresholdDenominator
   {-# INLINE modify #-}
   modify f sp = sp {thresholdDenominator = f (thresholdDenominator sp)}
+
+-- | @since Unreleased
+instance HasField "governanceAuthority" SidechainParams Governance.GovernanceAuthority where
+  {-# INLINE get #-}
+  get = governanceAuthority
+  {-# INLINE modify #-}
+  modify f sp = sp {governanceAuthority = f (governanceAuthority sp)}
 
 {- | Compressed DER SECP256k1 public key.
  = Important note
@@ -1090,3 +1097,135 @@ instance HasField "sidechainEpoch" CheckpointMessage Integer where
   {-# INLINE modify #-}
   modify f (CheckpointMessage sp bh bn se) =
     CheckpointMessage sp bh bn (f se)
+
+{- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
+burn DParameter tokens
+
+@since Unreleased
+-}
+data DParameterPolicyRedeemer
+  = -- | @since Unreleased
+    DParameterMint
+  | -- | @since Unreleased
+    DParameterBurn
+
+-- | @since Unreleased
+instance ToData DParameterPolicyRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData DParameterMint = BuiltinData $ PlutusTx.I 0
+  toBuiltinData DParameterBurn = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData DParameterPolicyRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just DParameterMint
+      1 -> Just DParameterBurn
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData DParameterPolicyRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> DParameterMint
+          1 -> DParameterBurn
+          _ -> error ()
+
+{- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
+ratio is represented as a pair of integers - permissionedCandidatesCount and
+registeredCandidatesCount.
+
+@since Unreleased
+-}
+data DParameterValidatorDatum = DParameterValidatorDatum
+  { -- | @since Unreleased
+    permissionedCandidatesCount :: Integer
+  , -- | @since Unreleased
+    registeredCandidatesCount :: Integer
+  }
+
+-- | @since Unreleased
+instance HasField "permissionedCandidatesCount" DParameterValidatorDatum Integer where
+  {-# INLINE get #-}
+  get (DParameterValidatorDatum permissionedCandidatesCount _) =
+    permissionedCandidatesCount
+  {-# INLINE modify #-}
+  modify
+    f
+    ( DParameterValidatorDatum
+        permissionedCandidatesCount
+        registeredCandidatesCount
+      ) =
+      DParameterValidatorDatum
+        (f permissionedCandidatesCount)
+        registeredCandidatesCount
+
+-- | @since Unreleased
+instance HasField "registeredCandidatesCount" DParameterValidatorDatum Integer where
+  {-# INLINE get #-}
+  get (DParameterValidatorDatum _ registeredCandidatesCount) =
+    registeredCandidatesCount
+  {-# INLINE modify #-}
+  modify f (DParameterValidatorDatum numerator registeredCandidatesCount) =
+    DParameterValidatorDatum numerator (f registeredCandidatesCount)
+
+-- | @since Unreleased
+instance ToData DParameterValidatorDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData
+    ( DParameterValidatorDatum
+        permissionedCandidatesCount
+        registeredCandidatesCount
+      ) =
+      productToData2 permissionedCandidatesCount registeredCandidatesCount
+
+-- | @since Unreleased
+instance FromData DParameterValidatorDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 DParameterValidatorDatum
+
+-- | @since Unreleased
+instance UnsafeFromData DParameterValidatorDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 DParameterValidatorDatum
+
+{- | 'DParameterValidatorRedeemer' signals whether transaction is supposed to
+update the d parameter or remove it.
+
+@since Unreleased
+-}
+data DParameterValidatorRedeemer
+  = -- | @since Unreleased
+    UpdateDParameter
+  | -- | @since Unreleased
+    RemoveDParameter
+
+-- | @since Unreleased
+instance ToData DParameterValidatorRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData UpdateDParameter = BuiltinData $ PlutusTx.I 0
+  toBuiltinData RemoveDParameter = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData DParameterValidatorRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just UpdateDParameter
+      1 -> Just RemoveDParameter
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData DParameterValidatorRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> UpdateDParameter
+          1 -> RemoveDParameter
+          _ -> error ()

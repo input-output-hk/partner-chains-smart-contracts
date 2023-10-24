@@ -73,5 +73,5 @@ fromSingleton msg _ = traceError msg
 {-# INLINEABLE currencySymbolValueOf #-}
 currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
 currencySymbolValueOf v c = case Map.lookup c (getValue v) of
-  Nothing -> traceError "ERROR-CURRENCY-LOOKUP-01"
+  Nothing -> 0
   Just x -> sum (Map.elems x)

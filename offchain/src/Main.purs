@@ -25,6 +25,7 @@ import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
+import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( ClaimActRespV1
@@ -54,6 +55,9 @@ import TrustlessSidechain.EndpointResp
       , CborMerkleTreeResp
       , CborCombinedMerkleProofResp
       , CborPlainAggregatePublicKeysResp
+      , InsertDParameterResp
+      , UpdateDParameterResp
+      , RemoveDParameterResp
       )
   , stringifyEndpointResp
   )
@@ -99,6 +103,9 @@ import TrustlessSidechain.Options.Types
       , InsertVersion
       , UpdateVersion
       , InvalidateVersion
+      , InsertDParameter
+      , UpdateDParameter
+      , RemoveDParameter
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -576,6 +583,31 @@ runTxEndpoint sidechainEndpointParams endpoint =
           version
         let versioningTransactionIds = map unwrap txIds
         pure $ InvalidateVersionResp { versioningTransactionIds }
+
+      InsertDParameter
+        { permissionedCandidatesCount, registeredCandidatesCount } →
+        DParameter.mkInsertDParameterLookupsAndConstraints scParams
+          { permissionedCandidatesCount, registeredCandidatesCount }
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> InsertDParameterResp
+
+      UpdateDParameter
+        { permissionedCandidatesCount, registeredCandidatesCount } →
+        DParameter.mkUpdateDParameterLookupsAndConstraints scParams
+          { permissionedCandidatesCount, registeredCandidatesCount }
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> UpdateDParameterResp
+
+      RemoveDParameter →
+        DParameter.mkRemoveDParameterLookupsAndConstraints scParams
+          >>= submitAndAwaitTx mempty
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> RemoveDParameterResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

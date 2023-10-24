@@ -36,6 +36,10 @@ module TrustlessSidechain.Versioning (
   fuelProxyPolicyId,
   committeeCertificateVerificationPolicyId,
   committeeOraclePolicyId,
+  committeePlainEcdsaSecp256k1ATMSPolicyId,
+  committeePlainSchnorrSecp256k1ATMSPolicyId,
+  dParameterPolicyId,
+  dParameterValidatorId,
 ) where
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
@@ -82,7 +86,11 @@ fuelMintingPolicyId
   , versionOracleValidatorId
   , fuelProxyPolicyId
   , committeeCertificateVerificationPolicyId
-  , committeeOraclePolicyId ::
+  , committeeOraclePolicyId
+  , committeePlainEcdsaSecp256k1ATMSPolicyId
+  , committeePlainSchnorrSecp256k1ATMSPolicyId
+  , dParameterPolicyId
+  , dParameterValidatorId ::
     Integer
 fuelMintingPolicyId = 0
 merkleRootTokenPolicyId = 1
@@ -104,6 +112,10 @@ versionOracleValidatorId = 16
 fuelProxyPolicyId = 17
 committeeCertificateVerificationPolicyId = 18
 committeeOraclePolicyId = 19
+committeePlainEcdsaSecp256k1ATMSPolicyId = 20
+committeePlainSchnorrSecp256k1ATMSPolicyId = 21
+dParameterPolicyId = 22
+dParameterValidatorId = 23
 
 {- | Datum attached to 'VersionOraclePolicy' tokens stored on the
  'VersionOracleValidator' script.

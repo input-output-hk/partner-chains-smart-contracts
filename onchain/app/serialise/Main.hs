@@ -27,6 +27,7 @@ import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.DummyMintingPolicy as DummyMintingPolicy
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
@@ -221,6 +222,9 @@ main =
           , ("PoCSchnorr", PoCSchnorr.serialisablePolicy)
           , -- Validators for FUEL Proxy tests
             ("DummyMintingPolicy", DummyMintingPolicy.serialisableDummyMintingPolicy)
+          , -- Scripts for DParameter
+            ("DParameterMintingPolicy", DParameter.serialisableMintingPolicy)
+          , ("DParameterValidator", DParameter.serialisableValidator)
           ]
         plutusScriptsDotPlutus = fmap (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts
      in case options of

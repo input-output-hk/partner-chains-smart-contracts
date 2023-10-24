@@ -7,6 +7,7 @@ module TrustlessSidechain.Utils.Address
   , byteArrayToBech32BytesUnsafe
   , getOwnPaymentPubKeyHash
   , getOwnWalletAddress
+  , toValidatorHash
   ) where
 
 import Contract.Prelude
@@ -15,9 +16,11 @@ import Contract.Address
   ( Address
   , PaymentPubKeyHash
   )
-import Contract.Monad (Contract, liftedM)
+import Contract.Address as Address
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
+import Contract.Scripts (ValidatorHash)
 import Contract.Wallet
   ( getWalletAddresses
   , ownPaymentPubKeyHashes
@@ -123,3 +126,10 @@ getOwnWalletAddress ∷
 getOwnWalletAddress =
   liftedM (show (InternalError NotFoundOwnAddress))
     (getWalletAddresses >>= pure <<< Array.head)
+
+-- | Convert Address to ValidatorHash, raising an error if an address does not
+-- | represent a script.
+toValidatorHash ∷ Address → Contract ValidatorHash
+toValidatorHash addr =
+  liftContractM "Cannto convert Address to ValidatorHash"
+    (Address.toValidatorHash addr)

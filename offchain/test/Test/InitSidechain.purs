@@ -115,6 +115,7 @@ testScenario2 =
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
         , BigInt.fromInt 20_000_000
         ]
     $ \alice →

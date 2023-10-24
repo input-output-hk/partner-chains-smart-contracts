@@ -69,6 +69,8 @@ data ScriptId
   | CommitteeOraclePolicy -- (previously UpdateCommitteeHashPolicy)
   | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
   | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+  | DParameterPolicy
+  | DParameterValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -121,6 +123,10 @@ instance FromData ScriptId where
     Just CommitteePlainEcdsaSecp256k1ATMSPolicyId
   fromData (Integer i) | i == BigInt.fromInt 21 =
     Just CommitteePlainSchnorrSecp256k1ATMSPolicyId
+  fromData (Integer i) | i == BigInt.fromInt 22 =
+    Just DParameterPolicy
+  fromData (Integer i) | i == BigInt.fromInt 23 =
+    Just DParameterValidator
 
   fromData _ = Nothing
 
@@ -147,6 +153,8 @@ instance ToData ScriptId where
   toData CommitteeOraclePolicy = Integer (BigInt.fromInt 19)
   toData CommitteePlainEcdsaSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 20)
   toData CommitteePlainSchnorrSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 21)
+  toData DParameterPolicy = Integer (BigInt.fromInt 22)
+  toData DParameterValidator = Integer (BigInt.fromInt 23)
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.

@@ -227,6 +227,15 @@ data TxEndpoint
   | InvalidateVersion
       { version ∷ Int
       }
+  | InsertDParameter
+      { permissionedCandidatesCount ∷ BigInt
+      , registeredCandidatesCount ∷ BigInt
+      }
+  | UpdateDParameter
+      { permissionedCandidatesCount ∷ BigInt
+      , registeredCandidatesCount ∷ BigInt
+      }
+  | RemoveDParameter
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain

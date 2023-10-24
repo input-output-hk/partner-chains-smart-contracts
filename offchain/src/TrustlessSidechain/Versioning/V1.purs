@@ -15,6 +15,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
@@ -29,9 +30,11 @@ getVersionedValidators ∷
 getVersionedValidators sp = do
   -- Getting validators and policies to version
   merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
   -----------------------------------
   pure $ Map.fromFoldable
     [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
+    , Types.DParameterValidator /\ dParameterValidator
     ]
 
 -- | Minting policies to store in the versioning system.
@@ -63,6 +66,8 @@ getVersionedPolicies { sidechainParams: sp, atmsKind } = do
     sp
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
+  { dParameterMintingPolicy } ←
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol sp
 
   ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
@@ -78,6 +83,7 @@ getVersionedPolicies { sidechainParams: sp, atmsKind } = do
     , Types.CommitteeCertificateVerificationPolicy /\
         committeeCertificateVerificationMintingPolicy
     , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
+    , Types.DParameterPolicy /\ dParameterMintingPolicy
     ]
 
 getVersionedPoliciesAndValidators ∷

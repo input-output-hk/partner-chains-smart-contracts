@@ -701,12 +701,6 @@ initSidechain (InitSidechainParams isp) version = do
   -- Warning: this code is essentially duplicated code from
   -- `initSidechainTokens` and `paySidechainTokens`....
 
-  -- Mint and pay versioning tokens to versioning script
-  ----------------------------------------
-  versioningTxIds ← Versioning.insertVersion
-    { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
-    version
-
   -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
   let
@@ -743,6 +737,12 @@ initSidechain (InitSidechainParams isp) version = do
     ) isp
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" lookups constraints
+
+  -- Mint and pay versioning tokens to versioning script
+  ----------------------------------------
+  versioningTxIds ← Versioning.insertVersion
+    { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
+    version
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224

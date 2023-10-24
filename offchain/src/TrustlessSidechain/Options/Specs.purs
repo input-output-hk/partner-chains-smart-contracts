@@ -111,6 +111,9 @@ import TrustlessSidechain.Options.Types
       , InsertVersion
       , UpdateVersion
       , InvalidateVersion
+      , InsertDParameter
+      , UpdateDParameter
+      , RemoveDParameter
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -219,6 +222,19 @@ optSpec maybeConfig =
             ( progDesc
                 "Utility functions for cryptographic primitives and messages."
             )
+        )
+
+    , command "insert-d-parameter"
+        ( info (withCommonOpts maybeConfig insertDParameterSpec)
+            (progDesc "Insert new D parameter")
+        )
+    , command "update-d-parameter"
+        ( info (withCommonOpts maybeConfig updateDParameterSpec)
+            (progDesc "Update a D parameter")
+        )
+    , command "remove-d-parameter"
+        ( info (withCommonOpts maybeConfig removeDParameterSpec)
+            (progDesc "Remove a D parameter")
         )
     ]
 
@@ -1056,6 +1072,43 @@ invalidateVersionSpec ∷ Parser TxEndpoint
 invalidateVersionSpec = ado
   version ← parseVersion
   in InvalidateVersion { version }
+
+parseDParameterPermissionedCandidatesCount ∷ Parser BigInt
+parseDParameterPermissionedCandidatesCount =
+  option
+    Parsers.numerator
+    ( fold
+        [ long "d-parameter-permissioned-candidates-count"
+        , metavar "INT"
+        , help "D Parameter permissioned-candidates-count"
+        ]
+    )
+
+parseDParameterRegisteredCandidatesCount ∷ Parser BigInt
+parseDParameterRegisteredCandidatesCount =
+  option
+    Parsers.denominator
+    ( fold
+        [ long "d-parameter-registered-candidates-count"
+        , metavar "INT"
+        , help "D Parameter registered candidates count"
+        ]
+    )
+
+insertDParameterSpec ∷ Parser TxEndpoint
+insertDParameterSpec = ado
+  permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
+  registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
+  in InsertDParameter { permissionedCandidatesCount, registeredCandidatesCount }
+
+updateDParameterSpec ∷ Parser TxEndpoint
+updateDParameterSpec = ado
+  permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
+  registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
+  in UpdateDParameter { permissionedCandidatesCount, registeredCandidatesCount }
+
+removeDParameterSpec ∷ Parser TxEndpoint
+removeDParameterSpec = pure RemoveDParameter
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado

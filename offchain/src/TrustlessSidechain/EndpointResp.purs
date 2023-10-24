@@ -116,6 +116,12 @@ data EndpointResp
   | CborPlainAggregatePublicKeysResp
       { aggregatedPublicKeys ∷ PlutusData
       }
+  | InsertDParameterResp
+      { transactionId ∷ ByteArray }
+  | UpdateDParameterResp
+      { transactionId ∷ ByteArray }
+  | RemoveDParameterResp
+      { transactionId ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -384,6 +390,26 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         [ "endpoint" /\ J.fromString "CborPlainAggregatePublicKeys"
         , "cborHexPlainAggregatedPublicKeys" /\ J.fromString
             (serialisePlutusDataToHex aggregatedPublicKeys)
+        ]
+    InsertDParameterResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "InsertDParameter"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    UpdateDParameterResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "UpdateDParameter"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    RemoveDParameterResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "RemoveDParameter"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
 -- | Encode the endpoint response to a json object

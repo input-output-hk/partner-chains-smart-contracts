@@ -1,19 +1,20 @@
 module TrustlessSidechain.Versioning.Utils
-  ( versionOracleTokenName
-  , versionOraclePolicy
-  , versionOracleValidator
-  , getVersionOracleConfig
+  ( getVersionOracleConfig
   , getVersionOraclePolicy
+  , getVersionedCurrencySymbol
   , getVersionedScriptRefUtxo
+  , getVersionedValidatorAddress
   , insertVersionTokenLookupsAndConstraints
   , invalidateVersionTokenLookupsAndConstraints
   , updateVersionTokenLookupsAndConstraints
-  , getVersionedCurrencySymbol
+  , versionOraclePolicy
+  , versionOracleTokenName
+  , versionOracleValidator
   ) where
 
 import Contract.Prelude
 
-import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
+import Contract.Address (Address, getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.Monad as Monad
 import Contract.PlutusData
@@ -29,6 +30,7 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy
   , Validator
+  , ValidatorHash(ValidatorHash)
   , mintingPolicyHash
   , validatorHash
   )
@@ -469,3 +471,24 @@ getVersionedCurrencySymbol sp versionOracle = do
       ("Script for given version oracle was not found: " <> show versionOracle)
     Just scriptHash →
       pure $ scriptHashAsCurrencySymbol scriptHash
+
+getVersionedValidatorAddress ∷
+  SidechainParams →
+  VersionOracle →
+  Contract Address
+getVersionedValidatorAddress sp versionOracle = do
+  _ /\ TransactionOutputWithRefScript
+    { output: TransactionOutput
+        { referenceScript
+        }
+    } ← getVersionedScriptRefUtxo sp versionOracle
+
+  case referenceScript of
+    Nothing → throwContractError
+      ("Script for given version oracle was not found: " <> show versionOracle)
+    Just scriptHash → do
+      netId ← getNetworkId
+      versionOracleValidatorAddr ←
+        liftContractM "cannot get version oracle validator address"
+          (validatorHashEnterpriseAddress netId (ValidatorHash scriptHash))
+      pure $ versionOracleValidatorAddr

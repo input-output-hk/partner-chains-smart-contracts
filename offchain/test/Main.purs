@@ -9,6 +9,7 @@ import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import Test.ConfigFile as ConfigFile
+import Test.DParameter as DParameter
 import Test.Data as Data
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
@@ -64,6 +65,7 @@ main = do
           MerkleRootChaining.tests
           Checkpoint.tests
           Versioning.tests
+          DParameter.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

@@ -12,7 +12,7 @@ config =
   , port: UInt.fromInt 8082
   , logLevel: Info
   , ogmiosConfig:
-      { port: UInt.fromInt 1337
+      { port: UInt.fromInt 1338
       , host: "127.0.0.1"
       , secure: false
       , path: Nothing

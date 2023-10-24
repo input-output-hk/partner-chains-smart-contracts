@@ -27,6 +27,7 @@ module TrustlessSidechain.Options.Parsers
   , rootHash
   , numerator
   , denominator
+  , epoch
   , blockHash
   ) where
 
@@ -251,6 +252,16 @@ denominator = eitherReader
         | i > zero → pure i
         | otherwise → Left "denominator must be positive"
       Nothing → Left "failed to parse int denominator"
+  )
+
+-- | Parse an epoch.
+epoch ∷ ReadM BigInt
+epoch = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "epoch must be non negative"
+      Nothing → Left "failed to parse int epoch"
   )
 
 -- | Parse UInt
