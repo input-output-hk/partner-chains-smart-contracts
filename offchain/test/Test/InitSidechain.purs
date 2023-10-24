@@ -117,6 +117,9 @@ testScenario2 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 20_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
         ]
     $ \alice →
         Wallet.withKeyWallet alice do
@@ -217,6 +220,11 @@ testScenario4 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
         ]
     $ \alice →
         Wallet.withKeyWallet alice do
@@ -266,7 +274,9 @@ testScenario5 = do
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 10_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
         ]
     $ \alice →
         Wallet.withKeyWallet alice do
