@@ -80,7 +80,7 @@ testScenarioSuccess =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -91,7 +91,7 @@ testScenarioSuccess =
                 , registeredCandidatesCount: BigInt.fromInt 4
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -99,7 +99,7 @@ testScenarioSuccess =
             ( DParameter.mkRemoveDParameterLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
 testScenarioFailure ∷ PlutipTest
@@ -142,7 +142,7 @@ testScenarioFailure =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -150,7 +150,7 @@ testScenarioFailure =
             ( DParameter.mkRemoveDParameterLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         ( void
@@ -158,6 +158,6 @@ testScenarioFailure =
               ( DParameter.mkRemoveDParameterLookupsAndConstraints
                   sidechainParams
                   >>=
-                    submitAndAwaitTx mempty
+                    submitAndAwaitTx
               )
         ) # fails

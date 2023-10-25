@@ -144,7 +144,7 @@ testScenarioSuccess =
           $ mkFuelProxyMintLookupsAndConstraints sidechainParams
               fuelMintingParams
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         -- Insert new version of scripts.  Both version 1 and 2 are active and
         -- available at this point.
@@ -159,7 +159,7 @@ testScenarioSuccess =
                   (Mint.V2.FuelMintParams { amount: BigInt.fromInt 7 })
               )
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         -- Burn 10 fuel tokens using FUEL policy v1
         void
@@ -171,7 +171,7 @@ testScenarioSuccess =
                   }
               )
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         -- Burn 2 fuel tokens using FUEL policy v2
         void
@@ -183,7 +183,7 @@ testScenarioSuccess =
                   }
               )
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
 -- | Mint using version 1, update to version 2, burn using version 2
 -- | this should fail
@@ -268,7 +268,7 @@ testScenarioFailure =
             $ mkFuelProxyMintLookupsAndConstraints sidechainParams
                 fuelMintingParams
             >>=
-              submitAndAwaitTx mempty
+              submitAndAwaitTx
 
           -- Update scripts, invalidating version 1 policies
           void $ Versioning.updateVersion
@@ -288,5 +288,5 @@ testScenarioFailure =
 
                 )
             >>=
-              submitAndAwaitTx mempty
+              submitAndAwaitTx
           # fails

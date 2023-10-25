@@ -594,7 +594,9 @@ initSidechainTokens isp version = do
   ----------------------------------------
   txId ← balanceSignAndSubmit "Init Sidechain tokens" lookups constraints
 
-  -- Mint and pay versioning tokens to versioning script
+  -- Mint and pay versioning tokens to versioning script.  This needs to be done
+  -- after sidechain initialization.  Otherwise genesisUtxo can get spent by
+  -- versioning before it can be used to mint NFTs.
   ----------------------------------------
   versioningTransactionIds ← Versioning.insertVersion
     { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
@@ -738,7 +740,9 @@ initSidechain (InitSidechainParams isp) version = do
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" lookups constraints
 
-  -- Mint and pay versioning tokens to versioning script
+  -- Mint and pay versioning tokens to versioning script.  This needs to be done
+  -- after sidechain initialization.  Otherwise genesisUtxo can get spent by
+  -- versioning before it can be used to mint NFTs.
   ----------------------------------------
   versioningTxIds ← Versioning.insertVersion
     { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }

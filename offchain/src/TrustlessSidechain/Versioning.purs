@@ -31,17 +31,16 @@ insertVersion { sidechainParams: sp, atmsKind } version = do
     { sidechainParams: sp, atmsKind }
     version
 
-  let forbiddenUtxos = mempty
   validatorsTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable versionedValidators
   policiesTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable versionedPolicies
   pure (validatorsTxIds <> policiesTxIds)
@@ -57,19 +56,17 @@ invalidateVersion { sidechainParams: sp, atmsKind } version = do
     { sidechainParams: sp, atmsKind }
     version
 
-  let forbiddenUtxos = singleton (unwrap sp).genesisUtxo
-
   validatorsTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Array.fromFoldable
       $ Map.keys versionedValidators
   policiesTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Array.fromFoldable
       $ Map.keys versionedPolicies
@@ -94,8 +91,6 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   } ← getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind }
     newVersion
 
-  let forbiddenUtxos = singleton (unwrap sp).genesisUtxo
-
   let
     commonPolicies = Map.intersection newVersionedPolicies oldVersionedPolicies
     commonValidators = Map.intersection newVersionedValidators
@@ -104,13 +99,13 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   commonValidatorsTxIds ←
     traverse
       ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable commonValidators
   commonPoliciesTxIds ←
     traverse
       ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable commonPolicies
 
@@ -122,13 +117,13 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   uniqueNewValidatorsTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable uniqueNewValidators
   uniqueNewPoliciesTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Map.toUnfoldable uniqueNewPolicies
 
@@ -140,14 +135,14 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   uniqueOldValidatorsTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldValidators
   uniqueOldPoliciesTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Tx.submitAndAwaitTx forbiddenUtxos
+          Utils.Tx.submitAndAwaitTx
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldPolicies

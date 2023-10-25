@@ -138,7 +138,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
             , dsUtxo: Nothing
             }
         >>=
-          submitAndAwaitTx mempty
+          submitAndAwaitTx
 
 -- | `testScenarioSuccess2` tests minting some tokens with the fast distributed
 -- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
@@ -231,7 +231,7 @@ testScenarioSuccess2 =
                 , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
                 }
             >>=
-              submitAndAwaitTx mempty
+              submitAndAwaitTx
 
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
@@ -265,7 +265,7 @@ testScenarioFailure =
                 , dsUtxo: Nothing
                 }
             >>=
-              submitAndAwaitTx mempty
+              submitAndAwaitTx
           # fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
@@ -351,9 +351,9 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
 
         -- the very bad double mint attempt...
         void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
-          submitAndAwaitTx mempty
+          submitAndAwaitTx
         void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
-          submitAndAwaitTx mempty
+          submitAndAwaitTx
 
         pure unit
         # fails

@@ -93,7 +93,7 @@ testScenarioSuccess =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -109,7 +109,7 @@ testScenarioSuccess =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -117,7 +117,7 @@ testScenarioSuccess =
             ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
 testScenarioFailure ∷ PlutipTest
@@ -173,7 +173,7 @@ testScenarioFailure =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         void
@@ -181,7 +181,7 @@ testScenarioFailure =
             ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx mempty
+                  submitAndAwaitTx
             )
 
         ( void
@@ -189,6 +189,6 @@ testScenarioFailure =
               ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                   sidechainParams
                   >>=
-                    submitAndAwaitTx mempty
+                    submitAndAwaitTx
               )
         ) # fails

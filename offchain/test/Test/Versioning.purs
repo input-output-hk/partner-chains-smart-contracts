@@ -89,7 +89,7 @@ testScenarioSuccess =
               1
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         void
           $ Versioning.insertVersionTokenLookupsAndConstraints
@@ -97,7 +97,7 @@ testScenarioSuccess =
               1
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
         void
           $ Versioning.updateVersionTokenLookupsAndConstraints
               sidechainParams
@@ -105,7 +105,7 @@ testScenarioSuccess =
               2
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         void
           $ Versioning.updateVersionTokenLookupsAndConstraints
@@ -114,7 +114,7 @@ testScenarioSuccess =
               2
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         void
           $ Versioning.invalidateVersionTokenLookupsAndConstraints
@@ -122,7 +122,7 @@ testScenarioSuccess =
               2
               MerkleRootTokenPolicy
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx
 
         void
           $ Versioning.invalidateVersionTokenLookupsAndConstraints
@@ -130,4 +130,4 @@ testScenarioSuccess =
               2
               CommitteeCandidateValidator
           >>=
-            submitAndAwaitTx mempty
+            submitAndAwaitTx

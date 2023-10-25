@@ -204,7 +204,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
               , dsUtxo
               }
           )
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> ClaimActRespV1
@@ -214,7 +214,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           ( FUELProxyPolicy.FuelBurnParamsV1 $ Burn.V1.FuelBurnParams
               { amount, recipient, sidechainParams: scParams }
           )
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>>
@@ -227,7 +227,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { amount
               }
           )
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> ClaimActRespV2
@@ -240,7 +240,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
                   { amount }
               }
           )
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>>
@@ -596,7 +596,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkInsertDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> InsertDParameterResp
@@ -605,14 +605,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkUpdateDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdateDParameterResp
 
       RemoveDParameter →
         DParameter.mkRemoveDParameterLookupsAndConstraints scParams
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemoveDParameterResp
@@ -622,7 +622,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
           scParams
           { candidates: Array.fromFoldable permissionedCandidates }
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> InsertPermissionedCandidatesResp
@@ -632,7 +632,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
           scParams
           { candidates: Array.fromFoldable permissionedCandidates }
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
@@ -640,7 +640,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
       RemovePermissionedCandidates →
         PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
           scParams
-          >>= submitAndAwaitTx mempty
+          >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemovePermissionedCandidatesResp
