@@ -473,6 +473,111 @@ nix run .#sidechain-main-cli -- invalidate-version \
   --version 1
 ```
 
+#### 3.1.11 Insert a D parameter value
+
+```
+nix run .#sidechain-main-cli -- insert-d-parameter \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --d-parameter-permissioned-candidates-count N \
+  --d-parameter-registered-candidates-count M
+```
+
+where N and M are integers.  Note that this should be only done once and then
+`update-d-parameter` value should be used (see below).  However, there is no
+safeguard against inserting multiple D parameter values.
+
+#### 3.1.12 Update a D parameter value
+
+```
+nix run .#sidechain-main-cli -- update-d-parameter \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --d-parameter-permissioned-candidates-count N \
+  --d-parameter-registered-candidates-count M
+```
+
+where N and M are integers.  If more than one D parameter value was inserted
+this will remove all inserted values first and then replace them with a single
+new value.
+
+
+#### 3.1.13 Remove a D parameter value
+
+```
+nix run .#sidechain-main-cli -- remove-d-parameter \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3
+```
+
+This removes all inserted D parameter values.
+
+
+#### 3.1.14 Insert a list of permissioned candidates
+
+```
+nix run .#sidechain-main-cli -- insert-permissioned-candidates \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AUTHORITY_DISCOVERY_KEY_3:GRANDPA_KEY_3"
+```
+
+Insert a new list of permissioned candidates.  Each candidate is listed
+separately using the `--permissioned-candidate-keys` flag followed by a string
+of four keys separated from each other by a single colon.  This command should
+only be used once to initialize the list.  All subsequent updates should be done
+using the `update-permissioned-candidates` command below, though there is no
+safeguard against calling `insert-permissioned-candidates` multiple times.
+
+
+#### 3.1.15 Update a list of permissioned candidates
+
+```
+nix run .#sidechain-main-cli -- update-permissioned-candidates \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3 \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AUTHORITY_DISCOVERY_KEY_3:GRANDPA_KEY_3"
+```
+
+Replace existing list of permissioned candidates with a new list.  Each
+candidate is listed separately using the `--permissioned-candidate-keys` flag
+followed by a string of four keys separated from each other by a single colon.
+
+#### 3.1.16 Remove all permissioned candidates
+
+```
+nix run .#sidechain-main-cli -- remove-permissioned-candidates \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold 2/3
+```
+
+Remove all currently registered permissioned candidates.  If this command is
+called, a new list can only be created using the
+`insert-permissioned-candidates` command above.
+
+
 ### 3.2. Using a configuration file
 
 You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
