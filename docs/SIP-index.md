@@ -21,3 +21,4 @@ The status of an improvement proposal can be `In Progress` `Accepted` or `Implem
 | [11: Modular Criteria For Committee Selection](./SIPs/11-ModularCriteriaForCommitteeSelection.md)                                   | `Implemented` |
 | [12: Sidechain to Sidechain Token Transfer](./SIPs/12-Sidechain-to-Sidechain-Token-Transfer.md)                                     | `In Progress` |
 | [13: Defunct Sidechain](./SIPs/13-Defunct-Sidechain.md)                                                                             | `In Progress` |
+| [14: Data Versioning System](./SIPs/14-Data-Versioning-System.md)                                                                   | `In Progress` |
