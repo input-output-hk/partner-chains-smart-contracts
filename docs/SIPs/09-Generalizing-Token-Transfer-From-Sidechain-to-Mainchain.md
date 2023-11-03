@@ -68,7 +68,7 @@ As an overview, this document will discuss the following.
 
     - Bridging arbitrary data from the sidechain to the mainchain.
 
-## Replacing `FUELMintingPolicy` with `ScToken`
+## Generalizing `MerkleTreeEntry`
 
 We will start with defining `MerkleTreeEntry` as follows.
 
@@ -85,6 +85,7 @@ data MerkleTreeEntry
             -- previousMerkleRoot is added to make sure that the hashed entry
             -- is unique w.r.t other Merkle roots to prevent double claiming
         }
+    ...
 ```
 
 Note that this is essentially identical to the original `MerkleTreeEntry`
@@ -101,6 +102,7 @@ Note that this is essentially identical to the original `MerkleTreeEntry`
         , previousMerkleRoot :: Maybe ByteString
             -- previousMerkleRoot is added to make sure that the hashed entry
             -- is unique w.r.t other Merkle roots to prevent double claiming
++   ...
   }
 ```
 except that we instead:
@@ -113,7 +115,12 @@ except that we instead:
 
 - removed the `index` field which is no longer needed to ensure uniqueness
   amongst transactions within the Merkle tree (we instead propose to use the
-  Merkle proof).
+  Merkle proof);
+
+- treating `MerkleTreeEntry` as a sum type, where each arm is representing a
+  different token transfer type (see further discussions below).
+
+## Replacing `FUELMintingPolicy` with `ScToken`
 
 As redeemer, `ScToken` will take the following data type.
 ```haskell
@@ -198,8 +205,30 @@ This amounts to completing the following:
 
     - whatever other great ideas `GreatDAppIdeaToken` needs to verify.
 
+## Integration with Versioning system
+
+As at the time of designing this proposal, [SIP-01][SIP-01] wasn't approved,
+we decided to work out a proposal that works without Versioning. This doesn't
+mean, that the two are incompatible, in fact, we only have to change the
+name of the `FUELProxyPolicy` to `ScTokenProxyPolicy` to follow the same
+naming conventions, but this does not affect the script itself, and does not
+incur a currency symbol change.
+
+As an alternative design, we propose parameterising the `ScTokenProxyPolicy`.
+
+Instead of using the token name to identify the wrapped token, the `ScToken`
+token name is accepted as a parameter to the `ScTokenProxyPolicy`. This way,
+for each wrapped token, we get a different currency symbol. This design has a
+few benefits from the end-user perspective:
+- token name can be used a human readable name
+- currency symbol is different for each wrapped token, increasing the sense
+  of uniqueness
+
+However it does require change in the `FUELProxyPolicy`, so tokens
+already in circulation would become obsolete without some migration plan.
+
 ### Arbitrary Cardano Native Asset Token Transfer.
-Details will be in this [SIP](./docs/SIPs/07-ModularisingTokenHandling.md).
+Details will be in [SIP-07][SIP-07].
 
 The use case is as follows.
 
@@ -272,7 +301,7 @@ are all satisfied.
   This is to prevent double claiming.
 
 ### Bridging Arbitrary Data
-Details will be in another SIP.
+Details will be in [SIP-10][SIP-10].
 
 The use case is as follows.
 
@@ -325,3 +354,20 @@ Using the `postBoxMerkleTreeEntry`, `PostBoxToken` will mint only if the
 - `blake2b(cbor(merkleProof,previousMerkleRoot))` is not already in the
   distributed set, and this transaction inserts
   `blake2b(cbor(merkleProof,previousMerkleRoot))` in the distributed set.
+
+## Costs
+
+There's a minimal additional cost with the above implementation: as
+`MerkleTreeEntry` is now a sum type, and it includes an addition `tokenName`
+field, we have some additional checks that the `ScToken` minting policy
+has to verify on claiming, compared to the old `FUELMintingPolicy` logic.
+
+However, Merkle root insertion will not be affected, as the scripts involved are
+oblivious to the underlying changes in the leaf nodes.
+
+Furthermore, any later addition to the `MerkleTreeEntry` arms won't affect the
+execution costs and the transaction fees of the existing functionality.
+
+[SIP-01]: ./01-UpdateStrategy.md
+[SIP-07]:./07-ModularisingTokenHandling.md
+[SIP-10]: ./10-GeneralDataBridge.md

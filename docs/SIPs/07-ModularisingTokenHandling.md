@@ -39,8 +39,8 @@ We call the currently implemented mechanism which implements the two-way peg on
 the mainchain via minting and burning of a wrapped token a *mainchain wrapped
 token transfer*.
 
-This SIP proposes an alternative method (which may be used in addition to the
-*wrapped token*) to implement the two-way peg on the mainchain.
+This SIP proposes an alternative method which will be used in addition to the
+*wrapped token* to implement the two-way peg on the mainchain.
 Instead of minting and burning a wrapped token, we propose to take any
 arbitrary token on the mainchain, say `McToken`, and implement the two-way peg
 for `McToken` as follows.
@@ -69,6 +69,17 @@ and unlocking of `McToken`s a *mainchain lock/unlock transfer*.
 The implementation of a mainchain lock/unlock transfer is the primary focus of
 this proposal, and we will show how to modify the current system so that it
 allows a lock/unlock transfer of Cardano assets.
+
+## Assumptions
+
+This proposal builds on [SIP-09][SIP-09], which lays a groundwork for a more
+modular Merkle tree entry, allowing the transfer of different assets.
+
+As at the time of designing this proposal, [SIP-01][SIP-01] wasn't approved,
+we decided to work out a proposal that works without Versioning. This doesn't
+mean, that the two are incompatible, but some areas could be simplified using
+the VersionOracle. At the end of the proposal, there's [a section with notes about
+these simplifications](#simplifications-with-versionoracle).
 
 ## Plutus Design Specification.
 As an overview, we will create:
@@ -375,6 +386,28 @@ The following diagram depicts the transaction for step 3 of the workflow using
 
 ![Lock box sidechain to mainchain part 1](./07-ModularisingTokenHandling/McTokenSidechainToMainchain.svg)
 
+## Simplifications with VersionOracle
+
+With VersionOracle implementation, all scripts must be referenced via the VersionOracle,
+and no currency symbol or validator hash references should be used as parameters.
+
+In the present proposal, we introduced a `LockBoxOracleMintingPolicy`, which can
+be simplified by the VersionOracle: the VersionOracle will hold references to
+the LockBox addresses. As we're using a bounded number of Lockboxes, this should
+be a range of scriptIds (for example: 120-129).
+
+## Costs
+
+The flow of claiming and burning sidechain-owned tokens will be as described in
+[SIP-09][SIP-09].
+
+Mainchain-owned tokens are locked to and released from a lockbox, which has
+different fees involved. As the verification logic is basically identical,
+including the double spend preventing distributed set, and both action require
+an intermediary token (`RealeaseToken` for mainchain-owned tokens, `ScToken` for
+sidechain-owned tokens), we estimate that the fees of unlocking from the lockbox
+will have a similar fee as claiming a sidechain-owned token.
+
 [^refEnablingBlockchainInnovations]: Back, A., Corallo, M., Dashjr, L.,
 Friedenbach, M., Maxwell, G., Miller, A.K., Poelstra, A., Timón, J., & Wuille,
 P. (2014). Enabling Blockchain Innovations with Pegged Sidechains.
@@ -398,3 +431,6 @@ P. (2014). Enabling Blockchain Innovations with Pegged Sidechains.
 
 [^refCIP2]: Vries, Edsko. *CIP 2 - Coin Selection Algorithms for Cardano*,
   <https://cips.cardano.org/cips/cip2/>. Accessed 26 May 2023.
+
+[SIP-01]: ./01-UpdateStrategy.md
+[SIP-09]: ./09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md
