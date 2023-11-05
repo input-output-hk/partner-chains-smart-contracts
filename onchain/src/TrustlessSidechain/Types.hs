@@ -8,7 +8,7 @@ module TrustlessSidechain.Types where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (Address, BuiltinData (BuiltinData), LedgerBytes (LedgerBytes), TxOutRef)
+import Plutus.V2.Ledger.Api (BuiltinData (BuiltinData), LedgerBytes (LedgerBytes), TxOutRef, ValidatorHash)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
@@ -736,7 +736,8 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     newAggregateCommitteePubKeys :: aggregatePubKeys
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
-  , validatorAddress :: Address
+  , -- | @since unreleased
+    validatorHash :: ValidatorHash
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -749,7 +750,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
 instance ToData aggregatePubKeys => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHashMessage {..}) =
-    productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch validatorAddress
+    productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch validatorHash
 
 -- | @since v4.0.0
 instance FromData aggregatePubKeys => FromData (UpdateCommitteeHashMessage aggregatePubKeys) where
@@ -766,40 +767,40 @@ instance HasField "sidechainParams" (UpdateCommitteeHashMessage aggregatePubKeys
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage x _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
-    UpdateCommitteeHashMessage (f sp) nacpks pmr se va
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
+    UpdateCommitteeHashMessage (f sp) nacpks pmr se vh
 
 -- | @since v4.0.0
 instance HasField "newAggregateCommitteePubKeys" (UpdateCommitteeHashMessage aggregatePubKeys) aggregatePubKeys where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
-    UpdateCommitteeHashMessage sp (f nacpks) pmr se va
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
+    UpdateCommitteeHashMessage sp (f nacpks) pmr se vh
 
 -- | @since v4.0.0
 instance HasField "previousMerkleRoot" (UpdateCommitteeHashMessage aggregatePubKeys) (Maybe LedgerBytes) where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ _ x _ _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
-    UpdateCommitteeHashMessage sp nacpks (f pmr) se va
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
+    UpdateCommitteeHashMessage sp nacpks (f pmr) se vh
 
 -- | @since v4.0.0
 instance HasField "sidechainEpoch" (UpdateCommitteeHashMessage aggregatePubKeys) Integer where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ _ _ x _) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
-    UpdateCommitteeHashMessage sp nacpks pmr (f se) va
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
+    UpdateCommitteeHashMessage sp nacpks pmr (f se) vh
 
--- | @since v4.0.0
-instance HasField "validatorAddress" (UpdateCommitteeHashMessage aggregatePubKeys) Address where
+-- | @since unreleased
+instance HasField "validatorHash" (UpdateCommitteeHashMessage aggregatePubKeys) ValidatorHash where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ _ _ _ x) = x
   {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se va) =
-    UpdateCommitteeHashMessage sp nacpks pmr se (f va)
+  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
+    UpdateCommitteeHashMessage sp nacpks pmr se (f vh)
 
 -- | @since v4.0.0
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer

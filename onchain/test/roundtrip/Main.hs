@@ -27,7 +27,6 @@ import Test.QuickCheck (
   vectorOf,
  )
 import Test.QuickCheck.Extra (
-  ArbitraryAddress (ArbitraryAddress),
   ArbitraryAssetClass (ArbitraryAssetClass),
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
@@ -133,7 +132,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorAddress
+    validatorHash
   ),
   UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
  )
@@ -286,8 +285,8 @@ genUCHM = do
   nacpk <- arbitrary
   pmr <- genPMR
   NonNegative se <- arbitrary
-  ArbitraryAddress va <- arbitrary
-  pure . UpdateCommitteeHashMessage sp nacpk pmr se $ va
+  ArbitraryValidatorHash vh <- arbitrary
+  pure . UpdateCommitteeHashMessage sp nacpk pmr se $ vh
 
 genAPAPK :: Gen ATMSPlainAggregatePubKey
 genAPAPK =
@@ -500,8 +499,8 @@ shrinkUCHM (UpdateCommitteeHashMessage {..}) = do
   nacpk' <- shrink newAggregateCommitteePubKeys
   pmr' <- shrinkPMR previousMerkleRoot
   NonNegative se' <- shrink (NonNegative sidechainEpoch)
-  ArbitraryAddress va' <- shrink (ArbitraryAddress validatorAddress)
-  pure . UpdateCommitteeHashMessage sp' nacpk' pmr' se' $ va'
+  ArbitraryValidatorHash vh' <- shrink (ArbitraryValidatorHash validatorHash)
+  pure . UpdateCommitteeHashMessage sp' nacpk' pmr' se' $ vh'
 
 shrinkAPAPK ::
   ATMSPlainAggregatePubKey ->

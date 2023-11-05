@@ -17,6 +17,7 @@ import Contract.PlutusData (PlutusData)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (TokenName)
 import Ctl.Internal.Types.ByteArray (ByteArray)
+import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
@@ -172,7 +173,7 @@ data TxEndpoint
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
-      , mNewCommitteeAddress ∷ Maybe Address
+      , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
       }
   | SaveRoot
       { merkleRoot ∷ RootHash
@@ -192,7 +193,7 @@ data TxEndpoint
       , newMerkleRootSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
       , sidechainEpoch ∷ BigInt
-      , mNewCommitteeAddress ∷ Maybe Address
+      , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
       }
   | GetAddrs
       SidechainAddressesExtra

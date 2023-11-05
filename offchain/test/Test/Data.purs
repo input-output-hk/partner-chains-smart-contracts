@@ -15,8 +15,7 @@ import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
-  ( ArbitraryAddress(ArbitraryAddress)
-  , ArbitraryAssetClass(ArbitraryAssetClass)
+  ( ArbitraryAssetClass(ArbitraryAssetClass)
   , ArbitraryBigInt(ArbitraryBigInt)
   , ArbitraryCurrencySymbol(ArbitraryCurrencySymbol)
   , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
@@ -209,13 +208,13 @@ genUCHM = do
   newAggregatePubKeys ← arbitrary
   previousMerkleRoot ← liftArbitrary genRH
   Positive (ArbitraryBigInt sidechainEpoch) ← arbitrary
-  ArbitraryAddress validatorAddress ← arbitrary
+  ArbitraryValidatorHash validatorHash ← arbitrary
   pure $ UpdateCommitteeHashMessage
     { sidechainParams
     , newAggregatePubKeys
     , previousMerkleRoot
     , sidechainEpoch
-    , validatorAddress
+    , validatorHash
     }
 
 genUCH ∷ Gen UpdateCommitteeHash

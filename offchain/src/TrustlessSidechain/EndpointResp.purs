@@ -194,10 +194,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                     sidechainAddresses.addresses
                 )
             )
-        , "cborEncodedAddresses" /\ J.fromObject
+        , "validatorHashes" /\ J.fromObject
             ( Object.fromFoldable
                 ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                    sidechainAddresses.cborEncodedAddresses
+                    sidechainAddresses.validatorHashes
                 )
             )
         , "mintingPolicies" /\ J.fromObject
@@ -244,10 +244,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                       sidechainAddresses.addresses
                   )
               )
-          , "cborEncodedAddresses" /\ J.fromObject
+          , "validatorHashes" /\ J.fromObject
               ( Object.fromFoldable
                   ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.cborEncodedAddresses
+                      sidechainAddresses.validatorHashes
                   )
               )
           , "mintingPolicies" /\ J.fromObject
@@ -276,10 +276,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                       sidechainAddresses.addresses
                   )
               )
-          , "cborEncodedAddresses" /\ J.fromObject
+          , "validatorHashes" /\ J.fromObject
               ( Object.fromFoldable
                   ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.cborEncodedAddresses
+                      sidechainAddresses.validatorHashes
                   )
               )
           , "mintingPolicies" /\ J.fromObject

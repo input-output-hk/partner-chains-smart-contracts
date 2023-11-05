@@ -14,6 +14,8 @@ module TrustlessSidechain.Options.Parsers
   , ecdsaSecp256k1PublicKey
   , schnorrSecp256k1PrivateKey
   , bech32AddressParser
+  , bech32ValidatorHashParser
+  , validatorHashParser
   , bech32BytesParser
   , ecdsaSecp256k1PrivateKey
   , sidechainAddress
@@ -46,8 +48,13 @@ import Contract.Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
+import Ctl.Internal.Plutus.Types.Credential
+  ( Credential(ScriptCredential)
+  )
 import Ctl.Internal.Serialization.Address as Serialization.Address
 import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
+import Ctl.Internal.Serialization.Hash (scriptHashFromBytes)
+import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.String (Pattern(Pattern), split)
@@ -131,6 +138,15 @@ cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
   maybe (readerError "Error while parsing supplied CBOR as Address.")
     pure
 
+validatorHashParser ∷ ReadM ValidatorHash
+validatorHashParser = do
+  ba ← byteArray
+  vh ← case scriptHashFromBytes ba of
+    Just vh' → pure vh'
+    Nothing → readerError "script hash deserialization failed."
+
+  pure $ ValidatorHash vh
+
 -- | `bech32AddressParser` parses a human readable bech32 address into an
 -- | address
 -- TODO: this does *not* check if the network of the address coincides with the
@@ -147,6 +163,23 @@ parseHumanReadableBech32ToAddress str = do
 
   pure addr'
 
+-- | `parseHumanReadableBech32ToValidatorHash` parses a human readable bech32
+-- address into validator hash
+parseHumanReadableBech32ToValidatorHash ∷ String → Either String ValidatorHash
+parseHumanReadableBech32ToValidatorHash str = do
+  addr ← case (Serialization.Address.addressFromBech32 str) of
+    Just x → Right x
+    Nothing → Left "bech32 address deserialization failed."
+
+  addr' ← case Conversion.Address.toPlutusAddress addr of
+    Just x → Right x
+    Nothing → Left "bech32 address conversion to plutus address failed"
+
+  vh ← case (unwrap addr').addressCredential of
+    ScriptCredential vh' → Right vh'
+    _ → Left "provided address is not a script address"
+  pure vh
+
 -- | parses a human readable bech32 address to the bech32 bytes.
 parseHumanReadableBech32ToBech32Bytes ∷ String → Either String Bech32Bytes
 parseHumanReadableBech32ToBech32Bytes str = do
@@ -158,6 +191,10 @@ parseHumanReadableBech32ToBech32Bytes str = do
 -- | Wraps `parseHumanReadableBech32ToAddress`
 bech32AddressParser ∷ ReadM Address
 bech32AddressParser = eitherReader parseHumanReadableBech32ToAddress
+
+-- | Wraps `parseHumanReadableBech32ToValidatorHash`
+bech32ValidatorHashParser ∷ ReadM ValidatorHash
+bech32ValidatorHashParser = eitherReader parseHumanReadableBech32ToValidatorHash
 
 -- | Wraps `parseHumanReadableBech32ToBech32Bytes  `
 bech32BytesParser ∷ ReadM Bech32Bytes

@@ -317,7 +317,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           , committeeCertificateVerificationCurrencySymbol
           , merkleRootTokenCurrencySymbol
           }
-      { address: updateCommitteeHashValidator } ←
+      { validatorHash: updateCommitteeHashValidatorHash } ←
         UpdateCommitteeHash.getUpdateCommitteeHashValidator uch
 
       -- finally, build the message
@@ -335,7 +335,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
                 -- the previousMerkleRoot which is `merkleRoot2` in this case.
                 previousMerkleRoot: Just merkleRoot2
               , sidechainEpoch: BigInt.fromInt 1
-              , validatorAddress: updateCommitteeHashValidator
+              , validatorHash: updateCommitteeHashValidatorHash
               }
 
       Test.Utils.fails
@@ -359,5 +359,5 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
               -- root
               previousMerkleRoot: Nothing
             , sidechainEpoch: BigInt.fromInt 1
-            , mNewCommitteeAddress: Nothing
+            , mNewCommitteeValidatorHash: Nothing
             }

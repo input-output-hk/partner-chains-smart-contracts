@@ -19,6 +19,7 @@ import Contract.Wallet
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
 import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
+import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)
@@ -68,6 +69,7 @@ import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.Options.Parsers
   ( bech32AddressParser
   , bech32BytesParser
+  , bech32ValidatorHashParser
   , bigInt
   , blockHash
   , byteArray
@@ -86,6 +88,7 @@ import TrustlessSidechain.Options.Parsers
   , tokenName
   , transactionInput
   , uint
+  , validatorHashParser
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
@@ -734,31 +737,31 @@ committeeHashSpec = ado
     )
   previousMerkleRoot ← parsePreviousMerkleRoot
   sidechainEpoch ← parseSidechainEpoch
-  mNewCommitteeAddress ← optional parseNewCommitteeAddress
+  mNewCommitteeValidatorHash ← optional parseNewCommitteeValidatorHash
   in
     CommitteeHash
       { newCommitteePubKeysInput
       , committeeSignaturesInput
       , previousMerkleRoot
       , sidechainEpoch
-      , mNewCommitteeAddress
+      , mNewCommitteeValidatorHash
       }
 
-parseNewCommitteeAddress ∷ Parser Address
-parseNewCommitteeAddress =
+parseNewCommitteeValidatorHash ∷ Parser ValidatorHash
+parseNewCommitteeValidatorHash =
   ( option
-      cborEncodedAddressParser
+      validatorHashParser
       ( fold
-          [ long "new-committee-validator-cbor-encoded-address"
-          , metavar "CBOR_ENCODED_ADDRESS"
+          [ long "new-committee-validator-hash"
+          , metavar "VALIDATOR_HASH"
           , help
-              "Hex encoded CBOR of a validator address to send the committee oracle to"
+              "Hex encoded validator hash to send the committee oracle to"
           ]
       )
   )
     <|>
       ( option
-          bech32AddressParser
+          bech32ValidatorHashParser
           ( fold
               [ long "new-committee-validator-bech32-address"
               , metavar "BECH32_ADDRESS"
@@ -801,7 +804,7 @@ committeeHandoverSpec = ado
     "Filepath of a JSON file containing public keys and associated\
     \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
   sidechainEpoch ← parseSidechainEpoch
-  mNewCommitteeAddress ← optional parseNewCommitteeAddress
+  mNewCommitteeValidatorHash ← optional parseNewCommitteeValidatorHash
   in
     CommitteeHandover
       { merkleRoot
@@ -810,7 +813,7 @@ committeeHandoverSpec = ado
       , newCommitteeSignaturesInput
       , newMerkleRootSignaturesInput
       , sidechainEpoch
-      , mNewCommitteeAddress
+      , mNewCommitteeValidatorHash
       }
 
 -- | Parse all parameters for the `save-checkpoint` endpoint
@@ -1297,7 +1300,7 @@ cborUpdateCommitteeMessageSpec mConfig = ado
       , metavar "AGGREGATED_SIDECHAIN_PUBLIC_KEYS"
       , help "A CBOR encoded aggregated public key of the sidechain committee"
       ]
-  validatorAddress ← parseNewCommitteeAddress
+  validatorHash ← parseNewCommitteeValidatorHash
   in
     UtilsOptions
       { utilsOptions: CborUpdateCommitteeMessageAct
@@ -1305,7 +1308,7 @@ cborUpdateCommitteeMessageSpec mConfig = ado
               UpdateCommitteeHashMessage
                 { sidechainParams: scParams
                 , newAggregatePubKeys
-                , validatorAddress
+                , validatorHash
                 , previousMerkleRoot
                 , sidechainEpoch
                 }

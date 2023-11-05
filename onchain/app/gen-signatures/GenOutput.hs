@@ -52,10 +52,11 @@ import GetOpts (
   uchcNewCommitteePubKeys,
   uchcPreviousMerkleRoot,
   uchcSidechainEpoch,
-  uchcValidatorAddress,
+  uchcValidatorHash,
  )
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
+  ValidatorHash (ValidatorHash),
  )
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
@@ -98,7 +99,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorAddress
+    validatorHash
   ),
  )
 
@@ -184,8 +185,8 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                           _ -> error "unimplemented aggregate keys for update committee hash message"
                     , previousMerkleRoot = uchcPreviousMerkleRoot
                     , sidechainEpoch = uchcSidechainEpoch
-                    , validatorAddress =
-                        uchcValidatorAddress
+                    , validatorHash =
+                        uchcValidatorHash
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -205,12 +206,15 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                         ]
                     )
                     uchcNewCommitteePubKeys
+                serialisedValidatorHash =
+                  let ValidatorHash bs = uchcValidatorHash
+                   in showBuiltinBS bs
              in ["nix run .#sidechain-main-cli -- committee-hash"] :
                 sidechainParamFlags
                   <> currentCommitteePubKeysAndSigsFlags
                   <> newCommitteeFlags
                   <> [["--sidechain-epoch", show uchcSidechainEpoch]]
-                  <> [ ["--new-committee-validator-cbor-encoded-address", OffChain.showHexOfCborBuiltinData uchcValidatorAddress]
+                  <> [ ["--new-committee-validator-hash", serialisedValidatorHash]
                      ]
                   <> maybe [] (\bs -> [["--previous-merkle-root", show bs]]) uchcPreviousMerkleRoot
           SaveRootCommand {..} ->

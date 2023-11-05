@@ -8,9 +8,8 @@ import Data.ByteString.Lazy (fromStrict)
 import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
-import Plutus.V1.Ledger.Address (scriptHashAddress)
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef))
+import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef), ValidatorHash (ValidatorHash))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
@@ -115,7 +114,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorAddress
+    validatorHash
   ),
   UpdateCommitteeHashRedeemer (
     UpdateCommitteeHashRedeemer,
@@ -327,7 +326,7 @@ sampleUpdateCommitteeHashMessage =
     , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     , sidechainEpoch = 12
-    , validatorAddress = scriptHashAddress "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    , validatorHash = ValidatorHash "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
 sampleCheckpointDatum :: CheckpointDatum

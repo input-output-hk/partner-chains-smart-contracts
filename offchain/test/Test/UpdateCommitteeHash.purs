@@ -126,7 +126,8 @@ generateUchmSignatures
       , merkleRootTokenCurrencySymbol
       }
 
-  { address: updateCommitteeHashValidator } ← getUpdateCommitteeHashValidator uch
+  { validatorHash: updateCommitteeHashValidatorHash } ←
+    getUpdateCommitteeHashValidator uch
 
   -- Building the message to sign
   ---------------------------
@@ -138,7 +139,7 @@ generateUchmSignatures
           , newAggregatePubKeys
           , previousMerkleRoot
           , sidechainEpoch
-          , validatorAddress: updateCommitteeHashValidator
+          , validatorHash: updateCommitteeHashValidatorHash
           }
   let
     committeeSignatures = Array.zip
@@ -205,7 +206,7 @@ updateCommitteeHashWith params f = void do
         -- take `pubkey /\ sig` and convert to `pubkey /\ Just sig`
         , previousMerkleRoot: params.previousMerkleRoot
         , sidechainEpoch: params.sidechainEpoch
-        , mNewCommitteeAddress: Nothing
+        , mNewCommitteeValidatorHash: Nothing
         }
 
   uchp' ← f uchp

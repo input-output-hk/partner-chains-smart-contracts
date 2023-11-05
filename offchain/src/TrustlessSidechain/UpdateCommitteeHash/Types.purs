@@ -12,7 +12,6 @@ module TrustlessSidechain.UpdateCommitteeHash.Types
 
 import Contract.Prelude
 
-import Contract.Address (Address)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -20,6 +19,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Value (CurrencySymbol)
+import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -148,7 +148,7 @@ newtype UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     newAggregatePubKeys ∷ aggregatePubKeys
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
-  , validatorAddress ∷ Address
+  , validatorHash ∷ ValidatorHash
   }
 
 derive newtype instance (Eq a) ⇒ Eq (UpdateCommitteeHashMessage a)
@@ -167,14 +167,14 @@ instance
         , newAggregatePubKeys
         , previousMerkleRoot
         , sidechainEpoch
-        , validatorAddress
+        , validatorHash
         }
     ) = productToData5
     sidechainParams
     newAggregatePubKeys
     previousMerkleRoot
     sidechainEpoch
-    validatorAddress
+    validatorHash
 
 instance
   ( FromData aggregatePubKeys
@@ -185,11 +185,11 @@ instance
      newAggregatePubKeys
      previousMerkleRoot
      sidechainEpoch
-     validatorAddress →
+     validatorHash →
       UpdateCommitteeHashMessage
         { sidechainParams
         , newAggregatePubKeys
         , previousMerkleRoot
         , sidechainEpoch
-        , validatorAddress
+        , validatorHash
         }
