@@ -14,14 +14,16 @@ import Contract.Address as Address
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
+  )
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Ctl.Internal.Serialization.Hash
-  ( scriptHashToBytes
-  )
-import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
+import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
