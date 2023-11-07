@@ -1,7 +1,5 @@
 module TrustlessSidechain.Versioning.V1
-  ( getVersionedPolicies
-  , getVersionedValidators
-  , getVersionedPoliciesAndValidators
+  ( getVersionedPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -24,30 +22,15 @@ import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 
--- | Validators to store in the versioning system.
-getVersionedValidators ∷
-  SidechainParams →
-  Contract (Map.Map Types.ScriptId Validator)
-getVersionedValidators sp = do
-  -- Getting validators and policies to version
-  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
-  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
-  { permissionedCandidatesValidator } ←
-    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
-  -----------------------------------
-  pure $ Map.fromFoldable
-    [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
-    , Types.DParameterValidator /\ dParameterValidator
-    , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
-    ]
-
--- | Minting policies to store in the versioning system.
-getVersionedPolicies ∷
+getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
-  Contract (Map.Map Types.ScriptId MintingPolicy)
-getVersionedPolicies { sidechainParams: sp, atmsKind } = do
+  Contract
+    { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
+    , versionedValidators ∷ Map.Map Types.ScriptId Validator
+    }
+getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
@@ -81,28 +64,35 @@ getVersionedPolicies { sidechainParams: sp, atmsKind } = do
   committeeHashPolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
     CommitteeOraclePolicy.InitCommitteeHashMint
       { icTxOutRef: (unwrap sp).genesisUtxo }
-  pure $ Map.fromFoldable
-    [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
-    , Types.FUELMintingPolicy /\ fuelMintingPolicy
-    , Types.FUELBurningPolicy /\ fuelBurningPolicy
-    , Types.DSKeyPolicy /\ dsKeyPolicy
-    , Types.CommitteeHashPolicy /\ committeeHashPolicy
-    , Types.CommitteeCertificateVerificationPolicy /\
-        committeeCertificateVerificationMintingPolicy
-    , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
-    , Types.DParameterPolicy /\ dParameterMintingPolicy
-    , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
-    ]
 
-getVersionedPoliciesAndValidators ∷
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
-  Contract
-    { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
-    , versionedValidators ∷ Map.Map Types.ScriptId Validator
-    }
-getVersionedPoliciesAndValidators params = do
-  versionedPolicies ← getVersionedPolicies params
-  versionedValidators ← getVersionedValidators params.sidechainParams
+  let
+    versionedPolicies = Map.fromFoldable
+      [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
+      , Types.FUELMintingPolicy /\ fuelMintingPolicy
+      , Types.FUELBurningPolicy /\ fuelBurningPolicy
+      , Types.DSKeyPolicy /\ dsKeyPolicy
+      , Types.CommitteeHashPolicy /\ committeeHashPolicy
+      , Types.CommitteeCertificateVerificationPolicy /\
+          committeeCertificateVerificationMintingPolicy
+      , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
+      , Types.DParameterPolicy /\ dParameterMintingPolicy
+      , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
+      ]
+
+  -- Getting validators to version
+  -----------------------------------
+  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+
+  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
+  { permissionedCandidatesValidator } ←
+    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
+  -----------------------------------
+
+  let
+    versionedValidators = Map.fromFoldable
+      [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
+      , Types.DParameterValidator /\ dParameterValidator
+      , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      ]
+
   pure $ { versionedPolicies, versionedValidators }
