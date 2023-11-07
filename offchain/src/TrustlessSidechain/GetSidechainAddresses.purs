@@ -25,7 +25,6 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
-import Data.BigInt as BigInt
 import Data.Functor (map)
 import Data.Map as Map
 import Data.TraversableWithIndex (traverseWithIndex)
@@ -50,12 +49,6 @@ import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (assetClass)
-import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  )
-import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( getUpdateCommitteeHashValidator
-  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
@@ -63,11 +56,9 @@ import TrustlessSidechain.Utils.Logging
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(..)
-  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils
   ( getVersionOraclePolicy
-  , getVersionedCurrencySymbol
   , versionOracleValidator
   )
 
@@ -172,21 +163,6 @@ getSidechainAddresses
   committeeCandidateValidator ←
     CommitteeCandidateValidator.getCommitteeCandidateValidator scParams
 
-  merkleRootTokenCurrencySymbol ←
-    getVersionedCurrencySymbol scParams $ VersionOracle
-      { version: BigInt.fromInt version, scriptId: MerkleRootTokenPolicy }
-
-  { validator: committeeHashValidator } ←
-    do
-      let
-        uch = UpdateCommitteeHash
-          { sidechainParams: scParams
-          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          }
-      getUpdateCommitteeHashValidator uch
-
   dsInsertValidator ← DistributedSet.insertValidator ds
   dsConfValidator ← DistributedSet.dsConfValidator ds
 
@@ -255,7 +231,6 @@ getSidechainAddresses
 
     validators =
       [ CommitteeCandidateValidator /\ committeeCandidateValidator
-      , CommitteeHashValidator /\ committeeHashValidator
       , DSConfValidator /\ dsConfValidator
       , DSInsertValidator /\ dsInsertValidator
       , VersionOracleValidator /\ veresionOracleValidator

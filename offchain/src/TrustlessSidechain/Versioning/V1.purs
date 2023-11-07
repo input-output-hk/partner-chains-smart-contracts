@@ -4,8 +4,9 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Value as Value
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
@@ -20,6 +21,16 @@ import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash.Types
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  )
+import TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( getUpdateCommitteeHashValidator
+  )
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.Versioning.Types as Types
 
 getVersionedPoliciesAndValidators ∷
@@ -79,9 +90,33 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
       ]
 
+  -- Helper currency symbols
+  -----------------------------------
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
+
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+      { committeeCertificateMint, sidechainParams: sp }
+      atmsKind
+
+  merkleRootTokenCurrencySymbol ← liftContractM
+    (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
+    (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
+
   -- Getting validators to version
   -----------------------------------
   merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+  { validator: committeeHashValidator } ←
+    do
+      let
+        uch = UpdateCommitteeHash
+          { sidechainParams: sp
+          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+          , merkleRootTokenCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          }
+      getUpdateCommitteeHashValidator uch
 
   { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
   { permissionedCandidatesValidator } ←
@@ -91,6 +126,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   let
     versionedValidators = Map.fromFoldable
       [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
+      , Types.CommitteeHashValidator /\ committeeHashValidator
       , Types.DParameterValidator /\ dParameterValidator
       , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       ]
