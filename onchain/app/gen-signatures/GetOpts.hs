@@ -58,12 +58,13 @@ import Options.Applicative (
  )
 import Options.Applicative qualified as OptParse
 import Plutus.V2.Ledger.Api (
-  Address,
   FromData (fromBuiltinData),
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
   TxId (TxId),
   TxOutRef (TxOutRef),
+  ValidatorHash (ValidatorHash),
+  toBuiltin,
  )
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString), BuiltinData (BuiltinData))
@@ -183,7 +184,7 @@ data GenCliCommand
       , -- | previous merkle root that was just stored on chain.
         -- This is needed to create the message we wish to sign
         uchcPreviousMerkleRoot :: Maybe LedgerBytes
-      , uchcValidatorAddress :: Address
+      , uchcValidatorHash :: ValidatorHash
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
@@ -515,21 +516,14 @@ newCommitteePublicKeysParser =
 {- | Parser for parsing a hex encoded CBOR encoded
  'Plutus.V2.Ledger.Api.Address'
 -}
-parseAddress :: OptParse.ReadM Address
-parseAddress = eitherReader $ \(str :: HString.String) -> do
+parseValidatorHash :: OptParse.ReadM ValidatorHash
+parseValidatorHash = eitherReader $ \(str :: HString.String) -> do
   decoded <-
     Bifunctor.first ("Invalid hex: " <>)
       . Base16.decode
       . Char8.pack
       $ str
-  builtinData :: BuiltinData <-
-    fmap Builtins.dataToBuiltinData $
-      Bifunctor.first show $
-        Serialise.deserialiseOrFail $
-          ByteString.Lazy.fromStrict decoded
-  case fromBuiltinData builtinData of
-    Nothing -> Left "Invalid `Address`"
-    Just addr -> return addr
+  return $ ValidatorHash $ toBuiltin decoded
 
 {- | 'initCommitteePublicKeysParser' is essentially identical to
  'newCommitteePublicKeysParser' except the help strings / command line flag
@@ -766,12 +760,12 @@ updateCommitteeHashCommand =
                 , metavar "PREVIOUS_MERKLE_ROOT"
                 , help "Hex encoded previous merkle root (if it exists)"
                 ]
-        uchcValidatorAddress <-
-          option parseAddress $
+        uchcValidatorHash <-
+          option parseValidatorHash $
             mconcat
-              [ long "--new-committee-validator-cbor-encoded-address"
-              , metavar "ADDRESS"
-              , help "Hex encoded CBOR encoded BuiltinData of `Address`"
+              [ long "--new-committee-validator-script-hash"
+              , metavar "VALIDATOR_HASH"
+              , help "Hex encoded validator hash"
               ]
         pure $ do
           uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys

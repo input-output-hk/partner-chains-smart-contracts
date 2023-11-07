@@ -10,17 +10,20 @@ module TrustlessSidechain.GetSidechainAddresses
 
 import Contract.Prelude
 
-import Contract.Address (Address)
 import Contract.Address as Address
-import Contract.CborBytes as CborBytes
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (MintingPolicy, Validator, validatorHash)
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
+  )
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
+import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -75,10 +78,10 @@ import TrustlessSidechain.Versioning.Utils
 type SidechainAddresses =
   { -- bech32 addresses
     addresses ∷ Array (Tuple ScriptId String)
-  , --  currency symbols
+  , -- currency symbols
     mintingPolicies ∷ Array (Tuple ScriptId String)
-  , -- cbor of the Plutus Address type.
-    cborEncodedAddresses ∷ Array (Tuple ScriptId String)
+  , -- Hex encoded validator hashes
+    validatorHashes ∷ Array (Tuple ScriptId String)
   }
 
 -- | `SidechainAddressesExtra` provides extra information for creating more
@@ -174,7 +177,7 @@ getSidechainAddresses
     getVersionedCurrencySymbol scParams $ VersionOracle
       { version: BigInt.fromInt version, scriptId: MerkleRootTokenPolicy }
 
-  { committeeHashValidatorAddr, committeeHashValidatorCborAddress } ←
+  { committeeHashValidatorAddr, committeeHashValidatorHash } ←
     do
       let
         uch = UpdateCommitteeHash
@@ -183,12 +186,12 @@ getSidechainAddresses
           , merkleRootTokenCurrencySymbol
           , committeeCertificateVerificationCurrencySymbol
           }
-      { validator, address } ← getUpdateCommitteeHashValidator uch
+      { validator, validatorHash } ← getUpdateCommitteeHashValidator uch
       bech32Addr ← getAddr validator
 
       pure
         { committeeHashValidatorAddr: bech32Addr
-        , committeeHashValidatorCborAddress: getCborEncodedAddress address
+        , committeeHashValidatorHash: validatorHash
         }
 
   dsInsertValidatorAddr ← do
@@ -273,14 +276,14 @@ getSidechainAddresses
       , CheckpointValidator /\ checkpointValidatorAddr
       ] <> versionedAddresses
 
-    cborEncodedAddresses =
-      [ CommitteeHashValidator /\ committeeHashValidatorCborAddress
+    validatorHashes =
+      [ CommitteeHashValidator /\ getValidatorHashHex committeeHashValidatorHash
       ]
 
   pure
     { addresses
     , mintingPolicies
-    , cborEncodedAddresses
+    , validatorHashes
     }
 
 -- | Print the bech32 serialised address of a given validator
@@ -294,13 +297,6 @@ getAddr v = do
   serialised ← Address.addressToBech32 addr
   pure serialised
 
--- | Gets the hex encoded string of the cbor representation of an Address
-getCborEncodedAddress ∷ Address → String
-getCborEncodedAddress =
-  ByteArray.byteArrayToHex
-    <<< CborBytes.cborBytesToByteArray
-    <<< PlutusData.serializeData
-
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
 getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
@@ -308,6 +304,11 @@ getCurrencySymbolHex name mp = do
   cs ← Monad.liftContractM (show (InternalError (InvalidScript $ show name))) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
+
+-- | `getValidatorHashHex` converts a validator hash to a hex encoded string
+getValidatorHashHex ∷ ValidatorHash → String
+getValidatorHashHex (ValidatorHash sh) =
+  ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
 
 -- | Convert a currency symbol to hex encoded string
 currencySymbolToHex ∷ CurrencySymbol → String

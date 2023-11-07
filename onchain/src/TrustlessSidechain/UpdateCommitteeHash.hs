@@ -7,6 +7,7 @@ module TrustlessSidechain.UpdateCommitteeHash where
 
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
+  Credential (ScriptCredential),
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
@@ -18,6 +19,7 @@ import Plutus.V2.Ledger.Api (
   TxOut (txOutAddress, txOutDatum, txOutValue),
   TxOutRef,
   Value (getValue),
+  addressCredential,
   fromCompiledCode,
  )
 import Plutus.V2.Ledger.Contexts qualified as Contexts
@@ -42,7 +44,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorAddress
+    validatorHash
   ),
   UpdateCommitteeHashRedeemer (previousMerkleRoot),
  )
@@ -75,6 +77,21 @@ initCommitteeOracleMintAmount = 1
  See the specification for what is verified, but as a summary: we verify that
  the transaction corresponds to the signed update committee message in a
  reasonable sense.
+
+ OnChain error descriptions:
+
+ ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-01: invalid committee output
+
+ ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-02: tx doesn't reference previous merkle
+ root
+
+ ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-03: output address for utxo containing
+ committeeOracleCurrencySymbol must be a script address
+
+ ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-04: tx not signed by committee
+
+ ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-05: sidechain epoch is not strictly
+ increasing
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
@@ -84,9 +101,9 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "error 'mkUpdateCommitteeHashValidator': invalid committee output" committeeOutputIsValid
+  traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-01" committeeOutputIsValid
     && traceIfFalse
-      "error 'mkUpdateCommitteeHashValidator': tx doesn't reference previous merkle root"
+      "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-02"
       referencesPreviousMerkleRoot
   where
     info :: TxInfo
@@ -106,16 +123,22 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               -- with the data in this transaction directly... so in a sense,
               -- checking if this message is signed is checking if the
               -- transaction corresponds to the message
-              let msg =
+
+              let validatorHash' =
+                    case addressCredential $ txOutAddress o of
+                      ScriptCredential vh -> vh
+                      _ -> traceError "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-03"
+
+                  msg =
                     UpdateCommitteeHashMessage
                       { sidechainParams = sidechainParams (uch :: UpdateCommitteeHash)
                       , newAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
                       , previousMerkleRoot = previousMerkleRoot (red :: UpdateCommitteeHashRedeemer)
                       , sidechainEpoch = sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
-                      , validatorAddress = txOutAddress o
+                      , validatorHash = validatorHash'
                       }
                in traceIfFalse
-                    "error 'mkUpdateCommitteeHashValidator': tx not signed by committee"
+                    "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-04"
                     ( Value.valueOf
                         (txInfoMint info)
                         (committeeCertificateVerificationCurrencySymbol uch)
@@ -123,7 +146,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
                         > 0
                     )
                     && traceIfFalse
-                      "error 'mkUpdateCommitteeHashValidator': sidechain epoch is not strictly increasing"
+                      "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-05"
                       ( sidechainEpoch (dat :: UpdateCommitteeDatum BuiltinData)
                           < sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
                       )
@@ -167,12 +190,19 @@ PlutusTx.makeLift ''InitCommitteeHashMint
 
 {- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
  the committee hash.
+
+ OnChain error descriptions:
+
+ ERROR-UPDATE-COMMITIEE-HASH-POLICY-01: UTxO not consumed
+
+ ERROR-UPDATE-COMMITIEE-HASH-POLICY-02: wrong amount minted
+ increasing
 -}
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
 mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
 mkCommitteeOraclePolicy ichm _red ctx =
-  traceIfFalse "error 'mkCommitteeOraclePolicy' UTxO not consumed" hasUtxo
-    && traceIfFalse "error 'mkCommitteeOraclePolicy' wrong amount minted" checkMintedAmount
+  traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-POLICY-01" hasUtxo
+    && traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-POLICY-02" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

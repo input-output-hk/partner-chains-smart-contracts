@@ -25,7 +25,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/608))
 
 ## Changed
-
+* `GetAddrs` doesn't return cbor encoded address of UpdateCommitteeHashValidator anymore. Now it returns its validator hash.
+  ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
+* commands `committee-handover` and `committee-hash` now require `new-committee-validator-hash` argument instead of `new-committee-validator-cbor-encoded-address`.
+  ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
 * Commands `claim` and `burn` have been renamed to `claim-v1` and `burn-v1`,
   respectively.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))

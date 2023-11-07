@@ -7,8 +7,6 @@ module TrustlessSidechain.UpdateCommitteeHash
 
 import Contract.Prelude
 
-import Contract.Address (Address)
-import Contract.Address as Address
 import Contract.Monad
   ( Contract
   , liftContractM
@@ -31,6 +29,7 @@ import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
+import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -82,7 +81,7 @@ newtype UpdateCommitteeHashParams newAggregatePubKeys =
     , aggregateSignature ∷ ATMSAggregateSignatures
     , previousMerkleRoot ∷ Maybe RootHash
     , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
-    , mNewCommitteeAddress ∷ Maybe Address
+    , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
     -- the address of the new committee (if it isn't provided, it will
     -- reuse the current committee address)
     }
@@ -103,7 +102,7 @@ updateCommitteeHash
       , sidechainEpoch
       , newAggregatePubKeys
       , aggregateSignature
-      , mNewCommitteeAddress
+      , mNewCommitteeValidatorHash
       }
   ) = do
   -- Set up for the committee ATMS schemes
@@ -132,7 +131,7 @@ updateCommitteeHash
     , sidechainEpoch
     , newAggregatePubKeys
     , committeeCertificateVerificationCurrencySymbol
-    , mNewCommitteeAddress
+    , mNewCommitteeValidatorHash
     }
 
   -- Committee ATMS scheme lookups and constraints
@@ -181,7 +180,7 @@ updateCommitteeHashLookupsAndConstraints ∷
   , sidechainEpoch ∷ BigInt
   , newAggregatePubKeys ∷ newAggregatePubKeys
   , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-  , mNewCommitteeAddress ∷ Maybe Address
+  , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
   } →
   Contract
     { lookupsAndConstraints ∷
@@ -200,7 +199,7 @@ updateCommitteeHashLookupsAndConstraints
   , previousMerkleRoot
   , sidechainEpoch
   , committeeCertificateVerificationCurrencySymbol
-  , mNewCommitteeAddress
+  , mNewCommitteeValidatorHash
   } = do
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
@@ -229,30 +228,13 @@ updateCommitteeHashLookupsAndConstraints
       }
 
   { validator: updateValidator
-  , validatorHash: _valHash
-  , address: updateValidatorAddress
+  , validatorHash: updateValidatorHash
   } ← getUpdateCommitteeHashValidator uch
 
-  -- if we have provided a new validator address to upgrade to, then move
-  -- the NFT to the new validator address -- otherwise; assume that we are paying
-  -- back to the original validator address.
-  { newValidatorHash, newValidatorAddress } ← do
-    let
-      newValidatorAddress = case mNewCommitteeAddress of
-        Nothing → updateValidatorAddress
-        Just x → x
-    newValidatorHash ←
-      liftContractM
-        ( show
-            $ InternalError
-            $ InvalidScript
-                "Failed to get validator hash from provided new address"
-        )
-        $ Address.addressPaymentValidatorHash newValidatorAddress
-    pure
-      { newValidatorAddress
-      , newValidatorHash
-      }
+  -- if we have provided a new validator hash to upgrade to, then move
+  -- the NFT to an address coressponding to the new validator hash
+  -- otherwise assume that we are paying back to the original validator address.
+  let newValidatorHash = fromMaybe updateValidatorHash mNewCommitteeValidatorHash
 
   -- Get the UTxO with the current committee
   ------------------------------------------------------
@@ -288,7 +270,7 @@ updateCommitteeHashLookupsAndConstraints
       , newAggregatePubKeys: toData newAggregatePubKeys
       , previousMerkleRoot
       , sidechainEpoch
-      , validatorAddress: newValidatorAddress
+      , validatorHash: newValidatorHash
       }
 
     redeemer = Redeemer $ toData $ UpdateCommitteeHashRedeemer
