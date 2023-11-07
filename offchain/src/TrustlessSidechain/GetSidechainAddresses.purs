@@ -26,6 +26,7 @@ import Contract.Value as Value
 import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
 import Data.BigInt as BigInt
+import Data.Functor (map)
 import Data.Map as Map
 import Data.TraversableWithIndex (traverseWithIndex)
 import TrustlessSidechain.CandidatePermissionToken
@@ -168,16 +169,14 @@ getSidechainAddresses
   let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
 
   -- Validators
-  committeeCandidateValidatorAddr ← do
-    validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
-      scParams
-    getAddr validator
+  committeeCandidateValidator ←
+    CommitteeCandidateValidator.getCommitteeCandidateValidator scParams
 
   merkleRootTokenCurrencySymbol ←
     getVersionedCurrencySymbol scParams $ VersionOracle
       { version: BigInt.fromInt version, scriptId: MerkleRootTokenPolicy }
 
-  { committeeHashValidatorAddr, committeeHashValidatorHash } ←
+  { validator: committeeHashValidator } ←
     do
       let
         uch = UpdateCommitteeHash
@@ -186,22 +185,12 @@ getSidechainAddresses
           , merkleRootTokenCurrencySymbol
           , committeeCertificateVerificationCurrencySymbol
           }
-      { validator, validatorHash } ← getUpdateCommitteeHashValidator uch
-      bech32Addr ← getAddr validator
+      getUpdateCommitteeHashValidator uch
 
-      pure
-        { committeeHashValidatorAddr: bech32Addr
-        , committeeHashValidatorHash: validatorHash
-        }
+  dsInsertValidator ← DistributedSet.insertValidator ds
+  dsConfValidator ← DistributedSet.dsConfValidator ds
 
-  dsInsertValidatorAddr ← do
-    validator ← DistributedSet.insertValidator ds
-    getAddr validator
-  dsConfValidatorAddr ← do
-    validator ← DistributedSet.dsConfValidator ds
-    getAddr validator
-
-  checkpointValidatorAddr ← do
+  checkpointValidator ← do
     let
       checkpointParam = CheckpointParameter
         { sidechainParams: scParams
@@ -210,12 +199,10 @@ getSidechainAddresses
         , committeeOracleCurrencySymbol
         , committeeCertificateVerificationCurrencySymbol
         }
-    validator ← Checkpoint.checkpointValidator checkpointParam
-    getAddr validator
+    Checkpoint.checkpointValidator checkpointParam
 
-  veresionOracleValidatorAddr ← do
-    validator ← versionOracleValidator scParams versionOracleCurrencySymbol
-    getAddr validator
+  veresionOracleValidator ←
+    versionOracleValidator scParams versionOracleCurrencySymbol
 
   { versionedPolicies, versionedValidators } ←
     Versioning.getVersionedPoliciesAndValidators
@@ -224,7 +211,6 @@ getSidechainAddresses
   versionedCurrencySymbols ← Map.toUnfoldable <$> traverseWithIndex
     getCurrencySymbolHex
     versionedPolicies
-  versionedAddresses ← Map.toUnfoldable <$> traverse getAddr versionedValidators
 
   { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -267,18 +253,17 @@ getSidechainAddresses
               _ → []
           )
 
-    addresses =
-      [ CommitteeCandidateValidator /\ committeeCandidateValidatorAddr
-      , CommitteeHashValidator /\ committeeHashValidatorAddr
-      , DSConfValidator /\ dsConfValidatorAddr
-      , DSInsertValidator /\ dsInsertValidatorAddr
-      , VersionOracleValidator /\ veresionOracleValidatorAddr
-      , CheckpointValidator /\ checkpointValidatorAddr
-      ] <> versionedAddresses
+    validators =
+      [ CommitteeCandidateValidator /\ committeeCandidateValidator
+      , CommitteeHashValidator /\ committeeHashValidator
+      , DSConfValidator /\ dsConfValidator
+      , DSInsertValidator /\ dsInsertValidator
+      , VersionOracleValidator /\ veresionOracleValidator
+      , CheckpointValidator /\ checkpointValidator
+      ] <> Map.toUnfoldable versionedValidators
 
-    validatorHashes =
-      [ CommitteeHashValidator /\ getValidatorHashHex committeeHashValidatorHash
-      ]
+  addresses ← traverse (traverse getAddr) validators
+  let validatorHashes = map (map getValidatorHash) validators
 
   pure
     { addresses
@@ -309,6 +294,10 @@ getCurrencySymbolHex name mp = do
 getValidatorHashHex ∷ ValidatorHash → String
 getValidatorHashHex (ValidatorHash sh) =
   ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
+
+-- | `getValidatorHash` converts a validator to a hex encoded string
+getValidatorHash ∷ Validator → String
+getValidatorHash = getValidatorHashHex <<< validatorHash
 
 -- | Convert a currency symbol to hex encoded string
 currencySymbolToHex ∷ CurrencySymbol → String
