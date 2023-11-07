@@ -2,7 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Contract.Address (Address, PubKeyHash(PubKeyHash))
+import Contract.Address (PubKeyHash(PubKeyHash))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -67,13 +67,11 @@ import TrustlessSidechain.MerkleRoot.Types
   )
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.Options.Parsers
-  ( bech32AddressParser
-  , bech32BytesParser
+  ( bech32BytesParser
   , bech32ValidatorHashParser
   , bigInt
   , blockHash
   , byteArray
-  , cborEncodedAddressParser
   , combinedMerkleProofParserWithPkh
   , denominator
   , ecdsaSecp256k1PrivateKey

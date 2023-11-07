@@ -52,8 +52,10 @@ import Ctl.Internal.Plutus.Types.Credential
   ( Credential(ScriptCredential)
   )
 import Ctl.Internal.Serialization.Address as Serialization.Address
-import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
-import Ctl.Internal.Serialization.Hash (scriptHashFromBytes)
+import Ctl.Internal.Serialization.Hash
+  ( ed25519KeyHashFromBytes
+  , scriptHashFromBytes
+  )
 import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt

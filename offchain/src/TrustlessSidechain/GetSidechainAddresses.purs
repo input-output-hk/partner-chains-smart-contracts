@@ -10,20 +10,16 @@ module TrustlessSidechain.GetSidechainAddresses
 
 import Contract.Prelude
 
-import Contract.Address (Address)
 import Contract.Address as Address
-import Contract.CborBytes as CborBytes
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Ctl.Internal.Serialization.Hash
-  ( ScriptHash
-  , scriptHashToBytes
+  ( scriptHashToBytes
   )
 import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
 import Data.Array as Array
@@ -298,13 +294,6 @@ getAddr v = do
       (validatorHash v)
   serialised ← Address.addressToBech32 addr
   pure serialised
-
--- | Gets the hex encoded string of the cbor representation of an Address
-getCborEncodedAddress ∷ Address → String
-getCborEncodedAddress =
-  ByteArray.byteArrayToHex
-    <<< CborBytes.cborBytesToByteArray
-    <<< PlutusData.serializeData
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
