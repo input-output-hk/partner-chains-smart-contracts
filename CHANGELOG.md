@@ -25,8 +25,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/608))
 
 ## Changed
-* `GetAddrs` doesn't return cbor encoded address of UpdateCommitteeHashValidator anymore. Now it returns its validator hash.
+* `addresses` doesn't return cbor encoded address of UpdateCommitteeHashValidator anymore. Now it returns its validator hash.
   ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
+* `addresses` no loner requires `init` to be conducted first.  This reverts to
+  earlier behaviour that was changed when the versioning system was implemented.
+  ([616](https://github.com/input-output-hk/trustless-sidechain/pull/616))
+* `addresses` no longer returns `CommitteeNftPolicy` and `CommitteeHashPolicy`
+  in the `mintingPolicies` list.  These were duplicates of the
+  `CommitteeOraclePolicy` minting policy.
+  ([616](https://github.com/input-output-hk/trustless-sidechain/pull/616))
 * commands `committee-handover` and `committee-hash` now require `new-committee-validator-hash` argument instead of `new-committee-validator-cbor-encoded-address`.
   ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
 * Commands `claim` and `burn` have been renamed to `claim-v1` and `burn-v1`,
