@@ -8,6 +8,10 @@ import Contract.Monad (Contract, liftContractM)
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Value as Value
 import Data.Map as Map
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types
+  ( CheckpointParameter(CheckpointParameter)
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -21,6 +25,7 @@ import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
@@ -104,6 +109,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
     (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
     (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
 
+  { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp
+
   -- Getting validators to version
   -----------------------------------
   merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
@@ -121,11 +128,22 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
   { permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
-  -----------------------------------
+
+  checkpointValidator ← do
+    let
+      checkpointParam = CheckpointParameter
+        { sidechainParams: sp
+        , checkpointAssetClass: assetClass checkpointCurrencySymbol
+            Checkpoint.initCheckpointMintTn
+        , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
+        }
+    Checkpoint.checkpointValidator checkpointParam
 
   let
     versionedValidators = Map.fromFoldable
       [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
+      , Types.CheckpointValidator /\ checkpointValidator
       , Types.CommitteeHashValidator /\ committeeHashValidator
       , Types.DParameterValidator /\ dParameterValidator
       , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator

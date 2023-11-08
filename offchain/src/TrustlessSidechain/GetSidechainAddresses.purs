@@ -33,14 +33,10 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.Checkpoint.Types
-  ( CheckpointParameter(CheckpointParameter)
-  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -48,7 +44,6 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
@@ -119,10 +114,6 @@ getSidechainAddresses
         { thresholdNumerator: (unwrap scParams).thresholdNumerator
         , thresholdDenominator: (unwrap scParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: scParams }
-      atmsKind
 
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
@@ -165,17 +156,6 @@ getSidechainAddresses
 
   dsInsertValidator ← DistributedSet.insertValidator ds
   dsConfValidator ← DistributedSet.dsConfValidator ds
-
-  checkpointValidator ← do
-    let
-      checkpointParam = CheckpointParameter
-        { sidechainParams: scParams
-        , checkpointAssetClass: assetClass checkpointCurrencySymbol
-            Checkpoint.initCheckpointMintTn
-        , committeeOracleCurrencySymbol
-        , committeeCertificateVerificationCurrencySymbol
-        }
-    Checkpoint.checkpointValidator checkpointParam
 
   veresionOracleValidator ←
     versionOracleValidator scParams versionOracleCurrencySymbol
@@ -234,7 +214,6 @@ getSidechainAddresses
       , DSConfValidator /\ dsConfValidator
       , DSInsertValidator /\ dsInsertValidator
       , VersionOracleValidator /\ veresionOracleValidator
-      , CheckpointValidator /\ checkpointValidator
       ] <> Map.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators
