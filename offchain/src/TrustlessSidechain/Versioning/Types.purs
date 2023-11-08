@@ -52,8 +52,6 @@ data ScriptId
   | MerkleRootTokenValidator
   | CommitteeCandidateValidator
   | CandidatePermissionPolicy
-  | CommitteeNftPolicy
-  | CommitteeHashPolicy
   | CommitteeHashValidator
   | DSKeyPolicy
   | DSConfPolicy
@@ -66,7 +64,7 @@ data ScriptId
   | VersionOracleValidator -- not versioned
   | FUELProxyPolicy -- not versioned
   | CommitteeCertificateVerificationPolicy
-  | CommitteeOraclePolicy -- (previously UpdateCommitteeHashPolicy)
+  | CommitteeOraclePolicy
   | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
   | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
   | DParameterPolicy
@@ -91,10 +89,6 @@ instance FromData ScriptId where
     Just CommitteeCandidateValidator
   fromData (Integer i) | i == BigInt.fromInt 4 =
     Just CandidatePermissionPolicy
-  fromData (Integer i) | i == BigInt.fromInt 5 =
-    Just CommitteeNftPolicy
-  fromData (Integer i) | i == BigInt.fromInt 6 =
-    Just CommitteeHashPolicy
   fromData (Integer i) | i == BigInt.fromInt 7 =
     Just CommitteeHashValidator
   fromData (Integer i) | i == BigInt.fromInt 8 =
@@ -141,8 +135,6 @@ instance ToData ScriptId where
   toData MerkleRootTokenValidator = Integer (BigInt.fromInt 2)
   toData CommitteeCandidateValidator = Integer (BigInt.fromInt 3)
   toData CandidatePermissionPolicy = Integer (BigInt.fromInt 4)
-  toData CommitteeNftPolicy = Integer (BigInt.fromInt 5)
-  toData CommitteeHashPolicy = Integer (BigInt.fromInt 6)
   toData CommitteeHashValidator = Integer (BigInt.fromInt 7)
   toData DSKeyPolicy = Integer (BigInt.fromInt 8)
   toData DSConfPolicy = Integer (BigInt.fromInt 9)

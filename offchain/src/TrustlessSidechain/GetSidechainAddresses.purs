@@ -38,7 +38,6 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
@@ -115,11 +114,6 @@ getSidechainAddresses
         , thresholdDenominator: (unwrap scParams).thresholdDenominator
         }
 
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
-
-  let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
-
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
 
   dsConfPolicy ← DistributedSet.dsConfPolicy
@@ -184,8 +178,7 @@ getSidechainAddresses
 
   let
     mintingPolicies =
-      [ CommitteeNftPolicy /\ committeeNftPolicyId
-      , DSConfPolicy /\ dsConfPolicyId
+      [ DSConfPolicy /\ dsConfPolicyId
       , CheckpointPolicy /\ checkpointPolicyId
       , FUELProxyPolicy /\ fuelProxyPolicyId
       , VersionOraclePolicy /\ versionOraclePolicyId

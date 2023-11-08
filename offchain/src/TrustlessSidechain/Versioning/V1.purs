@@ -77,9 +77,9 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
-  committeeHashPolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
-    CommitteeOraclePolicy.InitCommitteeHashMint
-      { icTxOutRef: (unwrap sp).genesisUtxo }
+
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
     versionedPolicies = Map.fromFoldable
@@ -87,7 +87,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       , Types.FUELMintingPolicy /\ fuelMintingPolicy
       , Types.FUELBurningPolicy /\ fuelBurningPolicy
       , Types.DSKeyPolicy /\ dsKeyPolicy
-      , Types.CommitteeHashPolicy /\ committeeHashPolicy
       , Types.CommitteeCertificateVerificationPolicy /\
           committeeCertificateVerificationMintingPolicy
       , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
@@ -97,9 +96,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   -- Helper currency symbols
   -----------------------------------
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
-
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
@@ -119,7 +115,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       let
         uch = UpdateCommitteeHash
           { sidechainParams: sp
-          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+          , committeeOracleCurrencySymbol
           , merkleRootTokenCurrencySymbol
           , committeeCertificateVerificationCurrencySymbol
           }
