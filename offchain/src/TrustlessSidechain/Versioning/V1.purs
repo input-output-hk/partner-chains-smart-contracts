@@ -1,14 +1,17 @@
 module TrustlessSidechain.Versioning.V1
-  ( getVersionedPolicies
-  , getVersionedValidators
-  , getVersionedPoliciesAndValidators
+  ( getVersionedPoliciesAndValidators
   ) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractM)
 import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Value as Value
 import Data.Map as Map
+import TrustlessSidechain.Checkpoint as Checkpoint
+import TrustlessSidechain.Checkpoint.Types
+  ( CheckpointParameter(CheckpointParameter)
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -22,32 +25,28 @@ import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (assetClass)
+import TrustlessSidechain.UpdateCommitteeHash.Types
+  ( UpdateCommitteeHash(UpdateCommitteeHash)
+  )
+import TrustlessSidechain.UpdateCommitteeHash.Utils
+  ( getUpdateCommitteeHashValidator
+  )
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.Versioning.Types as Types
 
--- | Validators to store in the versioning system.
-getVersionedValidators ∷
-  SidechainParams →
-  Contract (Map.Map Types.ScriptId Validator)
-getVersionedValidators sp = do
-  -- Getting validators and policies to version
-  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
-  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
-  { permissionedCandidatesValidator } ←
-    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
-  -----------------------------------
-  pure $ Map.fromFoldable
-    [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
-    , Types.DParameterValidator /\ dParameterValidator
-    , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
-    ]
-
--- | Minting policies to store in the versioning system.
-getVersionedPolicies ∷
+getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
-  Contract (Map.Map Types.ScriptId MintingPolicy)
-getVersionedPolicies { sidechainParams: sp, atmsKind } = do
+  Contract
+    { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
+    , versionedValidators ∷ Map.Map Types.ScriptId Validator
+    }
+getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
@@ -78,31 +77,72 @@ getVersionedPolicies { sidechainParams: sp, atmsKind } = do
 
   ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
-  committeeHashPolicy ← CommitteeOraclePolicy.committeeOraclePolicy $
-    CommitteeOraclePolicy.InitCommitteeHashMint
-      { icTxOutRef: (unwrap sp).genesisUtxo }
-  pure $ Map.fromFoldable
-    [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
-    , Types.FUELMintingPolicy /\ fuelMintingPolicy
-    , Types.FUELBurningPolicy /\ fuelBurningPolicy
-    , Types.DSKeyPolicy /\ dsKeyPolicy
-    , Types.CommitteeHashPolicy /\ committeeHashPolicy
-    , Types.CommitteeCertificateVerificationPolicy /\
-        committeeCertificateVerificationMintingPolicy
-    , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
-    , Types.DParameterPolicy /\ dParameterMintingPolicy
-    , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
-    ]
 
-getVersionedPoliciesAndValidators ∷
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
-  Contract
-    { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
-    , versionedValidators ∷ Map.Map Types.ScriptId Validator
-    }
-getVersionedPoliciesAndValidators params = do
-  versionedPolicies ← getVersionedPolicies params
-  versionedValidators ← getVersionedValidators params.sidechainParams
+  { committeeOracleCurrencySymbol } ←
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
+
+  let
+    versionedPolicies = Map.fromFoldable
+      [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
+      , Types.FUELMintingPolicy /\ fuelMintingPolicy
+      , Types.FUELBurningPolicy /\ fuelBurningPolicy
+      , Types.DSKeyPolicy /\ dsKeyPolicy
+      , Types.CommitteeCertificateVerificationPolicy /\
+          committeeCertificateVerificationMintingPolicy
+      , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
+      , Types.DParameterPolicy /\ dParameterMintingPolicy
+      , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
+      ]
+
+  -- Helper currency symbols
+  -----------------------------------
+  { committeeCertificateVerificationCurrencySymbol } ←
+    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+      { committeeCertificateMint, sidechainParams: sp }
+      atmsKind
+
+  merkleRootTokenCurrencySymbol ← liftContractM
+    (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
+    (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
+
+  { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp
+
+  -- Getting validators to version
+  -----------------------------------
+  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+  { validator: committeeHashValidator } ←
+    do
+      let
+        uch = UpdateCommitteeHash
+          { sidechainParams: sp
+          , committeeOracleCurrencySymbol
+          , merkleRootTokenCurrencySymbol
+          , committeeCertificateVerificationCurrencySymbol
+          }
+      getUpdateCommitteeHashValidator uch
+
+  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
+  { permissionedCandidatesValidator } ←
+    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
+
+  checkpointValidator ← do
+    let
+      checkpointParam = CheckpointParameter
+        { sidechainParams: sp
+        , checkpointAssetClass: assetClass checkpointCurrencySymbol
+            Checkpoint.initCheckpointMintTn
+        , committeeOracleCurrencySymbol
+        , committeeCertificateVerificationCurrencySymbol
+        }
+    Checkpoint.checkpointValidator checkpointParam
+
+  let
+    versionedValidators = Map.fromFoldable
+      [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
+      , Types.CheckpointValidator /\ checkpointValidator
+      , Types.CommitteeHashValidator /\ committeeHashValidator
+      , Types.DParameterValidator /\ dParameterValidator
+      , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      ]
+
   pure $ { versionedPolicies, versionedValidators }

@@ -21,8 +21,6 @@ module TrustlessSidechain.Versioning (
   merkleRootTokenValidatorId,
   committeeCandidateValidatorId,
   candidatePermissionPolicyId,
-  committeeNftPolicyId,
-  committeeHashPolicyId,
   committeeHashValidatorId,
   dsKeyPolicyId,
   dsConfPolicyId,
@@ -74,8 +72,6 @@ fuelMintingPolicyId
   , merkleRootTokenValidatorId
   , committeeCandidateValidatorId
   , candidatePermissionPolicyId
-  , committeeNftPolicyId
-  , committeeHashPolicyId
   , committeeHashValidatorId
   , dsKeyPolicyId
   , dsConfPolicyId
@@ -101,8 +97,6 @@ merkleRootTokenPolicyId = 1
 merkleRootTokenValidatorId = 2
 committeeCandidateValidatorId = 3
 candidatePermissionPolicyId = 4
-committeeNftPolicyId = 5
-committeeHashPolicyId = 6
 committeeHashValidatorId = 7
 dsKeyPolicyId = 8
 dsConfPolicyId = 9

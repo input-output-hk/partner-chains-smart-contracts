@@ -25,7 +25,7 @@ import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
-import Data.BigInt as BigInt
+import Data.Functor (map)
 import Data.Map as Map
 import Data.TraversableWithIndex (traverseWithIndex)
 import TrustlessSidechain.CandidatePermissionToken
@@ -33,28 +33,16 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.Checkpoint.Types
-  ( CheckpointParameter(CheckpointParameter)
-  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClass)
-import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  )
-import TrustlessSidechain.UpdateCommitteeHash.Utils
-  ( getUpdateCommitteeHashValidator
-  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
@@ -62,11 +50,9 @@ import TrustlessSidechain.Utils.Logging
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(..)
-  , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils
   ( getVersionOraclePolicy
-  , getVersionedCurrencySymbol
   , versionOracleValidator
   )
 
@@ -127,15 +113,6 @@ getSidechainAddresses
         { thresholdNumerator: (unwrap scParams).thresholdNumerator
         , thresholdDenominator: (unwrap scParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: scParams }
-      atmsKind
-
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy scParams
-
-  let committeeNftPolicyId = currencySymbolToHex committeeOracleCurrencySymbol
 
   ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
 
@@ -168,54 +145,14 @@ getSidechainAddresses
   let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
 
   -- Validators
-  committeeCandidateValidatorAddr ← do
-    validator ← CommitteeCandidateValidator.getCommitteeCandidateValidator
-      scParams
-    getAddr validator
+  committeeCandidateValidator ←
+    CommitteeCandidateValidator.getCommitteeCandidateValidator scParams
 
-  merkleRootTokenCurrencySymbol ←
-    getVersionedCurrencySymbol scParams $ VersionOracle
-      { version: BigInt.fromInt version, scriptId: MerkleRootTokenPolicy }
+  dsInsertValidator ← DistributedSet.insertValidator ds
+  dsConfValidator ← DistributedSet.dsConfValidator ds
 
-  { committeeHashValidatorAddr, committeeHashValidatorHash } ←
-    do
-      let
-        uch = UpdateCommitteeHash
-          { sidechainParams: scParams
-          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          }
-      { validator, validatorHash } ← getUpdateCommitteeHashValidator uch
-      bech32Addr ← getAddr validator
-
-      pure
-        { committeeHashValidatorAddr: bech32Addr
-        , committeeHashValidatorHash: validatorHash
-        }
-
-  dsInsertValidatorAddr ← do
-    validator ← DistributedSet.insertValidator ds
-    getAddr validator
-  dsConfValidatorAddr ← do
-    validator ← DistributedSet.dsConfValidator ds
-    getAddr validator
-
-  checkpointValidatorAddr ← do
-    let
-      checkpointParam = CheckpointParameter
-        { sidechainParams: scParams
-        , checkpointAssetClass: assetClass checkpointCurrencySymbol
-            Checkpoint.initCheckpointMintTn
-        , committeeOracleCurrencySymbol
-        , committeeCertificateVerificationCurrencySymbol
-        }
-    validator ← Checkpoint.checkpointValidator checkpointParam
-    getAddr validator
-
-  veresionOracleValidatorAddr ← do
-    validator ← versionOracleValidator scParams versionOracleCurrencySymbol
-    getAddr validator
+  veresionOracleValidator ←
+    versionOracleValidator scParams versionOracleCurrencySymbol
 
   { versionedPolicies, versionedValidators } ←
     Versioning.getVersionedPoliciesAndValidators
@@ -224,7 +161,6 @@ getSidechainAddresses
   versionedCurrencySymbols ← Map.toUnfoldable <$> traverseWithIndex
     getCurrencySymbolHex
     versionedPolicies
-  versionedAddresses ← Map.toUnfoldable <$> traverse getAddr versionedValidators
 
   { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -242,8 +178,7 @@ getSidechainAddresses
 
   let
     mintingPolicies =
-      [ CommitteeNftPolicy /\ committeeNftPolicyId
-      , DSConfPolicy /\ dsConfPolicyId
+      [ DSConfPolicy /\ dsConfPolicyId
       , CheckpointPolicy /\ checkpointPolicyId
       , FUELProxyPolicy /\ fuelProxyPolicyId
       , VersionOraclePolicy /\ versionOraclePolicyId
@@ -267,18 +202,15 @@ getSidechainAddresses
               _ → []
           )
 
-    addresses =
-      [ CommitteeCandidateValidator /\ committeeCandidateValidatorAddr
-      , CommitteeHashValidator /\ committeeHashValidatorAddr
-      , DSConfValidator /\ dsConfValidatorAddr
-      , DSInsertValidator /\ dsInsertValidatorAddr
-      , VersionOracleValidator /\ veresionOracleValidatorAddr
-      , CheckpointValidator /\ checkpointValidatorAddr
-      ] <> versionedAddresses
+    validators =
+      [ CommitteeCandidateValidator /\ committeeCandidateValidator
+      , DSConfValidator /\ dsConfValidator
+      , DSInsertValidator /\ dsInsertValidator
+      , VersionOracleValidator /\ veresionOracleValidator
+      ] <> Map.toUnfoldable versionedValidators
 
-    validatorHashes =
-      [ CommitteeHashValidator /\ getValidatorHashHex committeeHashValidatorHash
-      ]
+  addresses ← traverse (traverse getAddr) validators
+  let validatorHashes = map (map getValidatorHash) validators
 
   pure
     { addresses
@@ -309,6 +241,10 @@ getCurrencySymbolHex name mp = do
 getValidatorHashHex ∷ ValidatorHash → String
 getValidatorHashHex (ValidatorHash sh) =
   ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
+
+-- | `getValidatorHash` converts a validator to a hex encoded string
+getValidatorHash ∷ Validator → String
+getValidatorHash = getValidatorHashHex <<< validatorHash
 
 -- | Convert a currency symbol to hex encoded string
 currencySymbolToHex ∷ CurrencySymbol → String
