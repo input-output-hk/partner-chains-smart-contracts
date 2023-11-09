@@ -80,17 +80,17 @@ initCommitteeOracleMintAmount = 1
 
  OnChain error descriptions:
 
- ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-01: invalid committee output
+ ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01: invalid committee output
 
- ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-02: tx doesn't reference previous merkle
+ ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02: tx doesn't reference previous merkle
  root
 
- ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-03: output address for utxo containing
+ ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03: output address for utxo containing
  committeeOracleCurrencySymbol must be a script address
 
- ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-04: tx not signed by committee
+ ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04: tx not signed by committee
 
- ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-05: sidechain epoch is not strictly
+ ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05: sidechain epoch is not strictly
  increasing
 -}
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
@@ -101,9 +101,9 @@ mkUpdateCommitteeHashValidator ::
   ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator uch dat red ctx =
-  traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-01" committeeOutputIsValid
+  traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01" committeeOutputIsValid
     && traceIfFalse
-      "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-02"
+      "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02"
       referencesPreviousMerkleRoot
   where
     info :: TxInfo
@@ -127,7 +127,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
               let validatorHash' =
                     case addressCredential $ txOutAddress o of
                       ScriptCredential vh -> vh
-                      _ -> traceError "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-03"
+                      _ -> traceError "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03"
 
                   msg =
                     UpdateCommitteeHashMessage
@@ -138,7 +138,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
                       , validatorHash = validatorHash'
                       }
                in traceIfFalse
-                    "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-04"
+                    "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
                     ( Value.valueOf
                         (txInfoMint info)
                         (committeeCertificateVerificationCurrencySymbol uch)
@@ -146,7 +146,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
                         > 0
                     )
                     && traceIfFalse
-                      "ERROR-UPDATE-COMMITIEE-HASH-VALIDATOR-05"
+                      "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05"
                       ( sidechainEpoch (dat :: UpdateCommitteeDatum BuiltinData)
                           < sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
                       )
@@ -193,16 +193,16 @@ PlutusTx.makeLift ''InitCommitteeHashMint
 
  OnChain error descriptions:
 
- ERROR-UPDATE-COMMITIEE-HASH-POLICY-01: UTxO not consumed
+ ERROR-UPDATE-COMMITTEE-HASH-POLICY-01: UTxO not consumed
 
- ERROR-UPDATE-COMMITIEE-HASH-POLICY-02: wrong amount minted
+ ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
  increasing
 -}
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
 mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
 mkCommitteeOraclePolicy ichm _red ctx =
-  traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-POLICY-01" hasUtxo
-    && traceIfFalse "ERROR-UPDATE-COMMITIEE-HASH-POLICY-02" checkMintedAmount
+  traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" hasUtxo
+    && traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-02" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
