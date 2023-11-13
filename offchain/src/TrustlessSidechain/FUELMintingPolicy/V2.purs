@@ -2,6 +2,7 @@ module TrustlessSidechain.FUELMintingPolicy.V2
   ( FuelMintParams(..)
   , getFuelMintingPolicy
   , mkMintFuelLookupAndConstraints
+  , dummyTokenName
   ) where
 
 import Contract.Prelude
@@ -74,12 +75,12 @@ getFuelMintingPolicy sidechainParams = do
 
 mkMintFuelLookupAndConstraints ∷
   SidechainParams →
-  { amount ∷ BigInt } →
+  FuelMintParams →
   Contract
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mkMintFuelLookupAndConstraints sidechainParams { amount } = do
+mkMintFuelLookupAndConstraints sidechainParams (FuelMintParams { amount }) = do
   { fuelMintingPolicy } ← getFuelMintingPolicy sidechainParams
 
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo

@@ -256,6 +256,7 @@ data TxEndpoint
             }
       }
   | RemovePermissionedCandidates
+  | BurnNFTs
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain

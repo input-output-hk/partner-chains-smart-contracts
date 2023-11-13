@@ -62,14 +62,14 @@ import TrustlessSidechain.EndpointResp
       , InsertPermissionedCandidatesResp
       , UpdatePermissionedCandidatesResp
       , RemovePermissionedCandidatesResp
+      , BurnNFTsResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.FUELBurningPolicy.V1 as Burn.V1
-import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
+import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
@@ -113,6 +113,7 @@ import TrustlessSidechain.Options.Types
       , InsertPermissionedCandidates
       , UpdatePermissionedCandidates
       , RemovePermissionedCandidates
+      , BurnNFTs
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -210,10 +211,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> ClaimActRespV1
 
       BurnActV1 { amount, recipient } →
-        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints scParams
-          ( FUELProxyPolicy.FuelBurnParamsV1 $ Burn.V1.FuelBurnParams
-              { amount, recipient, sidechainParams: scParams }
-          )
+        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints
+          { amount
+          , recipient
+          , sidechainParams: scParams
+          , version: BigInt.fromInt 1
+          }
           >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
@@ -233,13 +236,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> ClaimActRespV2
 
       BurnActV2 { amount, recipient } →
-        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints scParams
-          ( FUELProxyPolicy.FuelBurnParamsV2 $
-              { recipient
-              , fuelBurnParams: Burn.V2.FuelBurnParams
-                  { amount }
-              }
-          )
+        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints
+          { amount
+          , recipient
+          , sidechainParams: scParams
+          , version: BigInt.fromInt 2
+          }
           >>= submitAndAwaitTx
           <#> unwrap
           >>> { transactionId: _ }
@@ -644,6 +646,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemovePermissionedCandidatesResp
+
+      BurnNFTs →
+        GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams
+          >>= submitAndAwaitTx
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> BurnNFTsResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

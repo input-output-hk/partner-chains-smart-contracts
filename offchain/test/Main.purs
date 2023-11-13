@@ -13,6 +13,7 @@ import Test.DParameter as DParameter
 import Test.Data as Data
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
+import Test.GarbageCollector as GarbageCollector
 import Test.InitSidechain as InitSidechain
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
@@ -68,6 +69,7 @@ main = do
           Versioning.tests
           DParameter.tests
           PermissionedCandidates.tests
+          GarbageCollector.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

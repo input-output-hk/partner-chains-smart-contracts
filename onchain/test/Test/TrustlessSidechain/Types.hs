@@ -26,6 +26,7 @@ import TrustlessSidechain.Types (
     plainPublicKeys,
     plainSignatures
   ),
+  ATMSRedeemer (ATMSBurn, ATMSMint),
   BlockProducerRegistration (
     BlockProducerRegistration,
     inputUtxo,
@@ -93,6 +94,10 @@ import TrustlessSidechain.Types (
     UpdateDParameter
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
+  FUELMintingRedeemer (
+    FUELBurningRedeemer,
+    FUELMintingRedeemer
+  ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -210,6 +215,10 @@ tests =
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorDatum" samplePermissionedCandidatesValidatorDatum
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer1" samplePermissionedCandidatesValidatorRedeemer1
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer2" samplePermissionedCandidatesValidatorRedeemer2
+    , dataEncoderGoldenTest "FUELMintingRedeemer1" sampleFUELMintingRedeemer1
+    , dataEncoderGoldenTest "FUELMintingRedeemer2" sampleFUELMintingRedeemer2
+    , dataEncoderGoldenTest "ATMSRedeemer1" sampleATMSRedeemer1
+    , dataEncoderGoldenTest "ATMSRedeemer2" sampleATMSRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -524,6 +533,18 @@ samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
 
 samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
 samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
+
+sampleFUELMintingRedeemer1 :: FUELMintingRedeemer
+sampleFUELMintingRedeemer1 = FUELMintingRedeemer sampleMerkleTreeEntry1 sampleMerkleProof
+
+sampleFUELMintingRedeemer2 :: FUELMintingRedeemer
+sampleFUELMintingRedeemer2 = FUELBurningRedeemer
+
+sampleATMSRedeemer1 :: ATMSRedeemer
+sampleATMSRedeemer1 = ATMSMint sampleATMSPlainMultisignature
+
+sampleATMSRedeemer2 :: ATMSRedeemer
+sampleATMSRedeemer2 = ATMSBurn
 
 {- | Creating a test group with two golden tests:
  - encoding data using `toBuiltinData`

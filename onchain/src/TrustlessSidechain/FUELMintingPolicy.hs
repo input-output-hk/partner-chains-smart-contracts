@@ -11,6 +11,7 @@ module TrustlessSidechain.FUELMintingPolicy (
   bech32AddrToPubKeyHash,
 ) where
 
+import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
@@ -36,7 +37,7 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
-  FUELMintingRedeemer (FUELMintingRedeemer),
+  FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   SidechainParams,
  )
 import TrustlessSidechain.Versioning (
@@ -77,9 +78,36 @@ fuelTokenName = TokenName "FUEL"
   TODO: this isn't in the spec, but we have to do this to ensure that only the
   recipient is the one who is controlling where the FUEL goes i.e., so an
   adversary can't impersonate the recipient to steal their FUEL.
+
+  OnChain errors
+
+  ERROR-FUEL-MINTING-POLICY-01: this tx should mint negative amount of FUEL token
+
+  ERROR-FUEL-MINTING-POLICY-02: inserting wrong distributed set element
+
+  ERROR-FUEL-MINTING-POLICY-03: no Merkle root found
+
+  ERROR-FUEL-MINTING-POLICY-04: tx not signed by recipient
+
+  ERROR-FUEL-MINTING-POLICY-05: incorrect amount of FUEL minted
+
+  ERROR-FUEL-MINTING-POLICY-06: merkle proof failed
+
+  ERROR-FUEL-MINTING-POLICY-07: not inserting into distributed set
+
+  ERROR-FUEL-MINTING-POLICY-08: illegal FUEL minting
 -}
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> ScriptContext -> Bool
+mkMintingPolicy _ _ FUELBurningRedeemer (ScriptContext txInfo (Minting currSymbol)) =
+  traceIfFalse "ERROR-FUEL-MINTING-POLICY-01" noTokensMinted
+  where
+    noTokensMinted :: Bool
+    noTokensMinted =
+      case AssocMap.lookup currSymbol $
+        Value.getValue (txInfoMint txInfo) of
+        Just tns -> AssocMap.all (< 0) tns
+        _ -> traceError "ERROR-FUEL-MINTING-POLICY-01"
 mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
   let cborMte :: BuiltinByteString
       cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte
@@ -90,7 +118,7 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
         | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
           , (tn, _amt) : _ <- AssocMap.toList tns =
           unTokenName tn
-        | otherwise = traceError "error 'FUELMintingPolicy' inserting wrong distributed set element"
+        | otherwise = traceError "ERROR-FUEL-MINTING-POLICY-02"
 
       merkleRoot :: RootHash
       merkleRoot =
@@ -114,14 +142,14 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
               -- is enough to conclude that the current committee has signed
               -- it.
               | otherwise = go ts
-            go [] = traceError "error 'FUELMintingPolicy' no Merkle root found"
+            go [] = traceError "ERROR-FUEL-MINTING-POLICY-03"
          in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
    in traceIfFalse
-        "error 'FUELMintingPolicy' tx not signed by recipient"
+        "ERROR-FUEL-MINTING-POLICY-04"
         (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
-        && traceIfFalse "error 'FUELMintingPolicy' incorrect amount of FUEL minted" (fuelAmount == get @"amount" mte)
-        && traceIfFalse "error 'FUELMintingPolicy' merkle proof failed" (MerkleTree.memberMp cborMte mp merkleRoot)
-        && traceIfFalse "error 'FUELMintingPolicy' not inserting into distributed set" (dsInserted == cborMteHashed)
+        && traceIfFalse "ERROR-FUEL-MINTING-POLICY-05" (fuelAmount == get @"amount" mte)
+        && traceIfFalse "ERROR-FUEL-MINTING-POLICY-06" (MerkleTree.memberMp cborMte mp merkleRoot)
+        && traceIfFalse "ERROR-FUEL-MINTING-POLICY-07" (dsInserted == cborMteHashed)
   where
     -- Aliases:
     info :: TxInfo
@@ -148,7 +176,8 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
         , [(tn, amount)] <- AssocMap.toList tns
         , tn == fuelTokenName =
         amount
-      | otherwise = traceError "error 'FUELMintingPolicy' illegal FUEL minting"
+      | otherwise = traceError "ERROR-FUEL-MINTING-POLICY-08"
+mkMintingPolicy _ _ _ _ = False
 
 -- ctl hack
 -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
@@ -159,20 +188,14 @@ mkMintingPolicyUntyped sp versioningConfig = mkUntypedMintingPolicy $ mkMintingP
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
+-- Burning policy defines the criteria for burrning FUEL Proxy token.
+-- Currently there is no requirement that would prevent user from burning their
+-- FUEL Proxy token, as long as they actually have one. This policy don't have
+-- to check, wether user has FUEL Proxy tokens or not, because cardano itself
+-- won't allow for burning tokens, that the user doesn't have.
 {-# INLINEABLE mkBurningPolicy #-}
 mkBurningPolicy :: SidechainParams -> () -> ScriptContext -> Bool
-mkBurningPolicy _ () (ScriptContext txInfo (Minting currSymbol)) =
-  traceIfFalse "Can't burn a negative amount" (fuelAmount > 0)
-  where
-    fuelAmount :: Integer
-    fuelAmount
-      | Just tns <- AssocMap.lookup currSymbol $ getValue (txInfoMint txInfo)
-        , [(tn, amount)] <- AssocMap.toList tns
-        , tn == fuelTokenName =
-        amount
-      | otherwise = traceError "error 'FUELBurningPolicy' illegal FUEL burning"
-mkBurningPolicy _ _ _ =
-  traceIfFalse "Can't burn FUEL" False
+mkBurningPolicy _ () _ = True
 
 {-# INLINEABLE mkBurningPolicyUntyped #-}
 mkBurningPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

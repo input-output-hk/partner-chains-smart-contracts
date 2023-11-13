@@ -15,7 +15,8 @@ import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   LedgerBytes (LedgerBytes, getLedgerBytes),
   OutputDatum (OutputDatum),
-  ScriptContext (scriptContextTxInfo),
+  ScriptContext (ScriptContext, scriptContextTxInfo),
+  ScriptPurpose (Minting),
   TokenName (..),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
@@ -33,6 +34,7 @@ import TrustlessSidechain.Types (
     plainPublicKeys,
     plainSignatures
   ),
+  ATMSRedeemer (ATMSBurn, ATMSMint),
   CommitteeCertificateMint (
     thresholdDenominator,
     thresholdNumerator
@@ -58,17 +60,40 @@ import TrustlessSidechain.Versioning (
       2. the token name of this token that is minted minted has been signed by
       the current committee where this verification is performed by the given
       @verifySig@ function
+
+      OnChain errors
+
+      ERROR-ATMS-POLICY-01: Some ATMS tokens were minted in this transaction
+
+      ERROR-ATMS-POLICY-02: No tokens were burned in this transaction
+
+      ERROR-ATMS-POLICY-03: current committee mismatch
+
+      ERROR-ATMS-POLICY-04: committee signature invalid
+
+      ERROR-ATMS-POLICY-05: no committee utxo given as reference input
+
+      ERROR-ATMS-POLICY-06: bad mint
 -}
 mkMintingPolicy ::
   (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
   CommitteeCertificateMint ->
   VersionOracleConfig ->
-  ATMSPlainMultisignature ->
+  ATMSRedeemer ->
   ScriptContext ->
   Bool
-mkMintingPolicy verifySig ccm versioningConfig atmspms ctx =
-  traceIfFalse "error 'CommitteePlainATMSPolicy': current committee mismatch" isCurrentCommittee
-    && traceIfFalse "error 'CommitteePlainATMSPolicy': committee signature invalid" signedByCurrentCommittee
+mkMintingPolicy _ _ _ ATMSBurn (ScriptContext txInfo (Minting currSymbol)) =
+  traceIfFalse "ERROR-ATMS-POLICY-01" noTokensMinted
+  where
+    noTokensMinted :: Bool
+    noTokensMinted =
+      case AssocMap.lookup currSymbol $
+        Value.getValue (txInfoMint txInfo) of
+        Just tns -> AssocMap.all (< 0) tns
+        _ -> Trace.traceError "ERROR-ATMS-POLICY-02"
+mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
+  traceIfFalse "ERROR-ATMS-POLICY-03" isCurrentCommittee
+    && traceIfFalse "ERROR-ATMS-POLICY-04" signedByCurrentCommittee
   where
     info = scriptContextTxInfo ctx
 
@@ -144,7 +169,7 @@ mkMintingPolicy verifySig ccm versioningConfig atmspms ctx =
                 OutputDatum d <- txOutDatum o =
               IsData.unsafeFromBuiltinData $ getDatum d
             | otherwise = go ts
-          go [] = traceError "error 'CommitteePlainATMSPolicy' no committee utxo given as reference input"
+          go [] = traceError "ERROR-ATMS-POLICY-05"
        in go $ txInfoReferenceInputs info ++ txInfoInputs info
     -- TODO probably should pass as redeemer whether we should look in
     -- reference inputs or regular inputs
@@ -157,10 +182,10 @@ mkMintingPolicy verifySig ccm versioningConfig atmspms ctx =
     uniqueMintedTokenName :: TokenName
     uniqueMintedTokenName
       | Just tns <- AssocMap.lookup ownCurSymb $ Value.getValue (txInfoMint info)
-        , [(tn, amt)] <- AssocMap.toList tns
-        , amt > 0 =
+        , [(tn, _)] <- filter ((> 0) . snd) $ AssocMap.toList tns =
         tn
-      | otherwise = Trace.traceError "error 'CommitteePlainATMSPolicy': bad mint"
+      | otherwise = Trace.traceError "ERROR-ATMS-POLICY-06"
+mkMintingPolicy _ _ _ _ _ = False
 
 -- * Plain ATMS primitives
 

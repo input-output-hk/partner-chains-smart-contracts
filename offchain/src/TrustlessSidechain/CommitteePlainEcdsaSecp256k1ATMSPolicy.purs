@@ -5,6 +5,7 @@
 -- | build / submit the transaction.
 module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
   ( ATMSPlainEcdsaSecp256k1Multisignature(ATMSPlainEcdsaSecp256k1Multisignature)
+  , ATMSRedeemer(ATMSMint, ATMSBurn)
   , committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
 
   , committeePlainEcdsaSecp256k1ATMS
@@ -97,6 +98,16 @@ instance ToData ATMSPlainEcdsaSecp256k1Multisignature where
     [ toData currentCommittee
     , toData currentCommitteeSignatures
     ]
+
+data ATMSRedeemer
+  = ATMSMint ATMSPlainEcdsaSecp256k1Multisignature
+  | ATMSBurn
+
+derive instance Generic ATMSRedeemer _
+
+instance ToData ATMSRedeemer where
+  toData (ATMSMint sig) = Constr (BigNum.fromInt 0) [ toData sig ]
+  toData ATMSBurn = Constr (BigNum.fromInt 1) []
 
 -- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the committee plainEcdsaSecp256k1 ATMS
 -- | policy
@@ -231,7 +242,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
         "Invalid committee signatures for the sidechain message"
 
   let
-    redeemer = Redeemer $ toData $
+    redeemer = Redeemer $ toData $ ATMSMint $
       ATMSPlainEcdsaSecp256k1Multisignature
         { currentCommittee: curCommitteePubKeys
         , currentCommitteeSignatures: curCommitteeSignatures

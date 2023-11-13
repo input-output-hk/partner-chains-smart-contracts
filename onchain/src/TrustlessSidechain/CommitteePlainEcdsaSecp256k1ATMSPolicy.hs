@@ -17,7 +17,7 @@ import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainAT
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
-  ATMSPlainMultisignature,
+  ATMSRedeemer,
   CommitteeCertificateMint,
  )
 import TrustlessSidechain.Versioning (VersionOracleConfig)
@@ -28,7 +28,7 @@ import TrustlessSidechain.Versioning (VersionOracleConfig)
  'TrustlessSidechain.CommitteePlainATMSPolicy.mkMintingPolicy' and uses
  'verifyEcdsaSecp256k1Signature' to verify the signatures
 -}
-mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool
+mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool
 mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy
     verifyEcdsaSecp256k1Signature

@@ -128,17 +128,19 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
         }
 
       void
-        $ mkMintFuelLookupAndConstraints sidechainParams
-            { amount
-            , recipient
-            , sidechainParams
-            , merkleProof
-            , index
-            , previousMerkleRoot
-            , dsUtxo: Nothing
-            }
-        >>=
-          submitAndAwaitTx
+        $
+          ( mkMintFuelLookupAndConstraints sidechainParams $
+              FuelMintParams
+                { amount
+                , recipient
+                , sidechainParams
+                , merkleProof
+                , index
+                , previousMerkleRoot
+                , dsUtxo: Nothing
+                }
+          )
+        >>= submitAndAwaitTx
 
 -- | `testScenarioSuccess2` tests minting some tokens with the fast distributed
 -- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
@@ -221,15 +223,18 @@ testScenarioSuccess2 =
             $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
 
           void
-            $ mkMintFuelLookupAndConstraints sidechainParams
-                { amount
-                , recipient
-                , sidechainParams
-                , merkleProof
-                , index
-                , previousMerkleRoot
-                , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
-                }
+            $
+              ( mkMintFuelLookupAndConstraints sidechainParams $
+                  FuelMintParams
+                    { amount
+                    , recipient
+                    , sidechainParams
+                    , merkleProof
+                    , index
+                    , previousMerkleRoot
+                    , dsUtxo: Just nodeRef -- note that we use the distributed set UTxO in the endpoint here.
+                    }
+              )
             >>=
               submitAndAwaitTx
 
@@ -256,16 +261,17 @@ testScenarioFailure =
 
           void
             $ mkMintFuelLookupAndConstraints dummySidechainParams
-                { merkleProof: mp
-                , recipient
-                , sidechainParams: dummySidechainParams
-                , amount: BigInt.fromInt 1
-                , index: BigInt.fromInt 0
-                , previousMerkleRoot: Nothing
-                , dsUtxo: Nothing
-                }
-            >>=
-              submitAndAwaitTx
+                ( FuelMintParams
+                    { merkleProof: mp
+                    , recipient
+                    , sidechainParams: dummySidechainParams
+                    , amount: BigInt.fromInt 1
+                    , index: BigInt.fromInt 0
+                    , previousMerkleRoot: Nothing
+                    , dsUtxo: Nothing
+                    }
+                )
+            >>= submitAndAwaitTx
           # fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
@@ -343,7 +349,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
                   /\ combinedMerkleProof1
                 _ → Nothing
 
-        FuelMintParams fp0 ← liftContractM "Could not build FuelParams" $
+        fp0 ← liftContractM "Could not build FuelParams" $
           combinedMerkleProofToFuelParams
             { sidechainParams
             , combinedMerkleProof: combinedMerkleProof0

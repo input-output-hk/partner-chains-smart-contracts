@@ -128,6 +128,8 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | RemovePermissionedCandidatesResp
       { transactionId ∷ ByteArray }
+  | BurnNFTsResp
+      { transactionId ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -436,6 +438,13 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "RemovePermissionedCandidates"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    BurnNFTsResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "BurnNFTs"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 

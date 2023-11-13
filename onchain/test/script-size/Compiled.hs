@@ -79,7 +79,7 @@ import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.MerkleRootTokenMintingPolicy as MerkleRoot
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainMultisignature,
+  ATMSRedeemer,
   BlockProducerRegistration,
   CandidatePermissionMint,
   CheckpointDatum,
@@ -287,9 +287,9 @@ mkDsKeyPolicyCode ::
 mkDsKeyPolicyCode = $$(compile [||mkDsKeyPolicy||])
 
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode ::
-  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool)
 mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsaSecp256k1ATMSPolicy.mkMintingPolicy||])
 
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
-  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSPlainMultisignature -> ScriptContext -> Bool)
+  CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool)
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])
