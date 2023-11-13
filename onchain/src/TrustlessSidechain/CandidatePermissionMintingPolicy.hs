@@ -22,6 +22,11 @@ import TrustlessSidechain.Types (CandidatePermissionMint)
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 
       - The UTxO 'cpmUtxo' in 'CandidatePermissionMint' is spent
+
+  OnChain error descriptions:
+
+    ERROR-CANDIDATE-PERMISSION-POLICY-01: UTxO denoted in
+    CandidatePermissionMint was not consumed by the transaction
 -}
 mkCandidatePermissionMintingPolicy ::
   CandidatePermissionMint ->
@@ -29,7 +34,7 @@ mkCandidatePermissionMintingPolicy ::
   ScriptContext ->
   Bool
 mkCandidatePermissionMintingPolicy cpm _red ctx =
-  traceIfFalse "error 'mkCandidatePermissionMintingPolicy' CandidatePermissionMintingPolicy 'cpmUtxo' not consumed" $
+  traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" $
     go $
       txInfoInputs $
         scriptContextTxInfo ctx
