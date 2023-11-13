@@ -1,5 +1,6 @@
 module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
   ( tests
+  , generateSignatures
   ) where
 
 import Contract.Prelude

@@ -119,6 +119,7 @@ import TrustlessSidechain.Options.Types
       , InsertPermissionedCandidates
       , UpdatePermissionedCandidates
       , RemovePermissionedCandidates
+      , BurnNFTs
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -253,6 +254,10 @@ optSpec maybeConfig =
     , command "remove-permissioned-candidates"
         ( info (withCommonOpts maybeConfig removePermissionedCandidatesSpec)
             (progDesc "Remove a Permissioned Candidates list")
+        )
+    , command "collect-garbage"
+        ( info (withCommonOpts maybeConfig burnNFTsSpec)
+            (progDesc "Burn unneccessary NFTs")
         )
     ]
 
@@ -1163,6 +1168,9 @@ updatePermissionedCandidatesSpec = ado
 
 removePermissionedCandidatesSpec ∷ Parser TxEndpoint
 removePermissionedCandidatesSpec = pure RemovePermissionedCandidates
+
+burnNFTsSpec ∷ Parser TxEndpoint
+burnNFTsSpec = pure BurnNFTs
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado

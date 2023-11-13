@@ -2,8 +2,10 @@ module TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(..)
   , CombinedMerkleProof(..)
   , FuelMintParams(..)
+  , FUELMintingRedeemer(..)
   , mkMintFuelLookupAndConstraints
   , getFuelMintingPolicy
+  , fuelTokenName
   , combinedMerkleProofToFuelParams
   ) where
 
@@ -203,7 +205,9 @@ instance FromData CombinedMerkleProof where
     in CombinedMerkleProof { transaction, merkleProof }
   fromData _ = Nothing
 
-data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
+data FUELMintingRedeemer
+  = FUELMintingRedeemer MerkleTreeEntry MerkleProof
+  | FUELBurningRedeemer
 
 derive instance Generic FUELMintingRedeemer _
 instance ToData FUELMintingRedeemer where
@@ -211,6 +215,7 @@ instance ToData FUELMintingRedeemer where
     [ toData s1
     , toData s2
     ]
+  toData FUELBurningRedeemer = Constr (BigNum.fromInt 1) []
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
@@ -252,26 +257,21 @@ data FuelMintParams = FuelMintParams
 -- | Merkle proof
 mkMintFuelLookupAndConstraints ∷
   SidechainParams →
-  { amount ∷ BigInt
-  , recipient ∷ Address
-  , merkleProof ∷ MerkleProof
-  , sidechainParams ∷ SidechainParams
-  , index ∷ BigInt
-  , previousMerkleRoot ∷ Maybe RootHash
-  , dsUtxo ∷ Maybe TransactionInput
-  } →
+  FuelMintParams →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mkMintFuelLookupAndConstraints
   sp
-  { amount
-  , recipient
-  , merkleProof
-  , sidechainParams
-  , index
-  , previousMerkleRoot
-  , dsUtxo
-  } =
+  ( FuelMintParams
+      { amount
+      , recipient
+      , merkleProof
+      , sidechainParams
+      , index
+      , previousMerkleRoot
+      , dsUtxo
+      }
+  ) =
   do
     ownPkh ← getOwnPaymentPubKeyHash
 

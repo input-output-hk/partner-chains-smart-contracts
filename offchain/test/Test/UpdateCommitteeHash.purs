@@ -33,6 +33,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
@@ -57,6 +58,7 @@ import TrustlessSidechain.Utils.Crypto
   , multiSign
   , toPubKeyUnsafe
   )
+import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
 
 -- | `generateUchmSignatures` generates the public keys and corresponding
 -- | signatures of the current committee for the new committee given.
@@ -267,6 +269,10 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
         , sidechainEpoch: BigInt.fromInt 1
         }
 
+      void
+        $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
+        >>= submitAndAwaitTx
+
 -- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
 -- | but should fail because there isn't enough committee members signing the update
 -- | off.
@@ -421,6 +427,10 @@ testScenario3 =
           , sidechainEpoch: BigInt.fromInt 2
           }
 
+        void
+          $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
+          >>= submitAndAwaitTx
+
 -- | `testScenario4` is given in #277
 testScenario4 ∷ PlutipTest
 testScenario4 =
@@ -508,6 +518,10 @@ testScenario4 =
               -- signatures
               }
 
+        void
+          $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
+          >>= submitAndAwaitTx
+
 -- | `testScenario5` is essentially `testScenario2` but updates the committee
 -- | with exactly the required signatures instead.
 testScenario5 ∷ PlutipTest
@@ -576,3 +590,7 @@ testScenario5 =
                                 ]
                           )
                     }
+
+        void
+          $ GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams
+          >>= submitAndAwaitTx

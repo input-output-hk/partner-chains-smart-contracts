@@ -1,7 +1,8 @@
 module TrustlessSidechain.FUELBurningPolicy.V2
-  ( FuelBurnParams(..)
+  ( FuelBurnParams(FuelBurnParams)
   , getFuelBurningPolicy
   , mkBurnFuelLookupAndConstraints
+  , dummyTokenName
   ) where
 
 import Contract.Prelude
@@ -41,16 +42,17 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 
--- | `FuelBurnParams` is the data for the FUEL mint endpoint.
-data FuelBurnParams = FuelBurnParams
-  { amount ∷ BigInt
-  }
-
 dummyTokenName ∷ TokenName
 dummyTokenName =
   Unsafe.unsafePartial $ Maybe.fromJust
     $ Value.mkTokenName
     =<< byteArrayFromAscii "Dummy tokens"
+
+-- | `FuelBurnParams` is the data needed to mint FUELBurningToken
+data FuelBurnParams = FuelBurnParams
+  { amount ∷ BigInt
+  , sidechainParams ∷ SidechainParams
+  }
 
 -- | Get the DummyBurningPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
@@ -72,13 +74,12 @@ getFuelBurningPolicy sidechainParams = do
   pure { fuelBurningPolicy, fuelBurningCurrencySymbol }
 
 mkBurnFuelLookupAndConstraints ∷
-  SidechainParams →
-  { amount ∷ BigInt } →
+  FuelBurnParams →
   Contract
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mkBurnFuelLookupAndConstraints sidechainParams { amount } = do
+mkBurnFuelLookupAndConstraints (FuelBurnParams { sidechainParams, amount }) = do
   { fuelBurningPolicy } ← getFuelBurningPolicy sidechainParams
 
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo

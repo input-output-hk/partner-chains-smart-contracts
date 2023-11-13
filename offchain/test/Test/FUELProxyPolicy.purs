@@ -24,14 +24,11 @@ import Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
-import TrustlessSidechain.FUELBurningPolicy.V1 as Burn.V1
-import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy
-  ( FuelBurnParams(..)
-  , FuelMintParams(..)
+  ( FuelMintParams(..)
   , mkFuelProxyBurnLookupsAndConstraints
   , mkFuelProxyMintLookupsAndConstraints
   )
@@ -163,25 +160,24 @@ testScenarioSuccess =
 
         -- Burn 10 fuel tokens using FUEL policy v1
         void
-          $ mkFuelProxyBurnLookupsAndConstraints sidechainParams
-              ( FuelBurnParamsV1 $ Burn.V1.FuelBurnParams
-                  { amount: BigInt.fromInt 10
-                  , recipient: hexToByteArrayUnsafe "aabbcc"
-                  , sidechainParams
-                  }
-              )
+          $ mkFuelProxyBurnLookupsAndConstraints
+              { amount: BigInt.fromInt 10
+              , recipient: hexToByteArrayUnsafe "aabbcc"
+              , sidechainParams
+              , version: BigInt.fromInt 1
+              }
+
           >>=
             submitAndAwaitTx
 
         -- Burn 2 fuel tokens using FUEL policy v2
         void
-          $ mkFuelProxyBurnLookupsAndConstraints sidechainParams
-              ( FuelBurnParamsV2
-                  { recipient: hexToByteArrayUnsafe "aabbcc"
-                  , fuelBurnParams:
-                      Burn.V2.FuelBurnParams { amount: BigInt.fromInt 2 }
-                  }
-              )
+          $ mkFuelProxyBurnLookupsAndConstraints
+              { amount: BigInt.fromInt 2
+              , recipient: hexToByteArrayUnsafe "aabbcc"
+              , sidechainParams
+              , version: BigInt.fromInt 2
+              }
           >>=
             submitAndAwaitTx
 
@@ -279,14 +275,12 @@ testScenarioFailure =
           -- Attempt to burn fuel using invalidated version 1 policy.  Should
           -- fail.
           void
-            $ mkFuelProxyBurnLookupsAndConstraints sidechainParams
-                ( FuelBurnParamsV1 $ Burn.V1.FuelBurnParams
-                    { amount: BigInt.fromInt 5
-                    , recipient: hexToByteArrayUnsafe "aabbcc"
-                    , sidechainParams
-                    }
-
-                )
+            $ mkFuelProxyBurnLookupsAndConstraints
+                { amount: BigInt.fromInt 5
+                , recipient: hexToByteArrayUnsafe "aabbcc"
+                , sidechainParams
+                , version: BigInt.fromInt 1
+                }
             >>=
               submitAndAwaitTx
           # fails

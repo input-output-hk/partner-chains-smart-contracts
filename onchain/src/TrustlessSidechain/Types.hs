@@ -580,10 +580,16 @@ instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
 
  @since Unreleased
 -}
-data FUELMintingRedeemer = FUELMintingRedeemer MerkleTreeEntry MerkleProof
+data FUELMintingRedeemer
+  = FUELMintingRedeemer MerkleTreeEntry MerkleProof
+  | FUELBurningRedeemer
 
 -- | @since Unreleased
-PlutusTx.makeIsDataIndexed ''FUELMintingRedeemer [('FUELMintingRedeemer, 0)]
+PlutusTx.makeIsDataIndexed
+  ''FUELMintingRedeemer
+  [ ('FUELMintingRedeemer, 0)
+  , ('FUELBurningRedeemer, 1)
+  ]
 
 -- * Update Committee Hash data
 
@@ -936,6 +942,17 @@ data ATMSPlainMultisignature = ATMSPlainMultisignature
     )
 
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
+
+{- | 'ATMSReddemer' allows for either minting or burning
+ @since unreleased
+-}
+data ATMSRedeemer
+  = -- | @since Unreleased
+    ATMSMint ATMSPlainMultisignature
+  | -- | @since Unreleased
+    ATMSBurn
+
+PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
 
 {- | The Redeemer that is passed to the on-chain validator to update the
  checkpoint

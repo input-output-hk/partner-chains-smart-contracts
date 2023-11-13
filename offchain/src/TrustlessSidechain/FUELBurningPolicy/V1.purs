@@ -1,5 +1,6 @@
 module TrustlessSidechain.FUELBurningPolicy.V1
   ( FuelBurnParams(..)
+  , fuelTokenName
   , getFuelBurningPolicy
   , mkBurnFuelLookupAndConstraints
   ) where
@@ -8,7 +9,7 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
@@ -67,30 +68,26 @@ getFuelBurningPolicy sidechainParams = do
     , fuelBurningCurrencySymbol
     }
 
--- | `FuelBurnParams` is the data for the FUEL burn endpoint.
+-- | `FuelBurnParams` is the data needed to mint FUELBurningToken
 data FuelBurnParams = FuelBurnParams
   { amount ∷ BigInt
-  , recipient ∷ ByteArray
   , sidechainParams ∷ SidechainParams
   }
 
 -- | Burn FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
 mkBurnFuelLookupAndConstraints ∷
-  SidechainParams →
-  { amount ∷ BigInt
-  , recipient ∷ ByteArray
-  , sidechainParams ∷ SidechainParams
-  } →
+  FuelBurnParams →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-mkBurnFuelLookupAndConstraints sp { amount, sidechainParams } = do
+mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
     sidechainParams
     ( VersionOracle
         { version: BigInt.fromInt 1, scriptId: FUELBurningPolicy }
     )
-  { fuelBurningPolicy: fuelBurningPolicy' } ← getFuelBurningPolicy sp
+  { fuelBurningPolicy: fuelBurningPolicy' } ← getFuelBurningPolicy
+    sidechainParams
 
   pure
     { lookups: mempty

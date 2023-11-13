@@ -1,6 +1,5 @@
 module TrustlessSidechain.FUELProxyPolicy
   ( FuelMintParams(..)
-  , FuelBurnParams(..)
   , getFuelProxyMintingPolicy
   , mkFuelProxyMintLookupsAndConstraints
   , mkFuelProxyBurnLookupsAndConstraints
@@ -105,9 +104,9 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
   -- Note that this is the place that ties version number to concrete scripts.
   { lookups: fuelLookups, constraints: fuelConstraints } ←
     case fmp of
-      FuelMintParamsV1 (Mint.V1.FuelMintParams fp) →
+      FuelMintParamsV1 fp →
         Mint.V1.mkMintFuelLookupAndConstraints sidechainParams fp
-      FuelMintParamsV2 (Mint.V2.FuelMintParams fp) →
+      FuelMintParamsV2 fp →
         Mint.V2.mkMintFuelLookupAndConstraints sidechainParams fp
   let
     (version /\ amount) =
@@ -133,40 +132,32 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
           (Value.singleton fuelProxyCurrencySymbol fuelProxyTokenName amount)
   pure { lookups, constraints }
 
-data FuelBurnParams
-  = FuelBurnParamsV1 Burn.V1.FuelBurnParams
-  | FuelBurnParamsV2
-      { recipient ∷ ByteArray
-      , fuelBurnParams ∷ Burn.V2.FuelBurnParams
-      }
-
 -- | Build lookups and constraints for minting a given amount of proxy fuel.
 -- | This includes building constraints for a versioned minting policy.
 mkFuelProxyBurnLookupsAndConstraints ∷
-  SidechainParams →
-  FuelBurnParams →
+  { sidechainParams ∷ SidechainParams
+  , amount ∷ BigInt
+  , recipient ∷ ByteArray
+  , version ∷ BigInt
+  } →
   Contract
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
-mkFuelProxyBurnLookupsAndConstraints sidechainParams fmp = do
+mkFuelProxyBurnLookupsAndConstraints
+  { sidechainParams, amount, recipient, version } = do
   -- Delegate building of lookups and constraints to a versioned burning policy.
   -- Note that this is the place that ties version number to concrete scripts.
   { lookups: fuelLookups, constraints: fuelConstraints } ←
-    case fmp of
-      FuelBurnParamsV1 (Burn.V1.FuelBurnParams fp) →
-        Burn.V1.mkBurnFuelLookupAndConstraints sidechainParams fp
-      FuelBurnParamsV2 { fuelBurnParams: Burn.V2.FuelBurnParams fp } →
-        Burn.V2.mkBurnFuelLookupAndConstraints sidechainParams fp
-
-  let
-    (version /\ amount /\ recipient) =
-      case fmp of
-        FuelBurnParamsV1 (Burn.V1.FuelBurnParams { amount, recipient }) →
-          (BigInt.fromInt 1 /\ amount /\ recipient)
-        FuelBurnParamsV2
-          { recipient
-          , fuelBurnParams: Burn.V2.FuelBurnParams { amount }
-          } →
-          (BigInt.fromInt 2 /\ amount /\ recipient)
+    let
+      result -- BigInt cannot be pattern matched
+        | version == BigInt.fromInt 1 =
+            Burn.V1.mkBurnFuelLookupAndConstraints
+              (Burn.V1.FuelBurnParams { sidechainParams, amount })
+        | version == BigInt.fromInt 2 =
+            Burn.V2.mkBurnFuelLookupAndConstraints
+              (Burn.V2.FuelBurnParams { sidechainParams, amount })
+        | otherwise = pure { lookups: mempty, constraints: mempty }
+    in
+      result
 
   { fuelProxyPolicy, fuelProxyCurrencySymbol } ←
     getFuelProxyMintingPolicy sidechainParams
