@@ -5,7 +5,6 @@ import Test.TrustlessSidechain.MerkleProofSerialisation qualified as MerkleProof
 import Test.TrustlessSidechain.MerkleTree qualified as MerkleTree
 import Test.TrustlessSidechain.MultiSig qualified as MultiSig
 import Test.TrustlessSidechain.Types qualified as Types
-import Test.TrustlessSidechain.UpdateCommitteeHashMessage qualified as UpdateCommitteeHashMessage
 import TrustlessSidechain.HaskellPrelude
 
 -- | @since 0.1
@@ -27,5 +26,4 @@ tests =
     , MerkleProofSerialisation.testRootHash
     , MerkleProofSerialisation.testUp
     , MerkleProofSerialisation.testCombinedMerkleProof
-    , UpdateCommitteeHashMessage.test
     ]

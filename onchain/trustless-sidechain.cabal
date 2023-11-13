@@ -242,7 +242,6 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
     Test.TrustlessSidechain.Types
-    Test.TrustlessSidechain.UpdateCommitteeHashMessage
 
   build-depends:
     , base16-bytestring

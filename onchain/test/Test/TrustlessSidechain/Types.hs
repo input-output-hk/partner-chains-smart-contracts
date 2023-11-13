@@ -20,6 +20,11 @@ import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), RootHash (RootH
 import TrustlessSidechain.OffChain (showBuiltinBS)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
+  ATMSPlainMultisignature (
+    ATMSPlainMultisignature,
+    plainPublicKeys,
+    plainSignatures
+  ),
   BlockProducerRegistration (
     BlockProducerRegistration,
     inputUtxo,
@@ -68,6 +73,24 @@ import TrustlessSidechain.Types (
     merkleProof,
     transaction
   ),
+  CommitteeCertificateMint (
+    CommitteeCertificateMint,
+    thresholdDenominator,
+    thresholdNumerator
+  ),
+  DParameterPolicyRedeemer (
+    DParameterBurn,
+    DParameterMint
+  ),
+  DParameterValidatorDatum (
+    DParameterValidatorDatum,
+    permissionedCandidatesCount,
+    registeredCandidatesCount
+  ),
+  DParameterValidatorRedeemer (
+    RemoveDParameter,
+    UpdateDParameter
+  ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
@@ -81,6 +104,25 @@ import TrustlessSidechain.Types (
     index,
     previousMerkleRoot,
     recipient
+  ),
+  PermissionedCandidateKeys (
+    PermissionedCandidateKeys,
+    authorityDiscoveryKey,
+    grandpaKey,
+    mainchainKey,
+    sidechainKey
+  ),
+  PermissionedCandidatesPolicyRedeemer (
+    PermissionedCandidatesBurn,
+    PermissionedCandidatesMint
+  ),
+  PermissionedCandidatesValidatorDatum (
+    PermissionedCandidatesValidatorDatum,
+    candidates
+  ),
+  PermissionedCandidatesValidatorRedeemer (
+    RemovePermissionedCandidates,
+    UpdatePermissionedCandidates
   ),
   SidechainParams (
     SidechainParams,
@@ -122,8 +164,6 @@ import TrustlessSidechain.Types (
   ),
  )
 
--- import Plutus.V2.Ledger.Api (LedgerBytes)
-
 {- | Tests for all data types with @IsData@ implementation
  Some of the data types are only checked transitively (included by some other type)
 
@@ -138,18 +178,37 @@ tests =
     , dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
     , dataEncoderGoldenTest "BlockProducerRegistration2" sampleBlockProducerRegistration2
     , dataEncoderGoldenTest "BlockProducerRegistrationMsg" sampleBlockProducerRegistrationMsg
-    , dataEncoderGoldenTest "MerkleTreeEntry" sampleMerkleTreeEntry
-    , dataEncoderGoldenTest "MerkleRootInsertionMessage" sampleMerkleRootInsertionMessage
-    , dataEncoderGoldenTest "SignedMerkleRootRedeemer" sampleSignedMerkleRootRedeemer
-    , dataEncoderGoldenTest "CombinedMerkleProof" sampleCombinedMerkleProof
+    , dataEncoderGoldenTest "MerkleTreeEntry1" sampleMerkleTreeEntry1
+    , dataEncoderGoldenTest "MerkleTreeEntry2" sampleMerkleTreeEntry2
+    , dataEncoderGoldenTest "MerkleRootInsertionMessage1" sampleMerkleRootInsertionMessage1
+    , dataEncoderGoldenTest "MerkleRootInsertionMessage2" sampleMerkleRootInsertionMessage2
+    , dataEncoderGoldenTest "SignedMerkleRootRedeemer1" sampleSignedMerkleRootRedeemer1
+    , dataEncoderGoldenTest "SignedMerkleRootRedeemer2" sampleSignedMerkleRootRedeemer2
+    , dataEncoderGoldenTest "CombinedMerkleProof1" sampleCombinedMerkleProof1
+    , dataEncoderGoldenTest "CombinedMerkleProof2" sampleCombinedMerkleProof2
     , dataEncoderGoldenTest "UpdateCommitteeDatum" sampleUpdateCommitteeDatum
-    , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer" sampleUpdateCommitteeHashRedeemer
+    , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer1" sampleUpdateCommitteeHashRedeemer1
+    , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer2" sampleUpdateCommitteeHashRedeemer2
     , dataEncoderGoldenTest "UpdateCommitteeHash" sampleUpdateCommitteeHash
-    , dataEncoderGoldenTest "UpdateCommitteeHashMessage" sampleUpdateCommitteeHashMessage
+    , dataEncoderGoldenTest "UpdateCommitteeHashMessage1" sampleUpdateCommitteeHashMessage1
+    , dataEncoderGoldenTest "UpdateCommitteeHashMessage2" sampleUpdateCommitteeHashMessage2
     , dataEncoderGoldenTest "CheckpointDatum" sampleCheckpointDatum
     , dataEncoderGoldenTest "CheckpointRedeemer" sampleCheckpointRedeemer
     , dataEncoderGoldenTest "CheckpointParameter" sampleCheckpointParameter
     , dataEncoderGoldenTest "CheckpointMessage" sampleCheckpointMessage
+    , dataEncoderGoldenTest "CommitteeCertificateMint" sampleCommitteeCertificateMint
+    , dataEncoderGoldenTest "ATMSPlainMultisignature" sampleATMSPlainMultisignature
+    , dataEncoderGoldenTest "DParameterPolicyRedeemer1" sampleDParameterPolicyRedeemer1
+    , dataEncoderGoldenTest "DParameterPolicyRedeemer2" sampleDParameterPolicyRedeemer2
+    , dataEncoderGoldenTest "DParameterValidatorDatum" sampleDParameterValidatorDatum
+    , dataEncoderGoldenTest "DParameterValidatorRedeemer1" sampleDParameterValidatorRedeemer1
+    , dataEncoderGoldenTest "DParameterValidatorRedeemer2" sampleDParameterValidatorRedeemer2
+    , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer1" samplePermissionedCandidatesPolicyRedeemer1
+    , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer2" samplePermissionedCandidatesPolicyRedeemer2
+    , dataEncoderGoldenTest "PermissionedCandidateKeys" samplePermissionedCandidateKeys
+    , dataEncoderGoldenTest "PermissionedCandidatesValidatorDatum" samplePermissionedCandidatesValidatorDatum
+    , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer1" samplePermissionedCandidatesValidatorRedeemer1
+    , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer2" samplePermissionedCandidatesValidatorRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -172,13 +231,6 @@ sampleCommitteePubKeys' =
   , EcdsaSecp256k1PubKey "0241ea46a78aef957c814f8aa5f64355ac8c3b59318d4eb3f2aacafcf724995513"
   , EcdsaSecp256k1PubKey "0253e0839b05b420879089621b60f4a9618e877a90f624a2d8c8e8afa17c8be624"
   ]
-
--- sampleCommitteeSignatures :: [LedgerBytes]
--- sampleCommitteeSignatures =
---   [ "6fd0dd049dc90ebf5d52450e03bcd833ab53352f50bc15c7c2c1236b6aa78ff54fef9979d470bffb79ef949abc075bfb456fea4665f9b722d371f3301e05fd65"
---   , "7026f80d62c4bdaa303bf94892fecb27a20a407209a9d321c3f34b82e73ab1fa3d12b627c8d44d9a2c1674e38e68d389e61a2a867f61074e64c9d7d37aaacd7e"
---   , "44cf123d63075abf1cd1141b65a16f6f8e3f49c21f3c09661e0ed2a633f34f165fe982513ce82b51f4161c792877d0333b27cea6b413917f18738155988d18e3"
---   ]
 
 sampleMerkleProof :: MerkleProof
 sampleMerkleProof =
@@ -261,8 +313,8 @@ sampleBlockProducerRegistrationMsg =
     , inputUtxo = sampleTxOutRef
     }
 
-sampleMerkleTreeEntry :: MerkleTreeEntry
-sampleMerkleTreeEntry =
+sampleMerkleTreeEntry1 :: MerkleTreeEntry
+sampleMerkleTreeEntry1 =
   MerkleTreeEntry
     { index = 7599851
     , amount = 8887194232705394223
@@ -270,32 +322,56 @@ sampleMerkleTreeEntry =
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     }
 
-sampleMerkleRootInsertionMessage :: MerkleRootInsertionMessage
-sampleMerkleRootInsertionMessage =
+sampleMerkleTreeEntry2 :: MerkleTreeEntry
+sampleMerkleTreeEntry2 =
+  MerkleTreeEntry
+    { index = 7599851
+    , amount = 8887194232705394223
+    , recipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+    , previousMerkleRoot = Nothing
+    }
+
+sampleMerkleRootInsertionMessage1 :: MerkleRootInsertionMessage
+sampleMerkleRootInsertionMessage1 =
   MerkleRootInsertionMessage
     { sidechainParams = sampleSidechainParams
     , merkleRoot = "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     , previousMerkleRoot = Nothing
     }
 
-sampleSignedMerkleRootRedeemer :: SignedMerkleRootRedeemer
-sampleSignedMerkleRootRedeemer =
+sampleMerkleRootInsertionMessage2 :: MerkleRootInsertionMessage
+sampleMerkleRootInsertionMessage2 =
+  MerkleRootInsertionMessage
+    { sidechainParams = sampleSidechainParams
+    , merkleRoot = "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    }
+
+sampleSignedMerkleRootRedeemer1 :: SignedMerkleRootRedeemer
+sampleSignedMerkleRootRedeemer1 =
   SignedMerkleRootRedeemer
     { previousMerkleRoot = Nothing
     }
 
-sampleCombinedMerkleProof :: CombinedMerkleProof
-sampleCombinedMerkleProof =
+sampleSignedMerkleRootRedeemer2 :: SignedMerkleRootRedeemer
+sampleSignedMerkleRootRedeemer2 =
+  SignedMerkleRootRedeemer
+    { previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    }
+
+sampleCombinedMerkleProof1 :: CombinedMerkleProof
+sampleCombinedMerkleProof1 =
   CombinedMerkleProof
-    { transaction = sampleMerkleTreeEntry
+    { transaction = sampleMerkleTreeEntry1
     , merkleProof = sampleMerkleProof
     }
 
-{-
-sampleFUELReedemer2 :: FUELRedeemer
-sampleFUELReedemer2 =
-  SideToMain sampleMerkleTreeEntry sampleMerkleProof
--}
+sampleCombinedMerkleProof2 :: CombinedMerkleProof
+sampleCombinedMerkleProof2 =
+  CombinedMerkleProof
+    { transaction = sampleMerkleTreeEntry2
+    , merkleProof = sampleMerkleProof
+    }
 
 sampleUpdateCommitteeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
 sampleUpdateCommitteeDatum =
@@ -304,10 +380,16 @@ sampleUpdateCommitteeDatum =
     , sidechainEpoch = 12
     }
 
-sampleUpdateCommitteeHashRedeemer :: UpdateCommitteeHashRedeemer
-sampleUpdateCommitteeHashRedeemer =
+sampleUpdateCommitteeHashRedeemer1 :: UpdateCommitteeHashRedeemer
+sampleUpdateCommitteeHashRedeemer1 =
   UpdateCommitteeHashRedeemer
     { previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    }
+
+sampleUpdateCommitteeHashRedeemer2 :: UpdateCommitteeHashRedeemer
+sampleUpdateCommitteeHashRedeemer2 =
+  UpdateCommitteeHashRedeemer
+    { previousMerkleRoot = Nothing
     }
 
 sampleUpdateCommitteeHash :: UpdateCommitteeHash
@@ -319,12 +401,22 @@ sampleUpdateCommitteeHash =
     , mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
-sampleUpdateCommitteeHashMessage :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
-sampleUpdateCommitteeHashMessage =
+sampleUpdateCommitteeHashMessage1 :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
+sampleUpdateCommitteeHashMessage1 =
   UpdateCommitteeHashMessage
     { sidechainParams = sampleSidechainParams
     , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
+    , sidechainEpoch = 12
+    , validatorHash = ValidatorHash "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    }
+
+sampleUpdateCommitteeHashMessage2 :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
+sampleUpdateCommitteeHashMessage2 =
+  UpdateCommitteeHashMessage
+    { sidechainParams = sampleSidechainParams
+    , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
+    , previousMerkleRoot = Nothing
     , sidechainEpoch = 12
     , validatorHash = ValidatorHash "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
@@ -360,6 +452,77 @@ sampleCheckpointMessage =
     , blockNumber = 863548
     , sidechainEpoch = 15791
     }
+
+sampleCommitteeCertificateMint :: CommitteeCertificateMint
+sampleCommitteeCertificateMint =
+  CommitteeCertificateMint
+    { thresholdNumerator = 21
+    , thresholdDenominator = 37
+    }
+
+sampleATMSPlainMultisignature :: ATMSPlainMultisignature
+sampleATMSPlainMultisignature =
+  ATMSPlainMultisignature
+    { plainPublicKeys =
+        [ "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
+        , "03e19ca8508c2bc8fc46872086bab3c0c91d65862525577034d25564c212d76ab3"
+        , "03cd0ea1b6652948b4a9c4551101981330feaea6a23e0698ad0b9d0adf05d4a260"
+        ]
+    , plainSignatures =
+        [ "6fd0dd049dc90ebf5d52450e03bcd833ab53352f50bc15c7c2c1236b6aa78ff54fef9979d470bffb79ef949abc075bfb456fea4665f9b722d371f3301e05fd65"
+        , "7026f80d62c4bdaa303bf94892fecb27a20a407209a9d321c3f34b82e73ab1fa3d12b627c8d44d9a2c1674e38e68d389e61a2a867f61074e64c9d7d37aaacd7e"
+        , "44cf123d63075abf1cd1141b65a16f6f8e3f49c21f3c09661e0ed2a633f34f165fe982513ce82b51f4161c792877d0333b27cea6b413917f18738155988d18e3"
+        ]
+    }
+
+sampleDParameterPolicyRedeemer1 :: DParameterPolicyRedeemer
+sampleDParameterPolicyRedeemer1 = DParameterMint
+
+sampleDParameterPolicyRedeemer2 :: DParameterPolicyRedeemer
+sampleDParameterPolicyRedeemer2 = DParameterBurn
+
+sampleDParameterValidatorDatum :: DParameterValidatorDatum
+sampleDParameterValidatorDatum =
+  DParameterValidatorDatum
+    { permissionedCandidatesCount = 17
+    , registeredCandidatesCount = 42
+    }
+
+sampleDParameterValidatorRedeemer1 :: DParameterValidatorRedeemer
+sampleDParameterValidatorRedeemer1 = UpdateDParameter
+
+sampleDParameterValidatorRedeemer2 :: DParameterValidatorRedeemer
+sampleDParameterValidatorRedeemer2 = RemoveDParameter
+
+samplePermissionedCandidatesPolicyRedeemer1 :: PermissionedCandidatesPolicyRedeemer
+samplePermissionedCandidatesPolicyRedeemer1 = PermissionedCandidatesMint
+
+samplePermissionedCandidatesPolicyRedeemer2 :: PermissionedCandidatesPolicyRedeemer
+samplePermissionedCandidatesPolicyRedeemer2 = PermissionedCandidatesBurn
+
+samplePermissionedCandidateKeys :: PermissionedCandidateKeys
+samplePermissionedCandidateKeys =
+  PermissionedCandidateKeys
+    { mainchainKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+    , sidechainKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    , authorityDiscoveryKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+    , grandpaKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+    }
+
+samplePermissionedCandidatesValidatorDatum :: PermissionedCandidatesValidatorDatum
+samplePermissionedCandidatesValidatorDatum =
+  PermissionedCandidatesValidatorDatum
+    { candidates =
+        [ samplePermissionedCandidateKeys
+        , samplePermissionedCandidateKeys
+        ]
+    }
+
+samplePermissionedCandidatesValidatorRedeemer1 :: PermissionedCandidatesValidatorRedeemer
+samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
+
+samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
+samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
 
 {- | Creating a test group with two golden tests:
  - encoding data using `toBuiltinData`
