@@ -6,7 +6,7 @@ module TrustlessSidechain.DParameter
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
@@ -298,6 +298,10 @@ mkUpdateDParameterLookupsAndConstraints
              ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
           )
       $ Map.values dParameterUTxOs
+
+  when (dParameterTokenAmount <= BigInt.fromInt 0) $
+    throwContractError
+      "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
 
   (dParameterPolicyRefTxInput /\ dParameterPolicyRefTxOutput) ←
     Versioning.getVersionedScriptRefUtxo

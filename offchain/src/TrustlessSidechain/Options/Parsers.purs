@@ -1,37 +1,39 @@
 module TrustlessSidechain.Options.Parsers
-  ( parsePubKeyAndSignature
-  , transactionInput
-  , atmsKind
-  , parseATMSKind
-  , pubKeyHash
-  , governanceAuthority
-  , combinedMerkleProofParser
-  , committeeSignature
-  , plutusDataParser
-  , parsePubKeyBytesAndSignatureBytes
-  , pubKeyBytesAndSignatureBytes
-  , sidechainSignature
-  , ecdsaSecp256k1PublicKey
-  , schnorrSecp256k1PrivateKey
+  ( atmsKind
   , bech32AddressParser
-  , bech32ValidatorHashParser
-  , validatorHashParser
   , bech32BytesParser
-  , ecdsaSecp256k1PrivateKey
-  , sidechainAddress
-  , combinedMerkleProofParserWithPkh
-  , parseTokenName
-  , tokenName
-  , uint
+  , bech32ValidatorHashParser
   , bigInt
+  , blockHash
   , byteArray
   , cborEncodedAddressParser
-  , rootHash
-  , numerator
+  , combinedMerkleProofParser
+  , combinedMerkleProofParserWithPkh
+  , committeeSignature
   , denominator
+  , ecdsaSecp256k1PrivateKey
+  , ecdsaSecp256k1PublicKey
   , epoch
-  , blockHash
+  , governanceAuthority
+  , numerator
+  , parseATMSKind
+  , parsePubKeyAndSignature
+  , parsePubKeyBytesAndSignatureBytes
+  , parseTokenName
   , permissionedCandidateKeys
+  , permissionedCandidatesCount
+  , plutusDataParser
+  , pubKeyBytesAndSignatureBytes
+  , pubKeyHash
+  , registeredCandidatesCount
+  , rootHash
+  , schnorrSecp256k1PrivateKey
+  , sidechainAddress
+  , sidechainSignature
+  , tokenName
+  , transactionInput
+  , uint
+  , validatorHashParser
   ) where
 
 import Contract.Prelude
@@ -273,6 +275,26 @@ cbor = cborBytesFromByteArray <$> byteArray
 -- | Parse BigInt
 bigInt ∷ ReadM BigInt
 bigInt = maybeReader BigInt.fromString
+
+-- | Parse a permissioned candidates count
+permissionedCandidatesCount ∷ ReadM BigInt
+permissionedCandidatesCount = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "permissioned-candidates-count must be non-negative"
+      Nothing → Left "failed to parse int permissioned-candidates-count"
+  )
+
+-- | Parse a registered candidates count
+registeredCandidatesCount ∷ ReadM BigInt
+registeredCandidatesCount = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "registered-candidates-count must be non-negative"
+      Nothing → Left "failed to parse int registered-candidates-count"
+  )
 
 -- | Parse a numerator in the threshold.
 numerator ∷ ReadM BigInt

@@ -1094,7 +1094,7 @@ invalidateVersionSpec = ado
 parseDParameterPermissionedCandidatesCount ∷ Parser BigInt
 parseDParameterPermissionedCandidatesCount =
   option
-    Parsers.numerator
+    Parsers.permissionedCandidatesCount
     ( fold
         [ long "d-parameter-permissioned-candidates-count"
         , metavar "INT"
@@ -1105,7 +1105,7 @@ parseDParameterPermissionedCandidatesCount =
 parseDParameterRegisteredCandidatesCount ∷ Parser BigInt
 parseDParameterRegisteredCandidatesCount =
   option
-    Parsers.denominator
+    Parsers.registeredCandidatesCount
     ( fold
         [ long "d-parameter-registered-candidates-count"
         , metavar "INT"

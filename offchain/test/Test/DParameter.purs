@@ -39,7 +39,8 @@ tests ∷ WrappedTests
 tests = plutipGroup "Minting, and burning a DParameter Token" $
   do
     testScenarioSuccess
-    testScenarioFailure
+    testScenarioFailure1
+    testScenarioFailure2
 
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
@@ -102,8 +103,8 @@ testScenarioSuccess =
                   submitAndAwaitTx
             )
 
-testScenarioFailure ∷ PlutipTest
-testScenarioFailure =
+testScenarioFailure1 ∷ PlutipTest
+testScenarioFailure1 =
   Mote.Monad.test
     "Minting and removing twice a DParameter Token. (this should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
@@ -157,6 +158,69 @@ testScenarioFailure =
             $
               ( DParameter.mkRemoveDParameterLookupsAndConstraints
                   sidechainParams
+                  >>=
+                    submitAndAwaitTx
+              )
+        ) # fails
+
+testScenarioFailure2 ∷ PlutipTest
+testScenarioFailure2 =
+  Mote.Monad.test
+    "Minting, removing and updating a DParameter Token. (this should fail)"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+
+        pkh ← getOwnPaymentPubKeyHash
+        genesisUtxo ← getOwnTransactionInput
+        let
+          keyCount = 25
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: toData $ aggregateKeys
+                $ map unwrap initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            }
+
+        { sidechainParams } ← initSidechain initScParams 1
+
+        void
+          $
+            ( DParameter.mkInsertDParameterLookupsAndConstraints
+                sidechainParams
+                { permissionedCandidatesCount: BigInt.fromInt 2
+                , registeredCandidatesCount: BigInt.fromInt 3
+                }
+                >>=
+                  submitAndAwaitTx
+            )
+
+        void
+          $
+            ( DParameter.mkRemoveDParameterLookupsAndConstraints
+                sidechainParams
+                >>=
+                  submitAndAwaitTx
+            )
+
+        ( void
+            $
+              ( DParameter.mkUpdateDParameterLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesCount: BigInt.fromInt 1
+                  , registeredCandidatesCount: BigInt.fromInt 0
+                  }
                   >>=
                     submitAndAwaitTx
               )
