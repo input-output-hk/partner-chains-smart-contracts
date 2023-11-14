@@ -6,7 +6,7 @@ module TrustlessSidechain.PermissionedCandidates
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
@@ -335,6 +335,10 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
               permissionedCandidatesTokenName
           )
       $ Map.values permissionedCandidatesUTxOs
+
+  when (permissionedCandidatesTokenAmount <= BigInt.fromInt 0) $
+    throwContractError
+      "No previous PermissionedCandidates tokens were found. Please insert a new PermissionedCandidates before trying to update."
 
   ( permissionedCandidatesPolicyRefTxInput /\
       permissionedCandidatesPolicyRefTxOutput
