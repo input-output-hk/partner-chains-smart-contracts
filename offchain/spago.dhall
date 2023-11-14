@@ -12,6 +12,7 @@
   , "control"
   , "datetime"
   , "effect"
+  , "either"
   , "exceptions"
   , "foldable-traversable"
   , "foreign-object"

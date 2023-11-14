@@ -61,6 +61,7 @@ import Ctl.Internal.Serialization.Hash
 import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Either as Either
 import Data.String (Pattern(Pattern), split)
 import Data.UInt (UInt)
 import Data.UInt as UInt
@@ -413,11 +414,11 @@ permissionedCandidateKeys ∷
     , authorityDiscoveryKey ∷ ByteArray
     , grandpaKey ∷ ByteArray
     }
-permissionedCandidateKeys = maybeReader parsePermissionedCandidateKeys
+permissionedCandidateKeys = eitherReader parsePermissionedCandidateKeys
 
 parsePermissionedCandidateKeys ∷
   String →
-  Maybe
+  Either String
     { mainchainKey ∷ ByteArray
     , sidechainKey ∷ ByteArray
     , authorityDiscoveryKey ∷ ByteArray
@@ -426,17 +427,23 @@ parsePermissionedCandidateKeys ∷
 parsePermissionedCandidateKeys str =
   case split (Pattern ":") str of
     [ mainchainKey', sidechainKey', authorityDiscoveryKey', grandpaKey' ] → do
-      mainchainKey ← hexToByteArray mainchainKey'
-      sidechainKey ← hexToByteArray sidechainKey'
-      authorityDiscoveryKey ← hexToByteArray authorityDiscoveryKey'
-      grandpaKey ← hexToByteArray grandpaKey'
+      mainchainKey ← Either.note ("mainchainKey must be a valid hex string") $
+        hexToByteArray mainchainKey'
+      sidechainKey ← Either.note ("sidechainKey must be a valid hex string") $
+        hexToByteArray sidechainKey'
+      authorityDiscoveryKey ←
+        Either.note ("authorityDiscoveryKey must be a valid hex string") $
+          hexToByteArray authorityDiscoveryKey'
+      grandpaKey ← Either.note ("grandpaKey must be a valid hex string") $
+        hexToByteArray grandpaKey'
       pure $
         { mainchainKey
         , sidechainKey
         , authorityDiscoveryKey
         , grandpaKey
         }
-    _ → Nothing
+    _ → Left
+      "permissioned-candidate-keys must be a 4 hex strings concatenated with colons, for example: aa:bb:cc:dd"
 
 -- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for
 -- | converting hex encoded strings to token names
