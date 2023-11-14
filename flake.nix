@@ -275,6 +275,24 @@
           tar chf $out/${name}-${version}.tar main.js node_modules
         '';
       };
+    # Temporary means of getting docker image. Proper solution to be implemented in ETCM-5530.
+    # Usage:
+    # nix build .#dockerImage
+    # docker load < result
+    dockerImageFor = system: let
+      pkgs = nixpkgsFor system;
+      ctlMain = ctlMainFor system;
+    in
+      if system == "x86_64-linux"
+      then
+        pkgs.dockerTools.buildImage {
+          name = "sidechain-main-cli-docker";
+          config = {
+            Cmd = ["${ctlMain}/bin/sidechain-main-cli"];
+          };
+          contents = [ctlMain];
+        }
+      else null;
   in {
     project = perSystem hsProjectFor;
 
