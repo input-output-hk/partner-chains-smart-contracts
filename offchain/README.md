@@ -189,7 +189,9 @@ nix run .#sidechain-main-cli -- init \
 
 #### 3.1.2. Get script addresses of a sidechain
 
-Script addresses depend on the sidechain parameters, so we get different addresses for different parameters. To get the script addresses for a given sidechain, you can use the following command:
+Script addresses depend on the sidechain parameters, so we get different
+addresses for different parameters. To get the script addresses for a given
+sidechain, you can use the following command:
 
 ```
 nix run .#sidechain-main-cli -- addresses \
@@ -200,6 +202,7 @@ nix run .#sidechain-main-cli -- addresses \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
   --sidechain-genesis-hash 112233
+  --version 1
 ```
 
 #### 3.1.3. Claim FUEL tokens
