@@ -69,7 +69,7 @@ getPoCSchnorrSecp256k1MintingPolicy ∷
 getPoCSchnorrSecp256k1MintingPolicy = do
   mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams
     RawScripts.rawPoCSchnorr
-    (mempty ∷ Array Unit)
+    (mempty ∷ Array PlutusData)
   currencySymbol ← Monad.liftContractM "minting policy to currency symbol failed"
     $ Value.scriptCurrencySymbol mintingPolicy
   pure { mintingPolicy, currencySymbol }
