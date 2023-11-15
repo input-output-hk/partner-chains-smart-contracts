@@ -18,7 +18,6 @@ import Contract.Address
   )
 import Contract.Monad
   ( Contract
-  , liftContractE
   , liftContractM
   , throwContractError
   )
@@ -34,8 +33,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator(Validator), applyArgs, validatorHash)
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
+import Contract.Scripts (Validator, validatorHash)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -68,6 +66,9 @@ import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
   )
+import TrustlessSidechain.Utils.Scripts
+  ( mkValidatorWithParams
+  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 newtype RegisterParams = RegisterParams
@@ -86,13 +87,7 @@ newtype DeregisterParams = DeregisterParams
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
 getCommitteeCandidateValidator sp = do
-  let
-    script = decodeTextEnvelope rawCommitteeCandidateValidator >>=
-      plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM "Decoding text envelope failed." script
-  applied ← liftContractE $ applyArgs unapplied [ toData sp ]
-  pure $ Validator applied
+  mkValidatorWithParams rawCommitteeCandidateValidator [ toData sp ]
 
 data StakeOwnership
   = -- | Ada stake based configuration comprises the SPO public key and signature

@@ -6,7 +6,7 @@ module TrustlessSidechain.FUELMintingPolicy.V2
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractE, liftContractM)
+import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData
   ( Redeemer(Redeemer)
@@ -16,12 +16,8 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
 import Contract.Transaction (mkTxUnspentOut)
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
@@ -34,8 +30,11 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawDummyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELMintingPolicy)
   , VersionOracle(VersionOracle)
@@ -57,14 +56,8 @@ dummyTokenName =
 -- | minting policy.
 decodeDummyMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDummyMintingPolicy sidechainParams = do
-  let
-    script = decodeTextEnvelope RawScripts.rawDummyMintingPolicy >>=
-      plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM "Decoding text envelope failed." script
-  applied ← liftContractE $ Scripts.applyArgs unapplied
+  mkMintingPolicyWithParams rawDummyMintingPolicy
     [ toData sidechainParams ]
-  pure $ PlutusMintingPolicy applied
 
 getFuelMintingPolicy ∷
   SidechainParams →

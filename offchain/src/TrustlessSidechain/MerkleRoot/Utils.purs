@@ -23,16 +23,9 @@ import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData as PlutusData
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , Validator(Validator)
-  )
+import Contract.PlutusData (serializeData, toData)
+import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
 import Contract.Value as Value
@@ -41,38 +34,35 @@ import TrustlessSidechain.MerkleRoot.Types
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts
+  ( rawMerkleRootTokenMintingPolicy
+  , rawMerkleRootTokenValidator
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  , mkValidatorWithParams
+  )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
 -- | `RawScripts.rawMerkleRootTokenMintingPolicy`
 merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
-merkleRootTokenMintingPolicy sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawMerkleRootTokenMintingPolicy
-      >>= plutusScriptV2FromEnvelope
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp, PlutusData.toData versionOracleConfig ]
-  pure $ PlutusMintingPolicy applied
+merkleRootTokenMintingPolicy sidechainParams = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  mkMintingPolicyWithParams rawMerkleRootTokenMintingPolicy
+    [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
 -- | 'RawScripts.rawMerkleRootTokenValidator' paramaterized by `SidechainParams`.
 merkleRootTokenValidator ∷ SidechainParams → Contract Validator
-merkleRootTokenValidator sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawMerkleRootTokenValidator
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ Validator applied
+merkleRootTokenValidator sidechainParams = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  mkValidatorWithParams rawMerkleRootTokenValidator
+    [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `findMerkleRootTokenUtxo merkleRoot smrm` locates a utxo which
 -- |
@@ -144,4 +134,4 @@ serialiseMrimHash =
   Utils.Crypto.ecdsaSecp256k1Message
     <<< Hashing.blake2b256Hash
     <<< cborBytesToByteArray
-    <<< PlutusData.serializeData
+    <<< serializeData

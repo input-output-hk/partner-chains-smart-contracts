@@ -14,24 +14,21 @@ import Contract.PlutusData
   ( class ToData
   , toData
   )
-import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
-import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.Scripts (MintingPolicy)
 import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawCommitteeOraclePolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
+  )
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
   )
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
@@ -48,15 +45,8 @@ instance ToData InitCommitteeHashMint where
     toData icTxOutRef
 
 committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
-committeeOraclePolicy sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCommitteeOraclePolicy
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ PlutusMintingPolicy applied
+committeeOraclePolicy ichm =
+  mkMintingPolicyWithParams rawCommitteeOraclePolicy [ toData ichm ]
 
 -- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name

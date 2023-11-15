@@ -34,12 +34,8 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -65,7 +61,9 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts
+  ( rawCommitteePlainSchnorrSecp256k1ATMSPolicy
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
@@ -82,6 +80,9 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   , SchnorrSecp256k1Signature
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
@@ -118,17 +119,9 @@ committeePlainSchnorrSecp256k1ATMS ∷
   Contract MintingPolicy
 committeePlainSchnorrSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
   do
-    let
-      script =
-        decodeTextEnvelope
-          RawScripts.rawCommitteePlainSchnorrSecp256k1ATMSPolicy >>=
-          plutusScriptV2FromEnvelope
-
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-    unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-    applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    mkMintingPolicyWithParams rawCommitteePlainSchnorrSecp256k1ATMSPolicy
       [ toData committeeCertificateMint, toData versionOracleConfig ]
-    pure $ PlutusMintingPolicy applied
 
 -- | `getCommitteePlainSchnorrSecp256k1ATMSPolicy` grabs the committee plainSchnorrSecp256k1 ATMS currency
 -- | symbol and policy

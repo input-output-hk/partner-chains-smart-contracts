@@ -25,36 +25,30 @@ import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData (class ToData)
-import Contract.PlutusData as PlutusData
+import Contract.PlutusData (class ToData, serializeData, toData)
 import Contract.Scripts
-  ( Validator(Validator)
+  ( Validator
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawCommitteeHashValidator)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Scripts
+  ( mkValidatorWithParams
+  )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
-updateCommitteeHashValidator sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCommitteeHashValidator
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ Validator applied
+updateCommitteeHashValidator sidechainParams =
+  mkValidatorWithParams rawCommitteeHashValidator [ toData sidechainParams ]
 
 -- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
 -- | also returns the hash and address
@@ -88,7 +82,7 @@ serialiseUchmHash ∷
 serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
-  <<< PlutusData.serializeData
+  <<< serializeData
 
 -- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
 -- | identifies the committee hash.

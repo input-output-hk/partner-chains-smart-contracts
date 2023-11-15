@@ -30,9 +30,8 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -53,7 +52,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawCommitteePlainEcdsaSecp256k1ATMSPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
@@ -68,6 +67,9 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, InvalidData)
   , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types
@@ -105,16 +107,9 @@ committeePlainEcdsaSecp256k1ATMS ∷
   Contract MintingPolicy
 committeePlainEcdsaSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
   do
-    let
-      script =
-        decodeTextEnvelope
-          RawScripts.rawCommitteePlainEcdsaSecp256k1ATMSPolicy >>=
-          plutusScriptV2FromEnvelope
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-    unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-    applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
+    mkMintingPolicyWithParams rawCommitteePlainEcdsaSecp256k1ATMSPolicy
       [ toData committeeCertificateMint, toData versionOracleConfig ]
-    pure $ PlutusMintingPolicy applied
 
 -- | `getCommitteePlainEcdsaSecp256k1ATMSPolicy` grabs the committee plainEcdsaSecp256k1 ATMS currency
 -- | symbol and policy

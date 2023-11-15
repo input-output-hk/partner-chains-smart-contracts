@@ -24,8 +24,7 @@ mkValidatorWithParams ∷
   Contract Validator
 mkValidatorWithParams hexScript params = do
   let
-    script = decodeTextEnvelope hexScript
-      >>= plutusScriptV2FromEnvelope
+    script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
 
   unapplied ← liftContractM "Decoding text envelope failed." script
   applied ←
@@ -42,8 +41,7 @@ mkMintingPolicyWithParams ∷
   Contract MintingPolicy
 mkMintingPolicyWithParams hexScript params = do
   let
-    script = decodeTextEnvelope hexScript
-      >>= plutusScriptV2FromEnvelope
+    script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
 
   unapplied ← liftContractM "Decoding text envelope failed." script
   applied ←

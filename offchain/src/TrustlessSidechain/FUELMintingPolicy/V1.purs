@@ -21,7 +21,7 @@ import Contract.Credential
   , StakingCredential(StakingHash)
   )
 import Contract.Hashing (blake2b256Hash)
-import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -36,9 +36,8 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
@@ -79,6 +78,9 @@ import TrustlessSidechain.Utils.Address
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
+  )
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
@@ -213,15 +215,10 @@ instance ToData FUELMintingRedeemer where
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
 decodeFuelMintingPolicy ∷ SidechainParams → Contract MintingPolicy
-decodeFuelMintingPolicy sp = do
-  let
-    script = decodeTextEnvelope rawFUELMintingPolicy >>=
-      plutusScriptV2FromEnvelope
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  unapplied ← liftContractM "Decoding text envelope failed." script
-  applied ← liftContractE $ Scripts.applyArgs unapplied
-    [ toData sp, toData versionOracleConfig ]
-  pure $ PlutusMintingPolicy applied
+decodeFuelMintingPolicy sidechainParams = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  mkMintingPolicyWithParams rawFUELMintingPolicy
+    [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
 -- | (as required by the onchain mintng policy) via the given

@@ -6,13 +6,12 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractE, liftContractM)
+import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
+import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction (mkTxUnspentOut)
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
@@ -31,6 +30,9 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts (rawFUELBurningPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
   , VersionOracle(VersionOracle)
@@ -46,15 +48,8 @@ fuelTokenName =
 -- | Gets the FUELBurningPolicy by applying `SidechainParams` to the FUEL
 -- | burning policy
 decodeFuelBurningPolicy ∷ SidechainParams → Contract MintingPolicy
-decodeFuelBurningPolicy sp = do
-  let
-    script = decodeTextEnvelope rawFUELBurningPolicy >>=
-      plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM (show (InvalidScript "Fuel V1 burning envelope"))
-    script
-  applied ← liftContractE $ Scripts.applyArgs unapplied [ toData sp ]
-  pure $ PlutusMintingPolicy applied
+decodeFuelBurningPolicy sidechainParams =
+  mkMintingPolicyWithParams rawFUELBurningPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   SidechainParams →

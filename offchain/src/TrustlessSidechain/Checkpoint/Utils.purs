@@ -14,17 +14,13 @@ import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData as PlutusData
+import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , Validator(Validator)
+  ( MintingPolicy
+  , Validator
   )
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
@@ -36,33 +32,26 @@ import TrustlessSidechain.Checkpoint.Types
   , CheckpointParameter
   , InitCheckpointMint
   )
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts
+  ( rawCheckpointPolicy
+  , rawCheckpointValidator
+  )
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
+  , mkValidatorWithParams
+  )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
 checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
-checkpointPolicy sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCheckpointPolicy
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ PlutusMintingPolicy applied
+checkpointPolicy sidechainParams =
+  mkMintingPolicyWithParams rawCheckpointPolicy [ toData sidechainParams ]
 
 checkpointValidator ∷ CheckpointParameter → Contract Validator
-checkpointValidator sp = do
-  let
-    script = decodeTextEnvelope RawScripts.rawCheckpointValidator
-      >>= plutusScriptV2FromEnvelope
-
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData sp ]
-  pure $ Validator applied
+checkpointValidator sidechainParams =
+  mkValidatorWithParams rawCheckpointValidator [ toData sidechainParams ]
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
@@ -89,7 +78,7 @@ serialiseCheckpointMessage ∷ CheckpointMessage → Maybe EcdsaSecp256k1Message
 serialiseCheckpointMessage = Utils.Crypto.ecdsaSecp256k1Message
   <<< Hashing.blake2b256Hash
   <<< cborBytesToByteArray
-  <<< PlutusData.serializeData
+  <<< serializeData
 
 findCheckpointUtxo ∷
   CheckpointParameter →

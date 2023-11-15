@@ -16,13 +16,12 @@ import Contract.Monad as Monad
 import Contract.PlutusData
   ( class FromData
   , class ToData
+  , toData
+  , unitRedeemer
   )
-import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(PlutusMintingPolicy))
-import Contract.Scripts as Scripts
-import Contract.TextEnvelope as TextEnvelope
+import Contract.Scripts (MintingPolicy)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -35,7 +34,7 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawCandidatePermissionMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
@@ -44,6 +43,9 @@ import TrustlessSidechain.Utils.Data
 import TrustlessSidechain.Utils.Logging
   ( InternalError(NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError)
+  )
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
@@ -89,7 +91,6 @@ getCandidatePermissionMintingPolicy ∷
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
 getCandidatePermissionMintingPolicy cpm = do
-
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
   candidatePermissionCurrencySymbol ← Monad.liftContractM
     (show (InternalError (InvalidScript "CandidatePermissionToken")))
@@ -104,15 +105,7 @@ getCandidatePermissionMintingPolicy cpm = do
 candidatePermissionMintingPolicy ∷
   CandidatePermissionMint → Contract MintingPolicy
 candidatePermissionMintingPolicy cpm = do
-  let
-    script =
-      TextEnvelope.decodeTextEnvelope
-        RawScripts.rawCandidatePermissionMintingPolicy
-        >>= TextEnvelope.plutusScriptV2FromEnvelope
-  unapplied ← Monad.liftContractM "Decoding text envelope failed." script
-  applied ← Monad.liftContractE $ Scripts.applyArgs unapplied
-    [ PlutusData.toData cpm ]
-  pure $ PlutusMintingPolicy applied
+  mkMintingPolicyWithParams rawCandidatePermissionMintingPolicy [ toData cpm ]
 
 --------------------------------
 -- Endpoint code
@@ -184,7 +177,7 @@ candidatePermissionTokenLookupsAndConstraints
     constraints ∷ TxConstraints Void Void
     constraints =
       TxConstraints.mustMintValueWithRedeemer
-        PlutusData.unitRedeemer
+        unitRedeemer
         value
         <> TxConstraints.mustSpendPubKeyOutput txIn
   pure { lookups, constraints }
