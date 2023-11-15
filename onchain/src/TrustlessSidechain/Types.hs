@@ -16,6 +16,17 @@ import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.PlutusPrelude
 
+-- Note [Roundtrip tests]
+-- ~~~~~~~~~~~~~~~~~~~~~~
+--
+-- Whenever new definitions in this module are added, i.e. either a new data
+-- type or a new data constructor is created, corresponding roundtrip tests need
+-- to be updated.  These tests reside in Test.TrustlessSidechain.Types module in
+-- `tests/` directory and test correctness of serialization and deserialization
+-- using `ToData` and `FromData` instances.  Importantly, same tests are
+-- performed in the substrate-node to ensure interoperability with
+-- trustless-sidechain.
+
 -- * Sidechain Parametrization and general data
 
 newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
