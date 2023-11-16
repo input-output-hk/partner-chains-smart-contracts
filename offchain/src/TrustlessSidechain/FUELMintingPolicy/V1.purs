@@ -21,7 +21,7 @@ import Contract.Credential
   , StakingCredential(StakingHash)
   )
 import Contract.Hashing (blake2b256Hash)
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -214,7 +214,8 @@ instance ToData FUELMintingRedeemer where
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
-decodeFuelMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelMintingPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
 decodeFuelMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams rawFUELMintingPolicy
@@ -226,15 +227,15 @@ decodeFuelMintingPolicy sidechainParams = do
 -- | policy
 getFuelMintingPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
 getFuelMintingPolicy sidechainParams = do
   fuelMintingPolicy ← decodeFuelMintingPolicy sidechainParams
-  fuelMintingCurrencySymbol ←
-    liftContractM (show (InvalidScript "Fuel V1 minting policy")) $
-      Value.scriptCurrencySymbol fuelMintingPolicy
+  fuelMintingCurrencySymbol ← note
+    (InvalidScript "Fuel V1 minting policy")
+    (Value.scriptCurrencySymbol fuelMintingPolicy)
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
 -- | `FuelMintParams` is the data for the FUEL mint endpoint.
@@ -275,9 +276,11 @@ mkMintFuelLookupAndConstraints
   do
     ownPkh ← getOwnPaymentPubKeyHash
 
-    { fuelMintingPolicy, fuelMintingCurrencySymbol } ← getFuelMintingPolicy sp
+    { fuelMintingPolicy, fuelMintingCurrencySymbol } ← liftContractE $
+      getFuelMintingPolicy sp
 
-    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+    ds ← liftContractE $ DistributedSet.getDs
+      (unwrap sidechainParams).genesisUtxo
 
     bech32BytesRecipient ←
       liftContractM
@@ -331,7 +334,7 @@ mkMintFuelLookupAndConstraints
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
-    insertValidator ← DistributedSet.insertValidator ds
+    insertValidator ← liftContractE $ DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
 
     { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds

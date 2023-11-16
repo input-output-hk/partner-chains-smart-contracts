@@ -10,7 +10,7 @@ import Contract.Address
   , getNetworkId
   , validatorHashEnterpriseAddress
   )
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData
   ( toData
   )
@@ -26,6 +26,7 @@ import TrustlessSidechain.RawScripts
   , rawPermissionedCandidatesValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -35,13 +36,14 @@ import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig) as Versionin
 -- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodePermissionedCandidatesMintingPolicy ∷
-  SidechainParams → Contract MintingPolicy
+  SidechainParams → Either InternalError MintingPolicy
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams rawPermissionedCandidatesMintingPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
 
-decodePermissionedCandidatesValidator ∷ SidechainParams → Contract Validator
+decodePermissionedCandidatesValidator ∷
+  SidechainParams → Either InternalError Validator
 decodePermissionedCandidatesValidator sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams rawPermissionedCandidatesValidator
@@ -54,8 +56,8 @@ getPermissionedCandidatesValidatorAndAddress ∷
     , permissionedCandidatesValidatorAddress ∷ Address
     }
 getPermissionedCandidatesValidatorAndAddress sidechainParams = do
-  permissionedCandidatesValidator ← decodePermissionedCandidatesValidator
-    sidechainParams
+  permissionedCandidatesValidator ← liftContractE $
+    decodePermissionedCandidatesValidator sidechainParams
   netId ← getNetworkId
   permissionedCandidatesValidatorAddress ←
     liftContractM "cannot get d parameter validator address"
@@ -68,15 +70,15 @@ getPermissionedCandidatesValidatorAndAddress sidechainParams = do
 
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { permissionedCandidatesMintingPolicy ∷ MintingPolicy
     , permissionedCandidatesCurrencySymbol ∷ CurrencySymbol
     }
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol sidechainParams = do
   permissionedCandidatesMintingPolicy ← decodePermissionedCandidatesMintingPolicy
     sidechainParams
-  permissionedCandidatesCurrencySymbol ← liftContractM
-    "Failed to get PermissionedCandidatesMintingPolicy"
+  permissionedCandidatesCurrencySymbol ← note
+    (InvalidScript "Failed to get PermissionedCandidatesMintingPolicy")
     (Value.scriptCurrencySymbol permissionedCandidatesMintingPolicy)
   pure
     { permissionedCandidatesMintingPolicy, permissionedCandidatesCurrencySymbol }

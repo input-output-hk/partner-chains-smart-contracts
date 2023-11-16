@@ -11,7 +11,7 @@ module TrustlessSidechain.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractE)
 import Contract.Monad as Monad
 import Contract.PlutusData
   ( class FromData
@@ -33,6 +33,7 @@ import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
+import Data.Either (note)
 import Data.Map as Map
 import TrustlessSidechain.RawScripts (rawCandidatePermissionMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -86,14 +87,14 @@ instance FromData CandidatePermissionMint where
 -- | currency symbol for the candidate permission minting policy.
 getCandidatePermissionMintingPolicy ∷
   CandidatePermissionMint →
-  Contract
+  Either InternalError
     { candidatePermissionPolicy ∷ MintingPolicy
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
 getCandidatePermissionMintingPolicy cpm = do
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
-  candidatePermissionCurrencySymbol ← Monad.liftContractM
-    (show (InternalError (InvalidScript "CandidatePermissionToken")))
+  candidatePermissionCurrencySymbol ← note
+    (InvalidScript "CandidatePermissionToken")
     (Value.scriptCurrencySymbol candidatePermissionPolicy)
   pure
     { candidatePermissionPolicy
@@ -103,7 +104,7 @@ getCandidatePermissionMintingPolicy cpm = do
 -- | `candidatePermissionMintingPolicy` gets the minting policy for the
 -- | candidate permission minting policy
 candidatePermissionMintingPolicy ∷
-  CandidatePermissionMint → Contract MintingPolicy
+  CandidatePermissionMint → Either InternalError MintingPolicy
 candidatePermissionMintingPolicy cpm = do
   mkMintingPolicyWithParams rawCandidatePermissionMintingPolicy [ toData cpm ]
 
@@ -149,8 +150,8 @@ candidatePermissionTokenLookupsAndConstraints
   ) = do
   { candidatePermissionPolicy
   , candidatePermissionCurrencySymbol
-  } ← getCandidatePermissionMintingPolicy
-    candidateMintPermissionMint
+  } ← liftContractE $
+    getCandidatePermissionMintingPolicy candidateMintPermissionMint
 
   let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
   txOut ← Monad.liftedM (show (InternalError (NotFoundUtxo "Genesis UTxO"))) $
@@ -195,8 +196,8 @@ runCandidatePermissionToken
     ( CandidatePermissionMintParams
         { candidateMintPermissionMint }
     ) = do
-  { candidatePermissionCurrencySymbol } ← getCandidatePermissionMintingPolicy
-    candidateMintPermissionMint
+  { candidatePermissionCurrencySymbol } ← liftContractE $
+    getCandidatePermissionMintingPolicy candidateMintPermissionMint
 
   { lookups, constraints } ← candidatePermissionTokenLookupsAndConstraints cpmp
   txId ← balanceSignAndSubmit "Mint CandidatePermissionToken" lookups

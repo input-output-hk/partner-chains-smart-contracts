@@ -14,6 +14,11 @@ import Contract.Scripts
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Data.Array as Array
+import Data.Bifunctor (lmap)
+import Data.Either (note)
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript, InvalidScriptArgs)
+  )
 
 -- | `mkValidatorWithParams hexScript params` returns the `Validator` of
 -- | `hexScript` with the script applied to `params`.  This is a convenient
@@ -21,15 +26,13 @@ import Data.Array as Array
 mkValidatorWithParams ∷
   String →
   Array PlutusData →
-  Contract Validator
+  Either InternalError Validator
 mkValidatorWithParams hexScript params = do
-  let
-    script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM "Decoding text envelope failed." script
+  unapplied ← note (InvalidScript hexScript)
+    (decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope)
   applied ←
     if Array.null params then pure unapplied
-    else liftContractE $ Scripts.applyArgs unapplied params
+    else (InvalidScriptArgs <<< unwrap) `lmap` Scripts.applyArgs unapplied params
   pure $ Validator applied
 
 -- | `mkMintingPolicyWithParams hexScript params` returns the `MintingPolicy` of `hexScript`
@@ -38,13 +41,11 @@ mkValidatorWithParams hexScript params = do
 mkMintingPolicyWithParams ∷
   String →
   Array PlutusData →
-  Contract MintingPolicy
+  Either InternalError MintingPolicy
 mkMintingPolicyWithParams hexScript params = do
-  let
-    script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM "Decoding text envelope failed." script
+  unapplied ← note (InvalidScript hexScript)
+    (decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope)
   applied ←
     if Array.null params then pure unapplied
-    else liftContractE $ Scripts.applyArgs unapplied params
+    else (InvalidScriptArgs <<< unwrap) `lmap` Scripts.applyArgs unapplied params
   pure $ PlutusMintingPolicy applied

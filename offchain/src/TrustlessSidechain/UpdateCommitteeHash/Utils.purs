@@ -23,8 +23,7 @@ import Contract.Address (Address)
 import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData (class ToData, serializeData, toData)
 import Contract.Scripts
   ( Validator
@@ -41,12 +40,16 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
-updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
+updateCommitteeHashValidator ∷
+  UpdateCommitteeHash → Either InternalError Validator
 updateCommitteeHashValidator sidechainParams =
   mkValidatorWithParams rawCommitteeHashValidator [ toData sidechainParams ]
 
@@ -61,10 +64,10 @@ getUpdateCommitteeHashValidator ∷
     }
 getUpdateCommitteeHashValidator uch = do
   netId ← Address.getNetworkId
-  validator ← updateCommitteeHashValidator uch
+  validator ← liftContractE $ updateCommitteeHashValidator uch
   let validatorHash = Scripts.validatorHash validator
 
-  address ← Monad.liftContractM
+  address ← liftContractM
     "error 'getUpdateCommitteeHashValidator': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
   pure { validator, validatorHash, address }
@@ -95,10 +98,10 @@ findUpdateCommitteeHashUtxo ∷
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUpdateCommitteeHashUtxo uch = do
   netId ← Address.getNetworkId
-  validator ← updateCommitteeHashValidator uch
+  validator ← liftContractE $ updateCommitteeHashValidator uch
   let validatorHash = Scripts.validatorHash validator
 
-  validatorAddress ← Monad.liftContractM
+  validatorAddress ← liftContractM
     "error 'findUpdateCommitteeHashUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 

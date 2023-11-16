@@ -18,6 +18,7 @@ import Contract.Address
   )
 import Contract.Monad
   ( Contract
+  , liftContractE
   , liftContractM
   , throwContractError
   )
@@ -85,7 +86,8 @@ newtype DeregisterParams = DeregisterParams
   , spoPubKey ∷ Maybe PubKey
   }
 
-getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
+getCommitteeCandidateValidator ∷
+  SidechainParams → Either InternalError Validator
 getCommitteeCandidateValidator sp = do
   mkValidatorWithParams rawCommitteeCandidateValidator [ toData sp ]
 
@@ -232,7 +234,7 @@ register
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
 
-  validator ← getCommitteeCandidateValidator sidechainParams
+  validator ← liftContractE $ getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
     ( show
@@ -248,7 +250,7 @@ register
   ownRegistrations ← findOwnRegistrations ownPkh (getSPOPubKey stakeOwnership)
     valUtxos
 
-  maybeCandidatePermissionMintingPolicy ← case permissionToken of
+  maybeCandidatePermissionMintingPolicy ← liftContractE $ case permissionToken of
     Just
       { candidatePermissionTokenUtxo: pUtxo
       , candidatePermissionTokenName: pTokenName
@@ -313,7 +315,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownAddr ← getOwnWalletAddress
   netId ← getNetworkId
 
-  validator ← getCommitteeCandidateValidator sidechainParams
+  validator ← liftContractE $ getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
     ( show

@@ -12,8 +12,7 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
@@ -39,17 +38,22 @@ import TrustlessSidechain.RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 
-checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
+checkpointPolicy ∷
+  InitCheckpointMint → Either InternalError MintingPolicy
 checkpointPolicy sidechainParams =
   mkMintingPolicyWithParams rawCheckpointPolicy [ toData sidechainParams ]
 
-checkpointValidator ∷ CheckpointParameter → Contract Validator
+checkpointValidator ∷
+  CheckpointParameter → Either InternalError Validator
 checkpointValidator sidechainParams =
   mkValidatorWithParams rawCheckpointValidator [ toData sidechainParams ]
 
@@ -61,10 +65,11 @@ initCheckpointMintTn ∷ Value.TokenName
 initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
-checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
+checkpointAssetClass ∷ InitCheckpointMint → Either InternalError AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get checkpoint currency symbol"
+  curSym ← note
+    (InvalidScript "Couldn't get checkpoint currency symbol")
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym initCheckpointMintTn
@@ -86,10 +91,10 @@ findCheckpointUtxo ∷
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findCheckpointUtxo checkpointParameter = do
   netId ← Address.getNetworkId
-  validator ← checkpointValidator checkpointParameter
+  validator ← liftContractE $ checkpointValidator checkpointParameter
   let validatorHash = Scripts.validatorHash validator
 
-  validatorAddress ← Monad.liftContractM
+  validatorAddress ← liftContractM
     "error 'findCheckpointUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 

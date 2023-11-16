@@ -8,7 +8,7 @@ module Test.CandidatePermissionToken
 import Contract.Prelude
 
 import Contract.Address as Address
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractE)
 import Contract.Monad as Monad
 import Contract.Scripts as Scripts
 import Contract.Value as Value
@@ -87,12 +87,12 @@ testScenarioSuccess1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        { candidatePermissionCurrencySymbol } ←
+        { candidatePermissionCurrencySymbol } ← liftContractE $
           CandidatePermissionToken.getCandidatePermissionMintingPolicy
             candidateMintPermissionMint
 
         committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
+          committeeCandidateValidator ← liftContractE $
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               scParams
           netId ← Address.getNetworkId
@@ -132,7 +132,7 @@ assertIHaveCandidatePermissionToken
         , candidatePermissionTokenUtxo
         }
 
-  { candidatePermissionCurrencySymbol } ←
+  { candidatePermissionCurrencySymbol } ← liftContractE $
     CandidatePermissionToken.getCandidatePermissionMintingPolicy
       candidateMintPermissionMint
 
@@ -177,15 +177,15 @@ testScenarioFailure1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        { candidatePermissionCurrencySymbol } ←
+        { candidatePermissionCurrencySymbol } ← liftContractE $
           CandidatePermissionToken.getCandidatePermissionMintingPolicy
             candidateMintPermissionMint
 
         committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
+          netId ← Address.getNetworkId
+          committeeCandidateValidator ← liftContractE $
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               scParams
-          netId ← Address.getNetworkId
           addr ← Monad.liftContractM ("Cannot get validator address") $
             Address.validatorHashEnterpriseAddress
               netId

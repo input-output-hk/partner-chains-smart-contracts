@@ -65,6 +65,9 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(Other)
+  )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
@@ -103,7 +106,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSAggregateSignatures →
-  Contract
+  Either InternalError
     { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
@@ -124,7 +127,7 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSKinds →
-  Contract
+  Either InternalError
     { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
     , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
     }
@@ -153,10 +156,9 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
       , committeeCertificateVerificationCurrencySymbol:
           committeePlainSchnorrSecp256k1ATMSCurrencySymbol
       }
-  ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
-  ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"
-  ATMSMultisignature → Monad.throwContractError
-    "ATMS multisignature not implemented yet"
+  ATMSDummy → Left (Other "ATMS dummy not implemented yet")
+  ATMSPoK → Left (Other "ATMS PoK not implemented yet")
+  ATMSMultisignature → Left (Other "ATMS multisignature not implemented yet")
 
 -- | `toATMSAggregateSignatures` takes
 -- |

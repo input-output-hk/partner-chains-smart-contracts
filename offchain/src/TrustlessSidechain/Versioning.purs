@@ -7,7 +7,7 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, throwContractError)
+import Contract.Monad (Contract, liftContractE, throwContractError)
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction (TransactionHash)
 import Data.Array as Array
@@ -166,5 +166,5 @@ getVersionedPoliciesAndValidators ∷
 getVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
   case version of
     1 → V1.getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
-    2 → V2.getVersionedPoliciesAndValidators sidechainParams
+    2 → liftContractE $ V2.getVersionedPoliciesAndValidators sidechainParams
     _ → throwContractError ("Invalid version: " <> show version)

@@ -4,7 +4,7 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Value as Value
 import Data.Map as Map
@@ -50,7 +50,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
-  { committeeOraclePolicy } ←
+  { committeeOraclePolicy } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
@@ -60,25 +60,28 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
         , thresholdDenominator: (unwrap sp).thresholdDenominator
         }
 
-  { committeeCertificateVerificationMintingPolicy } ←
+  { committeeCertificateVerificationMintingPolicy } ← liftContractE $
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind
 
-  { merkleRootTokenMintingPolicy } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sp
-  { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
-  { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
-  { dParameterMintingPolicy } ←
+  { merkleRootTokenMintingPolicy } ← liftContractE $
+    MerkleRoot.getMerkleRootTokenMintingPolicy
+      sp
+  { fuelMintingPolicy } ← liftContractE $
+    FUELMintingPolicy.V1.getFuelMintingPolicy sp
+  { fuelBurningPolicy } ← liftContractE $
+    FUELBurningPolicy.V1.getFuelBurningPolicy sp
+  { dParameterMintingPolicy } ← liftContractE $
     DParameter.getDParameterMintingPolicyAndCurrencySymbol sp
-  { permissionedCandidatesMintingPolicy } ←
+  { permissionedCandidatesMintingPolicy } ← liftContractE $
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sp
 
-  ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
+  ds ← liftContractE $ DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
 
-  { committeeOracleCurrencySymbol } ←
+  { committeeOracleCurrencySymbol } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
@@ -96,7 +99,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   -- Helper currency symbols
   -----------------------------------
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { committeeCertificateVerificationCurrencySymbol } ← liftContractE $
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind
@@ -105,11 +108,13 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
     (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
     (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
 
-  { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp
+  { checkpointCurrencySymbol } ← liftContractE $ Checkpoint.getCheckpointPolicy
+    sp
 
   -- Getting validators to version
   -----------------------------------
-  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+  merkleRootTokenValidator ← liftContractE $ MerkleRoot.merkleRootTokenValidator
+    sp
   { validator: committeeHashValidator } ←
     do
       let
@@ -125,7 +130,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
 
-  checkpointValidator ← do
+  checkpointValidator ← liftContractE $ do
     let
       checkpointParam = CheckpointParameter
         { sidechainParams: sp

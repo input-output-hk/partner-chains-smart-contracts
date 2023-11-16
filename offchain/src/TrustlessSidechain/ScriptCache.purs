@@ -17,7 +17,7 @@ import Contract.Address
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedE)
 import Contract.PlutusData (PlutusData, toData, unitDatum)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
@@ -43,7 +43,7 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawScriptCache)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
@@ -51,9 +51,9 @@ import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
 
-getScriptCacheValidator ∷ PaymentPubKeyHash → Contract Validator
+getScriptCacheValidator ∷ PaymentPubKeyHash → Either InternalError Validator
 getScriptCacheValidator (PaymentPubKeyHash pkh) =
-  mkValidatorWithParams RawScripts.rawScriptCache [ toData pkh ]
+  mkValidatorWithParams rawScriptCache [ toData pkh ]
 
 getScriptRefUtxo ∷
   SidechainParams →
@@ -61,7 +61,8 @@ getScriptRefUtxo ∷
   Contract (TransactionInput /\ TransactionOutputWithRefScript)
 getScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
+  scriptCacheValidatorHash ←
+    liftContractE (validatorHash <$> getScriptCacheValidator pkh)
 
   netId ← getNetworkId
   valAddr ← liftContractM
@@ -87,7 +88,8 @@ createScriptRefUtxo ∷
   Contract (TransactionInput /\ TransactionOutputWithRefScript)
 createScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
+  scriptCacheValidatorHash ←
+    liftContractE (validatorHash <$> getScriptCacheValidator pkh)
 
   let
     constraints ∷ TxConstraints Unit Unit

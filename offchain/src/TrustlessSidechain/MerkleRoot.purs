@@ -10,6 +10,7 @@ import Contract.Prelude
 
 import Contract.Monad
   ( Contract
+  , liftContractE
   , liftContractM
   , liftedM
   )
@@ -90,7 +91,7 @@ saveRoot
   ) = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { committeeOracleCurrencySymbol } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   let
@@ -101,15 +102,16 @@ saveRoot
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { committeeCertificateVerificationCurrencySymbol } ← liftContractE $
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { merkleRootTokenCurrencySymbol } ← getMerkleRootTokenMintingPolicy
-    sidechainParams
+  { merkleRootTokenCurrencySymbol } ← liftContractE $
+    getMerkleRootTokenMintingPolicy
+      sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ InternalError $ NotFoundUtxo
@@ -172,16 +174,15 @@ saveRoot
 -- | symbol of the MerkleRootToken
 getMerkleRootTokenMintingPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { merkleRootTokenMintingPolicy ∷ MintingPolicy
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
 getMerkleRootTokenMintingPolicy sidechainParams = do
-
   policy ← merkleRootTokenMintingPolicy sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    liftContractM (show (InternalError (InvalidScript "MerkleRootPolicy"))) $
-      Value.scriptCurrencySymbol policy
+  merkleRootTokenCurrencySymbol ← note
+    (InvalidScript "MerkleRootPolicy")
+    (Value.scriptCurrencySymbol policy)
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
 -- | `saveRootLookupsAndConstraints` creates the lookups and constraints (and
@@ -206,12 +207,12 @@ saveRootLookupsAndConstraints
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  rootTokenMP ← merkleRootTokenMintingPolicy sidechainParams
+  rootTokenMP ← liftContractE $ merkleRootTokenMintingPolicy sidechainParams
   rootTokenCS ←
     liftContractM
       (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
       $ Value.scriptCurrencySymbol rootTokenMP
-  rootTokenVal ← merkleRootTokenValidator sidechainParams
+  rootTokenVal ← liftContractE $ merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
       ( show

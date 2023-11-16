@@ -6,8 +6,7 @@ module TrustlessSidechain.FUELMintingPolicy.V2
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractE)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -28,10 +27,12 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.Either (note)
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts (rawDummyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -54,21 +55,21 @@ dummyTokenName =
 
 -- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodeDummyMintingPolicy ∷ SidechainParams → Contract MintingPolicy
-decodeDummyMintingPolicy sidechainParams = do
-  mkMintingPolicyWithParams rawDummyMintingPolicy
-    [ toData sidechainParams ]
+decodeDummyMintingPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
+decodeDummyMintingPolicy sidechainParams =
+  mkMintingPolicyWithParams rawDummyMintingPolicy [ toData sidechainParams ]
 
 getFuelMintingPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
 getFuelMintingPolicy sidechainParams = do
   fuelMintingPolicy ← decodeDummyMintingPolicy sidechainParams
-  fuelMintingCurrencySymbol ← Monad.liftContractM
-    "Failed to get dummy CurrencySymbol"
+  fuelMintingCurrencySymbol ← note
+    (InvalidScript "Failed to get dummy CurrencySymbol")
     (Value.scriptCurrencySymbol fuelMintingPolicy)
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
@@ -80,7 +81,7 @@ mkMintFuelLookupAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 mkMintFuelLookupAndConstraints sidechainParams { amount } = do
-  { fuelMintingPolicy } ← getFuelMintingPolicy sidechainParams
+  { fuelMintingPolicy } ← liftContractE $ getFuelMintingPolicy sidechainParams
 
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
     sidechainParams

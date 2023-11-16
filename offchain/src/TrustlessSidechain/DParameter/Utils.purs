@@ -10,7 +10,7 @@ import Contract.Address
   , getNetworkId
   , validatorHashEnterpriseAddress
   )
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData
   ( toData
   )
@@ -26,6 +26,9 @@ import TrustlessSidechain.RawScripts
   , rawDParameterValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -34,13 +37,15 @@ import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig) as Versionin
 
 -- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodeDParameterMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeDParameterMintingPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
 decodeDParameterMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams rawDParameterMintingPolicy $
     [ toData sidechainParams, toData versionOracleConfig ]
 
-decodeDParameterValidator ∷ SidechainParams → Contract Validator
+decodeDParameterValidator ∷
+  SidechainParams → Either InternalError Validator
 decodeDParameterValidator sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams rawDParameterValidator
@@ -53,7 +58,7 @@ getDParameterValidatorAndAddress ∷
     , dParameterValidatorAddress ∷ Address
     }
 getDParameterValidatorAndAddress sidechainParams = do
-  dParameterValidator ← decodeDParameterValidator sidechainParams
+  dParameterValidator ← liftContractE $ decodeDParameterValidator sidechainParams
   netId ← getNetworkId
   dParameterValidatorAddress ←
     liftContractM "cannot get d parameter validator address"
@@ -63,13 +68,13 @@ getDParameterValidatorAndAddress sidechainParams = do
 
 getDParameterMintingPolicyAndCurrencySymbol ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { dParameterMintingPolicy ∷ MintingPolicy
     , dParameterCurrencySymbol ∷ CurrencySymbol
     }
 getDParameterMintingPolicyAndCurrencySymbol sidechainParams = do
   dParameterMintingPolicy ← decodeDParameterMintingPolicy sidechainParams
-  dParameterCurrencySymbol ← liftContractM
-    "Failed to get DParameterMintingPolicy"
+  dParameterCurrencySymbol ← note
+    (InvalidScript "Failed to get DParameterMintingPolicy")
     (Value.scriptCurrencySymbol dParameterMintingPolicy)
   pure { dParameterMintingPolicy, dParameterCurrencySymbol }

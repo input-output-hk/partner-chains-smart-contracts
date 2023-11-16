@@ -7,7 +7,7 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad (Contract, liftContractE, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
@@ -80,7 +80,7 @@ saveCheckpoint
   ) = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { committeeOracleCurrencySymbol } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   let
@@ -91,15 +91,15 @@ saveCheckpoint
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { committeeCertificateVerificationCurrencySymbol } ← liftContractE $
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sidechainParams
+  { merkleRootTokenCurrencySymbol } ← liftContractE $
+    MerkleRoot.getMerkleRootTokenMintingPolicy sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ InternalError $ NotFoundUtxo
@@ -195,10 +195,10 @@ saveCheckpointLookupsAndConstraints
 
   -- Getting the associated plutus scripts / UTXOs for checkpointing
   -------------------------------------------------------------
-  { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
-    sidechainParams
+  { checkpointCurrencySymbol, checkpointTokenName } ← liftContractE $
+    getCheckpointPolicy sidechainParams
 
-  { committeeOracleCurrencySymbol } ←
+  { committeeOracleCurrencySymbol } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting checkpoint validator
@@ -210,7 +210,7 @@ saveCheckpointLookupsAndConstraints
       , committeeOracleCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       }
-  validator ← checkpointValidator checkpointParam
+  validator ← liftContractE $ checkpointValidator checkpointParam
   let checkpointValidatorHash = Scripts.validatorHash validator
 
   -- Getting the checkpoint utxo
@@ -257,7 +257,7 @@ saveCheckpointLookupsAndConstraints
 -- | (potentially throwing an error in the case that it is not possible).
 getCheckpointPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { checkpointPolicy ∷ MintingPolicy
     , checkpointCurrencySymbol ∷ CurrencySymbol
     , checkpointTokenName ∷ TokenName
@@ -265,10 +265,8 @@ getCheckpointPolicy ∷
 getCheckpointPolicy (SidechainParams sp) = do
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
-  checkpointCurrencySymbol ← liftContractM
-    ( show
-        (InternalError (InvalidScript "Failed to get checkpoint CurrencySymbol"))
-    )
+  checkpointCurrencySymbol ← note
+    (InvalidScript "Failed to get checkpoint CurrencySymbol")
     (Value.scriptCurrencySymbol checkpointPolicy)
   let checkpointTokenName = initCheckpointMintTn
   pure

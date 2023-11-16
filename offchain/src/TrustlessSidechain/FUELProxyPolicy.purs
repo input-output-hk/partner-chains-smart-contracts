@@ -8,8 +8,7 @@ module TrustlessSidechain.FUELProxyPolicy
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractE)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
@@ -37,6 +36,9 @@ import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging
+  ( InternalError(InvalidScript)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -69,7 +71,8 @@ fuelProxyTokenName =
     =<< byteArrayFromAscii "FUEL"
 
 -- | Deserialize minting policy script, applying it to all required parameters.
-decodeFuelProxyPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelProxyPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
 decodeFuelProxyPolicy sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   mkMintingPolicyWithParams RawScripts.rawFUELProxyPolicy
@@ -78,14 +81,14 @@ decodeFuelProxyPolicy sp = do
 -- | Return proxy fuel minting policy and its corresponding currency symbol.
 getFuelProxyMintingPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { fuelProxyPolicy ∷ MintingPolicy
     , fuelProxyCurrencySymbol ∷ CurrencySymbol
     }
 getFuelProxyMintingPolicy sp = do
   fuelProxyPolicy ← decodeFuelProxyPolicy sp
-  fuelProxyCurrencySymbol ← Monad.liftContractM
-    "Failed to get FUEL proxy CurrencySymbol"
+  fuelProxyCurrencySymbol ← note
+    (InvalidScript "Failed to get FUEL proxy CurrencySymbol")
     (Value.scriptCurrencySymbol fuelProxyPolicy)
   pure { fuelProxyPolicy, fuelProxyCurrencySymbol }
 
@@ -117,7 +120,7 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
         FuelMintParamsV2 (Mint.V2.FuelMintParams { amount }) →
           (BigInt.fromInt 2 /\ amount)
 
-  { fuelProxyPolicy, fuelProxyCurrencySymbol } ←
+  { fuelProxyPolicy, fuelProxyCurrencySymbol } ← liftContractE $
     getFuelProxyMintingPolicy sidechainParams
   let
     lookups ∷ ScriptLookups Void
@@ -168,7 +171,7 @@ mkFuelProxyBurnLookupsAndConstraints sidechainParams fmp = do
           } →
           (BigInt.fromInt 2 /\ amount /\ recipient)
 
-  { fuelProxyPolicy, fuelProxyCurrencySymbol } ←
+  { fuelProxyPolicy, fuelProxyCurrencySymbol } ← liftContractE $
     getFuelProxyMintingPolicy sidechainParams
   let
     lookups ∷ ScriptLookups Void

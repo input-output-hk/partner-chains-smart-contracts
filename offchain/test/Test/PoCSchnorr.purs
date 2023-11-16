@@ -16,7 +16,7 @@ module Test.PoCSchnorrSecp256k1 (tests) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractE)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -43,6 +43,7 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
@@ -65,20 +66,21 @@ instance ToData SchnorrSecp256k1Redeemer where
 -- | Grabs the minting policy / currency symbol of the schnorr proof of concept
 -- | test minting policy.
 getPoCSchnorrSecp256k1MintingPolicy ∷
-  Contract { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
+  Either InternalError
+    { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
 getPoCSchnorrSecp256k1MintingPolicy = do
   mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams
     RawScripts.rawPoCSchnorr
     (mempty ∷ Array PlutusData)
-  currencySymbol ← Monad.liftContractM "minting policy to currency symbol failed"
-    $ Value.scriptCurrencySymbol mintingPolicy
+  currencySymbol ← note (InvalidScript RawScripts.rawPoCSchnorr)
+    (Value.scriptCurrencySymbol mintingPolicy)
   pure { mintingPolicy, currencySymbol }
 
 -- | `mustMintPocSchnorrSecp256k1` provides the lookups + constraints for minting the
 -- | `TrustlessSidechain.RawScripts.rawPoCSchnorrSecp256k1` minting policy.
 mustMintPocSchnorrSecp256k1 ∷
   SchnorrSecp256k1Redeemer →
-  Contract
+  Either InternalError
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -125,7 +127,8 @@ testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
+      { lookups, constraints } ← liftContractE $ mustMintPocSchnorrSecp256k1
+        redeemer
 
       void $ Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1" lookups
         constraints
@@ -152,7 +155,8 @@ testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
+      { lookups, constraints } ← liftContractE $ mustMintPocSchnorrSecp256k1
+        redeemer
 
       Test.Utils.fails $ void $ Utils.Transaction.balanceSignAndSubmit
         "PoCSchnorrSecp256k1"
@@ -210,7 +214,8 @@ testScenario3 =
             , signature: unwrap parsedSignature
             , publicKey: unwrap parsedPublicKey
             }
-        { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
+        { lookups, constraints } ← liftContractE $ mustMintPocSchnorrSecp256k1
+          redeemer
 
         void $ Utils.Transaction.balanceSignAndSubmit
           "PoCSchnorrSecp256k1"

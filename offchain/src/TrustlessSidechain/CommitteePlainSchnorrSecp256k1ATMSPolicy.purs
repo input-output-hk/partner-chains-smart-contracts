@@ -22,7 +22,7 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
+import Contract.Monad (Contract, liftContractE)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -116,7 +116,7 @@ committeePlainSchnorrSecp256k1ATMS ∷
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
-  Contract MintingPolicy
+  Either InternalError MintingPolicy
 committeePlainSchnorrSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
   do
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
@@ -129,15 +129,15 @@ getCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
-  Contract
+  Either InternalError
     { committeePlainSchnorrSecp256k1ATMSPolicy ∷ MintingPolicy
     , committeePlainSchnorrSecp256k1ATMSCurrencySymbol ∷ CurrencySymbol
     }
 getCommitteePlainSchnorrSecp256k1ATMSPolicy param = do
   committeePlainSchnorrSecp256k1ATMSPolicy ← committeePlainSchnorrSecp256k1ATMS
     param
-  committeePlainSchnorrSecp256k1ATMSCurrencySymbol ← Monad.liftContractM
-    ( show $ InternalError $ InvalidScript
+  committeePlainSchnorrSecp256k1ATMSCurrencySymbol ← note
+    ( InvalidScript
         "Failed to get committee plainSchnorrSecp256k1 ATMS currency symbol"
     )
     (Value.scriptCurrencySymbol committeePlainSchnorrSecp256k1ATMSPolicy)
@@ -200,7 +200,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy
   -------------------------------------------------------------
   { committeePlainSchnorrSecp256k1ATMSPolicy
-  } ← getCommitteePlainSchnorrSecp256k1ATMSPolicy
+  } ← liftContractE $ getCommitteePlainSchnorrSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
@@ -361,7 +361,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { committeeOracleCurrencySymbol } ← liftContractE $
     CommitteeOraclePolicy.getCommitteeOraclePolicy
       sidechainParams
   let
@@ -372,14 +372,15 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
         }
 
   { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
-    getCommitteePlainSchnorrSecp256k1ATMSPolicy
+    liftContractE $ getCommitteePlainSchnorrSecp256k1ATMSPolicy
       { committeeCertificateMint, sidechainParams }
 
   -- minting policy for the merkle root token
   -------------------------------------------------------------
 
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
+  merkleRootTokenMintingPolicy ← liftContractE $
+    MerkleRoot.Utils.merkleRootTokenMintingPolicy
+      sidechainParams
   merkleRootTokenCurrencySymbol ←
     Monad.liftContractM
       ( show $ InternalError $ InvalidScript

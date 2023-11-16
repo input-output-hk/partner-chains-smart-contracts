@@ -32,7 +32,13 @@ import Contract.Address (Address, NetworkId, getNetworkId)
 import Contract.Address as Address
 import Contract.AssocMap as AssocMap
 import Contract.Log as Log
-import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
+import Contract.Monad
+  ( Contract
+  , liftContractE
+  , liftContractM
+  , liftedM
+  , throwContractError
+  )
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -56,7 +62,12 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts
+  ( rawDsConfPolicy
+  , rawDsConfValidator
+  , rawDsKeyPolicy
+  , rawInsertValidator
+  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -283,43 +294,36 @@ dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
-insertValidator ∷ Ds → Contract Validator
-insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
-  toData
-  [ ds ]
+insertValidator ∷ Ds → Either InternalError Validator
+insertValidator ds = mkValidatorWithParams rawInsertValidator [ toData ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
-dsConfValidator ∷ Ds → Contract Validator
-dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
-  toData
-  [ ds ]
+dsConfValidator ∷ Ds → Either InternalError Validator
+dsConfValidator ds = mkValidatorWithParams rawDsConfValidator [ toData ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
-dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
-dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
-  toData
-  [ dsm ]
+dsConfPolicy ∷ DsConfMint → Either InternalError MintingPolicy
+dsConfPolicy dsm = mkMintingPolicyWithParams rawDsConfPolicy [ toData dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
-dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
-dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
-  toData
-  [ dskm ]
+dsKeyPolicy ∷ DsKeyMint → Either InternalError MintingPolicy
+dsKeyPolicy dskm = mkMintingPolicyWithParams rawDsKeyPolicy [ toData dskm ]
 
 -- | The address for the insert validator of the distributed set.
-insertAddress ∷ NetworkId → Ds → Contract Address
+insertAddress ∷ NetworkId → Ds → Either InternalError Address
 insertAddress netId ds = do
   v ← insertValidator ds
-  liftContractM "Couldn't derive distributed set insert validator address"
-    $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
+  note
+    (InvalidScript "Couldn't derive distributed set insert validator address")
+    (Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v))
 
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
 
-dsToDsKeyMint ∷ Ds → Contract DsKeyMint
+dsToDsKeyMint ∷ Ds → Either InternalError DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
 
@@ -353,13 +357,13 @@ insertNode str (Node node)
 
 -- | `getDs` grabs the `Ds` type given `TransactionInput`. Often, the
 -- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
-getDs ∷ TransactionInput → Contract Ds
+getDs ∷ TransactionInput → Either InternalError Ds
 getDs txInput = do
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
-    liftContractM
-      (show (InternalError (InvalidScript "DsConfPolicy")))
-      $ Value.scriptCurrencySymbol dsConfPolicy'
+    note
+      (InvalidScript "DsConfPolicy")
+      (Value.scriptCurrencySymbol dsConfPolicy')
   pure $ Ds dsConfPolicyCurrencySymbol
 
 -- | `getDsKeyPolicy` grabs the key policy and currency symbol from the given
@@ -371,7 +375,7 @@ getDsKeyPolicy ∷
   Contract
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy ds = do
-  insertValidator' ← insertValidator ds
+  insertValidator' ← liftContractE $ insertValidator ds
 
   let
     insertValidatorHash = Scripts.validatorHash insertValidator'
@@ -379,7 +383,7 @@ getDsKeyPolicy ds = do
       { dskmValidatorHash: insertValidatorHash
       , dskmConfCurrencySymbol: dsConf ds
       }
-  policy ← dsKeyPolicy dskm
+  policy ← liftContractE $ dsKeyPolicy dskm
 
   currencySymbol ←
     liftContractM
@@ -399,7 +403,7 @@ findDsConfOutput ∷
     }
 findDsConfOutput ds = do
   netId ← getNetworkId
-  v ← dsConfValidator ds
+  v ← liftContractE $ dsConfValidator ds
   scriptAddr ←
     liftContractM
       "Couldn't derive distributed set configuration validator address"
@@ -488,7 +492,7 @@ findDsOutput ds tn txInput = do
   -- `tn'` is the distributed set node onchain.
   tn' ← do
     netId ← getNetworkId
-    scriptAddr ← insertAddress netId ds
+    scriptAddr ← liftContractE $ insertAddress netId ds
 
     unless
       (scriptAddr == (unwrap txOut).address)
@@ -574,10 +578,10 @@ slowFindDsOutput ds tn = do
     "Finding the required distributed set node (this may take a while)..."
 
   netId ← getNetworkId
-  scriptAddr ← insertAddress netId ds
+  scriptAddr ← liftContractE $ insertAddress netId ds
   utxos ← Map.toUnfoldable <$> Utxos.utxosAt scriptAddr
-  dskm ← dsToDsKeyMint ds
-  policy ← dsKeyPolicy dskm
+  dskm ← liftContractE $ dsToDsKeyMint ds
+  policy ← liftContractE $ dsKeyPolicy dskm
 
   dsKeyCurSym ← liftContractM "Cannot get currency symbol" $
     Value.scriptCurrencySymbol policy

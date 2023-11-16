@@ -9,6 +9,7 @@ import Contract.Prelude
 
 import Contract.Monad
   ( Contract
+  , liftContractE
   , liftContractM
   )
 import Contract.PlutusData
@@ -115,7 +116,7 @@ updateCommitteeHash
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { committeeCertificateVerificationCurrencySymbol } ← liftContractE $
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
@@ -205,13 +206,15 @@ updateCommitteeHashLookupsAndConstraints
   -- committee hash
   -------------------------------------------------------------
   { committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+  } ← liftContractE $ CommitteeOraclePolicy.getCommitteeOraclePolicy
+    sidechainParams
 
   -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
 
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
+  merkleRootTokenMintingPolicy ← liftContractE $
+    MerkleRoot.Utils.merkleRootTokenMintingPolicy
+      sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
       (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))

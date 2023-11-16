@@ -12,12 +12,13 @@ import Data.Map as Map
 import TrustlessSidechain.FUELBurningPolicy.V2 as FUELBurningPolicy.V2
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging (InternalError)
 import TrustlessSidechain.Versioning.Types as Types
 
 -- | Validators to store in the versioning system.
 getVersionedValidators ∷
   SidechainParams →
-  Contract (Map.Map Types.ScriptId Validator)
+  Either InternalError (Map.Map Types.ScriptId Validator)
 getVersionedValidators _sp = do
   -- Getting validators and policies to version
   -----------------------------------
@@ -26,7 +27,7 @@ getVersionedValidators _sp = do
 -- | Minting policies to store in the versioning system.
 getVersionedPolicies ∷
   SidechainParams →
-  Contract (Map.Map Types.ScriptId MintingPolicy)
+  Either InternalError (Map.Map Types.ScriptId MintingPolicy)
 getVersionedPolicies sp = do
   -- Getting policies to version
   -----------------------------------
@@ -39,7 +40,7 @@ getVersionedPolicies sp = do
 
 getVersionedPoliciesAndValidators ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { versionedPolicies ∷ (Map.Map Types.ScriptId MintingPolicy)
     , versionedValidators ∷ (Map.Map Types.ScriptId Validator)
     }

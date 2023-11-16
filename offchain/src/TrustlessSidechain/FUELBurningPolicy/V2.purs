@@ -6,8 +6,7 @@ module TrustlessSidechain.FUELBurningPolicy.V2
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -32,6 +31,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts (rawDummyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -54,20 +54,21 @@ dummyTokenName =
 
 -- | Get the DummyBurningPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodeDummyBurningPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeDummyBurningPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
 decodeDummyBurningPolicy sidechainParams =
   mkMintingPolicyWithParams rawDummyMintingPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { fuelBurningPolicy ∷ MintingPolicy
     , fuelBurningCurrencySymbol ∷ CurrencySymbol
     }
 getFuelBurningPolicy sidechainParams = do
   fuelBurningPolicy ← decodeDummyBurningPolicy sidechainParams
-  fuelBurningCurrencySymbol ← Monad.liftContractM
-    "Failed to get dummy CurrencySymbol"
+  fuelBurningCurrencySymbol ← note
+    (InvalidScript "Failed to get dummy CurrencySymbol")
     (Value.scriptCurrencySymbol fuelBurningPolicy)
   pure { fuelBurningPolicy, fuelBurningCurrencySymbol }
 
@@ -79,7 +80,7 @@ mkBurnFuelLookupAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 mkBurnFuelLookupAndConstraints sidechainParams { amount } = do
-  { fuelBurningPolicy } ← getFuelBurningPolicy sidechainParams
+  { fuelBurningPolicy } ← liftContractE $ getFuelBurningPolicy sidechainParams
 
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
     sidechainParams

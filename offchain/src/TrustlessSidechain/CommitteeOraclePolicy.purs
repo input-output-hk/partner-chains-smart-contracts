@@ -44,17 +44,20 @@ instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
 
-committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
+committeeOraclePolicy ∷
+  InitCommitteeHashMint → Either InternalError MintingPolicy
 committeeOraclePolicy ichm =
   mkMintingPolicyWithParams rawCommitteeOraclePolicy [ toData ichm ]
 
 -- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name
 {-# INLINEABLE committeeOracleAssetClass #-}
-committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
+committeeOracleAssetClass ∷
+  InitCommitteeHashMint → Either InternalError AssetClass
 committeeOracleAssetClass ichm = do
   cp ← committeeOraclePolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get committee oracle currency symbol"
+  curSym ← note
+    (InvalidScript "Couldn't get committee oracle currency symbol")
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym committeeOracleTn
@@ -71,7 +74,7 @@ committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
 -- | (potentially throwing an error in the case that it is not possible).
 getCommitteeOraclePolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { committeeOraclePolicy ∷ MintingPolicy
     , committeeOracleCurrencySymbol ∷ CurrencySymbol
     , committeeOracleTokenName ∷ TokenName
@@ -79,8 +82,8 @@ getCommitteeOraclePolicy ∷
 getCommitteeOraclePolicy (SidechainParams sp) = do
   policy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
-  committeeOracleCurrencySymbol ← Monad.liftContractM
-    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
+  committeeOracleCurrencySymbol ← note
+    (InvalidScript "CommitteeHashPolicy")
     (Value.scriptCurrencySymbol policy)
   let committeeOracleTokenName = committeeOracleTn
   pure

@@ -15,7 +15,12 @@ module TrustlessSidechain.Versioning.Utils
 import Contract.Prelude
 
 import Contract.Address (Address, getNetworkId, validatorHashEnterpriseAddress)
-import Contract.Monad (Contract, liftContractM, throwContractError)
+import Contract.Monad
+  ( Contract
+  , liftContractE
+  , liftContractM
+  , throwContractError
+  )
 import Contract.Monad as Monad
 import Contract.PlutusData
   ( Datum(Datum)
@@ -52,14 +57,19 @@ import Contract.Value (CurrencySymbol, TokenName, scriptHashAsCurrencySymbol)
 import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt as BigInt
+import Data.Either (note)
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Effect.Exception (error)
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts
+  ( rawVersionOraclePolicy
+  , rawVersionOracleValidator
+  )
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -85,30 +95,29 @@ versionOracleTokenName =
 
 -- | Deserialize VersionOraclePolicy minting policy script, applying it to all
 -- | required parameters.
-versionOraclePolicy ∷ SidechainParams → Contract MintingPolicy
+versionOraclePolicy ∷ SidechainParams → Either InternalError MintingPolicy
 versionOraclePolicy gscp =
-  mkMintingPolicyWithParams RawScripts.rawVersionOraclePolicy [ toData gscp ]
+  mkMintingPolicyWithParams rawVersionOraclePolicy [ toData gscp ]
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
 -- | required parameters.
 versionOracleValidator ∷
   SidechainParams →
   CurrencySymbol →
-  Contract Validator
+  Either InternalError Validator
 versionOracleValidator sp cs =
-  mkValidatorWithParams RawScripts.rawVersionOracleValidator
-    [ toData sp, toData cs ]
+  mkValidatorWithParams rawVersionOracleValidator [ toData sp, toData cs ]
 
 getVersionOraclePolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { versionOracleMintingPolicy ∷ MintingPolicy
     , versionOracleCurrencySymbol ∷ CurrencySymbol
     }
 getVersionOraclePolicy gscp = do
   versionOracleMintingPolicy ← versionOraclePolicy gscp
-  versionOracleCurrencySymbol ← Monad.liftContractM
-    "Failed to get version oracle CurrencySymbol"
+  versionOracleCurrencySymbol ← note
+    (InvalidScript "Failed to get version oracle CurrencySymbol")
     (Value.scriptCurrencySymbol versionOracleMintingPolicy)
   pure { versionOracleMintingPolicy, versionOracleCurrencySymbol }
 
@@ -116,12 +125,12 @@ getVersionOraclePolicy gscp = do
 -- | script address and VersionOraclePolicy currency symbol.
 getVersionOracleConfig ∷
   SidechainParams →
-  Contract VersionOracleConfig
+  Either InternalError VersionOracleConfig
 getVersionOracleConfig sp = do
   -- get versionning currency symbol
   versionOracleMintingPolicy ← versionOraclePolicy sp
-  versionOracleCurrencySymbol ← Monad.liftContractM
-    "Failed to get version oracle CurrencySymbol"
+  versionOracleCurrencySymbol ← note
+    (InvalidScript "Failed to get version oracle CurrencySymbol")
     (Value.scriptCurrencySymbol versionOracleMintingPolicy)
 
   pure $ VersionOracleConfig { versionOracleCurrencySymbol }
@@ -151,8 +160,9 @@ insertVersionTokenLookupsAndConstraints scp ver (Tuple scriptId script) =
       -- Preparing versioning scripts and tokens
       -----------------------------------
       { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-        getVersionOraclePolicy scp
-      vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+        liftContractE $ getVersionOraclePolicy scp
+      vValidator ←
+        liftContractE $ versionOracleValidator scp versionOracleCurrencySymbol
 
       -- Prepare datum and other boilerplate
       -----------------------------------
@@ -222,8 +232,9 @@ invalidateVersionTokenLookupsAndConstraints scp ver scriptId = do
   -- Prepare versioning scripts and tokens
   -----------------------------------
   { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-    getVersionOraclePolicy scp
-  vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+    liftContractE $ getVersionOraclePolicy scp
+  vValidator ←
+    liftContractE $ versionOracleValidator scp versionOracleCurrencySymbol
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
@@ -320,8 +331,10 @@ updateVersionTokenLookupsAndConstraints
     Just versionedScript → do
       -- Prepare versioning scripts and tokens
       -----------------------------------
-      { versionOracleCurrencySymbol } ← getVersionOraclePolicy scp
-      vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+      { versionOracleCurrencySymbol } ←
+        liftContractE $ getVersionOraclePolicy scp
+      vValidator ←
+        liftContractE $ versionOracleValidator scp versionOracleCurrencySymbol
 
       -- Get UTxOs located at the version oracle validator script address
       -----------------------------------
@@ -410,9 +423,10 @@ getVersionedScriptRefUtxo ∷
   VersionOracle →
   Contract (TransactionInput /\ TransactionOutputWithRefScript)
 getVersionedScriptRefUtxo sp versionOracle = do
-  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
-  versionOracleValidatorHash ←
-    validatorHash <$> versionOracleValidator sp versionOracleCurrencySymbol
+  { versionOracleCurrencySymbol } ← liftContractE $ getVersionOraclePolicy sp
+  versionOracleValidatorHash ← liftContractE
+    $ validatorHash
+    <$> versionOracleValidator sp versionOracleCurrencySymbol
   netId ← getNetworkId
   valAddr ← liftContractM "cannot get validator address"
     (validatorHashEnterpriseAddress netId versionOracleValidatorHash)

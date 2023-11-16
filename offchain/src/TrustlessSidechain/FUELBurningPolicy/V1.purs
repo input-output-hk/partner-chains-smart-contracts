@@ -6,7 +6,7 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
@@ -47,20 +47,21 @@ fuelTokenName =
 
 -- | Gets the FUELBurningPolicy by applying `SidechainParams` to the FUEL
 -- | burning policy
-decodeFuelBurningPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelBurningPolicy ∷
+  SidechainParams → Either InternalError MintingPolicy
 decodeFuelBurningPolicy sidechainParams =
   mkMintingPolicyWithParams rawFUELBurningPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   SidechainParams →
-  Contract
+  Either InternalError
     { fuelBurningPolicy ∷ MintingPolicy
     , fuelBurningCurrencySymbol ∷ CurrencySymbol
     }
 getFuelBurningPolicy sidechainParams = do
   policy ← decodeFuelBurningPolicy sidechainParams
   fuelBurningCurrencySymbol ←
-    liftContractM (show (InvalidScript "Fuel V1 burning policy")) $
+    note (InvalidScript "Fuel V1 burning policy") $
       Value.scriptCurrencySymbol policy
   pure
     { fuelBurningPolicy: policy
@@ -90,7 +91,8 @@ mkBurnFuelLookupAndConstraints sp { amount, sidechainParams } = do
     ( VersionOracle
         { version: BigInt.fromInt 1, scriptId: FUELBurningPolicy }
     )
-  { fuelBurningPolicy: fuelBurningPolicy' } ← getFuelBurningPolicy sp
+  { fuelBurningPolicy: fuelBurningPolicy' } ←
+    liftContractE $ getFuelBurningPolicy sp
 
   pure
     { lookups: mempty

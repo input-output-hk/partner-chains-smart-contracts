@@ -38,6 +38,8 @@ data InternalError
   | NotFoundOwnAddress
   -- | Invalid policy or validator script, conversion to currency symbol / validator hash failed
   | InvalidScript String
+  -- | Invalid arguments to a validator script or minting policy
+  | InvalidScriptArgs String
   -- | Invalid datum or redeemer, decoding errors
   | InvalidData String
   -- | Conversion of any data type (excluding datums and redeemers, use InvalidData for those)
