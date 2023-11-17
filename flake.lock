@@ -8409,6 +8409,30 @@
         "type": "github"
       }
     },
+    "n2c_5": {
+      "inputs": {
+        "flake-utils": [
+          "haskell-nix",
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1697285352,
+        "narHash": "sha256-tRGLm/DO8+anGUCgLYxTF5EPqWv8EZ9MVFWRdh285HU=",
+        "owner": "nlewo",
+        "repo": "nix2container",
+        "rev": "9d7f33ef0058f4df4c0912025f43c758a3289d76",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nlewo",
+        "repo": "nix2container",
+        "type": "github"
+      }
+    },
     "nix": {
       "inputs": {
         "lowdown-src": "lowdown-src",
@@ -13409,6 +13433,7 @@
           "plutip",
           "iohk-nix"
         ],
+        "n2c": "n2c_5",
         "nixpkgs": [
           "cardano-transaction-lib",
           "nixpkgs"
