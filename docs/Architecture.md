@@ -59,7 +59,7 @@ _ogmios_:
 Ogmios serves as a query layer directly communication with the cardano-node.
 
 _ogmios-datum-cache_:
-A cache layer, to make datum queries quicker (will be deprecated in later CTL versions)
+A cache layer, to make datum queries quicker (deprecated)
 
 _ctl-server (deprecated)_:
 A helper service for some tasks that could not be implemented in CTL

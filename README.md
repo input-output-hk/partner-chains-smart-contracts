@@ -3,6 +3,7 @@
 This is the repository of Trustless Sidechain with the Cardano Plutus contracts.
 
 - [Instruction for the CLI tool](./offchain/README.md)
+- [Integration Guideline](./docs/IntegrationGuideline.md)
 - [Architecture and high level concepts](./docs/Architecture.md)
 - [The specification of the Plutus contracts](./docs/Specification.md)
 - [Improvement Proposals](./docs/SIP-index.md)

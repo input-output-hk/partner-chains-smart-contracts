@@ -1,18 +1,21 @@
-# Trustless Sidechain CTL
+# Trustless Sidechain CLI
 
 ## 1. Development
 
-If you want to develop for this submodule, please before setting up an environment consult the notes on [CONTRIBUTING.md](CONTRIBUTING.md) first.
+If you want to develop for this submodule, please before setting up an environment
+consult the notes on [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 
 ## 2. Environment setup
 
-In order to run CTL you need to setup the runtime dependencies:
+In order to execute off-chain commands with the CLI, you need to setup the
+runtime dependencies:
 
 - cardano-node
 - ogmios
 - kupo
 
-Luckily, we have a dockerised setup, that spins up all these easily with a preset test network. Just run:
+Luckily, we have a dockerised setup, that spins up all these easily with a
+preset test network. Just run:
 
 ```
 nix run .#ctl-runtime
@@ -29,11 +32,18 @@ To change the testnet you're using, you have to change the network name in the `
       };
 ```
 
-You can also run these components directly without using Docker, more about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
+You can also run these components directly without using Docker, more about these
+can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
+
+Or by using a nix derivation, that brings required runtime dependencies into
+scope:
+https://github.com/szg251/cardano-dev-shell
 
 ### 2.1. Configuring hosted runtime dependencies
 
-In case you are running the runtime dependencies (ogmios and kupo) on a hosted environment, or anything else than the default settings, you can either configure it via CLI arguments, or set these in the configuration.
+In case you are running the runtime dependencies (ogmios and kupo) on a hosted
+environment, or anything else than the default settings, you can either configure
+it via CLI arguments, or set these in the configuration.
 
 The arguments for each service are using the following scheme:
 
@@ -44,19 +54,23 @@ The arguments for each service are using the following scheme:
   --ogmios-secure          Whether ogmios is using an HTTPS connection
 ```
 
-So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`, you want to use the following arguments:
+So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`,
+you want to use the following arguments:
 
 ```
 nix run .#sidechain-main-cli -- burn-v1 --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
 
-For more information about the arguments, please refer to `nix run .#sidechain-main-cli -- burn-v1 --help`
+For more information about the arguments, please refer to
+`nix run .#sidechain-main-cli -- burn-v1 --help`
 
-To use a configuration file instead, see [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
+To use a configuration file instead, see
+[3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
 
 ## 3. Running the CLI
 
-You can call the contract endpoints with the following CLI command (you need to add `--` before the arguments):
+You can call the contract endpoints with the following CLI command
+(you need to add `--` before the arguments):
 
 **Running with nix:**
 
@@ -70,8 +84,9 @@ nix run .#sidechain-main-cli -- --help
 nix build .#ctl-bundle-cli
 ```
 
-This will produce a package `trustless-sidechain-cli-<version>.tar` with the compiled `main.js` script that can be run using Node
-and all necessary dependencies in `node_modules` directory.
+This will produce a package `trustless-sidechain-cli-<version>.tar` with the
+compiled `main.js` script that can be run using Node and all necessary
+dependencies in `node_modules` directory.
 
 ```
 node main.js --help
@@ -81,9 +96,11 @@ node main.js --help
 
 Notes:
 
-- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we have to add an arbitrary utxo here.
+- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we
+  have to add an arbitrary UTxO here.
 
-- prior to running the contracts - it may be desirable to have available your signing key in the environment. Example:
+- prior to running the contracts - it may be desirable to have available your
+  signing key in the environment. Example:
 
 ```bash
 export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
@@ -114,9 +131,12 @@ Available commands:
 
 #### 3.1.1. Initialising the sidechain
 
-Before we can start claiming tokens, we must initialise the sidechain by: initialising the sidechain's tokens, and setting our initial committee. Only after these steps will we be able to obtain the validator addresses.
+Before we can start claiming tokens, we must initialise the sidechain by:
+initialising the sidechain's tokens, and setting our initial committee. Only
+after these steps will we be able to obtain the validator addresses.
 
-To initialise the sidechain, we can run the following command which will spend the genesis committee hash utxo.
+To initialise the sidechain, we can run the following command which will spend
+the genesis committee hash UTxO.
 
 ```
 nix run .#sidechain-main-cli -- init \
@@ -131,11 +151,13 @@ nix run .#sidechain-main-cli -- init \
   --version 1
 ```
 
-Normally, the protocol has to wait until the committee has reached the desired number of members.
-To defend against accidentally consuming the `genesis-committee-hash-utxo`, it's possible, to split
-up the initialisation step into two separate commands:
+Normally, the protocol has to wait until the committee has reached the desired
+number of members. To defend against accidentally consuming the
+`genesis-committee-hash-utxo`, it's possible, to split up the initialisation
+step into two separate commands:
 
-1. mint tokens identifying tokens used later in the protocol (spending the `genesis-committee-hash-utxo`)
+1. mint tokens identifying tokens used later in the protocol
+   (spending the `genesis-committee-hash-utxo`)
 2. set up the first committee (only the owner of the above minted tokens can do this)
 
 To mint the initial tokens, use the following command:
@@ -152,8 +174,9 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
   --version 1
 ```
 
-Alternatively, one may optionally mint candidate permission tokens in the same transaction as
-the `init-tokens-mint` transaction. The following command achieves this.
+Alternatively, one may optionally mint candidate permission tokens in the same
+transaction as the `init-tokens-mint` transaction. The following command
+achieves this.
 ```
 nix run .#sidechain-main-cli -- init-tokens-mint \
   --payment-signing-key-file $SIGNING_KEY \
@@ -168,8 +191,8 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
   --candidate-permission-token-utxo "9fda32facf5f250f74cc3a77762fb9efec093b0afe5221a6d8bca2a217428668#1"
 ```
 
-And when ready, continue with setting up the first committee with the `init` command with the
-`use-init-tokens` flag:
+And when ready, continue with setting up the first committee with the `init`
+command with the `use-init-tokens` flag:
 
 ```
 nix run .#sidechain-main-cli -- init \
@@ -556,7 +579,8 @@ called, a new list can only be created using the
 
 ### 3.2. Using a configuration file
 
-You can also provide a configuration in `$CWD/config.json` in the following format instead of repeating them in all commands.
+You can also provide a configuration in `$CWD/config.json` in the following format
+instead of repeating them in all commands.
 
 ```json
 {
@@ -581,11 +605,14 @@ nix run .#sidechain-main-cli -- burn-v1 --amount 5 --recipient aabb
 
 You can find a sample configuration file in `ctl/config.example.json`.
 
-When using the CLI argument and the configuration file together, the **CLI arguments override** these configuration values. You can also set any of the above values to null, if you don't want to set a default value for that property.
+When using the CLI argument and the configuration file together, the **CLI
+arguments override** these configuration values. You can also set any of the above
+values to null, if you don't want to set a default value for that property.
 
 ### 3.3. Configuring hosted runtime dependencies
 
-You can set the network configuration of the runtime dependecies in the configuration file using the following format:
+You can set the network configuration of the runtime dependecies in the
+configuration file using the following format:
 
 _$CWD/config.json_
 
@@ -612,4 +639,5 @@ _$CWD/config.json_
 }
 ```
 
-Any service where no configuration is defined will fallback to its default value (localhost).
+Any service where no configuration is defined will fallback to its default
+value (localhost).
