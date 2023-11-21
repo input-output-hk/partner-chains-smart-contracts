@@ -50,7 +50,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
-  { committeeOraclePolicy } ←
+  { committeeOraclePolicy, committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
@@ -77,9 +77,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
-
-  { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
     versionedPolicies = Map.fromFoldable

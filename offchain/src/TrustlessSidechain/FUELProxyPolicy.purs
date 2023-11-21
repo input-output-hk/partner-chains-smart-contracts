@@ -34,7 +34,7 @@ import TrustlessSidechain.FUELBurningPolicy.V1 as Burn.V1
 import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
-import TrustlessSidechain.RawScripts as RawScripts
+import TrustlessSidechain.RawScripts (rawFUELProxyPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -71,7 +71,7 @@ fuelProxyTokenName =
 decodeFuelProxyPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeFuelProxyPolicy sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  mkMintingPolicyWithParams RawScripts.rawFUELProxyPolicy
+  mkMintingPolicyWithParams rawFUELProxyPolicy
     [ toData sp, toData versionOracleConfig ]
 
 -- | Return proxy fuel minting policy and its corresponding currency symbol.
