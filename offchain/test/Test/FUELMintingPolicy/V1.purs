@@ -50,7 +50,7 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
@@ -140,7 +140,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
                 , dsUtxo: Nothing
                 }
           )
-        >>= submitAndAwaitTx
+        >>= balanceSignAndSubmit "Test: mint v1 fuel"
 
 -- | `testScenarioSuccess2` tests minting some tokens with the fast distributed
 -- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
@@ -236,7 +236,7 @@ testScenarioSuccess2 =
                     }
               )
             >>=
-              submitAndAwaitTx
+              balanceSignAndSubmit "Test: mint v1 fuel"
 
 testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
@@ -271,7 +271,7 @@ testScenarioFailure =
                     , dsUtxo: Nothing
                     }
                 )
-            >>= submitAndAwaitTx
+            >>= balanceSignAndSubmit "Test: mint v1 fuel"
           # fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
@@ -357,9 +357,9 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
 
         -- the very bad double mint attempt...
         void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
-          submitAndAwaitTx
+          balanceSignAndSubmit "Test: mint v1 fuel"
         void $ mkMintFuelLookupAndConstraints sidechainParams fp0 >>=
-          submitAndAwaitTx
+          balanceSignAndSubmit "Test: mint v1 fuel again"
 
         pure unit
         # fails

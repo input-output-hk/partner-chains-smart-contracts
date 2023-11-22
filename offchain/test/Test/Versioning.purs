@@ -35,7 +35,7 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils as Versioning
 
@@ -91,7 +91,7 @@ testScenarioSuccess =
               1
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: insert policy version"
 
         void
           $ Versioning.insertVersionTokenLookupsAndConstraints
@@ -99,7 +99,8 @@ testScenarioSuccess =
               1
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: insert validator version"
+
         void
           $ Versioning.updateVersionTokenLookupsAndConstraints
               sidechainParams
@@ -107,7 +108,7 @@ testScenarioSuccess =
               2
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: update policy version"
 
         void
           $ Versioning.updateVersionTokenLookupsAndConstraints
@@ -116,7 +117,7 @@ testScenarioSuccess =
               2
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: update validator version"
 
         void
           $ Versioning.invalidateVersionTokenLookupsAndConstraints
@@ -124,7 +125,7 @@ testScenarioSuccess =
               2
               MerkleRootTokenPolicy
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: invalidate policy version"
 
         void
           $ Versioning.invalidateVersionTokenLookupsAndConstraints
@@ -132,4 +133,4 @@ testScenarioSuccess =
               2
               CommitteeCandidateValidator
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: invalidate validator version"

@@ -44,7 +44,7 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregate all the FUELProxyPolicy tests in one convenient
@@ -141,7 +141,7 @@ testScenarioSuccess =
           $ mkFuelProxyMintLookupsAndConstraints sidechainParams
               fuelMintingParams
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: mint fuel via v1 proxy"
 
         -- Insert new version of scripts.  Both version 1 and 2 are active and
         -- available at this point.
@@ -156,7 +156,7 @@ testScenarioSuccess =
                   (Mint.V2.FuelMintParams { amount: BigInt.fromInt 7 })
               )
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: mint fuel via v2 proxy"
 
         -- Burn 10 fuel tokens using FUEL policy v1
         void
@@ -168,7 +168,7 @@ testScenarioSuccess =
               }
 
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: burn fuel via v1 proxy"
 
         -- Burn 2 fuel tokens using FUEL policy v2
         void
@@ -179,7 +179,7 @@ testScenarioSuccess =
               , version: BigInt.fromInt 2
               }
           >>=
-            submitAndAwaitTx
+            balanceSignAndSubmit "Test: burn fuel via v2 proxy"
 
 -- | Mint using version 1, update to version 2, burn using version 2
 -- | this should fail
@@ -264,7 +264,7 @@ testScenarioFailure =
             $ mkFuelProxyMintLookupsAndConstraints sidechainParams
                 fuelMintingParams
             >>=
-              submitAndAwaitTx
+              balanceSignAndSubmit "Test: mint fuel via v1 proxy"
 
           -- Update scripts, invalidating version 1 policies
           void $ Versioning.updateVersion
@@ -282,5 +282,5 @@ testScenarioFailure =
                 , version: BigInt.fromInt 1
                 }
             >>=
-              submitAndAwaitTx
+              balanceSignAndSubmit "Test: burn fuel via v1 proxy"
           # fails

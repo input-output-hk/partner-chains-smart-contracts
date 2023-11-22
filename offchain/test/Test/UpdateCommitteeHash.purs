@@ -58,7 +58,7 @@ import TrustlessSidechain.Utils.Crypto
   , multiSign
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `generateUchmSignatures` generates the public keys and corresponding
 -- | signatures of the current committee for the new committee given.
@@ -271,7 +271,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
 
       void
         $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
-        >>= submitAndAwaitTx
+        >>= balanceSignAndSubmit "Test: burn NFTs"
 
 -- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
 -- | but should fail because there isn't enough committee members signing the update
@@ -429,7 +429,7 @@ testScenario3 =
 
         void
           $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "Test: burn NFTs"
 
 -- | `testScenario4` is given in #277
 testScenario4 ∷ PlutipTest
@@ -520,7 +520,7 @@ testScenario4 =
 
         void
           $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "Test: burn NFTs"
 
 -- | `testScenario5` is essentially `testScenario2` but updates the committee
 -- | with exactly the required signatures instead.
@@ -593,4 +593,4 @@ testScenario5 =
 
         void
           $ GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "Test: burn NFTs"

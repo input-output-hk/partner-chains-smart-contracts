@@ -31,7 +31,7 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `tests` aggregate all the PermissionedCandidatesPolicy tests in one convenient
 -- | function
@@ -93,7 +93,7 @@ testScenarioSuccess =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: insert permissioned candidates"
             )
 
         void
@@ -109,7 +109,7 @@ testScenarioSuccess =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: update permissioned candidates"
             )
 
         void
@@ -117,7 +117,7 @@ testScenarioSuccess =
             ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: remove permissioned candidates"
             )
 
 testScenarioFailure ∷ PlutipTest
@@ -173,7 +173,7 @@ testScenarioFailure =
                     ]
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: insert permissioned candidates"
             )
 
         void
@@ -181,7 +181,7 @@ testScenarioFailure =
             ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: remove permissioned candidates"
             )
 
         ( void
@@ -189,6 +189,6 @@ testScenarioFailure =
               ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
                   sidechainParams
                   >>=
-                    submitAndAwaitTx
+                    balanceSignAndSubmit "Test: update permissioned candidates"
               )
         ) # fails

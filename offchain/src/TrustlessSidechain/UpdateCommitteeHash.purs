@@ -154,11 +154,10 @@ updateCommitteeHash
         , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
         }
 
-  let
-    { lookups, constraints } = lookupsAndConstraints
-      <> committeeATMSLookupsAndConstraints
-
-  balanceSignAndSubmit "Update CommiteeHash" lookups constraints
+  balanceSignAndSubmit "Update CommiteeHash"
+    ( lookupsAndConstraints
+        <> committeeATMSLookupsAndConstraints
+    )
 
 -- | `updateCommitteeHashLookupsAndConstraints` grabs the lookups and
 -- | constraints for updating the committee hash, and returns the current

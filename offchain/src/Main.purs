@@ -136,7 +136,7 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
 
 -- | Main entrypoint for the CTL CLI
@@ -205,7 +205,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
               , dsUtxo
               }
           )
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "ClaimActV1"
           <#> unwrap
           >>> { transactionId: _ }
           >>> ClaimActRespV1
@@ -217,7 +217,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainParams: scParams
           , version: BigInt.fromInt 1
           }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "BurnActV1"
           <#> unwrap
           >>> { transactionId: _ }
           >>>
@@ -230,7 +230,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { amount
               }
           )
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "ClaimActV2"
           <#> unwrap
           >>> { transactionId: _ }
           >>> ClaimActRespV2
@@ -242,7 +242,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainParams: scParams
           , version: BigInt.fromInt 2
           }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "BurnActV2"
           <#> unwrap
           >>> { transactionId: _ }
           >>>
@@ -598,7 +598,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkInsertDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "InsertDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> InsertDParameterResp
@@ -607,14 +607,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkUpdateDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "UpdateDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdateDParameterResp
 
       RemoveDParameter →
         DParameter.mkRemoveDParameterLookupsAndConstraints scParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "RemoveDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemoveDParameterResp
@@ -624,7 +624,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
           scParams
           { candidates: Array.fromFoldable permissionedCandidates }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "InsertPermissionedCandidates"
           <#> unwrap
           >>> { transactionId: _ }
           >>> InsertPermissionedCandidatesResp
@@ -634,7 +634,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
           scParams
           { candidates: Array.fromFoldable permissionedCandidates }
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "UpdatePermissionedCandidates"
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
@@ -642,14 +642,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
       RemovePermissionedCandidates →
         PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
           scParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "RemovePermissionedCandidates"
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemovePermissionedCandidatesResp
 
       BurnNFTs →
         GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "BurnNFTs"
           <#> unwrap
           >>> { transactionId: _ }
           >>> BurnNFTsResp

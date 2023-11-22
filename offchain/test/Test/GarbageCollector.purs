@@ -57,7 +57,7 @@ import TrustlessSidechain.Utils.Crypto
   , toPubKeyUnsafe
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
@@ -80,7 +80,7 @@ testScenarioSuccess =
 
         void
           $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
-          >>= submitAndAwaitTx
+          >>= balanceSignAndSubmit "Test: burn NFTs"
 
         committeePlainEcdsaSecp256k1ATMSMint ←
           CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
@@ -267,13 +267,13 @@ mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
               , dsUtxo: Nothing
               }
         )
-      >>= submitAndAwaitTx
+      >>= balanceSignAndSubmit "Test: mint V1 fuel"
 
     void
       $ BurningV1.mkBurnFuelLookupAndConstraints
           (BurningV1.FuelBurnParams { sidechainParams, amount })
       >>=
-        submitAndAwaitTx
+        balanceSignAndSubmit "Test: burn V1 fuel"
 
     void
       $
@@ -282,13 +282,13 @@ mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
               { amount
               }
         )
-      >>= submitAndAwaitTx
+      >>= balanceSignAndSubmit "Test: mint V2 fuel"
 
     void
       $ BurningV2.mkBurnFuelLookupAndConstraints
           (BurningV2.FuelBurnParams { sidechainParams, amount })
       >>=
-        submitAndAwaitTx
+        balanceSignAndSubmit "Test: burn V2 fuel"
 
     { fuelMintingCurrencySymbol
     } ← MintingV1.getFuelMintingPolicy sidechainParams

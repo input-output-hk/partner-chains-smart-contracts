@@ -355,13 +355,11 @@ runCommitteePlainSchnorrSecp256k1ATMSPolicy params = do
             (unwrap params.committeeATMSParams).currentCommitteeUtxo.index
       }
 
-    { lookups, constraints } = mustMintCommitteeATMSPolicyLookupsAndConstraints
-      <> extraLookupsAndContraints
-
   Utils.Transaction.balanceSignAndSubmit
     "CommitteePlainSchnorrSecp256k1ATMSPolicy"
-    lookups
-    constraints
+    ( mustMintCommitteeATMSPolicyLookupsAndConstraints
+        <> extraLookupsAndContraints
+    )
 
 -- | `findUpdateCommitteeHashUtxoFromSidechainParams` is similar to
 -- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but

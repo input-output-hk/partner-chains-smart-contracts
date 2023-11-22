@@ -14,7 +14,7 @@ import Data.Array as Array
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Tx as Utils.Tx
+import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types as Types
 import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
@@ -34,13 +34,13 @@ insertVersion { sidechainParams: sp, atmsKind } version = do
   validatorsTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Insert versioned validators"
       )
       $ Map.toUnfoldable versionedValidators
   policiesTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Insert versioned policies"
       )
       $ Map.toUnfoldable versionedPolicies
   pure (validatorsTxIds <> policiesTxIds)
@@ -59,14 +59,14 @@ invalidateVersion { sidechainParams: sp, atmsKind } version = do
   validatorsTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Invalidate versioned validators"
       )
       $ Array.fromFoldable
       $ Map.keys versionedValidators
   policiesTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Invalidate versioned policies"
       )
       $ Array.fromFoldable
       $ Map.keys versionedPolicies
@@ -99,13 +99,15 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   commonValidatorsTxIds ←
     traverse
       ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit
+            "Update common versioned validators"
       )
       $ Map.toUnfoldable commonValidators
   commonPoliciesTxIds ←
     traverse
       ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit
+            "Update common versioned policies"
       )
       $ Map.toUnfoldable commonPolicies
 
@@ -117,13 +119,13 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   uniqueNewValidatorsTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Update new versioned validators"
       )
       $ Map.toUnfoldable uniqueNewValidators
   uniqueNewPoliciesTxIds ←
     traverse
       ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Update new versioned policies"
       )
       $ Map.toUnfoldable uniqueNewPolicies
 
@@ -135,14 +137,14 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
   uniqueOldValidatorsTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Update old versioned validators"
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldValidators
   uniqueOldPoliciesTxIds ←
     traverse
       ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Tx.submitAndAwaitTx
+          Utils.Transaction.balanceSignAndSubmit "Update old versioned policies"
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldPolicies

@@ -305,7 +305,7 @@ register
               ownRegistrations
           )
 
-  balanceSignAndSubmit "Registers Committee Candidate" lookups constraints
+  balanceSignAndSubmit "Registers Committee Candidate" { lookups, constraints }
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
@@ -342,7 +342,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
       <> mconcat
         (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
 
-  balanceSignAndSubmit "Deregister Committee Candidate" lookups constraints
+  balanceSignAndSubmit "Deregister Committee Candidate" { lookups, constraints }
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate

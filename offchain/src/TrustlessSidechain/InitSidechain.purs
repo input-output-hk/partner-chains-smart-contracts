@@ -592,7 +592,7 @@ initSidechainTokens isp version = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  txId ← balanceSignAndSubmit "Init Sidechain tokens" lookups constraints
+  txId ← balanceSignAndSubmit "Init Sidechain tokens" { lookups, constraints }
 
   -- Mint and pay versioning tokens to versioning script.  This needs to be done
   -- after sidechain initialization.  Otherwise genesisUtxo can get spent by
@@ -646,7 +646,7 @@ paySidechainTokens isp version = do
 
   -- Building / submitting / awaiting the transaction.
   ----------------------------------------
-  txId ← balanceSignAndSubmit "Pay Sidechain tokens" lookups constraints
+  txId ← balanceSignAndSubmit "Pay Sidechain tokens" { lookups, constraints }
 
   -- Build sidechain addresses
   ----------------------------------------
@@ -738,7 +738,7 @@ initSidechain (InitSidechainParams isp) version = do
           }
     ) isp
 
-  txId ← balanceSignAndSubmit "Initialise Sidechain" lookups constraints
+  txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
   -- Mint and pay versioning tokens to versioning script.  This needs to be done
   -- after sidechain initialization.  Otherwise genesisUtxo can get spent by

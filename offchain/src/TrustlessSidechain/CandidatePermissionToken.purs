@@ -198,8 +198,7 @@ runCandidatePermissionToken
   { candidatePermissionCurrencySymbol } ← getCandidatePermissionMintingPolicy
     candidateMintPermissionMint
 
-  { lookups, constraints } ← candidatePermissionTokenLookupsAndConstraints cpmp
-  txId ← balanceSignAndSubmit "Mint CandidatePermissionToken" lookups
-    constraints
+  txId ← candidatePermissionTokenLookupsAndConstraints cpmp >>=
+    balanceSignAndSubmit "Mint CandidatePermissionToken"
 
   pure { transactionId: txId, candidatePermissionCurrencySymbol }

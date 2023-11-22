@@ -30,10 +30,11 @@ balanceSignAndSubmit ∷
   IsData datum ⇒
   IsData redeemer ⇒
   String →
-  ScriptLookups validator →
-  TxConstraints redeemer datum →
+  { lookups ∷ ScriptLookups validator
+  , constraints ∷ TxConstraints redeemer datum
+  } →
   Contract TransactionHash
-balanceSignAndSubmit txName lookups constraints = do
+balanceSignAndSubmit txName { lookups, constraints } = do
   ubTx ← liftedE
     ( lmap (BuildTxError >>> InternalError) <$>
         mkUnbalancedTx lookups constraints

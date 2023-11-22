@@ -31,7 +31,7 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Tx (submitAndAwaitTx)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `tests` aggregate all the DParameterPolicy tests in one convenient
 -- | function
@@ -81,7 +81,7 @@ testScenarioSuccess =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: insert D param"
             )
 
         void
@@ -92,7 +92,7 @@ testScenarioSuccess =
                 , registeredCandidatesCount: BigInt.fromInt 4
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: update D param"
             )
 
         void
@@ -100,7 +100,7 @@ testScenarioSuccess =
             ( DParameter.mkRemoveDParameterLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: remove D param"
             )
 
 testScenarioFailure1 ∷ PlutipTest
@@ -143,7 +143,7 @@ testScenarioFailure1 =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: insert D param"
             )
 
         void
@@ -151,7 +151,7 @@ testScenarioFailure1 =
             ( DParameter.mkRemoveDParameterLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: remove D param"
             )
 
         ( void
@@ -159,7 +159,7 @@ testScenarioFailure1 =
               ( DParameter.mkRemoveDParameterLookupsAndConstraints
                   sidechainParams
                   >>=
-                    submitAndAwaitTx
+                    balanceSignAndSubmit "Test: remove D param again"
               )
         ) # fails
 
@@ -203,7 +203,7 @@ testScenarioFailure2 =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: insert D param"
             )
 
         void
@@ -211,7 +211,7 @@ testScenarioFailure2 =
             ( DParameter.mkRemoveDParameterLookupsAndConstraints
                 sidechainParams
                 >>=
-                  submitAndAwaitTx
+                  balanceSignAndSubmit "Test: remove D param"
             )
 
         ( void
@@ -222,6 +222,6 @@ testScenarioFailure2 =
                   , registeredCandidatesCount: BigInt.fromInt 0
                   }
                   >>=
-                    submitAndAwaitTx
+                    balanceSignAndSubmit "Test: update removed D param"
               )
         ) # fails

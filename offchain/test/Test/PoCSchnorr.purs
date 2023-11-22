@@ -125,10 +125,9 @@ testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
-      void $ Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1" lookups
-        constraints
+      void $ mustMintPocSchnorrSecp256k1 redeemer >>=
+        Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
       pure unit
 
 testScenario2 ∷ PlutipTest
@@ -152,12 +151,9 @@ testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
           , signature: unwrap signature
           , publicKey: unwrap publicKey
           }
-      { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
-      Test.Utils.fails $ void $ Utils.Transaction.balanceSignAndSubmit
-        "PoCSchnorrSecp256k1"
-        lookups
-        constraints
+      Test.Utils.fails $ void $ mustMintPocSchnorrSecp256k1 redeemer >>=
+        Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
       pure unit
 
 testScenario3 ∷ PlutipTest
@@ -210,10 +206,7 @@ testScenario3 =
             , signature: unwrap parsedSignature
             , publicKey: unwrap parsedPublicKey
             }
-        { lookups, constraints } ← mustMintPocSchnorrSecp256k1 redeemer
 
-        void $ Utils.Transaction.balanceSignAndSubmit
-          "PoCSchnorrSecp256k1"
-          lookups
-          constraints
+        void $ mustMintPocSchnorrSecp256k1 redeemer >>=
+          Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
         pure unit

@@ -166,7 +166,7 @@ saveRoot
               TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
           }
 
-  balanceSignAndSubmit "Save Merkle root" lookups constraints
+  balanceSignAndSubmit "Save Merkle root" { lookups, constraints }
 
 -- | `getMerkleRootTokenMintingPolicy` gets the minting policy and currency
 -- | symbol of the MerkleRootToken

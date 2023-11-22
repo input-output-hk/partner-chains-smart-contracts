@@ -160,7 +160,7 @@ saveCheckpoint
             TxConstraints.mustReferenceOutput currentCommitteeUtxo.index
         }
 
-  balanceSignAndSubmit "Save Checkpoint" lookups constraints
+  balanceSignAndSubmit "Save Checkpoint" { lookups, constraints }
 
 saveCheckpointLookupsAndConstraints ∷
   { sidechainParams ∷ SidechainParams
