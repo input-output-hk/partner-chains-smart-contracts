@@ -26,6 +26,7 @@ derive instance Functor (ContractEff a)
 -- | Type alias for convenient use with `+` type operator.
 type CONTRACT a r = (contract ∷ ContractEff a | r)
 
+-- | A helper type `Proxy` for internal use.
 _contract ∷ Proxy "contract"
 _contract = Proxy
 
@@ -33,7 +34,7 @@ _contract = Proxy
 embedContract ∷ ∀ r a. Contract a → Run (CONTRACT a + r) a
 embedContract f = Run.lift _contract (EmbedContract f identity)
 
--- | A helper functions used by the actual handler.  Runs `Contract` actions by
+-- | A helper function used by the actual handler.  Runs `Contract` actions by
 -- | embedding them inside `AFF` effects.
 handleContract ∷ ∀ r a. ContractParams → ContractEff a ~> Run (AFF + r)
 handleContract params = case _ of

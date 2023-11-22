@@ -8,6 +8,7 @@
   , "bigints"
   , "cardano-transaction-lib"
   , "codec-argonaut"
+  , "console"
   , "const"
   , "control"
   , "datetime"
