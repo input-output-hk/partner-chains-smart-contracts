@@ -62,7 +62,7 @@ import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , getOwnWalletAddress
   )
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
   )

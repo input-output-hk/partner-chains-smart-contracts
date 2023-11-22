@@ -40,7 +40,7 @@ import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
   )
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError)
   )
