@@ -88,7 +88,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(ConversionError, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
   )

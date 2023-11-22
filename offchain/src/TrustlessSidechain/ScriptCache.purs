@@ -46,7 +46,7 @@ import Data.Map as Map
 import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
+import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )

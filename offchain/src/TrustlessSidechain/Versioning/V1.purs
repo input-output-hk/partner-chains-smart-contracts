@@ -32,7 +32,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )

@@ -71,7 +71,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript, InvalidData)
   , OffchainError(InternalError, InvalidInputError)
   )

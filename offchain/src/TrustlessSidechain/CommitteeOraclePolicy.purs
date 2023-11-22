@@ -23,7 +23,7 @@ import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.RawScripts (rawCommitteeOraclePolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )

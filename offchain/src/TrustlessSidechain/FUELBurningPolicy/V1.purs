@@ -33,7 +33,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.RawScripts (rawFUELBurningPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Logging (InternalError(InvalidScript))
+import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )

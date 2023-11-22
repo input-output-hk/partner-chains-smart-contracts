@@ -43,7 +43,7 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )

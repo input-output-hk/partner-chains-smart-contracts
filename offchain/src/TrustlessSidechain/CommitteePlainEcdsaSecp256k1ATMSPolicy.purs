@@ -71,7 +71,7 @@ import TrustlessSidechain.Utils.Crypto
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript, InvalidData)
   , OffchainError(InternalError, InvalidInputError)
   )

@@ -62,7 +62,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
   , OffchainError(InternalError)
   )

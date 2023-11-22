@@ -66,7 +66,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Logging
+import TrustlessSidechain.Utils.Error
   ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
   , OffchainError(InternalError)
   )
