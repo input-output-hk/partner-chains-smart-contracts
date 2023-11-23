@@ -34,11 +34,13 @@
   , "profunctor"
   , "quickcheck"
   , "record"
+  , "run"
   , "strings"
   , "tailrec"
   , "test-unit"
   , "transformers"
   , "tuples"
+  , "typelevel-prelude"
   , "uint"
   , "unfoldable"
   ]
