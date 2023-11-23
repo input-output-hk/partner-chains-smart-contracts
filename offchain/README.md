@@ -201,7 +201,6 @@ nix run .#sidechain-main-cli -- addresses \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
-  --sidechain-genesis-hash 112233
   --version 1
 ```
 
@@ -212,7 +211,6 @@ nix run .#sidechain-main-cli -- claim-v1 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -231,7 +229,6 @@ nix run .#sidechain-main-cli -- claim-v2 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3
   --amount 13
 ```
@@ -243,7 +240,6 @@ nix run .#sidechain-main-cli -- burn-v1 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --amount 5 \
   --recipient aabbcc
@@ -258,7 +254,6 @@ nix run .#sidechain-main-cli -- burn-v2 \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --amount 5 \
@@ -274,7 +269,6 @@ In order to generate the signatures, you can use the signature generator tool:
 cabal run trustless-sidechain-gen-signatures -- \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --atms-kind plain-ecdsa-secp256k1 \
   --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
@@ -289,7 +283,6 @@ nix run .#sidechain-main-cli -- register \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -307,7 +300,6 @@ nix run .#sidechain-main-cli -- register \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -330,7 +322,6 @@ nix run .#sidechain-main-cli -- deregister \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -344,7 +335,6 @@ nix run .#sidechain-main-cli -- committee-hash \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -369,7 +359,6 @@ the JSON key `cborEncodedAddresses` from the output of the `addresses` subcomman
 nix run .#sidechain-main-cli -- save-root \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --sidechain-id 1 \
@@ -389,7 +378,6 @@ nix run .#sidechain-main-cli -- committee-handover \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --merkle-root abababab \
@@ -414,7 +402,6 @@ nix run .#sidechain-main-cli -- candidate-permission-token \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -430,7 +417,6 @@ nix run .#sidechain-main-cli -- save-checkpoint \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
@@ -446,7 +432,6 @@ nix run .#sidechain-main-cli -- insert-version \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --version 2
 ```
@@ -458,7 +443,6 @@ nix run .#sidechain-main-cli -- update-version \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --old-version 1 \
   --new-version 2
@@ -471,7 +455,6 @@ nix run .#sidechain-main-cli -- invalidate-version \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --version 1
 ```
@@ -483,7 +466,6 @@ nix run .#sidechain-main-cli -- insert-d-parameter \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
@@ -500,7 +482,6 @@ nix run .#sidechain-main-cli -- update-d-parameter \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
@@ -510,7 +491,6 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-
 #### 3.1.13 Remove a D parameter value
 
 ```
@@ -518,12 +498,10 @@ nix run .#sidechain-main-cli -- remove-d-parameter \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3
 ```
 
 This removes all inserted D parameter values.
-
 
 #### 3.1.14 Insert a list of permissioned candidates
 
@@ -532,7 +510,6 @@ nix run .#sidechain-main-cli -- insert-permissioned-candidates \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
   --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
@@ -546,7 +523,6 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-
 #### 3.1.15 Update a list of permissioned candidates
 
 ```
@@ -554,7 +530,6 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3 \
   --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
   --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
@@ -572,14 +547,12 @@ nix run .#sidechain-main-cli -- remove-permissioned-candidates \
   --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
-  --sidechain-genesis-hash 112233 \
   --threshold 2/3
 ```
 
 Remove all currently registered permissioned candidates.  If this command is
 called, a new list can only be created using the
 `insert-permissioned-candidates` command above.
-
 
 ### 3.2. Using a configuration file
 
@@ -589,7 +562,6 @@ You can also provide a configuration in `$CWD/config.json` in the following form
 {
   "sidechainParameters": {
     "chainId": 123,
-    "genesisHash": "11223344aabbcc",
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
     "threshold": { "numerator": 2, "denominator": 3 },
     "atmsKind": "plain-ecdsa-secp256k1"

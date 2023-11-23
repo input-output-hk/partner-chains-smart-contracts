@@ -374,52 +374,54 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> SaveRootResp
 
-      InitTokens { initCandidatePermissionTokenMintInfo, version } → do
-        let
-          sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: sc.genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-            , initCandidatePermissionTokenMintInfo:
-                case initCandidatePermissionTokenMintInfo of
-                  Nothing → Nothing
-                  Just
-                    { candidatePermissionTokenAmount
-                    , candidatePermissionTokenName
-                    , candidatePermissionTokenUtxo
-                    } → Just
-                    { amount: candidatePermissionTokenAmount
-                    , permissionToken:
-                        { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
-                            candidatePermissionTokenUtxo
-                        , candidatePermissionTokenName
-                        }
-                    }
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
-        { transactionId
-        , sidechainParams
-        , sidechainAddresses
-        , versioningTransactionIds
-        } ←
-          initSidechainTokens isc version
-
-        pure $ InitResp
-          { transactionId: unwrap transactionId
+      InitTokens { initCandidatePermissionTokenMintInfo, genesisHash, version } →
+        do
+          let
+            sc = unwrap scParams
+            isc =
+              { initChainId: sc.chainId
+              , initGenesisHash: genesisHash
+              , initUtxo: sc.genesisUtxo
+              , initThresholdNumerator: sc.thresholdNumerator
+              , initThresholdDenominator: sc.thresholdDenominator
+              , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+              , initCandidatePermissionTokenMintInfo:
+                  case initCandidatePermissionTokenMintInfo of
+                    Nothing → Nothing
+                    Just
+                      { candidatePermissionTokenAmount
+                      , candidatePermissionTokenName
+                      , candidatePermissionTokenUtxo
+                      } → Just
+                      { amount: candidatePermissionTokenAmount
+                      , permissionToken:
+                          { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
+                              candidatePermissionTokenUtxo
+                          , candidatePermissionTokenName
+                          }
+                      }
+              , initGovernanceAuthority: sc.governanceAuthority
+              }
+          { transactionId
           , sidechainParams
           , sidechainAddresses
-          , versioningTransactionIds: map unwrap versioningTransactionIds
-          }
+          , versioningTransactionIds
+          } ←
+            initSidechainTokens isc version
+
+          pure $ InitResp
+            { transactionId: unwrap transactionId
+            , sidechainParams
+            , sidechainAddresses
+            , versioningTransactionIds: map unwrap versioningTransactionIds
+            }
 
       Init
         { committeePubKeysInput
         , initSidechainEpoch
         , useInitTokens
         , initCandidatePermissionTokenMintInfo
+        , genesisHash
         , version
         } → do
         rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
@@ -434,7 +436,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           sc = unwrap scParams
           isc =
             { initChainId: sc.chainId
-            , initGenesisHash: sc.genesisHash
+            , initGenesisHash: genesisHash
             , initUtxo: sc.genesisUtxo
             , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
             , initAggregatedCommittee: committeePubKeys

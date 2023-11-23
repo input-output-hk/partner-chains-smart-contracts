@@ -51,7 +51,6 @@ test1 =
               , sidechainParameters:
                   ( Just
                       { chainId: (Just 123)
-                      , genesisHash: hexToByteArray "11223344aabbcc"
                       , genesisUtxo:
                           ( Just
                               ( TransactionInput

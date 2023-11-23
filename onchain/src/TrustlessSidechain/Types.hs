@@ -29,28 +29,6 @@ import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
-newtype GenesisHash = GenesisHash {getGenesisHash :: LedgerBytes}
-  deriving stock (TSPrelude.Eq, TSPrelude.Ord)
-  deriving newtype
-    ( Eq
-    , Ord
-    )
-  deriving (IsString, TSPrelude.Show) via LedgerBytes
-
--- | @since Unreleased
-instance ToData GenesisHash where
-  toBuiltinData (GenesisHash x) = toBuiltinData x
-
--- | @since Unreleased
-instance FromData GenesisHash where
-  fromBuiltinData x = GenesisHash <$> fromBuiltinData x
-
--- | @since Unreleased
-instance UnsafeFromData GenesisHash where
-  unsafeFromBuiltinData = GenesisHash . unsafeFromBuiltinData
-
-PlutusTx.makeLift ''GenesisHash
-
 {- | Parameters uniquely identifying a sidechain
 
  = Note
@@ -59,7 +37,6 @@ PlutusTx.makeLift ''GenesisHash
 -}
 data SidechainParams = SidechainParams
   { chainId :: Integer
-  , genesisHash :: GenesisHash
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
     -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
     genesisUtxo :: TxOutRef
@@ -92,13 +69,6 @@ instance HasField "chainId" SidechainParams Integer where
   get = chainId
   {-# INLINE modify #-}
   modify f sp = sp {chainId = f (chainId sp)}
-
--- | @since v4.0.0
-instance HasField "genesisHash" SidechainParams GenesisHash where
-  {-# INLINE get #-}
-  get = genesisHash
-  {-# INLINE modify #-}
-  modify f sp = sp {genesisHash = f (genesisHash sp)}
 
 -- | @since v4.0.0
 instance HasField "genesisUtxo" SidechainParams TxOutRef where

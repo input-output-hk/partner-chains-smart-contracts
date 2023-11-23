@@ -84,7 +84,6 @@ import TrustlessSidechain.OffChain (
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey,
-  GenesisHash (GenesisHash),
   MerkleTreeEntry (..),
   SidechainParams (..),
  )
@@ -303,18 +302,6 @@ parseTxOutRef =
       void $ char '#'
       txIx <- decimal
       pure $ TxOutRef txId txIx
-
-{- | 'parseGenesisHash' parses the CLI flag value
- > HEXSTR
--}
-parseGenesisHash :: OptParse.ReadM GenesisHash
-parseGenesisHash =
-  eitherReader
-    ( fmap (GenesisHash . LedgerBytes . Builtins.toBuiltin)
-        . mapLeft ("Unable to parse genesisHash: " <>)
-        . Base16.decode
-        . Char8.pack
-    )
 
 {- | 'parseThreshold' parses the CLI flag value
  > UINT/UINT
@@ -567,16 +554,6 @@ sidechainParamsParser = do
         , long "sidechain-id"
         , metavar "1"
         , help "Sidechain ID"
-        ]
-
-  genesisHash <-
-    option
-      parseGenesisHash
-      $ mconcat
-        [ short 'h'
-        , long "sidechain-genesis-hash"
-        , metavar "GENESIS_HASH"
-        , help "Sidechain genesis hash"
         ]
 
   genesisUtxo <-

@@ -469,15 +469,6 @@ sidechainParamsSpec maybeConfig = ado
         (maybeConfig >>= _.sidechainParameters >>= _.chainId)
     ]
 
-  genesisHash ← option byteArray $ fold
-    [ short 'h'
-    , long "sidechain-genesis-hash"
-    , metavar "GENESIS_HASH"
-    , help "Sidechain genesis hash"
-    , maybe mempty value
-        (maybeConfig >>= _.sidechainParameters >>= _.genesisHash)
-    ]
-
   genesisUtxo ← option transactionInput $ fold
     [ short 'c'
     , long "genesis-committee-hash-utxo"
@@ -531,7 +522,6 @@ sidechainParamsSpec maybeConfig = ado
   in
     SidechainParams
       { chainId: BigInt.fromInt chainId
-      , genesisHash
       , genesisUtxo
       , governanceAuthority
       , thresholdNumerator
@@ -977,6 +967,17 @@ parseNewCheckpointBlockHash =
         ]
     )
 
+parseGenesisHash ∷ Parser ByteArray
+parseGenesisHash =
+  option
+    byteArray
+    ( fold
+        [ long "sidechain-genesis-hash"
+        , metavar "GENESIS_HASH"
+        , help "Sidechain genesis hash"
+        ]
+    )
+
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
 initCandidatePermissionTokenMintHelper ∷
@@ -1012,10 +1013,12 @@ initTokensSpec ∷ Parser TxEndpoint
 initTokensSpec = ado
   initCandidatePermissionTokenMintInfo ← optional
     initCandidatePermissionTokenMintHelper
+  genesisHash ← parseGenesisHash
   version ← parseVersion
   in
     InitTokens
       { initCandidatePermissionTokenMintInfo
+      , genesisHash
       , version
       }
 
@@ -1048,6 +1051,7 @@ initSpec = ado
     ]
   initCandidatePermissionTokenMintInfo ← optional
     initCandidatePermissionTokenMintHelper
+  genesisHash ← parseGenesisHash
   version ← parseVersion
   in
     Init
@@ -1055,6 +1059,7 @@ initSpec = ado
       , initSidechainEpoch
       , useInitTokens
       , initCandidatePermissionTokenMintInfo
+      , genesisHash
       , version
       }
 

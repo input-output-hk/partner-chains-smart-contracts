@@ -37,7 +37,6 @@ optExample ∷ Config
 optExample =
   { sidechainParameters: Just
       { chainId: Just 1
-      , genesisHash: Just $ hexToByteArrayUnsafe "genesisHash"
       , genesisUtxo: Just $ TransactionInput
           { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
           , index: UInt.fromInt 2

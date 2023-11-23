@@ -339,14 +339,12 @@ genPK = suchThatMap (genByteArrayLen 33) ecdsaSecp256k1PubKey
 genSP ∷ Gen SidechainParams
 genSP = do
   NonNegative (ArbitraryBigInt chainId) ← arbitrary
-  genesisHash ← genGH
   ArbitraryTransactionInput genesisUtxo ← arbitrary
   Positive (ArbitraryBigInt thresholdNumerator) ← arbitrary
   Positive (ArbitraryBigInt thresholdDenominator) ← arbitrary
   governanceAuthority ← genGA
   pure $ SidechainParams
     { chainId
-    , genesisHash
     , genesisUtxo
     , thresholdNumerator
     , thresholdDenominator

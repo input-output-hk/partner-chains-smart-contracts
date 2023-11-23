@@ -88,7 +88,6 @@ import TrustlessSidechain.Types (
   SidechainParams (
     SidechainParams,
     chainId,
-    genesisHash,
     genesisUtxo,
     thresholdDenominator,
     thresholdNumerator
@@ -130,7 +129,6 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
           [ ["--payment-signing-key-file", signingKeyFile]
           , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
           , ["--sidechain-id", show chainId]
-          , ["--sidechain-genesis-hash", show genesisHash]
           , ["--threshold-numerator", show thresholdNumerator]
           , ["--threshold-denominator", show thresholdDenominator]
           , ["--atms-kind", OffChain.showATMSKind atmsKind]

@@ -133,7 +133,6 @@ import TrustlessSidechain.Types (
   SidechainParams (
     SidechainParams,
     chainId,
-    genesisHash,
     genesisUtxo,
     governanceAuthority,
     thresholdDenominator,
@@ -281,7 +280,6 @@ sampleSidechainParams :: SidechainParams
 sampleSidechainParams =
   SidechainParams
     { chainId = 11
-    , genesisHash = "e8118a6a0f2ea8447b2418b0301fa53fa97f95a042fc92edbd7eda9f809d9040"
     , genesisUtxo = sampleTxOutRef
     , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     , thresholdNumerator = 2

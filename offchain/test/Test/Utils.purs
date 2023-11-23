@@ -265,7 +265,6 @@ assertHasOutputWithAsset txId addr cs tn = do
 dummySidechainParams ∷ SidechainParams
 dummySidechainParams = SidechainParams
   { chainId: BigInt.fromInt 69
-  , genesisHash: hexToByteArrayUnsafe "112233"
   , genesisUtxo: toTxIn
       "211307be24c471d42012c5ebd7d98c83f349c612023ce365f9fb5e3e758d0779"
       1

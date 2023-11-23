@@ -10,7 +10,6 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Control.Alternative (guard)
 import Data.BigInt (BigInt)
@@ -18,7 +17,6 @@ import TrustlessSidechain.Governance as Governance
 
 newtype SidechainParams = SidechainParams
   { chainId ∷ BigInt
-  , genesisHash ∷ ByteArray
   , genesisUtxo ∷ TransactionInput
   ,
     -- `thresholdNumerator` is the numerator of the ratio required for the
@@ -46,7 +44,6 @@ instance ToData SidechainParams where
   toData
     ( SidechainParams
         { chainId
-        , genesisHash
         , genesisUtxo
         , thresholdNumerator
         , thresholdDenominator
@@ -55,7 +52,6 @@ instance ToData SidechainParams where
     ) =
     Constr (BigNum.fromInt 0)
       [ toData chainId
-      , toData genesisHash
       , toData genesisUtxo
       , toData thresholdNumerator
       , toData thresholdDenominator
@@ -64,17 +60,15 @@ instance ToData SidechainParams where
 
 instance FromData SidechainParams where
   fromData = case _ of
-    Constr ix [ cid, gh, gu, tn, td, ga ] → do
+    Constr ix [ cid, gu, tn, td, ga ] → do
       guard (ix == BigNum.fromInt 0)
       chainId ← fromData cid
-      genesisHash ← fromData gh
       genesisUtxo ← fromData gu
       thresholdNumerator ← fromData tn
       thresholdDenominator ← fromData td
       governanceAuthority ← fromData ga
       pure $ SidechainParams
         { chainId
-        , genesisHash
         , genesisUtxo
         , thresholdNumerator
         , thresholdDenominator

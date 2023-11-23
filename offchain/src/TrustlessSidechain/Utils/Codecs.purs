@@ -121,7 +121,6 @@ scParamsCodec =
   wrapIso SidechainParams $
     ( CAR.object "sidechainParameters"
         { chainId: chainIdCodec
-        , genesisHash: byteArrayCodec
         , genesisUtxo: transactionInputCodec
         , thresholdNumerator:
             CA.prismaticCodec "thresholdNumerator"

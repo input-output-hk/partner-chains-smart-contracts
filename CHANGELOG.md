@@ -26,6 +26,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/608))
 
 ## Changed
+* The `--sidechain-genesis-hash` now only needs to be passed to `--init` and
+  `init-tokens-mint` commands.
 * `addresses` doesn't return cbor encoded address of UpdateCommitteeHashValidator anymore. Now it returns its validator hash.
   ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
 * `addresses` no loner requires `init` to be conducted first.  This reverts to
@@ -43,6 +45,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Commands `init` and `init-tokens-mint` now require `--version` flag followed
   by a positive integer as an argument.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
+
+## Removed
+
+* `genesisHash` field has been removed from the `"sidechainParameters"` record
+  in the configuration file.
 
 # v4.0.0
 

@@ -48,7 +48,6 @@ configCodec =
   scParamsCodec ∷
     CA.JsonCodec
       { chainId ∷ Maybe Int
-      , genesisHash ∷ Maybe ByteArray
       , genesisUtxo ∷ Maybe TransactionInput
       , threshold ∷
           Maybe
@@ -61,7 +60,6 @@ configCodec =
   scParamsCodec =
     ( CAR.object "sidechainParameters"
         { chainId: CAC.maybe CA.int
-        , genesisHash: CAC.maybe byteArrayCodec
         , genesisUtxo: CAC.maybe transactionInputCodec
         , threshold: CAC.maybe thresholdCodec
         , atmsKind: CAC.maybe atmsKindCodec

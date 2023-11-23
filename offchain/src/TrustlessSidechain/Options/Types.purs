@@ -79,7 +79,6 @@ type Config =
     sidechainParameters ∷
       Maybe
         { chainId ∷ Maybe Int
-        , genesisHash ∷ Maybe ByteArray
         , genesisUtxo ∷ Maybe TransactionInput
         , threshold ∷
             Maybe
@@ -200,6 +199,7 @@ data TxEndpoint
   | InitTokens
       { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
+      , genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | Init
@@ -208,6 +208,7 @@ data TxEndpoint
       , useInitTokens ∷ Boolean
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
+      , genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | SaveCheckpoint

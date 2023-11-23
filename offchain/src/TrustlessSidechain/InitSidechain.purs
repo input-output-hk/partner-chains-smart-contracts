@@ -141,7 +141,6 @@ type InitSidechainParams' =
 toSidechainParams ∷ ∀ (r ∷ Row Type). InitTokensParams r → SidechainParams
 toSidechainParams isp = SidechainParams
   { chainId: isp.initChainId
-  , genesisHash: isp.initGenesisHash
   , genesisUtxo: isp.initUtxo
   , thresholdNumerator: isp.initThresholdNumerator
   , thresholdDenominator: isp.initThresholdDenominator

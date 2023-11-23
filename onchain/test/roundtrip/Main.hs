@@ -91,7 +91,6 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
-  GenesisHash (GenesisHash),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -109,7 +108,6 @@ import TrustlessSidechain.Types (
   SidechainParams (
     SidechainParams,
     chainId,
-    genesisHash,
     genesisUtxo,
     governanceAuthority,
     thresholdDenominator,
@@ -140,9 +138,7 @@ import TrustlessSidechain.Types (
 main :: IO ()
 main =
   defaultMain . adjustOption go . testGroup "Roundtrip" $
-    [ testProperty "GenesisHash (safe)" . toDataSafeLaws' genGH shrinkGH $ show
-    , testProperty "GenesisHash (unsafe)" . toDataUnsafeLaws' genGH shrinkGH $ show
-    , testProperty "SidechainParams (safe)" . toDataSafeLaws' genSP shrinkSP $ show
+    [ testProperty "SidechainParams (safe)" . toDataSafeLaws' genSP shrinkSP $ show
     , testProperty "SidechainParams (unsafe)" . toDataUnsafeLaws' genSP shrinkSP $ show
     , testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
     , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
@@ -399,11 +395,6 @@ genUCH = do
   ArbitraryCurrencySymbol rtcs <- arbitrary
   pure . UpdateCommitteeHash sp cocs ccvcs $ rtcs
 
-genGH :: Gen GenesisHash
-genGH = do
-  ArbitraryBytes lb <- arbitrary
-  pure . GenesisHash $ lb
-
 genGA :: Gen GovernanceAuthority
 genGA = do
   ArbitraryPubKeyHash pkh <- arbitrary
@@ -412,12 +403,11 @@ genGA = do
 genSP :: Gen SidechainParams
 genSP = do
   NonNegative cid <- arbitrary
-  gh <- genGH
   ArbitraryTxOutRef gu <- arbitrary
   Positive n <- arbitrary
   Positive d <- arbitrary
   ga <- genGA
-  pure . SidechainParams cid gh gu n d $ ga
+  pure . SidechainParams cid gu n d $ ga
 
 genCPM :: Gen CandidatePermissionMint
 genCPM = do
@@ -603,12 +593,6 @@ shrinkUCH (UpdateCommitteeHash {..}) = do
   ArbitraryCurrencySymbol rtcs' <- shrink (ArbitraryCurrencySymbol mptRootTokenCurrencySymbol)
   pure . UpdateCommitteeHash sp' cocs' csvcs' $ rtcs'
 
-shrinkGH :: GenesisHash -> [GenesisHash]
-shrinkGH (GenesisHash lb) = do
-  let ab = coerce lb
-  ArbitraryBytes lb' <- shrink ab
-  pure . GenesisHash $ lb'
-
 shrinkGA :: GovernanceAuthority -> [GovernanceAuthority]
 shrinkGA (GovernanceAuthority pkh) = do
   ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
@@ -617,12 +601,11 @@ shrinkGA (GovernanceAuthority pkh) = do
 shrinkSP :: SidechainParams -> [SidechainParams]
 shrinkSP (SidechainParams {..}) = do
   NonNegative cid' <- shrink . NonNegative $ chainId
-  gh' <- shrinkGH genesisHash
   ArbitraryTxOutRef gu' <- shrink . ArbitraryTxOutRef $ genesisUtxo
   Positive n' <- shrink . Positive $ thresholdNumerator
   ga <- shrinkGA governanceAuthority
   -- We don't shrink the denominator, as this could make the result _bigger_.
-  pure . SidechainParams cid' gh' gu' n' thresholdDenominator $ ga
+  pure . SidechainParams cid' gu' n' thresholdDenominator $ ga
 
 shrinkCPM :: CandidatePermissionMint -> [CandidatePermissionMint]
 shrinkCPM (CandidatePermissionMint {..}) = do
