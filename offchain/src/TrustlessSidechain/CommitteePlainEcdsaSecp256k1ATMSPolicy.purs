@@ -43,8 +43,12 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
+import Contract.TxConstraints as TxConstraints
+import Contract.Utxos as Utxos
+import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Data.Array (find)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -60,6 +64,9 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
+import TrustlessSidechain.Utils.Address
+  ( getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
@@ -73,6 +80,7 @@ import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
   , VersionOracle(VersionOracle)
@@ -194,6 +202,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
   -- Grabbing CommitteePlainEcdsaSecp256k1ATMSPolicy
   -------------------------------------------------------------
   { committeePlainEcdsaSecp256k1ATMSPolicy
+  , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
   } ← getCommitteePlainEcdsaSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
@@ -282,12 +291,35 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
               committeeCertificateVerificationVersioningOutput
           )
 
+  ownValue ← getOwnUTxOsTotalValue
+  let
+    burnWasteTokenConstraints = fold $ do
+      (_ /\ tokenName /\ amount) ←
+        -- Filtering the entire list is probably suboptimal. If possible this
+        -- should be optimised.
+        find
+          (\(cs /\ _ /\ _) → cs == committeePlainEcdsaSecp256k1ATMSCurrencySymbol)
+          (flattenValue ownValue)
+      pure $
+        TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
+          redeemer
+          tokenName
+          (negate amount)
+          ( RefInput $ mkTxUnspentOut
+              committeeCertificateVerificationVersioningInput
+              committeeCertificateVerificationVersioningOutput
+          )
+
+  ownAddr ← getOwnWalletAddress
+  ownUtxos ← Utxos.utxosAt ownAddr
+
   pure
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeORef committeeTxOut)
-          --    <> ScriptLookups.mintingPolicy committeePlainEcdsaSecp256k1ATMSPolicy
           <> versioningLookups
+          <> ScriptLookups.unspentOutputs ownUtxos
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
@@ -299,6 +331,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
               committeeCertificateVerificationVersioningOutput
           )
           <> versioningConstraints
+          <> burnWasteTokenConstraints
     -- Note: we used to include the current committee as reference input
     -- every time, but there are times when one wants to spend the output
     -- with the current committee and hence must provide a redeemer (and

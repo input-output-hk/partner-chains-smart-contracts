@@ -38,6 +38,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   )
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( FUELMintingPolicy
@@ -56,16 +57,8 @@ mkBurnNFTsLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 mkBurnNFTsLookupsAndConstraints sidechainParams = do
-  ownAddr ← getOwnWalletAddress
-  ownUtxos ← utxosAt ownAddr
-  let
-    ownValue =
-      foldMap
-        ( \( TransactionOutputWithRefScript
-               { output: TransactionOutput { amount } }
-           ) → amount
-        ) $ Map.values ownUtxos
 
+  ownValue ← getOwnUTxOsTotalValue
   committeeCertificateMint ←
     EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
       sidechainParams
@@ -180,9 +173,7 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
           (flattenValue ownValue)
       pure $ mkConstraint { tokenName, amount }
 
-    lookups = ScriptLookups.unspentOutputs ownUtxos
-
   pure
-    { lookups
-    , constraints
+    { constraints
+    , lookups: mempty
     }

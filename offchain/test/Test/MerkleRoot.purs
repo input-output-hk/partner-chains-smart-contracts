@@ -349,7 +349,7 @@ testScenario3 =
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 50_000_000
         ]
     $ \alice → Wallet.withKeyWallet alice do
         Log.logInfo' "MerkleRoot testScenario2"
@@ -357,7 +357,7 @@ testScenario3 =
         -- 1. Setting up the sidechain
         ---------------------------
         let
-          committeeSize = 100
+          committeeSize = 70
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
 
