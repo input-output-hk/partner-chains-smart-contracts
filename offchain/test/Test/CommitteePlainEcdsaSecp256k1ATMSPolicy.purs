@@ -232,8 +232,8 @@ testScenario1 =
         void do
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
+              -- byte array of 32 bytes which are all 2s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
 
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
@@ -272,12 +272,12 @@ testScenario1 =
             sidechainMessageTokenName
 
         logInfo'
-          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
+          "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
         void do
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
+              -- byte array of 32 bytes which are all 3s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 3
 
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
@@ -285,7 +285,7 @@ testScenario1 =
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
               $ Value.mkTokenName
               $ ByteArray.byteArrayFromIntArrayUnsafe
-              $ Array.replicate 32 3
+              $ Array.replicate 32 4
 
             allPubKeysAndSignatures = generateSignatures
               { -- the current committee stored on chain
@@ -318,8 +318,8 @@ testScenario1 =
             Utils.Crypto.generatePrivKey
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 4
+              -- byte array of 32 bytes which are all 5s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 5
 
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray

@@ -13,6 +13,7 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
+import Ctl.Internal.Plutus.Types.Value (singleton, unionWith)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
@@ -239,8 +240,8 @@ testScenario1 =
         void do
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
+              -- byte array of 32 bytes which are all 2s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
 
             sidechainMessage =
               sidechainMessageByteArray
@@ -281,13 +282,32 @@ testScenario1 =
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
+        let
+          v1 = singleton committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+            ( Unsafe.unsafePartial $ Maybe.fromJust
+                $ Value.mkTokenName
+                $ ByteArray.byteArrayFromIntArrayUnsafe
+                $ Array.replicate 32 0
+            )
+            (BigInt.fromInt 1)
+          v2 = singleton committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+            ( Unsafe.unsafePartial $ Maybe.fromJust
+                $ Value.mkTokenName
+                $ ByteArray.byteArrayFromIntArrayUnsafe
+                $ Array.replicate 32 1
+            )
+            (BigInt.fromInt (-1))
+          v3 = unionWith (+) v1 v2
+
+        logInfo' (show v3)
+
         logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 2s, but we try to mint all 3s"
+          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
         void do
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
+              -- byte array of 32 bytes which are all 3s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 3
 
             sidechainMessage =
               sidechainMessageByteArray
@@ -295,7 +315,7 @@ testScenario1 =
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
               $ Value.mkTokenName
               $ ByteArray.byteArrayFromIntArrayUnsafe
-              $ Array.replicate 32 3
+              $ Array.replicate 32 4
 
             allPubKeysAndSignatures = generateSignatures
               { -- the current committee stored on chain
@@ -309,6 +329,7 @@ testScenario1 =
           utxo ←
             CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
               sidechainParams
+
           void
             ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
                 $
@@ -330,13 +351,13 @@ testScenario1 =
           wrongCommittee ← sequence $ Array.replicate keyCount
             $ Effect.Class.liftEffect
             $ Utils.SchnorrSecp256k1.generateRandomPrivateKey
+
           let
             sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 4
+              -- byte array of 32 bytes which are all 5s.
+              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 5
 
-            sidechainMessage =
-              sidechainMessageByteArray
+            sidechainMessage = sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
               $ Value.mkTokenName

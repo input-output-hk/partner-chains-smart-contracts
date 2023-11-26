@@ -51,6 +51,8 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
+import Contract.TxConstraints as TxConstraints
+import Contract.Utxos as Utxos
 import Contract.Value
   ( CurrencySymbol
   , TokenName
@@ -59,6 +61,8 @@ import Contract.Value
   , mkTokenName
   )
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Data.Array (filter)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -77,6 +81,9 @@ import TrustlessSidechain.Utils.Address
   , bech32BytesFromAddress
   , getOwnPaymentPubKeyHash
   )
+import TrustlessSidechain.Utils.Address
+  ( getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
   , OffchainError(InternalError, InvalidInputError)
@@ -84,6 +91,7 @@ import TrustlessSidechain.Utils.Logging
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( FUELMintingPolicy
@@ -405,6 +413,29 @@ mkMintFuelLookupAndConstraints
     mustAddDSNodeA ← mkNodeConstraints nodeA
     mustAddDSNodeB ← mkNodeConstraints nodeB
 
+    ownValue ← getOwnUTxOsTotalValue
+    let
+      burnWasteTokenConstraints = fold $ do
+        (_ /\ tokenName /\ amount') ←
+          -- Filtering the entire list is probably suboptimal. If possible this
+          -- should be optimised.
+          filter
+            (\(cs /\ _ /\ _) → cs == fuelMintingCurrencySymbol)
+            (flattenValue ownValue)
+        pure $
+          TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+            (Scripts.mintingPolicyHash fuelMintingPolicy)
+            (wrap $ toData FUELBurningRedeemer)
+            tokenName
+            (negate amount')
+            ( RefInput $ mkTxUnspentOut
+                scriptRefTxInput
+                scriptRefTxOutput
+            )
+
+    ownAddr ← getOwnWalletAddress
+    ownUtxos ← Utxos.utxosAt ownAddr
+
     pure
       { lookups:
           Lookups.mintingPolicy dsKeyPolicy
@@ -416,6 +447,7 @@ mkMintFuelLookupAndConstraints
               (Map.singleton merkleRootVersioningInput merkleRootVersioningOutput)
             <> Lookups.unspentOutputs
               (Map.singleton dsKeyVersioningInput dsKeyVersioningOutput)
+            <> Lookups.unspentOutputs ownUtxos
       , constraints:
           -- Minting the FUEL tokens
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
@@ -439,6 +471,7 @@ mkMintFuelLookupAndConstraints
             -- Referencing versioning utxos
             <> Constraints.mustReferenceOutput merkleRootVersioningInput
             <> Constraints.mustReferenceOutput dsKeyVersioningInput
+            <> burnWasteTokenConstraints
       }
 
 -- | `findMerkleRootTokenUtxoByRootHash` attempts to find a UTxO with MerkleRootToken

@@ -7,16 +7,11 @@
 -- | NOTE: this is essentially duplicated from `TrustlessSidechain.CommitteePlainSchnorrEcdsa256k1ATMSPolicy`
 module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
   ( ATMSPlainSchnorrSecp256k1Multisignature
-      ( ATMSPlainSchnorrSecp256k1Multisignature
-      )
-  , ATMSRedeemer(ATMSMint, ATMSBurn)
-  , committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
-
+  , ATMSRedeemer(..)
   , committeePlainSchnorrSecp256k1ATMS
-  , getCommitteePlainSchnorrSecp256k1ATMSPolicy
-
+  , committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
   , findUpdateCommitteeHashUtxoFromSidechainParams
-
+  , getCommitteePlainSchnorrSecp256k1ATMSPolicy
   , mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   , runCommitteePlainSchnorrSecp256k1ATMSPolicy
   ) where
@@ -50,10 +45,15 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
+import Contract.TxConstraints as TxConstraints
+import Contract.Utxos as Utxos
 import Contract.Value
   ( CurrencySymbol
+  , TokenName
   )
 import Contract.Value as Value
+import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Data.Array (find)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -71,6 +71,9 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
+import TrustlessSidechain.Utils.Address
+  ( getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, InvalidData)
@@ -85,6 +88,7 @@ import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
   , VersionOracle(VersionOracle)
@@ -211,6 +215,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy
   -------------------------------------------------------------
   { committeePlainSchnorrSecp256k1ATMSPolicy
+  , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
   } ← getCommitteePlainSchnorrSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
@@ -299,11 +304,37 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
               committeeCertificateVerificationVersioningOutput
           )
 
+  ownValue ← getOwnUTxOsTotalValue
+  let
+    burnWasteTokenConstraints = fold $ do
+      (_ /\ tokenName /\ amount) ←
+        -- Filtering the entire list is probably suboptimal. If possible this
+        -- should be optimised.
+        find
+          ( \(cs /\ _ /\ _) → cs ==
+              committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+          )
+          (flattenValue ownValue)
+      pure $
+        TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
+          redeemer
+          tokenName
+          (negate amount)
+          ( RefInput $ mkTxUnspentOut
+              committeeCertificateVerificationVersioningInput
+              committeeCertificateVerificationVersioningOutput
+          )
+
+  ownAddr ← getOwnWalletAddress
+  ownUtxos ← Utxos.utxosAt ownAddr
+
   pure
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeORef committeeTxOut)
           <> versioningLookups
+          <> ScriptLookups.unspentOutputs ownUtxos
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
@@ -315,6 +346,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
               committeeCertificateVerificationVersioningOutput
           )
           <> versioningConstraints
+          <> burnWasteTokenConstraints
     -- Note: we used to include the current committee as reference input
     -- every time, but there are times when one wants to spend the output
     -- with the current committee and hence must provide a redeemer (and

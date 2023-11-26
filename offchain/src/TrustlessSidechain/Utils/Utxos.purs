@@ -1,6 +1,7 @@
 -- | `Utils.Utxos` provides some utility functions for querying utxos.
 module TrustlessSidechain.Utils.Utxos
   ( findUtxoByValueAt
+  , getOwnUTxOsTotalValue
   ) where
 
 import Contract.Prelude
@@ -8,9 +9,17 @@ import Contract.Prelude
 import Contract.Address (Address)
 import Contract.Monad (Contract)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
+import Contract.Transaction
+  ( TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  )
 import Contract.Utxos as Utxos
 import Contract.Value (Value)
 import Data.FoldableWithIndex as FoldableWithIndex
+import Data.Map as Map
+import TrustlessSidechain.Utils.Address
+  ( getOwnWalletAddress
+  )
 
 -- | `findUtxoAtByValue addr p` finds all utxos at the validator address `addr`
 -- | using `Contract.Utxos.utxosAt`, then looks for the first utxo which satisfies
@@ -27,3 +36,15 @@ findUtxoByValueAt addr p = do
   let
     go _txIn txOut = p (unwrap (unwrap txOut).output).amount
   pure $ FoldableWithIndex.findWithIndex go scriptUtxos
+
+getOwnUTxOsTotalValue ∷ Contract Value
+getOwnUTxOsTotalValue = do
+  ownAddr ← getOwnWalletAddress
+  ownUtxos ← Utxos.utxosAt ownAddr
+  pure
+    $ foldMap
+        ( \( TransactionOutputWithRefScript
+               { output: TransactionOutput { amount } }
+           ) → amount
+        )
+    $ Map.values ownUtxos
