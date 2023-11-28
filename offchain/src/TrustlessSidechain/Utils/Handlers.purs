@@ -16,8 +16,8 @@ import Type.Proxy (Proxy(Proxy))
 import Type.Row (type (+))
 
 type SidechainEffects =
-  ( EXCEPT OffchainError
-      + EXCEPT InternalError
+  ( EXCEPT InternalError
+      + EXCEPT OffchainError
       + CONTRACT Unit
       + AFF
       + ()
@@ -25,11 +25,10 @@ type SidechainEffects =
 
 runSidechainEffects ∷ ContractParams → Run SidechainEffects ~> Aff
 runSidechainEffects params =
-  runShowError
-    >>> runInternalError
+  runInternalError
+    >>> runShowError
     >>> runContract params
-    >>>
-      Run.runBaseAff
+    >>> Run.runBaseAff
 
 runInternalError ∷ ∀ r. Run (EXCEPT InternalError + AFF + r) ~> Run (AFF + r)
 runInternalError r1 = do
