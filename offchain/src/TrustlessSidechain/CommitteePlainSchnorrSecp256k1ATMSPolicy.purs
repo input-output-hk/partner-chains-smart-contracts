@@ -326,15 +326,11 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
               committeeCertificateVerificationVersioningOutput
           )
 
-  ownAddr ← getOwnWalletAddress
-  ownUtxos ← Utxos.utxosAt ownAddr
-
   pure
     { lookups:
         ScriptLookups.unspentOutputs
           (Map.singleton committeeORef committeeTxOut)
           <> versioningLookups
-          <> ScriptLookups.unspentOutputs ownUtxos
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
