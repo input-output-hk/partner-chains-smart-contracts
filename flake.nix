@@ -287,7 +287,10 @@
     in
       n2c.buildImage {
         name = "sidechain-main-cli-docker";
-        tag = "${self.shortRev or self.dirtyShortRev}";
+        tag =
+          if (self ? shortRev)
+          then "${self.shortRev}"
+          else "${self.dirtyShortRev}";
         config = {
           Cmd = ["sidechain-main-cli"];
         };
