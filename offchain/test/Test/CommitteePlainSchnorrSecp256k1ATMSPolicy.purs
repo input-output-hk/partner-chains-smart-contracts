@@ -13,7 +13,6 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import Ctl.Internal.Plutus.Types.Value (singleton, unionWith)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
@@ -281,25 +280,6 @@ testScenario1 =
           Test.Utils.assertIHaveOutputWithAsset
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
-
-        let
-          v1 = singleton committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-            ( Unsafe.unsafePartial $ Maybe.fromJust
-                $ Value.mkTokenName
-                $ ByteArray.byteArrayFromIntArrayUnsafe
-                $ Array.replicate 32 0
-            )
-            (BigInt.fromInt 1)
-          v2 = singleton committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-            ( Unsafe.unsafePartial $ Maybe.fromJust
-                $ Value.mkTokenName
-                $ ByteArray.byteArrayFromIntArrayUnsafe
-                $ Array.replicate 32 1
-            )
-            (BigInt.fromInt (-1))
-          v3 = unionWith (+) v1 v2
-
-        logInfo' (show v3)
 
         logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
