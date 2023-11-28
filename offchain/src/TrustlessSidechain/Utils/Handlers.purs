@@ -4,10 +4,12 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, ContractParams)
 import Contract.Monad as Contract
+import Effect.Class (liftEffect)
+import Effect.Exception as Exception
 import Run (AFF, Run)
-import Run as Run
+import Run (interpret, lift, liftAff, on, runBaseAff, send) as Run
 import Run.Except (EXCEPT)
-import Run.Except as Run
+import Run.Except (runExcept) as Run
 import TrustlessSidechain.Utils.Error (InternalError, OffchainError)
 import Type.Proxy (Proxy(Proxy))
 import Type.Row (type (+))
@@ -22,11 +24,29 @@ type SidechainEffects =
 
 --
 
-{-
-runSidechainEffects :: ContractParams -> Run (CONTRACT Unit + AFF + ()) ~> Aff
-runSidechainEffects params f =
-  Run.runBaseAff (runContract params f)
+runSidechainEffects ∷ ContractParams → Run SidechainEffects ~> Aff
+runSidechainEffects params =
+  runShowError
+    >>> runInternalError
+    >>> runContract params
+    >>>
+      Run.runBaseAff
 
+runInternalError ∷ ∀ r. Run (EXCEPT InternalError + AFF + r) ~> Run (AFF + r)
+runInternalError r1 = do
+  res ← Run.runExcept r1
+  case res of
+    Right ok → pure ok
+    Left err → Run.liftAff (liftEffect (Exception.throw (show err)))
+
+runShowError ∷ ∀ a r. Show a ⇒ Run (EXCEPT a + AFF + r) ~> Run (AFF + r)
+runShowError r1 = do
+  res ← Run.runExcept r1
+  case res of
+    Right ok → pure ok
+    Left err → Run.liftAff (liftEffect (Exception.throw (show err)))
+
+{-
 mapExcept :: forall a b r. (a -> b) -> Run (EXCEPT a + r) ~> Run (EXCEPT b + r)
 mapExcept f r1 = do
   x <- Run.runExcept r1
@@ -34,8 +54,6 @@ mapExcept f r1 = do
     Right x' -> pure x'
     Left y' -> ?g --throw (f y')
 -}
-
---liftContractE (runExcept f) >>= (liftContractE >>= runExcept)
 
 -- JSTOLAREK: redundant, we want to interpret to Aff
 -- runAffEffects ∷ Run (AFF + ()) Unit → Contract Unit
