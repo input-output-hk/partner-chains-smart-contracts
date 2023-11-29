@@ -80,9 +80,7 @@ import TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , bech32BytesFromAddress
   , getOwnPaymentPubKeyHash
-  )
-import TrustlessSidechain.Utils.Address
-  ( getOwnWalletAddress
+  , getOwnWalletAddress
   )
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)

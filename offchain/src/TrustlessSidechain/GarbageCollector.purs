@@ -16,28 +16,20 @@ import Contract.PlutusData
   , unitRedeemer
   )
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
-  ( TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , mkTxUnspentOut
+  ( mkTxUnspentOut
   )
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Utxos (utxosAt)
 import Ctl.Internal.Plutus.Types.Value (flattenValue)
 import Data.Array (filter)
 import Data.BigInt as BigInt
-import Data.Map as Map
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as SchnorrATMSPolicy
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELMintingPolicy.V1 as MintingV1
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address
-  ( getOwnWalletAddress
-  )
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId

@@ -43,12 +43,11 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Types.Value (flattenValue)
-import Data.Array (find)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -297,7 +296,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
       (_ /\ tokenName /\ amount) ←
         -- Filtering the entire list is probably suboptimal. If possible this
         -- should be optimised.
-        find
+        Array.find
           (\(cs /\ _ /\ _) → cs == committeePlainEcdsaSecp256k1ATMSCurrencySymbol)
           (flattenValue ownValue)
       pure $
