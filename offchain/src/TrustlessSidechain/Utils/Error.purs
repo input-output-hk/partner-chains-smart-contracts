@@ -6,6 +6,7 @@ module TrustlessSidechain.Utils.Error
 import Contract.Prelude
 
 import Contract.ScriptLookups as ScriptLookups
+import Contract.Scripts (ApplyArgsError)
 import Contract.Transaction as Transaction
 
 -- | Error raised from the off-chain code of the application
@@ -28,6 +29,11 @@ data InternalError
   | NotFoundOwnPubKeyHash
   -- | Own address cannot be found
   | NotFoundOwnAddress
+  -- | Cannot decode script from a text envelope.  Use 'String' field to pass
+  -- | the envelope that failed.
+  | InvalidScriptEnvelope String
+  -- | Cannot apply arguments to a script
+  | InvalidScriptArgs ApplyArgsError
   -- | Invalid policy or validator script, conversion to currency symbol / validator hash failed
   | InvalidScript String
   -- | Invalid datum or redeemer, decoding errors
