@@ -6,7 +6,8 @@ module TrustlessSidechain.Utils.Logging
   , LogEff
   , logStr
   , logMsg
-  , runLog
+  , runLogToConsole
+  , runLogToFile
   ) where
 
 import Contract.Prelude
@@ -52,16 +53,31 @@ logMsg msg = Run.lift _log (LogMsg msg unit)
 logStr ∷ ∀ r. String → Run (LOG + r) Unit
 logStr str = Run.lift _log (LogStr str unit)
 
-handleLog ∷ ∀ r. LogEff ~> Run (AFF + r)
-handleLog = case _ of
+handleLogToFile ∷ ∀ r. String → LogEff ~> Run (AFF + r)
+handleLogToFile fileName = case _ of
   LogMsg msg next → do
-    Run.liftAff $ appendTextFile UTF8 "./contractlog.json"
+    Run.liftAff $ appendTextFile UTF8 fileName
       (jsonFormatter msg <> "\n")
+    pure next
+
+  LogStr str next → do
+    Run.liftAff $ appendTextFile UTF8 fileName
+      (str <> "\n")
+    pure next
+
+handleLogToConsole ∷ ∀ r. LogEff ~> Run (AFF + r)
+handleLogToConsole = case _ of
+  LogMsg msg next → do
+    Run.liftAff $ Console.log (jsonFormatter msg <> "\n")
     pure next
 
   LogStr str next → do
     Run.liftAff $ Console.log str
     pure next
 
-runLog ∷ ∀ r. Run (AFF + LOG + r) ~> Run (AFF + r)
-runLog = Run.interpret (Run.on _log handleLog Run.send)
+runLogToConsole ∷ ∀ r. Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToConsole = Run.interpret (Run.on _log handleLogToConsole Run.send)
+
+runLogToFile ∷ ∀ r. String → Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToFile fileName =
+  Run.interpret (Run.on _log (handleLogToFile fileName) Run.send)
