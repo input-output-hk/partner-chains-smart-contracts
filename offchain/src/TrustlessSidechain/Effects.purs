@@ -1,4 +1,7 @@
-module TrustlessSidechain.Utils.Handlers where
+module TrustlessSidechain.Effects
+  ( SidechainEffects
+  , runSidechainEffects
+  ) where
 
 import Contract.Prelude
 
