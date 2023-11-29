@@ -7,6 +7,8 @@
 -- | NOTE: this is essentially duplicated from `TrustlessSidechain.CommitteePlainSchnorrEcdsa256k1ATMSPolicy`
 module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
   ( ATMSPlainSchnorrSecp256k1Multisignature
+      ( ATMSPlainSchnorrSecp256k1Multisignature
+      )
   , ATMSRedeemer(..)
   , committeePlainSchnorrSecp256k1ATMS
   , committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
@@ -45,15 +47,12 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.TxConstraints as TxConstraints
-import Contract.Utxos as Utxos
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
   )
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Types.Value (flattenValue)
-import Data.Array (find)
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -71,9 +70,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
-import TrustlessSidechain.Utils.Address
-  ( getOwnWalletAddress
-  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Logging
   ( InternalError(InvalidScript, InvalidData)
@@ -310,7 +306,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
       (_ /\ tokenName /\ amount) ←
         -- Filtering the entire list is probably suboptimal. If possible this
         -- should be optimised.
-        find
+        Array.find
           ( \(cs /\ _ /\ _) → cs ==
               committeePlainSchnorrSecp256k1ATMSCurrencySymbol
           )

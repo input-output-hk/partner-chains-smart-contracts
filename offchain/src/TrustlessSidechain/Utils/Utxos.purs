@@ -8,9 +8,9 @@ import Contract.Prelude
 
 import Contract.Address (Address)
 import Contract.Monad (Contract)
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Transaction
-  ( TransactionOutput(TransactionOutput)
+  ( TransactionInput
+  , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.Utxos as Utxos
