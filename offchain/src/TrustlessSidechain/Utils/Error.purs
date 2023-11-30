@@ -50,6 +50,9 @@ data InternalError
   | InvalidScriptEnvelope String
   -- | Cannot apply arguments to a script
   | InvalidScriptArgs ApplyArgsError
+  -- | Cannot decode a currency symbol.  Use 'String' field to provide a unique
+  -- | tag or description.
+  | InvalidCurrencySymbol String
   -- | Invalid policy or validator script, conversion to currency symbol /
   -- | validator hash failed
   | InvalidScript String

@@ -84,10 +84,10 @@ handleLogToConsole = case _ of
     pure next
 
 -- | Handle `LOG` effect by logging to console.
-runLogToConsole ∷ ∀ r. Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToConsole ∷ ∀ r. Run (AFF + LOG + r) ~> Run (AFF + r)
 runLogToConsole = Run.interpret (Run.on _log handleLogToConsole Run.send)
 
 -- | Handle `LOG` effect by logging to a file.
-runLogToFile ∷ ∀ r. String → Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToFile ∷ ∀ r. String → Run (AFF + LOG + r) ~> Run (AFF + r)
 runLogToFile fileName =
   Run.interpret (Run.on _log (handleLogToFile fileName) Run.send)

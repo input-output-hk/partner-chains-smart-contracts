@@ -8,6 +8,7 @@ module TrustlessSidechain.Checkpoint.Utils
   ) where
 
 import Contract.Prelude
+import TrustlessSidechain.Utils.Logging
 
 import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
@@ -27,6 +28,9 @@ import Contract.Transaction
   )
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Except
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
@@ -39,17 +43,27 @@ import TrustlessSidechain.RawScripts
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.Error
+  ( InternalError(InvalidCurrencySymbol)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
+import Type.Row (type (+))
 
-checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
+checkpointPolicy ∷
+  ∀ r.
+  InitCheckpointMint →
+  Run (EXCEPT InternalError + LOG + r) MintingPolicy
 checkpointPolicy sidechainParams =
   mkMintingPolicyWithParams rawCheckpointPolicy [ toData sidechainParams ]
 
-checkpointValidator ∷ CheckpointParameter → Contract Validator
+checkpointValidator ∷
+  ∀ r.
+  CheckpointParameter →
+  Run (EXCEPT InternalError + r) Validator
 checkpointValidator sidechainParams =
   mkValidatorWithParams rawCheckpointValidator [ toData sidechainParams ]
 
@@ -61,10 +75,13 @@ initCheckpointMintTn ∷ Value.TokenName
 initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
-checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
+checkpointAssetClass ∷
+  ∀ r.
+  InitCheckpointMint →
+  Run (EXCEPT InternalError + r) AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get checkpoint currency symbol"
+  curSym ← Except.note (InvalidCurrencySymbol "checkpoint")
     (Value.scriptCurrencySymbol cp)
 
   pure $ assetClass curSym initCheckpointMintTn
