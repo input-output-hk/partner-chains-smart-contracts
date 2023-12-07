@@ -705,38 +705,6 @@ data CheckpointMessage = CheckpointMessage
 
 PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 
--- | @since v4.0.0
-instance HasField "sidechainParams" CheckpointMessage SidechainParams where
-  {-# INLINE get #-}
-  get (CheckpointMessage x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage (f sp) bh bn se
-
--- | @since v4.0.0
-instance HasField "blockHash" CheckpointMessage LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp (f bh) bn se
-
--- | @since v4.0.0
-instance HasField "blockNumber" CheckpointMessage Integer where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp bh (f bn) se
-
--- | @since v4.0.0
-instance HasField "sidechainEpoch" CheckpointMessage Integer where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp bh bn (f se)
-
 {- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
 burn DParameter tokens
 
