@@ -18,12 +18,9 @@ import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , mkTxUnspentOut
   )
-import Contract.Transaction as Transaction
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
-  , InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -41,18 +38,10 @@ import TrustlessSidechain.DParameter.Types
   , DParameterValidatorRedeemer(RemoveDParameter, UpdateDParameter)
 
   )
+import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
-import TrustlessSidechain.Versioning.Types
-  ( ScriptId(DParameterPolicy, DParameterValidator)
-  , VersionOracle(VersionOracle)
-  )
-import TrustlessSidechain.Versioning.Utils
-  ( getVersionedCurrencySymbol
-  , getVersionedScriptRefUtxo
-  , getVersionedValidatorAddress
-  ) as Versioning
 
 dParameterTokenName ∷ TokenName
 dParameterTokenName =
@@ -72,38 +61,17 @@ mkInsertDParameterLookupsAndConstraints ∷
 mkInsertDParameterLookupsAndConstraints
   sidechainParams
   { permissionedCandidatesCount, registeredCandidatesCount } = do
-  dParameterCurrencySymbol ←
-    Versioning.getVersionedCurrencySymbol
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-      )
+  { dParameterCurrencySymbol, dParameterMintingPolicy } ←
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
 
   let
     dParameterMintingPolicyHash =
       Value.currencyMPSHash dParameterCurrencySymbol
 
-  dParameterValidatorAddress ←
-    Versioning.getVersionedValidatorAddress
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
+  { dParameterValidatorAddress } ←
+    DParameter.getDParameterValidatorAndAddress sidechainParams
 
   dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
-
-  (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    ( VersionOracle
-        { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-    )
-
-  (dParameterValidatorScriptRefTxInput /\ dParameterValidatorScriptRefTxOutput) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
 
   { lookups: governanceLookups, constraints: governanceConstraints } ←
     Governance.governanceAuthorityLookupsAndConstraints
@@ -121,27 +89,19 @@ mkInsertDParameterLookupsAndConstraints
       { permissionedCandidatesCount, registeredCandidatesCount }
 
     lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        ( Map.singleton dParameterValidatorScriptRefTxInput
-            dParameterValidatorScriptRefTxOutput
-        )
-        <> Lookups.unspentOutputs
-          (Map.singleton scriptRefTxInput scriptRefTxOutput)
-        <> governanceLookups
+    lookups = Lookups.mintingPolicy dParameterMintingPolicy
+      <> governanceLookups
 
     constraints ∷ TxConstraints Void Void
     constraints =
-      Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+      Constraints.mustMintCurrencyWithRedeemer
         dParameterMintingPolicyHash
         (Redeemer $ toData DParameterMint)
         dParameterTokenName
         (BigInt.fromInt 1)
-        (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
         <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
           DatumInline
           value
-        <> Constraints.mustReferenceOutput dParameterValidatorScriptRefTxInput
         <> governanceConstraints
   pure { lookups, constraints }
 
@@ -152,23 +112,15 @@ mkRemoveDParameterLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 mkRemoveDParameterLookupsAndConstraints sidechainParams = do
-  dParameterCurrencySymbol ←
-    Versioning.getVersionedCurrencySymbol
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-      )
+  { dParameterCurrencySymbol, dParameterMintingPolicy } ←
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
 
   let
     dParameterMintingPolicyHash =
       Value.currencyMPSHash dParameterCurrencySymbol
 
-  dParameterValidatorAddress ←
-    Versioning.getVersionedValidatorAddress
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
+  { dParameterValidatorAddress, dParameterValidator } ←
+    DParameter.getDParameterValidatorAndAddress sidechainParams
 
   -- find all UTxOs at DParameterValidator address that contain DParameterToken
   dParameterUTxOs ←
@@ -190,61 +142,31 @@ mkRemoveDParameterLookupsAndConstraints sidechainParams = do
           )
       $ Map.values dParameterUTxOs
 
-  (dParameterPolicyRefTxInput /\ dParameterPolicyRefTxOutput) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-      )
-
-  (dParameterValidatorScriptRefTxInput /\ dParameterValidatorScriptRefTxOutput) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
-
   { lookups: governanceLookups, constraints: governanceConstraints } ←
     Governance.governanceAuthorityLookupsAndConstraints
       (unwrap sidechainParams).governanceAuthority
 
   let
     lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        ( Map.singleton dParameterValidatorScriptRefTxInput
-            dParameterValidatorScriptRefTxOutput
-        )
-        <> Lookups.unspentOutputs
-          (Map.singleton dParameterPolicyRefTxInput dParameterPolicyRefTxOutput)
-        <> Lookups.unspentOutputs dParameterUTxOs
-        <> governanceLookups
-
-    validatorRef = RefInput
-      ( Transaction.mkTxUnspentOut dParameterValidatorScriptRefTxInput
-          dParameterValidatorScriptRefTxOutput
-      )
+    lookups = Lookups.validator dParameterValidator
+      <> Lookups.mintingPolicy dParameterMintingPolicy
+      <> Lookups.unspentOutputs dParameterUTxOs
+      <> governanceLookups
 
     spendScriptOutputConstraints ∷ TxConstraints Void Void
     spendScriptOutputConstraints =
       foldMap
-        ( \txInput → Constraints.mustSpendScriptOutputUsingScriptRef txInput
+        ( \txInput → Constraints.mustSpendScriptOutput txInput
             (Redeemer $ toData RemoveDParameter)
-            validatorRef
         ) $ Map.keys dParameterUTxOs
 
     constraints ∷ TxConstraints Void Void
     constraints =
-      Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+      Constraints.mustMintCurrencyWithRedeemer
         dParameterMintingPolicyHash
         (Redeemer $ toData DParameterBurn)
         dParameterTokenName
         (-amountToBurn)
-        ( RefInput $ mkTxUnspentOut dParameterPolicyRefTxInput
-            dParameterPolicyRefTxOutput
-        )
-        <> Constraints.mustReferenceOutput dParameterValidatorScriptRefTxInput
-        <> Constraints.mustReferenceOutput dParameterPolicyRefTxInput
         <> spendScriptOutputConstraints
         <> governanceConstraints
 
@@ -262,19 +184,11 @@ mkUpdateDParameterLookupsAndConstraints ∷
 mkUpdateDParameterLookupsAndConstraints
   sidechainParams
   { permissionedCandidatesCount, registeredCandidatesCount } = do
-  dParameterCurrencySymbol ←
-    Versioning.getVersionedCurrencySymbol
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-      )
+  { dParameterCurrencySymbol } ←
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
 
-  dParameterValidatorAddress ←
-    Versioning.getVersionedValidatorAddress
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
+  { dParameterValidatorAddress, dParameterValidator } ←
+    DParameter.getDParameterValidatorAndAddress sidechainParams
 
   dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
 
@@ -303,20 +217,6 @@ mkUpdateDParameterLookupsAndConstraints
     throwContractError
       "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
 
-  (dParameterPolicyRefTxInput /\ dParameterPolicyRefTxOutput) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterPolicy }
-      )
-
-  (dParameterValidatorScriptRefTxInput /\ dParameterValidatorScriptRefTxOutput) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: DParameterValidator }
-      )
-
   { lookups: governanceLookups, constraints: governanceConstraints } ←
     Governance.governanceAuthorityLookupsAndConstraints
       (unwrap sidechainParams).governanceAuthority
@@ -333,27 +233,15 @@ mkUpdateDParameterLookupsAndConstraints
       { permissionedCandidatesCount, registeredCandidatesCount }
 
     lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        ( Map.singleton dParameterValidatorScriptRefTxInput
-            dParameterValidatorScriptRefTxOutput
-        )
-        <> Lookups.unspentOutputs
-          (Map.singleton dParameterPolicyRefTxInput dParameterPolicyRefTxOutput)
-        <> Lookups.unspentOutputs dParameterUTxOs
-        <> governanceLookups
-
-    validatorRef = RefInput
-      ( Transaction.mkTxUnspentOut dParameterValidatorScriptRefTxInput
-          dParameterValidatorScriptRefTxOutput
-      )
+    lookups = Lookups.validator dParameterValidator
+      <> Lookups.unspentOutputs dParameterUTxOs
+      <> governanceLookups
 
     spendScriptOutputConstraints ∷ TxConstraints Void Void
     spendScriptOutputConstraints =
       foldMap
-        ( \txInput → Constraints.mustSpendScriptOutputUsingScriptRef txInput
+        ( \txInput → Constraints.mustSpendScriptOutput txInput
             (Redeemer $ toData UpdateDParameter)
-            validatorRef
         ) $ Map.keys dParameterUTxOs
 
     constraints ∷ TxConstraints Void Void
@@ -361,8 +249,6 @@ mkUpdateDParameterLookupsAndConstraints
       Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
         DatumInline
         value
-        <> Constraints.mustReferenceOutput dParameterValidatorScriptRefTxInput
-        <> Constraints.mustReferenceOutput dParameterPolicyRefTxInput
         <> spendScriptOutputConstraints
         <> governanceConstraints
 

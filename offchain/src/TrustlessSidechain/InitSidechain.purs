@@ -21,6 +21,7 @@ module TrustlessSidechain.InitSidechain
   , InitTokensParams
   , paySidechainTokens
   , initCheckpointMintLookupsAndConstraints
+  , toSidechainParams
   ) where
 
 import Contract.Prelude

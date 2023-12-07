@@ -18,12 +18,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
-import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -69,11 +67,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
     sp
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
-  { dParameterMintingPolicy } ←
-    DParameter.getDParameterMintingPolicyAndCurrencySymbol sp
-  { permissionedCandidatesMintingPolicy } ←
-    PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
-      sp
 
   ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
@@ -87,8 +80,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       , Types.CommitteeCertificateVerificationPolicy /\
           committeeCertificateVerificationMintingPolicy
       , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
-      , Types.DParameterPolicy /\ dParameterMintingPolicy
-      , Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
+      --, Types.DParameterPolicy /\ dParameterMintingPolicy
+      --, Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
       ]
 
   -- Helper currency symbols
@@ -118,10 +111,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
           }
       getUpdateCommitteeHashValidator uch
 
-  { dParameterValidator } ← DParameter.getDParameterValidatorAndAddress sp
-  { permissionedCandidatesValidator } ←
-    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
-
   checkpointValidator ← do
     let
       checkpointParam = CheckpointParameter
@@ -138,8 +127,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
       , Types.CheckpointValidator /\ checkpointValidator
       , Types.CommitteeHashValidator /\ committeeHashValidator
-      , Types.DParameterValidator /\ dParameterValidator
-      , Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      --, Types.DParameterValidator /\ dParameterValidator
+      --, Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       ]
 
   pure $ { versionedPolicies, versionedValidators }

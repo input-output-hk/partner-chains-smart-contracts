@@ -2,6 +2,7 @@
 module TrustlessSidechain.Utils.Utxos
   ( findUtxoByValueAt
   , getOwnUTxOsTotalValue
+  , getOwnUTxOs
   ) where
 
 import Contract.Prelude
@@ -13,6 +14,7 @@ import Contract.Transaction
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
+import Contract.Utxos (UtxoMap)
 import Contract.Utxos as Utxos
 import Contract.Value (Value)
 import Data.FoldableWithIndex as FoldableWithIndex
@@ -48,3 +50,8 @@ getOwnUTxOsTotalValue = do
            ) → amount
         )
     $ Map.values ownUtxos
+
+getOwnUTxOs ∷ Contract UtxoMap
+getOwnUTxOs = do
+  ownAddr ← getOwnWalletAddress
+  Utxos.utxosAt ownAddr

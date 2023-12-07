@@ -132,7 +132,10 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
-import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Transaction
+  ( balanceSignAndSubmit
+  , balanceSignAndSubmitWithoutSpendingUtxo
+  )
 import TrustlessSidechain.Versioning as Versioning
 
 -- | Main entrypoint for the CTL CLI
@@ -600,7 +603,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkInsertDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= balanceSignAndSubmit "InsertDParameter"
+          >>= balanceSignAndSubmitWithoutSpendingUtxo
+            (unwrap scParams).genesisUtxo
+            "InsertDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> InsertDParameterResp
@@ -609,14 +614,18 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { permissionedCandidatesCount, registeredCandidatesCount } →
         DParameter.mkUpdateDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= balanceSignAndSubmit "UpdateDParameter"
+          >>= balanceSignAndSubmitWithoutSpendingUtxo
+            (unwrap scParams).genesisUtxo
+            "UpdateDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdateDParameterResp
 
       RemoveDParameter →
         DParameter.mkRemoveDParameterLookupsAndConstraints scParams
-          >>= balanceSignAndSubmit "RemoveDParameter"
+          >>= balanceSignAndSubmitWithoutSpendingUtxo
+            (unwrap scParams).genesisUtxo
+            "RemoveDParameter"
           <#> unwrap
           >>> { transactionId: _ }
           >>> RemoveDParameterResp
@@ -630,7 +639,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , permissionedCandidatesToRemove: Array.fromFoldable <$>
               permissionedCandidatesToRemove
           }
-          >>= balanceSignAndSubmit "UpdatePermissionedCandidates"
+          >>= balanceSignAndSubmitWithoutSpendingUtxo
+            (unwrap scParams).genesisUtxo
+            "UpdatePermissionedCandidates"
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
