@@ -20,7 +20,7 @@ import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
 --
 -- 1. Add a CompiledCode for it in the Compiled module.
 -- 2. Use a fitsInto in an appropriate test group. Guess at a possible value
--- (1000 is a good start.
+-- (1000 is a good start).
 -- 3. Run the tests, and ensure you don't error due to Plutus weirdness. If you
 -- fail because your guess was too low, raise the limit; if you have headroom
 -- left, lower it.
