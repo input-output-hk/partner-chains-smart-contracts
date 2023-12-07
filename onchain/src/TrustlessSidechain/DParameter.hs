@@ -7,15 +7,14 @@ module TrustlessSidechain.DParameter (
 ) where
 
 import Plutus.V2.Ledger.Api (
+  Address,
   Script,
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
-  TxInInfo (TxInInfo),
-  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs),
+  TxInfo (txInfoMint, txInfoOutputs),
   TxOut (TxOut),
   fromCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts (getContinuingOutputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
@@ -29,14 +28,6 @@ import TrustlessSidechain.Types (
   SidechainParams,
  )
 import TrustlessSidechain.Utils (currencySymbolValueOf)
-import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId, version),
-  VersionOracleConfig,
-  dParameterPolicyId,
-  dParameterValidatorId,
-  getVersionedCurrencySymbol,
-  getVersionedValidatorAddress,
- )
 
 -- OnChain error descriptions:
 --
@@ -54,15 +45,15 @@ import TrustlessSidechain.Versioning (
 --   ERROR-DPARAMETER-POLICY-05: Wrong ScriptContext - this should never happen
 mkMintingPolicy ::
   SidechainParams ->
-  VersionOracleConfig ->
+  Address ->
   DParameterPolicyRedeemer ->
   ScriptContext ->
   Bool
 mkMintingPolicy
   sp
-  versionOracleConfig
+  dParameterValidatorAddress
   DParameterMint
-  ctx@(ScriptContext txInfo (Minting cs)) =
+  (ScriptContext txInfo (Minting cs)) =
     traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
       && traceIfFalse
         "ERROR-DPARAMETER-POLICY-02"
@@ -72,17 +63,6 @@ mkMintingPolicy
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
-      -- get DParameterValidator address
-      dParameterValidatorAddress =
-        getVersionedValidatorAddress
-          versionOracleConfig
-          ( VersionOracle
-              { version = 1
-              , scriptId = dParameterValidatorId
-              }
-          )
-          ctx
 
       -- Amount of DParameterToken sent to the DParameterValidator address
       outAmount :: Integer
@@ -140,7 +120,6 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-05"
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
   SidechainParams ->
-  VersionOracleConfig ->
   -- Here raw BuiltinData is passed instead of 'DParameterValidatorDatum'
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
@@ -150,97 +129,103 @@ dParameterValidator ::
   Bool
 dParameterValidator
   sp
-  versionOracleConfig
   _
   UpdateDParameter
-  ctx@(ScriptContext txInfo _) =
+  (ScriptContext txInfo _) =
     traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
-      && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-02" amountsMatch
     where
+      -- This part was removed because we remove DParameter from
+      -- the versioning system. Until some other approach will appear we are not
+      -- able to have mintingPolicy and validator reference each other.
+      -- Once such approach is available we should put this logic back.
+      -- && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-02" amountsMatch
+
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
-      -- get DParameter currency symbol
-      dParameterCurrencySymbol =
-        getVersionedCurrencySymbol
-          versionOracleConfig
-          ( VersionOracle
-              { version = 1
-              , scriptId = dParameterPolicyId
-              }
-          )
-          ctx
+-- -- get DParameter currency symbol
+-- dParameterCurrencySymbol =
+--   getVersionedCurrencySymbol
+--     versionOracleConfig
+--     ( VersionOracle
+--         { version = 1
+--         , scriptId = dParameterPolicyId
+--         }
+--     )
+--     ctx
 
-      -- Amount of DParameter token sent to the DParameterValidator address
-      outAmount :: Integer
-      outAmount =
-        sum
-          [ currencySymbolValueOf value dParameterCurrencySymbol
-          | (TxOut _ value _ _) <-
-              getContinuingOutputs ctx
-          ]
+-- -- Amount of DParameter token sent to the DParameterValidator address
+-- outAmount :: Integer
+-- outAmount =
+--   sum
+--     [ currencySymbolValueOf value dParameterCurrencySymbol
+--     | (TxOut _ value _ _) <-
+--         getContinuingOutputs ctx
+--     ]
 
-      -- Amount of DParameter token spent by this transaction
-      inAmount :: Integer
-      inAmount =
-        sum
-          [ currencySymbolValueOf value dParameterCurrencySymbol
-          | TxInInfo _ (TxOut _ value _ _) <-
-              txInfoInputs txInfo
-          ]
+-- -- Amount of DParameter token spent by this transaction
+-- inAmount :: Integer
+-- inAmount =
+--   sum
+--     [ currencySymbolValueOf value dParameterCurrencySymbol
+--     | TxInInfo _ (TxOut _ value _ _) <-
+--         txInfoInputs txInfo
+--     ]
 
-      -- Check wether the same amount of DParameter token is spent as is output
-      -- back to the validator address
-      amountsMatch :: Bool
-      amountsMatch = inAmount == outAmount
+-- -- Check wether the same amount of DParameter token is spent as is output
+-- -- back to the validator address
+-- amountsMatch :: Bool
+-- amountsMatch = inAmount == outAmount
 dParameterValidator
   sp
-  versionOracleConfig
   _
   RemoveDParameter
-  ctx@(ScriptContext txInfo _) =
+  (ScriptContext txInfo _) =
     traceIfFalse "ERROR-DPARAMETER-VALIDATOR-03" signedByGovernanceAuthority
-      && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-04" tokensBurned
     where
+      -- This part was removed because we remove DParameter from
+      -- the versioning system. Until some other approach will appear we are not
+      -- able to have mintingPolicy and validator reference each other.
+      -- Once such approach is available we should put this logic back.
+      -- && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-04" tokensBurned
+
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
-      -- get DParameter currency symbol
-      dParameterCurrencySymbol =
-        getVersionedCurrencySymbol
-          versionOracleConfig
-          ( VersionOracle
-              { version = 1
-              , scriptId = dParameterPolicyId
-              }
-          )
-          ctx
+-- -- get DParameter currency symbol
+-- dParameterCurrencySymbol =
+--   getVersionedCurrencySymbol
+--     versionOracleConfig
+--     ( VersionOracle
+--         { version = 1
+--         , scriptId = dParameterPolicyId
+--         }
+--     )
+--     ctx
 
-      -- Amount of DParameterToken minted by this transaction
-      mintAmount :: Integer
-      mintAmount =
-        currencySymbolValueOf (txInfoMint txInfo) dParameterCurrencySymbol
+-- -- Amount of DParameterToken minted by this transaction
+-- mintAmount :: Integer
+-- mintAmount =
+--   currencySymbolValueOf (txInfoMint txInfo) dParameterCurrencySymbol
 
-      -- Check whether this transaction burned some DParameter tokens
-      tokensBurned :: Bool
-      tokensBurned = mintAmount < 0
+-- -- Check whether this transaction burned some DParameter tokens
+-- tokensBurned :: Bool
+-- tokensBurned = mintAmount < 0
 
 mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  BuiltinData ->
   ()
-mkValidatorUntyped sp versionOracleConfig =
+mkValidatorUntyped sp =
   mkUntypedValidator $
     dParameterValidator
       (unsafeFromBuiltinData sp)
-      (unsafeFromBuiltinData versionOracleConfig)
 
 serialisableValidator :: Script
 serialisableValidator =
@@ -252,11 +237,11 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkMintingPolicyUntyped sp versioningConfig =
+mkMintingPolicyUntyped sp validatorAddress =
   mkUntypedMintingPolicy $
     mkMintingPolicy
       (unsafeFromBuiltinData sp)
-      (unsafeFromBuiltinData versioningConfig)
+      (unsafeFromBuiltinData validatorAddress)
 
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy =

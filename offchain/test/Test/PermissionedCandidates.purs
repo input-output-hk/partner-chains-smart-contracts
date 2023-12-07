@@ -22,6 +22,7 @@ import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
+  , toSidechainParams
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -30,7 +31,9 @@ import TrustlessSidechain.Utils.Crypto
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Transaction
+  ( balanceSignAndSubmitWithoutSpendingUtxo
+  )
 
 -- | `tests` aggregate all the PermissionedCandidatesPolicy tests in one convenient
 -- | function
@@ -43,9 +46,10 @@ testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
   Mote.Monad.test "Minting, updating and removing a PermissionedCandidates Token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 150_000_000
+        [ BigInt.fromInt 1_000_000
+        , BigInt.fromInt 5_000_000
         , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 150_000_000
         ]
     $ \alice → Wallet.withKeyWallet alice do
 
@@ -71,7 +75,7 @@ testScenarioSuccess =
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
 
-        { sidechainParams } ← initSidechain initScParams 1
+          sidechainParams = toSidechainParams (unwrap initScParams)
 
         void
           $
@@ -92,7 +96,9 @@ testScenarioSuccess =
                 , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
-                  balanceSignAndSubmit "Test: insert permissioned candidates"
+                  balanceSignAndSubmitWithoutSpendingUtxo
+                    (unwrap sidechainParams).genesisUtxo
+                    "Test: insert permissioned candidates"
             )
 
         void
@@ -115,7 +121,9 @@ testScenarioSuccess =
                     ]
                 }
                 >>=
-                  balanceSignAndSubmit "Test: update permissioned candidates"
+                  balanceSignAndSubmitWithoutSpendingUtxo
+                    (unwrap sidechainParams).genesisUtxo
+                    "Test: update permissioned candidates"
             )
 
         void
@@ -126,5 +134,10 @@ testScenarioSuccess =
                 , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
-                  balanceSignAndSubmit "Test: remove permissioned candidates"
+                  balanceSignAndSubmitWithoutSpendingUtxo
+                    (unwrap sidechainParams).genesisUtxo
+                    "Test: remove permissioned candidates"
             )
+
+        _ ← initSidechain initScParams 1
+        pure unit

@@ -30,21 +30,20 @@ import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
   )
-import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig) as Versioning
 
 -- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodeDParameterMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDParameterMintingPolicy sidechainParams = do
-  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
+    sidechainParams
   mkMintingPolicyWithParams rawDParameterMintingPolicy $
-    [ toData sidechainParams, toData versionOracleConfig ]
+    [ toData sidechainParams, toData dParameterValidatorAddress ]
 
 decodeDParameterValidator ∷ SidechainParams → Contract Validator
 decodeDParameterValidator sidechainParams = do
-  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams rawDParameterValidator
-    [ toData sidechainParams, toData versionOracleConfig ]
+    [ toData sidechainParams ]
 
 getDParameterValidatorAndAddress ∷
   SidechainParams →

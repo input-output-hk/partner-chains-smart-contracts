@@ -1,7 +1,11 @@
-module TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit) where
+module TrustlessSidechain.Utils.Transaction
+  ( balanceSignAndSubmit
+  , balanceSignAndSubmitWithoutSpendingUtxo
+  ) where
 
 import Contract.Prelude
 
+import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftedE)
 import Contract.PlutusData (class IsData)
@@ -9,8 +13,10 @@ import Contract.ScriptLookups (ScriptLookups, mkUnbalancedTx)
 import Contract.Scripts (class ValidatorTypes)
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
   , awaitTxConfirmed
   , balanceTx
+  , balanceTxWithConstraints
   , signTransaction
   , submit
   )
@@ -41,6 +47,39 @@ balanceSignAndSubmit txName { lookups, constraints } = do
     )
   bsTx ← liftedE
     (lmap (BalanceTxError >>> InternalError) <$> balanceTx ubTx)
+  signedTx ← signTransaction bsTx
+  txId ← submit signedTx
+  logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
+  awaitTxConfirmed txId
+  logInfo' $ txName <> " Tx confirmed!"
+
+  pure txId
+
+balanceSignAndSubmitWithoutSpendingUtxo ∷
+  ∀ (validator ∷ Type) (datum ∷ Type) (redeemer ∷ Type).
+  ValidatorTypes validator datum redeemer ⇒
+  IsData datum ⇒
+  IsData redeemer ⇒
+  TransactionInput →
+  String →
+  { lookups ∷ ScriptLookups validator
+  , constraints ∷ TxConstraints redeemer datum
+  } →
+  Contract TransactionHash
+balanceSignAndSubmitWithoutSpendingUtxo
+  forbiddenUtxo
+  txName
+  { lookups, constraints } = do
+  ubTx ← liftedE
+    ( lmap (BuildTxError >>> InternalError) <$>
+        mkUnbalancedTx lookups constraints
+    )
+  let balanceTxConstraints = mustNotSpendUtxoWithOutRef forbiddenUtxo
+
+  bsTx ← liftedE
+    ( lmap (BalanceTxError >>> InternalError) <$>
+        balanceTxWithConstraints ubTx balanceTxConstraints
+    )
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
   logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
