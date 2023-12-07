@@ -59,9 +59,7 @@ import TrustlessSidechain.EndpointResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , RemoveDParameterResp
-      , InsertPermissionedCandidatesResp
       , UpdatePermissionedCandidatesResp
-      , RemovePermissionedCandidatesResp
       , BurnNFTsResp
       )
   , stringifyEndpointResp
@@ -110,9 +108,7 @@ import TrustlessSidechain.Options.Types
       , InsertDParameter
       , UpdateDParameter
       , RemoveDParameter
-      , InsertPermissionedCandidates
       , UpdatePermissionedCandidates
-      , RemovePermissionedCandidates
       , BurnNFTs
       )
   , UtilsEndpoint
@@ -621,33 +617,19 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> RemoveDParameterResp
 
-      InsertPermissionedCandidates
-        { permissionedCandidates } →
-        PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
-          scParams
-          { candidates: Array.fromFoldable permissionedCandidates }
-          >>= balanceSignAndSubmit "InsertPermissionedCandidates"
-          <#> unwrap
-          >>> { transactionId: _ }
-          >>> InsertPermissionedCandidatesResp
-
       UpdatePermissionedCandidates
-        { permissionedCandidates } →
+        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } →
         PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
           scParams
-          { candidates: Array.fromFoldable permissionedCandidates }
+          { permissionedCandidatesToAdd: Array.fromFoldable
+              permissionedCandidatesToAdd
+          , permissionedCandidatesToRemove: Array.fromFoldable <$>
+              permissionedCandidatesToRemove
+          }
           >>= balanceSignAndSubmit "UpdatePermissionedCandidates"
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
-
-      RemovePermissionedCandidates →
-        PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
-          scParams
-          >>= balanceSignAndSubmit "RemovePermissionedCandidates"
-          <#> unwrap
-          >>> { transactionId: _ }
-          >>> RemovePermissionedCandidatesResp
 
       BurnNFTs →
         GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams

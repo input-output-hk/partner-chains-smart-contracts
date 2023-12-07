@@ -48,6 +48,8 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
   , grandpaKey ∷ ByteArray
   }
 
+derive instance Eq PermissionedCandidateKeys
+
 instance ToData PermissionedCandidateKeys where
   toData
     ( PermissionedCandidateKeys

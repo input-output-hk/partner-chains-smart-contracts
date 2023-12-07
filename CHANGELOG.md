@@ -6,6 +6,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 # Unreleased
 
 ## Added
+* Added `update-permissioned-candidates` command takes candidates to add and candidates to remove.
+  It can also remove all current permissioned-candidates with `--remove-all-candidates` flag.
+  ([631](https://github.com/input-output-hk/trustless-sidechain/pull/631))
 * Added `collect-garbage` command for burning nfts that can pile up at the user's
   wallet address.
 * Script versioning system with three new commands: `insert-version`,
@@ -20,10 +23,6 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * D Parameter storage and management system, with `insert-d-parameter`,
   `update-d-parameter` and `remove-d-parameter` commands
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/607))
-* Permissioned candidates storage and management system, with
-  `insert-permissioned-candidates`, `update-permissioned-candidates` and
-  `remove-permissioned-candidates` commands
-  ([607](https://github.com/input-output-hk/trustless-sidechain/pull/608))
 
 ## Changed
 * The `--sidechain-genesis-hash` now only needs to be passed to `--init` and
