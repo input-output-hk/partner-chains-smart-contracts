@@ -302,30 +302,6 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
--- | @since v4.0.0
-instance HasField "sidechainParams" MerkleRootInsertionMessage SidechainParams where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage x _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage (f sp) mr pmr
-
--- | @since v4.0.0
-instance HasField "merkleRoot" MerkleRootInsertionMessage LedgerBytes where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage _ x _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage sp (f mr) pmr
-
--- | @since v4.0.0
-instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage sp mr (f pmr)
-
 {- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
  minting policy.
 
