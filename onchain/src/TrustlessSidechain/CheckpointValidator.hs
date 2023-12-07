@@ -47,13 +47,20 @@ import TrustlessSidechain.Types (
     sidechainEpoch,
     sidechainParams
   ),
-  CheckpointParameter,
+  CheckpointParameter (
+    assetClass,
+    committeeCertificateVerificationCurrencySymbol,
+    committeeOracleCurrencySymbol
+  ),
   CheckpointRedeemer,
   SidechainParams,
   UpdateCommitteeDatum,
  )
 import TrustlessSidechain.Types as CheckpointDatum (
   CheckpointDatum (blockHash, blockNumber),
+ )
+import TrustlessSidechain.Types as CheckpointParameter (
+  CheckpointParameter (sidechainParams),
  )
 import TrustlessSidechain.Types as UpdateCommitteeDatum (
   UpdateCommitteeDatum (sidechainEpoch),
@@ -86,14 +93,14 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     minted = txInfoMint info
 
     sc :: SidechainParams
-    sc = get @"sidechainParams" checkpointParam
+    sc = CheckpointParameter.sidechainParams checkpointParam
 
     -- Check if the transaction input value contains the current committee NFT
     containsCommitteeNft :: TxInInfo -> Bool
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in case AssocMap.lookup (get @"committeeOracleCurrencySymbol" checkpointParam) $ getValue outputValue of
+       in case AssocMap.lookup (committeeOracleCurrencySymbol checkpointParam) $ getValue outputValue of
             Just tns -> case AssocMap.lookup (TokenName "") tns of
               Just amount -> amount == 1
               Nothing -> False
@@ -123,7 +130,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
 
     -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
     outputContainsCheckpointNft :: Bool
-    outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
+    outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (assetClass checkpointParam) == 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
@@ -135,7 +142,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
               , sidechainEpoch = UpdateCommitteeDatum.sidechainEpoch committeeDatum
               }
        in -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
-          case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
+          case AssocMap.lookup (committeeCertificateVerificationCurrencySymbol checkpointParam) $ getValue minted of
             Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
               Just amount -> amount > 0
               Nothing -> False

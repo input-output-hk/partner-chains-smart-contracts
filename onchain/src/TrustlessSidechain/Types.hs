@@ -679,38 +679,6 @@ instance ToData CheckpointParameter where
       committeeCertificateVerificationCurrencySymbol
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" CheckpointParameter SidechainParams where
-  {-# INLINE get #-}
-  get (CheckpointParameter x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter (f csp) cac ccocs chac
-
--- | @since v4.0.0
-instance HasField "assetClass" CheckpointParameter AssetClass where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp (f cac) ccocs chac
-
--- | @since v4.0.0
-instance HasField "committeeOracleCurrencySymbol" CheckpointParameter CurrencySymbol where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp cac (f ccocs) chac
-
--- | @since v4.0.0
-instance HasField "committeeCertificateVerificationCurrencySymbol" CheckpointParameter CurrencySymbol where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp cac ccocs (f chac)
-
--- | @since v4.0.0
 instance FromData CheckpointParameter where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData4 CheckpointParameter
