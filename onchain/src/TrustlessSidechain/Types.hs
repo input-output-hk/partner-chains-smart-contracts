@@ -277,38 +277,6 @@ data MerkleTreeEntry = MerkleTreeEntry
 
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
--- | @since v4.0.0
-instance HasField "index" MerkleTreeEntry Integer where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry (f i) a r pmr
-
--- | @since v4.0.0
-instance HasField "amount" MerkleTreeEntry Integer where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i (f a) r pmr
-
--- | @since v4.0.0
-instance HasField "recipient" MerkleTreeEntry LedgerBytes where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i a (f r) pmr
-
--- | @since v4.0.0
-instance HasField "previousMerkleRoot" MerkleTreeEntry (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i a r (f pmr)
-
 {- | 'MerkleRootInsertionMessage' is a data type for which committee members
  create signatures for
  >  blake2b(cbor(MerkleRootInsertionMessage))

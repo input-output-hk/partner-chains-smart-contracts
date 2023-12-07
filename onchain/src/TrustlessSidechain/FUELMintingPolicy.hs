@@ -38,6 +38,7 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
+  MerkleTreeEntry (amount, recipient),
   SidechainParams,
  )
 import TrustlessSidechain.Versioning (
@@ -146,8 +147,8 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
          in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
    in traceIfFalse
         "ERROR-FUEL-MINTING-POLICY-04"
-        (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
-        && traceIfFalse "ERROR-FUEL-MINTING-POLICY-05" (fuelAmount == get @"amount" mte)
+        (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (recipient mte)))
+        && traceIfFalse "ERROR-FUEL-MINTING-POLICY-05" (fuelAmount == amount mte)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-06" (MerkleTree.memberMp cborMte mp merkleRoot)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-07" (dsInserted == cborMteHashed)
   where
