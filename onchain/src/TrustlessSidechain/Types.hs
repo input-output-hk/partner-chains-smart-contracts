@@ -890,14 +890,6 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
   }
   deriving newtype (ToData, FromData, UnsafeFromData)
 
--- | @since Unreleased
-instance HasField "candidates" PermissionedCandidatesValidatorDatum [PermissionedCandidateKeys] where
-  {-# INLINE get #-}
-  get (PermissionedCandidatesValidatorDatum candidates) = candidates
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidatesValidatorDatum candidates) =
-    PermissionedCandidatesValidatorDatum (f candidates)
-
 {- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
 update the list of permissioned candidates or remove the list altogether.
 
