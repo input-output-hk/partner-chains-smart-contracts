@@ -63,41 +63,6 @@ data SidechainParams = SidechainParams
 PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
--- | @since v4.0.0
-instance HasField "chainId" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = chainId
-  {-# INLINE modify #-}
-  modify f sp = sp {chainId = f (chainId sp)}
-
--- | @since v4.0.0
-instance HasField "genesisUtxo" SidechainParams TxOutRef where
-  {-# INLINE get #-}
-  get = genesisUtxo
-  {-# INLINE modify #-}
-  modify f sp = sp {genesisUtxo = f (genesisUtxo sp)}
-
--- | @since v4.0.0
-instance HasField "thresholdNumerator" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = thresholdNumerator
-  {-# INLINE modify #-}
-  modify f sp = sp {thresholdNumerator = f (thresholdNumerator sp)}
-
--- | @since v4.0.0
-instance HasField "thresholdDenominator" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = thresholdDenominator
-  {-# INLINE modify #-}
-  modify f sp = sp {thresholdDenominator = f (thresholdDenominator sp)}
-
--- | @since Unreleased
-instance HasField "governanceAuthority" SidechainParams Governance.GovernanceAuthority where
-  {-# INLINE get #-}
-  get = governanceAuthority
-  {-# INLINE modify #-}
-  modify f sp = sp {governanceAuthority = f (governanceAuthority sp)}
-
 {- | Compressed DER SECP256k1 public key.
  = Important note
 

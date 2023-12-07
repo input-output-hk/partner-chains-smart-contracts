@@ -35,7 +35,7 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
-  SidechainParams,
+  SidechainParams (governanceAuthority),
  )
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 import TrustlessSidechain.Versioning (
@@ -82,7 +82,7 @@ mkMintingPolicy
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get PermissionedCandidatesValidator address
       permissionedCandidatesValidatorAddress =
@@ -131,7 +131,7 @@ mkMintingPolicy
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- Amount of PermissionedCandidatesToken sent output by this transaction
       outAmount :: Integer
@@ -186,7 +186,7 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get PermissionedCandidates currency symbol
       permissionedCandidatesCurrencySymbol =
@@ -236,7 +236,7 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get PermissionedCandidates currency symbol
       permissionedCandidatesCurrencySymbol =

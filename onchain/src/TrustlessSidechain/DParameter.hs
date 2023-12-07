@@ -26,7 +26,7 @@ import TrustlessSidechain.ScriptUtils (
 import TrustlessSidechain.Types (
   DParameterPolicyRedeemer (DParameterBurn, DParameterMint),
   DParameterValidatorRedeemer (RemoveDParameter, UpdateDParameter),
-  SidechainParams,
+  SidechainParams (governanceAuthority),
  )
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 import TrustlessSidechain.Versioning (
@@ -71,7 +71,7 @@ mkMintingPolicy
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get DParameterValidator address
       dParameterValidatorAddress =
@@ -103,26 +103,30 @@ mkMintingPolicy
       -- sent to the DParameterValidator address
       allTokensSentToDParameterValidator :: Bool
       allTokensSentToDParameterValidator = mintAmount == outAmount
-mkMintingPolicy sp _ DParameterBurn (ScriptContext txInfo (Minting cs)) =
-  traceIfFalse "ERROR-DPARAMETER-POLICY-03" signedByGovernanceAuthority
-    && traceIfFalse "ERROR-DPARAMETER-POLICY-04" noOutputsWithDParameterToken
-  where
-    -- Check that transaction was approved by governance authority
-    signedByGovernanceAuthority :: Bool
-    signedByGovernanceAuthority =
-      txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+mkMintingPolicy
+  sp
+  _
+  DParameterBurn
+  (ScriptContext txInfo (Minting cs)) =
+    traceIfFalse "ERROR-DPARAMETER-POLICY-03" signedByGovernanceAuthority
+      && traceIfFalse "ERROR-DPARAMETER-POLICY-04" noOutputsWithDParameterToken
+    where
+      -- Check that transaction was approved by governance authority
+      signedByGovernanceAuthority :: Bool
+      signedByGovernanceAuthority =
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
-    -- Amount of DParameterToken sent output by this transaction
-    outAmount :: Integer
-    outAmount =
-      sum
-        [ currencySymbolValueOf value cs
-        | (TxOut _ value _ _) <-
-            txInfoOutputs txInfo
-        ]
-    -- Check wether this transaction output any DParameter tokens
-    noOutputsWithDParameterToken :: Bool
-    noOutputsWithDParameterToken = outAmount == 0
+      -- Amount of DParameterToken sent output by this transaction
+      outAmount :: Integer
+      outAmount =
+        sum
+          [ currencySymbolValueOf value cs
+          | (TxOut _ value _ _) <-
+              txInfoOutputs txInfo
+          ]
+      -- Check wether this transaction output any DParameter tokens
+      noOutputsWithDParameterToken :: Bool
+      noOutputsWithDParameterToken = outAmount == 0
 mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-05"
 
 -- OnChain error descriptions:
@@ -160,7 +164,7 @@ dParameterValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get DParameter currency symbol
       dParameterCurrencySymbol =
@@ -207,7 +211,7 @@ dParameterValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedBy` governanceAuthority sp
 
       -- get DParameter currency symbol
       dParameterCurrencySymbol =
