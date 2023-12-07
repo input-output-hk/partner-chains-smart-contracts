@@ -582,22 +582,6 @@ instance FromData CommitteeCertificateMint where
 instance UnsafeFromData CommitteeCertificateMint where
   unsafeFromBuiltinData = productUnsafeFromData2 CommitteeCertificateMint
 
--- | @since v4.0.0
-instance HasField "thresholdNumerator" CommitteeCertificateMint Integer where
-  {-# INLINE get #-}
-  get (CommitteeCertificateMint x _) = x
-  {-# INLINE modify #-}
-  modify f (CommitteeCertificateMint tn td) =
-    CommitteeCertificateMint (f tn) td
-
--- | @since v4.0.0
-instance HasField "thresholdDenominator" CommitteeCertificateMint Integer where
-  {-# INLINE get #-}
-  get (CommitteeCertificateMint _ x) = x
-  {-# INLINE modify #-}
-  modify f (CommitteeCertificateMint tn td) =
-    CommitteeCertificateMint tn (f td)
-
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the
  "TrustlessSidechain.CommitteePlainATMSPolicy".
