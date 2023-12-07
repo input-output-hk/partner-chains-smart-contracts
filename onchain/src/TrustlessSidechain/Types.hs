@@ -243,30 +243,6 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
--- | @since v4.0.0
-instance HasField "sidechainParams" BlockProducerRegistrationMsg SidechainParams where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg x _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg (f sp) spk u
-
--- | @since v4.0.0
-instance HasField "sidechainPubKey" BlockProducerRegistrationMsg LedgerBytes where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg _ x _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg sp (f spk) u
-
--- | @since v4.0.0
-instance HasField "inputUtxo" BlockProducerRegistrationMsg TxOutRef where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg sp spk (f u)
-
 -- * Merkle Root Token data
 
 {- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
