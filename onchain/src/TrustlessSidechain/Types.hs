@@ -756,31 +756,6 @@ data DParameterValidatorDatum = DParameterValidatorDatum
   }
 
 -- | @since Unreleased
-instance HasField "permissionedCandidatesCount" DParameterValidatorDatum Integer where
-  {-# INLINE get #-}
-  get (DParameterValidatorDatum permissionedCandidatesCount _) =
-    permissionedCandidatesCount
-  {-# INLINE modify #-}
-  modify
-    f
-    ( DParameterValidatorDatum
-        permissionedCandidatesCount
-        registeredCandidatesCount
-      ) =
-      DParameterValidatorDatum
-        (f permissionedCandidatesCount)
-        registeredCandidatesCount
-
--- | @since Unreleased
-instance HasField "registeredCandidatesCount" DParameterValidatorDatum Integer where
-  {-# INLINE get #-}
-  get (DParameterValidatorDatum _ registeredCandidatesCount) =
-    registeredCandidatesCount
-  {-# INLINE modify #-}
-  modify f (DParameterValidatorDatum numerator registeredCandidatesCount) =
-    DParameterValidatorDatum numerator (f registeredCandidatesCount)
-
--- | @since Unreleased
 instance ToData DParameterValidatorDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData
