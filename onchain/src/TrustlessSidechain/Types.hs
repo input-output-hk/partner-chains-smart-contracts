@@ -349,22 +349,6 @@ data CombinedMerkleProof = CombinedMerkleProof
 
 PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
--- | @since v4.0.0
-instance HasField "transaction" CombinedMerkleProof MerkleTreeEntry where
-  {-# INLINE get #-}
-  get (CombinedMerkleProof x _) = x
-  {-# INLINE modify #-}
-  modify f (CombinedMerkleProof t mp) =
-    CombinedMerkleProof (f t) mp
-
--- | @since v4.0.0
-instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
-  {-# INLINE get #-}
-  get (CombinedMerkleProof _ x) = x
-  {-# INLINE modify #-}
-  modify f (CombinedMerkleProof t mp) =
-    CombinedMerkleProof t (f mp)
-
 -- * FUEL Minting Policy data
 
 {- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
