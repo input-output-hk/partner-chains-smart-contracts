@@ -880,38 +880,6 @@ instance UnsafeFromData PermissionedCandidateKeys where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData4 PermissionedCandidateKeys
 
--- | @since Unreleased
-instance HasField "mainchainKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys m _ _ _) = m
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys (f m) s a g
-
--- | @since Unreleased
-instance HasField "sidechainKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ s _ _) = s
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m (f s) a g
-
--- | @since Unreleased
-instance HasField "authorityDiscoveryKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ _ a _) = a
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m s (f a) g
-
--- | @since Unreleased
-instance HasField "grandpaKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ _ _ g) = g
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m s a (f g)
-
 {- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
    candidates' keys.
 
