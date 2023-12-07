@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -11,13 +12,14 @@ import Plutus.V2.Ledger.Api (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoOutRef),
   TxInfo (txInfoInputs),
-  TxOutRef,
   fromCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
-import TrustlessSidechain.Types (CandidatePermissionMint)
+import TrustlessSidechain.Types (
+  CandidatePermissionMint (CandidatePermissionMint, utxo),
+ )
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 
@@ -33,15 +35,12 @@ mkCandidatePermissionMintingPolicy ::
   () ->
   ScriptContext ->
   Bool
-mkCandidatePermissionMintingPolicy cpm _red ctx =
+mkCandidatePermissionMintingPolicy CandidatePermissionMint {utxo} _red ctx =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" $
     go $
       txInfoInputs $
         scriptContextTxInfo ctx
   where
-    utxo :: TxOutRef
-    utxo = get @"utxo" cpm
-
     -- Tests if any of the input utxos in the script context are equal to the
     -- distinguished UTxO given in @cpm@.
     go :: [TxInInfo] -> Bool

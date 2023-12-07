@@ -171,20 +171,6 @@ instance UnsafeFromData CandidatePermissionMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
 
--- | @since v4.0.0
-instance HasField "sidechainParams" CandidatePermissionMint SidechainParams where
-  {-# INLINE get #-}
-  get (CandidatePermissionMint sp _) = sp
-  {-# INLINE modify #-}
-  modify f (CandidatePermissionMint sp u) = CandidatePermissionMint (f sp) u
-
--- | @since v4.0.0
-instance HasField "utxo" CandidatePermissionMint TxOutRef where
-  {-# INLINE get #-}
-  get (CandidatePermissionMint _ u) = u
-  {-# INLINE modify #-}
-  modify f (CandidatePermissionMint sp u) = CandidatePermissionMint sp (f u)
-
 {- Sum type distinguishing different Stake ownership models
  Ada based staking requires the SPO public key and the signature on
  the @BlockProducerRegistrationMsg@, while a native token based staking model
