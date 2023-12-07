@@ -552,22 +552,6 @@ instance UnsafeFromData CheckpointDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointDatum
 
--- | @since v4.0.0
-instance HasField "blockHash" CheckpointDatum LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointDatum x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointDatum bh bn) =
-    CheckpointDatum (f bh) bn
-
--- | @since v4.0.0
-instance HasField "blockNumber" CheckpointDatum Integer where
-  {-# INLINE get #-}
-  get (CheckpointDatum _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointDatum bh bn) =
-    CheckpointDatum bh (f bn)
-
 {- | 'CommitteeCertificateMint' is the type to parameterize committee
  certificate verification minting policies.
  See SIP05 in @docs/SIPs/@ for details.

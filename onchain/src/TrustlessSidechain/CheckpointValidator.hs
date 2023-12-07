@@ -52,6 +52,9 @@ import TrustlessSidechain.Types (
   SidechainParams,
   UpdateCommitteeDatum,
  )
+import TrustlessSidechain.Types as CheckpointDatum (
+  CheckpointDatum (blockHash, blockNumber),
+ )
 import TrustlessSidechain.Types as UpdateCommitteeDatum (
   UpdateCommitteeDatum (sidechainEpoch),
  )
@@ -71,10 +74,10 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
-      (get @"blockNumber" datum < get @"blockNumber" outputDatum)
+      (CheckpointDatum.blockNumber datum < CheckpointDatum.blockNumber outputDatum)
     && traceIfFalse
       "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
-      (get @"blockHash" datum /= get @"blockHash" outputDatum)
+      (CheckpointDatum.blockHash datum /= CheckpointDatum.blockHash outputDatum)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -127,8 +130,8 @@ mkCheckpointValidator checkpointParam datum _red ctx =
       let message =
             CheckpointMessage
               { sidechainParams = sc
-              , blockHash = get @"blockHash" outputDatum
-              , blockNumber = get @"blockNumber" outputDatum
+              , blockHash = CheckpointDatum.blockHash outputDatum
+              , blockNumber = CheckpointDatum.blockNumber outputDatum
               , sidechainEpoch = UpdateCommitteeDatum.sidechainEpoch committeeDatum
               }
        in -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
