@@ -80,12 +80,12 @@ testScenarioSuccess =
                 { permissionedCandidatesToAdd:
                     [ { mainchainKey: hexToByteArrayUnsafe "aa11"
                       , sidechainKey: hexToByteArrayUnsafe "bb11"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc11"
+                      , auraKey: hexToByteArrayUnsafe "cc11"
                       , grandpaKey: hexToByteArrayUnsafe "dd11"
                       }
                     , { mainchainKey: hexToByteArrayUnsafe "aa22"
                       , sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc22"
+                      , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
                     ]
@@ -102,14 +102,14 @@ testScenarioSuccess =
                 { permissionedCandidatesToAdd:
                     [ { mainchainKey: hexToByteArrayUnsafe "aa33"
                       , sidechainKey: hexToByteArrayUnsafe "bb33"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc33"
+                      , auraKey: hexToByteArrayUnsafe "cc33"
                       , grandpaKey: hexToByteArrayUnsafe "dd33"
                       }
                     ]
                 , permissionedCandidatesToRemove: Just
                     [ { mainchainKey: hexToByteArrayUnsafe "aa22"
                       , sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc22"
+                      , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
                     ]

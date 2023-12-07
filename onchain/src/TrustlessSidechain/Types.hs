@@ -1276,7 +1276,7 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
   , -- | @since Unreleased
     sidechainKey :: LedgerBytes
   , -- | @since Unreleased
-    authorityDiscoveryKey :: LedgerBytes
+    auraKey :: LedgerBytes
   , -- | @since Unreleased
     grandpaKey :: LedgerBytes
   }
@@ -1314,7 +1314,7 @@ instance HasField "sidechainKey" PermissionedCandidateKeys LedgerBytes where
     PermissionedCandidateKeys m (f s) a g
 
 -- | @since Unreleased
-instance HasField "authorityDiscoveryKey" PermissionedCandidateKeys LedgerBytes where
+instance HasField "auraKey" PermissionedCandidateKeys LedgerBytes where
   {-# INLINE get #-}
   get (PermissionedCandidateKeys _ _ a _) = a
   {-# INLINE modify #-}
