@@ -43,6 +43,9 @@ import TrustlessSidechain.Types (
   SignedMerkleRootRedeemer,
   merkleRoot,
  )
+import TrustlessSidechain.Types as SignedMerkleRootRedeemer (
+  SignedMerkleRootRedeemer (previousMerkleRoot),
+ )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
@@ -112,7 +115,7 @@ mkMintingPolicy
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
       -- documentation of this function.
-      p1 = case get @"previousMerkleRoot" smrr of
+      p1 = case SignedMerkleRootRedeemer.previousMerkleRoot smrr of
         Nothing -> True
         Just (LedgerBytes tn) ->
           -- Checks if any of the reference inputs have at least 1 of the last
@@ -139,7 +142,7 @@ mkMintingPolicy
                     MerkleRootInsertionMessage
                       { sidechainParams = sp
                       , merkleRoot = LedgerBytes $ unTokenName tn
-                      , previousMerkleRoot = get @"previousMerkleRoot" smrr
+                      , previousMerkleRoot = SignedMerkleRootRedeemer.previousMerkleRoot smrr
                       }
                in traceIfFalse
                     "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"

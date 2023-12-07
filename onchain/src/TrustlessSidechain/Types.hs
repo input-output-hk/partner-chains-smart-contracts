@@ -325,13 +325,6 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
       TSPrelude.Show
     )
 
-instance HasField "previousMerkleRoot" SignedMerkleRootRedeemer (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (SignedMerkleRootRedeemer x) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRootRedeemer pmr) =
-    SignedMerkleRootRedeemer (f pmr)
-
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
 
