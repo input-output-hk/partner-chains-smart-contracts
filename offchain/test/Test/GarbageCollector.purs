@@ -97,8 +97,6 @@ testScenarioSuccess =
         { fuelBurningCurrencySymbol } ← BurningV1.getFuelBurningPolicy
           sidechainParams
 
-        logInfo' "Pizda"
-
         Test.Utils.assertIHaveOutputWithAsset
           fuelMintingCurrencySymbol
           MintingV1.fuelTokenName

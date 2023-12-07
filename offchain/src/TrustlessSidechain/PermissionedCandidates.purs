@@ -1,7 +1,5 @@
 module TrustlessSidechain.PermissionedCandidates
-  ( mkInsertPermissionedCandidatesLookupsAndConstraints
-  , mkRemovePermissionedCandidatesLookupsAndConstraints
-  , mkUpdatePermissionedCandidatesLookupsAndConstraints
+  ( mkUpdatePermissionedCandidatesLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -10,14 +8,15 @@ import Contract.Monad (Contract, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
-
+  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( TransactionOutput(TransactionOutput)
+  ( OutputDatum(OutputDatum)
+  , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , mkTxUnspentOut
   )
@@ -31,6 +30,8 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
+import Data.Array ((\\))
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
@@ -40,16 +41,18 @@ import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
   , PermissionedCandidatesPolicyRedeemer
       ( PermissionedCandidatesMint
-      , PermissionedCandidatesBurn
       )
   , PermissionedCandidatesValidatorDatum(PermissionedCandidatesValidatorDatum)
   , PermissionedCandidatesValidatorRedeemer
-      ( RemovePermissionedCandidates
-      , UpdatePermissionedCandidates
+      ( UpdatePermissionedCandidates
       )
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import TrustlessSidechain.Utils.Error
+  ( InternalError(InvalidData)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(PermissionedCandidatesPolicy, PermissionedCandidatesValidator)
   , VersionOracle(VersionOracle)
@@ -66,228 +69,24 @@ permissionedCandidatesTokenName =
     $ Value.mkTokenName
     =<< byteArrayFromAscii ""
 
-mkInsertPermissionedCandidatesLookupsAndConstraints ∷
-  SidechainParams →
-  { candidates ∷
-      Array
-        { mainchainKey ∷ ByteArray
-        , sidechainKey ∷ ByteArray
-        , authorityDiscoveryKey ∷ ByteArray
-        , grandpaKey ∷ ByteArray
-        }
-
-  } →
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-mkInsertPermissionedCandidatesLookupsAndConstraints
-  sidechainParams
-  { candidates } = do
-  permissionedCandidatesCurrencySymbol ←
-    Versioning.getVersionedCurrencySymbol
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesPolicy }
-      )
-
-  let
-    permissionedCandidatesMintingPolicyHash =
-      Value.currencyMPSHash permissionedCandidatesCurrencySymbol
-
-  permissionedCandidatesValidatorAddress ←
-    Versioning.getVersionedValidatorAddress
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesValidator }
-      )
-
-  permissionedCandidatesValidatorHash ←
-    Utils.toValidatorHash permissionedCandidatesValidatorAddress
-
-  (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    ( VersionOracle
-        { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesPolicy }
-    )
-
-  ( permissionedCandidatesValidatorScriptRefTxInput /\
-      permissionedCandidatesValidatorScriptRefTxOutput
-  ) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesValidator }
-      )
-
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
-
-  let
-    value ∷ Value
-    value = Value.singleton
-      permissionedCandidatesCurrencySymbol
-      permissionedCandidatesTokenName
-      (BigInt.fromInt 1)
-
-    permissionedCandidatesDatum ∷ Datum
-    permissionedCandidatesDatum = Datum $ toData $
-      PermissionedCandidatesValidatorDatum
-        { candidates: map PermissionedCandidateKeys candidates }
-
-    lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        ( Map.singleton permissionedCandidatesValidatorScriptRefTxInput
-            permissionedCandidatesValidatorScriptRefTxOutput
-        )
-        <> Lookups.unspentOutputs
-          (Map.singleton scriptRefTxInput scriptRefTxOutput)
-        <> governanceLookups
-
-    constraints ∷ TxConstraints Void Void
-    constraints =
-      Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-        permissionedCandidatesMintingPolicyHash
-        (Redeemer $ toData PermissionedCandidatesMint)
-        permissionedCandidatesTokenName
-        (BigInt.fromInt 1)
-        (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
-        <> Constraints.mustPayToScript permissionedCandidatesValidatorHash
-          permissionedCandidatesDatum
-          DatumInline
-          value
-        <> Constraints.mustReferenceOutput
-          permissionedCandidatesValidatorScriptRefTxInput
-        <> governanceConstraints
-  pure { lookups, constraints }
-
-mkRemovePermissionedCandidatesLookupsAndConstraints ∷
-  SidechainParams →
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-mkRemovePermissionedCandidatesLookupsAndConstraints sidechainParams = do
-  permissionedCandidatesCurrencySymbol ←
-    Versioning.getVersionedCurrencySymbol
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesPolicy }
-      )
-
-  let
-    permissionedCandidatesMintingPolicyHash =
-      Value.currencyMPSHash permissionedCandidatesCurrencySymbol
-
-  permissionedCandidatesValidatorAddress ←
-    Versioning.getVersionedValidatorAddress
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesValidator }
-      )
-
-  -- find all UTxOs at permissionedCandidatesValidator address that contain permissionedCandidatesToken
-  permissionedCandidatesUTxOs ←
-    Map.filter
-      ( \( TransactionOutputWithRefScript
-             { output: (TransactionOutput { amount }) }
-         ) →
-          Value.valueOf amount permissionedCandidatesCurrencySymbol
-            permissionedCandidatesTokenName >
-            BigInt.fromInt 0
-      )
-      <$> utxosAt permissionedCandidatesValidatorAddress
-
-  -- check how much permissionedCandidatesToken is stored in UTxOs that we're trying to remove
-  let
-    amountToBurn = sum
-      $ map
-          ( \( TransactionOutputWithRefScript
-                 { output: (TransactionOutput { amount }) }
-             ) → Value.valueOf amount permissionedCandidatesCurrencySymbol
-              permissionedCandidatesTokenName
-          )
-      $ Map.values permissionedCandidatesUTxOs
-
-  ( permissionedCandidatesPolicyRefTxInput /\
-      permissionedCandidatesPolicyRefTxOutput
-  ) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesPolicy }
-      )
-
-  ( permissionedCandidatesValidatorScriptRefTxInput /\
-      permissionedCandidatesValidatorScriptRefTxOutput
-  ) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesValidator }
-      )
-
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
-
-  let
-    lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.unspentOutputs
-        ( Map.singleton permissionedCandidatesValidatorScriptRefTxInput
-            permissionedCandidatesValidatorScriptRefTxOutput
-        )
-        <> Lookups.unspentOutputs
-          ( Map.singleton permissionedCandidatesPolicyRefTxInput
-              permissionedCandidatesPolicyRefTxOutput
-          )
-        <> Lookups.unspentOutputs permissionedCandidatesUTxOs
-        <> governanceLookups
-
-    validatorRef = RefInput
-      ( Transaction.mkTxUnspentOut permissionedCandidatesValidatorScriptRefTxInput
-          permissionedCandidatesValidatorScriptRefTxOutput
-      )
-
-    spendScriptOutputConstraints ∷ TxConstraints Void Void
-    spendScriptOutputConstraints =
-      foldMap
-        ( \txInput → Constraints.mustSpendScriptOutputUsingScriptRef txInput
-            (Redeemer $ toData RemovePermissionedCandidates)
-            validatorRef
-        ) $ Map.keys permissionedCandidatesUTxOs
-
-    constraints ∷ TxConstraints Void Void
-    constraints =
-      Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-        permissionedCandidatesMintingPolicyHash
-        (Redeemer $ toData PermissionedCandidatesBurn)
-        permissionedCandidatesTokenName
-        (-amountToBurn)
-        ( RefInput $ mkTxUnspentOut permissionedCandidatesPolicyRefTxInput
-            permissionedCandidatesPolicyRefTxOutput
-        )
-        <> Constraints.mustReferenceOutput
-          permissionedCandidatesValidatorScriptRefTxInput
-        <> Constraints.mustReferenceOutput permissionedCandidatesPolicyRefTxInput
-        <> spendScriptOutputConstraints
-        <> governanceConstraints
-
-  pure { lookups, constraints }
-
 mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
   SidechainParams →
-  { candidates ∷
+  { permissionedCandidatesToAdd ∷
       Array
         { mainchainKey ∷ ByteArray
         , sidechainKey ∷ ByteArray
         , authorityDiscoveryKey ∷ ByteArray
         , grandpaKey ∷ ByteArray
         }
-
+  , permissionedCandidatesToRemove ∷
+      Maybe
+        ( Array
+            { mainchainKey ∷ ByteArray
+            , sidechainKey ∷ ByteArray
+            , authorityDiscoveryKey ∷ ByteArray
+            , grandpaKey ∷ ByteArray
+            }
+        )
   } →
   Contract
     { lookups ∷ ScriptLookups Void
@@ -295,13 +94,17 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
     }
 mkUpdatePermissionedCandidatesLookupsAndConstraints
   sidechainParams
-  { candidates } = do
+  { permissionedCandidatesToAdd, permissionedCandidatesToRemove } = do
   permissionedCandidatesCurrencySymbol ←
     Versioning.getVersionedCurrencySymbol
       sidechainParams
       ( VersionOracle
           { version: BigInt.fromInt 1, scriptId: PermissionedCandidatesPolicy }
       )
+
+  let
+    permissionedCandidatesMintingPolicyHash =
+      Value.currencyMPSHash permissionedCandidatesCurrencySymbol
 
   permissionedCandidatesValidatorAddress ←
     Versioning.getVersionedValidatorAddress
@@ -313,32 +116,23 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
   permissionedCandidatesValidatorHash ←
     Utils.toValidatorHash permissionedCandidatesValidatorAddress
 
-  -- find all UTxOs at PermissionedCandidatesValidator address that contain PermissionedCandidatesToken
-  permissionedCandidatesUTxOs ←
-    Map.filter
-      ( \( TransactionOutputWithRefScript
-             { output: (TransactionOutput { amount }) }
-         ) →
-          Value.valueOf amount permissionedCandidatesCurrencySymbol
-            permissionedCandidatesTokenName >
-            BigInt.fromInt 0
-      )
-      <$> utxosAt permissionedCandidatesValidatorAddress
-
-  -- check how much PermissionedCandidatesToken is stored in UTxOs that we're trying to update
-  let
-    permissionedCandidatesTokenAmount = sum
-      $ map
-          ( \( TransactionOutputWithRefScript
-                 { output: (TransactionOutput { amount }) }
-             ) → Value.valueOf amount permissionedCandidatesCurrencySymbol
-              permissionedCandidatesTokenName
-          )
-      $ Map.values permissionedCandidatesUTxOs
-
-  when (permissionedCandidatesTokenAmount <= BigInt.fromInt 0) $
-    throwContractError
-      "No previous PermissionedCandidates tokens were found. Please insert a new PermissionedCandidates before trying to update."
+  -- find the permissioned candidates UTxO
+  maybePermissionedCandidatesUTxO ←
+    ( Array.find
+        ( \( _ /\ TransactionOutputWithRefScript
+               { output: (TransactionOutput { amount, datum: outputDatum }) }
+           ) → fromMaybe false $ do
+            d ← case outputDatum of
+              OutputDatum (Datum d) → pure d
+              _ → Nothing
+            _ ← (fromData d ∷ Maybe PermissionedCandidatesValidatorDatum)
+            pure
+              ( Value.valueOf amount permissionedCandidatesCurrencySymbol
+                  permissionedCandidatesTokenName > BigInt.fromInt 0
+              )
+        )
+        <<< Map.toUnfoldable
+    ) <$> utxosAt permissionedCandidatesValidatorAddress
 
   ( permissionedCandidatesPolicyRefTxInput /\
       permissionedCandidatesPolicyRefTxOutput
@@ -362,17 +156,50 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     Governance.governanceAuthorityLookupsAndConstraints
       (unwrap sidechainParams).governanceAuthority
 
+  oldCandidates ← case maybePermissionedCandidatesUTxO of
+    Nothing → pure []
+    Just
+      ( _ /\ TransactionOutputWithRefScript
+          { output: TransactionOutput { datum: outputDatum } }
+      ) →
+      maybe
+        ( throwContractError $ show $ InternalError $ InvalidData
+            "could not decode PermissionedCandidatesValidatorDatum"
+        )
+        pure $ do
+        d ← case outputDatum of
+          OutputDatum (Datum d) → pure d
+          _ → Nothing
+        PermissionedCandidatesValidatorDatum { candidates } ← fromData d
+        pure candidates
+
   let
+    filteredCandidates ∷ Array PermissionedCandidateKeys
+    filteredCandidates = case permissionedCandidatesToRemove of
+      Nothing → []
+      Just candidatesToRemove → oldCandidates \\
+        (map PermissionedCandidateKeys candidatesToRemove)
+
+    newCandidates ∷ Array PermissionedCandidateKeys
+    newCandidates = filteredCandidates <>
+      (map PermissionedCandidateKeys permissionedCandidatesToAdd)
+
     value ∷ Value
     value = Value.singleton
       permissionedCandidatesCurrencySymbol
       permissionedCandidatesTokenName
-      permissionedCandidatesTokenAmount
+      one
 
     permissionedCandidatesDatum ∷ Datum
     permissionedCandidatesDatum = Datum $ toData $
       PermissionedCandidatesValidatorDatum
-        { candidates: map PermissionedCandidateKeys candidates }
+        { candidates: newCandidates }
+
+    oldUtxoLookups ∷ ScriptLookups Void
+    oldUtxoLookups = case maybePermissionedCandidatesUTxO of
+      Nothing → mempty
+      Just (txInput /\ txOutput) →
+        Lookups.unspentOutputs $ Map.singleton txInput txOutput
 
     lookups ∷ ScriptLookups Void
     lookups =
@@ -384,7 +211,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
           ( Map.singleton permissionedCandidatesPolicyRefTxInput
               permissionedCandidatesPolicyRefTxOutput
           )
-        <> Lookups.unspentOutputs permissionedCandidatesUTxOs
+        <> oldUtxoLookups
         <> governanceLookups
 
     validatorRef = RefInput
@@ -393,12 +220,23 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       )
 
     spendScriptOutputConstraints ∷ TxConstraints Void Void
-    spendScriptOutputConstraints =
-      foldMap
-        ( \txInput → Constraints.mustSpendScriptOutputUsingScriptRef txInput
-            (Redeemer $ toData UpdatePermissionedCandidates)
-            validatorRef
-        ) $ Map.keys permissionedCandidatesUTxOs
+    spendScriptOutputConstraints = case maybePermissionedCandidatesUTxO of
+      Nothing → mempty
+      Just (txInput /\ _) → Constraints.mustSpendScriptOutputUsingScriptRef
+        txInput
+        (Redeemer $ toData UpdatePermissionedCandidates)
+        validatorRef
+
+    mintTokenConstraint = case maybePermissionedCandidatesUTxO of
+      Just _ → mempty
+      Nothing → Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+        permissionedCandidatesMintingPolicyHash
+        (Redeemer $ toData PermissionedCandidatesMint)
+        permissionedCandidatesTokenName
+        (BigInt.fromInt 1)
+        ( RefInput $ mkTxUnspentOut permissionedCandidatesPolicyRefTxInput
+            permissionedCandidatesPolicyRefTxOutput
+        )
 
     constraints ∷ TxConstraints Void Void
     constraints =
@@ -410,6 +248,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
           permissionedCandidatesValidatorScriptRefTxInput
         <> Constraints.mustReferenceOutput permissionedCandidatesPolicyRefTxInput
         <> spendScriptOutputConstraints
+        <> mintTokenConstraint
         <> governanceConstraints
 
   pure { lookups, constraints }

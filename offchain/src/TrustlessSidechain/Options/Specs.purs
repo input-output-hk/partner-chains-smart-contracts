@@ -116,9 +116,7 @@ import TrustlessSidechain.Options.Types
       , InsertDParameter
       , UpdateDParameter
       , RemoveDParameter
-      , InsertPermissionedCandidates
       , UpdatePermissionedCandidates
-      , RemovePermissionedCandidates
       , BurnNFTs
       )
   , UtilsEndpoint
@@ -242,18 +240,9 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig removeDParameterSpec)
             (progDesc "Remove a D parameter")
         )
-
-    , command "insert-permissioned-candidates"
-        ( info (withCommonOpts maybeConfig insertPermissionedCandidatesSpec)
-            (progDesc "Insert new Permissioned Candidates list")
-        )
     , command "update-permissioned-candidates"
         ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
             (progDesc "Update a Permissioned Candidates list")
-        )
-    , command "remove-permissioned-candidates"
-        ( info (withCommonOpts maybeConfig removePermissionedCandidatesSpec)
-            (progDesc "Remove a Permissioned Candidates list")
         )
     , command "collect-garbage"
         ( info (withCommonOpts maybeConfig burnNFTsSpec)
@@ -1138,7 +1127,7 @@ updateDParameterSpec = ado
 removeDParameterSpec ∷ Parser TxEndpoint
 removeDParameterSpec = pure RemoveDParameter
 
-parsePermissionedCandidates ∷
+parseAddPermissionedCandidates ∷
   Parser
     ( List
         { mainchainKey ∷ ByteArray
@@ -1147,11 +1136,11 @@ parsePermissionedCandidates ∷
         , grandpaKey ∷ ByteArray
         }
     )
-parsePermissionedCandidates =
+parseAddPermissionedCandidates =
   ( many
       ( option permissionedCandidateKeys
           ( fold
-              [ long "permissioned-candidate-keys"
+              [ long "add-candidate"
               , metavar
                   "MAINCHAIN_KEY:SIDECHAIN_KEY:AUTHORITY_DISCOVERY_KEY:GRANDPA_KEY"
               , help
@@ -1161,18 +1150,45 @@ parsePermissionedCandidates =
       )
   )
 
-insertPermissionedCandidatesSpec ∷ Parser TxEndpoint
-insertPermissionedCandidatesSpec = ado
-  permissionedCandidates ← parsePermissionedCandidates
-  in InsertPermissionedCandidates { permissionedCandidates }
+parseRemovePermissionedCandidates ∷
+  Parser
+    ( Maybe
+        ( List
+            { mainchainKey ∷ ByteArray
+            , sidechainKey ∷ ByteArray
+            , authorityDiscoveryKey ∷ ByteArray
+            , grandpaKey ∷ ByteArray
+            }
+        )
+    )
+parseRemovePermissionedCandidates = Just <$>
+  ( many
+      ( option permissionedCandidateKeys
+          ( fold
+              [ long "remove-candidate"
+              , metavar
+                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AUTHORITY_DISCOVERY_KEY:GRANDPA_KEY"
+              , help
+                  "A list of tuples of 4 keys used to describe a permissioned candidate, separated by a colon"
+              ]
+          )
+      )
+  )
+
+parseRemoveAllCandidates ∷ ∀ a. Parser (Maybe a)
+parseRemoveAllCandidates = flag' Nothing $ fold
+  [ long "remove-all-candidates"
+  , help "When used, all current permissioned candidates will be removed."
+  ]
 
 updatePermissionedCandidatesSpec ∷ Parser TxEndpoint
 updatePermissionedCandidatesSpec = ado
-  permissionedCandidates ← parsePermissionedCandidates
-  in UpdatePermissionedCandidates { permissionedCandidates }
-
-removePermissionedCandidatesSpec ∷ Parser TxEndpoint
-removePermissionedCandidatesSpec = pure RemovePermissionedCandidates
+  permissionedCandidatesToAdd ← parseAddPermissionedCandidates
+  permissionedCandidatesToRemove ←
+    (parseRemoveAllCandidates <|> parseRemovePermissionedCandidates)
+  in
+    UpdatePermissionedCandidates
+      { permissionedCandidatesToAdd, permissionedCandidatesToRemove }
 
 burnNFTsSpec ∷ Parser TxEndpoint
 burnNFTsSpec = pure BurnNFTs

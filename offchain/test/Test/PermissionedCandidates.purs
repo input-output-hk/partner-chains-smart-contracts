@@ -12,7 +12,6 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils
   ( WrappedTests
-  , fails
   , getOwnTransactionInput
   , plutipGroup
   )
@@ -39,7 +38,6 @@ tests ∷ WrappedTests
 tests = plutipGroup "Minting, and burning a PermissionedCandidates Token" $
   do
     testScenarioSuccess
-    testScenarioFailure
 
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
@@ -77,9 +75,9 @@ testScenarioSuccess =
 
         void
           $
-            ( PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
+            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
-                { candidates:
+                { permissionedCandidatesToAdd:
                     [ { mainchainKey: hexToByteArrayUnsafe "aa11"
                       , sidechainKey: hexToByteArrayUnsafe "bb11"
                       , authorityDiscoveryKey: hexToByteArrayUnsafe "cc11"
@@ -91,6 +89,7 @@ testScenarioSuccess =
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
                     ]
+                , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
                   balanceSignAndSubmit "Test: insert permissioned candidates"
@@ -100,11 +99,18 @@ testScenarioSuccess =
           $
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
-                { candidates:
+                { permissionedCandidatesToAdd:
                     [ { mainchainKey: hexToByteArrayUnsafe "aa33"
                       , sidechainKey: hexToByteArrayUnsafe "bb33"
                       , authorityDiscoveryKey: hexToByteArrayUnsafe "cc33"
                       , grandpaKey: hexToByteArrayUnsafe "dd33"
+                      }
+                    ]
+                , permissionedCandidatesToRemove: Just
+                    [ { mainchainKey: hexToByteArrayUnsafe "aa22"
+                      , sidechainKey: hexToByteArrayUnsafe "bb22"
+                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc22"
+                      , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
                     ]
                 }
@@ -114,81 +120,11 @@ testScenarioSuccess =
 
         void
           $
-            ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
+            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
-                >>=
-                  balanceSignAndSubmit "Test: remove permissioned candidates"
-            )
-
-testScenarioFailure ∷ PlutipTest
-testScenarioFailure =
-  Mote.Monad.test
-    "Minting and removing twice a PermissionedCandidates Token. (this should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 150_000_000
-        , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 50_000_000
-        ]
-    $ \alice → Wallet.withKeyWallet alice do
-
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-
-        { sidechainParams } ← initSidechain initScParams 1
-
-        void
-          $
-            ( PermissionedCandidates.mkInsertPermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { candidates:
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa11"
-                      , sidechainKey: hexToByteArrayUnsafe "bb11"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc11"
-                      , grandpaKey: hexToByteArrayUnsafe "dd11"
-                      }
-                    , { mainchainKey: hexToByteArrayUnsafe "aa22"
-                      , sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , authorityDiscoveryKey: hexToByteArrayUnsafe "cc22"
-                      , grandpaKey: hexToByteArrayUnsafe "dd22"
-                      }
-                    ]
+                { permissionedCandidatesToAdd: []
+                , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
-                  balanceSignAndSubmit "Test: insert permissioned candidates"
-            )
-
-        void
-          $
-            ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                >>=
                   balanceSignAndSubmit "Test: remove permissioned candidates"
             )
-
-        ( void
-            $
-              ( PermissionedCandidates.mkRemovePermissionedCandidatesLookupsAndConstraints
-                  sidechainParams
-                  >>=
-                    balanceSignAndSubmit "Test: update permissioned candidates"
-              )
-        ) # fails

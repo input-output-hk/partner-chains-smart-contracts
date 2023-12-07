@@ -238,25 +238,24 @@ data TxEndpoint
       , registeredCandidatesCount ∷ BigInt
       }
   | RemoveDParameter
-  | InsertPermissionedCandidates
-      { permissionedCandidates ∷
-          List
-            { mainchainKey ∷ ByteArray
-            , sidechainKey ∷ ByteArray
-            , authorityDiscoveryKey ∷ ByteArray
-            , grandpaKey ∷ ByteArray
-            }
-      }
   | UpdatePermissionedCandidates
-      { permissionedCandidates ∷
+      { permissionedCandidatesToAdd ∷
           List
             { mainchainKey ∷ ByteArray
             , sidechainKey ∷ ByteArray
             , authorityDiscoveryKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
+      , permissionedCandidatesToRemove ∷
+          Maybe
+            ( List
+                { mainchainKey ∷ ByteArray
+                , sidechainKey ∷ ByteArray
+                , authorityDiscoveryKey ∷ ByteArray
+                , grandpaKey ∷ ByteArray
+                }
+            )
       }
-  | RemovePermissionedCandidates
   | BurnNFTs
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
