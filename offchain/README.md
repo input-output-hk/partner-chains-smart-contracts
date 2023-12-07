@@ -511,9 +511,9 @@ nix run .#sidechain-main-cli -- insert-permissioned-candidates \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AUTHORITY_DISCOVERY_KEY_3:GRANDPA_KEY_3"
+  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
 ```
 
 Insert a new list of permissioned candidates.  Each candidate is listed
@@ -531,9 +531,9 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AUTHORITY_DISCOVERY_KEY_3:GRANDPA_KEY_3"
+  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
 ```
 
 Replace existing list of permissioned candidates with a new list.  Each

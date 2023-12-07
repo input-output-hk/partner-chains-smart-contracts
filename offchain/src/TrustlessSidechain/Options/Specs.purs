@@ -1132,7 +1132,7 @@ parseAddPermissionedCandidates ∷
     ( List
         { mainchainKey ∷ ByteArray
         , sidechainKey ∷ ByteArray
-        , authorityDiscoveryKey ∷ ByteArray
+        , auraKey ∷ ByteArray
         , grandpaKey ∷ ByteArray
         }
     )
@@ -1142,7 +1142,7 @@ parseAddPermissionedCandidates =
           ( fold
               [ long "add-candidate"
               , metavar
-                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AUTHORITY_DISCOVERY_KEY:GRANDPA_KEY"
+                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
               , help
                   "A list of tuples of 4 keys used to describe a permissioned candidate, separated by a colon"
               ]
@@ -1156,7 +1156,7 @@ parseRemovePermissionedCandidates ∷
         ( List
             { mainchainKey ∷ ByteArray
             , sidechainKey ∷ ByteArray
-            , authorityDiscoveryKey ∷ ByteArray
+            , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
         )
@@ -1167,7 +1167,7 @@ parseRemovePermissionedCandidates = Just <$>
           ( fold
               [ long "remove-candidate"
               , metavar
-                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AUTHORITY_DISCOVERY_KEY:GRANDPA_KEY"
+                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
               , help
                   "A list of tuples of 4 keys used to describe a permissioned candidate, separated by a colon"
               ]

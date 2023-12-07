@@ -243,7 +243,7 @@ data TxEndpoint
           List
             { mainchainKey ∷ ByteArray
             , sidechainKey ∷ ByteArray
-            , authorityDiscoveryKey ∷ ByteArray
+            , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
       , permissionedCandidatesToRemove ∷
@@ -251,7 +251,7 @@ data TxEndpoint
             ( List
                 { mainchainKey ∷ ByteArray
                 , sidechainKey ∷ ByteArray
-                , authorityDiscoveryKey ∷ ByteArray
+                , auraKey ∷ ByteArray
                 , grandpaKey ∷ ByteArray
                 }
             )

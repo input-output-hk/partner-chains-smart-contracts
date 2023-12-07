@@ -75,7 +75,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
       Array
         { mainchainKey ∷ ByteArray
         , sidechainKey ∷ ByteArray
-        , authorityDiscoveryKey ∷ ByteArray
+        , auraKey ∷ ByteArray
         , grandpaKey ∷ ByteArray
         }
   , permissionedCandidatesToRemove ∷
@@ -83,7 +83,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
         ( Array
             { mainchainKey ∷ ByteArray
             , sidechainKey ∷ ByteArray
-            , authorityDiscoveryKey ∷ ByteArray
+            , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
         )

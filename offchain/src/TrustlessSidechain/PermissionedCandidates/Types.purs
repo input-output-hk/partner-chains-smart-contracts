@@ -44,7 +44,7 @@ instance FromData PermissionedCandidatesValidatorRedeemer where
 data PermissionedCandidateKeys = PermissionedCandidateKeys
   { mainchainKey ∷ ByteArray
   , sidechainKey ∷ ByteArray
-  , authorityDiscoveryKey ∷ ByteArray
+  , auraKey ∷ ByteArray
   , grandpaKey ∷ ByteArray
   }
 
@@ -53,16 +53,16 @@ derive instance Eq PermissionedCandidateKeys
 instance ToData PermissionedCandidateKeys where
   toData
     ( PermissionedCandidateKeys
-        { mainchainKey, sidechainKey, authorityDiscoveryKey, grandpaKey }
+        { mainchainKey, sidechainKey, auraKey, grandpaKey }
     ) =
-    productToData4 mainchainKey sidechainKey authorityDiscoveryKey grandpaKey
+    productToData4 mainchainKey sidechainKey auraKey grandpaKey
 
 instance FromData PermissionedCandidateKeys where
   fromData =
     productFromData4 $
-      \mainchainKey sidechainKey authorityDiscoveryKey grandpaKey →
+      \mainchainKey sidechainKey auraKey grandpaKey →
         PermissionedCandidateKeys
-          { mainchainKey, sidechainKey, authorityDiscoveryKey, grandpaKey }
+          { mainchainKey, sidechainKey, auraKey, grandpaKey }
 
 data PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates ∷ Array PermissionedCandidateKeys
