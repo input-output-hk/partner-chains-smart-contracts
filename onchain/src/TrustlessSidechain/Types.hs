@@ -223,46 +223,6 @@ data BlockProducerRegistration = BlockProducerRegistration
 
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
--- | @since v4.0.0
-instance HasField "spoPubKey" BlockProducerRegistration StakeOwnership where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration x _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration (f so) scPK scS u pkh
-
--- | @since v4.0.0
-instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration LedgerBytes where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so (f scPK) scS u pkh
-
--- | @since v4.0.0
-instance HasField "sidechainSignature" BlockProducerRegistration Signature where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK (f scS) u pkh
-
--- | @since v4.0.0
-instance HasField "inputUtxo" BlockProducerRegistration TxOutRef where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK scS (f u) pkh
-
--- | @since v4.0.0
-instance HasField "ownPkh" BlockProducerRegistration PubKeyHash where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK scS u (f pkh)
-
 {- | = Important note
 
  The 'Data' serializations for this type /cannot/ change.

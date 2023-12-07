@@ -10,17 +10,16 @@ module TrustlessSidechain.CommitteeCandidateValidator (
   serialisableValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
+import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
 import Plutus.V2.Ledger.Contexts (
-  ScriptContext (scriptContextTxInfo),
-  TxInfo,
+  ScriptContext (ScriptContext),
   txSignedBy,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedValidator)
 import TrustlessSidechain.Types (
-  BlockProducerRegistration,
+  BlockProducerRegistration (ownPkh),
   SidechainParams,
  )
 
@@ -31,15 +30,11 @@ mkCommitteeCandidateValidator ::
   () ->
   ScriptContext ->
   Bool
-mkCommitteeCandidateValidator _ datum _ ctx =
+mkCommitteeCandidateValidator _ datum _ (ScriptContext txInfo _) =
   traceIfFalse "Must be signed by the original submitter" isSigned
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
-    pkh :: PubKeyHash
-    pkh = get @"ownPkh" datum
     isSigned :: Bool
-    isSigned = txSignedBy info pkh
+    isSigned = txSignedBy txInfo (ownPkh datum)
 
 {-# INLINEABLE committeeCandidateValidatorUntyped #-}
 committeeCandidateValidatorUntyped ::
