@@ -407,22 +407,6 @@ instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeDatum
   unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeDatum
 
 -- | @since v4.0.0
-instance HasField "aggregateCommitteePubKeys" (UpdateCommitteeDatum aggregatePubKeys) aggregatePubKeys where
-  {-# INLINE get #-}
-  get (UpdateCommitteeDatum x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeDatum ch se) =
-    UpdateCommitteeDatum (f ch) se
-
--- | @since v4.0.0
-instance HasField "sidechainEpoch" (UpdateCommitteeDatum aggregatePubKeys) Integer where
-  {-# INLINE get #-}
-  get (UpdateCommitteeDatum _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeDatum ch se) =
-    UpdateCommitteeDatum ch (f se)
-
--- | @since v4.0.0
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
   deriving newtype
     ( -- | @since v4.0.0

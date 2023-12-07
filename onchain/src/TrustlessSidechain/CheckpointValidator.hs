@@ -52,6 +52,9 @@ import TrustlessSidechain.Types (
   SidechainParams,
   UpdateCommitteeDatum,
  )
+import TrustlessSidechain.Types as UpdateCommitteeDatum (
+  UpdateCommitteeDatum (sidechainEpoch),
+ )
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
@@ -126,7 +129,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
               { sidechainParams = sc
               , blockHash = get @"blockHash" outputDatum
               , blockNumber = get @"blockNumber" outputDatum
-              , sidechainEpoch = get @"sidechainEpoch" committeeDatum
+              , sidechainEpoch = UpdateCommitteeDatum.sidechainEpoch committeeDatum
               }
        in -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
           case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
