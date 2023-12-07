@@ -638,22 +638,6 @@ instance UnsafeFromData CheckpointRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointRedeemer
 
--- | @since v4.0.0
-instance HasField "newCheckpointBlockHash" CheckpointRedeemer LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ncbh ncbn) =
-    CheckpointRedeemer (f ncbh) ncbn
-
--- | @since v4.0.0
-instance HasField "newCheckpointBlockNumber" CheckpointRedeemer Integer where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ncbh ncbn) =
-    CheckpointRedeemer ncbh (f ncbn)
-
 {- | 'Checkpoint' is used as the parameter for the validator.
 
  @since v4.0.0
