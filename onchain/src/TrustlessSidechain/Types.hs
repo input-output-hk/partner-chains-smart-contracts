@@ -461,38 +461,6 @@ instance ToData UpdateCommitteeHash where
       committeeCertificateVerificationCurrencySymbol
       mptRootTokenCurrencySymbol
 
--- | @since v4.0.0
-instance HasField "sidechainParams" UpdateCommitteeHash SidechainParams where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash (f sp) cocs ccvcs rtcs
-
--- | @since v4.0.0
-instance HasField "committeeOracleCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp (f cocs) ccvcs rtcs
-
--- | @since v4.0.0
-instance HasField "committeeCertificateVerificationCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp cocs (f ccvcs) rtcs
-
--- | @since v4.0.0
-instance HasField "mptRootTokenCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp cocs ccvcs (f rtcs)
-
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData4 UpdateCommitteeHash
