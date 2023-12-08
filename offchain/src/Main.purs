@@ -250,6 +250,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainSig
         , inputUtxo
         , permissionToken
+        , auraKey
+        , grandpaKey
         } →
         let
           params = CommitteeCandidateValidator.RegisterParams
@@ -259,6 +261,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainSig
             , inputUtxo
             , permissionToken
+            , auraKey
+            , grandpaKey
             }
         in
           CommitteeCandidateValidator.register params

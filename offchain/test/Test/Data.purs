@@ -313,6 +313,8 @@ genBPR ∷ Gen BlockProducerRegistration
 genBPR = do
   stakeOwnership ← genSO
   sidechainPubKey ← genGH
+  auraKey ← genGH
+  grandpaKey ← genGH
   sidechainSignature ← genGH
   ArbitraryTransactionInput inputUtxo ← arbitrary
   ArbitraryPaymentPubKeyHash ownPkh ← arbitrary
@@ -322,6 +324,8 @@ genBPR = do
     , sidechainSignature
     , inputUtxo
     , ownPkh
+    , auraKey
+    , grandpaKey
     }
 
 genCPM ∷ Gen CandidatePermissionMint

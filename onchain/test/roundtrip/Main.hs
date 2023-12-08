@@ -60,6 +60,8 @@ import TrustlessSidechain.Types (
   ATMSPlainMultisignature (ATMSPlainMultisignature),
   BlockProducerRegistration (
     BlockProducerRegistration,
+    auraKey,
+    grandpaKey,
     inputUtxo,
     ownPkh,
     sidechainPubKey,
@@ -362,10 +364,20 @@ genBPR :: Gen BlockProducerRegistration
 genBPR = do
   so <- genSO
   sidePk <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
+  auraKey <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
+  grandpaKey <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
   ArbitrarySignature sideSig <- arbitrary
   ArbitraryTxOutRef iu <- arbitrary
   ArbitraryPubKeyHash pkh <- arbitrary
-  pure . BlockProducerRegistration so sidePk sideSig iu $ pkh
+  pure $
+    BlockProducerRegistration
+      so
+      sidePk
+      sideSig
+      iu
+      pkh
+      auraKey
+      grandpaKey
 
 genPK :: Gen EcdsaSecp256k1PubKey
 genPK = do
@@ -570,10 +582,20 @@ shrinkBPR :: BlockProducerRegistration -> [BlockProducerRegistration]
 shrinkBPR (BlockProducerRegistration {..}) = do
   so' <- shrinkSO stakeOwnership
   EcdsaSecp256k1PubKey sidePk' <- shrinkPK (EcdsaSecp256k1PubKey sidechainPubKey)
+  EcdsaSecp256k1PubKey auraKey' <- shrinkPK (EcdsaSecp256k1PubKey auraKey)
+  EcdsaSecp256k1PubKey grandpaKey' <- shrinkPK (EcdsaSecp256k1PubKey grandpaKey)
   ArbitrarySignature sideSig' <- shrink (ArbitrarySignature sidechainSignature)
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
   ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash ownPkh)
-  pure . BlockProducerRegistration so' sidePk' sideSig' tout' $ pkh'
+  pure $
+    BlockProducerRegistration
+      so'
+      sidePk'
+      sideSig'
+      tout'
+      pkh'
+      auraKey'
+      grandpaKey'
 
 -- We don't shrink these, as it wouldn't make much sense to
 shrinkPK :: EcdsaSecp256k1PubKey -> [EcdsaSecp256k1PubKey]

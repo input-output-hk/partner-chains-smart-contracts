@@ -66,11 +66,11 @@ main =
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
-            200
+            202
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
-            2_952
+            2_992
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode

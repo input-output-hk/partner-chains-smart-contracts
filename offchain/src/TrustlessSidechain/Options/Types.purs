@@ -162,6 +162,8 @@ data TxEndpoint
       , sidechainSig ∷ ByteArray
       , inputUtxo ∷ TransactionInput
       , permissionToken ∷ Maybe CandidatePermissionTokenInfo
+      , auraKey ∷ ByteArray
+      , grandpaKey ∷ ByteArray
       }
   | CandidiatePermissionTokenAct
       CandidatePermissionTokenMintInfo
