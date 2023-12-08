@@ -78,6 +78,8 @@ newtype RegisterParams = RegisterParams
   , sidechainSig ∷ ByteArray
   , inputUtxo ∷ TransactionInput
   , permissionToken ∷ Maybe CandidatePermissionTokenInfo
+  , auraKey ∷ ByteArray
+  , grandpaKey ∷ ByteArray
   }
 
 newtype DeregisterParams = DeregisterParams
@@ -127,6 +129,8 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   , sidechainSignature ∷ ByteArray -- Signature of the sidechain candidate
   , inputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
   , ownPkh ∷ PaymentPubKeyHash -- Owner public key hash
+  , auraKey ∷ ByteArray -- sidechain authority discovery key
+  , grandpaKey ∷ ByteArray -- sidechain grandpa key
   }
 
 derive instance Generic BlockProducerRegistration _
@@ -146,6 +150,8 @@ instance ToData BlockProducerRegistration where
         , sidechainSignature
         , inputUtxo
         , ownPkh
+        , auraKey
+        , grandpaKey
         }
     ) =
     Constr (BigNum.fromInt 0)
@@ -154,17 +160,21 @@ instance ToData BlockProducerRegistration where
       , toData sidechainSignature
       , toData inputUtxo
       , toData ownPkh
+      , toData auraKey
+      , toData grandpaKey
       ]
 
 instance FromData BlockProducerRegistration where
   fromData plutusData = case plutusData of
-    Constr n [ x1, x2, x3, x4, x5 ] → do
+    Constr n [ x1, x2, x3, x4, x5, x6, x7 ] → do
       guard (n == BigNum.fromInt 0)
       x1' ← fromData x1
       x2' ← fromData x2
       x3' ← fromData x3
       x4' ← fromData x4
       x5' ← fromData x5
+      x6' ← fromData x6
+      x7' ← fromData x7
       pure
         ( BlockProducerRegistration
             { stakeOwnership: x1'
@@ -172,6 +182,8 @@ instance FromData BlockProducerRegistration where
             , sidechainSignature: x3'
             , inputUtxo: x4'
             , ownPkh: x5'
+            , auraKey: x6'
+            , grandpaKey: x7'
             }
         )
     _ → Nothing
@@ -225,6 +237,8 @@ register
       , sidechainSig
       , inputUtxo
       , permissionToken
+      , auraKey
+      , grandpaKey
       }
   ) = do
   netId ← getNetworkId
@@ -279,6 +293,8 @@ register
       , sidechainSignature: sidechainSig
       , inputUtxo: inputUtxo
       , ownPkh
+      , auraKey
+      , grandpaKey
       }
 
     lookups ∷ Lookups.ScriptLookups Void

@@ -80,6 +80,7 @@ import TrustlessSidechain.Options.Parsers
   , permissionedCandidateKeys
   , plutusDataParser
   , pubKeyBytesAndSignatureBytes
+  , registrationSidechainKeys
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
@@ -641,11 +642,8 @@ parseTokenBasedStakingFlag =
 -- | Parse all parameters for the `register` endpoint
 regSpec ∷ Parser TxEndpoint
 regSpec = ado
-  sidechainPubKey ← option byteArray $ fold
-    [ long "sidechain-public-key"
-    , metavar "PUBLIC_KEY"
-    , help "Sidechain public key value"
-    ]
+  { sidechainKey, auraKey, grandpaKey } ←
+    parseRegistrationSidechainKeys
   sidechainSig ← option byteArray $ fold
     [ long "sidechain-signature"
     , metavar "SIGNATURE"
@@ -677,10 +675,12 @@ regSpec = ado
   in
     CommitteeCandidateReg
       { stakeOwnership
-      , sidechainPubKey
+      , sidechainPubKey: sidechainKey
       , sidechainSig
       , inputUtxo
       , permissionToken
+      , auraKey
+      , grandpaKey
       }
 
 -- | Parse all parameters for the `deregister` endpoint
@@ -1126,6 +1126,21 @@ updateDParameterSpec = ado
 
 removeDParameterSpec ∷ Parser TxEndpoint
 removeDParameterSpec = pure RemoveDParameter
+
+parseRegistrationSidechainKeys ∷
+  Parser
+    { sidechainKey ∷ ByteArray
+    , auraKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
+parseRegistrationSidechainKeys =
+  option registrationSidechainKeys
+    ( fold
+        [ long "sidechain-keys"
+        , metavar "SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
+        , help "Sidechain keys of a block producer"
+        ]
+    )
 
 parseAddPermissionedCandidates ∷
   Parser

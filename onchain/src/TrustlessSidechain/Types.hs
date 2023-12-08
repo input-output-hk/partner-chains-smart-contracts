@@ -262,6 +262,12 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | Owner public key hash
     -- | @since v4.0.0
     ownPkh :: PubKeyHash
+  , -- | Sidechain authority discovery key
+    -- | @since Unreleased
+    auraKey :: LedgerBytes
+  , -- | Sidechain grandpa key
+    -- | @since Unreleased
+    grandpaKey :: LedgerBytes
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -275,42 +281,42 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 -- | @since v4.0.0
 instance HasField "spoPubKey" BlockProducerRegistration StakeOwnership where
   {-# INLINE get #-}
-  get (BlockProducerRegistration x _ _ _ _) = x
+  get (BlockProducerRegistration x _ _ _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration (f so) scPK scS u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
+    BlockProducerRegistration (f so) scPK scS u pkh ak gk
 
 -- | @since v4.0.0
 instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration LedgerBytes where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ x _ _ _) = x
+  get (BlockProducerRegistration _ x _ _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so (f scPK) scS u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
+    BlockProducerRegistration so (f scPK) scS u pkh ak gk
 
 -- | @since v4.0.0
 instance HasField "sidechainSignature" BlockProducerRegistration Signature where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ x _ _) = x
+  get (BlockProducerRegistration _ _ x _ _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK (f scS) u pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
+    BlockProducerRegistration so scPK (f scS) u pkh ak gk
 
 -- | @since v4.0.0
 instance HasField "inputUtxo" BlockProducerRegistration TxOutRef where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ x _) = x
+  get (BlockProducerRegistration _ _ _ x _ _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK scS (f u) pkh
+  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
+    BlockProducerRegistration so scPK scS (f u) pkh ak gk
 
 -- | @since v4.0.0
 instance HasField "ownPkh" BlockProducerRegistration PubKeyHash where
   {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ _ x) = x
+  get (BlockProducerRegistration _ _ _ _ x _ _) = x
   {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh) =
-    BlockProducerRegistration so scPK scS u (f pkh)
+  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
+    BlockProducerRegistration so scPK scS u (f pkh) ak gk
 
 {- | = Important note
 
@@ -723,7 +729,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     newAggregateCommitteePubKeys :: aggregatePubKeys
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
-  , -- | @since unreleased
+  , -- | @since Unreleased
     validatorHash :: ValidatorHash
   }
   deriving stock
@@ -781,7 +787,7 @@ instance HasField "sidechainEpoch" (UpdateCommitteeHashMessage aggregatePubKeys)
   modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
     UpdateCommitteeHashMessage sp nacpks pmr (f se) vh
 
--- | @since unreleased
+-- | @since Unreleased
 instance HasField "validatorHash" (UpdateCommitteeHashMessage aggregatePubKeys) ValidatorHash where
   {-# INLINE get #-}
   get (UpdateCommitteeHashMessage _ _ _ _ x) = x
@@ -914,7 +920,7 @@ data ATMSPlainMultisignature = ATMSPlainMultisignature
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
 
 {- | 'ATMSReddemer' allows for either minting or burning
- @since unreleased
+ @since Unreleased
 -}
 data ATMSRedeemer
   = -- | @since Unreleased

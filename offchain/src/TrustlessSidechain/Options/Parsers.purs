@@ -20,6 +20,7 @@ module TrustlessSidechain.Options.Parsers
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseTokenName
+  , registrationSidechainKeys
   , permissionedCandidateKeys
   , permissionedCandidatesCount
   , plutusDataParser
@@ -406,6 +407,35 @@ parsePubKeyBytesAndSignatureBytes str =
       l' ← hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
+
+registrationSidechainKeys ∷
+  ReadM
+    { sidechainKey ∷ ByteArray
+    , auraKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
+registrationSidechainKeys = eitherReader parseRegistrationSidechainKeys
+
+parseRegistrationSidechainKeys ∷
+  String →
+  Either String
+    { sidechainKey ∷ ByteArray
+    , auraKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
+parseRegistrationSidechainKeys str =
+  case split (Pattern ":") str of
+    [ sidechainKey', auraKey', grandpaKey' ] → do
+      sidechainKey ← Either.note ("sidechainKey must be a valid hex string") $
+        hexToByteArray sidechainKey'
+      auraKey ←
+        Either.note ("auraKey must be a valid hex string") $
+          hexToByteArray auraKey'
+      grandpaKey ← Either.note ("grandpaKey must be a valid hex string") $
+        hexToByteArray grandpaKey'
+      pure { sidechainKey, auraKey, grandpaKey }
+    _ → Left
+      "sidechain-keys must be a 3 hex strings concatenated with colons, for example: aa:bb:cc"
 
 permissionedCandidateKeys ∷
   ReadM

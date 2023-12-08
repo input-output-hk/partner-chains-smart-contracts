@@ -254,13 +254,17 @@ data BlockProducerRegistration = BlockProducerRegistration
   { -- | Verification keys required by the stake ownership model
     stakeOwnership :: StakeOwnership
   , -- | public key in the sidechain's desired format
-    sidechainPubKey :: ByteString
+    sidechainPubKey :: LedgerBytes
   , -- | Signature of the sidechain
     sidechainSignature :: Signature
   , -- | A UTxO that must be spent by the transaction
     inputUtxo :: TxOutRef
   , -- | Owner public key hash
     ownPkh :: PubKeyHash
+  , -- | Sidechain authority discovery key
+    auraKey :: LedgerBytes
+  , -- | Sidechain grandpa key
+    grandpaKey :: LedgerBytes
   }
 
 data StakeOwnership

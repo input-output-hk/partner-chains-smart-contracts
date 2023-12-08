@@ -27,6 +27,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Changed
 * The `--sidechain-genesis-hash` now only needs to be passed to `--init` and
   `init-tokens-mint` commands.
+* `BlockProducerRegistration` has 2 new fields - `authorityDiscoveryKey` and `grandpaKey`
+  ([627](https://github.com/input-output-hk/trustless-sidechain/pull/627))
+* `register` now doesn't take `--sidechain-pub-key SIDECHAIN_KEY` argument. Instead of that it takes `--sidechain-keys SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY` argument.
+  ([627](https://github.com/input-output-hk/trustless-sidechain/pull/627))
 * `addresses` doesn't return cbor encoded address of UpdateCommitteeHashValidator anymore. Now it returns its validator hash.
   ([614](https://github.com/input-output-hk/trustless-sidechain/pull/614))
 * `addresses` no loner requires `init` to be conducted first.  This reverts to
