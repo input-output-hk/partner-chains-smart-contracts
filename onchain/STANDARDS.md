@@ -1043,10 +1043,10 @@ rapidly without warning.
 ## Records
 
 Records for onchain use SHOULD have `HasField` instances defined for each field.
-Record accesses and modifications onchain SHOULD NOT use built-in fields;
-instead, they SHOULD use `get`, `put` and `modify` using the appropriate
-`HasField` instances. The labels for `HasField` instances SHOULD match the field
-names.
+Instances SHOULD be derived using provided Template Haskell function
+`mkHasField`.  Record accesses and modifications onchain SHOULD NOT use built-in
+fields; instead, they SHOULD use `get`, `put` and `modify` using the appropriate
+`HasField` instances.
 
 Records for onchain use MUST NOT have prefixed fields:
 

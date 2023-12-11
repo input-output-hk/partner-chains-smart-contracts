@@ -64,39 +64,7 @@ PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | @since v4.0.0
-instance HasField "chainId" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = chainId
-  {-# INLINE modify #-}
-  modify f sp = sp {chainId = f (chainId sp)}
-
--- | @since v4.0.0
-instance HasField "genesisUtxo" SidechainParams TxOutRef where
-  {-# INLINE get #-}
-  get = genesisUtxo
-  {-# INLINE modify #-}
-  modify f sp = sp {genesisUtxo = f (genesisUtxo sp)}
-
--- | @since v4.0.0
-instance HasField "thresholdNumerator" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = thresholdNumerator
-  {-# INLINE modify #-}
-  modify f sp = sp {thresholdNumerator = f (thresholdNumerator sp)}
-
--- | @since v4.0.0
-instance HasField "thresholdDenominator" SidechainParams Integer where
-  {-# INLINE get #-}
-  get = thresholdDenominator
-  {-# INLINE modify #-}
-  modify f sp = sp {thresholdDenominator = f (thresholdDenominator sp)}
-
--- | @since Unreleased
-instance HasField "governanceAuthority" SidechainParams Governance.GovernanceAuthority where
-  {-# INLINE get #-}
-  get = governanceAuthority
-  {-# INLINE modify #-}
-  modify f sp = sp {governanceAuthority = f (governanceAuthority sp)}
+mkHasField ''SidechainParams
 
 {- | Compressed DER SECP256k1 public key.
  = Important note
@@ -207,18 +175,7 @@ instance UnsafeFromData CandidatePermissionMint where
   unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" CandidatePermissionMint SidechainParams where
-  {-# INLINE get #-}
-  get (CandidatePermissionMint sp _) = sp
-  {-# INLINE modify #-}
-  modify f (CandidatePermissionMint sp u) = CandidatePermissionMint (f sp) u
-
--- | @since v4.0.0
-instance HasField "utxo" CandidatePermissionMint TxOutRef where
-  {-# INLINE get #-}
-  get (CandidatePermissionMint _ u) = u
-  {-# INLINE modify #-}
-  modify f (CandidatePermissionMint sp u) = CandidatePermissionMint sp (f u)
+mkHasField ''CandidatePermissionMint
 
 {- Sum type distinguishing different Stake ownership models
  Ada based staking requires the SPO public key and the signature on
@@ -279,44 +236,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 -- | @since v4.0.0
-instance HasField "spoPubKey" BlockProducerRegistration StakeOwnership where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration x _ _ _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
-    BlockProducerRegistration (f so) scPK scS u pkh ak gk
-
--- | @since v4.0.0
-instance HasField "ecdsaSecp256k1PubKey" BlockProducerRegistration LedgerBytes where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ x _ _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
-    BlockProducerRegistration so (f scPK) scS u pkh ak gk
-
--- | @since v4.0.0
-instance HasField "sidechainSignature" BlockProducerRegistration Signature where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ x _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
-    BlockProducerRegistration so scPK (f scS) u pkh ak gk
-
--- | @since v4.0.0
-instance HasField "inputUtxo" BlockProducerRegistration TxOutRef where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
-    BlockProducerRegistration so scPK scS (f u) pkh ak gk
-
--- | @since v4.0.0
-instance HasField "ownPkh" BlockProducerRegistration PubKeyHash where
-  {-# INLINE get #-}
-  get (BlockProducerRegistration _ _ _ _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistration so scPK scS u pkh ak gk) =
-    BlockProducerRegistration so scPK scS u (f pkh) ak gk
+mkHasField ''BlockProducerRegistration
 
 {- | = Important note
 
@@ -339,28 +259,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" BlockProducerRegistrationMsg SidechainParams where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg x _ _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg (f sp) spk u
-
--- | @since v4.0.0
-instance HasField "sidechainPubKey" BlockProducerRegistrationMsg LedgerBytes where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg _ x _) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg sp (f spk) u
-
--- | @since v4.0.0
-instance HasField "inputUtxo" BlockProducerRegistrationMsg TxOutRef where
-  {-# INLINE get #-}
-  get (BlockProducerRegistrationMsg _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (BlockProducerRegistrationMsg sp spk u) =
-    BlockProducerRegistrationMsg sp spk (f u)
+mkHasField ''BlockProducerRegistrationMsg
 
 -- * Merkle Root Token data
 
@@ -397,36 +296,7 @@ data MerkleTreeEntry = MerkleTreeEntry
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
 -- | @since v4.0.0
-instance HasField "index" MerkleTreeEntry Integer where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry (f i) a r pmr
-
--- | @since v4.0.0
-instance HasField "amount" MerkleTreeEntry Integer where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i (f a) r pmr
-
--- | @since v4.0.0
-instance HasField "recipient" MerkleTreeEntry LedgerBytes where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i a (f r) pmr
-
--- | @since v4.0.0
-instance HasField "previousMerkleRoot" MerkleTreeEntry (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (MerkleTreeEntry _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (MerkleTreeEntry i a r pmr) =
-    MerkleTreeEntry i a r (f pmr)
+mkHasField ''MerkleTreeEntry
 
 {- | 'MerkleRootInsertionMessage' is a data type for which committee members
  create signatures for
@@ -454,28 +324,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" MerkleRootInsertionMessage SidechainParams where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage x _ _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage (f sp) mr pmr
-
--- | @since v4.0.0
-instance HasField "merkleRoot" MerkleRootInsertionMessage LedgerBytes where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage _ x _) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage sp (f mr) pmr
-
--- | @since v4.0.0
-instance HasField "previousMerkleRoot" MerkleRootInsertionMessage (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (MerkleRootInsertionMessage _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (MerkleRootInsertionMessage sp mr pmr) =
-    MerkleRootInsertionMessage sp mr (f pmr)
+mkHasField ''MerkleRootInsertionMessage
 
 {- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
  minting policy.
@@ -500,12 +349,7 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
       TSPrelude.Show
     )
 
-instance HasField "previousMerkleRoot" SignedMerkleRootRedeemer (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (SignedMerkleRootRedeemer x) = x
-  {-# INLINE modify #-}
-  modify f (SignedMerkleRootRedeemer pmr) =
-    SignedMerkleRootRedeemer (f pmr)
+mkHasField ''SignedMerkleRootRedeemer
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
@@ -532,20 +376,7 @@ data CombinedMerkleProof = CombinedMerkleProof
 PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
 -- | @since v4.0.0
-instance HasField "transaction" CombinedMerkleProof MerkleTreeEntry where
-  {-# INLINE get #-}
-  get (CombinedMerkleProof x _) = x
-  {-# INLINE modify #-}
-  modify f (CombinedMerkleProof t mp) =
-    CombinedMerkleProof (f t) mp
-
--- | @since v4.0.0
-instance HasField "merkleProof" CombinedMerkleProof MerkleProof where
-  {-# INLINE get #-}
-  get (CombinedMerkleProof _ x) = x
-  {-# INLINE modify #-}
-  modify f (CombinedMerkleProof t mp) =
-    CombinedMerkleProof t (f mp)
+mkHasField ''CombinedMerkleProof
 
 -- * FUEL Minting Policy data
 
@@ -676,36 +507,7 @@ instance ToData UpdateCommitteeHash where
       mptRootTokenCurrencySymbol
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" UpdateCommitteeHash SidechainParams where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash (f sp) cocs ccvcs rtcs
-
--- | @since v4.0.0
-instance HasField "committeeOracleCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp (f cocs) ccvcs rtcs
-
--- | @since v4.0.0
-instance HasField "committeeCertificateVerificationCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp cocs (f ccvcs) rtcs
-
--- | @since v4.0.0
-instance HasField "mptRootTokenCurrencySymbol" UpdateCommitteeHash CurrencySymbol where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHash _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHash sp cocs ccvcs rtcs) =
-    UpdateCommitteeHash sp cocs ccvcs (f rtcs)
+mkHasField ''UpdateCommitteeHash
 
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
@@ -839,20 +641,7 @@ instance UnsafeFromData CheckpointDatum where
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointDatum
 
 -- | @since v4.0.0
-instance HasField "blockHash" CheckpointDatum LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointDatum x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointDatum bh bn) =
-    CheckpointDatum (f bh) bn
-
--- | @since v4.0.0
-instance HasField "blockNumber" CheckpointDatum Integer where
-  {-# INLINE get #-}
-  get (CheckpointDatum _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointDatum bh bn) =
-    CheckpointDatum bh (f bn)
+mkHasField ''CheckpointDatum
 
 {- | 'CommitteeCertificateMint' is the type to parameterize committee
  certificate verification minting policies.
@@ -885,20 +674,7 @@ instance UnsafeFromData CommitteeCertificateMint where
   unsafeFromBuiltinData = productUnsafeFromData2 CommitteeCertificateMint
 
 -- | @since v4.0.0
-instance HasField "thresholdNumerator" CommitteeCertificateMint Integer where
-  {-# INLINE get #-}
-  get (CommitteeCertificateMint x _) = x
-  {-# INLINE modify #-}
-  modify f (CommitteeCertificateMint tn td) =
-    CommitteeCertificateMint (f tn) td
-
--- | @since v4.0.0
-instance HasField "thresholdDenominator" CommitteeCertificateMint Integer where
-  {-# INLINE get #-}
-  get (CommitteeCertificateMint _ x) = x
-  {-# INLINE modify #-}
-  modify f (CommitteeCertificateMint tn td) =
-    CommitteeCertificateMint tn (f td)
+mkHasField ''CommitteeCertificateMint
 
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the
@@ -957,20 +733,7 @@ instance UnsafeFromData CheckpointRedeemer where
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointRedeemer
 
 -- | @since v4.0.0
-instance HasField "newCheckpointBlockHash" CheckpointRedeemer LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ncbh ncbn) =
-    CheckpointRedeemer (f ncbh) ncbn
-
--- | @since v4.0.0
-instance HasField "newCheckpointBlockNumber" CheckpointRedeemer Integer where
-  {-# INLINE get #-}
-  get (CheckpointRedeemer _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointRedeemer ncbh ncbn) =
-    CheckpointRedeemer ncbh (f ncbn)
+mkHasField ''CheckpointRedeemer
 
 {- | 'Checkpoint' is used as the parameter for the validator.
 
@@ -1013,36 +776,7 @@ instance ToData CheckpointParameter where
       committeeCertificateVerificationCurrencySymbol
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" CheckpointParameter SidechainParams where
-  {-# INLINE get #-}
-  get (CheckpointParameter x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter (f csp) cac ccocs chac
-
--- | @since v4.0.0
-instance HasField "assetClass" CheckpointParameter AssetClass where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp (f cac) ccocs chac
-
--- | @since v4.0.0
-instance HasField "committeeOracleCurrencySymbol" CheckpointParameter CurrencySymbol where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp cac (f ccocs) chac
-
--- | @since v4.0.0
-instance HasField "committeeCertificateVerificationCurrencySymbol" CheckpointParameter CurrencySymbol where
-  {-# INLINE get #-}
-  get (CheckpointParameter _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointParameter csp cac ccocs chac) =
-    CheckpointParameter csp cac ccocs (f chac)
+mkHasField ''CheckpointParameter
 
 -- | @since v4.0.0
 instance FromData CheckpointParameter where
@@ -1072,36 +806,7 @@ data CheckpointMessage = CheckpointMessage
 PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" CheckpointMessage SidechainParams where
-  {-# INLINE get #-}
-  get (CheckpointMessage x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage (f sp) bh bn se
-
--- | @since v4.0.0
-instance HasField "blockHash" CheckpointMessage LedgerBytes where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp (f bh) bn se
-
--- | @since v4.0.0
-instance HasField "blockNumber" CheckpointMessage Integer where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp bh (f bn) se
-
--- | @since v4.0.0
-instance HasField "sidechainEpoch" CheckpointMessage Integer where
-  {-# INLINE get #-}
-  get (CheckpointMessage _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (CheckpointMessage sp bh bn se) =
-    CheckpointMessage sp bh bn (f se)
+mkHasField ''CheckpointMessage
 
 {- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
 burn DParameter tokens
@@ -1154,29 +859,7 @@ data DParameterValidatorDatum = DParameterValidatorDatum
   }
 
 -- | @since Unreleased
-instance HasField "permissionedCandidatesCount" DParameterValidatorDatum Integer where
-  {-# INLINE get #-}
-  get (DParameterValidatorDatum permissionedCandidatesCount _) =
-    permissionedCandidatesCount
-  {-# INLINE modify #-}
-  modify
-    f
-    ( DParameterValidatorDatum
-        permissionedCandidatesCount
-        registeredCandidatesCount
-      ) =
-      DParameterValidatorDatum
-        (f permissionedCandidatesCount)
-        registeredCandidatesCount
-
--- | @since Unreleased
-instance HasField "registeredCandidatesCount" DParameterValidatorDatum Integer where
-  {-# INLINE get #-}
-  get (DParameterValidatorDatum _ registeredCandidatesCount) =
-    registeredCandidatesCount
-  {-# INLINE modify #-}
-  modify f (DParameterValidatorDatum numerator registeredCandidatesCount) =
-    DParameterValidatorDatum numerator (f registeredCandidatesCount)
+mkHasField ''DParameterValidatorDatum
 
 -- | @since Unreleased
 instance ToData DParameterValidatorDatum where
@@ -1304,36 +987,7 @@ instance UnsafeFromData PermissionedCandidateKeys where
   unsafeFromBuiltinData = productUnsafeFromData4 PermissionedCandidateKeys
 
 -- | @since Unreleased
-instance HasField "mainchainKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys m _ _ _) = m
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys (f m) s a g
-
--- | @since Unreleased
-instance HasField "sidechainKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ s _ _) = s
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m (f s) a g
-
--- | @since Unreleased
-instance HasField "auraKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ _ a _) = a
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m s (f a) g
-
--- | @since Unreleased
-instance HasField "grandpaKey" PermissionedCandidateKeys LedgerBytes where
-  {-# INLINE get #-}
-  get (PermissionedCandidateKeys _ _ _ g) = g
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidateKeys m s a g) =
-    PermissionedCandidateKeys m s a (f g)
+mkHasField ''PermissionedCandidateKeys
 
 {- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
    candidates' keys.
@@ -1346,12 +1000,7 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
   deriving newtype (ToData, FromData, UnsafeFromData)
 
 -- | @since Unreleased
-instance HasField "candidates" PermissionedCandidatesValidatorDatum [PermissionedCandidateKeys] where
-  {-# INLINE get #-}
-  get (PermissionedCandidatesValidatorDatum candidates) = candidates
-  {-# INLINE modify #-}
-  modify f (PermissionedCandidatesValidatorDatum candidates) =
-    PermissionedCandidatesValidatorDatum (f candidates)
+mkHasField ''PermissionedCandidatesValidatorDatum
 
 {- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
 update the list of permissioned candidates or remove the list altogether.

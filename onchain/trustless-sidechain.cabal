@@ -160,7 +160,11 @@ library trustless-sidechain-prelude
 library plutus-shim-prelude
   import:          common-lang, common-script-lang
   exposed-modules: TrustlessSidechain.PlutusPrelude
+  other-modules:   TrustlessSidechain.PlutusPrelude.TH
   hs-source-dirs:  prelude
+  build-depends:
+    , template-haskell
+    , th-abstraction
 
 library quickcheck-extra
   import:          common-lang, common-optimized

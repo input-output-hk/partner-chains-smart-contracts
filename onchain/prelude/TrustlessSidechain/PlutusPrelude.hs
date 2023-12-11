@@ -3,6 +3,7 @@
 
 module TrustlessSidechain.PlutusPrelude (
   module PlutusTx.Prelude,
+  module PlutusPrelude.TH,
   GHC.IsString (..),
   PlutusTx.ToData (..),
   PlutusTx.FromData (..),
@@ -54,6 +55,7 @@ import PlutusTx (
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
 import PlutusTx.Prelude hiding (fromInteger, toList)
+import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
 import Prelude qualified as HaskellPrelude
 
 {-# INLINE ifThenElse #-}

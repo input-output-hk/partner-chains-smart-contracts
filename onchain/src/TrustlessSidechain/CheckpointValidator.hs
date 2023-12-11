@@ -152,11 +152,7 @@ newtype InitCheckpointMint = InitCheckpointMint
 PlutusTx.makeLift ''InitCheckpointMint
 
 -- | @since v4.0.0
-instance HasField "txOutRef" InitCheckpointMint TxOutRef where
-  {-# INLINE get #-}
-  get (InitCheckpointMint x) = x
-  {-# INLINE modify #-}
-  modify f (InitCheckpointMint x) = InitCheckpointMint (f x)
+mkHasField ''InitCheckpointMint
 
 {- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
  the utxo which contains the checkpoint. We use an empty bytestring for

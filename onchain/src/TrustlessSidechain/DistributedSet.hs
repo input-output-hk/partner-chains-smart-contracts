@@ -87,11 +87,7 @@ newtype Ds = Ds
   deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | @since v4.0.0
-instance HasField "identitySymbol" Ds CurrencySymbol where
-  {-# INLINE get #-}
-  get (Ds x) = x
-  {-# INLINE modify #-}
-  modify f (Ds x) = Ds (f x)
+mkHasField ''Ds
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
@@ -102,11 +98,7 @@ newtype DsDatum = DsDatum
   deriving newtype (Eq, FromData, ToData, UnsafeFromData)
 
 -- | @since v4.0.0
-instance HasField "next" DsDatum BuiltinByteString where
-  {-# INLINE get #-}
-  get (DsDatum x) = x
-  {-# INLINE modify #-}
-  modify f (DsDatum x) = DsDatum (f x)
+mkHasField ''DsDatum
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
@@ -126,18 +118,7 @@ instance Eq Node where
       && get @"next" a == get @"next" b
 
 -- | @since v4.0.0
-instance HasField "key" Node BuiltinByteString where
-  {-# INLINE get #-}
-  get (Node x _) = x
-  {-# INLINE modify #-}
-  modify f (Node k n) = Node (f k) n
-
--- | @since v4.0.0
-instance HasField "next" Node BuiltinByteString where
-  {-# INLINE get #-}
-  get (Node _ x) = x
-  {-# INLINE modify #-}
-  modify f (Node k n) = Node k (f n)
+mkHasField ''Node
 
 -- | @since v4.0.0
 instance ToData Node where
@@ -177,18 +158,7 @@ instance Eq DsConfDatum where
       && get @"fuelPolicy" a == get @"fuelPolicy" b
 
 -- | @since v4.0.0
-instance HasField "keyPolicy" DsConfDatum CurrencySymbol where
-  {-# INLINE get #-}
-  get (DsConfDatum x _) = x
-  {-# INLINE modify #-}
-  modify f (DsConfDatum kp fp) = DsConfDatum (f kp) fp
-
--- | @since v4.0.0
-instance HasField "fuelPolicy" DsConfDatum CurrencySymbol where
-  {-# INLINE get #-}
-  get (DsConfDatum _ x) = x
-  {-# INLINE modify #-}
-  modify f (DsConfDatum kp fp) = DsConfDatum kp (f fp)
+mkHasField ''DsConfDatum
 
 -- | @since v4.0.0
 instance ToData DsConfDatum where
@@ -247,11 +217,7 @@ newtype DsConfMint = DsConfMint
     )
 
 -- | @since v4.0.0
-instance HasField "txOutRef" DsConfMint TxOutRef where
-  {-# INLINE get #-}
-  get (DsConfMint x) = x
-  {-# INLINE modify #-}
-  modify f (DsConfMint x) = DsConfMint (f x)
+mkHasField ''DsConfMint
 
 {- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
  'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
@@ -275,18 +241,7 @@ data DsKeyMint = DsKeyMint
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since v4.0.0
-instance HasField "validatorHash" DsKeyMint ValidatorHash where
-  {-# INLINE get #-}
-  get (DsKeyMint x _) = x
-  {-# INLINE modify #-}
-  modify f (DsKeyMint vh ccs) = DsKeyMint (f vh) ccs
-
--- | @since v4.0.0
-instance HasField "confCurrencySymbol" DsKeyMint CurrencySymbol where
-  {-# INLINE get #-}
-  get (DsKeyMint _ x) = x
-  {-# INLINE modify #-}
-  modify f (DsKeyMint vh ccs) = DsKeyMint vh (f ccs)
+mkHasField ''DsKeyMint
 
 -- | @since v4.0.0
 instance ToData DsKeyMint where
