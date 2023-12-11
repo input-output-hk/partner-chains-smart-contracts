@@ -1,5 +1,6 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,7 +11,7 @@
 -}
 module TrustlessSidechain.DistributedSet (
   -- * Re-export data types
-  module DistributedSet.Types,
+  module DistributedSet,
 
   -- * Helper functions for the data types
   mkNode,
@@ -56,7 +57,7 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
-import TrustlessSidechain.DistributedSet.Types as DistributedSet.Types
+import TrustlessSidechain.DistributedSet.Types as DistributedSet
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (
   mkUntypedMintingPolicy,
@@ -99,11 +100,7 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
 -- | 'mkNode' is a wrapper to create a Node from a prefix and the datum.
 {-# INLINEABLE mkNode #-}
 mkNode :: BuiltinByteString -> DsDatum -> Node
-mkNode str d =
-  Node
-    { key = str
-    , next = get @"next" d
-    }
+mkNode key (DsDatum next) = Node {key, next}
 
 -- | 'rootNode' is the root node of every distributed set.
 {-# INLINEABLE rootNode #-}
@@ -149,10 +146,10 @@ lengthIb _ = 2
 -}
 {-# INLINEABLE insertNode #-}
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
-insertNode str node
-  | get @"key" node < str && str < get @"next" node =
+insertNode str (Node key next)
+  | key < str && str < next =
     Just $
-      Ib {unIb = (put @"next" str node, Node {key = str, next = get @"next" node})}
+      Ib {unIb = (Node key str, Node str next)}
   | otherwise = Nothing
 
 {- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
@@ -167,7 +164,7 @@ mkInsertValidator ds _dat _red ctx =
               contNodes :: Ib Node
               contNodes =
                 let normalizeIbNodes Ib {unIb = (a, b)}
-                      | get @"key" a < get @"key" b = Ib {unIb = (a, b)}
+                      | key a < key b = Ib {unIb = (a, b)}
                       | otherwise = Ib {unIb = (b, a)}
                  in normalizeIbNodes $
                       fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
@@ -194,7 +191,7 @@ mkInsertValidator ds _dat _red ctx =
                     2
                 _ -> -1
            in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
-                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (get @"fuelPolicy" conf) minted)
+                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (DistributedSet.fuelPolicy conf) minted)
       )
         ( fromMaybe
             (traceError "error 'mkInsertValidator' bad insertion")
@@ -226,10 +223,10 @@ mkInsertValidator ds _dat _red ctx =
     !minted = getValue (txInfoMint info)
 
     conf :: DsConfDatum
-    !conf = getConf (get @"identitySymbol" ds) info
+    !conf = getConf (DistributedSet.identitySymbol ds) info
 
     keyCurrencySymbol :: CurrencySymbol
-    keyCurrencySymbol = get @"keyPolicy" conf
+    keyCurrencySymbol = DistributedSet.keyPolicy conf
 
     -- Given a value, gets the token name (of the "continuing" token name). Also
     -- verifies that the 'Value' is 'relatively small': namely, that it has only
@@ -284,7 +281,11 @@ mkDsConfPolicy dsc _red ctx =
 
     -- Checks
     spendsTxOutRef :: Bool
-    spendsTxOutRef = isJust $ Contexts.findTxInByTxOutRef (get @"txOutRef" dsc) info
+    spendsTxOutRef =
+      isJust $
+        Contexts.findTxInByTxOutRef
+          (DistributedSet.txOutRef dsc)
+          info
 
     mintingChecks :: Bool
     mintingChecks
@@ -315,11 +316,17 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ txInfoMint info ->
+      AssocMap.member (DistributedSet.confCurrencySymbol dskm) $ getValue $ txInfoMint info ->
       case mintedTns of
-        [tn] | unTokenName tn == get @"key" rootNode ->
+        [tn] | unTokenName tn == key rootNode ->
           traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
-            case find (\txout -> txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)) (txInfoOutputs info) of
+            case find
+              ( \txout ->
+                  txOutAddress txout
+                    == scriptHashAddress
+                      (DistributedSet.validatorHash dskm)
+              )
+              (txInfoOutputs info) of
               Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
               Nothing -> False
         -- Note: Why don't we have to verify that the 'DsConf' validator has
@@ -344,7 +351,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
       let go [] = []
           go (t : ts)
             | txout <- txInInfoResolved t
-              , txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)
+              , txOutAddress txout == scriptHashAddress (DistributedSet.validatorHash dskm)
               , Just tns <- AssocMap.lookup ownCS $ getValue (txOutValue txout)
               , -- If it's more clear, we're checking the following condition:
                 -- > [(tn,1)] <- AssocMap.toList tns
