@@ -7,7 +7,7 @@ module Sizer (
 
 import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
-import Plutus.V2.Ledger.Api (Script)
+import Plutus.V1.Ledger.Scripts (Script (Script))
 import PlutusTx.Code (CompiledCode, sizePlc)
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (
@@ -17,8 +17,8 @@ import Test.Tasty.Providers (
   testPassed,
  )
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.ScriptUtils (scriptSize)
 import Type.Reflection (Typeable)
+import UntypedPlutusCore qualified as UPLC
 
 fitsUnder ::
   forall (a :: Type).
@@ -129,3 +129,6 @@ renderExcess tData mData diff =
   renderEstimates tData mData
     <> "Remaining headroom: "
     <> show diff
+
+scriptSize :: Script -> Integer
+scriptSize (Script x) = UPLC.programSize x
