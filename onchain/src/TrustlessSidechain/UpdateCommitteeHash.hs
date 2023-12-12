@@ -41,7 +41,7 @@ import TrustlessSidechain.Types (
     sidechainParams,
     validatorHash
   ),
-  UpdateCommitteeHashRedeemer (previousMerkleRoot),
+  UpdateCommitteeHashRedeemer,
  )
 
 -- * Updating the committee hash
@@ -154,7 +154,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case previousMerkleRoot (red :: UpdateCommitteeHashRedeemer) of
+      case get @"previousMerkleRoot" red of
         Nothing -> True
         Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool

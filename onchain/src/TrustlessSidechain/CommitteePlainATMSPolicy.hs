@@ -39,7 +39,7 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  UpdateCommitteeDatum (aggregateCommitteePubKeys),
+  UpdateCommitteeDatum,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Versioning (
@@ -101,7 +101,7 @@ mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
     isCurrentCommittee :: Bool
     isCurrentCommittee =
       aggregateCheck (plainPublicKeys atmspms) $
-        aggregateCommitteePubKeys committeeDatum
+        get @"aggregateCommitteePubKeys" committeeDatum
 
     -- 2.
     signedByCurrentCommittee :: Bool
