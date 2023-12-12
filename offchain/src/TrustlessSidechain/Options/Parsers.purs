@@ -43,7 +43,8 @@ import Contract.Address (Address, PubKeyHash(PubKeyHash))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
 import Contract.PlutusData (class FromData)
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray, hexToByteArray)
+import Contract.Prim.ByteArray (ByteArray)
+import Contract.Prim.ByteArray as ByteArray
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -96,8 +97,10 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
-hexToByteArray' ∷ String → Maybe ByteArray
-hexToByteArray' s = hexToByteArray $ fromMaybe s $ stripPrefix (Pattern "0x") s
+hexToByteArray ∷ String → Maybe ByteArray
+hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix
+  (Pattern "0x")
+  s
 
 -- | Wraps `parseATMSKind`
 atmsKind ∷ ReadM ATMSKinds
@@ -134,7 +137,7 @@ transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
-      transactionId ← TransactionHash <$> hexToByteArray' txId
+      transactionId ← TransactionHash <$> hexToByteArray txId
       in
         TransactionInput
           { transactionId
@@ -230,38 +233,38 @@ combinedMerkleProofParserWithPkh = do
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
-byteArray = maybeReader hexToByteArray'
+byteArray = maybeReader hexToByteArray
 
 -- | Parses a EcdsaSecp256k1PubKey from hexadecimal representation.
 -- | See `EcdsaSecp256k1PubKey` for the invariants.
 ecdsaSecp256k1PublicKey ∷ ReadM EcdsaSecp256k1PubKey
 ecdsaSecp256k1PublicKey = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1PubKey
-  <=< hexToByteArray'
+  <=< hexToByteArray
 
 -- | Parses a EcdsaSecp256k1PrivateKey from hexadecimal representation.
 ecdsaSecp256k1PrivateKey ∷ ReadM EcdsaSecp256k1PrivateKey
 ecdsaSecp256k1PrivateKey = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1PrivateKey
-  <=< hexToByteArray'
+  <=< hexToByteArray
 
 -- | Parses a schnorr private key from the hexadecimal representation
 schnorrSecp256k1PrivateKey ∷ ReadM SchnorrSecp256k1PrivateKey
 schnorrSecp256k1PrivateKey = maybeReader
   $ Utils.SchnorrSecp256k1.parsePrivateKey
-  <=< hexToByteArray'
+  <=< hexToByteArray
 
 -- | Parses a SidechainSignature from hexadecimal representation.
 -- | See `SidechainSignature` for the invariants.
 sidechainSignature ∷ ReadM EcdsaSecp256k1Signature
 sidechainSignature = maybeReader
   $ Utils.Crypto.ecdsaSecp256k1Signature
-  <=< hexToByteArray'
+  <=< hexToByteArray
 
 -- | Parses a PubKeyHash from hexadecimal representation.
 pubKeyHash ∷ ReadM PubKeyHash
 pubKeyHash = maybeReader
-  $ hexToByteArray'
+  $ hexToByteArray
   >=> ed25519KeyHashFromBytes
   >=> PubKeyHash
   >>> pure
@@ -337,7 +340,7 @@ uint = maybeReader UInt.fromString
 
 -- | Parses the raw bytes of a `RootHash`
 rootHash ∷ ReadM RootHash
-rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray')
+rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray)
 
 sidechainAddress ∷ ReadM ByteArray
 sidechainAddress = hexString
@@ -354,8 +357,8 @@ blockHash = hexString
 hexString ∷ ReadM ByteArray
 hexString = maybeReader $ \str →
   case split (Pattern "0x") str of
-    [ "", hex ] → hexToByteArray' hex
-    [ hex ] → hexToByteArray' hex
+    [ "", hex ] → hexToByteArray hex
+    [ hex ] → hexToByteArray hex
     _ → Nothing
 
 -- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
@@ -376,13 +379,13 @@ parsePubKeyAndSignature ∷
 parsePubKeyAndSignature str =
   case split (Pattern ":") str of
     [ l, r ] | l /= "" → do
-      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray' $ l
+      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
       if r == "" then pure $ l' /\ Nothing
       else do
-        r' ← Utils.Crypto.ecdsaSecp256k1Signature <=< hexToByteArray' $ r
+        r' ← Utils.Crypto.ecdsaSecp256k1Signature <=< hexToByteArray $ r
         pure $ l' /\ Just r'
     [ l ] → ado
-      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray' $ l
+      l' ← Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
 
@@ -401,13 +404,13 @@ parsePubKeyBytesAndSignatureBytes ∷
 parsePubKeyBytesAndSignatureBytes str =
   case split (Pattern ":") str of
     [ l, r ] | l /= "" → do
-      l' ← hexToByteArray' $ l
+      l' ← hexToByteArray $ l
       if r == "" then pure $ l' /\ Nothing
       else do
-        r' ← hexToByteArray' $ r
+        r' ← hexToByteArray $ r
         pure $ l' /\ Just r'
     [ l ] → ado
-      l' ← hexToByteArray' $ l
+      l' ← hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
 
@@ -430,12 +433,12 @@ parseRegistrationSidechainKeys str =
   case split (Pattern ":") str of
     [ sidechainKey', auraKey', grandpaKey' ] → do
       sidechainKey ← Either.note ("sidechainKey must be a valid hex string") $
-        hexToByteArray' sidechainKey'
+        hexToByteArray sidechainKey'
       auraKey ←
         Either.note ("auraKey must be a valid hex string") $
-          hexToByteArray' auraKey'
+          hexToByteArray auraKey'
       grandpaKey ← Either.note ("grandpaKey must be a valid hex string") $
-        hexToByteArray' grandpaKey'
+        hexToByteArray grandpaKey'
       pure { sidechainKey, auraKey, grandpaKey }
     _ → Left
       "sidechain-keys must be a 3 hex strings concatenated with colons, for example: aa:bb:cc"
@@ -461,14 +464,14 @@ parsePermissionedCandidateKeys str =
   case split (Pattern ":") str of
     [ mainchainKey', sidechainKey', auraKey', grandpaKey' ] → do
       mainchainKey ← Either.note ("mainchainKey must be a valid hex string") $
-        hexToByteArray' mainchainKey'
+        hexToByteArray mainchainKey'
       sidechainKey ← Either.note ("sidechainKey must be a valid hex string") $
-        hexToByteArray' sidechainKey'
+        hexToByteArray sidechainKey'
       auraKey ←
         Either.note ("auraKey must be a valid hex string") $
-          hexToByteArray' auraKey'
+          hexToByteArray auraKey'
       grandpaKey ← Either.note ("grandpaKey must be a valid hex string") $
-        hexToByteArray' grandpaKey'
+        hexToByteArray grandpaKey'
       pure $
         { mainchainKey
         , sidechainKey
@@ -482,7 +485,7 @@ parsePermissionedCandidateKeys str =
 -- | converting hex encoded strings to token names
 parseTokenName ∷ String → Maybe (TokenName)
 parseTokenName hexStr = do
-  ba ← hexToByteArray' hexStr
+  ba ← hexToByteArray hexStr
   Value.mkTokenName ba
 
 -- | `tokenName` wraps `parseTokenName`.
