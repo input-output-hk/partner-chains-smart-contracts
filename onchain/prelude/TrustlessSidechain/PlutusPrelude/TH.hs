@@ -27,17 +27,15 @@ mkHasField name = do
 
   -- Ensure record fields are explicitly named.  The field names are stripped of
   -- module prefixes so that we can use them as pattern and variable names.
-  --
-  -- We are doing an ugly hack here: each field gets prefixed with an underscore
-  -- in order to prevent name clashes with already defined names.  A more
-  -- elegant solution would be to generate fresh names for the purposes of
-  -- pattern matching, but this suffices for now.
   fieldNames <- case constructorVariant constructorInfo of
-    RecordConstructor names -> pure (map (mkName . ("_" ++) . nameBase) names)
+    RecordConstructor names -> pure (map (mkName . nameBase) names)
     _ -> fail "HasField instance can only be derived for constructors with explicit field names"
 
   -- Unique name of a function that is applied by modify
   fName <- newName "f"
+
+  -- Generate fresh pattern names based on record field names
+  fieldPatNames <- mapM (newName . nameBase) fieldNames
 
   -- A bunch of helper definitions common for all instances for a given data
   -- type
@@ -83,16 +81,16 @@ mkHasField name = do
       -- A pattern builder function.  For "get" we need to replace all but one
       -- field with a wildcard.  For "modify" we just turn field names into
       -- patterns.  This function provides a uniform way of doing it.
-      mkPat f = ParensP $ ConP conName (map f fieldNames)
+      mkPat f = ParensP $ ConP conName (map f fieldPatNames)
 
-      -- pair record fields with their types
-      fieldsWithTypes = zip fieldNames (constructorFields constructorInfo)
+      -- pair record fields with their pattern variables and types
+      fieldsWithTypes =
+        zip3 fieldNames fieldPatNames (constructorFields constructorInfo)
 
       -- Worker that constructs a HasField instance definition for each field.
-      decls = flip map fieldsWithTypes $ \(fieldName, ty) ->
-        let -- field name as type literal.  We strip the leading underscore
-            -- added above.
-            fieldLit = LitT $ StrTyLit $ tail $ nameBase fieldName
+      decls = flip map fieldsWithTypes $ \(fieldName, fieldPatName, ty) ->
+        let -- field name as type literal.
+            fieldLit = LitT $ StrTyLit $ nameBase fieldName
             -- type of instance: HasField "someField" FooDataType Integer
             instanceT =
               foldl1
@@ -107,7 +105,7 @@ mkHasField name = do
               foldl
                 AppE
                 (ConE conName)
-                (map (applyToField field) fieldNames)
+                (map (applyToField field) fieldPatNames)
          in -- Build instance declaration that contains definition of "get" and
             -- "modify", together with their corresponding INLINE pragmas.
             InstanceD
@@ -118,8 +116,8 @@ mkHasField name = do
               , FunD
                   getName
                   [ Clause
-                      [mkPat (mkWildCards fieldName)]
-                      (NormalB (VarE fieldName))
+                      [mkPat (mkWildCards fieldPatName)]
+                      (NormalB (VarE fieldPatName))
                       []
                   ]
               , PragmaD (InlineP modifyName Inline FunLike AllPhases)
@@ -127,7 +125,7 @@ mkHasField name = do
                   modifyName
                   [ Clause
                       [VarP fName, mkPat VarP]
-                      (NormalB (modifyB fieldName))
+                      (NormalB (modifyB fieldPatName))
                       []
                   ]
               ]
