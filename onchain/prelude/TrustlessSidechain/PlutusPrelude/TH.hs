@@ -48,8 +48,19 @@ mkHasField name = do
       -- parent data type Name
       conName = constructorName constructorInfo
 
-      -- parent data type TyCon
-      parentTyCon = ConT (datatypeName dataTypeInfo)
+      -- type variables passed to a type
+      tyVars = map tyVarBndrName (datatypeVars dataTypeInfo)
+
+      -- Parent data type TyCon.  Make sure to apply type variables for
+      -- paremeterized data types.
+      parentTyCon =
+        if null tyVars
+          then ConT (datatypeName dataTypeInfo)
+          else
+            foldl
+              AppT
+              (ConT (datatypeName dataTypeInfo))
+              (map VarT tyVars)
 
       -- Takes two names.  If ther are equal constructs an application of f to
       -- that field, otherwise leaves it unchanged.  This function is intended
@@ -122,3 +133,8 @@ mkHasField name = do
               ]
 
   pure decls
+
+-- | Get name of a type variable binder
+tyVarBndrName :: TyVarBndr -> Name
+tyVarBndrName (PlainTV name) = name
+tyVarBndrName (KindedTV name _) = name

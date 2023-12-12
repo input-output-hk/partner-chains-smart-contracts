@@ -436,20 +436,7 @@ instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeDatum
   unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeDatum
 
 -- | @since v4.0.0
-instance HasField "aggregateCommitteePubKeys" (UpdateCommitteeDatum aggregatePubKeys) aggregatePubKeys where
-  {-# INLINE get #-}
-  get (UpdateCommitteeDatum x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeDatum ch se) =
-    UpdateCommitteeDatum (f ch) se
-
--- | @since v4.0.0
-instance HasField "sidechainEpoch" (UpdateCommitteeDatum aggregatePubKeys) Integer where
-  {-# INLINE get #-}
-  get (UpdateCommitteeDatum _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeDatum ch se) =
-    UpdateCommitteeDatum ch (f se)
+mkHasField ''UpdateCommitteeDatum
 
 -- | @since v4.0.0
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
@@ -558,44 +545,7 @@ instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeHashM
   unsafeFromBuiltinData = productUnsafeFromData5 UpdateCommitteeHashMessage
 
 -- | @since v4.0.0
-instance HasField "sidechainParams" (UpdateCommitteeHashMessage aggregatePubKeys) SidechainParams where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage x _ _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
-    UpdateCommitteeHashMessage (f sp) nacpks pmr se vh
-
--- | @since v4.0.0
-instance HasField "newAggregateCommitteePubKeys" (UpdateCommitteeHashMessage aggregatePubKeys) aggregatePubKeys where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ x _ _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
-    UpdateCommitteeHashMessage sp (f nacpks) pmr se vh
-
--- | @since v4.0.0
-instance HasField "previousMerkleRoot" (UpdateCommitteeHashMessage aggregatePubKeys) (Maybe LedgerBytes) where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ _ x _ _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
-    UpdateCommitteeHashMessage sp nacpks (f pmr) se vh
-
--- | @since v4.0.0
-instance HasField "sidechainEpoch" (UpdateCommitteeHashMessage aggregatePubKeys) Integer where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ _ _ x _) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
-    UpdateCommitteeHashMessage sp nacpks pmr (f se) vh
-
--- | @since Unreleased
-instance HasField "validatorHash" (UpdateCommitteeHashMessage aggregatePubKeys) ValidatorHash where
-  {-# INLINE get #-}
-  get (UpdateCommitteeHashMessage _ _ _ _ x) = x
-  {-# INLINE modify #-}
-  modify f (UpdateCommitteeHashMessage sp nacpks pmr se vh) =
-    UpdateCommitteeHashMessage sp nacpks pmr se (f vh)
+mkHasField ''UpdateCommitteeHashMessage
 
 -- | @since v4.0.0
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
