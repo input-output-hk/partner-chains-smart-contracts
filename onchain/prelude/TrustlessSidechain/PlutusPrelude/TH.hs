@@ -52,15 +52,9 @@ mkHasField name = do
       -- Parent data type TyCon.  Make sure to apply type variables for
       -- paremeterized data types.
       parentTyCon =
-        if null tyVars
-          then ConT (datatypeName dataTypeInfo)
-          else
-            foldl
-              AppT
-              (ConT (datatypeName dataTypeInfo))
-              (map VarT tyVars)
+        foldl AppT (ConT (datatypeName dataTypeInfo)) (map VarT tyVars)
 
-      -- Takes two names.  If ther are equal constructs an application of f to
+      -- Takes two names.  If there are equal constructs an application of f to
       -- that field, otherwise leaves it unchanged.  This function is intended
       -- to be partially applied and used to construct body of "modify"
       -- function.
