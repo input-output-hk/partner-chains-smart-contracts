@@ -283,6 +283,7 @@ test-suite script-size
     Sizer
 
   build-depends:
+    , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
