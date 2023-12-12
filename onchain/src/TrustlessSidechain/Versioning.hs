@@ -44,13 +44,38 @@ module TrustlessSidechain.Versioning (
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
 import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
-import Plutus.V2.Ledger.Api (Address, CurrencySymbol (CurrencySymbol), Datum (Datum), OutputDatum (OutputDatum), Script, ScriptContext (ScriptContext), ScriptHash (ScriptHash), ScriptPurpose (Minting, Spending), TokenName (TokenName), TxInInfo (TxInInfo), TxOut (TxOut), ValidatorHash (ValidatorHash), fromCompiledCode, txInInfoOutRef, txInfoInputs, txInfoOutputs, txOutValue)
+import Plutus.V2.Ledger.Api (
+  Address,
+  CurrencySymbol (CurrencySymbol),
+  Datum (Datum),
+  OutputDatum (OutputDatum),
+  Script,
+  ScriptContext (ScriptContext),
+  ScriptHash (ScriptHash),
+  ScriptPurpose (Minting, Spending),
+  TokenName (TokenName),
+  TxInInfo (TxInInfo),
+  TxOut (TxOut),
+  ValidatorHash (ValidatorHash),
+  fromCompiledCode,
+  txInInfoOutRef,
+  txInfoInputs,
+  txInfoOutputs,
+  txOutValue,
+ )
 import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
-import TrustlessSidechain.Types (SidechainParams (SidechainParams), genesisUtxo, governanceAuthority)
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+ )
+import TrustlessSidechain.Types (
+  SidechainParams (SidechainParams),
+  genesisUtxo,
+  governanceAuthority,
+ )
 import TrustlessSidechain.Utils (fromSingleton)
 
 -- Note [Versioned script identifiers]
@@ -449,14 +474,11 @@ mkVersionOracleValidatorUntyped ::
   -- | ScriptContext
   BuiltinData ->
   ()
-mkVersionOracleValidatorUntyped params currSymbol datum redeemer scriptContext =
-  check $
+mkVersionOracleValidatorUntyped params currSymbol =
+  mkUntypedValidator $
     mkVersionOracleValidator
       (PlutusTx.unsafeFromBuiltinData params)
       (PlutusTx.unsafeFromBuiltinData currSymbol)
-      (PlutusTx.unsafeFromBuiltinData datum)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (PlutusTx.unsafeFromBuiltinData scriptContext)
 
 serialisableVersionOracleValidator ::
   Script

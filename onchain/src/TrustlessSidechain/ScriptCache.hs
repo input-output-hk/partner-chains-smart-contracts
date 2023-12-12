@@ -10,6 +10,9 @@ import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext), txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptUtils (
+  mkUntypedValidator,
+ )
 
 {- | Script cache parameterized by a public key hash.  Spending from the script
  is only permitted when the transaction is signed by pub key hash used as the
@@ -29,13 +32,10 @@ mkScriptCacheUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkScriptCacheUntyped pkh datum redeemer sc =
-  check $
+mkScriptCacheUntyped pkh =
+  mkUntypedValidator $
     mkScriptCache
       (PlutusTx.unsafeFromBuiltinData pkh)
-      (PlutusTx.unsafeFromBuiltinData datum)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (PlutusTx.unsafeFromBuiltinData sc)
 
 serialisableScriptCache :: Script
 serialisableScriptCache =
