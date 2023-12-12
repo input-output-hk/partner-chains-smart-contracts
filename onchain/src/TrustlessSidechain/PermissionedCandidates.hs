@@ -132,14 +132,8 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 --   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01: transaction not signed by the
 --   governance authority
 --
---   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02: transaction moves
---   PermissionedCandidates tokens out of the PermissionedCandidates validator
---
---   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-03: transaction not signed by the
+--   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02: transaction not signed by the
 --   governance authority
---
---   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-04: transaction did not burn
---   PermissionedCandidates tokens
 
 {-# INLINEABLE permissionedCandidatesValidator #-}
 permissionedCandidatesValidator ::
@@ -160,93 +154,23 @@ permissionedCandidatesValidator
       "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01"
       signedByGovernanceAuthority
     where
-      -- This part was removed because we remove PermissionedCandidates from
-      -- the versioning system. Until some other approach will appear we are not
-      -- able to have mintingPolicy and validator reference each other.
-      -- Once such approach is available we should put this logic back.
-      -- && traceIfFalse "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02" amountsMatch
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
--- -- get PermissionedCandidates currency symbol
--- permissionedCandidatesCurrencySymbol =
---   getVersionedCurrencySymbol
---     versionOracleConfig
---     ( VersionOracle
---         { version = 1
---         , scriptId = permissionedCandidatesPolicyId
---         }
---     )
---     ctx
-
--- -- Amount of PermissionedCandidates token sent to the
--- -- PermissionedCandidatesValidator address
--- outAmount :: Integer
--- outAmount =
---   sum
---     [ currencySymbolValueOf value permissionedCandidatesCurrencySymbol
---     | (TxOut _ value _ _) <-
---         getContinuingOutputs ctx
---     ]
-
--- -- Amount of PermissionedCandidates token spent by this transaction
--- inAmount :: Integer
--- inAmount =
---   sum
---     [ currencySymbolValueOf value permissionedCandidatesCurrencySymbol
---     | TxInInfo _ (TxOut _ value _ _) <-
---         txInfoInputs txInfo
---     ]
-
--- -- Check wether the same amount of PermissionedCandidates token is spent
--- -- as is output back to the validator address
--- amountsMatch :: Bool
--- amountsMatch = inAmount == outAmount
 permissionedCandidatesValidator
   sp
   _
   RemovePermissionedCandidates
   (ScriptContext txInfo _) =
     traceIfFalse
-      "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-03"
+      "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02"
       signedByGovernanceAuthority
     where
-      -- This part was removed because we remove PermissionedCandidates from
-      -- the versioning system. Until some other approach will appear we are not
-      -- able to have mintingPolicy and validator reference each other.
-      -- Once such approach is available we should put this logic back.
-      -- && traceIfFalse "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-04" tokensBurned
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
--- -- get PermissionedCandidates currency symbol
--- permissionedCandidatesCurrencySymbol =
---   getVersionedCurrencySymbol
---     versionOracleConfig
---     ( VersionOracle
---         { version = 1
---         , scriptId = permissionedCandidatesPolicyId
---         }
---     )
---     ctx
-
--- -- Amount of PermissionedCandidatesToken minted by this transaction
--- mintAmount :: Integer
--- mintAmount =
---   currencySymbolValueOf
---     (txInfoMint txInfo)
---     permissionedCandidatesCurrencySymbol
-
--- -- Check whether this transaction burned some PermissionedCandidates
--- -- tokens
--- tokensBurned :: Bool
--- tokensBurned = mintAmount < 0
 
 mkMintingPolicyUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()

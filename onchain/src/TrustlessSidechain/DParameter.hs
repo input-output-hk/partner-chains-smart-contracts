@@ -110,13 +110,9 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-05"
 --   ERROR-DPARAMETER-VALIDATOR-01: transaction not signed by the governance
 --   authority
 --
---   ERROR-DPARAMETER-VALIDATOR-02: transaction moves DParameter tokens out of
---   the DParameter validator
---
 --   ERROR-DPARAMETER-VALIDATOR-03: transaction not signed by the governance
 --   authority
---
---   ERROR-DPARAMETER-VALIDATOR-04: transaction did not burn DParameter tokens
+
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
   SidechainParams ->
@@ -134,87 +130,21 @@ dParameterValidator
   (ScriptContext txInfo _) =
     traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
     where
-      -- This part was removed because we remove DParameter from
-      -- the versioning system. Until some other approach will appear we are not
-      -- able to have mintingPolicy and validator reference each other.
-      -- Once such approach is available we should put this logic back.
-      -- && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-02" amountsMatch
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
--- -- get DParameter currency symbol
--- dParameterCurrencySymbol =
---   getVersionedCurrencySymbol
---     versionOracleConfig
---     ( VersionOracle
---         { version = 1
---         , scriptId = dParameterPolicyId
---         }
---     )
---     ctx
-
--- -- Amount of DParameter token sent to the DParameterValidator address
--- outAmount :: Integer
--- outAmount =
---   sum
---     [ currencySymbolValueOf value dParameterCurrencySymbol
---     | (TxOut _ value _ _) <-
---         getContinuingOutputs ctx
---     ]
-
--- -- Amount of DParameter token spent by this transaction
--- inAmount :: Integer
--- inAmount =
---   sum
---     [ currencySymbolValueOf value dParameterCurrencySymbol
---     | TxInInfo _ (TxOut _ value _ _) <-
---         txInfoInputs txInfo
---     ]
-
--- -- Check wether the same amount of DParameter token is spent as is output
--- -- back to the validator address
--- amountsMatch :: Bool
--- amountsMatch = inAmount == outAmount
 dParameterValidator
   sp
   _
   RemoveDParameter
   (ScriptContext txInfo _) =
-    traceIfFalse "ERROR-DPARAMETER-VALIDATOR-03" signedByGovernanceAuthority
+    traceIfFalse "ERROR-DPARAMETER-VALIDATOR-02" signedByGovernanceAuthority
     where
-      -- This part was removed because we remove DParameter from
-      -- the versioning system. Until some other approach will appear we are not
-      -- able to have mintingPolicy and validator reference each other.
-      -- Once such approach is available we should put this logic back.
-      -- && traceIfFalse "ERROR-DPARAMETER-VALIDATOR-04" tokensBurned
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
--- -- get DParameter currency symbol
--- dParameterCurrencySymbol =
---   getVersionedCurrencySymbol
---     versionOracleConfig
---     ( VersionOracle
---         { version = 1
---         , scriptId = dParameterPolicyId
---         }
---     )
---     ctx
-
--- -- Amount of DParameterToken minted by this transaction
--- mintAmount :: Integer
--- mintAmount =
---   currencySymbolValueOf (txInfoMint txInfo) dParameterCurrencySymbol
-
--- -- Check whether this transaction burned some DParameter tokens
--- tokensBurned :: Bool
--- tokensBurned = mintAmount < 0
 
 mkValidatorUntyped ::
   BuiltinData ->
