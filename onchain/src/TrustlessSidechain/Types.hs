@@ -566,6 +566,9 @@ newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
       TSPrelude.Show
     )
 
+-- | @since Unreleased
+makeHasField ''UpdateCommitteeHashRedeemer
+
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
   { -- | @since v4.0.0
