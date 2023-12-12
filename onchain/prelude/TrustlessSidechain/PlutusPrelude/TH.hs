@@ -1,7 +1,7 @@
 {-# LANGUAGE NoRebindableSyntax #-}
 
 module TrustlessSidechain.PlutusPrelude.TH (
-  mkHasField,
+  makeHasField,
 ) where
 
 import Control.Monad
@@ -12,8 +12,8 @@ import Prelude
 {- | Derive a HasField instance for a given data type declaration.  Works only
  for single-constructor data types and newtypes.
 -}
-mkHasField :: Name -> Q [Dec]
-mkHasField name = do
+makeHasField :: Name -> Q [Dec]
+makeHasField name = do
   dataTypeInfo <- reifyDatatype name
 
   -- Ensure that data type contains only a single data constructor

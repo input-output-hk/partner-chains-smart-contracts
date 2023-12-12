@@ -64,7 +64,7 @@ PlutusTx.makeLift ''SidechainParams
 PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 
 -- | @since v4.0.0
-mkHasField ''SidechainParams
+makeHasField ''SidechainParams
 
 {- | Compressed DER SECP256k1 public key.
  = Important note
@@ -175,7 +175,7 @@ instance UnsafeFromData CandidatePermissionMint where
   unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
 
 -- | @since v4.0.0
-mkHasField ''CandidatePermissionMint
+makeHasField ''CandidatePermissionMint
 
 {- Sum type distinguishing different Stake ownership models
  Ada based staking requires the SPO public key and the signature on
@@ -236,7 +236,7 @@ data BlockProducerRegistration = BlockProducerRegistration
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistration, 0)]
 
 -- | @since v4.0.0
-mkHasField ''BlockProducerRegistration
+makeHasField ''BlockProducerRegistration
 
 {- | = Important note
 
@@ -259,7 +259,7 @@ data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
 PlutusTx.makeIsDataIndexed ''BlockProducerRegistrationMsg [('BlockProducerRegistrationMsg, 0)]
 
 -- | @since v4.0.0
-mkHasField ''BlockProducerRegistrationMsg
+makeHasField ''BlockProducerRegistrationMsg
 
 -- * Merkle Root Token data
 
@@ -296,7 +296,7 @@ data MerkleTreeEntry = MerkleTreeEntry
 PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 
 -- | @since v4.0.0
-mkHasField ''MerkleTreeEntry
+makeHasField ''MerkleTreeEntry
 
 {- | 'MerkleRootInsertionMessage' is a data type for which committee members
  create signatures for
@@ -324,7 +324,7 @@ data MerkleRootInsertionMessage = MerkleRootInsertionMessage
 PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMessage, 0)]
 
 -- | @since v4.0.0
-mkHasField ''MerkleRootInsertionMessage
+makeHasField ''MerkleRootInsertionMessage
 
 {- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
  minting policy.
@@ -349,7 +349,7 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
       TSPrelude.Show
     )
 
-mkHasField ''SignedMerkleRootRedeemer
+makeHasField ''SignedMerkleRootRedeemer
 
 {- | 'CombinedMerkleProof' is a product type to include both the
  'MerkleTreeEntry' and the 'MerkleProof'.
@@ -376,7 +376,7 @@ data CombinedMerkleProof = CombinedMerkleProof
 PlutusTx.makeIsDataIndexed ''CombinedMerkleProof [('CombinedMerkleProof, 0)]
 
 -- | @since v4.0.0
-mkHasField ''CombinedMerkleProof
+makeHasField ''CombinedMerkleProof
 
 -- * FUEL Minting Policy data
 
@@ -436,7 +436,7 @@ instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeDatum
   unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeDatum
 
 -- | @since v4.0.0
-mkHasField ''UpdateCommitteeDatum
+makeHasField ''UpdateCommitteeDatum
 
 -- | @since v4.0.0
 newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
@@ -494,7 +494,7 @@ instance ToData UpdateCommitteeHash where
       mptRootTokenCurrencySymbol
 
 -- | @since v4.0.0
-mkHasField ''UpdateCommitteeHash
+makeHasField ''UpdateCommitteeHash
 
 instance FromData UpdateCommitteeHash where
   {-# INLINEABLE fromBuiltinData #-}
@@ -545,7 +545,7 @@ instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeHashM
   unsafeFromBuiltinData = productUnsafeFromData5 UpdateCommitteeHashMessage
 
 -- | @since v4.0.0
-mkHasField ''UpdateCommitteeHashMessage
+makeHasField ''UpdateCommitteeHashMessage
 
 -- | @since v4.0.0
 newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
@@ -591,7 +591,7 @@ instance UnsafeFromData CheckpointDatum where
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointDatum
 
 -- | @since v4.0.0
-mkHasField ''CheckpointDatum
+makeHasField ''CheckpointDatum
 
 {- | 'CommitteeCertificateMint' is the type to parameterize committee
  certificate verification minting policies.
@@ -624,7 +624,7 @@ instance UnsafeFromData CommitteeCertificateMint where
   unsafeFromBuiltinData = productUnsafeFromData2 CommitteeCertificateMint
 
 -- | @since v4.0.0
-mkHasField ''CommitteeCertificateMint
+makeHasField ''CommitteeCertificateMint
 
 {- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
  This is used as redeemer for the
@@ -683,7 +683,7 @@ instance UnsafeFromData CheckpointRedeemer where
   unsafeFromBuiltinData = productUnsafeFromData2 CheckpointRedeemer
 
 -- | @since v4.0.0
-mkHasField ''CheckpointRedeemer
+makeHasField ''CheckpointRedeemer
 
 {- | 'Checkpoint' is used as the parameter for the validator.
 
@@ -726,7 +726,7 @@ instance ToData CheckpointParameter where
       committeeCertificateVerificationCurrencySymbol
 
 -- | @since v4.0.0
-mkHasField ''CheckpointParameter
+makeHasField ''CheckpointParameter
 
 -- | @since v4.0.0
 instance FromData CheckpointParameter where
@@ -756,7 +756,7 @@ data CheckpointMessage = CheckpointMessage
 PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 
 -- | @since v4.0.0
-mkHasField ''CheckpointMessage
+makeHasField ''CheckpointMessage
 
 {- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
 burn DParameter tokens
@@ -809,7 +809,7 @@ data DParameterValidatorDatum = DParameterValidatorDatum
   }
 
 -- | @since Unreleased
-mkHasField ''DParameterValidatorDatum
+makeHasField ''DParameterValidatorDatum
 
 -- | @since Unreleased
 instance ToData DParameterValidatorDatum where
@@ -937,7 +937,7 @@ instance UnsafeFromData PermissionedCandidateKeys where
   unsafeFromBuiltinData = productUnsafeFromData4 PermissionedCandidateKeys
 
 -- | @since Unreleased
-mkHasField ''PermissionedCandidateKeys
+makeHasField ''PermissionedCandidateKeys
 
 {- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
    candidates' keys.
@@ -950,7 +950,7 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
   deriving newtype (ToData, FromData, UnsafeFromData)
 
 -- | @since Unreleased
-mkHasField ''PermissionedCandidatesValidatorDatum
+makeHasField ''PermissionedCandidatesValidatorDatum
 
 {- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
 update the list of permissioned candidates or remove the list altogether.

@@ -87,7 +87,7 @@ newtype Ds = Ds
   deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | @since v4.0.0
-mkHasField ''Ds
+makeHasField ''Ds
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
@@ -98,7 +98,7 @@ newtype DsDatum = DsDatum
   deriving newtype (Eq, FromData, ToData, UnsafeFromData)
 
 -- | @since v4.0.0
-mkHasField ''DsDatum
+makeHasField ''DsDatum
 
 {- | 'Node' is an internal data type of the tree node used in the validator.
  See: Note [How This All Works].
@@ -118,7 +118,7 @@ instance Eq Node where
       && get @"next" a == get @"next" b
 
 -- | @since v4.0.0
-mkHasField ''Node
+makeHasField ''Node
 
 -- | @since v4.0.0
 instance ToData Node where
@@ -158,7 +158,7 @@ instance Eq DsConfDatum where
       && get @"fuelPolicy" a == get @"fuelPolicy" b
 
 -- | @since v4.0.0
-mkHasField ''DsConfDatum
+makeHasField ''DsConfDatum
 
 -- | @since v4.0.0
 instance ToData DsConfDatum where
@@ -217,7 +217,7 @@ newtype DsConfMint = DsConfMint
     )
 
 -- | @since v4.0.0
-mkHasField ''DsConfMint
+makeHasField ''DsConfMint
 
 {- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
  'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
@@ -241,7 +241,7 @@ data DsKeyMint = DsKeyMint
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since v4.0.0
-mkHasField ''DsKeyMint
+makeHasField ''DsKeyMint
 
 -- | @since v4.0.0
 instance ToData DsKeyMint where
