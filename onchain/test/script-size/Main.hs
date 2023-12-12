@@ -54,15 +54,15 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            4_568
+            3_412
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
-            1_471
+            1_416
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            3_892
+            2_808
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -70,7 +70,7 @@ main =
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
-            2_992
+            2_154
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
@@ -78,7 +78,7 @@ main =
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            2_764
+            1_981
         , fitsInto
             "mkCommitteeOraclePolicy"
             Compiled.mkCommitteeOraclePolicyCode
@@ -86,23 +86,23 @@ main =
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            2_853
+            2_091
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
-            768
+            664
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            3_499
+            2_488
         , fitsInto
             "mkCheckpointValidator"
             Compiled.mkCVCode
-            1_557
+            1_549
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            4_303
+            3_203
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
@@ -110,7 +110,7 @@ main =
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            2_853
+            2_091
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
@@ -118,7 +118,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            4_069
+            2_990
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
@@ -126,7 +126,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            4_069
+            2_990
         ]
     , testGroup
         "Distributed set"
@@ -137,7 +137,7 @@ main =
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             DS.serialisableInsertValidator
-            4_095
+            3_056
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
@@ -145,7 +145,7 @@ main =
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            2_884
+            2_085
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode
@@ -153,7 +153,7 @@ main =
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             DS.serialisableDsKeyPolicy
-            3_630
+            2_687
         ]
     , testGroup
         "Other"
