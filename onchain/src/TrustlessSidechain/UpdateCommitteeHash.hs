@@ -31,13 +31,8 @@ import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy, mkUntypedValidator)
 import TrustlessSidechain.Types (
-  UpdateCommitteeDatum (aggregateCommitteePubKeys, sidechainEpoch),
-  UpdateCommitteeHash (
-    committeeCertificateVerificationCurrencySymbol,
-    committeeOracleCurrencySymbol,
-    mptRootTokenCurrencySymbol,
-    sidechainParams
-  ),
+  UpdateCommitteeDatum,
+  UpdateCommitteeHash,
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -116,7 +111,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
           go (o : os)
             | -- recall that 'committeeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
-              Value.valueOf (txOutValue o) (committeeOracleCurrencySymbol uch) initCommitteeOracleTn > 0
+              Value.valueOf (txOutValue o) (get @"committeeOracleCurrencySymbol" uch) initCommitteeOracleTn > 0
               , OutputDatum d <- txOutDatum o
               , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
               -- Note that we build the @msg@ that we check is signed
@@ -131,25 +126,23 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
                   msg =
                     UpdateCommitteeHashMessage
-                      { sidechainParams = sidechainParams (uch :: UpdateCommitteeHash)
-                      , newAggregateCommitteePubKeys = aggregateCommitteePubKeys ucd
-                      , previousMerkleRoot = previousMerkleRoot (red :: UpdateCommitteeHashRedeemer)
-                      , sidechainEpoch = sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
+                      { sidechainParams = get @"sidechainParams" uch
+                      , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
+                      , previousMerkleRoot = get @"previousMerkleRoot" red
+                      , sidechainEpoch = get @"sidechainEpoch" ucd
                       , validatorHash = validatorHash'
                       }
                in traceIfFalse
                     "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
                     ( Value.valueOf
                         (txInfoMint info)
-                        (committeeCertificateVerificationCurrencySymbol uch)
+                        (get @"committeeCertificateVerificationCurrencySymbol" uch)
                         (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
                         > 0
                     )
                     && traceIfFalse
                       "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05"
-                      ( sidechainEpoch (dat :: UpdateCommitteeDatum BuiltinData)
-                          < sidechainEpoch (ucd :: UpdateCommitteeDatum BuiltinData)
-                      )
+                      (get @"sidechainEpoch" dat < get @"sidechainEpoch" ucd)
             | otherwise = go os
        in go (txInfoOutputs info)
 
@@ -166,7 +159,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (mptRootTokenCurrencySymbol uch) (TokenName tn) > 0)
+                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (get @"mptRootTokenCurrencySymbol" uch) (TokenName tn) > 0)
                     || go rest
                 )
               go [] = False
