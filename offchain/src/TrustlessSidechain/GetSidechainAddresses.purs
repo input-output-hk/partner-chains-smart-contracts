@@ -40,8 +40,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
+import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidScript)
@@ -144,6 +146,18 @@ getSidechainAddresses
   { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy scParams
   let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
 
+  { permissionedCandidatesCurrencySymbol } ←
+    PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
+      scParams
+  let
+    permissionedCandidatesPolicyId =
+      currencySymbolToHex permissionedCandidatesCurrencySymbol
+
+  { dParameterCurrencySymbol } ←
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol
+      scParams
+  let dParameterPolicyId = currencySymbolToHex dParameterCurrencySymbol
+
   -- Validators
   committeeCandidateValidator ←
     CommitteeCandidateValidator.getCommitteeCandidateValidator scParams
@@ -176,12 +190,21 @@ getSidechainAddresses
     committeePlainSchnorrSecp256k1ATMSPolicyId = currencySymbolToHex
       committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
+  { permissionedCandidatesValidator } ←
+    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
+      scParams
+
+  { dParameterValidator } ←
+    DParameter.getDParameterValidatorAndAddress scParams
+
   let
     mintingPolicies =
       [ DSConfPolicy /\ dsConfPolicyId
       , CheckpointPolicy /\ checkpointPolicyId
       , FUELProxyPolicy /\ fuelProxyPolicyId
       , VersionOraclePolicy /\ versionOraclePolicyId
+      , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
+      , DParameterPolicy /\ dParameterPolicyId
       ]
         <>
           Array.catMaybes
@@ -207,6 +230,8 @@ getSidechainAddresses
       , DSConfValidator /\ dsConfValidator
       , DSInsertValidator /\ dsInsertValidator
       , VersionOracleValidator /\ veresionOracleValidator
+      , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      , DParameterValidator /\ dParameterValidator
       ] <> Map.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators
