@@ -2,8 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.DummyMintingPolicy (
-  serialisableDummyMintingPolicy,
+module TrustlessSidechain.PoCMintingPolicy (
+  serialisablePoCMintingPolicy,
 ) where
 
 import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
@@ -24,20 +24,20 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
  Note: this policy does not allow to burn transaction tokens, but we might
  wish to do so in order to allow recovering minAda.
 -}
-mkDummyMintingPolicy ::
+mkPoCMintingPolicy ::
   SidechainParams ->
   () -> -- no redeemer
   ScriptContext ->
   Bool
-mkDummyMintingPolicy _ _ (ScriptContext txInfo (Minting currSymbol)) =
+mkPoCMintingPolicy _ _ (ScriptContext txInfo (Minting currSymbol)) =
   traceIfFalse "ERROR-DUMMY-MINTING-01" (ttMinted > 0)
   where
     ttMinted = currencySymbolValueOf (txInfoMint txInfo) currSymbol
-mkDummyMintingPolicy _ _ _ =
+mkPoCMintingPolicy _ _ _ =
   trace "ERROR-DUMMY-MINTING-02" False
 
-{-# INLINEABLE mkDummyMintingPolicyUntyped #-}
-mkDummyMintingPolicyUntyped ::
+{-# INLINEABLE mkPoCMintingPolicyUntyped #-}
+mkPoCMintingPolicyUntyped ::
   -- | Sidechain parameters
   BuiltinData ->
   -- | Redeemer
@@ -45,9 +45,9 @@ mkDummyMintingPolicyUntyped ::
   -- | ScriptContext
   BuiltinData ->
   ()
-mkDummyMintingPolicyUntyped params =
-  mkUntypedMintingPolicy $ mkDummyMintingPolicy (unsafeFromBuiltinData params)
+mkPoCMintingPolicyUntyped params =
+  mkUntypedMintingPolicy $ mkPoCMintingPolicy (unsafeFromBuiltinData params)
 
-serialisableDummyMintingPolicy :: Script
-serialisableDummyMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkDummyMintingPolicyUntyped||])
+serialisablePoCMintingPolicy :: Script
+serialisablePoCMintingPolicy =
+  fromCompiledCode $$(PlutusTx.compile [||mkPoCMintingPolicyUntyped||])

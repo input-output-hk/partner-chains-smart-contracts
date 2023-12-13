@@ -31,7 +31,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.RawScripts (rawDummyMintingPolicy)
+import TrustlessSidechain.RawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -53,11 +53,11 @@ dummyTokenName =
     $ Value.mkTokenName
     =<< byteArrayFromAscii "Dummy tokens"
 
--- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
+-- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodeDummyMintingPolicy ∷ SidechainParams → Contract MintingPolicy
-decodeDummyMintingPolicy sidechainParams = do
-  mkMintingPolicyWithParams rawDummyMintingPolicy
+decodePoCMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodePoCMintingPolicy sidechainParams = do
+  mkMintingPolicyWithParams rawPoCMintingPolicy
     [ toData sidechainParams ]
 
 getFuelMintingPolicy ∷
@@ -67,7 +67,7 @@ getFuelMintingPolicy ∷
     , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
 getFuelMintingPolicy sidechainParams = do
-  fuelMintingPolicy ← decodeDummyMintingPolicy sidechainParams
+  fuelMintingPolicy ← decodePoCMintingPolicy sidechainParams
   fuelMintingCurrencySymbol ← Monad.liftContractM
     "Failed to get dummy CurrencySymbol"
     (Value.scriptCurrencySymbol fuelMintingPolicy)

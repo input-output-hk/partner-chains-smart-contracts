@@ -31,7 +31,7 @@ import TrustlessSidechain.Utils.Scripts
   , mkValidatorWithParams
   )
 
--- | Get the DummyMintingPolicy by applying `SidechainParams` to the dummy
+-- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodeDParameterMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDParameterMintingPolicy sidechainParams = do

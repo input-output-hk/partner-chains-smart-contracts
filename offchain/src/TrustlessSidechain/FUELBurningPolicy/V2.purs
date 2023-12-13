@@ -31,7 +31,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.RawScripts (rawDummyMintingPolicy)
+import TrustlessSidechain.RawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -58,7 +58,7 @@ data FuelBurnParams = FuelBurnParams
 -- | minting policy.
 decodeDummyBurningPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDummyBurningPolicy sidechainParams =
-  mkMintingPolicyWithParams rawDummyMintingPolicy [ toData sidechainParams ]
+  mkMintingPolicyWithParams rawPoCMintingPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   SidechainParams →

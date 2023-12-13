@@ -29,7 +29,6 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as Co
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
-import TrustlessSidechain.DummyMintingPolicy as DummyMintingPolicy
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
@@ -38,6 +37,7 @@ import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenV
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
+import TrustlessSidechain.PoCMintingPolicy as PoCMintingPolicy
 import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSchnorr qualified as PoCSchnorr
@@ -222,7 +222,7 @@ main =
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
           , ("PoCSchnorr", PoCSchnorr.serialisablePolicy)
           , -- Validators for FUEL Proxy tests
-            ("DummyMintingPolicy", DummyMintingPolicy.serialisableDummyMintingPolicy)
+            ("PoCMintingPolicy", PoCMintingPolicy.serialisablePoCMintingPolicy)
           , -- Scripts for DParameter
             ("DParameterMintingPolicy", DParameter.serialisableMintingPolicy)
           , ("DParameterValidator", DParameter.serialisableValidator)
