@@ -3,7 +3,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module TrustlessSidechain.UpdateCommitteeHash where
+module TrustlessSidechain.UpdateCommitteeHash (
+  InitCommitteeHashMint (..),
+  initCommitteeOracleTn,
+  initCommitteeOracleMintAmount,
+  mkCommitteeOraclePolicy,
+  mkUpdateCommitteeHashValidator,
+  serialisableCommitteeOraclePolicy,
+  serialisableCommitteeHashValidator,
+) where
 
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (

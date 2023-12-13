@@ -4,7 +4,9 @@
  for storing UTxOs with attached reference scripts.  It acts as a cache for
  minting policies of tokens minted during sidechain initialization.
 -}
-module TrustlessSidechain.ScriptCache (serialisableScriptCache) where
+module TrustlessSidechain.ScriptCache (
+  serialisableScriptCache,
+) where
 
 import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext), txSignedBy)

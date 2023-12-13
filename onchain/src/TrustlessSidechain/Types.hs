@@ -4,7 +4,40 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.Types where
+module TrustlessSidechain.Types (
+  ATMSPlainAggregatePubKey (..),
+  ATMSPlainMultisignature (..),
+  ATMSRedeemer (..),
+  BlockProducerRegistration (..),
+  BlockProducerRegistrationMsg (..),
+  CandidatePermissionMint (..),
+  CheckpointDatum (..),
+  CheckpointMessage (..),
+  CheckpointParameter (..),
+  CheckpointRedeemer (..),
+  CombinedMerkleProof (..),
+  CommitteeCertificateMint (..),
+  DParameterPolicyRedeemer (..),
+  DParameterValidatorDatum (..),
+  DParameterValidatorRedeemer (..),
+  EcdsaSecp256k1PubKey (..),
+  FUELMintingRedeemer (..),
+  MerkleRootInsertionMessage (..),
+  MerkleTreeEntry (..),
+  PermissionedCandidateKeys (..),
+  PermissionedCandidatesPolicyRedeemer (..),
+  PermissionedCandidatesValidatorDatum (..),
+  PermissionedCandidatesValidatorRedeemer (..),
+  PubKey (..),
+  SidechainParams (..),
+  Signature (..),
+  SignedMerkleRootRedeemer (..),
+  StakeOwnership (..),
+  UpdateCommitteeDatum (..),
+  UpdateCommitteeHash (..),
+  UpdateCommitteeHashMessage (..),
+  UpdateCommitteeHashRedeemer (..),
+) where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
