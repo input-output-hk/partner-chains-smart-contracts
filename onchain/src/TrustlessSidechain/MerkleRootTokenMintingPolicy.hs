@@ -41,7 +41,6 @@ import TrustlessSidechain.Types (
   MerkleTreeEntry,
   SidechainParams,
   SignedMerkleRootRedeemer,
-  merkleRoot,
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),

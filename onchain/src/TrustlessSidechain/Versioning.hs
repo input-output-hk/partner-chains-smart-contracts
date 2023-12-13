@@ -72,9 +72,7 @@ import TrustlessSidechain.ScriptUtils (
   mkUntypedValidator,
  )
 import TrustlessSidechain.Types (
-  SidechainParams (SidechainParams),
-  genesisUtxo,
-  governanceAuthority,
+  SidechainParams,
  )
 import TrustlessSidechain.Utils (fromSingleton)
 
@@ -264,7 +262,7 @@ mkVersionOraclePolicy ::
   ScriptContext ->
   Bool
 mkVersionOraclePolicy
-  SidechainParams {..}
+  sp
   InitializeVersionOracle
   (ScriptContext txInfo (Minting _)) =
     traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
@@ -272,9 +270,9 @@ mkVersionOraclePolicy
       -- Ensure that the genesis UTxO is used by the transaction.
       isGenesisUtxoUsed :: Bool
       isGenesisUtxoUsed =
-        genesisUtxo `elem` map txInInfoOutRef (txInfoInputs txInfo)
+        get @"genesisUtxo" sp `elem` map txInInfoOutRef (txInfoInputs txInfo)
 mkVersionOraclePolicy
-  SidechainParams {..}
+  sp
   (MintVersionOracle newVersionOracle newScriptHash)
   (ScriptContext txInfo (Minting currSymbol)) =
     fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
@@ -286,7 +284,7 @@ mkVersionOraclePolicy
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` governanceAuthority
+        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
       -- Check that this transaction mints a token with correct datum and script
       -- hash.
@@ -304,7 +302,7 @@ mkVersionOraclePolicy
         assetClassValueOf value versionToken == 1
         ]
 mkVersionOraclePolicy
-  SidechainParams {..}
+  sp
   (BurnVersionOracle oldVersion)
   (ScriptContext txInfo (Minting currSymbol)) =
     fromSingleton "ERROR-VERSION-POLICY-04" versionInputPresent
@@ -317,7 +315,7 @@ mkVersionOraclePolicy
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` governanceAuthority
+        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
       -- Check that the script version to be invalidated is present in exactly
       -- one transaction input.
@@ -380,7 +378,7 @@ mkVersionOracleValidator ::
   ScriptContext ->
   Bool
 mkVersionOracleValidator
-  SidechainParams {..}
+  sp
   versionToken
   versionOracleDatum
   (InvalidateVersionOracle versionOracle)
@@ -393,7 +391,7 @@ mkVersionOracleValidator
 
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` governanceAuthority
+        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracleDatum == versionOracle
@@ -406,7 +404,7 @@ mkVersionOracleValidator
           , assetClassValueOf (txOutValue txOut) versionAsset > 0
           ]
 mkVersionOracleValidator
-  SidechainParams {..}
+  sp
   versionToken
   (VersionOracle oldVersion oldScriptId)
   ( UpdateVersionOracle
@@ -423,7 +421,8 @@ mkVersionOracleValidator
 
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
-      signedByGovernanceAuthority = txInfo `Governance.isApprovedBy` governanceAuthority
+      signedByGovernanceAuthority =
+        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
 
       -- Check that the script version to be invalidated is present in exactly
       -- one transaction input.

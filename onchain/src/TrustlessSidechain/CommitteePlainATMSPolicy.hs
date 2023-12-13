@@ -30,15 +30,8 @@ import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey),
-  ATMSPlainMultisignature (
-    plainPublicKeys,
-    plainSignatures
-  ),
   ATMSRedeemer (ATMSBurn, ATMSMint),
-  CommitteeCertificateMint (
-    thresholdDenominator,
-    thresholdNumerator
-  ),
+  CommitteeCertificateMint,
   UpdateCommitteeDatum,
  )
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
@@ -101,7 +94,7 @@ mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
     -- 1.
     isCurrentCommittee :: Bool
     isCurrentCommittee =
-      aggregateCheck (plainPublicKeys atmspms) $
+      aggregateCheck (get @"plainPublicKeys" atmspms) $
         get @"aggregateCommitteePubKeys" committeeDatum
 
     -- 2.
@@ -109,10 +102,10 @@ mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
     signedByCurrentCommittee =
       verifyPlainMultisig
         verifySig
-        (plainPublicKeys atmspms)
+        (get @"plainPublicKeys" atmspms)
         threshold
         (LedgerBytes (unTokenName uniqueMintedTokenName))
-        (plainSignatures atmspms)
+        (get @"plainSignatures" atmspms)
 
     threshold :: Integer
     threshold =
@@ -143,9 +136,9 @@ mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
       --    makes this smallest integer that is strictly larger than
       --    @numerator/denominator *n@ i.e., we have
       --    @ceil(numerator/denominator * n)@ as required.
-      ( length (plainPublicKeys atmspms)
-          `Builtins.multiplyInteger` thresholdNumerator ccm
-          `Builtins.divideInteger` thresholdDenominator ccm
+      ( length (get @"plainPublicKeys" atmspms)
+          `Builtins.multiplyInteger` get @"thresholdNumerator" ccm
+          `Builtins.divideInteger` get @"thresholdDenominator" ccm
       )
         + 1
 

@@ -41,7 +41,12 @@ module TrustlessSidechain.Types (
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
-import Plutus.V2.Ledger.Api (BuiltinData (BuiltinData), LedgerBytes (LedgerBytes), TxOutRef, ValidatorHash)
+import Plutus.V2.Ledger.Api (
+  BuiltinData (BuiltinData),
+  LedgerBytes (LedgerBytes),
+  TxOutRef,
+  ValidatorHash,
+ )
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
@@ -122,6 +127,9 @@ newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
     , TSPrelude.Show
     )
     via LedgerBytes
+
+-- | @since Unreleased
+makeHasField ''EcdsaSecp256k1PubKey
 
 {- | Ed25519 public key
  = Important note
@@ -382,6 +390,7 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
       TSPrelude.Show
     )
 
+-- | @since Unreleased
 makeHasField ''SignedMerkleRootRedeemer
 
 {- | 'CombinedMerkleProof' is a product type to include both the
@@ -680,6 +689,9 @@ data ATMSPlainMultisignature = ATMSPlainMultisignature
     )
 
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
+
+-- | @since Unreleased
+makeHasField ''ATMSPlainMultisignature
 
 {- | 'ATMSReddemer' allows for either minting or burning
  @since Unreleased
