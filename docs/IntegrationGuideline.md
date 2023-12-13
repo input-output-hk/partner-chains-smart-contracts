@@ -30,20 +30,20 @@ for ease of use.
 In the following sections we will go through all interactions of
 `trustless-sidechain`, and their associated CLI commands and observed data types.
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-| Event                                             | CLI command                                                                                               | Observed address/token                                        | Observed/Generated data type  |
-|---------------------------------------------------|-----------------------------------------------------------------------------------------------------------|---------------------------------------------------------------|-------------------------------|
-| Initialisation                                    | `init` / `init-tokens-mint`                                                                               | -                                                             | -                             |
-| Insert/Update/Remove D-parameter                  | `insert-d-parameter` / `update-d-parameter` / `remove-update-d-parameter`                                 |                                                               |                               | <!-- TODO: Byron Network's team would be better qualified to fill out this section --!>
-| Insert/Update/Remove permissioned candidate list  | `insert-permissioned-candidates` / `update-permissioned-candidates` / `remove-permissioned-candidates`    |                                                               |                               | <!-- TODO: Byron Network's team would be better qualified to fill out this section --!>
-| Candidate permission token mint                   | `candidate-permission-token`                                                                              | [CandidatePermissionToken]                                    | -                             |
-| Committee registration/deregistration             | `register`                                                                                                | [CommitteeCandidateValidator]                                 | [BlockProducerRegistration]   |
-| Merkle root insertion                             | `save-root`                                                                                               | [MerkleRootTokenValidator] / [MerkleRootTokenMintingPolicy]   | -                             | <!-- TODO: is it observed? --!>
-| Save checkpoint                                   | `save-checkpoint`                                                                                         | -                                                             | -                             | <!-- TODO: is it observed? --!>
-| Committee hash update                             | `committee-hash`                                                                                          | -                                                             | -                             |
-| Insert/Update/Invalidate version                  | `insert-version` / `update-version` / `invalidate-version`                                                | [VersionOraclePolicy]                                         | [VersionOracle]               | <!-- TODO: Byron Network's team would be better qualified to fill out this section --!>
-| Claim tokens                                      | `claim-v1` / `claim-v2`                                                                                   | -                                                             | [CombinedMerkleProof]         |
-| Burn tokens                                       | `burn-v1` / `burn-v2`                                                                                     | -                                                             | -                             |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Event                                             | CLI command                                                               | Observed address/token                                            | Observed/Generated data type  |
+|---------------------------------------------------|---------------------------------------------------------------------------|-------------------------------------------------------------------|-------------------------------|
+| Initialisation                                    | `init` / `init-tokens-mint`                                               | -                                                                 | -                             |
+| Insert/Update/Remove D-parameter                  | `insert-d-parameter` / `update-d-parameter` / `remove-update-d-parameter` | [DParameterToken], [DParameterValidator]                          | [DParameterValidatorDatum]    |
+| Insert/Update/Remove permissioned candidate list  | `update-permissioned-candidates`                                          | [PermissionedCandidatesPolicy], [PermissionedCandidatesValidator] | [PermissionedCandidateKeys]   |
+| Candidate permission token mint                   | `candidate-permission-token`                                              | [CandidatePermissionToken]                                        | -                             |
+| Committee registration/deregistration             | `register`                                                                | [CommitteeCandidateValidator]                                     | [BlockProducerRegistration]   |
+| Merkle root insertion                             | `save-root`                                                               | [MerkleRootTokenValidator], [MerkleRootTokenMintingPolicy]        | -                             | <!-- TODO: is it observed? -->
+| Save checkpoint                                   | `save-checkpoint`                                                         | -                                                                 | -                             | <!-- TODO: is it observed? -->
+| Committee hash update                             | `committee-hash`                                                          | -                                                                 | -                             |
+| Insert/Update/Invalidate version                  | `insert-version` / `update-version` / `invalidate-version`                | [VersionOraclePolicy], [VersionOracleValidator]                   | [VersionOracle]               |
+| Claim tokens                                      | `claim-v1` / `claim-v2`                                                   | -                                                                 | [CombinedMerkleProof]         |
+| Burn tokens                                       | `burn-v1` / `burn-v2`                                                     | -                                                                 | -                             |
 
 ### 1.1. Initialisation
 
@@ -96,6 +96,15 @@ Encoding: [CombinedMerkleProof-example] -> [CombinedMerkleProof-encoding]
 [MerkleRootTokenMintingPolicy]: https://github.com/input-output-hk/trustless-sidechain/blob/31e551802be62385b212428040184c45e68cd572/onchain/src/TrustlessSidechain/MerkleRootTokenMintingPolicy.hs#L77
 [CandidatePermissionToken]: https://github.com/input-output-hk/trustless-sidechain/blob/31e551802be62385b212428040184c45e68cd572/onchain/src/TrustlessSidechain/CandidatePermissionMintingPolicy.hs#L26
 [VersionOraclePolicy]: https://github.com/input-output-hk/trustless-sidechain/blob/31e551802be62385b212428040184c45e68cd572/onchain/src/TrustlessSidechain/Versioning.hs#L242
+[VersionOracleValidator]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/Versioning.hs#L375
+
+[DParameterToken]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/DParameter.hs#L46
+[DParameterValidator]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/DParameter.hs#L117
+[DParameterValidatorDatum]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/Types.hs#L801
+
+[PermissionedCandidatesPolicy]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/PermissionedCandidates.hs#L57
+[PermissionedCandidatesValidator]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/PermissionedCandidates.hs#L139
+[PermissionedCandidateKeys]: https://github.com/input-output-hk/trustless-sidechain/blob/a0d1204ac21c88b4436b457f24bd856fa947e74e/onchain/src/TrustlessSidechain/Types.hs#L911
 
 [BlockProducerRegistration]: https://github.com/input-output-hk/trustless-sidechain/blob/31e551802be62385b212428040184c45e68cd572/onchain/src/TrustlessSidechain/Types.hs#L269
 [BlockProducerRegistration-example]: https://github.com/input-output-hk/trustless-sidechain/blob/31e551802be62385b212428040184c45e68cd572/onchain/src/TrustlessSidechain/Types.hs#L269
