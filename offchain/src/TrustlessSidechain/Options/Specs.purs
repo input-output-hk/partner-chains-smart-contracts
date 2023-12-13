@@ -1136,7 +1136,7 @@ parseRegistrationSidechainKeys ∷
 parseRegistrationSidechainKeys =
   option registrationSidechainKeys
     ( fold
-        [ long "sidechain-keys"
+        [ long "sidechain-public-keys"
         , metavar "SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
         , help "Sidechain keys of a block producer"
         ]
