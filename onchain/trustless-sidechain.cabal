@@ -96,13 +96,6 @@ library
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain
     TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.PoCECDSA
-    TrustlessSidechain.PoCInlineDatum
-    TrustlessSidechain.PoCMintingPolicy
-    TrustlessSidechain.PoCReferenceInput
-    TrustlessSidechain.PoCReferenceScript
-    TrustlessSidechain.PoCSchnorr
-    TrustlessSidechain.PoCSerialiseData
     TrustlessSidechain.ScriptCache
     TrustlessSidechain.ScriptUtils
     TrustlessSidechain.Types
@@ -138,6 +131,47 @@ library
     , trustless-sidechain-prelude
 
   hs-source-dirs:  src
+
+library onchain-poc
+  import:          common-lang, common-script-lang
+  exposed-modules:
+    TrustlessSidechain.PoCECDSA
+    TrustlessSidechain.PoCInlineDatum
+    TrustlessSidechain.PoCMintingPolicy
+    TrustlessSidechain.PoCReferenceInput
+    TrustlessSidechain.PoCReferenceScript
+    TrustlessSidechain.PoCSchnorr
+    TrustlessSidechain.PoCSerialiseData
+
+  build-depends:
+    , aeson                        ^>=1.5.0.0
+    , attoparsec
+    , base16-bytestring
+    , bech32
+    , bytestring                   ^>=0.10.12.0
+    , cardano-addresses
+    , cardano-api
+    , cardano-binary
+    , cardano-crypto
+    , cardano-crypto-class
+    , cardano-ledger-alonzo
+    , cryptonite
+    , deepseq
+    , either
+    , lens
+    , plutonomy
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , plutus-tx-plugin
+    , QuickCheck
+    , secp256k1-haskell
+    , serialise
+    , text
+    , trustless-sidechain
+    , trustless-sidechain-prelude
+
+  hs-source-dirs:  poc
 
 library trustless-sidechain-prelude
   import:          common-lang
@@ -216,6 +250,7 @@ executable trustless-sidechain-serialise
     , bytestring
     , cardano-api
     , filepath
+    , onchain-poc
     , plutonomy
     , plutus-ledger-api
     , trustless-sidechain
