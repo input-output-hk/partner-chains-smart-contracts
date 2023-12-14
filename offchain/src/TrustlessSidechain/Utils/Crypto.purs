@@ -367,12 +367,11 @@ verifyMultiSignature
     go ∷ BigInt → Array pubKey → Array signature → Boolean
     go signed pubs sigs =
       let
-        ok = signed >
+        ok = ((Array.length pubKeys) == 0) || (signed >
           ( BigInt.quot
               (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
-              thresholdDenominator
-          )
-      in
+              thresholdDenominator ))
+       in
         case Array.uncons pubs of
           Nothing → ok
           Just { head: pub, tail: pubs' } →
