@@ -259,17 +259,12 @@ instance UnsafeFromData DsKeyMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DsKeyMint
 
-{- | 'unsafeGetDatum' gets the datum sitting at a 'TxOut' and throws an error
- otherwise.
+{- | 'unsafeGetDatum' gets the inline datum sitting at a 'TxOut' and throws an
+ error otherwise.
 -}
 {-# INLINEABLE unsafeGetDatum #-}
-unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxInfo -> TxOut -> a
-unsafeGetDatum _info o = case txOutDatum o of
-  -- Legacy code which used to accept a regular old datum.... we only allow
-  -- inline datum now.
-  -- > OutputDatumHash dhash
-  -- >   | Just bn <- Contexts.findDatum dhash info ->
-  -- >     PlutusTx.unsafeFromBuiltinData (getDatum bn)
+unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxOut -> a
+unsafeGetDatum o = case txOutDatum o of
   OutputDatum d -> PlutusTx.unsafeFromBuiltinData (getDatum d)
   _ -> traceError "error 'unsafeGetDatum' failed"
 
@@ -284,7 +279,7 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
     go (t : ts) =
       case txInInfoResolved t of
         o -> case AssocMap.lookup currencySymbol $ getValue $ txOutValue o of
-          Just _ -> unsafeGetDatum info o
+          Just _ -> unsafeGetDatum o
           Nothing -> go ts
     go [] = traceError "error 'getConf' missing conf"
 
@@ -459,7 +454,7 @@ mkInsertValidator ds _dat _red ctx =
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.
     getTxOutNodeInfo :: TxOut -> Node
-    getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum info o
+    getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum o
 
 {- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
  at. This will always error.
