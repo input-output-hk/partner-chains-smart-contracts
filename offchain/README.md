@@ -92,495 +92,13 @@ dependencies in `node_modules` directory.
 node main.js --help
 ```
 
-### 3.1. Using the CLI commands
-
-Notes:
-
-- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we
-  have to add an arbitrary UTxO here.
-
-- prior to running the contracts - it may be desirable to have available your
-  signing key in the environment. Example:
-
-```bash
-export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
-```
-
-Available commands:
-
-```
-  init-tokens-mint            Pre-mint tokens without setting the inital committee
-  init                        Initialise sidechain
-  addresses                   Get the script addresses for a given sidechain
-  claim-v1                    Claim a FUEL tokens from a proof
-  burn-v1                     Burn a certain amount of FUEL tokens
-  claim-v2                    Claim FUEL tokens from thin air
-  burn-v2                     Burn a certain amount of FUEL tokens
-  register                    Register a committee candidate
-  deregister                  Deregister a committee member
-  candidate-permission-token  Mint candidate permission tokens
-  save-checkpoint             Saving a new checkpoint
-  committee-hash              Update the committee hash
-  save-root                   Saving a new merkle root
-  committee-handover          An alias for saving the merkle root, followed by
-                              updating the committee hash
-  insert-version              Initialize a new protocol version
-  update-version              Update an existing protocol version
-  invalidate-version          Invalidate a protocol version
-```
-
-#### 3.1.1. Initialising the sidechain
-
-Before we can start claiming tokens, we must initialise the sidechain by:
-initialising the sidechain's tokens, and setting our initial committee. Only
-after these steps will we be able to obtain the validator addresses.
-
-To initialise the sidechain, we can run the following command which will spend
-the genesis committee hash UTxO.
-
-```
-nix run .#sidechain-main-cli -- init \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --sidechain-genesis-hash 112233 \
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --version 1
-```
-
-Normally, the protocol has to wait until the committee has reached the desired
-number of members. To defend against accidentally consuming the
-`genesis-committee-hash-utxo`, it's possible, to split up the initialisation
-step into two separate commands:
-
-1. mint tokens identifying tokens used later in the protocol
-   (spending the `genesis-committee-hash-utxo`)
-2. set up the first committee (only the owner of the above minted tokens can do this)
-
-To mint the initial tokens, use the following command:
-
-```
-nix run .#sidechain-main-cli -- init-tokens-mint \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --sidechain-genesis-hash 112233 \
-  --version 1
-```
-
-Alternatively, one may optionally mint candidate permission tokens in the same
-transaction as the `init-tokens-mint` transaction. The following command
-achieves this.
-```
-nix run .#sidechain-main-cli -- init-tokens-mint \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo  "9fda32facf5f250f74cc3a77762fb9efec093b0afe5221a6d8bca2a217428668#1" \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --sidechain-genesis-hash 112233 \
-  --candidate-permission-token-amount 1 \
-  --candidate-permission-token-name ""\
-  --candidate-permission-token-utxo "9fda32facf5f250f74cc3a77762fb9efec093b0afe5221a6d8bca2a217428668#1"
-```
-
-And when ready, continue with setting up the first committee with the `init`
-command with the `use-init-tokens` flag:
-
-```
-nix run .#sidechain-main-cli -- init \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --sidechain-genesis-hash 112233 \
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --use-init-tokens \
-  --version 1
-```
-
-#### 3.1.2. Get script addresses of a sidechain
-
-Script addresses depend on the sidechain parameters, so we get different
-addresses for different parameters. To get the script addresses for a given
-sidechain, you can use the following command:
-
-```
-nix run .#sidechain-main-cli -- addresses \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --version 1
-```
-
-#### 3.1.3. Claim FUEL tokens
-
-```
-nix run .#sidechain-main-cli -- claim-v1 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --combined-proof aabb \
-  --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
-    # ^ Optional flag to avoid a linear scan through the UTxO set
-```
-
-Note: at the moment there also exists `claim-v2` command, which works with
-scripts in version 2 - see below for how versions are managed.  `claim-v2`
-exists for demonstration purposes only and does not require any proofs, allowing
-to claim FUEL out of thin air:
-
-```
-nix run .#sidechain-main-cli -- claim-v2 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3
-  --amount 13
-```
-
-#### 3.1.4. Burn user owned FUEL tokens
-
-```
-nix run .#sidechain-main-cli -- burn-v1 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --amount 5 \
-  --recipient aabbcc
-```
-
-Note: at the moment there also exists `burn-v2` command, which works with
-scripts in version 2 - see below for how versions are managed.  `burn-v2` exists
-for demonstration purposes only and uses same arguments as `burn-v1`.
-
-```
-nix run .#sidechain-main-cli -- burn-v2 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --amount 5 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --recipient aabbcc
-```
-
-#### 3.1.5. Register committee candidate
-
-In order to generate the signatures, you can use the signature generator tool:
-
-```
-cabal run trustless-sidechain-gen-signatures -- \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
-  --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
-  --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
-```
-
-And use it's output for the registration:
-
-```
-nix run .#sidechain-main-cli -- register \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --spo-public-key f71ff66b6b8da0702444183b5ce5de09f6754457a6a71b3354b81ced8dcd7e30 \
-  --sidechain-public-key 03eef26d3cf978e0fc2d786c443b1284b27b265a7c82eeeec68c24cd3fd0bb6428 \
-  --spo-signature 980db1db31457189326e948c7f292b16278ab91bd45f5fd6ee9ad637bf993f26936c17ee126e510c52d0a3381b52acb36a2a89d4fe55a587cf3478678114dd0f \
-  --sidechain-signature bd00090a8a26b3aad534ae2e75ce4ab5b284ffad0751b793d447a3980f770f217929543c21bc7d2567c6ee0c23b983e3983f22d8eb41dfb901a6c31ae3d5b41d \
-  --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
-```
-
-Optionally, assuming that we are using a permissioned candidates system, one
-can include the candidate permission token when registering as follows.
-```
-nix run .#sidechain-main-cli -- register \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
-  --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
-  --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
-  --sidechain-signature 5fe405ba531216cf5bfe65f2826d618c5d4a84df7016fcc4f4a6a68323ecb5f56799e08aa8dba6bc087b9131c5b76483ededa250da0ddbf2d24e00991b627e6e \
-  --registration-utxo "fff1c0f7f2834cb30a2136c7aadeb37a4680b30e3ae6ea088edc4e1ece939026#3" \
-  --candidate-permission-token-name "aabb" \
-  --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
-```
-where we note the flags `--candidate-permission-token-utxo` and
-`--candidate-permission-token-name` must be generated by the
-`candidate-permission-token` command.
-
-#### 3.1.6. Deregister committee candidate
-
-```
-nix run .#sidechain-main-cli -- deregister \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --spo-public-key aabbcc
-```
-
-#### 3.1.5. Committee hash update
-
-```
-nix run .#sidechain-main-cli -- committee-hash \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --committee-pub-key-and-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-signature aabbcc02 \
-  --committee-pub-key-and-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-signature aabbcc04:cccccc \
-  --new-committee-pub-key ddeeff01 \
-  --new-committee-pub-key ddeeff02 \
-  --new-committee-pub-key ddeeff03 \
-  --new-committee-pub-key ddeeff04 \
-  --sidechain-epoch 6 \
-  --new-committee-validator-cbor-encoded-address aadd \
-  --previous-merkle-root abcdef
-```
-where we note that `--new-committee-validator-cbor-encoded-address` can be found from
-the JSON key `cborEncodedAddresses` from the output of the `addresses` subcommand.
-
-#### 3.1.6. Save merkle root
-
-```
-nix run .#sidechain-main-cli -- save-root \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --sidechain-id 1 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --merkle-root abababab \
-  --committee-pub-key-and-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-signature aabbcc02 \
-  --committee-pub-key-and-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-signature aabbcc04:cccccc \
-  --previous-merkle-root abcdef
-```
-
-#### 3.1.7 Committee handover
-
-```
-nix run .#sidechain-main-cli -- committee-handover \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --merkle-root abababab \
-  --sidechain-epoch 6 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --previous-merkle-root abcdef \
-  --new-committee-pub-key ddeeff01 \
-  --new-committee-pub-key ddeeff02 \
-  --new-committee-pub-key ddeeff03 \
-  --committee-pub-key-and-new-committee-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-new-committee-signature aabbcc02 \
-  --committee-pub-key-and-new-committee-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc02 \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
-```
-
-#### 3.1.8 Candidiate permission token
-
-```
-nix run .#sidechain-main-cli -- candidate-permission-token \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --candidate-permission-token-amount 10 \
-  --candidate-permission-token-name "aabb" \
-  --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
-```
-
-#### 3.1.8 Save checkpoint
-
-```
-nix run .#sidechain-main-cli -- save-checkpoint \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
-  --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
-  --new-checkpoint-block-number 42 \
-  --sidechain-epoch 5
-```
-
-#### 3.1.8 Insert new protocol version
-
-```
-nix run .#sidechain-main-cli -- insert-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --version 2
-```
-
-#### 3.1.9 Update existing protocol version
-
-```
-nix run .#sidechain-main-cli -- update-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --old-version 1 \
-  --new-version 2
-```
-
-#### 3.1.10 Invalidate protocol version
-
-```
-nix run .#sidechain-main-cli -- invalidate-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --version 1
-```
-
-#### 3.1.11 Insert a D parameter value
-
-```
-nix run .#sidechain-main-cli -- insert-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --d-parameter-permissioned-candidates-count N \
-  --d-parameter-registered-candidates-count M
-```
-
-where N and M are integers.  Note that this should be only done once and then
-`update-d-parameter` value should be used (see below).  However, there is no
-safeguard against inserting multiple D parameter values.
-
-#### 3.1.12 Update a D parameter value
-
-```
-nix run .#sidechain-main-cli -- update-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --d-parameter-permissioned-candidates-count N \
-  --d-parameter-registered-candidates-count M
-```
-
-where N and M are integers.  If more than one D parameter value was inserted
-this will remove all inserted values first and then replace them with a single
-new value.
-
-#### 3.1.13 Remove a D parameter value
-
-```
-nix run .#sidechain-main-cli -- remove-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3
-```
-
-This removes all inserted D parameter values.
-
-#### 3.1.14 Insert a list of permissioned candidates
-
-```
-nix run .#sidechain-main-cli -- insert-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
-```
-
-Insert a new list of permissioned candidates.  Each candidate is listed
-separately using the `--permissioned-candidate-keys` flag followed by a string
-of four keys separated from each other by a single colon.  This command should
-only be used once to initialize the list.  All subsequent updates should be done
-using the `update-permissioned-candidates` command below, though there is no
-safeguard against calling `insert-permissioned-candidates` multiple times.
-
-#### 3.1.15 Update a list of permissioned candidates
-
-```
-nix run .#sidechain-main-cli -- update-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
-```
-
-Replace existing list of permissioned candidates with a new list.  Each
-candidate is listed separately using the `--permissioned-candidate-keys` flag
-followed by a string of four keys separated from each other by a single colon.
-
-#### 3.1.16 Remove all permissioned candidates
-
-```
-nix run .#sidechain-main-cli -- remove-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3
-```
-
-Remove all currently registered permissioned candidates.  If this command is
-called, a new list can only be created using the
-`insert-permissioned-candidates` command above.
-
-### 3.2. Using a configuration file
-
-You can also provide a configuration in `$CWD/config.json` in the following format
-instead of repeating them in all commands.
+### 3.1. Using a configuration file
+
+When running the CLI one needs to pass a single command (see section 3.3 below)
+followed by options.  A set of options related to defining the sidechain
+parameters is used by all commands.  Instead of having to pass these options on
+the command line with every call, it is easier to put them in a configuration
+file `$CWD/config.json` in the following format:
 
 ```json
 {
@@ -591,25 +109,46 @@ instead of repeating them in all commands.
     "atmsKind": "plain-ecdsa-secp256k1"
     "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c"
   },
-  "runtimeConfig": null,
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
-  "stakeSigningKeyFile": null
+  "stakeSigningKeyFile": "/absolute/path/to/stake.skey"
 }
 ```
 
-and now you can call the CLI without these values:
+This allows to shorten a CLI call from:
 
 ```
-nix run .#sidechain-main-cli -- burn-v1 --amount 5 --recipient aabb
+nix run .#sidechain-main-cli -- burn-v1 \
+  --sidechain-id 123 \
+  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
+  --threshold-numerator 2 \
+  --threshold-denominator 3 \
+  --atms-kind plain-ecdsa-secp256k1 \
+  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+  --payment-signing-key-file payment.skey \
+  --stake-signing-key-file stake.skey \
+  --amount 5 \
+  --recipient aabbcc
 ```
 
-You can find a sample configuration file in `ctl/config.example.json`.
+to:
+
+```
+nix run .#sidechain-main-cli -- burn-v1 \
+  --amount 5 \
+  --recipient aabbcc
+```
+
+**We henceforth assume that these common options are located in the
+configuration file and omit them from any further examples.**
+
+You can find a sample configuration file in `config.example.json`.
 
 When using the CLI argument and the configuration file together, the **CLI
-arguments override** these configuration values. You can also set any of the above
-values to null, if you don't want to set a default value for that property.
+arguments override** these configuration values. You can also set any of the
+above values to null, if you don't want to set a default value for that
+property.
 
-### 3.3. Configuring hosted runtime dependencies
+### 3.2. Configuring hosted runtime dependencies
 
 You can set the network configuration of the runtime dependecies in the
 configuration file using the following format:
@@ -634,10 +173,359 @@ _$CWD/config.json_
       "path": null
     },
     "kupo": null
-  },
-  "signingKeyFile": null
+  }
 }
 ```
 
-Any service where no configuration is defined will fallback to its default
-value (localhost).
+Any service where no configuration is defined will fallback to its default value
+(localhost).
+
+### 3.3. Using the CLI commands
+
+Notes:
+
+- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we
+  have to add an arbitrary UTxO here.
+
+- If not using a config file, prior to running the contracts it may be desirable
+  to have available your signing key in the environment. Example:
+
+  ```bash
+  export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
+  ```
+
+  and then pass it on the command line as `--payment-signing-key-file
+  $SIGNING_KEY`.
+
+Available commands:
+
+```
+  init-tokens-mint         Pre-mint tokens without setting the initial committee
+  init                     Initialise sidechain
+  addresses                Get the script addresses for a given sidechain
+  claim-v1                 Claim a FUEL tokens from a proof
+  burn-v1                  Burn a certain amount of FUEL tokens
+  claim-v2                 Claim FUEL tokens from thin air
+  burn-v2                  Burn a certain amount of FUEL tokens
+  register                 Register a committee candidate
+  candidate-permission-token
+                           Mint candidate permission tokens
+  deregister               Deregister a committee member
+  committee-hash           Update the committee hash
+  save-root                Saving a new merkle root
+  committee-handover       An alias for saving the merkle root, followed by
+                           updating the committee hash
+  save-checkpoint          Saving a new checkpoint
+  insert-version           Initialize a new protocol version
+  update-version           Update an existing protocol version
+  invalidate-version       Invalidate a protocol version
+  utils                    Utility functions for cryptographic primitives and
+                           messages.
+  insert-d-parameter       Insert new D parameter
+  update-d-parameter       Update a D parameter
+  remove-d-parameter       Remove a D parameter
+  update-permissioned-candidates
+                           Update a Permissioned Candidates list
+  collect-garbage          Burn unneccessary NFTs
+```
+
+#### 3.3.1. Initialising the sidechain
+
+Before we can start claiming tokens, we must initialise the sidechain by:
+initialising the sidechain's tokens, and setting our initial committee. Only
+after these steps will we be able to obtain the validator addresses.
+
+To initialise the sidechain, we can run the following command which will spend
+the genesis committee hash UTxO.
+
+```
+nix run .#sidechain-main-cli -- init \
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --version 1
+```
+
+Normally, the protocol has to wait until the committee has reached the desired
+number of members. To defend against accidentally consuming the
+`genesis-committee-hash-utxo`, it's possible, to split up the initialisation
+step into two separate commands:
+
+1. mint tokens identifying tokens used later in the protocol
+   (spending the `genesis-committee-hash-utxo`)
+2. set up the first committee (only the owner of the above minted tokens can do this)
+
+To mint the initial tokens, use the following command:
+
+```
+nix run .#sidechain-main-cli -- init-tokens-mint \
+  --sidechain-genesis-hash 112233 \
+  --version 1
+```
+
+Alternatively, one may optionally mint candidate permission tokens in the same
+transaction as the `init-tokens-mint` transaction. The following command
+achieves this.
+```
+nix run .#sidechain-main-cli -- init-tokens-mint \
+  --sidechain-genesis-hash 112233 \
+  --candidate-permission-token-amount 1 \
+  --candidate-permission-token-name ""\
+  --candidate-permission-token-utxo "9fda32facf5f250f74cc3a77762fb9efec093b0afe5221a6d8bca2a217428668#1"
+```
+
+And when ready, continue with setting up the first committee with the `init`
+command with the `use-init-tokens` flag:
+
+```
+nix run .#sidechain-main-cli -- init \
+  --sidechain-genesis-hash 112233 \
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --use-init-tokens \
+  --version 1
+```
+
+#### 3.3.2. Get script addresses of a sidechain
+
+Script addresses depend on the sidechain parameters, so we get different
+addresses for different parameters. To get the script addresses for a given
+sidechain, you can use the following command:
+
+```
+nix run .#sidechain-main-cli -- addresses \
+  --version 1
+```
+
+#### 3.3.3. Claim FUEL tokens
+
+```
+nix run .#sidechain-main-cli -- claim-v1 \
+  --combined-proof aabb \
+  --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
+    # ^ Optional flag to avoid a linear scan through the UTxO set
+```
+
+Note: at the moment there also exists `claim-v2` command, which works with
+scripts in version 2 - see below for how versions are managed.  `claim-v2`
+exists for demonstration purposes only and does not require any proofs, allowing
+to claim FUEL out of thin air:
+
+```
+nix run .#sidechain-main-cli -- claim-v2 \
+  --amount 13
+```
+
+#### 3.3.4. Burn user owned FUEL tokens
+
+```
+nix run .#sidechain-main-cli -- burn-v1 \
+  --amount 5 \
+  --recipient aabbcc
+```
+
+Note: at the moment there also exists `burn-v2` command, which works with
+scripts in version 2 - see below for how versions are managed.  `burn-v2` exists
+for demonstration purposes only and uses same arguments as `burn-v1`.
+
+```
+nix run .#sidechain-main-cli -- burn-v2 \
+  --amount 5 \
+  --recipient aabbcc
+```
+
+#### 3.3.5. Register committee candidate
+
+In order to generate the signatures, you can use the signature generator tool:
+
+```
+cabal run trustless-sidechain-gen-signatures -- \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --sidechain-genesis-hash 112233 \
+  --threshold-numerator 2 \
+  --threshold-denominator 3 \
+  --atms-kind plain-ecdsa-secp256k1 \
+  --spo-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --sidechain-signing-key fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
+```
+
+And use it's output for the registration:
+
+```
+nix run .#sidechain-main-cli -- register \
+  --spo-public-key f71ff66b6b8da0702444183b5ce5de09f6754457a6a71b3354b81ced8dcd7e30 \
+  --sidechain-public-key 03eef26d3cf978e0fc2d786c443b1284b27b265a7c82eeeec68c24cd3fd0bb6428 \
+  --spo-signature 980db1db31457189326e948c7f292b16278ab91bd45f5fd6ee9ad637bf993f26936c17ee126e510c52d0a3381b52acb36a2a89d4fe55a587cf3478678114dd0f \
+  --sidechain-signature bd00090a8a26b3aad534ae2e75ce4ab5b284ffad0751b793d447a3980f770f217929543c21bc7d2567c6ee0c23b983e3983f22d8eb41dfb901a6c31ae3d5b41d \
+  --registration-utxo 7eddcb7807899d5078ebc25c59d372b484add88604db461e6ef077fd0379733d#0
+```
+
+Optionally, assuming that we are using a permissioned candidates system, one
+can include the candidate permission token when registering as follows.
+```
+nix run .#sidechain-main-cli -- register \
+  --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
+  --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
+  --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
+  --sidechain-signature 5fe405ba531216cf5bfe65f2826d618c5d4a84df7016fcc4f4a6a68323ecb5f56799e08aa8dba6bc087b9131c5b76483ededa250da0ddbf2d24e00991b627e6e \
+  --registration-utxo "fff1c0f7f2834cb30a2136c7aadeb37a4680b30e3ae6ea088edc4e1ece939026#3" \
+  --candidate-permission-token-name "aabb" \
+  --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
+```
+where we note the flags `--candidate-permission-token-utxo` and
+`--candidate-permission-token-name` must be generated by the
+`candidate-permission-token` command.
+
+#### 3.3.6. Deregister committee candidate
+
+```
+nix run .#sidechain-main-cli -- deregister \
+  --spo-public-key aabbcc
+```
+
+#### 3.3.5. Committee hash update
+
+```
+nix run .#sidechain-main-cli -- committee-hash \
+  --committee-pub-key-and-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-signature aabbcc02 \
+  --committee-pub-key-and-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-signature aabbcc04:cccccc \
+  --new-committee-pub-key ddeeff01 \
+  --new-committee-pub-key ddeeff02 \
+  --new-committee-pub-key ddeeff03 \
+  --new-committee-pub-key ddeeff04 \
+  --sidechain-epoch 6 \
+  --new-committee-validator-cbor-encoded-address aadd \
+  --previous-merkle-root abcdef
+```
+where we note that `--new-committee-validator-cbor-encoded-address` can be found from
+the JSON key `cborEncodedAddresses` from the output of the `addresses` subcommand.
+
+#### 3.3.6. Save merkle root
+
+```
+nix run .#sidechain-main-cli -- save-root \
+  --merkle-root abababab \
+  --committee-pub-key-and-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-signature aabbcc02 \
+  --committee-pub-key-and-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-signature aabbcc04:cccccc \
+  --previous-merkle-root abcdef
+```
+
+#### 3.3.7 Committee handover
+
+```
+nix run .#sidechain-main-cli -- committee-handover \
+  --merkle-root abababab \
+  --sidechain-epoch 6 \
+  --previous-merkle-root abcdef \
+  --new-committee-pub-key ddeeff01 \
+  --new-committee-pub-key ddeeff02 \
+  --new-committee-pub-key ddeeff03 \
+  --committee-pub-key-and-new-committee-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-new-committee-signature aabbcc02 \
+  --committee-pub-key-and-new-committee-signature aabbcc03:bbbbbb \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc01:aaaaaa \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc02 \
+  --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
+```
+
+#### 3.3.8 Candidiate permission token
+
+```
+nix run .#sidechain-main-cli -- candidate-permission-token \
+  --candidate-permission-token-amount 10 \
+  --candidate-permission-token-name "aabb" \
+  --candidate-permission-token-utxo "9ce50ad2562c18295e8a76ade473eeb17fc32f978961ab5adf78704d70b23834#1"
+```
+
+#### 3.3.8 Save checkpoint
+
+```
+nix run .#sidechain-main-cli -- save-checkpoint \
+  --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
+  --new-checkpoint-block-number 42 \
+  --sidechain-epoch 5
+```
+
+#### 3.3.8 Insert new protocol version
+
+```
+nix run .#sidechain-main-cli -- insert-version \
+  --version 2
+```
+
+#### 3.3.9 Update existing protocol version
+
+```
+nix run .#sidechain-main-cli -- update-version \
+  --old-version 1 \
+  --new-version 2
+```
+
+#### 3.3.10 Invalidate protocol version
+
+```
+nix run .#sidechain-main-cli -- invalidate-version \
+  --version 1
+```
+
+#### 3.3.11 Insert a D parameter value
+
+```
+nix run .#sidechain-main-cli -- insert-d-parameter \
+  --d-parameter-permissioned-candidates-count N \
+  --d-parameter-registered-candidates-count M
+```
+
+where N and M are integers.  Note that this should be only done once and then
+`update-d-parameter` value should be used (see below).  However, there is no
+safeguard against inserting multiple D parameter values.
+
+#### 3.3.12 Update a D parameter value
+
+```
+nix run .#sidechain-main-cli -- update-d-parameter \
+  --d-parameter-permissioned-candidates-count N \
+  --d-parameter-registered-candidates-count M
+```
+
+where N and M are integers.  If more than one D parameter value was inserted
+this will remove all inserted values first and then replace them with a single
+new value.
+
+#### 3.3.13 Remove a D parameter value
+
+```
+nix run .#sidechain-main-cli -- remove-d-parameter
+```
+
+This removes all inserted D parameter values.
+
+#### 3.3.14 Update a list of permissioned candidates
+
+TODO JANKUN: update this section
+
+```
+nix run .#sidechain-main-cli -- update-permissioned-candidates \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AUTHORITY_DISCOVERY_KEY_1:GRANDPA_KEY_1" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AUTHORITY_DISCOVERY_KEY_2:GRANDPA_KEY_2" \
+  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AUTHORITY_DISCOVERY_KEY_3:GRANDPA_KEY_3"
+```
+
+Replace existing list of permissioned candidates with a new list.  Each
+candidate is listed separately using the `--permissioned-candidate-keys` flag
+followed by a string of four keys separated from each other by a single colon.
+
+#### 3.3.15 Garbage collect redundant tokens
+
+TODO JANKUN: write this section
+
+#### 3.3.16 Utils
+
+TODO: who wrote this command?
