@@ -118,6 +118,12 @@ format-hs-staged: requires_nix_shell
 		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
 		| xargs -0 -r fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence
 
+format-hs: requires_nix_shell
+	@git ls-files -z\
+		| grep -Ez '^.*\.hs$$'\
+		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
+		| xargs -0 -r fourmolu $(FOURMOLU_EXTENSIONS) --mode inplace --check-idempotence
+
 check-format-hs-staged: requires_nix_shell
 	@git diff -z --name-only --diff-filter=d --cached HEAD\
 		| grep -Ez '^.*\.hs$$'\
