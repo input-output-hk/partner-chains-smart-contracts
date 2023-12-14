@@ -5,7 +5,10 @@
  that the current committee has signed its token name with the plain (simply
  public key and signature concatenation) ATMS scheme with SchnorrSecp256k1 signatures.
 -}
-module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy where
+module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy (
+  mkMintingPolicy,
+  serialisableMintingPolicy,
+) where
 
 import Plutus.V2.Ledger.Api (
   Script,
