@@ -51,9 +51,9 @@ import TrustlessSidechain.Versioning (
    1. the provided committee in the redeemer matches the current committee
       stored onchain
 
-   2. the token name of this token that is minted minted has been signed by the
-      current committee where this verification is performed by the given
-      @verifySig@ function
+   2. the token name of this token that is minted has been signed by the current
+      committee where this verification is performed by the given @verifySig@
+      function
 
  OnChain errors:
 
@@ -148,6 +148,7 @@ mkMintingPolicy verifySig ccm versioningConfig (ATMSMint atmspms) ctx =
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
         ctx
+
     committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
     committeeDatum =
       let go :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
