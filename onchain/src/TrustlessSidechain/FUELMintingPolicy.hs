@@ -58,7 +58,7 @@ fuelTokenName = TokenName "FUEL"
 {- | 'mkMintingPolicy' verifies the following
 
   1. MerkleRootToken with the name of the Merkle root of the transaction
-  calculated from the proof) can be found in the MerkleRootTokenValidator.
+     calculated from the proof) can be found in the MerkleRootTokenValidator.
 
   N.B. this performs this verification on the FIRST merkle root of the
   MerkleRootToken it finds in the inputs. So, to ensure "predictable" behaviour

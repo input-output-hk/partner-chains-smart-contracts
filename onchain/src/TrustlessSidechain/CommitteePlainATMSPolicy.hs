@@ -53,27 +53,28 @@ import TrustlessSidechain.Versioning (
 
 {-# INLINEABLE mkMintingPolicy #-}
 
-{- | 'mkMintingPolicy' verifies
-      1. the provided committee in the redeemer matches the current committee
+{- | 'mkMintingPolicy' verifies:
+
+   1. the provided committee in the redeemer matches the current committee
       stored onchain
 
-      2. the token name of this token that is minted minted has been signed by
-      the current committee where this verification is performed by the given
+   2. the token name of this token that is minted minted has been signed by the
+      current committee where this verification is performed by the given
       @verifySig@ function
 
-      OnChain errors
+ OnChain errors:
 
-      ERROR-ATMS-POLICY-01: Some ATMS tokens were minted in this transaction
+   ERROR-ATMS-POLICY-01: Some ATMS tokens were minted in this transaction
 
-      ERROR-ATMS-POLICY-02: No tokens were burned in this transaction
+   ERROR-ATMS-POLICY-02: No tokens were burned in this transaction
 
-      ERROR-ATMS-POLICY-03: current committee mismatch
+   ERROR-ATMS-POLICY-03: current committee mismatch
 
-      ERROR-ATMS-POLICY-04: committee signature invalid
+   ERROR-ATMS-POLICY-04: committee signature invalid
 
-      ERROR-ATMS-POLICY-05: no committee utxo given as reference input
+   ERROR-ATMS-POLICY-05: no committee utxo given as reference input
 
-      ERROR-ATMS-POLICY-06: bad mint
+   ERROR-ATMS-POLICY-06: bad mint
 -}
 mkMintingPolicy ::
   (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
