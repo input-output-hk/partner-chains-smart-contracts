@@ -259,8 +259,35 @@ register
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
 
-  ownRegistrations ← findOwnRegistrations ownPkh (getSPOPubKey stakeOwnership)
+  { ownRegistrationUtxos, ownRegistrationDatums } ← findOwnRegistrations ownPkh
+    (getSPOPubKey stakeOwnership)
     valUtxos
+
+  let
+    datum = BlockProducerRegistration
+      { stakeOwnership
+      , sidechainPubKey
+      , sidechainSignature: sidechainSig
+      , inputUtxo: inputUtxo
+      , ownPkh
+      , auraKey
+      , grandpaKey
+      }
+
+    matchingKeys (BlockProducerRegistration r1) (BlockProducerRegistration r2) =
+      r1.stakeOwnership == r2.stakeOwnership
+        && r1.sidechainPubKey
+        == r2.sidechainPubKey
+        && r1.auraKey
+        == r2.auraKey
+        && r1.grandpaKey
+        == r2.grandpaKey
+
+  when (any (matchingKeys datum) ownRegistrationDatums) $
+    throwContractError
+      ( InvalidInputError
+          "BlockProducer with given set of keys is already registered"
+      )
 
   maybeCandidatePermissionMintingPolicy ← case permissionToken of
     Just
@@ -287,15 +314,6 @@ register
             candidatePermissionCurrencySymbol
             candidatePermissionTokenName
             one
-    datum = BlockProducerRegistration
-      { stakeOwnership
-      , sidechainPubKey
-      , sidechainSignature: sidechainSig
-      , inputUtxo: inputUtxo
-      , ownPkh
-      , auraKey
-      , grandpaKey
-      }
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.unspentOutputs ownUtxos
@@ -318,7 +336,7 @@ register
         <> Constraints.mustBeSignedBy ownPkh
         <> mconcat
           ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
-              ownRegistrations
+              ownRegistrationUtxos
           )
 
   balanceSignAndSubmit "Registers Committee Candidate" { lookups, constraints }
@@ -341,9 +359,9 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
 
-  ownRegistrations ← findOwnRegistrations ownPkh spoPubKey valUtxos
+  { ownRegistrationUtxos } ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
-  when (null ownRegistrations)
+  when (null ownRegistrationUtxos)
     $ throwContractError
         (InvalidInputError "Couldn't find registration UTxO")
 
@@ -356,7 +374,9 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
     constraints ∷ Constraints.TxConstraints Void Void
     constraints = Constraints.mustBeSignedBy ownPkh
       <> mconcat
-        (flip Constraints.mustSpendScriptOutput unitRedeemer <$> ownRegistrations)
+        ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
+            ownRegistrationUtxos
+        )
 
   balanceSignAndSubmit "Deregister Committee Candidate" { lookups, constraints }
 
@@ -366,9 +386,12 @@ findOwnRegistrations ∷
   PaymentPubKeyHash →
   Maybe PubKey →
   UtxoMap →
-  Contract (Array TransactionInput)
+  Contract
+    { ownRegistrationUtxos ∷ Array TransactionInput
+    , ownRegistrationDatums ∷ Array BlockProducerRegistration
+    }
 findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
-  mayTxIns ← Map.toUnfoldable validatorUtxos #
+  mayTxInsAndBlockProducerRegistrations ← Map.toUnfoldable validatorUtxos #
     parTraverse
       \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
         pure do
@@ -378,8 +401,15 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
             ( (getSPOPubKey r.stakeOwnership == spoPubKey) &&
                 (r.ownPkh == ownPkh)
             )
-          pure input
-  pure $ catMaybes mayTxIns
+          pure (input /\ BlockProducerRegistration r)
+
+  let
+    txInsAndBlockProducerRegistrations = catMaybes
+      mayTxInsAndBlockProducerRegistrations
+    ownRegistrationUtxos = map (\(a /\ _) → a) txInsAndBlockProducerRegistrations
+    ownRegistrationDatums = map (\(_ /\ b) → b)
+      txInsAndBlockProducerRegistrations
+  pure $ { ownRegistrationUtxos, ownRegistrationDatums }
 
 -- | Return SPO public key if StakeOwnership is ada based staking. Otherwise, it returns Nothing.
 getSPOPubKey ∷ StakeOwnership → Maybe PubKey

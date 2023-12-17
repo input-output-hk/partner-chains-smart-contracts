@@ -33,6 +33,7 @@
   , "prelude"
   , "profunctor"
   , "quickcheck"
+  , "random"
   , "record"
   , "strings"
   , "tailrec"
