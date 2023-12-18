@@ -27,7 +27,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
-import Data.Array ((\\))
+import Data.Array (nub, sort, (\\))
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -49,7 +49,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
 import TrustlessSidechain.Utils.Error
   ( InternalError(InvalidData)
-  , OffchainError(InternalError)
+  , OffchainError(InternalError, InvalidInputError)
   )
 
 permissionedCandidatesTokenName ∷ TokenName
@@ -145,9 +145,19 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
         (map PermissionedCandidateKeys candidatesToRemove)
 
     newCandidates ∷ Array PermissionedCandidateKeys
-    newCandidates = filteredCandidates <>
-      (map PermissionedCandidateKeys permissionedCandidatesToAdd)
+    newCandidates = nub
+      ( filteredCandidates <>
+          (map PermissionedCandidateKeys permissionedCandidatesToAdd)
+      )
 
+  when (sort newCandidates == sort oldCandidates)
+    $ throwContractError
+    $
+      ( InvalidInputError
+          "New candidates list is the same as the currently stored list."
+      )
+
+  let
     value ∷ Value
     value = Value.singleton
       permissionedCandidatesCurrencySymbol

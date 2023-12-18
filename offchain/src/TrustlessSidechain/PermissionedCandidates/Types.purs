@@ -49,6 +49,7 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
   }
 
 derive instance Eq PermissionedCandidateKeys
+derive instance Ord PermissionedCandidateKeys
 
 instance ToData PermissionedCandidateKeys where
   toData
