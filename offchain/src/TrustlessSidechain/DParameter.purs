@@ -6,17 +6,19 @@ module TrustlessSidechain.DParameter
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, throwContractError)
+import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
+  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( TransactionOutput(TransactionOutput)
+  ( OutputDatum(OutputDatum)
+  , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints
@@ -27,6 +29,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
+import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -42,6 +45,10 @@ import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import TrustlessSidechain.Utils.Error
+  ( InternalError(NotFoundUtxo)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 
 dParameterTokenName ∷ TokenName
 dParameterTokenName =
@@ -192,26 +199,53 @@ mkUpdateDParameterLookupsAndConstraints
 
   dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
 
-  -- find all UTxOs at DParameterValidator address that contain DParameterToken
-  dParameterUTxOs ←
-    Map.filter
-      ( \( TransactionOutputWithRefScript
-             { output: (TransactionOutput { amount }) }
-         ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName >
-          BigInt.fromInt 0
-      )
+  -- find one UTxO at DParameterValidator address that contain DParameterToken
+
+  mOldDParameter ←
+    ( Array.head
+        <<< Map.toUnfoldable
+        <<< Map.filter
+          ( \( TransactionOutputWithRefScript
+                 { output: (TransactionOutput { amount }) }
+             ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
+              >
+                BigInt.fromInt 0
+          )
+    )
       <$> utxosAt dParameterValidatorAddress
+
+  (oldDParameterInput /\ oldDParameterOutput) ← liftContractM
+    ( show
+        ( InternalError
+            (NotFoundUtxo "Old D parameter not found")
+        )
+    )
+    mOldDParameter
 
   -- check how much DParameterToken is stored in UTxOs that we're trying to
   -- update
   let
-    dParameterTokenAmount = sum
-      $ map
-          ( \( TransactionOutputWithRefScript
-                 { output: (TransactionOutput { amount }) }
-             ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
-          )
-      $ Map.values dParameterUTxOs
+    dParameterTokenAmount = case oldDParameterOutput of
+      TransactionOutputWithRefScript
+        { output: TransactionOutput { amount }
+        } → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
+
+  -- if the old D Parameter is exactly the same as the new one, throw an error
+  case oldDParameterOutput of
+    TransactionOutputWithRefScript
+      { output: TransactionOutput { datum: OutputDatum (Datum d) }
+      } → case fromData d of
+      Just (DParameterValidatorDatum dParameter)
+        | dParameter.permissionedCandidatesCount == permissionedCandidatesCount
+            && dParameter.registeredCandidatesCount
+            == registeredCandidatesCount → throwContractError
+            ( show
+                ( InvalidInputError
+                    "Provided values have already been set. Please check."
+                )
+            )
+      _ → pure unit
+    _ → pure unit
 
   when (dParameterTokenAmount <= BigInt.fromInt 0) $
     throwContractError
@@ -234,15 +268,14 @@ mkUpdateDParameterLookupsAndConstraints
 
     lookups ∷ ScriptLookups Void
     lookups = Lookups.validator dParameterValidator
-      <> Lookups.unspentOutputs dParameterUTxOs
+      <> Lookups.unspentOutputs
+        (Map.singleton oldDParameterInput oldDParameterOutput)
       <> governanceLookups
 
     spendScriptOutputConstraints ∷ TxConstraints Void Void
-    spendScriptOutputConstraints =
-      foldMap
-        ( \txInput → Constraints.mustSpendScriptOutput txInput
-            (Redeemer $ toData UpdateDParameter)
-        ) $ Map.keys dParameterUTxOs
+    spendScriptOutputConstraints = Constraints.mustSpendScriptOutput
+      oldDParameterInput
+      (Redeemer $ toData UpdateDParameter)
 
     constraints ∷ TxConstraints Void Void
     constraints =
