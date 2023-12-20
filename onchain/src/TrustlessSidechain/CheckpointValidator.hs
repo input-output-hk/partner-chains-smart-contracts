@@ -195,7 +195,6 @@ mkCheckpointPolicy ichm _red ctx =
         Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
         _ -> False
 
--- CTL hack
 mkCheckpointPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCheckpointPolicyUntyped =
   mkUntypedMintingPolicy

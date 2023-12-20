@@ -36,7 +36,6 @@ mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy
     verifySchnorrSecp256k1Signature
 
--- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped ccm versionOracleConfig =
   mkUntypedMintingPolicy

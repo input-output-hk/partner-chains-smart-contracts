@@ -218,7 +218,6 @@ mkCommitteeOraclePolicy ichm _red ctx =
         Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 
--- CTL hack
 mkCommitteeOraclePolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeOraclePolicyUntyped =
   mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData

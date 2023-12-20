@@ -17,7 +17,6 @@ mkMptRootTokenValidator ::
 mkMptRootTokenValidator _sc _dat _red _ctx =
   Trace.traceError "error 'mkMptRootTokenValidator': illegal attempt to spend"
 
--- CTL hack
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidatorUntyped = mkMptRootTokenValidator . PlutusTx.unsafeFromBuiltinData

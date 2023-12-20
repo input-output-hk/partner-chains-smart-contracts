@@ -36,7 +36,6 @@ mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy
     verifyEcdsaSecp256k1Signature
 
--- CTL hack
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped ccm versionOracleConfig =
   mkUntypedMintingPolicy

@@ -147,7 +147,6 @@ mkPolicy redeemer _context =
     . verifySchnorrSecp256k1Signature (publicKey redeemer) (message redeemer)
     $ signature redeemer
 
--- CTL hack
 untypedPolicy :: BuiltinData -> BuiltinData -> ()
 untypedPolicy = mkUntypedMintingPolicy mkPolicy
 
