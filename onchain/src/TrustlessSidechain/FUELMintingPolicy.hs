@@ -35,11 +35,11 @@ import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTo
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   SidechainParams,
  )
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,

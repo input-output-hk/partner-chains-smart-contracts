@@ -18,11 +18,11 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
   ATMSRedeemer,
   CommitteeCertificateMint,
  )
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Versioning (VersionOracleConfig)
 
 {-# INLINEABLE mkMintingPolicy #-}

@@ -67,14 +67,10 @@ import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
- )
 import TrustlessSidechain.Types (
   SidechainParams,
  )
-import TrustlessSidechain.Utils (fromSingleton)
+import TrustlessSidechain.Utils (fromSingleton, mkUntypedMintingPolicy, mkUntypedValidator)
 
 -- Note [Versioned script identifiers]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

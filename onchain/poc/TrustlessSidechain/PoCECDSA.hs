@@ -10,7 +10,7 @@ import Plutus.V2.Ledger.Contexts (ScriptContext)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 

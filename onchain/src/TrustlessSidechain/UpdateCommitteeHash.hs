@@ -37,7 +37,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy, mkUntypedValidator)
 import TrustlessSidechain.Types (
   UpdateCommitteeDatum,
   UpdateCommitteeHash,
@@ -51,6 +50,7 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashRedeemer,
  )
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy, mkUntypedValidator)
 
 -- * Updating the committee hash
 

@@ -19,7 +19,7 @@ import Plutus.V2.Ledger.Api (Script, ScriptContext, fromCompiledCode)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 

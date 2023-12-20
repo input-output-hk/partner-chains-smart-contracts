@@ -16,8 +16,8 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (CandidatePermissionMint)
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 
 {- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 

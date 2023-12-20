@@ -17,11 +17,8 @@ module TrustlessSidechain.FUELProxyPolicy (
 import Plutus.V2.Ledger.Api
 import PlutusTx
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
-  mkUntypedMintingPolicy,
- )
 import TrustlessSidechain.Types
-import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,

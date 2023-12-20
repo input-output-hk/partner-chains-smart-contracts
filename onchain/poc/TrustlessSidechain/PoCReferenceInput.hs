@@ -38,7 +38,7 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedValidator)
+import TrustlessSidechain.Utils (mkUntypedValidator)
 
 -- * To Reference
 

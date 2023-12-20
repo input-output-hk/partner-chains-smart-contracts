@@ -43,8 +43,8 @@ import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSchnorr qualified as PoCSchnorr
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
 import TrustlessSidechain.ScriptCache qualified as ScriptCache
-import TrustlessSidechain.ScriptUtils (scriptToPlutusScript)
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
+import TrustlessSidechain.Utils (scriptToPlutusScript)
 import TrustlessSidechain.Versioning qualified as Versioning
 
 -- * CLI parsing

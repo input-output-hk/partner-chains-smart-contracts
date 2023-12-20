@@ -12,7 +12,7 @@ import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
 import Plutus.V2.Ledger.Contexts (ScriptContext (ScriptContext), txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 

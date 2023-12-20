@@ -21,10 +21,6 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
- )
 import TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (
     PermissionedCandidatesBurn,
@@ -36,7 +32,7 @@ import TrustlessSidechain.Types (
   ),
   SidechainParams,
  )
-import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
 
 -- OnChain error descriptions:
 --

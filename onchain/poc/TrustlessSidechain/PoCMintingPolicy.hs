@@ -14,9 +14,8 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx (compile)
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (SidechainParams)
-import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 
 {- | Dummy FUEL minting policy for testing purposes.  Allows minting a single
    dummy token.

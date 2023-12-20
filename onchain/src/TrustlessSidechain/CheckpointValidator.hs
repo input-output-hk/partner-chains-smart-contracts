@@ -36,7 +36,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy, mkUntypedValidator)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
   CheckpointDatum,
@@ -52,6 +51,7 @@ import TrustlessSidechain.Types (
   SidechainParams,
   UpdateCommitteeDatum,
  )
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy, mkUntypedValidator)
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData

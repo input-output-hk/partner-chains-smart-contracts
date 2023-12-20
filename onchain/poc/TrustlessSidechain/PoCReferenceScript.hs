@@ -33,7 +33,7 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 

@@ -18,11 +18,11 @@ import Plutus.V2.Ledger.Contexts (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedValidator)
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,
  )
+import TrustlessSidechain.Utils (mkUntypedValidator)
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
 mkCommitteeCandidateValidator ::

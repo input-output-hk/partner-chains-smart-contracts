@@ -67,7 +67,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedMintingPolicy,
   mkUntypedValidator,
  )

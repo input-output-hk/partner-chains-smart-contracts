@@ -97,7 +97,6 @@ library
     TrustlessSidechain.OffChain
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.ScriptCache
-    TrustlessSidechain.ScriptUtils
     TrustlessSidechain.Types
     TrustlessSidechain.UpdateCommitteeHash
     TrustlessSidechain.Utils

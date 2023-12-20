@@ -18,16 +18,12 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
- )
 import TrustlessSidechain.Types (
   DParameterPolicyRedeemer (DParameterBurn, DParameterMint),
   DParameterValidatorRedeemer (RemoveDParameter, UpdateDParameter),
   SidechainParams,
  )
-import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
 
 -- OnChain error descriptions:
 --

@@ -28,7 +28,7 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (
+import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 

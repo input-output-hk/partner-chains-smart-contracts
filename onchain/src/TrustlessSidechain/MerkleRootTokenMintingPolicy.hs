@@ -30,7 +30,6 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.ScriptUtils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
@@ -42,6 +41,7 @@ import TrustlessSidechain.Types (
   SidechainParams,
   SignedMerkleRootRedeemer,
  )
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
