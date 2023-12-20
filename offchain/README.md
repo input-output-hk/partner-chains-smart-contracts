@@ -92,24 +92,30 @@ export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
 Available commands:
 
 ```
-  init-tokens-mint            Pre-mint tokens without setting the inital committee
-  init                        Initialise sidechain
-  addresses                   Get the script addresses for a given sidechain
-  claim-v1                    Claim a FUEL tokens from a proof
-  burn-v1                     Burn a certain amount of FUEL tokens
-  claim-v2                    Claim FUEL tokens from thin air
-  burn-v2                     Burn a certain amount of FUEL tokens
-  register                    Register a committee candidate
-  deregister                  Deregister a committee member
-  candidate-permission-token  Mint candidate permission tokens
-  save-checkpoint             Saving a new checkpoint
-  committee-hash              Update the committee hash
-  save-root                   Saving a new merkle root
-  committee-handover          An alias for saving the merkle root, followed by
-                              updating the committee hash
-  insert-version              Initialize a new protocol version
-  update-version              Update an existing protocol version
-  invalidate-version          Invalidate a protocol version
+  init-tokens-mint                  Pre-mint tokens without setting the inital committee
+  init                              Initialise sidechain
+  addresses                         Get the script addresses for a given sidechain
+  claim-v1                          Claim a FUEL tokens from a proof
+  burn-v1                           Burn a certain amount of FUEL tokens
+  claim-v2                          Claim FUEL tokens from thin air
+  burn-v2                           Burn a certain amount of FUEL tokens
+  register                          Register a committee candidate
+  deregister                        Deregister a committee member
+  candidate-permission-token        Mint candidate permission tokens
+  save-checkpoint                   Saving a new checkpoint
+  committee-hash                    Update the committee hash
+  save-root                         Saving a new merkle root
+  committee-handover                An alias for saving the merkle root, followed by
+                                    updating the committee hash
+  insert-version                    Initialize a new protocol version
+  update-version                    Update an existing protocol version
+  invalidate-version                Invalidate a protocol version
+  insert-d-parameter                Insert an Ariadne d-parameter for the first time for multi-type committee election
+  update-d-parameter                Update an existing D parameter
+  remove-d-parameter                Remove an existing D parameter - WILL ALSO BREAK THE CHAIN
+  update-permissioned-candidates    Update the Permissioned Candidates list
+  collect-garbage                   Burn unneccessary NFTs
+
 ```
 
 #### 3.1.1. Initialising the sidechain
@@ -503,27 +509,7 @@ nix run .#sidechain-main-cli -- remove-d-parameter \
 
 This removes all inserted D parameter values.
 
-#### 3.1.14 Insert a list of permissioned candidates
-
-```
-nix run .#sidechain-main-cli -- insert-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
-```
-
-Insert a new list of permissioned candidates.  Each candidate is listed
-separately using the `--permissioned-candidate-keys` flag followed by a string
-of four keys separated from each other by a single colon.  This command should
-only be used once to initialize the list.  All subsequent updates should be done
-using the `update-permissioned-candidates` command below, though there is no
-safeguard against calling `insert-permissioned-candidates` multiple times.
-
-#### 3.1.15 Update a list of permissioned candidates
+#### 3.1.14 Insert/Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -531,28 +517,17 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
-  --permissioned-candidate-keys "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
+  --add-candidate "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
+  --add-candidate "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
+  --remove-candidate "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
 ```
 
-Replace existing list of permissioned candidates with a new list.  Each
-candidate is listed separately using the `--permissioned-candidate-keys` flag
-followed by a string of four keys separated from each other by a single colon.
-
-#### 3.1.16 Remove all permissioned candidates
-
-```
-nix run .#sidechain-main-cli -- remove-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3
-```
-
-Remove all currently registered permissioned candidates.  If this command is
-called, a new list can only be created using the
-`insert-permissioned-candidates` command above.
+Insert a new list of permissioned candidates, or update an existing one.  
+Each candidate is listed separately using the `--add-candidate` or 
+`--remove-candidate`flag followed by a string of four keys separated from 
+each other by a single colon. Inserting the same candidate multiple times
+will have no effect. Removing a non existing candidate will have no effect
+either.
 
 ### 3.2. Using a configuration file
 
