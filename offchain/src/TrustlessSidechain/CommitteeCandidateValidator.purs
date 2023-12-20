@@ -406,9 +406,8 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
   let
     txInsAndBlockProducerRegistrations = catMaybes
       mayTxInsAndBlockProducerRegistrations
-    ownRegistrationUtxos = map (\(a /\ _) → a) txInsAndBlockProducerRegistrations
-    ownRegistrationDatums = map (\(_ /\ b) → b)
-      txInsAndBlockProducerRegistrations
+    ownRegistrationUtxos = map fst txInsAndBlockProducerRegistrations
+    ownRegistrationDatums = map snd txInsAndBlockProducerRegistrations
   pure $ { ownRegistrationUtxos, ownRegistrationDatums }
 
 -- | Return SPO public key if StakeOwnership is ada based staking. Otherwise, it returns Nothing.
