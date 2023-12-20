@@ -54,7 +54,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            3_412
+            3_407
         , fitsInto
             "mkMintingPolicy (MerkleRoot)"
             Compiled.mkMPMerkleRootCode
@@ -62,7 +62,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            2_808
+            2_803
         , fitsInto
             "mkCommitteeCandidateValidator"
             Compiled.mkCCVCode
@@ -114,11 +114,11 @@ main =
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
-            1582
+            1_582
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_990
+            2_985
         , fitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode
@@ -126,7 +126,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_990
+            2_985
         ]
     , testGroup
         "Distributed set"
