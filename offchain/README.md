@@ -626,14 +626,31 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3 \
-  --add-candidate "MAINCHAIN_KEY_4:SIDECHAIN_KEY_4:AURA_KEY_4:GRANDPA_KEY_4" \
-  --add-candidate "MAINCHAIN_KEY_5:SIDECHAIN_KEY_5:AURA_KEY_5:GRANDPA_KEY_5" \
-  --remove-candidate "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1"
+  --add-candidate "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
+  --add-candidate "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
+  --remove-candidate "MAINCHAIN_KEY_3:SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
 ```
 
-You can add and remove candidates in a single transaction.  Each
-candidate is listed separately using the `--add-candidate` or `--remove-candidate` flag
-followed by a string of four keys separated from each other by a single colon.
+Manage the list of permissioned candidates by inserting new candidates and
+removing already existing ones.  You can add and remove candidates in a single
+transaction.  Each candidate is listed separately using the `--add-candidate` or
+`--remove-candidate` flag followed by a string of four keys separated from each
+other by a single colon.  Inserting the same candidate multiple times will have
+no effect. Removing a non existing candidate will have no effect either.
+
+It is also possible to remove all existing permissioned candidates using the
+`--remove-all-candidates` flag:
+
+```
+nix run .#sidechain-main-cli -- update-permissioned-candidates \
+  --payment-signing-key-file $SIGNING_KEY \
+  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
+  --sidechain-id 1 \
+  --threshold 2/3 \
+  --add-candidate "MAINCHAIN_KEY_1:SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
+  --add-candidate "MAINCHAIN_KEY_2:SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
+  --remove-all-candidates
+```
 
 #### 3.1.20 Remove all permissioned candidates
 
