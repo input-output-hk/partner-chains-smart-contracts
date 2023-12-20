@@ -1,9 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{- | The module 'GetOpts' provides functionality / data types to parse the command line
- arguments
--}
+-- | The module 'GetOpts' provides functionality / data types to parse the command line
+-- arguments
 module GetOpts (
   getOpts,
   Args (..),
@@ -114,9 +113,8 @@ data Command
   | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
   | SidechainKeyCommand {skCommand :: SidechainKeyCommand}
 
-{- | 'SidechainKeyCommand' is for commands related to working with sidechain
- keys
--}
+-- | 'SidechainKeyCommand' is for commands related to working with sidechain
+-- keys
 data SidechainKeyCommand
   = -- | For generating a fresh (with high probability) sidechain private key
     FreshSidechainPrivateKey
@@ -132,9 +130,8 @@ data SidechainKeyCommand
     SidechainPrivateKeyToPublicKey
       {spktpkPrivateKey :: SECP.SecKey}
 
-{- | 'MerkleTreeCommand' is for commands related to creating / querying merkle
- trees.
--}
+-- | 'MerkleTreeCommand' is for commands related to creating / querying merkle
+-- trees.
 data MerkleTreeCommand
   = -- | CLI arguments for creating a merkle tree from merkle entries
     MerkleTreeEntriesCommand
@@ -203,13 +200,12 @@ data GenCliCommand
         iscSidechainEpoch :: Integer
       }
 
-{- | A newtype wrapper around 'MerkleTreeEntry'  to admit json parsing parsing
- as specified in the spec. Note that we use this newtype wrapper because
- 'MerkleTreeEntry's fields use the prefix "mte" to ensure that record names
- are unique so the automagically derived 'parseJSON' will assume the "mte"
- prefixed records are what we want -- but we don't want that and just want
- the record name
--}
+-- | A newtype wrapper around 'MerkleTreeEntry'  to admit json parsing parsing
+-- as specified in the spec. Note that we use this newtype wrapper because
+-- 'MerkleTreeEntry's fields use the prefix "mte" to ensure that record names
+-- are unique so the automagically derived 'parseJSON' will assume the "mte"
+-- prefixed records are what we want -- but we don't want that and just want
+-- the record name
 newtype MerkleTreeEntryJson = MerkleTreeEntryJson MerkleTreeEntry
 
 instance FromJSON MerkleTreeEntryJson where
@@ -228,16 +224,15 @@ instance FromJSON MerkleTreeEntryJson where
 
 -- * CLI parser
 
-{- | Parser info for the CLI arguments i.e., wraps up 'argParser' with some
- extra info.
-
- Note: the return type is @IO Args@ because some CLI commands have an
- alternative "read a file as input" (isntead of over multiple command line
- arguments) and we do the IO to read the files here.
-
- This simplifies the design for phases which process (see the module
- 'GenOutput') this information.
--}
+-- | Parser info for the CLI arguments i.e., wraps up 'argParser' with some
+-- extra info.
+--
+-- Note: the return type is @IO Args@ because some CLI commands have an
+-- alternative "read a file as input" (isntead of over multiple command line
+-- arguments) and we do the IO to read the files here.
+--
+-- This simplifies the design for phases which process (see the module
+-- 'GenOutput') this information.
 opts :: OptParse.ParserInfo (IO Args)
 opts =
   info
@@ -246,9 +241,8 @@ opts =
         <> progDesc "Internal tool for generating trustless sidechain CLI commands"
     )
 
-{- | Parser for the CLI arguments. Aggregates all the parsers together into a
- single parser, and includes a @--help@ parser.
--}
+-- | Parser for the CLI arguments. Aggregates all the parsers together into a
+-- single parser, and includes a @--help@ parser.
 argParser :: OptParse.Parser (IO Args)
 argParser =
   do
@@ -285,9 +279,8 @@ parseMerkleTreeEntry =
         . Char8.pack
     )
 
-{- | 'parseTxOutRef' parses the CLI flag value
- > HEXSTR#UINT
--}
+-- | 'parseTxOutRef' parses the CLI flag value
+-- > HEXSTR#UINT
 parseTxOutRef :: OptParse.ReadM TxOutRef
 parseTxOutRef =
   eitherReader
@@ -303,10 +296,9 @@ parseTxOutRef =
       txIx <- decimal
       pure $ TxOutRef txId txIx
 
-{- | 'parseThreshold' parses the CLI flag value
- > UINT/UINT
- where the second UINT must satisfy > 0.
--}
+-- | 'parseThreshold' parses the CLI flag value
+-- > UINT/UINT
+-- where the second UINT must satisfy > 0.
 parseThreshold :: OptParse.ReadM (Integer, Integer)
 parseThreshold = eitherReader $ parseOnly thresholdParser . Text.pack
   where
@@ -329,17 +321,16 @@ parseSpoPrivKey = eitherReader toSpoPrivKey
         . Base16.decode
         . Char8.pack
 
-{- | 'parseSpoPrivKey' parses the CLI flag value which is an SPO private key
- encoded as cbor hex format.
-
- This is compatible with @cardano-cli@'s output format. In particular, if you
- generate generate a secret key / private key pair with
- > cardano-cli address key-gen \
- >  --verification-key-file payment.vkey \
- >  --signing-key-file payment.skey
- Then, the JSON field @cborHex@ of the JSON object in @payment.skey@ is what
- this will parse.
--}
+-- | 'parseSpoPrivKey' parses the CLI flag value which is an SPO private key
+-- encoded as cbor hex format.
+--
+-- This is compatible with @cardano-cli@'s output format. In particular, if you
+-- generate generate a secret key / private key pair with
+-- > cardano-cli address key-gen \
+-- >  --verification-key-file payment.vkey \
+-- >  --signing-key-file payment.skey
+-- Then, the JSON field @cborHex@ of the JSON object in @payment.skey@ is what
+-- this will parse.
 parseSpoPrivKeyCbor :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
   where
@@ -355,9 +346,8 @@ parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
 parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
 
-{- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
- on the format
--}
+-- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
+-- on the format
 parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
 parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
 
@@ -381,18 +371,16 @@ parsePreviousMerkleRoot =
         . Char8.pack
     )
 
-{- | 'parseMerkleTree' parses a hex encoded, cbored, builtindata representation
- of a merkle tree given as a CLI argument.
--}
+-- | 'parseMerkleTree' parses a hex encoded, cbored, builtindata representation
+-- of a merkle tree given as a CLI argument.
 parseMerkleTree :: OptParse.ReadM MerkleTree
 parseMerkleTree = eitherReader $ \str -> do
   binary <- mapLeft ("Invalid merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
   builtindata :: Builtins.BuiltinData <- mapLeft show $ fmap BuiltinData $ Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
   maybe (Left "'fromBuiltinData' for merkle tree failed") Right $ fromBuiltinData builtindata
 
-{- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
- of a root hash of a merkle tree given as a CLI argument.
--}
+-- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
+-- of a root hash of a merkle tree given as a CLI argument.
 parseRootHash :: OptParse.ReadM LedgerBytes
 parseRootHash =
   eitherReader
@@ -402,17 +390,16 @@ parseRootHash =
         . Char8.pack
     )
 
-{- | 'parseSpoPubKey' parses the CLI flag value which is an SPO public key
- encoded as hex cbor format.
-
- This is compatible with @cardano-cli@'s output format. In particular, if you
- generate generate a secret key / private key pair with
- > cardano-cli address key-gen \
- >  --verification-key-file payment.vkey \
- >  --signing-key-file payment.skey
- Then, the JSON field @cborHex@ of the JSON object in @payment.vkey@ is what
- this will parse.
--}
+-- | 'parseSpoPubKey' parses the CLI flag value which is an SPO public key
+-- encoded as hex cbor format.
+--
+-- This is compatible with @cardano-cli@'s output format. In particular, if you
+-- generate generate a secret key / private key pair with
+-- > cardano-cli address key-gen \
+-- >  --verification-key-file payment.vkey \
+-- >  --signing-key-file payment.skey
+-- Then, the JSON field @cborHex@ of the JSON object in @payment.vkey@ is what
+-- this will parse.
 parseSpoPubKeyCbor :: OptParse.ReadM (VerKeyDSIGN Ed25519DSIGN)
 parseSpoPubKeyCbor = eitherReader toSpoPubKeyCbor
   where
@@ -441,9 +428,8 @@ decodeHash rawParser =
 
 -- * CLI flag parsers.
 
-{- | CLI parser for parsing input for the committee's private keys. Note that
- in the case that we read the committee from a file, we need to do some IO
--}
+-- | CLI parser for parsing input for the committee's private keys. Note that
+-- in the case that we read the committee from a file, we need to do some IO
 currentCommitteePrivateKeysParser :: OptParse.Parser (IO [SECP.SecKey])
 currentCommitteePrivateKeysParser =
   fmap pure {- need to introduce the IO monad-} manyCurrentCommittePrivateKeys
@@ -500,9 +486,8 @@ newCommitteePublicKeysParser =
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
-{- | Parser for parsing a hex encoded CBOR encoded
- 'Plutus.V2.Ledger.Api.Address'
--}
+-- | Parser for parsing a hex encoded CBOR encoded
+-- 'Plutus.V2.Ledger.Api.Address'
 parseValidatorHash :: OptParse.ReadM ValidatorHash
 parseValidatorHash = eitherReader $ \(str :: HString.String) -> do
   decoded <-
@@ -512,10 +497,9 @@ parseValidatorHash = eitherReader $ \(str :: HString.String) -> do
       $ str
   return $ ValidatorHash $ toBuiltin decoded
 
-{- | 'initCommitteePublicKeysParser' is essentially identical to
- 'newCommitteePublicKeysParser' except the help strings / command line flag
- is changed to reflect that this is the inital committee.
--}
+-- | 'initCommitteePublicKeysParser' is essentially identical to
+-- 'newCommitteePublicKeysParser' except the help strings / command line flag
+-- is changed to reflect that this is the inital committee.
 initCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
 initCommitteePublicKeysParser =
   fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
@@ -593,10 +577,9 @@ signingKeyFileParser =
       , help "Path to the signing key file"
       ]
 
-{- | 'genCliCommandHelperParser' factors out the parsing of 'SidechainParams'
- and the signing key file which is common to the parsers that generate a
- subcommand
--}
+-- | 'genCliCommandHelperParser' factors out the parsing of 'SidechainParams'
+-- and the signing key file which is common to the parsers that generate a
+-- subcommand
 genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
@@ -618,9 +601,8 @@ genCliCommandHelperParser = do
 
 -- * Commands for the subparsers
 
-{- | 'registerCommand' is the subparser for gathering the parameters for
- 'RegistrationCommand'.
--}
+-- | 'registerCommand' is the subparser for gathering the parameters for
+-- 'RegistrationCommand'.
 registerCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 registerCommand =
   command "register" $
@@ -679,9 +661,8 @@ deregisterCommand =
         pure $ pure (scParamsAndSigningKeyFunction $ DeregistrationCommand {..})
         <**> helper
 
-{- | 'initSidechainCommand' parses the cli arguments for gathering the
- parameters for initalizing the sidechain
--}
+-- | 'initSidechainCommand' parses the cli arguments for gathering the
+-- parameters for initalizing the sidechain
 initSidechainCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 initSidechainCommand =
   command "init" $
@@ -706,9 +687,8 @@ initSidechainCommand =
           pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
         <**> helper
 
-{- | 'committeeHashCommand' parses the cli arguments for gathering the parameters for
- 'UpdateCommitteeHashCommand'
--}
+-- | 'committeeHashCommand' parses the cli arguments for gathering the parameters for
+-- 'UpdateCommitteeHashCommand'
 updateCommitteeHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 updateCommitteeHashCommand =
   command "committee-hash" $
@@ -750,9 +730,8 @@ updateCommitteeHashCommand =
           pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
         <**> helper
 
-{- | 'saveRootCommand' parses the cli arguments to grab the required parameters for generating a CLI command
- for saving a merkle root
--}
+-- | 'saveRootCommand' parses the cli arguments to grab the required parameters for generating a CLI command
+-- for saving a merkle root
 saveRootCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 saveRootCommand =
   command "save-root" $
@@ -807,9 +786,8 @@ merkleTreeCommand =
         pure $ pure $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
         <**> helper
 
-{- | 'rootHashCommand' parses the cli arguments to grab the root hash from a
- merkle tree
--}
+-- | 'rootHashCommand' parses the cli arguments to grab the root hash from a
+-- merkle tree
 rootHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 rootHashCommand =
   command "root-hash" $
@@ -827,9 +805,8 @@ rootHashCommand =
         pure $ pure $ MerkleTreeCommand $ RootHashCommand {..}
         <**> helper
 
-{- | 'combinedMerkleProofCommand' parses the cli arguments to grab the 'CombinedMerkleProof' from a merkle
- tree entry, and a merkle tree
--}
+-- | 'combinedMerkleProofCommand' parses the cli arguments to grab the 'CombinedMerkleProof' from a merkle
+-- tree entry, and a merkle tree
 combinedMerkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 combinedMerkleProofCommand =
   command "combined-merkle-proof" $
@@ -856,9 +833,8 @@ combinedMerkleProofCommand =
         pure $ pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
         <**> helper
 
-{- | 'merkleProofCommand' parses the cli arguments to grab the merkle proof
- from a merkle tree and merkle tree entry
--}
+-- | 'merkleProofCommand' parses the cli arguments to grab the merkle proof
+-- from a merkle tree and merkle tree entry
 merkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 merkleProofCommand =
   command "merkle-proof" $
@@ -885,9 +861,8 @@ merkleProofCommand =
         pure $ pure $ MerkleTreeCommand $ MerkleProofCommand {..}
         <**> helper
 
-{- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
- fresh sidechain private key
--}
+-- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
+-- fresh sidechain private key
 freshSidechainPrivateKeyCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 freshSidechainPrivateKeyCommand =
   command "fresh-sidechain-private-key" $
@@ -898,9 +873,8 @@ freshSidechainPrivateKeyCommand =
         pure $ pure $ SidechainKeyCommand FreshSidechainPrivateKey
         <**> helper
 
-{- | 'freshSidechainCommittee' parses the cli arguments for generating a Json file
- output of a sidechain committee
--}
+-- | 'freshSidechainCommittee' parses the cli arguments for generating a Json file
+-- output of a sidechain committee
 freshSidechainCommittee :: OptParse.Mod OptParse.CommandFields (IO Command)
 freshSidechainCommittee = do
   command "fresh-sidechain-committee" $
@@ -934,9 +908,8 @@ freshSidechainCommittee = do
                 | otherwise -> Left "Invalid character"
        in List.foldl' go (Right 0)
 
-{- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
- fresh sidechain private key
--}
+-- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
+-- fresh sidechain private key
 sidechainPrivateKeyToPublicKeyCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 sidechainPrivateKeyToPublicKeyCommand =
   command "sidechain-private-key-to-public-key" $

@@ -1,9 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
-{- | The module 'GenOutput' provides functionality to take the given parsed
- data from the module 'GetOpts', and create the appropriate output to display
- to the user.
--}
+-- | The module 'GenOutput' provides functionality to take the given parsed
+-- data from the module 'GetOpts', and create the appropriate output to display
+-- to the user.
 module GenOutput (genCliCommand, merkleTreeCommand, sidechainKeyCommand) where
 
 import Control.Exception (ioError)
@@ -104,9 +103,8 @@ import TrustlessSidechain.Types (
 
 -- * Main driver functions for generating output
 
-{- | Generates the corresponding CLI command for the purescript
- function.
--}
+-- | Generates the corresponding CLI command for the purescript
+-- function.
 genCliCommand ::
   -- | the signing key file (private key) of the wallet used to sign
   -- transaction on cardano.
@@ -238,11 +236,10 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                   <> [["--merkle-root", show srcMerkleRoot]]
                   <> maybe [] (\bs -> [["--previous-merkle-root", show bs]]) srcPreviousMerkleRoot
 
-{- | 'merkleTreeCommand' creates output for the merkle tree commands.
-
- Note: this is in the IO monad to propogate errors via exceptions that may
- occur from malformed user data.
--}
+-- | 'merkleTreeCommand' creates output for the merkle tree commands.
+--
+-- Note: this is in the IO monad to propogate errors via exceptions that may
+-- occur from malformed user data.
 merkleTreeCommand :: MerkleTreeCommand -> IO HString.String
 merkleTreeCommand = \case
   MerkleTreeEntriesCommand {..} ->
@@ -267,12 +264,11 @@ merkleTreeCommand = \case
               , merkleProof = mp
               }
 
-{- | 'sidechainKeyCommand' creates the output for commands relating to the
- sidechain keys.
-
- Note: this is in the IO monad because generating fresh private keys is an IO
- action.
--}
+-- | 'sidechainKeyCommand' creates the output for commands relating to the
+-- sidechain keys.
+--
+-- Note: this is in the IO monad because generating fresh private keys is an IO
+-- action.
 sidechainKeyCommand :: SidechainKeyCommand -> IO HString.String
 sidechainKeyCommand = \case
   FreshSidechainPrivateKey -> OffChain.showSecpPrivKey <$> OffChain.generateRandomSecpPrivKey

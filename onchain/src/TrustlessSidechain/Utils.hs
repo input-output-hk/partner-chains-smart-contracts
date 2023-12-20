@@ -35,9 +35,8 @@ currencySymbolValueOf v c = case Map.lookup c (getValue v) of
   Nothing -> 0
   Just x -> sum (Map.elems x)
 
-{- | Convert a validator to untyped
- The output will accept BuiltinData instead of concrete types
--}
+-- | Convert a validator to untyped
+-- The output will accept BuiltinData instead of concrete types
 {-# INLINE mkUntypedValidator #-}
 mkUntypedValidator ::
   forall (d :: Type) (r :: Type).
@@ -49,9 +48,8 @@ mkUntypedValidator ::
 mkUntypedValidator f d r p =
   check $ f (unsafeFromBuiltinData d) (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
 
-{- | Convert a minting policy to untyped
- The output will accept BuiltinData instead of concrete types
--}
+-- | Convert a minting policy to untyped
+-- The output will accept BuiltinData instead of concrete types
 {-# INLINE mkUntypedMintingPolicy #-}
 mkUntypedMintingPolicy ::
   forall (r :: Type).

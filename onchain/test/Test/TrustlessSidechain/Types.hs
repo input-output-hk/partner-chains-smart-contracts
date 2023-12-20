@@ -171,11 +171,10 @@ import TrustlessSidechain.Types (
   ),
  )
 
-{- | Tests for all data types with @IsData@ implementation
- Some of the data types are only checked transitively (included by some other type)
-
- In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
--}
+-- | Tests for all data types with @IsData@ implementation
+-- Some of the data types are only checked transitively (included by some other type)
+--
+-- In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
 tests :: TestTree
 tests =
   testGroup
@@ -550,13 +549,12 @@ sampleATMSRedeemer1 = ATMSMint sampleATMSPlainMultisignature
 sampleATMSRedeemer2 :: ATMSRedeemer
 sampleATMSRedeemer2 = ATMSBurn
 
-{- | Creating a test group with two golden tests:
- - encoding data using `toBuiltinData`
- - serialising BuiltinData to CBOR
-
- Results of the tests are compared to the files under ./test/golden/*.golden
- If no file exists for the given data type, a new one will be created automatically
--}
+-- | Creating a test group with two golden tests:
+-- - encoding data using `toBuiltinData`
+-- - serialising BuiltinData to CBOR
+--
+-- Results of the tests are compared to the files under ./test/golden/*.golden
+-- If no file exists for the given data type, a new one will be created automatically
 dataEncoderGoldenTest :: ToData a => HString.String -> a -> TestTree
 dataEncoderGoldenTest name sampleData =
   let builtinData = toBuiltinData sampleData

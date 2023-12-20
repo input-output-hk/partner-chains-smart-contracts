@@ -154,25 +154,22 @@ PlutusTx.makeLift ''InitCheckpointMint
 -- | @since v4.0.0
 makeHasField ''InitCheckpointMint
 
-{- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
- the utxo which contains the checkpoint. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
+-- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
+-- the utxo which contains the checkpoint. We use an empty bytestring for
+-- this because the name really doesn't matter, so we mighaswell save a few
+-- bytes by giving it the empty name.
 {-# INLINEABLE initCheckpointMintTn #-}
 initCheckpointMintTn :: TokenName
 initCheckpointMintTn = TokenName Builtins.emptyByteString
 
-{- | 'initCheckpointMintAmount' is the amount of the currency to mint which
- is 1.
--}
+-- | 'initCheckpointMintAmount' is the amount of the currency to mint which
+-- is 1.
 {-# INLINEABLE initCheckpointMintAmount #-}
 initCheckpointMintAmount :: Integer
 initCheckpointMintAmount = 1
 
-{- | 'mkCheckpointPolicy' is the minting policy for the NFT which identifies
- the checkpoint
--}
+-- | 'mkCheckpointPolicy' is the minting policy for the NFT which identifies
+-- the checkpoint
 {-# INLINEABLE mkCheckpointPolicy #-}
 mkCheckpointPolicy :: InitCheckpointMint -> () -> ScriptContext -> Bool
 mkCheckpointPolicy ichm _red ctx =

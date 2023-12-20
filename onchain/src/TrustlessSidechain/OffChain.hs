@@ -1,12 +1,11 @@
 {-# LANGUAGE RecordWildCards #-}
 
-{- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
- functionality. In particular, we provide utilities for generating signatures
- / related messages for the system. This is useful for testing the system
- externally.
-
- See: the executable `trustless-sidechain-gen-signatures`
--}
+-- | 'TrustlessSidechain.OffChain' provides utilities for doing offchain
+-- functionality. In particular, we provide utilities for generating signatures
+-- / related messages for the system. This is useful for testing the system
+-- externally.
+--
+-- See: the executable `trustless-sidechain-gen-signatures`
 module TrustlessSidechain.OffChain (
   Bech32Recipient (bech32RecipientBytes),
   signWithSPOKey,
@@ -94,9 +93,8 @@ import TrustlessSidechain.Types (
 --      about although it doesn't explicitly say that):
 --      https://cips.cardano.org/cips/cip19/
 
-{- | 'Bech32' is a thin wrapper around decoding a bech32 encoded value. See the
- bitcoin reference [3] for more details on the encoding.
--}
+-- | 'Bech32' is a thin wrapper around decoding a bech32 encoded value. See the
+-- bitcoin reference [3] for more details on the encoding.
 data Bech32 = Bech32
   { bech32HumanReadablePart :: HumanReadablePart
   , bech32DataPart :: DataPart
@@ -107,15 +105,14 @@ data Bech32 = Bech32
 bech32DataPartBytes :: Bech32 -> Maybe ByteString
 bech32DataPartBytes = Bech32.dataPartToBytes . bech32DataPart
 
-{- | 'Bech32Recipient' is a newtype wrapper around the binary data part of
- specialized Bech32 type meant to only represent recipients on the main chain...
-
- In particular, we verify that the human readable part is @addr@ or @addr_test@.
- See Discussion on prefixes in Cardano [2]
-
- This exists so we can parse
- JSON of 'TrustlessSidechain.Types.MerkleTreeEntry'...
--}
+-- | 'Bech32Recipient' is a newtype wrapper around the binary data part of
+-- specialized Bech32 type meant to only represent recipients on the main chain...
+--
+-- In particular, we verify that the human readable part is @addr@ or @addr_test@.
+-- See Discussion on prefixes in Cardano [2]
+--
+-- This exists so we can parse
+-- JSON of 'TrustlessSidechain.Types.MerkleTreeEntry'...
 newtype Bech32Recipient = Bech32Recipient {bech32RecipientBytes :: BuiltinByteString}
   deriving (Show, Eq)
 
@@ -160,11 +157,10 @@ data SidechainCommitteeMember = SidechainCommitteeMember
     scmPublicKey :: EcdsaSecp256k1PubKey
   }
 
-{- | 'SidechainCommittee' is a newtype wrapper around a lsit of
- @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
- members (i.e., the 'Data.Aeson.FromJSON' is a derived via the newtype
- wrapper)
--}
+-- | 'SidechainCommittee' is a newtype wrapper around a lsit of
+-- @[SidechainCommitteeMember]@ to provide JSON parsing of a list of committee
+-- members (i.e., the 'Data.Aeson.FromJSON' is a derived via the newtype
+-- wrapper)
 newtype SidechainCommittee = SidechainCommittee
   {unSidechainCommittee :: [SidechainCommitteeMember]}
   deriving newtype (FromJSON, ToJSON)
@@ -217,10 +213,9 @@ strToSecpPrivKey raw = do
       $ raw
   maybe (Left "Unable to parse sidechain private key") Right $ SECP.secKey decoded
 
-{- | Parses a hex encoded string into a sidechain public key. Note that this
- uses 'Crypto.Secp256k1.importPubKey' which imports a DER-encoded
- public key.
--}
+-- | Parses a hex encoded string into a sidechain public key. Note that this
+-- uses 'Crypto.Secp256k1.importPubKey' which imports a DER-encoded
+-- public key.
 strToSecpPubKey ::
   HaskellString.String ->
   Either HaskellString.String SECP.PubKey
@@ -234,30 +229,29 @@ strToSecpPubKey raw = do
 
 -- * Generating a private sidechain key
 
-{- | Generates a random sidechain private key.
-
- The implementation is a translation of the underlying example in the C
- library: https://github.com/bitcoin-core/secp256k1/blob/master/examples/ecdsa.c
- where we use the module 'Crypto.Random' from cryptonite to handle the cross
- platform random bytestring generation
-
- Surprisingly, the Haskell library we're using doesn't include a nice wrapper
- for this, so we do it ourselves I guess.
-
- Some implementation notes:
-
-      - We use the default context 'Crypto.Secp256k1.Internal.ctx' which is
-      thread safe and used internally for precomputed values (and adding
-      randomization to prevent side channel attacks)
-
-      - As given in the C example, we loop forever until we find a "valid"
-      key i.e., a non-zero key smaller than the group's order (see
-      [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)...
-      Ostensibly, the probability of a secret key being "invalid" is
-      neglible, so we _expect_ this loop to run at most once.
-
- TODO: might be a good idea to put this in a newtype wrapper...
--}
+-- | Generates a random sidechain private key.
+--
+-- The implementation is a translation of the underlying example in the C
+-- library: https://github.com/bitcoin-core/secp256k1/blob/master/examples/ecdsa.c
+-- where we use the module 'Crypto.Random' from cryptonite to handle the cross
+-- platform random bytestring generation
+--
+-- Surprisingly, the Haskell library we're using doesn't include a nice wrapper
+-- for this, so we do it ourselves I guess.
+--
+-- Some implementation notes:
+--
+--      - We use the default context 'Crypto.Secp256k1.Internal.ctx' which is
+--      thread safe and used internally for precomputed values (and adding
+--      randomization to prevent side channel attacks)
+--
+--      - As given in the C example, we loop forever until we find a "valid"
+--      key i.e., a non-zero key smaller than the group's order (see
+--      [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)...
+--      Ostensibly, the probability of a secret key being "invalid" is
+--      neglible, so we _expect_ this loop to run at most once.
+--
+-- TODO: might be a good idea to put this in a newtype wrapper...
 generateRandomSecpPrivKey :: IO SECP.SecKey
 generateRandomSecpPrivKey =
   let go = do
@@ -287,10 +281,9 @@ signWithSPOKey skey msg =
         . rawSerialiseSigDSIGN
         $ signDSIGN () serialised skey
 
-{- | Given a @message@, converts the @message@ to the 'BuiltinData'
- representation, seralises to cbor, then takes the @blake2b_256@ hash.
- Finally, this signs the hash with the given SECP256K1 key
--}
+-- | Given a @message@, converts the @message@ to the 'BuiltinData'
+-- representation, seralises to cbor, then takes the @blake2b_256@ hash.
+-- Finally, this signs the hash with the given SECP256K1 key
 signWithSidechainKey ::
   ToData a =>
   SECP.SecKey ->
@@ -328,9 +321,8 @@ showBuiltinBS = showBS . Builtins.fromBuiltin
 showSecpPrivKey :: SECP.SecKey -> HaskellString.String
 showSecpPrivKey = showBS . SECP.getSecKey
 
-{- | Serialise a sidechain public key and signature into
- > PUBKEY:SIG
--}
+-- | Serialise a sidechain public key and signature into
+-- > PUBKEY:SIG
 showScPubKeyAndSig ::
   EcdsaSecp256k1PubKey ->
   Signature ->
@@ -338,39 +330,34 @@ showScPubKeyAndSig ::
 showScPubKeyAndSig sckey sig =
   concat [show sckey, ":", show sig]
 
-{- | 'showThreshold' shows integers @n@ and @m@ as
- > n/m
- Importantly, this is compatible with the purescript parser format
--}
+-- | 'showThreshold' shows integers @n@ and @m@ as
+-- > n/m
+-- Importantly, this is compatible with the purescript parser format
 showThreshold ::
   Integer ->
   Integer ->
   HaskellString.String
 showThreshold n m = show n <> "/" <> show m
 
-{- | 'showMerkleTree' seralises a merkle tree to the hex encoded cbor builtin
- data representation
--}
+-- | 'showMerkleTree' seralises a merkle tree to the hex encoded cbor builtin
+-- data representation
 showMerkleTree :: MerkleTree -> HaskellString.String
 showMerkleTree = showHexOfCborBuiltinData
 
-{- | 'showMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
- data representation
--}
+-- | 'showMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
+-- data representation
 showMerkleProof :: MerkleProof -> HaskellString.String
 showMerkleProof = showHexOfCborBuiltinData
 
-{- | 'showCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
- cbor builtin data representation
--}
+-- | 'showCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
+-- cbor builtin data representation
 showCombinedMerkleProof :: CombinedMerkleProof -> HaskellString.String
 showCombinedMerkleProof = showHexOfCborBuiltinData
 
-{- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
- BuiltinData representation of the given argument.
-
- Many serialization mechanisms are an alias of this.
--}
+-- | 'showHexOfCborBuiltinData' shows the hex of the cbor serialized
+-- BuiltinData representation of the given argument.
+--
+-- Many serialization mechanisms are an alias of this.
 showHexOfCborBuiltinData ::
   forall (a :: Type).
   ToData a =>

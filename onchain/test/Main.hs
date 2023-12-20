@@ -11,10 +11,9 @@ import TrustlessSidechain.HaskellPrelude
 main :: IO ()
 main = defaultMain tests
 
-{- | Project wide tests
-
- @since 0.1
--}
+-- | Project wide tests
+--
+-- @since 0.1
 tests :: TestTree
 tests =
   testGroup

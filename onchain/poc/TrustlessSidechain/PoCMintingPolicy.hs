@@ -17,12 +17,11 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 
-{- | Dummy FUEL minting policy for testing purposes.  Allows minting a single
-   dummy token.
-
- Note: this policy does not allow to burn transaction tokens, but we might
- wish to do so in order to allow recovering minAda.
--}
+-- | Dummy FUEL minting policy for testing purposes.  Allows minting a single
+--   dummy token.
+--
+-- Note: this policy does not allow to burn transaction tokens, but we might
+-- wish to do so in order to allow recovering minAda.
 mkPoCMintingPolicy ::
   SidechainParams ->
   () -> -- no redeemer

@@ -9,9 +9,8 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
 import Prelude
 
-{- | Derive a HasField instance for a given data type declaration.  Works only
- for single-constructor data types and newtypes.
--}
+-- | Derive a HasField instance for a given data type declaration.  Works only
+-- for single-constructor data types and newtypes.
 makeHasField :: Name -> Q [Dec]
 makeHasField name = do
   dataTypeInfo <- reifyDatatype name

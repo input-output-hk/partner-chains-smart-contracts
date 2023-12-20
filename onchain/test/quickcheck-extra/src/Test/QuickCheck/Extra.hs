@@ -1,14 +1,13 @@
 {-# LANGUAGE MultiWayIf #-}
 
-{- | Module: Test.QuickCheck.Extra
- Description: Some improved versions and helpers for QuickCheck functions
- Copyright: (C) MLabs 2023
- Mainainter: Koz Ross (koz@mlabs.city)
- Portability: GHC only
-
- Some functions designed to supercede equivalent functionality from
- QuickCheck, for reasons of efficiency or safety.
--}
+-- | Module: Test.QuickCheck.Extra
+-- Description: Some improved versions and helpers for QuickCheck functions
+-- Copyright: (C) MLabs 2023
+-- Mainainter: Koz Ross (koz@mlabs.city)
+-- Portability: GHC only
+--
+-- Some functions designed to supercede equivalent functionality from
+-- QuickCheck, for reasons of efficiency or safety.
 module Test.QuickCheck.Extra (
   -- * Generators
   suchThat,
@@ -77,11 +76,10 @@ import Test.QuickCheck.Poly (A (A))
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 
-{- | Wrapper for 'AssetClass' to provide QuickCheck instances. Currently will
- not generate the ADA asset class.
-
- @since v4.0.0
--}
+-- | Wrapper for 'AssetClass' to provide QuickCheck instances. Currently will
+-- not generate the ADA asset class.
+--
+-- @since v4.0.0
 newtype ArbitraryAssetClass = ArbitraryAssetClass AssetClass
   deriving
     ( -- | @since v4.0.0
@@ -133,13 +131,12 @@ instance Function ArbitraryAssetClass where
       outOf (ArbitraryCurrencySymbol sym, ArbitraryTokenName tok) =
         ArbitraryAssetClass (AssetClass (sym, tok))
 
-{- | Wrapper for 'TokenName' to provide QuickCheck instances. Currently only
- generates those 'TokenName's that correspond to ASCII strings; this is
- somewhat limited, but anything more would complicate the shrinker too much,
- as it would require re-encoding.
-
- @since v4.0.0
--}
+-- | Wrapper for 'TokenName' to provide QuickCheck instances. Currently only
+-- generates those 'TokenName's that correspond to ASCII strings; this is
+-- somewhat limited, but anything more would complicate the shrinker too much,
+-- as it would require re-encoding.
+--
+-- @since v4.0.0
 newtype ArbitraryTokenName = ArbitraryTokenName TokenName
   deriving
     ( -- | @since v4.0.0
@@ -190,10 +187,9 @@ instance Function ArbitraryTokenName where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Similar to 'A', but with 'Data'-related instances included.
-
- @since v4.0.0
--}
+-- | Similar to 'A', but with 'Data'-related instances included.
+--
+-- @since v4.0.0
 newtype DA = DA A
   deriving
     ( -- | @since v4.0.0
@@ -224,10 +220,9 @@ newtype DA = DA A
 instance Function DA where
   function = functionMap (coerce @DA @A) coerce
 
-{- | Wrapper for 'StakingCredential' to provide Quickcheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'StakingCredential' to provide Quickcheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryStakingCredential = ArbitraryStakingCredential StakingCredential
   deriving
     ( -- | @since v4.0.0
@@ -292,10 +287,9 @@ instance Function ArbitraryStakingCredential where
           Left (ArbitraryCredential cred) -> StakingHash cred
           Right (i, j, k) -> StakingPtr (fromIntegral i) (fromIntegral j) (fromIntegral k)
 
-{- | Wrapper for 'Credential' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'Credential' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryCredential = ArbitraryCredential Credential
   deriving
     ( -- | @since v4.0.0
@@ -356,10 +350,9 @@ instance Function ArbitraryCredential where
           Left (ArbitraryPubKeyHash pkh) -> PubKeyCredential pkh
           Right (ArbitraryValidatorHash vh) -> ScriptCredential vh
 
-{- | Wrapper for 'Address' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'Address' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryAddress = ArbitraryAddress Address
   deriving
     ( -- | @since v4.0.0
@@ -375,10 +368,9 @@ newtype ArbitraryAddress = ArbitraryAddress Address
       Show
     )
 
-{- | Does not shrink, as it wouldn't make sense to.
-
- @since v4.0.0
--}
+-- | Does not shrink, as it wouldn't make sense to.
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryAddress where
   arbitrary =
     ArbitraryAddress <$> do
@@ -411,10 +403,9 @@ instance Function ArbitraryAddress where
           Nothing -> Nothing
           Just (ArbitraryStakingCredential scred') -> Just scred'
 
-{- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
   deriving
     ( -- | @since v4.0.0
@@ -432,10 +423,9 @@ newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
       Show
     )
 
-{- | Does not shrink, as it doesn't make much sense to.
-
- @since v4.0.0
--}
+-- | Does not shrink, as it doesn't make much sense to.
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
     ArbitraryPubKeyHash
@@ -463,10 +453,9 @@ instance Function ArbitraryPubKeyHash where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
   deriving
     ( -- | @since v4.0.0
@@ -484,11 +473,10 @@ newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
       Show
     )
 
-{- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
- much sense to).
-
- @since v4.0.0
--}
+-- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
+-- much sense to).
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
     ArbitraryCurrencySymbol
@@ -516,10 +504,9 @@ instance Function ArbitraryCurrencySymbol where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Wrapper for 'ValidatorHash' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'ValidatorHash' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryValidatorHash = ArbitraryValidatorHash ValidatorHash
   deriving
     ( -- | @since v4.0.0
@@ -537,11 +524,10 @@ newtype ArbitraryValidatorHash = ArbitraryValidatorHash ValidatorHash
       Show
     )
 
-{- | Does not shrink (it wouldn't make
- much sense to).
-
- @since v4.0.0
--}
+-- | Does not shrink (it wouldn't make
+-- much sense to).
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryValidatorHash where
   arbitrary =
     ArbitraryValidatorHash
@@ -569,10 +555,9 @@ instance Function ArbitraryValidatorHash where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Wrapper for 'TxId' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'TxId' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryTxId = ArbitraryTxId TxId
   deriving
     ( -- | @since v4.0.0
@@ -590,10 +575,9 @@ newtype ArbitraryTxId = ArbitraryTxId TxId
       Show
     )
 
-{- | Does not shrink, as this is a fixed-width hash.
-
- @since v4.0.0
--}
+-- | Does not shrink, as this is a fixed-width hash.
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryTxId where
   arbitrary =
     ArbitraryTxId <$> do
@@ -619,10 +603,9 @@ instance Function ArbitraryTxId where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Wrapper for 'TxOutRef' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'TxOutRef' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryTxOutRef = ArbitraryTxOutRef TxOutRef
   deriving
     ( -- | @since v4.0.0
@@ -666,11 +649,10 @@ instance Function ArbitraryTxOutRef where
       outOf (ArbitraryTxId tid, tidx) =
         ArbitraryTxOutRef . TxOutRef tid $ tidx
 
-{- | Wrapper for 'LedgerBytes' to provide QuickCheck instances. This assumes any
- kind of bytestring is OK.
-
- @since v4.0.0
--}
+-- | Wrapper for 'LedgerBytes' to provide QuickCheck instances. This assumes any
+-- kind of bytestring is OK.
+--
+-- @since v4.0.0
 newtype ArbitraryBytes = ArbitraryBytes LedgerBytes
   deriving
     ( -- | @since v4.0.0
@@ -723,12 +705,11 @@ instance Function ArbitraryBytes where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
-{- | Same as 'Test.QuickCheck.Gen.suchThat', but has a retry limit of 100; if it
- fails to generate a satisfactory @a@ within that many attempts, the
- generator will error out, and notify the user of this.
-
- @since v3.0.0.
--}
+-- | Same as 'Test.QuickCheck.Gen.suchThat', but has a retry limit of 100; if it
+-- fails to generate a satisfactory @a@ within that many attempts, the
+-- generator will error out, and notify the user of this.
+--
+-- @since v3.0.0.
 suchThat ::
   forall (a :: Type).
   Gen a ->
@@ -736,12 +717,11 @@ suchThat ::
   Gen a
 suchThat = suchThatRetrying 100
 
-{- | Same as 'Test.QuickCheck.Gen.suchThatMap', but has a retry limit of 100; if
- it fails to generate a 'Just' within that many attempts, the generator will
- error out, and notify the user of this.
-
- @since v3.0.0.
--}
+-- | Same as 'Test.QuickCheck.Gen.suchThatMap', but has a retry limit of 100; if
+-- it fails to generate a 'Just' within that many attempts, the generator will
+-- error out, and notify the user of this.
+--
+-- @since v3.0.0.
 suchThatMap ::
   forall (a :: Type) (b :: Type).
   Gen a ->
@@ -749,10 +729,9 @@ suchThatMap ::
   Gen b
 suchThatMap = suchThatMapRetrying 100
 
-{- | As 'suchThat', but allows setting the retry limit explicitly.
-
- @since v3.0.0.
--}
+-- | As 'suchThat', but allows setting the retry limit explicitly.
+--
+-- @since v3.0.0.
 suchThatRetrying ::
   forall (a :: Type).
   Word ->
@@ -771,10 +750,9 @@ suchThatRetrying limit gen p = sized (go 0)
     errorOut :: Gen a
     errorOut = error $ "suchThat exceeded retry limit: " <> show limit
 
-{- | As 'suchThatMap', but allows setting the retry limit explicitly.
-
- @since v3.0.0.
--}
+-- | As 'suchThatMap', but allows setting the retry limit explicitly.
+--
+-- @since v3.0.0.
 suchThatMapRetrying ::
   forall (a :: Type) (b :: Type).
   Word ->
@@ -796,10 +774,9 @@ suchThatMapRetrying limit gen k = sized (go 0)
     errorOut :: Gen b
     errorOut = error $ "suchThatMap exceeded retry limit: " <> show limit
 
-{- | As 'Test.QuickCheck.Gen.sublistOf', but about faster by a factor of 2-3.
-
- @since v3.0.0.
--}
+-- | As 'Test.QuickCheck.Gen.sublistOf', but about faster by a factor of 2-3.
+--
+-- @since v3.0.0.
 sublistOf ::
   forall (a :: Type).
   [a] ->

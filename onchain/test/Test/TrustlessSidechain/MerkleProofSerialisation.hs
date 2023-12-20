@@ -46,9 +46,8 @@ unsafeFromHex bs = case Bytes.fromHex bs of
     BuiltinByteString bs'' -> bs''
   Left err -> TSPrelude.error (TSPrelude.show err)
 
-{- | 'testSide' includes some integration tests with the mamba people for #249
- for the 'Side' type
--}
+-- | 'testSide' includes some integration tests with the mamba people for #249
+-- for the 'Side' type
 testSide :: TestTree
 testSide =
   Tasty.testGroup
@@ -81,9 +80,8 @@ testSide =
          in expected HUnit.@=? actual
     ]
 
-{- | 'testRootHash' includes some integration tests with the mamba people for #249
- for the 'Side' type
--}
+-- | 'testRootHash' includes some integration tests with the mamba people for #249
+-- for the 'Side' type
 testRootHash :: TestTree
 testRootHash =
   Tasty.testGroup

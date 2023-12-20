@@ -1,8 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
-{- | "Ctl" defines a monad which allows one to conveniently call CLI ctl
- commands / generate required data.
--}
+-- | "Ctl" defines a monad which allows one to conveniently call CLI ctl
+-- commands / generate required data.
 module Ctl (
   CtlRegistration (..),
   CtlDeregistration (..),
@@ -120,19 +119,18 @@ newtype CtlClaim = CtlClaim
 
 --
 
-{- $ctlFlags
- These functions provide a means to generate the flags for each CTL command.
- As an example use case, if we wanted to generate the complete CLI command
- for intializing the Sidechain, we'd type something like:
- @
- Data.List.intercalate " "
-  $ concat
-      [ [ "nix run .#sidechain-main-cli --" ]
-      , ctlInitSidechainFlags (CtlInitSidechain{ {\- initalize this.. -\} })
-      , ctlCommonFlags (CtlCommon{ {\- initalize this.. -\} })
-      ]
- @
--}
+-- $ctlFlags
+-- These functions provide a means to generate the flags for each CTL command.
+-- As an example use case, if we wanted to generate the complete CLI command
+-- for intializing the Sidechain, we'd type something like:
+-- @
+-- Data.List.intercalate " "
+--  $ concat
+--      [ [ "nix run .#sidechain-main-cli --" ]
+--      , ctlInitSidechainFlags (CtlInitSidechain{ {\- initalize this.. -\} })
+--      , ctlCommonFlags (CtlCommon{ {\- initalize this.. -\} })
+--      ]
+-- @
 
 --  | 'CtlCommon' provides the data of required flags for every CTL command.
 data CtlCommon = CtlCommon
@@ -142,9 +140,8 @@ data CtlCommon = CtlCommon
     ccSidechainParams :: SidechainParams
   }
 
-{- | 'ctlCommonFlags' generates the CLI flags that corresponds to sidechain
- parameters
--}
+-- | 'ctlCommonFlags' generates the CLI flags that corresponds to sidechain
+-- parameters
 ctlCommonFlags :: CtlCommon -> [HString.String]
 ctlCommonFlags CtlCommon {..} =
   let SidechainParams {..} = ccSidechainParams
@@ -157,9 +154,8 @@ ctlCommonFlags CtlCommon {..} =
         , ["--threshold", OffChain.showThreshold thresholdNumerator thresholdDenominator]
         ]
 
-{- | 'ctlInitSidechainFlags' generates the CLI flags that corresponds to init
- sidechain command
--}
+-- | 'ctlInitSidechainFlags' generates the CLI flags that corresponds to init
+-- sidechain command
 ctlInitSidechainFlags :: CtlInitSidechain -> [HString.String]
 ctlInitSidechainFlags CtlInitSidechain {..} =
   fmap List.unwords $
@@ -171,9 +167,8 @@ ctlInitSidechainFlags CtlInitSidechain {..} =
         \pubKey ->
           ["--committee-pub-key", show pubKey]
 
-{- | 'ctlRegistrationFlags' generates the CLI flags that corresponds to register
- command
--}
+-- | 'ctlRegistrationFlags' generates the CLI flags that corresponds to register
+-- command
 ctlRegistrationFlags :: SidechainParams -> CtlRegistration -> [HString.String]
 ctlRegistrationFlags scParams CtlRegistration {..} =
   let msg =
@@ -191,9 +186,8 @@ ctlRegistrationFlags scParams CtlRegistration {..} =
         , ["--registration-utxo", show crRegistrationUtxo]
         ]
 
-{- | 'ctlDeregistrationFlags' generates the CLI flags that corresponds to deregister
- command
--}
+-- | 'ctlDeregistrationFlags' generates the CLI flags that corresponds to deregister
+-- command
 ctlDeregistrationFlags :: CtlDeregistration -> [HString.String]
 ctlDeregistrationFlags CtlDeregistration {..} =
   fmap
@@ -202,9 +196,8 @@ ctlDeregistrationFlags CtlDeregistration {..} =
     , ["--spo-public-key", show $ OffChain.vKeyToSpoPubKey cdrSpoPubKey]
     ]
 
-{- | 'ctlUpdateCommitteeHash' generates the CLI flags that corresponds to the
- update committee hash command
--}
+-- | 'ctlUpdateCommitteeHash' generates the CLI flags that corresponds to the
+-- update committee hash command
 ctlUpdateCommitteeHash :: SidechainParams -> CtlUpdateCommitteeHash -> [HString.String]
 ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
   let msg =
@@ -250,9 +243,8 @@ ctlUpdateCommitteeHash scParams CtlUpdateCommitteeHash {..} =
             (\bs -> [["--previous-merkle-root", show $ unRootHash bs]])
             cuchPreviousMerkleRoot
 
-{- | 'ctlSaveRootFlags' generates the CLI flags that corresponds to the
- save root command
--}
+-- | 'ctlSaveRootFlags' generates the CLI flags that corresponds to the
+-- save root command
 ctlSaveRootFlags :: SidechainParams -> CtlSaveRoot -> [HString.String]
 ctlSaveRootFlags scParams CtlSaveRoot {..} =
   let msg =
@@ -277,9 +269,8 @@ ctlSaveRootFlags scParams CtlSaveRoot {..} =
           <> [["--merkle-root", show csrMerkleRoot]]
           <> maybe [] (\bs -> [["--previous-merkle-root", show $ unRootHash bs]]) csrPreviousMerkleRoot
 
-{- | 'ctlClaimFlags' generates the CLI flags that corresponds to the
- claim command (minting FUEL)
--}
+-- | 'ctlClaimFlags' generates the CLI flags that corresponds to the
+-- claim command (minting FUEL)
 ctlClaimFlags :: CtlClaim -> [HString.String]
 ctlClaimFlags CtlClaim {..} =
   fmap
@@ -288,18 +279,17 @@ ctlClaimFlags CtlClaim {..} =
     , ["--combined-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
     ]
 
-{- | 'ctlBurnFlags' generates the CLI flags that corresponds to the
- claim command (minting FUEL)
- TODO: Put this together later
- @
- ctlBurnFlags :: CtlBurn -> [String]
- ctlBurnFlags CtlBurn{..} =
-     map List.unwords
-         [ [ "burn" ]
-         , [ "--combined-merkle-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
-         ]
- @
--}
+-- | 'ctlBurnFlags' generates the CLI flags that corresponds to the
+-- claim command (minting FUEL)
+-- TODO: Put this together later
+-- @
+-- ctlBurnFlags :: CtlBurn -> [String]
+-- ctlBurnFlags CtlBurn{..} =
+--     map List.unwords
+--         [ [ "burn" ]
+--         , [ "--combined-merkle-proof", OffChain.showCombinedMerkleProof ccCombinedMerkleProof]
+--         ]
+-- @
 
 -- * Some utility functions
 

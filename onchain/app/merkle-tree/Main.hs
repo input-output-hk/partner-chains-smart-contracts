@@ -1,10 +1,9 @@
-{- |
- Module      : Main
- Description : A CLI for 'TrustlessSidechain.MerkleTree'
-
- This is is a CLI for 'TrustlessSidechain.MerkleTree' supporting input via cbor
- encoded BuiltinData.
--}
+-- |
+-- Module      : Main
+-- Description : A CLI for 'TrustlessSidechain.MerkleTree'
+--
+-- This is is a CLI for 'TrustlessSidechain.MerkleTree' supporting input via cbor
+-- encoded BuiltinData.
 module Main (main, serialiseBuiltinData) where
 
 import Codec.Serialise qualified as Serialise
@@ -26,47 +25,42 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 
 -- * Utility functions
 
-{- | 'serialiseBuiltinData'
- converts the given data to its 'BuiltinData' instance, and serializes that
- to cbor i.e.,
- > 'serialiseBuiltinData' = 'Builtins.serialiseData' . 'PlutusTx.IsData.Class.toBuiltinData'
-
- Why is this here? Well, it was a helpful wrapper used in GHCi when developing
- this.
-
- Some notes on [cbor](https://www.rfc-editor.org/rfc/rfc8949.html) (although
- for a detailed treatment, just see the RFC). It appears that Plutus encodes
- lists as indefinite length lists i.e., lists will be prefixed by @0x9f...@
- and terminated with @0xff@.
--}
+-- | 'serialiseBuiltinData'
+-- converts the given data to its 'BuiltinData' instance, and serializes that
+-- to cbor i.e.,
+-- > 'serialiseBuiltinData' = 'Builtins.serialiseData' . 'PlutusTx.IsData.Class.toBuiltinData'
+--
+-- Why is this here? Well, it was a helpful wrapper used in GHCi when developing
+-- this.
+--
+-- Some notes on [cbor](https://www.rfc-editor.org/rfc/rfc8949.html) (although
+-- for a detailed treatment, just see the RFC). It appears that Plutus encodes
+-- lists as indefinite length lists i.e., lists will be prefixed by @0x9f...@
+-- and terminated with @0xff@.
 serialiseBuiltinData :: ToData a => a -> BuiltinByteString
 serialiseBuiltinData = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | @'unBuiltinByteString' bs@ unwraps the 'BuiltinByteString' type to give
- the underlying (strict) 'ByteString'.
--}
+-- | @'unBuiltinByteString' bs@ unwraps the 'BuiltinByteString' type to give
+-- the underlying (strict) 'ByteString'.
 unBuiltinByteString :: BuiltinByteString -> ByteString
 unBuiltinByteString (BuiltinByteString bs) = bs
 
 -- * Parsing
 
-{- | 'Input' is a newtype wrapper for @Maybe FilePath@ where @'Just' 'FilePath'@
- denotes parsing a 'FilePath', and 'Nothing' denotes no input was provided
- and we are hence interested in reading input from stdin.
--}
+-- | 'Input' is a newtype wrapper for @Maybe FilePath@ where @'Just' 'FilePath'@
+-- denotes parsing a 'FilePath', and 'Nothing' denotes no input was provided
+-- and we are hence interested in reading input from stdin.
 newtype Input = Input (Maybe FilePath)
   deriving newtype (Show, Eq)
 
-{- | 'Output' is a newtype wrapper for @Maybe FilePath@ and is identical to
- 'Input' except 'Nothing' denotes no input was provided and we are hence
- interested in writing output to stdout.
--}
+-- | 'Output' is a newtype wrapper for @Maybe FilePath@ and is identical to
+-- 'Input' except 'Nothing' denotes no input was provided and we are hence
+-- interested in writing output to stdout.
 newtype Output = Output (Maybe FilePath)
   deriving newtype (Show, Eq)
 
-{- | 'pFileInput' parses an input file and returns 'Nothing' as the default.
- The 'Nothing' is used to represent stdin.
--}
+-- | 'pFileInput' parses an input file and returns 'Nothing' as the default.
+-- The 'Nothing' is used to represent stdin.
 pFileInput :: Parser Input
 pFileInput =
   fmap Input $
@@ -77,12 +71,11 @@ pFileInput =
         <> Applicative.metavar "FILENAME"
         <> Applicative.help "Input file (defaults to stdin)"
 
-{- | 'pFileOutput' parses an output file and returns 'Nothing' as the default.
- The 'Nothing' is used to represent stdout.
-
- N.B. this is essentially duplicated code from 'pFileOutput' aside from
- changes to the help text.
--}
+-- | 'pFileOutput' parses an output file and returns 'Nothing' as the default.
+-- The 'Nothing' is used to represent stdout.
+--
+-- N.B. this is essentially duplicated code from 'pFileOutput' aside from
+-- changes to the help text.
 pFileOutput :: Parser Output
 pFileOutput =
   fmap Output $
@@ -95,14 +88,12 @@ pFileOutput =
 
 -- * Readers
 
-{- $readers
- *Readers* are methods used to read data from input
--}
+-- $readers
+-- *Readers* are methods used to read data from input
 
-{- | 'MerkleTreeAction' is a (hopefully) convenient intermediate type which
- represents the merkle tree function we wish to execute and its associated
- arguments.
--}
+-- | 'MerkleTreeAction' is a (hopefully) convenient intermediate type which
+-- represents the merkle tree function we wish to execute and its associated
+-- arguments.
 data MerkleTreeAction
   = -- | Correponds to @\bs -> 'MerkleTree.fromList' bs@
     FromList [BuiltinByteString]
@@ -115,11 +106,10 @@ data MerkleTreeAction
   | -- | Correponds to @\bs -> 'MerkleTree.lookupsMpFromList' bs@
     LookupsMpFromList [BuiltinByteString]
 
-{- | 'readBuiltinDataCbor' reads a cbor encoded 'BuiltinData' representation
- of the given arguments e.g. if the argument is @["pomeranian", "maltese"]@
- (say, correponding to 'FromList' in 'MerkleTreeAction'), then this will
- attempt to read @cbor(toBuiltinData(["pomeranian", "maltese"]))@
--}
+-- | 'readBuiltinDataCbor' reads a cbor encoded 'BuiltinData' representation
+-- of the given arguments e.g. if the argument is @["pomeranian", "maltese"]@
+-- (say, correponding to 'FromList' in 'MerkleTreeAction'), then this will
+-- attempt to read @cbor(toBuiltinData(["pomeranian", "maltese"]))@
 readBuiltinDataCbor :: MerkleTreeOption -> Handle -> IO MerkleTreeAction
 readBuiltinDataCbor opt handle = case opt of
   EncodeFromList -> FromList <$> arg
@@ -145,14 +135,12 @@ readBuiltinDataCbor opt handle = case opt of
 
 -- * Writers
 
-{- $writers
- *Writers* are methods used to write the data to the given handle.
--}
+-- $writers
+-- *Writers* are methods used to write the data to the given handle.
 
-{- | @'writeCborBuiltinData' mta handle@ will execute the associated merkle
- tree command given by the 'MerkleTreeAction' @mta@, and write the result on
- the given handle encoded as @cbor(toBuiltinData(result))@.
--}
+-- | @'writeCborBuiltinData' mta handle@ will execute the associated merkle
+-- tree command given by the 'MerkleTreeAction' @mta@, and write the result on
+-- the given handle encoded as @cbor(toBuiltinData(result))@.
 writeCborBuiltinData :: MerkleTreeAction -> Handle -> IO ()
 writeCborBuiltinData mta handle = case mta of
   FromList arg -> writer $ MerkleTree.fromList arg
@@ -170,17 +158,15 @@ writeCborBuiltinData mta handle = case mta of
 
 -- * Input / Output
 
-{- $inputoutput
- This section includes functions help work with the 'Input' and 'Output' types.
--}
+-- $inputoutput
+-- This section includes functions help work with the 'Input' and 'Output' types.
 
-{- | @'withInputOutput' input output go@ opens up two 'Handle's from @input@
- (either a file [using 'IO.withFile'] or stdin) and @output@ (either a file
- [using 'IO.withFile'] or stdout) resp; and executes @go@ with the
- aforementioned 'Handle's.
-
- This is a helper function for the remaining functions in this section.
--}
+-- | @'withInputOutput' input output go@ opens up two 'Handle's from @input@
+-- (either a file [using 'IO.withFile'] or stdin) and @output@ (either a file
+-- [using 'IO.withFile'] or stdout) resp; and executes @go@ with the
+-- aforementioned 'Handle's.
+--
+-- This is a helper function for the remaining functions in this section.
 withInputOutput :: Input -> Output -> (Handle -> Handle -> IO a) -> IO a
 withInputOutput (Input input) (Output output) go = case input of
   Just inFp -> case output of
@@ -207,9 +193,8 @@ data MerkleTreeCliOptions = MerkleTreeCliOptions
   }
   deriving stock (Show, Eq)
 
-{- | 'MerkleTreeOption' is a sum type representing the action to execute for
- the merkle tree.
--}
+-- | 'MerkleTreeOption' is a sum type representing the action to execute for
+-- the merkle tree.
 data MerkleTreeOption
   = -- | Correponds to 'MerkleTree.fromList'
     EncodeFromList
@@ -223,10 +208,9 @@ data MerkleTreeOption
     EncodeLookupsMpFromList
   deriving stock (Show, Eq)
 
-{- | 'options' is the main runner of the application. It returns
- 'MerkleTreeCliOptions' which is a pure representation of what the rest of the
- application should do.
--}
+-- | 'options' is the main runner of the application. It returns
+-- 'MerkleTreeCliOptions' which is a pure representation of what the rest of the
+-- application should do.
 options :: Parser MerkleTreeCliOptions
 options =
   Applicative.subparser $
@@ -268,29 +252,28 @@ options =
             )
       ]
 
-{- | 'main' is the main function.
-
- For help in this repo, type
- > cabal run trustless-sidechain-merkle-tree -- --help
-
- Example. Computing the cbor encoded BuiltinData of a merkle tree.
- Let @input@ be the file of the binary representation of
-
- > cbor (toBuiltinData ["pomeranian", "maltese", "yorkie"])
-
- To get the root hash of the corresponding merkle tree on stdout, type
-
- > cabal run trustless-sidechain-merkle-tree -- fromList --input=input
-
- Alternatively, you could write it to a file @output@ via
-
- > cabal run trustless-sidechain-merkle-tree -- fromList --input=input --output=output
-
- Moreover, you could pipe @input@ in as stdin (and dump the binary output to a
- file @output@) via
-
- > cat input | cabal run trustless-sidechain-merkle-tree -- fromList --output=output
--}
+-- | 'main' is the main function.
+--
+-- For help in this repo, type
+-- > cabal run trustless-sidechain-merkle-tree -- --help
+--
+-- Example. Computing the cbor encoded BuiltinData of a merkle tree.
+-- Let @input@ be the file of the binary representation of
+--
+-- > cbor (toBuiltinData ["pomeranian", "maltese", "yorkie"])
+--
+-- To get the root hash of the corresponding merkle tree on stdout, type
+--
+-- > cabal run trustless-sidechain-merkle-tree -- fromList --input=input
+--
+-- Alternatively, you could write it to a file @output@ via
+--
+-- > cabal run trustless-sidechain-merkle-tree -- fromList --input=input --output=output
+--
+-- Moreover, you could pipe @input@ in as stdin (and dump the binary output to a
+-- file @output@) via
+--
+-- > cat input | cabal run trustless-sidechain-merkle-tree -- fromList --output=output
 main :: IO ()
 main =
   let opts :: ParserInfo MerkleTreeCliOptions

@@ -54,48 +54,44 @@ import TrustlessSidechain.Utils (mkUntypedMintingPolicy, mkUntypedValidator)
 
 -- * Updating the committee hash
 
-{- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
- to the Plutus data representation, then encoding it to cbor via the builtin.
--}
+-- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
+-- to the Plutus data representation, then encoding it to cbor via the builtin.
 serialiseUchm :: ToData aggregatePubKeys => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'initCommitteeOracleTn'  is the token name of the NFT which identifies
- the utxo which contains the committee hash. We use an empty bytestring for
- this because the name really doesn't matter, so we mighaswell save a few
- bytes by giving it the empty name.
--}
+-- | 'initCommitteeOracleTn'  is the token name of the NFT which identifies
+-- the utxo which contains the committee hash. We use an empty bytestring for
+-- this because the name really doesn't matter, so we mighaswell save a few
+-- bytes by giving it the empty name.
 {-# INLINEABLE initCommitteeOracleTn #-}
 initCommitteeOracleTn :: TokenName
 initCommitteeOracleTn = TokenName Builtins.emptyByteString
 
-{- | 'initCommitteeOracleMintAmount' is the amount of the currency to mint which
- is 1.
--}
+-- | 'initCommitteeOracleMintAmount' is the amount of the currency to mint which
+-- is 1.
 {-# INLINEABLE initCommitteeOracleMintAmount #-}
 initCommitteeOracleMintAmount :: Integer
 initCommitteeOracleMintAmount = 1
 
-{- | 'mkUpdateCommitteeHashValidator' is the on-chain validator.
- See the specification for what is verified, but as a summary: we verify that
- the transaction corresponds to the signed update committee message in a
- reasonable sense.
-
- OnChain error descriptions:
-
- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01: invalid committee output
-
- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02: tx doesn't reference previous merkle
- root
-
- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03: output address for utxo containing
- committeeOracleCurrencySymbol must be a script address
-
- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04: tx not signed by committee
-
- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05: sidechain epoch is not strictly
- increasing
--}
+-- | 'mkUpdateCommitteeHashValidator' is the on-chain validator.
+-- See the specification for what is verified, but as a summary: we verify that
+-- the transaction corresponds to the signed update committee message in a
+-- reasonable sense.
+--
+-- OnChain error descriptions:
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01: invalid committee output
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02: tx doesn't reference previous merkle
+-- root
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03: output address for utxo containing
+-- committeeOracleCurrencySymbol must be a script address
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04: tx not signed by committee
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05: sidechain epoch is not strictly
+-- increasing
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
   UpdateCommitteeHash ->
@@ -189,16 +185,15 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
 
 PlutusTx.makeLift ''InitCommitteeHashMint
 
-{- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
- the committee hash.
-
- OnChain error descriptions:
-
- ERROR-UPDATE-COMMITTEE-HASH-POLICY-01: UTxO not consumed
-
- ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
- increasing
--}
+-- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
+-- the committee hash.
+--
+-- OnChain error descriptions:
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-POLICY-01: UTxO not consumed
+--
+-- ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
+-- increasing
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
 mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
 mkCommitteeOraclePolicy ichm _red ctx =

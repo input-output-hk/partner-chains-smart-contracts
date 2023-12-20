@@ -19,10 +19,9 @@ import Test.QuickCheck (
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 
-{- | Verifies that @'fromData' '.' 'toData'@ @=@ @'Just'@.
-
- @since v4.0.0
--}
+-- | Verifies that @'fromData' '.' 'toData'@ @=@ @'Just'@.
+--
+-- @since v4.0.0
 toDataSafeLaws ::
   forall (a :: Type).
   ( Arbitrary a
@@ -34,10 +33,9 @@ toDataSafeLaws ::
   Property
 toDataSafeLaws = toDataSafeLaws' @a arbitrary shrink show
 
-{- | Verified that @'unsafeFromData' '.' 'toData'@ @=@ @'id'@.
-
- @since v4.0.0
--}
+-- | Verified that @'unsafeFromData' '.' 'toData'@ @=@ @'id'@.
+--
+-- @since v4.0.0
 toDataUnsafeLaws ::
   forall (a :: Type).
   ( Arbitrary a
@@ -49,11 +47,10 @@ toDataUnsafeLaws ::
   Property
 toDataUnsafeLaws = toDataUnsafeLaws' @a arbitrary shrink show
 
-{- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
- prettyprinter.
-
- @since v4.0.0
--}
+-- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
+-- prettyprinter.
+--
+-- @since v4.0.0
 toDataSafeLaws' ::
   forall (a :: Type).
   (PTPrelude.ToData a, PTPrelude.FromData a, Eq a) =>
@@ -76,11 +73,10 @@ toDataSafeLaws' gen shr pprint = forAllShrinkShow gen shr pprint $ \x ->
                 . property
                 $ False
 
-{- | As 'toDataUnsafeLaws', but allows a custom generator, shrinker and
- prettyprinter.
-
- @since v4.0.0
--}
+-- | As 'toDataUnsafeLaws', but allows a custom generator, shrinker and
+-- prettyprinter.
+--
+-- @since v4.0.0
 toDataUnsafeLaws' ::
   forall (a :: Type).
   (PTPrelude.ToData a, PTPrelude.UnsafeFromData a, Eq a) =>

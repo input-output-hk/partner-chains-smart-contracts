@@ -635,10 +635,9 @@ shrinkCPM (CandidatePermissionMint {..}) = do
   ArbitraryTxOutRef x' <- shrink (ArbitraryTxOutRef utxo)
   pure . CandidatePermissionMint sp' $ x'
 
-{- | Wrapper for 'PubKey' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'PubKey' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitraryPubKey = ArbitraryPubKey PubKey
   deriving
     ( -- | @since v4.0.0
@@ -656,10 +655,9 @@ newtype ArbitraryPubKey = ArbitraryPubKey PubKey
       Show
     )
 
-{- | Does not shrink, as this wouldn't make much sense.
-
- @since v4.0.0
--}
+-- | Does not shrink, as this wouldn't make much sense.
+--
+-- @since v4.0.0
 instance Arbitrary ArbitraryPubKey where
   arbitrary =
     ArbitraryPubKey
@@ -669,10 +667,9 @@ instance Arbitrary ArbitraryPubKey where
       . fromList @ByteString
       <$> vectorOf 64 arbitrary
 
-{- | Wrapper for 'Signature' to provide QuickCheck instances.
-
- @since v4.0.0
--}
+-- | Wrapper for 'Signature' to provide QuickCheck instances.
+--
+-- @since v4.0.0
 newtype ArbitrarySignature = ArbitrarySignature Signature
   deriving
     ( -- | @since v4.0.0
@@ -690,10 +687,9 @@ newtype ArbitrarySignature = ArbitrarySignature Signature
       Show
     )
 
-{- | Does not shrink, as this wouldn't make much sense.
-
- @since v4.0.0
--}
+-- | Does not shrink, as this wouldn't make much sense.
+--
+-- @since v4.0.0
 instance Arbitrary ArbitrarySignature where
   arbitrary =
     ArbitrarySignature

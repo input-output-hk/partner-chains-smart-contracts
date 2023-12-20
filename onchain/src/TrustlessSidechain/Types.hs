@@ -67,12 +67,11 @@ import TrustlessSidechain.PlutusPrelude
 
 -- * Sidechain Parametrization and general data
 
-{- | Parameters uniquely identifying a sidechain
-
- = Note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | Parameters uniquely identifying a sidechain
+--
+-- = Note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 data SidechainParams = SidechainParams
   { chainId :: Integer
   , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
@@ -104,11 +103,10 @@ PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
 -- | @since v4.0.0
 makeHasField ''SidechainParams
 
-{- | Compressed DER SECP256k1 public key.
- = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | Compressed DER SECP256k1 public key.
+-- = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
   { -- | @since v4.0.0
     getEcdsaSecp256k1PubKey :: LedgerBytes
@@ -131,11 +129,10 @@ newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
 -- | @since Unreleased
 makeHasField ''EcdsaSecp256k1PubKey
 
-{- | Ed25519 public key
- = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | Ed25519 public key
+-- = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 newtype PubKey = PubKey
   -- TODO: rename to Ed25519PubKEy
   { -- | @since v4.0.0
@@ -156,11 +153,10 @@ newtype PubKey = PubKey
     )
     via LedgerBytes
 
-{- | Ed25519 signature
- = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | Ed25519 signature
+-- = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 newtype Signature = Signature
   -- TODO: rename to Ed25519Signature
   { -- | @since v4.0.0
@@ -183,9 +179,8 @@ newtype Signature = Signature
 
 -- * Committee Candidate Validator data
 
-{- | 'CandidatePermissionMint' is used to parameterize the minting policy in
- 'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
--}
+-- | 'CandidatePermissionMint' is used to parameterize the minting policy in
+-- 'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
 data CandidatePermissionMint = CandidatePermissionMint
   { -- | @since v4.0.0
     sidechainParams :: SidechainParams
@@ -279,10 +274,9 @@ PlutusTx.makeIsDataIndexed ''BlockProducerRegistration [('BlockProducerRegistrat
 -- | @since v4.0.0
 makeHasField ''BlockProducerRegistration
 
-{- | = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { sidechainParams :: SidechainParams
   , sidechainPubKey :: LedgerBytes
@@ -304,13 +298,12 @@ makeHasField ''BlockProducerRegistrationMsg
 
 -- * Merkle Root Token data
 
-{- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
- for the MerkleRootToken.
-
- = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | 'MerkleTreeEntry' (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
+-- for the MerkleRootToken.
+--
+-- = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 data MerkleTreeEntry = MerkleTreeEntry
   { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
     -- | @since v4.0.0
@@ -339,14 +332,13 @@ PlutusTx.makeIsDataIndexed ''MerkleTreeEntry [('MerkleTreeEntry, 0)]
 -- | @since v4.0.0
 makeHasField ''MerkleTreeEntry
 
-{- | 'MerkleRootInsertionMessage' is a data type for which committee members
- create signatures for
- >  blake2b(cbor(MerkleRootInsertionMessage))
-
- = Important note
-
- The 'Data' serializations for this type /cannot/ change.
--}
+-- | 'MerkleRootInsertionMessage' is a data type for which committee members
+-- create signatures for
+-- >  blake2b(cbor(MerkleRootInsertionMessage))
+--
+-- = Important note
+--
+-- The 'Data' serializations for this type /cannot/ change.
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
   { -- | @since v4.0.0
     sidechainParams :: SidechainParams
@@ -367,11 +359,10 @@ PlutusTx.makeIsDataIndexed ''MerkleRootInsertionMessage [('MerkleRootInsertionMe
 -- | @since v4.0.0
 makeHasField ''MerkleRootInsertionMessage
 
-{- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
- minting policy.
-
- @since v4.0.0
--}
+-- | 'SignedMerkleRootRedeemer' is the redeemer for the signed merkle root
+-- minting policy.
+--
+-- @since v4.0.0
 newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
   { previousMerkleRoot :: Maybe LedgerBytes
   }
@@ -393,15 +384,14 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
 -- | @since Unreleased
 makeHasField ''SignedMerkleRootRedeemer
 
-{- | 'CombinedMerkleProof' is a product type to include both the
- 'MerkleTreeEntry' and the 'MerkleProof'.
-
- This exists as for testing in #249.
-
- = Important note
-
- The 'Data' serializations of this type /cannot/ change.
--}
+-- | 'CombinedMerkleProof' is a product type to include both the
+-- 'MerkleTreeEntry' and the 'MerkleProof'.
+--
+-- This exists as for testing in #249.
+--
+-- = Important note
+--
+-- The 'Data' serializations of this type /cannot/ change.
 data CombinedMerkleProof = CombinedMerkleProof
   { -- | @since v4.0.0
     transaction :: MerkleTreeEntry
@@ -422,13 +412,12 @@ makeHasField ''CombinedMerkleProof
 
 -- * FUEL Minting Policy data
 
-{- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
- So, this includes which transaction in the sidechain we are transferring over
- to the main chain (hence the 'MerkleTreeEntry'), and the proof that this
- actually happened on the sidechain (hence the 'MerkleProof')
-
- @since Unreleased
--}
+-- | 'FUELMintingRedeemer' indicates that we wish to mint FUEL on the mainchain.
+-- So, this includes which transaction in the sidechain we are transferring over
+-- to the main chain (hence the 'MerkleTreeEntry'), and the proof that this
+-- actually happened on the sidechain (hence the 'MerkleProof')
+--
+-- @since Unreleased
 data FUELMintingRedeemer
   = FUELMintingRedeemer MerkleTreeEntry MerkleProof
   | FUELBurningRedeemer
@@ -442,14 +431,13 @@ PlutusTx.makeIsDataIndexed
 
 -- * Update Committee Hash data
 
-{- | Datum for the committee. This is used to verify
- signatures for sidechain to mainchain transfers.
-
- The actual representation of the committee's public key depends on the ATMS
- implementation.
-
- @since v4.0.0
--}
+-- | Datum for the committee. This is used to verify
+-- signatures for sidechain to mainchain transfers.
+--
+-- The actual representation of the committee's public key depends on the ATMS
+-- implementation.
+--
+-- @since v4.0.0
 data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
   { aggregateCommitteePubKeys :: aggregatePubKeys
   , sidechainEpoch :: Integer
@@ -547,12 +535,11 @@ instance UnsafeFromData UpdateCommitteeHash where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData4 UpdateCommitteeHash
 
-{- | = Important note
-
- The 'Data' serializations for this type /cannot/ be changed.
-
- @since v4.0.0
--}
+-- | = Important note
+--
+-- The 'Data' serializations for this type /cannot/ be changed.
+--
+-- @since v4.0.0
 data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { sidechainParams :: SidechainParams
   , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
@@ -638,12 +625,11 @@ instance UnsafeFromData CheckpointDatum where
 -- | @since v4.0.0
 makeHasField ''CheckpointDatum
 
-{- | 'CommitteeCertificateMint' is the type to parameterize committee
- certificate verification minting policies.
- See SIP05 in @docs/SIPs/@ for details.
-
- @since Unreleased
--}
+-- | 'CommitteeCertificateMint' is the type to parameterize committee
+-- certificate verification minting policies.
+-- See SIP05 in @docs/SIPs/@ for details.
+--
+-- @since Unreleased
 data CommitteeCertificateMint = CommitteeCertificateMint
   { thresholdNumerator :: Integer
   , thresholdDenominator :: Integer
@@ -671,12 +657,11 @@ instance UnsafeFromData CommitteeCertificateMint where
 -- | @since v4.0.0
 makeHasField ''CommitteeCertificateMint
 
-{- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
- This is used as redeemer for the
- "TrustlessSidechain.CommitteePlainATMSPolicy".
-
- @since v4.0.0
--}
+-- | 'ATMSPlainMultisignature' corresponds to SIP05 in @docs/SIPs/@.
+-- This is used as redeemer for the
+-- "TrustlessSidechain.CommitteePlainATMSPolicy".
+--
+-- @since v4.0.0
 data ATMSPlainMultisignature = ATMSPlainMultisignature
   { plainPublicKeys :: [LedgerBytes]
   , plainSignatures :: [LedgerBytes]
@@ -693,9 +678,8 @@ PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature,
 -- | @since Unreleased
 makeHasField ''ATMSPlainMultisignature
 
-{- | 'ATMSReddemer' allows for either minting or burning
- @since Unreleased
--}
+-- | 'ATMSReddemer' allows for either minting or burning
+-- @since Unreleased
 data ATMSRedeemer
   = -- | @since Unreleased
     ATMSMint ATMSPlainMultisignature
@@ -704,9 +688,8 @@ data ATMSRedeemer
 
 PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
 
-{- | The Redeemer that is passed to the on-chain validator to update the
- checkpoint
--}
+-- | The Redeemer that is passed to the on-chain validator to update the
+-- checkpoint
 data CheckpointRedeemer = CheckpointRedeemer
   { newCheckpointBlockHash :: LedgerBytes
   , newCheckpointBlockNumber :: Integer
@@ -733,10 +716,9 @@ instance UnsafeFromData CheckpointRedeemer where
 -- | @since v4.0.0
 makeHasField ''CheckpointRedeemer
 
-{- | 'Checkpoint' is used as the parameter for the validator.
-
- @since v4.0.0
--}
+-- | 'Checkpoint' is used as the parameter for the validator.
+--
+-- @since v4.0.0
 data CheckpointParameter = CheckpointParameter
   { -- | @since v4.0.0
     sidechainParams :: SidechainParams
@@ -786,10 +768,9 @@ instance UnsafeFromData CheckpointParameter where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData4 CheckpointParameter
 
-{- | = Important note
-
- The 'Data' serializations of this type /cannot/ be changed.
--}
+-- | = Important note
+--
+-- The 'Data' serializations of this type /cannot/ be changed.
 data CheckpointMessage = CheckpointMessage
   { -- | @since v4.0.0
     sidechainParams :: SidechainParams
@@ -806,11 +787,10 @@ PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 -- | @since v4.0.0
 makeHasField ''CheckpointMessage
 
-{- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
-burn DParameter tokens
-
-@since Unreleased
--}
+-- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
+--burn DParameter tokens
+--
+-- @since Unreleased
 data DParameterPolicyRedeemer
   = -- | @since Unreleased
     DParameterMint
@@ -843,12 +823,11 @@ instance UnsafeFromData DParameterPolicyRedeemer where
           1 -> DParameterBurn
           _ -> error ()
 
-{- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
-ratio is represented as a pair of integers - permissionedCandidatesCount and
-registeredCandidatesCount.
-
-@since Unreleased
--}
+-- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
+--ratio is represented as a pair of integers - permissionedCandidatesCount and
+--registeredCandidatesCount.
+--
+-- @since Unreleased
 data DParameterValidatorDatum = DParameterValidatorDatum
   { -- | @since Unreleased
     permissionedCandidatesCount :: Integer
@@ -879,11 +858,10 @@ instance UnsafeFromData DParameterValidatorDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DParameterValidatorDatum
 
-{- | 'DParameterValidatorRedeemer' signals whether transaction is supposed to
-update the d parameter or remove it.
-
-@since Unreleased
--}
+-- | 'DParameterValidatorRedeemer' signals whether transaction is supposed to
+--update the d parameter or remove it.
+--
+-- @since Unreleased
 data DParameterValidatorRedeemer
   = -- | @since Unreleased
     UpdateDParameter
@@ -916,11 +894,10 @@ instance UnsafeFromData DParameterValidatorRedeemer where
           1 -> RemoveDParameter
           _ -> error ()
 
-{- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
-burn PermissionedCandidates tokens
-
-@since Unreleased
--}
+-- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
+--burn PermissionedCandidates tokens
+--
+-- @since Unreleased
 data PermissionedCandidatesPolicyRedeemer
   = -- | @since Unreleased
     PermissionedCandidatesMint
@@ -953,10 +930,9 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
           1 -> PermissionedCandidatesBurn
           _ -> error ()
 
-{- | 'PermissionedCandidateKeys' stores the keys of some permissioned candiate.
-
-@since Unreleased
--}
+-- | 'PermissionedCandidateKeys' stores the keys of some permissioned candiate.
+--
+-- @since Unreleased
 data PermissionedCandidateKeys = PermissionedCandidateKeys
   { -- | @since Unreleased
     mainchainKey :: LedgerBytes
@@ -987,11 +963,10 @@ instance UnsafeFromData PermissionedCandidateKeys where
 -- | @since Unreleased
 makeHasField ''PermissionedCandidateKeys
 
-{- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
-   candidates' keys.
-
-@since Unreleased
--}
+-- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
+--   candidates' keys.
+--
+-- @since Unreleased
 newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates :: [PermissionedCandidateKeys]
   }
@@ -1000,11 +975,10 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
 -- | @since Unreleased
 makeHasField ''PermissionedCandidatesValidatorDatum
 
-{- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
-update the list of permissioned candidates or remove the list altogether.
-
-@since Unreleased
--}
+-- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
+--update the list of permissioned candidates or remove the list altogether.
+--
+-- @since Unreleased
 data PermissionedCandidatesValidatorRedeemer
   = -- | @since Unreleased
     UpdatePermissionedCandidates

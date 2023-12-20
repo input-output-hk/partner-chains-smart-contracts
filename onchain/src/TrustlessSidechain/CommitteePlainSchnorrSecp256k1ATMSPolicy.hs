@@ -1,10 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | "TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy" provides a token which verifies
- that the current committee has signed its token name with the plain (simply
- public key and signature concatenation) ATMS scheme with SchnorrSecp256k1 signatures.
--}
+-- | "TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy" provides a token which verifies
+-- that the current committee has signed its token name with the plain (simply
+-- public key and signature concatenation) ATMS scheme with SchnorrSecp256k1 signatures.
 module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy (
   mkMintingPolicy,
   serialisableMintingPolicy,
@@ -27,10 +26,9 @@ import TrustlessSidechain.Versioning (VersionOracleConfig)
 
 {-# INLINEABLE mkMintingPolicy #-}
 
-{- | 'mkMintingPolicy' wraps
- 'TrustlessSidechain.CommitteePlainATMSPolicy.mkMintingPolicy' and uses
- 'verifySchnorrSecp256k1Signature' to verify the signatures
--}
+-- | 'mkMintingPolicy' wraps
+-- 'TrustlessSidechain.CommitteePlainATMSPolicy.mkMintingPolicy' and uses
+-- 'verifySchnorrSecp256k1Signature' to verify the signatures
 mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool
 mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy

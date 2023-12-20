@@ -2,12 +2,11 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | 'TrustlessSidechain.Versioning' module implements script versioning system.
- It provides VersionOraclePolicy for minting tokens that store versioned
- scripts, as well as VersionedOracleValidator script for storing the
- versioning tokens.  Each versioning token stores a reference script and a
- datum that identifies the script and its version.
--}
+-- | 'TrustlessSidechain.Versioning' module implements script versioning system.
+-- It provides VersionOraclePolicy for minting tokens that store versioned
+-- scripts, as well as VersionedOracleValidator script for storing the
+-- versioning tokens.  Each versioning token stores a reference script and a
+-- datum that identifies the script and its version.
 module TrustlessSidechain.Versioning (
   serialisableVersionOraclePolicy,
   serialisableVersionOracleValidator,
@@ -136,11 +135,10 @@ dParameterValidatorId = 23
 permissionedCandidatesPolicyId = 24
 permissionedCandidatesValidatorId = 25
 
-{- | Datum attached to 'VersionOraclePolicy' tokens stored on the
- 'VersionOracleValidator' script.
-
- @since Unreleased
--}
+-- | Datum attached to 'VersionOraclePolicy' tokens stored on the
+-- 'VersionOracleValidator' script.
+--
+-- @since Unreleased
 data VersionOracle = VersionOracle
   { -- | Version of the script.
     -- @since Unreleased
@@ -170,12 +168,11 @@ instance UnsafeFromData VersionOracle where
 instance Eq VersionOracle where
   VersionOracle v s == VersionOracle v' s' = v == v' && s == s'
 
-{- | Configuration of the versioning system.  Contains currency symbol of
- VersionOraclePolicy tokens.  Required to identify versioning tokens that can be
- trusted.
-
- @since Unreleased
--}
+-- | Configuration of the versioning system.  Contains currency symbol of
+-- VersionOraclePolicy tokens.  Required to identify versioning tokens that can be
+-- trusted.
+--
+-- @since Unreleased
 newtype VersionOracleConfig = VersionOracleConfig
   { -- | @since Unreleased
     versionOracleCurrencySymbol :: CurrencySymbol
@@ -197,17 +194,15 @@ instance UnsafeFromData VersionOracleConfig where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
 
-{- | Token name for versioning tokens.  Must match definition in off-chain
- | module.
--}
+-- | Token name for versioning tokens.  Must match definition in off-chain
+-- | module.
 versionOracleTokenName :: TokenName
 versionOracleTokenName = TokenName "Version oracle"
 
-{- | Redeemer for the versioning oracle minting policy that instructs the script
- whether to mint or burn versioning tokens.
-
- @since Unreleased
--}
+-- | Redeemer for the versioning oracle minting policy that instructs the script
+-- whether to mint or burn versioning tokens.
+--
+-- @since Unreleased
 data VersionOraclePolicyRedeemer
   = -- | Mint initial versioning tokens.  Used during sidechain initialization.
     -- @since Unreleased
@@ -227,12 +222,11 @@ PlutusTx.makeIsDataIndexed
   , ('BurnVersionOracle, 2)
   ]
 
-{- | Redeemer for versioning oracle validator script.  Used when existing
- versioning tokens are spent from the script, either to be burned or updated
- with a new script and datum.
-
- @since Unreleased
--}
+-- | Redeemer for versioning oracle validator script.  Used when existing
+-- versioning tokens are spent from the script, either to be burned or updated
+-- with a new script and datum.
+--
+-- @since Unreleased
 data VersionOracleValidatorRedeemer
   = -- | Invalidate existing versioning token.
     -- @since Unreleased
@@ -247,11 +241,10 @@ PlutusTx.makeIsDataIndexed
   , ('UpdateVersionOracle, 1)
   ]
 
-{- | Manages minting and burning of versioning tokens.  (Note that these are
- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
- versioning tokens during sidechain initialization, other than the usual
- requirement of burning a genesis UTxO.
--}
+-- | Manages minting and burning of versioning tokens.  (Note that these are
+-- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
+-- versioning tokens during sidechain initialization, other than the usual
+-- requirement of burning a genesis UTxO.
 mkVersionOraclePolicy ::
   SidechainParams ->
   VersionOraclePolicyRedeemer ->
@@ -360,11 +353,10 @@ serialisableVersionOraclePolicy =
   fromCompiledCode
     $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
 
-{- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
- scripts as well as a script caching system.  UTxOs on the script are managed
- by governance authority, with VersionOraclePolicy ensuring that tokens are
- minted and burned correctly.
--}
+-- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
+-- scripts as well as a script caching system.  UTxOs on the script are managed
+-- by governance authority, with VersionOraclePolicy ensuring that tokens are
+-- minted and burned correctly.
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
   SidechainParams ->
@@ -481,10 +473,9 @@ serialisableVersionOracleValidator =
   fromCompiledCode
     $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
 
-{- | Searches for a specified validator script passed as a reference input.
- Note that if requested script ID corresponds to a minting policy this
- function will return a result anyway without reporting any errors.
--}
+-- | Searches for a specified validator script passed as a reference input.
+-- Note that if requested script ID corresponds to a minting policy this
+-- function will return a result anyway without reporting any errors.
 {-# INLINEABLE getVersionedValidatorAddress #-}
 getVersionedValidatorAddress ::
   VersionOracleConfig ->
@@ -494,10 +485,9 @@ getVersionedValidatorAddress ::
 getVersionedValidatorAddress voConfig vo =
   scriptHashAddress . ValidatorHash . getVersionedScriptHash voConfig vo
 
-{- | Searches for a specified minting policy passed as a reference input.  Note
- that if requested script ID corresponds to a validator this function will
- return a result anyway without reporting any errors.
--}
+-- | Searches for a specified minting policy passed as a reference input.  Note
+-- that if requested script ID corresponds to a validator this function will
+-- return a result anyway without reporting any errors.
 {-# INLINEABLE getVersionedCurrencySymbol #-}
 getVersionedCurrencySymbol ::
   VersionOracleConfig ->
@@ -507,14 +497,13 @@ getVersionedCurrencySymbol ::
 getVersionedCurrencySymbol voConfig vo sc =
   CurrencySymbol (getVersionedScriptHash voConfig vo sc)
 
-{- | Searches script context for a reference input containing specified script
- as a reference input.  Said reference input must come from
- VersionOracleValidator script address.  Returns script hash if requested
- version exists, throws error otherwise.  Note that this function is a worker
- for 'getVersionedCurrencySymbol' and 'getVersionedValidatorAddress', and it
- is therefore the callers responsibility to correctly interpret the result as
- either a validator or a minting policy.
--}
+-- | Searches script context for a reference input containing specified script
+-- as a reference input.  Said reference input must come from
+-- VersionOracleValidator script address.  Returns script hash if requested
+-- version exists, throws error otherwise.  Note that this function is a worker
+-- for 'getVersionedCurrencySymbol' and 'getVersionedValidatorAddress', and it
+-- is therefore the callers responsibility to correctly interpret the result as
+-- either a validator or a minting policy.
 {-# INLINEABLE getVersionedScriptHash #-}
 getVersionedScriptHash ::
   VersionOracleConfig ->

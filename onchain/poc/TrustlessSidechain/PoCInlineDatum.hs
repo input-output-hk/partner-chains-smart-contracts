@@ -1,15 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | A module for a trivial proof of concept (abbr. PoC) on chain script
- demonstrating the use of inline datum. In particular, we provide a script
- succeeds iff its inline datum is its redeemer.
-
- This is used on the ctl side as a minimal example / test of using inline
- datums.
-
- Since this is just used as a proof of concept on the ctl side, we have no
- offchain Haskell equivalent
--}
+-- | A module for a trivial proof of concept (abbr. PoC) on chain script
+-- demonstrating the use of inline datum. In particular, we provide a script
+-- succeeds iff its inline datum is its redeemer.
+--
+-- This is used on the ctl side as a minimal example / test of using inline
+-- datums.
+--
+-- Since this is just used as a proof of concept on the ctl side, we have no
+-- offchain Haskell equivalent
 module TrustlessSidechain.PoCInlineDatum (
   mkPoCInlineDatumValidator,
   serialisablePoCInlineDatumValidator,
@@ -32,9 +31,8 @@ import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 
-{- | 'mkPoCInlineDatumValidator'
- A script which verifies that its inline datum is the redeemer.
--}
+-- | 'mkPoCInlineDatumValidator'
+-- A script which verifies that its inline datum is the redeemer.
 mkPoCInlineDatumValidator :: Integer -> Integer -> ScriptContext -> Bool
 mkPoCInlineDatumValidator _dat red ctx =
   case Contexts.findOwnInput ctx of
@@ -54,9 +52,8 @@ mkPoCInlineDatumValidator _dat red ctx =
 mkPoCInlineDatumValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkPoCInlineDatumValidatorUntyped = mkUntypedValidator mkPoCInlineDatumValidator
 
-{- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
- 'mkPoCInlineDatumValidator'
--}
+-- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
+-- 'mkPoCInlineDatumValidator'
 serialisablePoCInlineDatumValidator :: Script
 serialisablePoCInlineDatumValidator =
   fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])

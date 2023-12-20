@@ -19,15 +19,14 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (CandidatePermissionMint)
 import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 
-{- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
-
-      - The UTxO 'cpmUtxo' in 'CandidatePermissionMint' is spent
-
-  OnChain error descriptions:
-
-    ERROR-CANDIDATE-PERMISSION-POLICY-01: UTxO denoted in
-    CandidatePermissionMint was not consumed by the transaction
--}
+-- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
+--
+--      - The UTxO 'cpmUtxo' in 'CandidatePermissionMint' is spent
+--
+--  OnChain error descriptions:
+--
+--    ERROR-CANDIDATE-PERMISSION-POLICY-01: UTxO denoted in
+--    CandidatePermissionMint was not consumed by the transaction
 mkCandidatePermissionMintingPolicy ::
   CandidatePermissionMint ->
   () ->

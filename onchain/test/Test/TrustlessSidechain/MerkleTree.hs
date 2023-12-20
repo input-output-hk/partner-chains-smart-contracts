@@ -1,9 +1,8 @@
 -- Needed for Arbitrary instances for Plutus types
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-{- | This module is a bunch of tests for our MerkleTree implementation. For
- now, it's just property based tests.
--}
+-- | This module is a bunch of tests for our MerkleTree implementation. For
+-- now, it's just property based tests.
 module Test.TrustlessSidechain.MerkleTree (test) where
 
 import Control.Monad (fail, guard, void)

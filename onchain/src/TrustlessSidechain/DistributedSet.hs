@@ -4,10 +4,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{- | Implementation of a set for on-chain proof of not in a set membership.
- We call this a *distributed set* since the set structure is distributed over
- many utxos in the block chain.
--}
+-- | Implementation of a set for on-chain proof of not in a set membership.
+-- We call this a *distributed set* since the set structure is distributed over
+-- many utxos in the block chain.
 module TrustlessSidechain.DistributedSet (
   -- * Data types
   Ds (..),
@@ -72,11 +71,10 @@ import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 
-{- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
- for the distributed set. (See Note [How This All Works]. Moreover, this
- parameterizes the 'mkInsertValidator' and is used as the type which identifies
- the appropriate datum and redeemer type
--}
+-- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
+-- for the distributed set. (See Note [How This All Works]. Moreover, this
+-- parameterizes the 'mkInsertValidator' and is used as the type which identifies
+-- the appropriate datum and redeemer type
 newtype Ds = Ds
   { -- | The 'CurrencySymbol' which identifies the utxo with 'DsConfDatum'.
     -- |
@@ -100,9 +98,8 @@ newtype DsDatum = DsDatum
 -- | @since v4.0.0
 makeHasField ''DsDatum
 
-{- | 'Node' is an internal data type of the tree node used in the validator.
- See: Note [How This All Works].
--}
+-- | 'Node' is an internal data type of the tree node used in the validator.
+-- See: Note [How This All Works].
 data Node = Node
   { -- | @since v4.0.0
     key :: BuiltinByteString
@@ -135,9 +132,8 @@ instance UnsafeFromData Node where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 Node
 
-{- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
- minting policies needed by the distributed set.
--}
+-- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
+-- minting policies needed by the distributed set.
 data DsConfDatum = DsConfDatum
   { -- | @since v4.0.0
     keyPolicy :: CurrencySymbol
@@ -175,10 +171,9 @@ instance UnsafeFromData DsConfDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DsConfDatum
 
-{- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
- length "array" of how many new nodes (this is always 2, see 'lengthIb') are
- generated after inserting into a node.
--}
+-- | 'Ib' is the insertion buffer (abbr. Ib) where we store which is a fixed
+-- length "array" of how many new nodes (this is always 2, see 'lengthIb') are
+-- generated after inserting into a node.
 newtype Ib a = Ib {unIb :: (a, a)}
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq)
@@ -201,9 +196,8 @@ instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 (curry Ib)
 
-{- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
- set. See 'mkDsConfPolicy' for more details.
--}
+-- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
+-- set. See 'mkDsConfPolicy' for more details.
 newtype DsConfMint = DsConfMint
   { -- | @since v4.0.0
     txOutRef :: TxOutRef
@@ -219,10 +213,9 @@ newtype DsConfMint = DsConfMint
 -- | @since v4.0.0
 makeHasField ''DsConfMint
 
-{- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
- 'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
- the token. See Note [How This All Works] for more details.
--}
+-- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
+-- 'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
+-- the token. See Note [How This All Works] for more details.
 data DsKeyMint = DsKeyMint
   { -- | The validator hash that the minting policy
     -- | essentially "forwards" its checks to the validator.
@@ -259,18 +252,16 @@ instance UnsafeFromData DsKeyMint where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DsKeyMint
 
-{- | 'unsafeGetDatum' gets the inline datum sitting at a 'TxOut' and throws an
- error otherwise.
--}
+-- | 'unsafeGetDatum' gets the inline datum sitting at a 'TxOut' and throws an
+-- error otherwise.
 {-# INLINEABLE unsafeGetDatum #-}
 unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxOut -> a
 unsafeGetDatum o = case txOutDatum o of
   OutputDatum d -> PlutusTx.unsafeFromBuiltinData (getDatum d)
   _ -> traceError "error 'unsafeGetDatum' failed"
 
-{- | 'getConf' gets the config associated with a distributed set and throws an
- error if it does not exist.
--}
+-- | 'getConf' gets the config associated with a distributed set and throws an
+-- error if it does not exist.
 {-# INLINEABLE getConf #-}
 getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
 getConf currencySymbol info = go $ txInfoReferenceInputs info
@@ -319,9 +310,8 @@ rootNode =
         -- hash.
     }
 
-{- | 'fromListIb lst' converts a list of length 2 into an 'Ib' and throws an
- exception otherwise.
--}
+-- | 'fromListIb lst' converts a list of length 2 into an 'Ib' and throws an
+-- exception otherwise.
 {-# INLINEABLE fromListIb #-}
 fromListIb :: [a] -> Ib a
 fromListIb = \case
@@ -333,15 +323,14 @@ fromListIb = \case
 lengthIb :: Ib a -> Integer
 lengthIb _ = 2
 
-{- | @'insertNode' str node@ inserts returns the new nodes which should be
- created (in place of the old @node@) provided that @str@ can actually be
- inserted here. See Note [How This All Works].
-
- Note that the first projection of 'Ib' will always be the node which should
- replace @node@, which also should be the node which is strictly less than
- @str@. This property is helpful in 'mkInsertValidator' when verifying that the
- nodes generated are as they should be.
--}
+-- | @'insertNode' str node@ inserts returns the new nodes which should be
+-- created (in place of the old @node@) provided that @str@ can actually be
+-- inserted here. See Note [How This All Works].
+--
+-- Note that the first projection of 'Ib' will always be the node which should
+-- replace @node@, which also should be the node which is strictly less than
+-- @str@. This property is helpful in 'mkInsertValidator' when verifying that the
+-- nodes generated are as they should be.
 {-# INLINEABLE insertNode #-}
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
 insertNode str node
@@ -350,9 +339,8 @@ insertNode str node
       Ib {unIb = (put @"next" str node, Node {key = str, next = get @"next" node})}
   | otherwise = Nothing
 
-{- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
- done in the 'insertNode' function.
--}
+-- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
+-- done in the 'insertNode' function.
 {-# INLINEABLE mkInsertValidator #-}
 mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
@@ -456,15 +444,13 @@ mkInsertValidator ds _dat _red ctx =
     getTxOutNodeInfo :: TxOut -> Node
     getTxOutNodeInfo o = mkNode (getKeyTn $ txOutValue o) $ unsafeGetDatum o
 
-{- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
- at. This will always error.
--}
+-- | 'mkDsConfValidator' is the script for which 'DsConfDatum' will be sitting
+-- at. This will always error.
 mkDsConfValidator :: Ds -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 
-{- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
- the various minting policies that the distributed set depends on
--}
+-- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
+-- the various minting policies that the distributed set depends on
 mkDsConfPolicy :: DsConfMint -> () -> ScriptContext -> Bool
 mkDsConfPolicy dsc _red ctx =
   traceIfFalse "error 'mkDsConfPolicy' missing TxOutRef" spendsTxOutRef
@@ -490,10 +476,9 @@ mkDsConfPolicy dsc _red ctx =
         True
       | otherwise = False
 
-{- | 'dsConfTokenName' is the token name of the NFT which identifies the utxo
- holding 'DsConfDatum'. We just leave this as the empty string since it
- doesn't matter
--}
+-- | 'dsConfTokenName' is the token name of the NFT which identifies the utxo
+-- holding 'DsConfDatum'. We just leave this as the empty string since it
+-- doesn't matter
 dsConfTokenName :: TokenName
 dsConfTokenName = TokenName emptyByteString
 
@@ -570,50 +555,42 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     * Variations of a Patricia Tree. This also had budget issues.
 -}
 
-{- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
- needed for ctl)
--}
+-- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
+-- needed for ctl)
 mkInsertValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkInsertValidatorUntyped = mkUntypedValidator . mkInsertValidator . PlutusTx.unsafeFromBuiltinData
 
-{- | 'serialisableInsertValidator' is a serialisable version of the validator
- (this is needed for ctl)
--}
+-- | 'serialisableInsertValidator' is a serialisable version of the validator
+-- (this is needed for ctl)
 serialisableInsertValidator :: Script
 serialisableInsertValidator = fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
 
-{- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
- needed for ctl)
--}
+-- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
+-- needed for ctl)
 mkDsConfValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfValidatorUntyped = mkDsConfValidator . PlutusTx.unsafeFromBuiltinData
 
-{- | 'serialisableDsConfValidator' creates a serialisable version of the
- validator (this is needed for ctl)
--}
+-- | 'serialisableDsConfValidator' creates a serialisable version of the
+-- validator (this is needed for ctl)
 serialisableDsConfValidator :: Script
 serialisableDsConfValidator = fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
 
-{- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
- needed for ctl)
--}
+-- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
+-- needed for ctl)
 mkDsConfPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfPolicyUntyped = mkUntypedMintingPolicy . mkDsConfPolicy . PlutusTx.unsafeFromBuiltinData
 
-{- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
- policy (this is needed for ctl)
--}
+-- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
+-- policy (this is needed for ctl)
 serialisableDsConfPolicy :: Script
 serialisableDsConfPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
 
-{- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
- needed for ctl)
--}
+-- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
+-- needed for ctl)
 mkDsKeyPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsKeyPolicyUntyped = mkUntypedMintingPolicy . mkDsKeyPolicy . PlutusTx.unsafeFromBuiltinData
 
-{- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
- policy (this is needed for ctl)
--}
+-- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
+-- policy (this is needed for ctl)
 serialisableDsKeyPolicy :: Script
 serialisableDsKeyPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])

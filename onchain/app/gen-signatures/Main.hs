@@ -1,18 +1,17 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{- | This CLI utility is an internal tool used to help generate CLI calls to
- the purescript project.
-
- High level overview of modules
-
-      - 'GetOpts': provides functionality to parse the CLI arguments
-
-      - 'GenOutput': provides functionality to generate the output displayed to
-      the user
-
- For discussion on how to use this, see @docs/GenSignatures.md@.
--}
+-- | This CLI utility is an internal tool used to help generate CLI calls to
+-- the purescript project.
+--
+-- High level overview of modules
+--
+--      - 'GetOpts': provides functionality to parse the CLI arguments
+--
+--      - 'GenOutput': provides functionality to generate the output displayed to
+--      the user
+--
+-- For discussion on how to use this, see @docs/GenSignatures.md@.
 module Main (main) where
 
 import Control.Monad (return)

@@ -68,9 +68,8 @@ data Options
     -- 'GenPlutusScripts'.
     PlutusScriptTargets
 
-{- | 'getOpts' is a high level function to convert the CLI arguments to
- 'Options'
--}
+-- | 'getOpts' is a high level function to convert the CLI arguments to
+-- 'Options'
 getOpts :: IO Options
 getOpts =
   Environment.getProgName >>= \progName ->

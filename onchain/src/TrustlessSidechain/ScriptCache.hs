@@ -1,9 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | 'TrustlessSidechain.ScriptCache' module provides a simple on-chain script
- for storing UTxOs with attached reference scripts.  It acts as a cache for
- minting policies of tokens minted during sidechain initialization.
--}
+-- | 'TrustlessSidechain.ScriptCache' module provides a simple on-chain script
+-- for storing UTxOs with attached reference scripts.  It acts as a cache for
+-- minting policies of tokens minted during sidechain initialization.
 module TrustlessSidechain.ScriptCache (
   serialisableScriptCache,
 ) where
@@ -16,10 +15,9 @@ import TrustlessSidechain.Utils (
   mkUntypedValidator,
  )
 
-{- | Script cache parameterized by a public key hash.  Spending from the script
- is only permitted when the transaction is signed by pub key hash used as the
- script parameter.
--}
+-- | Script cache parameterized by a public key hash.  Spending from the script
+-- is only permitted when the transaction is signed by pub key hash used as the
+-- script parameter.
 {-# INLINEABLE mkScriptCache #-}
 mkScriptCache :: PubKeyHash -> () -> () -> ScriptContext -> Bool
 mkScriptCache pkh () () (ScriptContext txInfo _) =

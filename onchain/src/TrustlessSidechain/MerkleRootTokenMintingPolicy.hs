@@ -56,22 +56,20 @@ import TrustlessSidechain.Versioning (
 serialiseMte :: MerkleTreeEntry -> BuiltinByteString
 serialiseMte = Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'serialiseMrimHash' is an alias for
- > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
--}
+-- | 'serialiseMrimHash' is an alias for
+-- > PlutusTx.Builtins.blake2b_256 . PlutusTx.Builtins.serialiseData . PlutusTx.IsData.Class.toBuiltinData
 {-# INLINEABLE serialiseMrimHash #-}
 serialiseMrimHash :: MerkleRootInsertionMessage -> LedgerBytes
 serialiseMrimHash =
   LedgerBytes . Builtins.blake2b_256 . Builtins.serialiseData . IsData.toBuiltinData
 
-{- | 'mkMintingPolicy' verifies the following
-
-      1. UTXO with the last Merkle root is referenced in the transaction.
-
-      2.  the committee certificate verification minting policy asserts that
-      `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
-      and At least one token is paid to 'validatorHash'
--}
+-- | 'mkMintingPolicy' verifies the following
+--
+--      1. UTXO with the last Merkle root is referenced in the transaction.
+--
+--      2.  the committee certificate verification minting policy asserts that
+--      `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
+--      and At least one token is paid to 'validatorHash'
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy

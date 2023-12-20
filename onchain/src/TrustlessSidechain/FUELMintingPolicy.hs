@@ -48,55 +48,53 @@ import TrustlessSidechain.Versioning (
   merkleRootTokenPolicyId,
  )
 
-{- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
- the side chain).
--}
+-- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
+-- the side chain).
 {-# INLINEABLE fuelTokenName #-}
 fuelTokenName :: TokenName
 fuelTokenName = TokenName "FUEL"
 
-{- | 'mkMintingPolicy' verifies the following
-
-  1. MerkleRootToken with the name of the Merkle root of the transaction
-     calculated from the proof) can be found in the MerkleRootTokenValidator.
-
-  N.B. this performs this verification on the FIRST merkle root of the
-  MerkleRootToken it finds in the inputs. So, to ensure "predictable" behaviour
-  [order of inputs in a transaction is not defined, but as of August 10, 2022
-  there is a [CIP](https://github.com/cardano-foundation/CIPs/pull/231) to
-  allow us to define it], the transaction should be constructed s.t. there is
-  exactly only one input with an MerkleRootToken.
-
-  2. chainId matches the minting policy id
-
-  TODO: It doesn't do this yet? Honestly, I'm quite unsure what this means?
-
-  3. amount matches the actual tx body contents
-
-  4. The recipient has signed the transaction
-
-  TODO: this isn't in the spec, but we have to do this to ensure that only the
-  recipient is the one who is controlling where the FUEL goes i.e., so an
-  adversary can't impersonate the recipient to steal their FUEL.
-
-  OnChain errors
-
-  ERROR-FUEL-MINTING-POLICY-01: this tx should mint negative amount of FUEL token
-
-  ERROR-FUEL-MINTING-POLICY-02: inserting wrong distributed set element
-
-  ERROR-FUEL-MINTING-POLICY-03: no Merkle root found
-
-  ERROR-FUEL-MINTING-POLICY-04: tx not signed by recipient
-
-  ERROR-FUEL-MINTING-POLICY-05: incorrect amount of FUEL minted
-
-  ERROR-FUEL-MINTING-POLICY-06: merkle proof failed
-
-  ERROR-FUEL-MINTING-POLICY-07: not inserting into distributed set
-
-  ERROR-FUEL-MINTING-POLICY-08: illegal FUEL minting
--}
+-- | 'mkMintingPolicy' verifies the following
+--
+--  1. MerkleRootToken with the name of the Merkle root of the transaction
+--     calculated from the proof) can be found in the MerkleRootTokenValidator.
+--
+--  N.B. this performs this verification on the FIRST merkle root of the
+--  MerkleRootToken it finds in the inputs. So, to ensure "predictable" behaviour
+--  [order of inputs in a transaction is not defined, but as of August 10, 2022
+--  there is a [CIP](https://github.com/cardano-foundation/CIPs/pull/231) to
+--  allow us to define it], the transaction should be constructed s.t. there is
+--  exactly only one input with an MerkleRootToken.
+--
+--  2. chainId matches the minting policy id
+--
+--  TODO: It doesn't do this yet? Honestly, I'm quite unsure what this means?
+--
+--  3. amount matches the actual tx body contents
+--
+--  4. The recipient has signed the transaction
+--
+--  TODO: this isn't in the spec, but we have to do this to ensure that only the
+--  recipient is the one who is controlling where the FUEL goes i.e., so an
+--  adversary can't impersonate the recipient to steal their FUEL.
+--
+--  OnChain errors
+--
+--  ERROR-FUEL-MINTING-POLICY-01: this tx should mint negative amount of FUEL token
+--
+--  ERROR-FUEL-MINTING-POLICY-02: inserting wrong distributed set element
+--
+--  ERROR-FUEL-MINTING-POLICY-03: no Merkle root found
+--
+--  ERROR-FUEL-MINTING-POLICY-04: tx not signed by recipient
+--
+--  ERROR-FUEL-MINTING-POLICY-05: incorrect amount of FUEL minted
+--
+--  ERROR-FUEL-MINTING-POLICY-06: merkle proof failed
+--
+--  ERROR-FUEL-MINTING-POLICY-07: not inserting into distributed set
+--
+--  ERROR-FUEL-MINTING-POLICY-08: illegal FUEL minting
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> ScriptContext -> Bool
 mkMintingPolicy _ _ FUELBurningRedeemer (ScriptContext txInfo (Minting currSymbol)) =
@@ -204,10 +202,9 @@ mkBurningPolicyUntyped = mkUntypedMintingPolicy . mkBurningPolicy . unsafeFromBu
 serialisableBurningPolicy :: Script
 serialisableBurningPolicy = fromCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])
 
-{- | Deriving the public key hash from a bech32 binary
- -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019
- -   TODO: In later versions, we can use bytewise primitives
--}
+-- | Deriving the public key hash from a bech32 binary
+-- -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019
+-- -   TODO: In later versions, we can use bytewise primitives
 {-# INLINEABLE bech32AddrToPubKeyHash #-}
 bech32AddrToPubKeyHash :: LedgerBytes -> Maybe PubKeyHash
 bech32AddrToPubKeyHash (LedgerBytes addr) =

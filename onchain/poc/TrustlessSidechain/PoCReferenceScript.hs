@@ -1,20 +1,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | A module for a trivial proof of concept (abbr. PoC) on chain script
- demonstrating the use of a reference script. In particular, we provide two
- scripts
-
-    1. 'mkPoCToReferenceScriptValidator': a script which always succeeds.
-
-    2. 'mkPoCReferenceScriptValidator': A script if there is an input which
-    has a reference script as given in its redeemer.
-
- This is used on the ctl side as a minimal example / test of using reference
- scripts.
-
- Since this is just used as a proof of concept on the ctl side, we have no
- offchain Haskell equivalent
--}
+-- | A module for a trivial proof of concept (abbr. PoC) on chain script
+-- demonstrating the use of a reference script. In particular, we provide two
+-- scripts
+--
+--    1. 'mkPoCToReferenceScriptValidator': a script which always succeeds.
+--
+--    2. 'mkPoCReferenceScriptValidator': A script if there is an input which
+--    has a reference script as given in its redeemer.
+--
+-- This is used on the ctl side as a minimal example / test of using reference
+-- scripts.
+--
+-- Since this is just used as a proof of concept on the ctl side, we have no
+-- offchain Haskell equivalent
 module TrustlessSidechain.PoCReferenceScript (
   mkPoCToReferenceScriptValidator,
   serialisablePoCToReferenceScriptValidator,
@@ -39,9 +38,8 @@ import TrustlessSidechain.Utils (
 
 -- * To Reference
 
-{- | 'mkPoCToReferenceScriptValidator'
- A script which is always true.
--}
+-- | 'mkPoCToReferenceScriptValidator'
+-- A script which is always true.
 mkPoCToReferenceScriptValidator :: () -> () -> ScriptContext -> Bool
 mkPoCToReferenceScriptValidator _dat _red _ctx = True
 
@@ -49,18 +47,16 @@ mkPoCToReferenceScriptValidator _dat _red _ctx = True
 mkPoCToReferenceScriptValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkPoCToReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCToReferenceScriptValidator
 
-{- | 'serialisablePoCToReferenceScriptValidator' is a serialisable untyped script of
- 'mkPoCToReferenceScriptValidator'
--}
+-- | 'serialisablePoCToReferenceScriptValidator' is a serialisable untyped script of
+-- 'mkPoCToReferenceScriptValidator'
 serialisablePoCToReferenceScriptValidator :: Script
 serialisablePoCToReferenceScriptValidator = fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
 
 -- * Reference
 
-{- | 'mkPoCReferenceScriptValidator'
- A script which verifies that the given 'Address' is a reference input AND the
- given 'Address''s witness datum is the redeemer.
--}
+-- | 'mkPoCReferenceScriptValidator'
+-- A script which verifies that the given 'Address' is a reference input AND the
+-- given 'Address''s witness datum is the redeemer.
 mkPoCReferenceScriptValidator :: () -> ScriptHash -> ScriptContext -> Bool
 mkPoCReferenceScriptValidator _dat red ctx =
   traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash" $
@@ -74,8 +70,7 @@ mkPoCReferenceScriptValidator _dat red ctx =
 mkPoCReferenceScriptValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkPoCReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCReferenceScriptValidator
 
-{- | 'serialisablePoCReferenceScriptValidator' is a serialisable untyped script of
- 'mkPoCReferenceScriptValidator'
--}
+-- | 'serialisablePoCReferenceScriptValidator' is a serialisable untyped script of
+-- 'mkPoCReferenceScriptValidator'
 serialisablePoCReferenceScriptValidator :: Script
 serialisablePoCReferenceScriptValidator = fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])

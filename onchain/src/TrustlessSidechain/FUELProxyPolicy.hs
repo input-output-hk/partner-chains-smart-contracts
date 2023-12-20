@@ -3,13 +3,12 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | 'TrustlessSidechain.FUELProxyPolicy' module provides a so called
- proxy FUEL policy.  This policy delegates actual fuel minting and burning
- criteria to scripts stored in the versioning system, allowing to change
- minting and burning conditions by changing the versioned scripts and at the
- same time having a FUEL currency symbol that remains stable throughout the
- sidechain lifetime.
--}
+-- | 'TrustlessSidechain.FUELProxyPolicy' module provides a so called
+-- proxy FUEL policy.  This policy delegates actual fuel minting and burning
+-- criteria to scripts stored in the versioning system, allowing to change
+-- minting and burning conditions by changing the versioned scripts and at the
+-- same time having a FUEL currency symbol that remains stable throughout the
+-- sidechain lifetime.
 module TrustlessSidechain.FUELProxyPolicy (
   serialisableFuelProxyPolicy,
 ) where
@@ -27,11 +26,10 @@ import TrustlessSidechain.Versioning (
   getVersionedCurrencySymbol,
  )
 
-{- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
- burned, and which version of the fuel script to use.  Burn case also contains
- address of the sidechain recipient.  Recipient information is used by the
- sidechain bridge to add tokens to respective sidechain account.
--}
+-- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
+-- burned, and which version of the fuel script to use.  Burn case also contains
+-- address of the sidechain recipient.  Recipient information is used by the
+-- sidechain bridge to add tokens to respective sidechain account.
 data FuelProxyRedeemer
   = FuelProxyMint {version :: Integer}
   | FuelProxyBurn
@@ -46,11 +44,10 @@ makeIsDataIndexed
   , ('FuelProxyBurn, 1)
   ]
 
-{- | Mint/burn proxy FUEL tokens.  Delegates actual minting/burning logic to
- versioned FUEL policies, allowing to mint/burn N tokens if the respective
- versioned policy mints N tokens.  Note that this policy does not constrain
- the token name in any way and only checks the currency symbol.
--}
+-- | Mint/burn proxy FUEL tokens.  Delegates actual minting/burning logic to
+-- versioned FUEL policies, allowing to mint/burn N tokens if the respective
+-- versioned policy mints N tokens.  Note that this policy does not constrain
+-- the token name in any way and only checks the currency symbol.
 mkFuelProxyPolicy ::
   SidechainParams ->
   VersionOracleConfig ->
