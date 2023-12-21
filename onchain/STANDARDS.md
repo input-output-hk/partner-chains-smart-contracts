@@ -7,6 +7,12 @@ to evolve as our needs change.
 
 # Changelog
 
+## 11/12/23
+
+### Changed
+
+* Deriving `HasField` instances now done using Template Haskell
+
 ## 8/08/23
 
 ### Changed
