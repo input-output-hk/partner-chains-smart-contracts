@@ -25,6 +25,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   ([607](https://github.com/input-output-hk/trustless-sidechain/pull/607))
 
 ## Changed
+* `update-permissioned-candidates` doesn't take `mainchainKey` as argument anymore.
+  For example instead of `--add-candidate MAINCHAIN_KEY:SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY`
+  now you have to do `--add-candidate SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY`.
 * The `--sidechain-genesis-hash` now only needs to be passed to `--init` and
   `init-tokens-mint` commands.
 * `BlockProducerRegistration` has 2 new fields - `authorityDiscoveryKey` and `grandpaKey`
