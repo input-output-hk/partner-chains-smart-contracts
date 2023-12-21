@@ -117,7 +117,6 @@ import TrustlessSidechain.Types (
     PermissionedCandidateKeys,
     auraKey,
     grandpaKey,
-    mainchainKey,
     sidechainKey
   ),
   PermissionedCandidatesPolicyRedeemer (
@@ -516,8 +515,7 @@ samplePermissionedCandidatesPolicyRedeemer2 = PermissionedCandidatesBurn
 samplePermissionedCandidateKeys :: PermissionedCandidateKeys
 samplePermissionedCandidateKeys =
   PermissionedCandidateKeys
-    { mainchainKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-    , sidechainKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    { sidechainKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
     , auraKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     , grandpaKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     }

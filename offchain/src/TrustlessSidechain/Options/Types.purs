@@ -243,16 +243,14 @@ data TxEndpoint
   | UpdatePermissionedCandidates
       { permissionedCandidatesToAdd ∷
           List
-            { mainchainKey ∷ ByteArray
-            , sidechainKey ∷ ByteArray
+            { sidechainKey ∷ ByteArray
             , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
       , permissionedCandidatesToRemove ∷
           Maybe
             ( List
-                { mainchainKey ∷ ByteArray
-                , sidechainKey ∷ ByteArray
+                { sidechainKey ∷ ByteArray
                 , auraKey ∷ ByteArray
                 , grandpaKey ∷ ByteArray
                 }

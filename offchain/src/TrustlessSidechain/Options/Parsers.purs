@@ -445,8 +445,7 @@ parseRegistrationSidechainKeys str =
 
 permissionedCandidateKeys ∷
   ReadM
-    { mainchainKey ∷ ByteArray
-    , sidechainKey ∷ ByteArray
+    { sidechainKey ∷ ByteArray
     , auraKey ∷ ByteArray
     , grandpaKey ∷ ByteArray
     }
@@ -455,16 +454,13 @@ permissionedCandidateKeys = eitherReader parsePermissionedCandidateKeys
 parsePermissionedCandidateKeys ∷
   String →
   Either String
-    { mainchainKey ∷ ByteArray
-    , sidechainKey ∷ ByteArray
+    { sidechainKey ∷ ByteArray
     , auraKey ∷ ByteArray
     , grandpaKey ∷ ByteArray
     }
 parsePermissionedCandidateKeys str =
   case split (Pattern ":") str of
-    [ mainchainKey', sidechainKey', auraKey', grandpaKey' ] → do
-      mainchainKey ← Either.note ("mainchainKey must be a valid hex string") $
-        hexToByteArray mainchainKey'
+    [ sidechainKey', auraKey', grandpaKey' ] → do
       sidechainKey ← Either.note ("sidechainKey must be a valid hex string") $
         hexToByteArray sidechainKey'
       auraKey ←
@@ -473,8 +469,7 @@ parsePermissionedCandidateKeys str =
       grandpaKey ← Either.note ("grandpaKey must be a valid hex string") $
         hexToByteArray grandpaKey'
       pure $
-        { mainchainKey
-        , sidechainKey
+        { sidechainKey
         , auraKey
         , grandpaKey
         }
