@@ -1145,8 +1145,7 @@ parseRegistrationSidechainKeys =
 parseAddPermissionedCandidates ∷
   Parser
     ( List
-        { mainchainKey ∷ ByteArray
-        , sidechainKey ∷ ByteArray
+        { sidechainKey ∷ ByteArray
         , auraKey ∷ ByteArray
         , grandpaKey ∷ ByteArray
         }
@@ -1157,9 +1156,9 @@ parseAddPermissionedCandidates =
           ( fold
               [ long "add-candidate"
               , metavar
-                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
+                  "SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
               , help
-                  "A list of tuples of 4 keys used to describe a permissioned candidate, separated by a colon"
+                  "A list of tuples of 3 keys used to describe a permissioned candidate, separated by a colon"
               ]
           )
       )
@@ -1169,8 +1168,7 @@ parseRemovePermissionedCandidates ∷
   Parser
     ( Maybe
         ( List
-            { mainchainKey ∷ ByteArray
-            , sidechainKey ∷ ByteArray
+            { sidechainKey ∷ ByteArray
             , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }
@@ -1182,9 +1180,9 @@ parseRemovePermissionedCandidates = Just <$>
           ( fold
               [ long "remove-candidate"
               , metavar
-                  "MAINCHAIN_KEY:SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
+                  "SIDECHAIN_KEY:AURA_KEY:GRANDPA_KEY"
               , help
-                  "A list of tuples of 4 keys used to describe a permissioned candidate, separated by a colon"
+                  "A list of tuples of 3 keys used to describe a permissioned candidate, separated by a colon"
               ]
           )
       )

@@ -62,16 +62,14 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
   SidechainParams →
   { permissionedCandidatesToAdd ∷
       Array
-        { mainchainKey ∷ ByteArray
-        , sidechainKey ∷ ByteArray
+        { sidechainKey ∷ ByteArray
         , auraKey ∷ ByteArray
         , grandpaKey ∷ ByteArray
         }
   , permissionedCandidatesToRemove ∷
       Maybe
         ( Array
-            { mainchainKey ∷ ByteArray
-            , sidechainKey ∷ ByteArray
+            { sidechainKey ∷ ByteArray
             , auraKey ∷ ByteArray
             , grandpaKey ∷ ByteArray
             }

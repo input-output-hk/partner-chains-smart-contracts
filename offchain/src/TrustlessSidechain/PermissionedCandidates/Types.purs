@@ -23,8 +23,8 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Data.BigInt as BigInt
 import TrustlessSidechain.Utils.Data
-  ( productFromData4
-  , productToData4
+  ( productFromData3
+  , productToData3
   )
 
 data PermissionedCandidatesValidatorRedeemer
@@ -42,8 +42,7 @@ instance FromData PermissionedCandidatesValidatorRedeemer where
   fromData _ = Nothing
 
 data PermissionedCandidateKeys = PermissionedCandidateKeys
-  { mainchainKey ∷ ByteArray
-  , sidechainKey ∷ ByteArray
+  { sidechainKey ∷ ByteArray
   , auraKey ∷ ByteArray
   , grandpaKey ∷ ByteArray
   }
@@ -54,16 +53,16 @@ derive instance Ord PermissionedCandidateKeys
 instance ToData PermissionedCandidateKeys where
   toData
     ( PermissionedCandidateKeys
-        { mainchainKey, sidechainKey, auraKey, grandpaKey }
+        { sidechainKey, auraKey, grandpaKey }
     ) =
-    productToData4 mainchainKey sidechainKey auraKey grandpaKey
+    productToData3 sidechainKey auraKey grandpaKey
 
 instance FromData PermissionedCandidateKeys where
   fromData =
-    productFromData4 $
-      \mainchainKey sidechainKey auraKey grandpaKey →
+    productFromData3 $
+      \sidechainKey auraKey grandpaKey →
         PermissionedCandidateKeys
-          { mainchainKey, sidechainKey, auraKey, grandpaKey }
+          { sidechainKey, auraKey, grandpaKey }
 
 data PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates ∷ Array PermissionedCandidateKeys

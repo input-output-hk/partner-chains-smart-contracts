@@ -935,8 +935,6 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
 -- @since Unreleased
 data PermissionedCandidateKeys = PermissionedCandidateKeys
   { -- | @since Unreleased
-    mainchainKey :: LedgerBytes
-  , -- | @since Unreleased
     sidechainKey :: LedgerBytes
   , -- | @since Unreleased
     auraKey :: LedgerBytes
@@ -947,18 +945,18 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
 -- | @since Unreleased
 instance ToData PermissionedCandidateKeys where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (PermissionedCandidateKeys m s a g) =
-    productToData4 m s a g
+  toBuiltinData (PermissionedCandidateKeys s a g) =
+    productToData3 s a g
 
 -- | @since Unreleased
 instance FromData PermissionedCandidateKeys where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 PermissionedCandidateKeys
+  fromBuiltinData = productFromData3 PermissionedCandidateKeys
 
 -- | @since Unreleased
 instance UnsafeFromData PermissionedCandidateKeys where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 PermissionedCandidateKeys
+  unsafeFromBuiltinData = productUnsafeFromData3 PermissionedCandidateKeys
 
 -- | @since Unreleased
 makeHasField ''PermissionedCandidateKeys

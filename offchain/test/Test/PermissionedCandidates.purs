@@ -84,13 +84,11 @@ testScenarioSuccess =
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 { permissionedCandidatesToAdd:
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa11"
-                      , sidechainKey: hexToByteArrayUnsafe "bb11"
+                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
                       , auraKey: hexToByteArrayUnsafe "cc11"
                       , grandpaKey: hexToByteArrayUnsafe "dd11"
                       }
-                    , { mainchainKey: hexToByteArrayUnsafe "aa22"
-                      , sidechainKey: hexToByteArrayUnsafe "bb22"
+                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
                       , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
@@ -108,15 +106,13 @@ testScenarioSuccess =
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 { permissionedCandidatesToAdd:
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa33"
-                      , sidechainKey: hexToByteArrayUnsafe "bb33"
+                    [ { sidechainKey: hexToByteArrayUnsafe "bb33"
                       , auraKey: hexToByteArrayUnsafe "cc33"
                       , grandpaKey: hexToByteArrayUnsafe "dd33"
                       }
                     ]
                 , permissionedCandidatesToRemove: Just
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa22"
-                      , sidechainKey: hexToByteArrayUnsafe "bb22"
+                    [ { sidechainKey: hexToByteArrayUnsafe "bb22"
                       , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
@@ -185,13 +181,11 @@ testScenarioFailure =
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 { permissionedCandidatesToAdd:
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa11"
-                      , sidechainKey: hexToByteArrayUnsafe "bb11"
+                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
                       , auraKey: hexToByteArrayUnsafe "cc11"
                       , grandpaKey: hexToByteArrayUnsafe "dd11"
                       }
-                    , { mainchainKey: hexToByteArrayUnsafe "aa22"
-                      , sidechainKey: hexToByteArrayUnsafe "bb22"
+                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
                       , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
@@ -208,13 +202,11 @@ testScenarioFailure =
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
                 sidechainParams
                 { permissionedCandidatesToAdd:
-                    [ { mainchainKey: hexToByteArrayUnsafe "aa11"
-                      , sidechainKey: hexToByteArrayUnsafe "bb11"
+                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
                       , auraKey: hexToByteArrayUnsafe "cc11"
                       , grandpaKey: hexToByteArrayUnsafe "dd11"
                       }
-                    , { mainchainKey: hexToByteArrayUnsafe "aa22"
-                      , sidechainKey: hexToByteArrayUnsafe "bb22"
+                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
                       , auraKey: hexToByteArrayUnsafe "cc22"
                       , grandpaKey: hexToByteArrayUnsafe "dd22"
                       }
