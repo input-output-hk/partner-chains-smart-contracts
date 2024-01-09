@@ -252,9 +252,11 @@ number of members. To defend against accidentally consuming the
 `genesis-committee-hash-utxo`, it's possible, to split up the initialisation
 step into two separate commands:
 
-1. mint tokens identifying tokens used later in the protocol
-   (spending the `genesis-committee-hash-utxo`)
-2. set up the first committee (only the owner of the above minted tokens can do this)
+  1. mint tokens identifying tokens used later in the protocol
+     (spending the `genesis-committee-hash-utxo`)
+
+  2. set up the first committee (only the owner of the above minted tokens can
+     do this)
 
 To mint the initial tokens, use the following command:
 
@@ -452,8 +454,10 @@ nix run .#sidechain-main-cli -- committee-hash \
   --new-committee-validator-cbor-encoded-address aadd \
   --previous-merkle-root abcdef
 ```
-where we note that `--new-committee-validator-cbor-encoded-address` can be found from
-the JSON key `cborEncodedAddresses` from the output of the `addresses` subcommand.
+
+where we note that `--new-committee-validator-cbor-encoded-address` can be found
+from the JSON key `cborEncodedAddresses` from the output of the `addresses`
+subcommand.
 
 #### 3.3.8. Save merkle root
 
@@ -587,7 +591,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.1.17 Remove a D parameter value
+#### 3.3.17 Remove a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- remove-d-parameter \
@@ -598,7 +602,7 @@ nix run .#sidechain-main-cli -- remove-d-parameter \
 
 This removes all inserted D parameter values.
 
-#### 3.1.18 Insert a list of permissioned candidates
+#### 3.3.18 Insert a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -618,7 +622,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.1.19 Update a list of permissioned candidates
+#### 3.3.19 Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -631,11 +635,11 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --remove-candidate "SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
 ```
 
-You can add and remove candidates in a single transaction.  Each
-candidate is listed separately using the `--add-candidate` or `--remove-candidate` flag
+You can add and remove candidates in a single transaction.  Each candidate is
+listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.1.20 Remove all permissioned candidates
+#### 3.3.20 Remove all permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -645,9 +649,9 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
   --remove-all-candidates
 ```
 
-Remove all currently registered permissioned candidates. You can also remove
-all candidates and add new ones in a single transaction. Just provide `--add-candidate`
-as described above.
+Remove all currently registered permissioned candidates. You can also remove all
+candidates and add new ones in a single transaction. Just provide
+`--add-candidate` as described above.
 
 
 #### 3.3.21 Garbage collect redundant tokens
@@ -660,10 +664,10 @@ nix run .#sidechain-main-cli -- collect-garbage \
 ```
 
 Burn all waste tokens found on a user's PubKey address. These tokens include
-ATMS Tokens and FUEL Mint and Burn tokens. These tokens don't play any role in the
-system after they are minted. Their only purpose is to be minted alongside some
-other tokens, as a proof that some kind of check has passed. After that there is
-no other way to use them.
+ATMS Tokens and FUEL Mint and Burn tokens. These tokens don't play any role in
+the system after they are minted. Their only purpose is to be minted alongside
+some other tokens, as a proof that some kind of check has passed. After that
+there is no other way to use them.
 
 #### 3.3.22 Utils
 
