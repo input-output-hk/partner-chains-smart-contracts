@@ -339,7 +339,7 @@ register
               ownRegistrationUtxos
           )
 
-  balanceSignAndSubmit "Registers Committee Candidate" { lookups, constraints }
+  balanceSignAndSubmit "Register Committee Candidate" { lookups, constraints }
 
 deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
