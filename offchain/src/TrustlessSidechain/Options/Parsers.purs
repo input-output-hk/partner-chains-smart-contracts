@@ -474,7 +474,7 @@ parsePermissionedCandidateKeys str =
         , grandpaKey
         }
     _ → Left
-      "permissioned-candidate-keys must be a 4 hex strings concatenated with colons, for example: aa:bb:cc:dd"
+      "permissioned-candidate-keys must be 3 hex strings concatenated with colons, for example: aa:bb:cc"
 
 -- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for
 -- | converting hex encoded strings to token names
