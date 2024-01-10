@@ -52,6 +52,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 * Commands `init` and `init-tokens-mint` now require `--version` flag followed
   by a positive integer as an argument.
   ([586](https://github.com/mlabs-haskell/trustless-sidechain/pull/586))
+* On-chain scripts now return short error codes instead of lengthy error
+  messages.
 
 ## Removed
 

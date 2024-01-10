@@ -133,11 +133,11 @@ main =
         [ fitsInto
             "mkInsertValidator"
             Compiled.mkInsertValidatorCode
-            1_693
+            1_711
         , scriptFitsInto
             "mkInsertValidator (serialized)"
             DS.serialisableInsertValidator
-            3_049
+            3_067
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
