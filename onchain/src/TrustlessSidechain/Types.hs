@@ -14,7 +14,6 @@ module TrustlessSidechain.Types (
   CheckpointDatum (..),
   CheckpointMessage (..),
   CheckpointParameter (..),
-  CheckpointRedeemer (..),
   CombinedMerkleProof (..),
   CommitteeCertificateMint (..),
   DParameterPolicyRedeemer (..),
@@ -699,38 +698,6 @@ data ATMSRedeemer
     )
 
 PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
-
--- | The Redeemer that is passed to the on-chain validator to update the
--- checkpoint
-data CheckpointRedeemer = CheckpointRedeemer
-  { newCheckpointBlockHash :: LedgerBytes
-  , newCheckpointBlockNumber :: Integer
-  }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
-
--- | @since v4.0.0
-instance ToData CheckpointRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (CheckpointRedeemer {..}) =
-    productToData2
-      newCheckpointBlockHash
-      newCheckpointBlockNumber
-
--- | @since v4.0.0
-instance FromData CheckpointRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 CheckpointRedeemer
-
--- | @since v4.0.0
-instance UnsafeFromData CheckpointRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 CheckpointRedeemer
-
--- | @since v4.0.0
-makeHasField ''CheckpointRedeemer
 
 -- | 'Checkpoint' is used as the parameter for the validator.
 --

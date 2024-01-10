@@ -99,7 +99,6 @@ import TrustlessSidechain.Types (
   CandidatePermissionMint,
   CheckpointDatum,
   CheckpointParameter,
-  CheckpointRedeemer,
   CommitteeCertificateMint,
   DParameterPolicyRedeemer,
   DParameterValidatorRedeemer,
@@ -229,7 +228,7 @@ mkCVCode ::
   CompiledCode
     ( CheckpointParameter ->
       CheckpointDatum ->
-      CheckpointRedeemer ->
+      () ->
       ScriptContext ->
       Bool
     )

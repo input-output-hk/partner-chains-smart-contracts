@@ -64,11 +64,6 @@ import TrustlessSidechain.Types (
     committeeOracleCurrencySymbol,
     sidechainParams
   ),
-  CheckpointRedeemer (
-    CheckpointRedeemer,
-    newCheckpointBlockHash,
-    newCheckpointBlockNumber
-  ),
   CombinedMerkleProof (
     CombinedMerkleProof,
     merkleProof,
@@ -196,7 +191,6 @@ tests =
     , dataEncoderGoldenTest "UpdateCommitteeHashMessage1" sampleUpdateCommitteeHashMessage1
     , dataEncoderGoldenTest "UpdateCommitteeHashMessage2" sampleUpdateCommitteeHashMessage2
     , dataEncoderGoldenTest "CheckpointDatum" sampleCheckpointDatum
-    , dataEncoderGoldenTest "CheckpointRedeemer" sampleCheckpointRedeemer
     , dataEncoderGoldenTest "CheckpointParameter" sampleCheckpointParameter
     , dataEncoderGoldenTest "CheckpointMessage" sampleCheckpointMessage
     , dataEncoderGoldenTest "CommitteeCertificateMint" sampleCommitteeCertificateMint
@@ -451,13 +445,6 @@ sampleCheckpointDatum =
   CheckpointDatum
     { blockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
     , blockNumber = 15791
-    }
-
-sampleCheckpointRedeemer :: CheckpointRedeemer
-sampleCheckpointRedeemer =
-  CheckpointRedeemer
-    { newCheckpointBlockHash = "5560457708ed4dbfdd3be10a3fee66e22ffef3143e8a69fca64e06a4ac8b761e"
-    , newCheckpointBlockNumber = 15791
     }
 
 sampleCheckpointParameter :: CheckpointParameter

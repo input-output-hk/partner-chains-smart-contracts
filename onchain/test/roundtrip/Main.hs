@@ -93,7 +93,6 @@ import TrustlessSidechain.Types (
     committeeOracleCurrencySymbol,
     sidechainParams
   ),
-  CheckpointRedeemer (CheckpointRedeemer),
   CombinedMerkleProof (CombinedMerkleProof),
   CommitteeCertificateMint (
     CommitteeCertificateMint,
@@ -212,8 +211,7 @@ main =
     , -- CheckpointDatum needs format clarification
       testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
     , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
-    , -- CheckpointRedeemer needs format clarification
-      testProperty "CheckpointParameter (safe)" . toDataSafeLaws' genCP shrinkCP $ show
+    , testProperty "CheckpointParameter (safe)" . toDataSafeLaws' genCP shrinkCP $ show
     , testProperty "CheckpointParameter (unsafe)" . toDataUnsafeLaws' genCP shrinkCP $ show
     , -- CheckpointMessage needs format clarification
       testProperty "Ds (safe)" . toDataSafeLaws' genDs shrinkDs $ show
@@ -238,8 +236,6 @@ main =
     , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
     , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
     , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
-    , testProperty "CheckpointRedeemer (safe)" . toDataSafeLaws' genCHPR shrinkCHPR $ show
-    , testProperty "CheckpointRedeemer (unsafe)" . toDataUnsafeLaws' genCHPR shrinkCHPR $ show
     , testProperty "DParameterPolicyRedeemer (safe)" . toDataSafeLaws' genDPPR shrinkDPPR $ show
     , testProperty "DParameterPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genDPPR shrinkDPPR $ show
     , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
@@ -340,12 +336,6 @@ genCHPM = do
   bn <- arbitrary
   se <- arbitrary
   pure $ CheckpointMessage sp lb bn se
-
-genCHPR :: Gen CheckpointRedeemer
-genCHPR = do
-  ArbitraryBytes ncbh <- arbitrary
-  ncbn <- arbitrary
-  pure $ CheckpointRedeemer ncbh ncbn
 
 genDPPR :: Gen DParameterPolicyRedeemer
 genDPPR = oneof [pure DParameterMint, pure DParameterBurn]
@@ -642,12 +632,6 @@ shrinkCHPM (CheckpointMessage sp bh bn se) = do
   bn' <- shrink bn
   se' <- shrink se
   pure $ CheckpointMessage sp' bh' bn' se'
-
-shrinkCHPR :: CheckpointRedeemer -> [CheckpointRedeemer]
-shrinkCHPR (CheckpointRedeemer ncbh ncbn) = do
-  ArbitraryBytes ncbh' <- shrink $ ArbitraryBytes ncbh
-  ncbn' <- shrink ncbn
-  pure $ CheckpointRedeemer ncbh' ncbn'
 
 shrinkDPPR :: DParameterPolicyRedeemer -> [DParameterPolicyRedeemer]
 shrinkDPPR = const []

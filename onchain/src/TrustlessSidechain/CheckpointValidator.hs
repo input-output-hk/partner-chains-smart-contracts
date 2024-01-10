@@ -47,7 +47,6 @@ import TrustlessSidechain.Types (
     sidechainParams
   ),
   CheckpointParameter,
-  CheckpointRedeemer,
   SidechainParams,
   UpdateCommitteeDatum,
  )
@@ -77,7 +76,7 @@ serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
 mkCheckpointValidator ::
   CheckpointParameter ->
   CheckpointDatum ->
-  CheckpointRedeemer ->
+  () ->
   ScriptContext ->
   Bool
 mkCheckpointValidator checkpointParam datum _red ctx =

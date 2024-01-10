@@ -7,7 +7,7 @@ module TrustlessSidechain.Checkpoint
 import Contract.Prelude
 
 import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
+import Contract.PlutusData (Datum(Datum), toData, unitRedeemer)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -23,7 +23,6 @@ import TrustlessSidechain.Checkpoint.Types
   , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
   , CheckpointParameter(CheckpointParameter)
-  , CheckpointRedeemer(CheckpointRedeemer)
   )
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
@@ -223,19 +222,13 @@ saveCheckpointLookupsAndConstraints
           }
       )
     value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
-    redeemer = Redeemer $ toData
-      ( CheckpointRedeemer
-          { newCheckpointBlockHash
-          , newCheckpointBlockNumber
-          }
-      )
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
         <> Lookups.validator validator
 
-    constraints = TxConstraints.mustSpendScriptOutput checkpointOref redeemer
+    constraints = TxConstraints.mustSpendScriptOutput checkpointOref unitRedeemer
       <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
         DatumInline
         value

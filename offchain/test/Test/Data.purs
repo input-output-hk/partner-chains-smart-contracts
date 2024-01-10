@@ -38,7 +38,6 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointMessage(CheckpointMessage)
   , CheckpointParameter(CheckpointParameter)
-  , CheckpointRedeemer(CheckpointRedeemer)
   , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -191,8 +190,6 @@ tests = pureGroup "Data roundtrip tests" $ do
     genCheckpointParameter
   test "InitCheckpointMint" $ liftEffect $ toDataLaws testCount
     genInitCheckpointMint
-  test "CheckpointRedeemer" $ liftEffect $ toDataLaws testCount
-    genCheckpointRedeemer
   test "CheckpointMessage" $ liftEffect $ toDataLaws testCount
     genCheckpointMessage
   test "DParameterValidatorRedeemer" $ liftEffect $ toDataLaws testCount
@@ -284,15 +281,6 @@ genInitCheckpointMint ∷ Gen InitCheckpointMint
 genInitCheckpointMint = InitCheckpointMint <<< { icTxOutRef: _ } <$> do
   ArbitraryTransactionInput input ← arbitrary
   pure input
-
-genCheckpointRedeemer ∷ Gen CheckpointRedeemer
-genCheckpointRedeemer = do
-  newCheckpointBlockHash ← arbitrary
-  newCheckpointBlockNumber ← BigInt.fromInt <$> arbitrary
-  pure $ CheckpointRedeemer
-    { newCheckpointBlockHash
-    , newCheckpointBlockNumber
-    }
 
 genCheckpointMessage ∷ Gen CheckpointMessage
 genCheckpointMessage = do

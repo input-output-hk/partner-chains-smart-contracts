@@ -2,7 +2,6 @@ module TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointParameter(CheckpointParameter)
   , InitCheckpointMint(InitCheckpointMint)
-  , CheckpointRedeemer(CheckpointRedeemer)
   , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
   ) where
@@ -108,32 +107,6 @@ instance ToData InitCheckpointMint where
 
 instance FromData InitCheckpointMint where
   fromData = map (InitCheckpointMint <<< { icTxOutRef: _ }) <$> fromData
-
-newtype CheckpointRedeemer = CheckpointRedeemer
-  { newCheckpointBlockHash ∷ ByteArray
-  , newCheckpointBlockNumber ∷ BigInt
-  }
-
-derive instance Generic CheckpointRedeemer _
-
-derive newtype instance Eq CheckpointRedeemer
-
-derive newtype instance Show CheckpointRedeemer
-
-instance ToData CheckpointRedeemer where
-  toData
-    ( CheckpointRedeemer
-        { newCheckpointBlockHash
-        , newCheckpointBlockNumber
-        }
-    ) = productToData2
-    newCheckpointBlockHash
-    newCheckpointBlockNumber
-
-instance FromData CheckpointRedeemer where
-  fromData = productFromData2
-    $ \newCheckpointBlockHash newCheckpointBlockNumber →
-        CheckpointRedeemer { newCheckpointBlockHash, newCheckpointBlockNumber }
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
