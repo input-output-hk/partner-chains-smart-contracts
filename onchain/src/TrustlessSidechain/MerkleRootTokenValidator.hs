@@ -11,11 +11,15 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 
 -- | 'mkMptRootTokenValidator' always fails.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-MERKLE-ROOT-TOKEN-VALIDATOR-01: Illegal attempt to spend.
 {-# INLINEABLE mkMptRootTokenValidator #-}
 mkMptRootTokenValidator ::
   SidechainParams -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMptRootTokenValidator _sc _dat _red _ctx =
-  Trace.traceError "error 'mkMptRootTokenValidator': illegal attempt to spend"
+  Trace.traceError "ERROR-MERKLE-ROOT-TOKEN-VALIDATOR-01"
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()

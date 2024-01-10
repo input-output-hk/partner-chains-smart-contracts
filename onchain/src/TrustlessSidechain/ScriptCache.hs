@@ -18,6 +18,10 @@ import TrustlessSidechain.Utils (
 -- | Script cache parameterized by a public key hash.  Spending from the script
 -- is only permitted when the transaction is signed by pub key hash used as the
 -- script parameter.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-SCRIPT-CACHE-01: Not signed by owner.
 {-# INLINEABLE mkScriptCache #-}
 mkScriptCache :: PubKeyHash -> () -> () -> ScriptContext -> Bool
 mkScriptCache pkh () () (ScriptContext txInfo _) =

@@ -57,6 +57,23 @@ serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
 
 {-# INLINEABLE mkCheckpointValidator #-}
+-- OnChain error descriptions:
+--
+--   ERROR-CHECKPOINT-VALIDATOR-01: Output missing NFT.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-02: Committee signature invalid.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-03: New checkpoint block number must be greater
+--   than current checkpoint block number.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-04: New checkpoint block hash must be different
+--   from current checkpoint block hash.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-05: No committee UTxO given as reference input.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-06: Expected exactly one continuing output.
+--
+--   ERROR-CHECKPOINT-VALIDATOR-07: Missing output inline datum.
 mkCheckpointValidator ::
   CheckpointParameter ->
   CheckpointDatum ->
@@ -64,13 +81,13 @@ mkCheckpointValidator ::
   ScriptContext ->
   Bool
 mkCheckpointValidator checkpointParam datum _red ctx =
-  traceIfFalse "error 'mkCheckpointValidator': output missing NFT" outputContainsCheckpointNft
-    && traceIfFalse "error 'mkCheckpointValidator': committee signature invalid" signedByCurrentCommittee
+  traceIfFalse "ERROR-CHECKPOINT-VALIDATOR-01" outputContainsCheckpointNft
+    && traceIfFalse "ERROR-CHECKPOINT-VALIDATOR-02" signedByCurrentCommittee
     && traceIfFalse
-      "error 'mkCheckpointValidator' new checkpoint block number must be greater than current checkpoint block number"
+      "ERROR-CHECKPOINT-VALIDATOR-03"
       (get @"blockNumber" datum < get @"blockNumber" outputDatum)
     && traceIfFalse
-      "error 'mkCheckpointValidator' new checkpoint block hash must be different from current checkpoint block hash"
+      "ERROR-CHECKPOINT-VALIDATOR-04"
       (get @"blockHash" datum /= get @"blockHash" outputDatum)
   where
     info :: TxInfo
@@ -95,7 +112,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
 
     -- Extract the UpdateCommitteeDatum from the list of input transactions
     extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
-    extractCommitteeDatum [] = traceError "error 'CheckpointValidator' no committee utxo given as reference input"
+    extractCommitteeDatum [] = traceError "ERROR-CHECKPOINT-VALIDATOR-05"
     extractCommitteeDatum (txIn : txIns)
       | containsCommitteeNft txIn = case txOutDatum (txInInfoResolved txIn) of
         OutputDatum d -> IsData.unsafeFromBuiltinData $ getDatum d
@@ -108,12 +125,12 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     ownOutput :: TxOut
     ownOutput = case Contexts.getContinuingOutputs ctx of
       [o] -> o
-      _ -> traceError "Expected exactly one output"
+      _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-06"
 
     outputDatum :: CheckpointDatum
     outputDatum = case txOutDatum ownOutput of
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
-      _ -> traceError "error 'mkCheckpointValidator': no output inline datum missing"
+      _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-07"
 
     -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
     outputContainsCheckpointNft :: Bool
@@ -170,11 +187,18 @@ initCheckpointMintAmount = 1
 
 -- | 'mkCheckpointPolicy' is the minting policy for the NFT which identifies
 -- the checkpoint
+--
+-- OnChain error descriptions:
+--
+--   ERROR-CHECKPOINT-POLICY-01: The transaction doesn't spend txOutRef
+--   indicated in InitCheckpointMint.
+--
+--   ERROR-CHECKPOINT-POLICY-02: wrong amount minted
 {-# INLINEABLE mkCheckpointPolicy #-}
 mkCheckpointPolicy :: InitCheckpointMint -> () -> ScriptContext -> Bool
 mkCheckpointPolicy ichm _red ctx =
-  traceIfFalse "error 'mkCheckpointPolicy' UTxO not consumed" hasUtxo
-    && traceIfFalse "error 'mkCheckpointPolicy' wrong amount minted" checkMintedAmount
+  traceIfFalse "ERROR-CHECKPOINT-POLICY-01" hasUtxo
+    && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

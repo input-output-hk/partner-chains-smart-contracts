@@ -254,14 +254,24 @@ instance UnsafeFromData DsKeyMint where
 
 -- | 'unsafeGetDatum' gets the inline datum sitting at a 'TxOut' and throws an
 -- error otherwise.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-UNSAFE-GET-DATUM-01: tx output does not have an inline datum attached
+--   to it.
 {-# INLINEABLE unsafeGetDatum #-}
 unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxOut -> a
 unsafeGetDatum o = case txOutDatum o of
   OutputDatum d -> PlutusTx.unsafeFromBuiltinData (getDatum d)
-  _ -> traceError "error 'unsafeGetDatum' failed"
+  _ -> traceError "ERROR-UNSAFE-GET-DATUM-01"
 
 -- | 'getConf' gets the config associated with a distributed set and throws an
 -- error if it does not exist.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-DS-GET-CONF-01: could not find a valid distributed set configuration
+--   in the provided transaction inputs.
 {-# INLINEABLE getConf #-}
 getConf :: CurrencySymbol -> TxInfo -> DsConfDatum
 getConf currencySymbol info = go $ txInfoReferenceInputs info
@@ -272,7 +282,7 @@ getConf currencySymbol info = go $ txInfoReferenceInputs info
         o -> case AssocMap.lookup currencySymbol $ getValue $ txOutValue o of
           Just _ -> unsafeGetDatum o
           Nothing -> go ts
-    go [] = traceError "error 'getConf' missing conf"
+    go [] = traceError "ERROR-DS-GET-CONF-01"
 
 PlutusTx.makeLift ''DsKeyMint
 
@@ -312,11 +322,16 @@ rootNode =
 
 -- | 'fromListIb lst' converts a list of length 2 into an 'Ib' and throws an
 -- exception otherwise.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-DS-FROM-LIST-IB-01: provided list should contain exactly two elements,
+--   but it was of different length.
 {-# INLINEABLE fromListIb #-}
 fromListIb :: [a] -> Ib a
 fromListIb = \case
   [a, b] -> Ib {unIb = (a, b)}
-  _ -> traceError "error 'fromListIb' bad list"
+  _ -> traceError "ERROR-DS-FROM-LIST-IB-01"
 
 -- | 'lengthIb' always returns 2.
 {-# INLINEABLE lengthIb #-}
@@ -329,8 +344,8 @@ lengthIb _ = 2
 --
 -- Note that the first projection of 'Ib' will always be the node which should
 -- replace @node@, which also should be the node which is strictly less than
--- @str@. This property is helpful in 'mkInsertValidator' when verifying that the
--- nodes generated are as they should be.
+-- @str@. This property is helpful in 'mkInsertValidator' when verifying that
+-- the nodes generated are as they should be.
 {-# INLINEABLE insertNode #-}
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
 insertNode str node
@@ -341,6 +356,34 @@ insertNode str node
 
 -- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
 -- done in the 'insertNode' function.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-DS-INSERT-VALIDATOR-01: Inserted node different from continuing node.
+--
+--   ERROR-DS-INSERT-VALIDATOR-02: Incorrect number of distributed set key
+--   tokens.  Should be 2.
+--
+--   ERROR-DS-INSERT-VALIDATOR-03: No FUEL tokens minted.
+--
+--   ERROR-DS-INSERT-VALIDATOR-04: Couldn't perform node insertion.
+--
+--   ERROR-DS-INSERT-VALIDATOR-05: Transaction doesn't mint exactly one key
+--   token.
+--
+--   ERROR-DS-INSERT-VALIDATOR-06: Couldn't find currently validated input.
+--   Should never happen.
+--
+--   ERROR-DS-INSERT-VALIDATOR-07: Value contains exactly one currency symbol,
+--   but it does not match the keyCurrencySymbol.
+--
+--   ERROR-DS-INSERT-VALIDATOR-08: Value does not contain exactly one token.
+--
+--   ERROR-DS-INSERT-VALIDATOR-09: Value does contain exactly one currency
+--   symbol, but it does not contain exactly one token name for that currency.
+--
+--   ERROR-DS-INSERT-VALIDATOR-10: Value does not contain exactly one currency
+--   symbol, i.e. it either contains none or more than one.
 {-# INLINEABLE mkInsertValidator #-}
 mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
@@ -376,11 +419,12 @@ mkInsertValidator ds _dat _red ctx =
                     , amt == 1 ->
                     2
                 _ -> -1
-           in traceIfFalse "error 'mkInsertValidator' bad insertion" (contNodes == nNodes && totalKeys == lengthIb nNodes)
-                && traceIfFalse "error 'mkInsertValidator' missing FUEL mint" (AssocMap.member (get @"fuelPolicy" conf) minted)
+           in traceIfFalse "ERROR-DS-INSERT-VALIDATOR-01" (contNodes == nNodes)
+                && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-02" (totalKeys == lengthIb nNodes)
+                && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-03" (AssocMap.member (get @"fuelPolicy" conf) minted)
       )
         ( fromMaybe
-            (traceError "error 'mkInsertValidator' bad insertion")
+            (traceError "ERROR-DS-INSERT-VALIDATOR-04")
             (insertNode nStr $ getTxOutNodeInfo (txInInfoResolved ownInput))
         )
   )
@@ -389,7 +433,7 @@ mkInsertValidator ds _dat _red ctx =
           | [(leaf, amt)] <- AssocMap.toList mp
             , amt == 1 ->
             unTokenName leaf
-        _ -> traceError "error 'mkInsertValidator' missing unique string to insert"
+        _ -> traceError "ERROR-DS-INSERT-VALIDATOR-05"
     )
   where
     -- if you're wondering why this is written in such an unreadable way, it's
@@ -403,7 +447,7 @@ mkInsertValidator ds _dat _red ctx =
     ownInput :: TxInInfo
     !ownInput = case Contexts.findOwnInput ctx of
       Just i -> i
-      Nothing -> traceError "error 'mkInsertValidator': ownInput failed"
+      Nothing -> traceError "ERROR-DS-INSERT-VALIDATOR-06"
 
     minted :: Map CurrencySymbol (Map TokenName Integer)
     !minted = getValue (txInfoMint info)
@@ -427,17 +471,17 @@ mkInsertValidator ds _dat _red ctx =
         [(tn, amt)] ->
           if
               | cs /= keyCurrencySymbol ->
-                traceError "error 'mkInsertValidator': No mapping for keyCurrencySymbol at output."
+                traceError "ERROR-DS-INSERT-VALIDATOR-07"
               | amt /= 1 ->
-                traceError "error 'mkInsertValidator': Amount for keyCurrencySymbol is 'too large'."
+                traceError "ERROR-DS-INSERT-VALIDATOR-08"
               | otherwise -> unTokenName tn
         -- Note from Koz: It would seem to be a better idea to fuse these two
         -- error cases together, but it is not so: we'd have to drag in some way
         -- of mapping AssocMap.toList over the entire 'outer map', which
         -- actually makes the whole function bigger by a non-trivial amount.
         -- Yes, it doesn't make much sense to me either.
-        _ -> traceError "error 'mkInsertValidator': Value at output is 'too large'."
-      _ -> traceError "error 'mkInsertValidator': Value at output is 'too large'."
+        _ -> traceError "ERROR-DS-INSERT-VALIDATOR-09"
+      _ -> traceError "ERROR-DS-INSERT-VALIDATOR-10"
 
     -- Given a TxOut, this will get (and check) if we have the 'TokenName' and
     -- required datum.
@@ -451,10 +495,18 @@ mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 
 -- | 'mkDsConfPolicy' mints the nft which identifies the utxo that stores
 -- the various minting policies that the distributed set depends on
+--
+-- OnChain error descriptions:
+--
+--   ERROR-DS-CONF-POLICY-01: The transaction doesn't spend txOutRef indicated
+--   in DsConfMint.
+--
+--   ERROR-DS-CONF-POLICY-02: Invalid mint.  Transaction should mint only one
+--   dsConfTokenName token, but it doesn't.
 mkDsConfPolicy :: DsConfMint -> () -> ScriptContext -> Bool
 mkDsConfPolicy dsc _red ctx =
-  traceIfFalse "error 'mkDsConfPolicy' missing TxOutRef" spendsTxOutRef
-    && traceIfFalse "error 'mkDsConfPolicy' illegal mint" mintingChecks
+  traceIfFalse "ERROR-DS-CONF-POLICY-01" spendsTxOutRef
+    && traceIfFalse "ERROR-DS-CONF-POLICY-02" mintingChecks
   where
     -- Aliases
     info :: TxInfo
@@ -485,6 +537,19 @@ dsConfTokenName = TokenName emptyByteString
 {-# INLINE mkDsKeyPolicy #-}
 
 -- | 'mkDsKeyPolicy'.  See Note [How This All Works].
+--
+-- OnChain error descriptions:
+--
+--   ERROR-DS-CONF-POLICY-01: Transaction does not send a minted token to
+--   validator hash indicated by DsKeyMint.
+--
+--   ERROR-DS-CONF-POLICY-02: Transaction does not mint exactly one token
+--
+--   ERROR-DS-CONF-POLICY-03: Invalid transaction inputs that match neither
+--   distributed set initialization nor insertion into the already existing set.
+--
+--   ERROR-DS-CONF-POLICY-04: Bad minted tokens.  Transaction should only mint
+--   one own token.
 mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool
 mkDsKeyPolicy dskm _red ctx = case ins of
   [_ownTn] -> True
@@ -498,7 +563,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
       AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ txInfoMint info ->
       case mintedTns of
         [tn] | unTokenName tn == get @"key" rootNode ->
-          traceIfFalse "error 'mkDsKeyPolicy' illegal outputs" $
+          traceIfFalse "ERROR-DS-CONF-POLICY-01" $
             case find (\txout -> txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)) (txInfoOutputs info) of
               Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
               Nothing -> False
@@ -508,8 +573,8 @@ mkDsKeyPolicy dskm _red ctx = case ins of
         -- this system (and the 'DsConf' validator cannot be changed), so
         -- everyone may independently verify offchain that the 'dscKeyPolicy'
         -- is as expected.
-        _ -> traceError "error 'mkDsKeyPolicy' bad initial mint"
-  _ -> traceError "error 'mkDsKeyPolicy' bad inputs in transaction"
+        _ -> traceError "ERROR-DS-CONF-POLICY-02"
+  _ -> traceError "ERROR-DS-CONF-POLICY-03"
   where
     -- Aliases
     info :: TxInfo
@@ -540,20 +605,20 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     mintedTns :: [TokenName]
     mintedTns = case AssocMap.lookup ownCS $ getValue (txInfoMint info) of
       Just mp | vs <- AssocMap.toList mp, all ((== 1) . snd) vs -> map fst vs
-      _ -> traceError "error 'mkDsKeyPolicy': bad minted tokens"
+      _ -> traceError "ERROR-DS-CONF-POLICY-04"
 
-{- Note [Alternative Ways of Doing This]
- We actually did try some other ways of doing it, but none of them worked.  For
- reference, here's what we tried:
-
-    * The [Stick Breaking Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
-    which had some obvious issues with datum sizes being too large which could
-    be remedied by working at the bit level of having a binary tree with
-    branches of 0 and 1.
-    This had budget issues.
-
-    * Variations of a Patricia Tree. This also had budget issues.
--}
+-- Note [Alternative Ways of Doing This]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+-- We actually did try some other ways of doing it, but none of them worked.
+-- For reference, here's what we tried:
+--
+--  * The [Stick Breaking Set](https://github.com/Plutonomicon/plutonomicon/blob/main/stick-breaking-set.md)
+--    which had some obvious issues with datum sizes being too large which could
+--    be remedied by working at the bit level of having a binary tree with
+--    branches of 0 and 1.  This had budget issues.
+--
+--  * Variations of a Patricia Tree. This also had budget issues.
 
 -- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
 -- needed for ctl)

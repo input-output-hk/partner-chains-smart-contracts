@@ -129,7 +129,6 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 --
 --   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02: transaction not signed by the
 --   governance authority
-
 {-# INLINEABLE permissionedCandidatesValidator #-}
 permissionedCandidatesValidator ::
   SidechainParams ->

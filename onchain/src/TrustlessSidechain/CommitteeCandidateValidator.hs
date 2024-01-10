@@ -25,6 +25,10 @@ import TrustlessSidechain.Types (
 import TrustlessSidechain.Utils (mkUntypedValidator)
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
+-- OnChain error descriptions:
+--
+--   ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01: Transaction not signed by the
+--   original submitter.
 mkCommitteeCandidateValidator ::
   SidechainParams ->
   BlockProducerRegistration ->
@@ -32,7 +36,7 @@ mkCommitteeCandidateValidator ::
   ScriptContext ->
   Bool
 mkCommitteeCandidateValidator _ datum _ ctx =
-  traceIfFalse "Must be signed by the original submitter" isSigned
+  traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

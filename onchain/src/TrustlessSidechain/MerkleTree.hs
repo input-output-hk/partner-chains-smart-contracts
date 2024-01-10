@@ -302,9 +302,13 @@ rootHashFromList = rootHash . fromList
 --
 -- > 'fromList' [] == error
 -- > fromList ["a", "b"] == fromNonEmpty ["a", "b"]
+--
+-- OnChain error descriptions:
+--
+--   ERROR-MERKLE-TREE-FROM-LIST-01: The list is empty.
 {-# INLINEABLE fromList #-}
 fromList :: [BuiltinByteString] -> MerkleTree
-fromList [] = traceError "illegal TrustlessSidechain.MerkleTree.fromList with empty list"
+fromList [] = traceError "ERROR-MERKLE-TREE-FROM-LIST-01"
 fromList lst = mergeAll . map (Tip . hashLeaf) $ lst
   where
     -- Note [Number of Nodes in the MerkleTree / Run Time]

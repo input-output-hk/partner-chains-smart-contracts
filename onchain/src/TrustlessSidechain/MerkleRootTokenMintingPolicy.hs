@@ -65,11 +65,22 @@ serialiseMrimHash =
 
 -- | 'mkMintingPolicy' verifies the following
 --
---      1. UTXO with the last Merkle root is referenced in the transaction.
+--   1. UTXO with the last Merkle root is referenced in the transaction.
 --
---      2.  the committee certificate verification minting policy asserts that
---      `MerkleRootInsertionMessage` has been signed, exactly one token is minted,
---      and At least one token is paid to 'validatorHash'
+--   2. the committee certificate verification minting policy asserts that
+--      `MerkleRootInsertionMessage` has been signed, exactly one token is
+--      minted, and At least one token is paid to 'validatorHash'
+--
+-- OnChain error descriptions:
+--
+--   ERROR-MERKLE-ROOT-POLICY-01: Previous merkle root not referenced.
+--
+--   ERROR-MERKLE-ROOT-POLICY-02: Transaction does not mint exactly one own
+--   token.
+--
+--   ERROR-MERKLE-ROOT-POLICY-03: Committee certificate verification failed.
+--
+--   ERROR-MERKLE-ROOT-POLICY-04: Token not paid to correct validator address.
 {-# INLINEABLE mkMintingPolicy #-}
 mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
 mkMintingPolicy
@@ -77,8 +88,8 @@ mkMintingPolicy
   versionOracleConfig
   smrr
   ctx =
-    traceIfFalse "error 'MerkleRootTokenMintingPolicy' previous merkle root not referenced" p1
-      && traceIfFalse "error 'MerkleRootTokenMintingPolicy' bad mint" p2
+    traceIfFalse "ERROR-MERKLE-ROOT-POLICY-01" p1
+      && traceIfFalse "ERROR-MERKLE-ROOT-POLICY-02" p2
     where
       info :: TxInfo
       info = scriptContextTxInfo ctx
@@ -96,6 +107,7 @@ mkMintingPolicy
               }
           )
           ctx
+
       committeeCertificateVerificationPolicy =
         getVersionedCurrencySymbol
           versionOracleConfig
@@ -139,7 +151,7 @@ mkMintingPolicy
                       , previousMerkleRoot = get @"previousMerkleRoot" smrr
                       }
                in traceIfFalse
-                    "error 'MerkleRootTokenMintingPolicy' committee certificate verification failed"
+                    "ERROR-MERKLE-ROOT-POLICY-03"
                     ( Value.valueOf
                         minted
                         committeeCertificateVerificationPolicy
@@ -147,7 +159,7 @@ mkMintingPolicy
                         > 0
                     )
                     && traceIfFalse
-                      "error 'MerkleRootTokenMintingPolicy' token not paid to correct validator address"
+                      "ERROR-MERKLE-ROOT-POLICY-04"
                       ( let go [] = False
                             go (txOut : txOuts) =
                               ( ( txOutAddress txOut == merkleRootTokenValidatorAddress
