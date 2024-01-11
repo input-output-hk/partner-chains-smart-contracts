@@ -44,7 +44,7 @@ import Data.Set as Set
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import TrustlessSidechain.RawScripts (rawPoCECDSA)
+import Test.PoCRawScripts (rawPoCECDSA)
 
 getValidator ∷ Contract Validator
 getValidator = do

@@ -26,8 +26,8 @@ import Data.Map as Map
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
-import TrustlessSidechain.RawScripts as RawScripts
 
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
 tests ∷ PlutipTest

@@ -41,8 +41,8 @@ import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
-import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
