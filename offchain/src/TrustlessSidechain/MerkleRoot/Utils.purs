@@ -35,7 +35,7 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.RawScripts
-  ( rawMerkleRootTokenMintingPolicy
+  ( rawMerkleRootTokenPolicy
   , rawMerkleRootTokenValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -53,7 +53,7 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 merkleRootTokenMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mkMintingPolicyWithParams rawMerkleRootTokenMintingPolicy
+  mkMintingPolicyWithParams rawMerkleRootTokenPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to

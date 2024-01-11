@@ -22,7 +22,7 @@ import Contract.Scripts
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import TrustlessSidechain.RawScripts
-  ( rawPermissionedCandidatesMintingPolicy
+  ( rawPermissionedCandidatesPolicy
   , rawPermissionedCandidatesValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -38,7 +38,7 @@ decodePermissionedCandidatesMintingPolicy ∷
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   { permissionedCandidatesValidatorAddress } ←
     getPermissionedCandidatesValidatorAndAddress sidechainParams
-  mkMintingPolicyWithParams rawPermissionedCandidatesMintingPolicy
+  mkMintingPolicyWithParams rawPermissionedCandidatesPolicy
     [ toData sidechainParams, toData permissionedCandidatesValidatorAddress ]
 
 decodePermissionedCandidatesValidator ∷ SidechainParams → Contract Validator

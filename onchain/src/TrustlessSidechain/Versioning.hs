@@ -108,7 +108,8 @@ fuelMintingPolicyId
   , dParameterPolicyId
   , dParameterValidatorId
   , permissionedCandidatesPolicyId
-  , permissionedCandidatesValidatorId ::
+  , permissionedCandidatesValidatorId
+  , scriptCacheId ::
     Integer
 fuelMintingPolicyId = 0
 merkleRootTokenPolicyId = 1
@@ -134,6 +135,7 @@ dParameterPolicyId = 22
 dParameterValidatorId = 23
 permissionedCandidatesPolicyId = 24
 permissionedCandidatesValidatorId = 25
+scriptCacheId = 26
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.

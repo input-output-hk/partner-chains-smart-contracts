@@ -120,7 +120,7 @@ getSidechainAddresses
 
   dsConfPolicy ← DistributedSet.dsConfPolicy
     (wrap (unwrap scParams).genesisUtxo)
-  dsConfPolicyId ← getCurrencySymbolHex DSConfPolicy dsConfPolicy
+  dsConfPolicyId ← getCurrencySymbolHex DsConfPolicy dsConfPolicy
 
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
     Nothing → pure Nothing
@@ -199,7 +199,7 @@ getSidechainAddresses
 
   let
     mintingPolicies =
-      [ DSConfPolicy /\ dsConfPolicyId
+      [ DsConfPolicy /\ dsConfPolicyId
       , CheckpointPolicy /\ checkpointPolicyId
       , FUELProxyPolicy /\ fuelProxyPolicyId
       , VersionOraclePolicy /\ versionOraclePolicyId
@@ -215,11 +215,11 @@ getSidechainAddresses
         <>
           ( case atmsKind of
               ATMSPlainEcdsaSecp256k1 →
-                [ CommitteePlainEcdsaSecp256k1ATMSPolicyId
+                [ CommitteePlainEcdsaSecp256k1ATMSPolicy
                     /\ committeePlainEcdsaSecp256k1ATMSPolicyId
                 ]
               ATMSPlainSchnorrSecp256k1 →
-                [ CommitteePlainSchnorrSecp256k1ATMSPolicyId
+                [ CommitteePlainSchnorrSecp256k1ATMSPolicy
                     /\ committeePlainSchnorrSecp256k1ATMSPolicyId
                 ]
               _ → []
@@ -227,8 +227,8 @@ getSidechainAddresses
 
     validators =
       [ CommitteeCandidateValidator /\ committeeCandidateValidator
-      , DSConfValidator /\ dsConfValidator
-      , DSInsertValidator /\ dsInsertValidator
+      , DsConfValidator /\ dsConfValidator
+      , DsInsertValidator /\ dsInsertValidator
       , VersionOracleValidator /\ veresionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       , DParameterValidator /\ dParameterValidator

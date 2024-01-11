@@ -191,9 +191,9 @@ main =
           [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
           , ("FUELBurningPolicy", FUELMintingPolicy.serialisableBurningPolicy)
           , ("MerkleRootTokenValidator", MerkleRootTokenValidator.serialisableValidator)
-          , ("MerkleRootTokenMintingPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
+          , ("MerkleRootTokenPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
           , ("CommitteeCandidateValidator", CommitteeCandidateValidator.serialisableValidator)
-          , ("CandidatePermissionMintingPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
+          , ("CandidatePermissionPolicy", CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy)
           , ("CommitteeOraclePolicy", UpdateCommitteeHash.serialisableCommitteeOraclePolicy)
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
@@ -207,7 +207,7 @@ main =
             ("CommitteePlainEcdsaSecp256k1ATMSPolicy", CommitteePlainEcdsaSecp256k1ATMSPolicy.serialisableMintingPolicy)
           , ("CommitteePlainSchnorrSecp256k1ATMSPolicy", CommitteePlainSchnorrSecp256k1ATMSPolicy.serialisableMintingPolicy)
           , -- Distributed set validators / minting policies
-            ("InsertValidator", DistributedSet.serialisableInsertValidator)
+            ("DsInsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)
           , ("DsConfPolicy", DistributedSet.serialisableDsConfPolicy)
           , ("DsKeyPolicy", DistributedSet.serialisableDsKeyPolicy)
@@ -220,13 +220,12 @@ main =
           , ("PoCSerialiseData", PoCSerialiseData.serialisablePoCSerialiseData)
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
           , ("PoCSchnorr", PoCSchnorr.serialisablePolicy)
-          , -- Validators for FUEL Proxy tests
-            ("PoCMintingPolicy", PoCMintingPolicy.serialisablePoCMintingPolicy)
+          , ("PoCMintingPolicy", PoCMintingPolicy.serialisablePoCMintingPolicy)
           , -- Scripts for DParameter
-            ("DParameterMintingPolicy", DParameter.serialisableMintingPolicy)
+            ("DParameterPolicy", DParameter.serialisableMintingPolicy)
           , ("DParameterValidator", DParameter.serialisableValidator)
           , -- Scripts for PermissionedCandidates
-            ("PermissionedCandidatesMintingPolicy", PermissionedCandidates.serialisableMintingPolicy)
+            ("PermissionedCandidatesPolicy", PermissionedCandidates.serialisableMintingPolicy)
           , ("PermissionedCandidatesValidator", PermissionedCandidates.serialisableValidator)
           ]
         plutusScriptsDotPlutus = fmap (Bifunctor.first (FilePath.<.> "plutus")) plutusScripts

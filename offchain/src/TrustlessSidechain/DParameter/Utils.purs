@@ -22,7 +22,7 @@ import Contract.Scripts
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import TrustlessSidechain.RawScripts
-  ( rawDParameterMintingPolicy
+  ( rawDParameterPolicy
   , rawDParameterValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -37,7 +37,7 @@ decodeDParameterMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDParameterMintingPolicy sidechainParams = do
   { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
     sidechainParams
-  mkMintingPolicyWithParams rawDParameterMintingPolicy $
+  mkMintingPolicyWithParams rawDParameterPolicy $
     [ toData sidechainParams, toData dParameterValidatorAddress ]
 
 decodeDParameterValidator ∷ SidechainParams → Contract Validator

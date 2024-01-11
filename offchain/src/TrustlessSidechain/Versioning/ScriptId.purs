@@ -33,10 +33,10 @@ data ScriptId
   | CommitteeCandidateValidator
   | CandidatePermissionPolicy
   | CommitteeHashValidator
-  | DSKeyPolicy
-  | DSConfPolicy
-  | DSConfValidator
-  | DSInsertValidator
+  | DsKeyPolicy
+  | DsConfPolicy
+  | DsConfValidator
+  | DsInsertValidator
   | CheckpointValidator
   | CheckpointPolicy
   | FUELBurningPolicy
@@ -45,12 +45,13 @@ data ScriptId
   | FUELProxyPolicy -- not versioned
   | CommitteeCertificateVerificationPolicy
   | CommitteeOraclePolicy
-  | CommitteePlainEcdsaSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
-  | CommitteePlainSchnorrSecp256k1ATMSPolicyId -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+  | CommitteePlainEcdsaSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+  | CommitteePlainSchnorrSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
   | DParameterPolicy
   | DParameterValidator
   | PermissionedCandidatesPolicy
   | PermissionedCandidatesValidator
+  | ScriptCache
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -72,13 +73,13 @@ instance FromData ScriptId where
   fromData (Integer i) | i == BigInt.fromInt 7 =
     Just CommitteeHashValidator
   fromData (Integer i) | i == BigInt.fromInt 8 =
-    Just DSKeyPolicy
+    Just DsKeyPolicy
   fromData (Integer i) | i == BigInt.fromInt 9 =
-    Just DSConfPolicy
+    Just DsConfPolicy
   fromData (Integer i) | i == BigInt.fromInt 10 =
-    Just DSConfValidator
+    Just DsConfValidator
   fromData (Integer i) | i == BigInt.fromInt 11 =
-    Just DSInsertValidator
+    Just DsInsertValidator
   fromData (Integer i) | i == BigInt.fromInt 12 =
     Just CheckpointValidator
   fromData (Integer i) | i == BigInt.fromInt 13 =
@@ -96,9 +97,9 @@ instance FromData ScriptId where
   fromData (Integer i) | i == BigInt.fromInt 19 =
     Just CommitteeOraclePolicy
   fromData (Integer i) | i == BigInt.fromInt 20 =
-    Just CommitteePlainEcdsaSecp256k1ATMSPolicyId
+    Just CommitteePlainEcdsaSecp256k1ATMSPolicy
   fromData (Integer i) | i == BigInt.fromInt 21 =
-    Just CommitteePlainSchnorrSecp256k1ATMSPolicyId
+    Just CommitteePlainSchnorrSecp256k1ATMSPolicy
   fromData (Integer i) | i == BigInt.fromInt 22 =
     Just DParameterPolicy
   fromData (Integer i) | i == BigInt.fromInt 23 =
@@ -107,6 +108,8 @@ instance FromData ScriptId where
     Just PermissionedCandidatesPolicy
   fromData (Integer i) | i == BigInt.fromInt 25 =
     Just PermissionedCandidatesValidator
+  fromData (Integer i) | i == BigInt.fromInt 26 =
+    Just ScriptCache
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -116,10 +119,10 @@ instance ToData ScriptId where
   toData CommitteeCandidateValidator = Integer (BigInt.fromInt 3)
   toData CandidatePermissionPolicy = Integer (BigInt.fromInt 4)
   toData CommitteeHashValidator = Integer (BigInt.fromInt 7)
-  toData DSKeyPolicy = Integer (BigInt.fromInt 8)
-  toData DSConfPolicy = Integer (BigInt.fromInt 9)
-  toData DSConfValidator = Integer (BigInt.fromInt 10)
-  toData DSInsertValidator = Integer (BigInt.fromInt 11)
+  toData DsKeyPolicy = Integer (BigInt.fromInt 8)
+  toData DsConfPolicy = Integer (BigInt.fromInt 9)
+  toData DsConfValidator = Integer (BigInt.fromInt 10)
+  toData DsInsertValidator = Integer (BigInt.fromInt 11)
   toData CheckpointValidator = Integer (BigInt.fromInt 12)
   toData CheckpointPolicy = Integer (BigInt.fromInt 13)
   toData FUELBurningPolicy = Integer (BigInt.fromInt 14)
@@ -128,9 +131,10 @@ instance ToData ScriptId where
   toData FUELProxyPolicy = Integer (BigInt.fromInt 17)
   toData CommitteeCertificateVerificationPolicy = Integer (BigInt.fromInt 18)
   toData CommitteeOraclePolicy = Integer (BigInt.fromInt 19)
-  toData CommitteePlainEcdsaSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 20)
-  toData CommitteePlainSchnorrSecp256k1ATMSPolicyId = Integer (BigInt.fromInt 21)
+  toData CommitteePlainEcdsaSecp256k1ATMSPolicy = Integer (BigInt.fromInt 20)
+  toData CommitteePlainSchnorrSecp256k1ATMSPolicy = Integer (BigInt.fromInt 21)
   toData DParameterPolicy = Integer (BigInt.fromInt 22)
   toData DParameterValidator = Integer (BigInt.fromInt 23)
   toData PermissionedCandidatesPolicy = Integer (BigInt.fromInt 24)
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
+  toData ScriptCache = Integer (BigInt.fromInt 26)

@@ -284,7 +284,7 @@ dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
 insertValidator ∷ Ds → Contract Validator
-insertValidator ds = mkValidatorWithParams RawScripts.rawInsertValidator $ map
+insertValidator ds = mkValidatorWithParams RawScripts.rawDsInsertValidator $ map
   toData
   [ ds ]
 

@@ -94,7 +94,7 @@ import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( FUELMintingPolicy
       , MerkleRootTokenPolicy
-      , DSKeyPolicy
+      , DsKeyPolicy
       )
   , VersionOracle(VersionOracle)
   )
@@ -377,7 +377,7 @@ mkMintFuelLookupAndConstraints
       Versioning.getVersionedScriptRefUtxo
         sidechainParams
         ( VersionOracle
-            { version: BigInt.fromInt 1, scriptId: DSKeyPolicy }
+            { version: BigInt.fromInt 1, scriptId: DsKeyPolicy }
         )
 
     let

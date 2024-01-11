@@ -76,12 +76,10 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
       , Types.FUELMintingPolicy /\ fuelMintingPolicy
       , Types.FUELBurningPolicy /\ fuelBurningPolicy
-      , Types.DSKeyPolicy /\ dsKeyPolicy
+      , Types.DsKeyPolicy /\ dsKeyPolicy
       , Types.CommitteeCertificateVerificationPolicy /\
           committeeCertificateVerificationMintingPolicy
       , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
-      --, Types.DParameterPolicy /\ dParameterMintingPolicy
-      --, Types.PermissionedCandidatesPolicy /\ permissionedCandidatesMintingPolicy
       ]
 
   -- Helper currency symbols

@@ -34,7 +34,7 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
-import TrustlessSidechain.RawScripts (rawCandidatePermissionMintingPolicy)
+import TrustlessSidechain.RawScripts (rawCandidatePermissionPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
@@ -105,7 +105,7 @@ getCandidatePermissionMintingPolicy cpm = do
 candidatePermissionMintingPolicy ∷
   CandidatePermissionMint → Contract MintingPolicy
 candidatePermissionMintingPolicy cpm = do
-  mkMintingPolicyWithParams rawCandidatePermissionMintingPolicy [ toData cpm ]
+  mkMintingPolicyWithParams rawCandidatePermissionPolicy [ toData cpm ]
 
 --------------------------------
 -- Endpoint code
