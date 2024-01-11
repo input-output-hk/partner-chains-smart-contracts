@@ -198,10 +198,20 @@ serialiseScriptsToPurescript moduleName plutusScripts handle = do
         , ByteString.Lazy.Char8.replicate 3 '"'
         ]
 
+-- Note [Serialized script names]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+-- The names used when serializing scripts must match the names of data
+-- constructors in ScriptId data type from the
+-- TrustlessSidechain.Versioning.ScriptId module in off-chain.  This required
+-- for this serializer to correctly build a map from ScriptId data constructors
+-- to serialized scripts.
+
 -- * Main function
 main :: IO ()
 main =
   getOpts >>= \options ->
+    -- See Note [Serialized script names]
     let plutusScripts =
           [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
           , ("FUELBurningPolicy", FUELMintingPolicy.serialisableBurningPolicy)

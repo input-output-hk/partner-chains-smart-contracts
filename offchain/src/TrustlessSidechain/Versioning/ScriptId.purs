@@ -26,6 +26,9 @@ import Data.Show.Generic (genericShow)
 -- |
 -- | 'ToData'/'FromData' instances below must align with identifiers assigned in
 -- | on-chain code.  See Note [Versioned script identifiers].
+-- |
+-- | Names of constructors must match names used in serialize application in
+-- | on-chain directory.  See Note [Serialized script names].
 data ScriptId
   = FUELMintingPolicy
   | MerkleRootTokenPolicy
