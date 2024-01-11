@@ -57,12 +57,17 @@ import Data.Maybe as Maybe
 import Effect.Exception (error)
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
+  )
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( VersionOracleValidator
+      , VersionOraclePolicy
+      )
   )
 import TrustlessSidechain.Versioning.Types
   ( class Versionable
@@ -87,7 +92,7 @@ versionOracleTokenName =
 -- | required parameters.
 versionOraclePolicy ∷ SidechainParams → Contract MintingPolicy
 versionOraclePolicy gscp =
-  mkMintingPolicyWithParams RawScripts.rawVersionOraclePolicy [ toData gscp ]
+  mkMintingPolicyWithParams VersionOraclePolicy [ toData gscp ]
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
 -- | required parameters.
@@ -96,8 +101,7 @@ versionOracleValidator ∷
   CurrencySymbol →
   Contract Validator
 versionOracleValidator sp cs =
-  mkValidatorWithParams RawScripts.rawVersionOracleValidator
-    [ toData sp, toData cs ]
+  mkValidatorWithParams VersionOracleValidator [ toData sp, toData cs ]
 
 getVersionOraclePolicy ∷
   SidechainParams →

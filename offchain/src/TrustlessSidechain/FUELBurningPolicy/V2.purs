@@ -34,7 +34,7 @@ import Partial.Unsafe as Unsafe
 import Test.PoCRawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
+  ( mkMintingPolicyWithParams'
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
@@ -58,7 +58,7 @@ data FuelBurnParams = FuelBurnParams
 -- | minting policy.
 decodeDummyBurningPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeDummyBurningPolicy sidechainParams =
-  mkMintingPolicyWithParams rawPoCMintingPolicy [ toData sidechainParams ]
+  mkMintingPolicyWithParams' rawPoCMintingPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   SidechainParams →

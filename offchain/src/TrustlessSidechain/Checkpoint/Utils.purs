@@ -32,10 +32,6 @@ import TrustlessSidechain.Checkpoint.Types
   , CheckpointParameter
   , InitCheckpointMint
   )
-import TrustlessSidechain.RawScripts
-  ( rawCheckpointPolicy
-  , rawCheckpointValidator
-  )
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -44,14 +40,20 @@ import TrustlessSidechain.Utils.Scripts
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( CheckpointPolicy
+      , CheckpointValidator
+      )
+  )
 
 checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
 checkpointPolicy sidechainParams =
-  mkMintingPolicyWithParams rawCheckpointPolicy [ toData sidechainParams ]
+  mkMintingPolicyWithParams CheckpointPolicy [ toData sidechainParams ]
 
 checkpointValidator ∷ CheckpointParameter → Contract Validator
 checkpointValidator sidechainParams =
-  mkValidatorWithParams rawCheckpointValidator [ toData sidechainParams ]
+  mkValidatorWithParams CheckpointValidator [ toData sidechainParams ]
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for

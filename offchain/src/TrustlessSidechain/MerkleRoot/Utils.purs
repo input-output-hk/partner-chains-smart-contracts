@@ -34,10 +34,6 @@ import TrustlessSidechain.MerkleRoot.Types
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.RawScripts
-  ( rawMerkleRootTokenPolicy
-  , rawMerkleRootTokenValidator
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -46,22 +42,28 @@ import TrustlessSidechain.Utils.Scripts
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( MerkleRootTokenPolicy
+      , MerkleRootTokenValidator
+      )
+  )
 import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
--- | `RawScripts.rawMerkleRootTokenMintingPolicy`
+-- | `MerkleRootTokenPolicy`
 merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 merkleRootTokenMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mkMintingPolicyWithParams rawMerkleRootTokenPolicy
+  mkMintingPolicyWithParams MerkleRootTokenPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
--- | 'RawScripts.rawMerkleRootTokenValidator' paramaterized by `SidechainParams`.
+-- | 'MerkleRootTokenValidator' paramaterized by `SidechainParams`.
 merkleRootTokenValidator ∷ SidechainParams → Contract Validator
 merkleRootTokenValidator sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mkValidatorWithParams rawMerkleRootTokenValidator
+  mkValidatorWithParams MerkleRootTokenValidator
     [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `findMerkleRootTokenUtxo merkleRoot smrm` locates a utxo which

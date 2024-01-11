@@ -8,6 +8,7 @@ import Contract.Prelude
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts (ApplyArgsError)
 import Contract.Transaction as Transaction
+import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 
 -- | Error raised from the off-chain code of the application
 data OffchainError
@@ -29,6 +30,8 @@ data InternalError
   | NotFoundOwnPubKeyHash
   -- | Own address cannot be found
   | NotFoundOwnAddress
+  -- | ScriptId not found in rawScriptsMap
+  | InvalidScriptId ScriptId
   -- | Cannot decode script from a text envelope.  Use 'String' field to pass
   -- | the envelope that failed.
   | InvalidScriptEnvelope String

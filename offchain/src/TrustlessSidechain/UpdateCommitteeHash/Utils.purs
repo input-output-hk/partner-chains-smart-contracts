@@ -34,7 +34,6 @@ import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.RawScripts (rawCommitteeHashValidator)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
@@ -45,10 +44,13 @@ import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteeHashValidator)
+  )
 
 updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
 updateCommitteeHashValidator sidechainParams =
-  mkValidatorWithParams rawCommitteeHashValidator [ toData sidechainParams ]
+  mkValidatorWithParams CommitteeHashValidator [ toData sidechainParams ]
 
 -- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
 -- | also returns the hash and address

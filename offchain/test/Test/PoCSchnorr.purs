@@ -67,7 +67,7 @@ instance ToData SchnorrSecp256k1Redeemer where
 getPoCSchnorrSecp256k1MintingPolicy ∷
   Contract { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
 getPoCSchnorrSecp256k1MintingPolicy = do
-  mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams
+  mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams'
     RawScripts.rawPoCSchnorr
     (mempty ∷ Array PlutusData)
   currencySymbol ← Monad.liftContractM "minting policy to currency symbol failed"

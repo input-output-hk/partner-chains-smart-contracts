@@ -56,7 +56,6 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -68,6 +67,14 @@ import TrustlessSidechain.Utils.Error
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
+  )
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( DsInsertValidator
+      , DsKeyPolicy
+      , DsConfPolicy
+      , DsConfValidator
+      )
   )
 
 -- * Types
@@ -284,28 +291,28 @@ dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
 insertValidator ∷ Ds → Contract Validator
-insertValidator ds = mkValidatorWithParams RawScripts.rawDsInsertValidator $ map
+insertValidator ds = mkValidatorWithParams DsInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
 dsConfValidator ∷ Ds → Contract Validator
-dsConfValidator ds = mkValidatorWithParams RawScripts.rawDsConfValidator $ map
+dsConfValidator ds = mkValidatorWithParams DsConfValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
 dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
-dsConfPolicy dsm = mkMintingPolicyWithParams RawScripts.rawDsConfPolicy $ map
+dsConfPolicy dsm = mkMintingPolicyWithParams DsConfPolicy $ map
   toData
   [ dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
 dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
-dsKeyPolicy dskm = mkMintingPolicyWithParams RawScripts.rawDsKeyPolicy $ map
+dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy $ map
   toData
   [ dskm ]
 

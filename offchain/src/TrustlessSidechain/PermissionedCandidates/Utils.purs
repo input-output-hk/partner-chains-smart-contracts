@@ -21,14 +21,16 @@ import Contract.Scripts
   )
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import TrustlessSidechain.RawScripts
-  ( rawPermissionedCandidatesPolicy
-  , rawPermissionedCandidatesValidator
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
+  )
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( PermissionedCandidatesValidator
+      , PermissionedCandidatesPolicy
+      )
   )
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
@@ -38,12 +40,12 @@ decodePermissionedCandidatesMintingPolicy ∷
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   { permissionedCandidatesValidatorAddress } ←
     getPermissionedCandidatesValidatorAndAddress sidechainParams
-  mkMintingPolicyWithParams rawPermissionedCandidatesPolicy
+  mkMintingPolicyWithParams PermissionedCandidatesPolicy
     [ toData sidechainParams, toData permissionedCandidatesValidatorAddress ]
 
 decodePermissionedCandidatesValidator ∷ SidechainParams → Contract Validator
 decodePermissionedCandidatesValidator sidechainParams = do
-  mkValidatorWithParams rawPermissionedCandidatesValidator
+  mkValidatorWithParams PermissionedCandidatesValidator
     [ toData sidechainParams ]
 
 getPermissionedCandidatesValidatorAndAddress ∷

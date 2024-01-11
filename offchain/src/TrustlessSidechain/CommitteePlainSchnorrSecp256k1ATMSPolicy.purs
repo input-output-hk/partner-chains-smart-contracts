@@ -61,9 +61,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
-import TrustlessSidechain.RawScripts
-  ( rawCommitteePlainSchnorrSecp256k1ATMSPolicy
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
@@ -85,6 +82,9 @@ import TrustlessSidechain.Utils.Scripts
   )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
   , VersionOracle(VersionOracle)
@@ -131,7 +131,7 @@ committeePlainSchnorrSecp256k1ATMS ∷
 committeePlainSchnorrSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
   do
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-    mkMintingPolicyWithParams rawCommitteePlainSchnorrSecp256k1ATMSPolicy
+    mkMintingPolicyWithParams CommitteePlainSchnorrSecp256k1ATMSPolicy
       [ toData committeeCertificateMint, toData versionOracleConfig ]
 
 -- | `getCommitteePlainSchnorrSecp256k1ATMSPolicy` grabs the committee plainSchnorrSecp256k1 ATMS currency

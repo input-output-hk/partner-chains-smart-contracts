@@ -55,7 +55,6 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.RawScripts (rawCommitteeCandidateValidator)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Address
@@ -70,6 +69,9 @@ import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteeCandidateValidator)
+  )
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -89,7 +91,7 @@ newtype DeregisterParams = DeregisterParams
 
 getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
 getCommitteeCandidateValidator sp = do
-  mkValidatorWithParams rawCommitteeCandidateValidator [ toData sp ]
+  mkValidatorWithParams CommitteeCandidateValidator [ toData sp ]
 
 data StakeOwnership
   = -- | Ada stake based configuration comprises the SPO public key and signature

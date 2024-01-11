@@ -43,17 +43,19 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
-import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(ScriptCache)
+  )
 
 getScriptCacheValidator ∷ PaymentPubKeyHash → Contract Validator
 getScriptCacheValidator (PaymentPubKeyHash pkh) =
-  mkValidatorWithParams RawScripts.rawScriptCache [ toData pkh ]
+  mkValidatorWithParams ScriptCache [ toData pkh ]
 
 getScriptRefUtxo ∷
   SidechainParams →

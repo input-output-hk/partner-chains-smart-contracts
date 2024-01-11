@@ -20,7 +20,6 @@ import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.RawScripts (rawCommitteeOraclePolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Error
@@ -29,6 +28,9 @@ import TrustlessSidechain.Utils.Error
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
+  )
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteeOraclePolicy)
   )
 
 -- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
@@ -46,7 +48,7 @@ instance ToData InitCommitteeHashMint where
 
 committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
 committeeOraclePolicy ichm =
-  mkMintingPolicyWithParams rawCommitteeOraclePolicy [ toData ichm ]
+  mkMintingPolicyWithParams CommitteeOraclePolicy [ toData ichm ]
 
 -- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name

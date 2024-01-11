@@ -73,7 +73,6 @@ import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
   )
 import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
-import TrustlessSidechain.RawScripts (rawFUELMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( Bech32Bytes
@@ -228,7 +227,7 @@ instance ToData FUELMintingRedeemer where
 decodeFuelMintingPolicy ∷ SidechainParams → Contract MintingPolicy
 decodeFuelMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mkMintingPolicyWithParams rawFUELMintingPolicy
+  mkMintingPolicyWithParams FUELMintingPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
 
 -- | `getFuelMintingPolicy` creates the parameter `FUELMint`
