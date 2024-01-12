@@ -10,10 +10,14 @@
 module TrustlessSidechain.Versioning (
   serialisableVersionOraclePolicy,
   serialisableVersionOracleValidator,
+  mkVersionOraclePolicy,
+  mkVersionOracleValidator,
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
   VersionOracle (..),
   VersionOracleConfig (..),
+  VersionOraclePolicyRedeemer,
+  VersionOracleValidatorRedeemer,
   -- | Script IDs
   fuelMintingPolicyId,
   merkleRootTokenPolicyId,

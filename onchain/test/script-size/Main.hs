@@ -6,15 +6,20 @@ import Plutus.V1.Ledger.Api (fromCompiledCode)
 import Sizer (fitsInto, fitsUnder, scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
+import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as PermissionedCandidates
 import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CPSATMSP
+import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
+import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRoot
+import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
+import TrustlessSidechain.Versioning qualified as Versioning
 
 -- Process for adding a new script to measurements:
 --
@@ -127,6 +132,66 @@ main =
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
             2_985
+        , fitsInto
+            "mkDParameterValidatorCode (DParameter)"
+            Compiled.mkDParameterValidatorCode
+            236
+        , scriptFitsInto
+            "mkDParameterValidatorCode (DParameter) serialized"
+            DParameter.serialisableValidator
+            2_019
+        , fitsInto
+            "mkDParameterPolicyCode (DParameter)"
+            Compiled.mkDParameterPolicyCode
+            977
+        , scriptFitsInto
+            "mkDParameterPolicyCode (DParameter) serialized"
+            DParameter.serialisableMintingPolicy
+            2_624
+        , fitsInto
+            "mkFuelProxyPolicyCode (FUELProxyPolicy)"
+            Compiled.mkFuelProxyPolicyCode
+            1_049
+        , scriptFitsInto
+            "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
+            FUELProxyPolicy.serialisableFuelProxyPolicy
+            2_660
+        , fitsInto
+            "mkPermissionedCandidatePolicyCode (PermissionedCandidates)"
+            Compiled.mkPermissionedCandidatePolicyCode
+            977
+        , scriptFitsInto
+            "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
+            PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
+            1_981
+        , fitsInto
+            "mkDParameterValidatorCode (PermissionedCandidates)"
+            Compiled.mkPermissionedCandidatesValidatorCode
+            236
+        , scriptFitsInto
+            "mkDParameterValidatorCode (PermissionedCandidates) serialized"
+            PermissionedCandidates.serialisableValidator
+            2_029
+        , fitsInto
+            "mkCommitteePlainATMSPolicyCode (CommitteePlainATMSPolicy)"
+            Compiled.mkCommitteePlainATMSPolicyCode
+            1_576
+        , fitsInto
+            "mkVersionOraclePolicyCode (Versioning)"
+            Compiled.mkVersionOraclePolicyCode
+            1_643
+        , scriptFitsInto
+            "mkVersionOraclePolicyCode (Versioning) serialized"
+            Versioning.serialisableVersionOraclePolicy
+            3_036
+        , fitsInto
+            "mkVersionOracleValidatorCode (Versioning)"
+            Compiled.mkVersionOracleValidatorCode
+            1_994
+        , scriptFitsInto
+            "mkVersionOracleValidatorCode (Versioning) serialized"
+            Versioning.serialisableVersionOracleValidator
+            3_468
         ]
     , testGroup
         "Distributed set"

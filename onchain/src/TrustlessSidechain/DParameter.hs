@@ -4,6 +4,8 @@
 module TrustlessSidechain.DParameter (
   serialisableMintingPolicy,
   serialisableValidator,
+  dParameterValidator,
+  mkMintingPolicy,
 ) where
 
 import Plutus.V2.Ledger.Api (

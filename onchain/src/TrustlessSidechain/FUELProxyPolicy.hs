@@ -11,6 +11,8 @@
 -- sidechain lifetime.
 module TrustlessSidechain.FUELProxyPolicy (
   serialisableFuelProxyPolicy,
+  mkFuelProxyPolicy,
+  FuelProxyRedeemer,
 ) where
 
 import Plutus.V2.Ledger.Api

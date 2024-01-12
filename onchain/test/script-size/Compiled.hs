@@ -45,11 +45,19 @@ module Compiled (
   fromData3Direct,
   unsafeFromData3CPS,
   unsafeFromData3Direct,
+  mkDParameterValidatorCode,
+  mkDParameterPolicyCode,
+  mkFuelProxyPolicyCode,
+  mkPermissionedCandidatesValidatorCode,
+  mkPermissionedCandidatePolicyCode,
+  mkCommitteePlainATMSPolicyCode,
+  mkVersionOraclePolicyCode,
+  mkVersionOracleValidatorCode,
 ) where
 
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
-import Plutus.V2.Ledger.Api (LedgerBytes, ScriptContext)
+import Plutus.V2.Ledger.Api (CurrencySymbol, LedgerBytes, ScriptContext)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -64,8 +72,15 @@ import TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
  )
 import TrustlessSidechain.CommitteePlainATMSPolicy (verifyPlainMultisig)
+import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
+import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
+import TrustlessSidechain.Versioning qualified as Versioning
+
+import Plutus.V1.Ledger.Address (Address)
 import TrustlessSidechain.DistributedSet (
   Ds,
   DsConfMint,
@@ -86,7 +101,11 @@ import TrustlessSidechain.Types (
   CheckpointParameter,
   CheckpointRedeemer,
   CommitteeCertificateMint,
+  DParameterPolicyRedeemer,
+  DParameterValidatorRedeemer,
   FUELMintingRedeemer,
+  PermissionedCandidatesPolicyRedeemer,
+  PermissionedCandidatesValidatorRedeemer,
   SidechainParams,
   SignedMerkleRootRedeemer,
   UpdateCommitteeDatum,
@@ -293,3 +312,54 @@ mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainEcdsa
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
   CompiledCode (CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool)
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])
+
+mkDParameterValidatorCode ::
+  CompiledCode (SidechainParams -> BuiltinData -> DParameterValidatorRedeemer -> ScriptContext -> Bool)
+mkDParameterValidatorCode = $$(compile [||DParameter.dParameterValidator||])
+
+mkDParameterPolicyCode ::
+  CompiledCode (SidechainParams -> Address -> DParameterPolicyRedeemer -> ScriptContext -> Bool)
+mkDParameterPolicyCode = $$(compile [||DParameter.mkMintingPolicy||])
+
+mkFuelProxyPolicyCode ::
+  CompiledCode (SidechainParams -> VersionOracleConfig -> FUELProxyPolicy.FuelProxyRedeemer -> ScriptContext -> Bool)
+mkFuelProxyPolicyCode = $$(compile [||FUELProxyPolicy.mkFuelProxyPolicy||])
+
+mkPermissionedCandidatesValidatorCode ::
+  CompiledCode (SidechainParams -> BuiltinData -> PermissionedCandidatesValidatorRedeemer -> ScriptContext -> Bool)
+mkPermissionedCandidatesValidatorCode = $$(compile [||PermissionedCandidates.permissionedCandidatesValidator||])
+
+mkPermissionedCandidatePolicyCode ::
+  CompiledCode (SidechainParams -> Address -> PermissionedCandidatesPolicyRedeemer -> ScriptContext -> Bool)
+mkPermissionedCandidatePolicyCode = $$(compile [||PermissionedCandidates.mkMintingPolicy||])
+
+mkCommitteePlainATMSPolicyCode ::
+  CompiledCode
+    ( (BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> Bool) ->
+      CommitteeCertificateMint ->
+      VersionOracleConfig ->
+      ATMSRedeemer ->
+      ScriptContext ->
+      Bool
+    )
+mkCommitteePlainATMSPolicyCode = $$(compile [||CommitteePlainATMSPolicy.mkMintingPolicy||])
+
+mkVersionOraclePolicyCode ::
+  CompiledCode
+    ( SidechainParams ->
+      Versioning.VersionOraclePolicyRedeemer ->
+      ScriptContext ->
+      Bool
+    )
+mkVersionOraclePolicyCode = $$(compile [||Versioning.mkVersionOraclePolicy||])
+
+mkVersionOracleValidatorCode ::
+  CompiledCode
+    ( SidechainParams ->
+      CurrencySymbol ->
+      Versioning.VersionOracle ->
+      Versioning.VersionOracleValidatorRedeemer ->
+      ScriptContext ->
+      Bool
+    )
+mkVersionOracleValidatorCode = $$(compile [||Versioning.mkVersionOracleValidator||])
