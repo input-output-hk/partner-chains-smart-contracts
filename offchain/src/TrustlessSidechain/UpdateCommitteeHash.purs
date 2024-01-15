@@ -39,6 +39,10 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Error
+  ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -66,10 +70,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , updateCommitteeHashValidator
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Error
-  ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
-  , OffchainError(InternalError)
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update

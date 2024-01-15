@@ -47,7 +47,7 @@ import Ctl.Internal.Serialization.Address
   , rewardAddressToAddress
   )
 import Data.Array as Array
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress)
   , OffchainError(InternalError)
   )

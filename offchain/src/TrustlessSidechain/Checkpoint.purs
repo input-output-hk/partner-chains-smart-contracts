@@ -54,6 +54,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (assetClass, assetClassValue)
@@ -62,10 +66,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
-  , OffchainError(InternalError)
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash

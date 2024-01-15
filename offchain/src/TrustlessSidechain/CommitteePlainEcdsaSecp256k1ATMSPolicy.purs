@@ -55,6 +55,10 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -70,10 +74,6 @@ import TrustlessSidechain.Utils.Crypto
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript, InvalidData)
-  , OffchainError(InternalError, InvalidInputError)
-  )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )

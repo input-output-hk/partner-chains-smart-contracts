@@ -60,6 +60,10 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -68,10 +72,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript, InvalidData)
-  , OffchainError(InternalError, InvalidInputError)
-  )
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PublicKey
   , SchnorrSecp256k1Signature

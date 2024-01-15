@@ -28,8 +28,8 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import TrustlessSidechain.Error (InternalError(InvalidScript))
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )

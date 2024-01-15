@@ -42,13 +42,13 @@ import TrustlessSidechain.DParameter.Types
 
   )
 import TrustlessSidechain.DParameter.Utils as DParameter
-import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError(NotFoundUtxo)
   , OffchainError(InternalError, InvalidInputError)
   )
+import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
 
 dParameterTokenName ∷ TokenName
 dParameterTokenName =

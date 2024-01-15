@@ -42,13 +42,13 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
-import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
-import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )
+import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
+import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(..)

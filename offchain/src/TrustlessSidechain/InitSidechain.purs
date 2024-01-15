@@ -75,6 +75,10 @@ import TrustlessSidechain.DistributedSet
   , DsKeyMint(DsKeyMint)
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Error
+  ( InternalError(ConversionError, InvalidScript)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
@@ -89,10 +93,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Error
-  ( InternalError(ConversionError, InvalidScript)
-  , OffchainError(InternalError, InvalidInputError)
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
 

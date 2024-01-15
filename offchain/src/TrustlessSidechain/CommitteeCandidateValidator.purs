@@ -55,15 +55,15 @@ import TrustlessSidechain.CandidatePermissionToken
   , CandidatePermissionTokenInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , getOwnWalletAddress
-  )
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript)
-  , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams

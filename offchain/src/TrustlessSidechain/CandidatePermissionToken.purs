@@ -34,14 +34,14 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import TrustlessSidechain.Error
+  ( InternalError(NotFoundUtxo, InvalidScript)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
-  )
-import TrustlessSidechain.Utils.Error
-  ( InternalError(NotFoundUtxo, InvalidScript)
-  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams

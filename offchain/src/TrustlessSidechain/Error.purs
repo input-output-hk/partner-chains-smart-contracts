@@ -1,4 +1,4 @@
-module TrustlessSidechain.Utils.Error
+module TrustlessSidechain.Error
   ( OffchainError(..)
   , InternalError(..)
   ) where

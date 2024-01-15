@@ -18,14 +18,14 @@ import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Map as Map
-import TrustlessSidechain.RawScripts (rawScripts)
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError
       ( InvalidScriptEnvelope
       , InvalidScriptArgs
       , InvalidScriptId
       )
   )
+import TrustlessSidechain.RawScripts (rawScripts)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 
 -- | `mkValidatorWithParams scriptId params` returns the `Validator` of

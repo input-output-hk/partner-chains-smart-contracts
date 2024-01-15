@@ -65,6 +65,10 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Error
+  ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
   )
@@ -75,10 +79,6 @@ import TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , bech32BytesFromAddress
   , getOwnPaymentPubKeyHash
-  )
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
-  , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams

@@ -43,9 +43,9 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
+import TrustlessSidechain.Error (InternalError(InvalidScript))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )

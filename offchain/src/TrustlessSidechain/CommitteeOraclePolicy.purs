@@ -20,12 +20,12 @@ import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError(InvalidScript)
   , OffchainError(InternalError)
   )
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.Types (AssetClass, assetClass)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )

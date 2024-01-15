@@ -22,7 +22,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Data.Bifunctor (lmap)
-import TrustlessSidechain.Utils.Error
+import TrustlessSidechain.Error
   ( InternalError(BalanceTxError, BuildTxError)
   , OffchainError(InternalError)
   )

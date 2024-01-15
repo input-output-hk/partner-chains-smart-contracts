@@ -56,13 +56,13 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
+  , OffchainError(InternalError, InvalidInputError)
+  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
-  )
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
-  , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams

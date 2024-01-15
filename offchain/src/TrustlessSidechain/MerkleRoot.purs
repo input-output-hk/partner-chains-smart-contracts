@@ -34,6 +34,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Error
+  ( InternalError(InvalidData, InvalidScript, NotFoundUtxo)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -63,10 +67,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidData, InvalidScript, NotFoundUtxo)
-  , OffchainError(InternalError)
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId

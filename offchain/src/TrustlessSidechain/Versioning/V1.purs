@@ -19,6 +19,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Error
+  ( InternalError(InvalidScript)
+  , OffchainError(InternalError)
+  )
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -29,10 +33,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
-  )
-import TrustlessSidechain.Utils.Error
-  ( InternalError(InvalidScript)
-  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Versioning.Types as Types
 
