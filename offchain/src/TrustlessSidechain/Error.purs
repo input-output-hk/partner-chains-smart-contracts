@@ -47,7 +47,6 @@ data InternalError
   | BuildTxError ScriptLookups.MkUnbalancedTxError
   -- | Error while attempting to balance a transaction
   | BalanceTxError Transaction.BalanceTxError
-  | Other String
 
 derive instance Generic InternalError _
 
