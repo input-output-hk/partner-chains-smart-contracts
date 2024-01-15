@@ -57,8 +57,15 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError, InvalidData)
-  , OffchainError(InternalError, InvalidInputError)
+  ( InternalError
+      ( InvalidScript
+      , NotFoundUtxo
+      , ConversionError
+      , InvalidData
+      , InvalidAddress
+      , DsInsertError
+      )
+  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
@@ -446,9 +453,8 @@ findDsConfOutput ds = do
     , confDat
     }
 
--- | `findDsOutput` finds the transaction which we must insert to
--- | (if it exists) for the distributed set from the given `TransactionInput`. It
--- | returns:
+-- | `findDsOutput` finds the transaction which we must insert to (if it exists)
+-- | for the distributed set from the given `TransactionInput`. It returns:
 -- |
 -- |    - the `TransactionInput` of the output to spend (i.e., the provided
 -- |    input);
@@ -475,7 +481,10 @@ findDsOutput ∷
 findDsOutput ds tn txInput = do
   txOut ←
     liftedM
-      ( show (InvalidInputError "Failed to find provided distributed set UTxO")
+      ( show
+          ( InternalError
+              (NotFoundUtxo "Failed to find provided distributed set UTxO")
+          )
       ) $
       Utxos.getUtxo txInput
 
@@ -500,7 +509,8 @@ findDsOutput ds tn txInput = do
     unless
       (scriptAddr == (unwrap txOut).address)
       $ throwContractError
-      $ InvalidInputError
+      $ InternalError
+      $ InvalidAddress
           "provided transaction is not at distributed set node address"
 
     keyNodeTn ← liftContractM
@@ -519,16 +529,17 @@ findDsOutput ds tn txInput = do
   nodes ←
     liftContractM
       ( show
-          ( InvalidInputError
-              ( "invalid distributed set node provided \
-                \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
-                \but got `providedNode` "
-                  <> show (getTokenName tn')
-
-                  <> ", `newNode` "
-                  <> show (getTokenName tn)
-                  <> ", and `next` "
-                  <> show (unwrap dat)
+          ( InternalError
+              ( DsInsertError
+                  ( "invalid distributed set node provided \
+                    \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+                    \but got `providedNode` "
+                      <> show (getTokenName tn')
+                      <> ", `newNode` "
+                      <> show (getTokenName tn)
+                      <> ", and `next` "
+                      <> show (unwrap dat)
+                  )
               )
           )
       ) $ insertNode (getTokenName tn) $ mkNode

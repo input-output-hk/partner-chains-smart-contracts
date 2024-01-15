@@ -44,6 +44,7 @@ import TrustlessSidechain.DParameter.Types
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Error
   ( InternalError(NotFoundUtxo)
+  , InvalidInputError(InvalidCLIParams)
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Governance as Governance
@@ -247,7 +248,9 @@ mkUpdateDParameterLookupsAndConstraints
             == registeredCandidatesCount → throwContractError
             ( show
                 ( InvalidInputError
-                    "Provided values have already been set. Please check."
+                    ( InvalidCLIParams
+                        "Provided values have already been set. Please check."
+                    )
                 )
             )
       _ → pure unit

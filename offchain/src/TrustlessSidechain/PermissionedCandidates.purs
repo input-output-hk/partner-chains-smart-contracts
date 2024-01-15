@@ -35,6 +35,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error
   ( InternalError(InvalidData)
+  , InvalidInputError(InvalidCLIParams)
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.Governance as Governance
@@ -151,7 +152,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
   when (sort newCandidates == sort oldCandidates)
     $ throwContractError
     $
-      ( InvalidInputError
+      ( InvalidInputError $ InvalidCLIParams
           "New candidates list is the same as the currently stored list."
       )
 

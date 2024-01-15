@@ -67,7 +67,7 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
   ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
-  , OffchainError(InternalError, InvalidInputError)
+  , OffchainError(InternalError)
   )
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
@@ -307,7 +307,7 @@ mkMintFuelLookupAndConstraints
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
         ( show
-            ( InvalidInputError
+            ( InternalError $ NotFoundUtxo
                 "Couldn't find the parent Merkle tree root hash of the transaction"
             )
         )

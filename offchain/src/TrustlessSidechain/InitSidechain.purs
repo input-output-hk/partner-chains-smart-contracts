@@ -77,6 +77,7 @@ import TrustlessSidechain.DistributedSet
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
   ( InternalError(ConversionError, InvalidScript)
+  , InvalidInputError(NoGenesisUTxO)
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
@@ -560,7 +561,7 @@ initSidechainTokens isp version = do
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
+  txOut ← liftedM (show (InvalidInputError NoGenesisUTxO)) $
     getUtxo
       txIn
 
@@ -708,7 +709,7 @@ initSidechain (InitSidechainParams isp) version = do
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (show (InvalidInputError "Cannot find genesis UTxO")) $
+  txOut ← liftedM (show (InvalidInputError NoGenesisUTxO)) $
     getUtxo
       txIn
 

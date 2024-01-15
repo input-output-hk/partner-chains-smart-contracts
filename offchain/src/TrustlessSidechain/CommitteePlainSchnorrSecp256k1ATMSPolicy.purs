@@ -61,8 +61,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript, InvalidData)
-  , OffchainError(InternalError, InvalidInputError)
+  ( InternalError(InvalidScript, InvalidData, NotFoundUtxo, VerificationError)
+  , OffchainError(InternalError)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -241,7 +241,8 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   when (datum.aggregatePubKeys /= curCommitteeHash)
     $ Monad.throwContractError
     $ show
-    $ InvalidInputError "Incorrect committee provided"
+    $ InternalError
+    $ VerificationError "Incorrect committee provided"
 
   unless
     ( Utils.Crypto.verifyMultiSignature
@@ -254,7 +255,8 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     )
     $ Monad.throwContractError
     $ show
-    $ InvalidInputError
+    $ InternalError
+    $ VerificationError
         "Invalid committee signatures for the sidechain message"
 
   let
@@ -433,7 +435,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
 
   -- Finding the current committee
   -------------------------------------------------------------
-  lkup ← Monad.liftedM (show $ InvalidInputError $ "current committee not found")
-    $
-      UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch
+  lkup ← Monad.liftedM
+    (show $ InternalError $ NotFoundUtxo "current committee not found")
+    (UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch)
   pure lkup

@@ -57,6 +57,7 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Error
   ( InternalError(InvalidScript)
+  , InvalidInputError(InvalidCLIParams, NotFoundInputUtxo)
   , OffchainError(InternalError, InvalidInputError)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -287,7 +288,7 @@ register
 
   when (any (matchingKeys datum) ownRegistrationDatums) $
     throwContractError
-      ( InvalidInputError
+      ( InvalidInputError $ InvalidCLIParams
           "BlockProducer with given set of keys is already registered"
       )
 
@@ -365,7 +366,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   when (null ownRegistrationUtxos)
     $ throwContractError
-        (InvalidInputError "Couldn't find registration UTxO")
+        (InvalidInputError $ NotFoundInputUtxo "Couldn't find registration UTxO")
 
   let
     lookups ∷ Lookups.ScriptLookups Void
