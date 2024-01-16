@@ -57,7 +57,7 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error
-  ( InternalError
+  ( OffchainError
       ( InvalidScript
       , NotFoundUtxo
       , ConversionError
@@ -65,7 +65,6 @@ import TrustlessSidechain.Error
       , InvalidAddress
       , DsInsertError
       )
-  , OffchainError(InternalError)
   )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
@@ -372,7 +371,7 @@ getDs txInput = do
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
   dsConfPolicyCurrencySymbol ←
     liftContractM
-      (show (InternalError (InvalidScript "DsConfPolicy")))
+      (show (InvalidScript "DsConfPolicy"))
       $ Value.scriptCurrencySymbol dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
@@ -397,7 +396,7 @@ getDsKeyPolicy ds = do
 
   currencySymbol ←
     liftContractM
-      (show (InternalError (InvalidScript "DsKeyPolicy")))
+      (show (InvalidScript "DsKeyPolicy"))
       $ Value.scriptCurrencySymbol policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
@@ -424,10 +423,8 @@ findDsConfOutput ds = do
   out ←
     liftContractM
       ( show
-          ( InternalError
-              ( NotFoundUtxo
-                  "Distributed Set config utxo does not contain oneshot token"
-              )
+          ( NotFoundUtxo
+              "Distributed Set config utxo does not contain oneshot token"
           )
       )
       $ Array.find
@@ -441,8 +438,7 @@ findDsConfOutput ds = do
   confDat ←
     liftContractM
       ( show
-          ( InternalError
-              (NotFoundUtxo "Distributed Set config utxo does not contain datum")
+          ( NotFoundUtxo "Distributed Set config utxo does not contain datum"
           )
       )
       $ outputDatumDatum (unwrap (unwrap (snd out)).output).datum
@@ -482,8 +478,7 @@ findDsOutput ds tn txInput = do
   txOut ←
     liftedM
       ( show
-          ( InternalError
-              (NotFoundUtxo "Failed to find provided distributed set UTxO")
+          ( NotFoundUtxo "Failed to find provided distributed set UTxO"
           )
       ) $
       Utxos.getUtxo txInput
@@ -494,7 +489,7 @@ findDsOutput ds tn txInput = do
   dat ←
     liftContractM
       ( show
-          (InternalError (ConversionError "datum not a distributed set node"))
+          (ConversionError "datum not a distributed set node")
       )
       $ outputDatumDatum (unwrap txOut).datum
       >>= (fromData <<< unwrap)
@@ -509,14 +504,12 @@ findDsOutput ds tn txInput = do
     unless
       (scriptAddr == (unwrap txOut).address)
       $ throwContractError
-      $ InternalError
       $ InvalidAddress
           "provided transaction is not at distributed set node address"
 
     keyNodeTn ← liftContractM
       ( show
-          ( InternalError
-              (InvalidData "missing token name in distributed set node")
+          ( InvalidData "missing token name in distributed set node"
           )
       )
       do
@@ -529,17 +522,15 @@ findDsOutput ds tn txInput = do
   nodes ←
     liftContractM
       ( show
-          ( InternalError
-              ( DsInsertError
-                  ( "invalid distributed set node provided \
-                    \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
-                    \but got `providedNode` "
-                      <> show (getTokenName tn')
-                      <> ", `newNode` "
-                      <> show (getTokenName tn)
-                      <> ", and `next` "
-                      <> show (unwrap dat)
-                  )
+          ( DsInsertError
+              ( "invalid distributed set node provided \
+                \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
+                \but got `providedNode` "
+                  <> show (getTokenName tn')
+                  <> ", `newNode` "
+                  <> show (getTokenName tn)
+                  <> ", and `next` "
+                  <> show (unwrap dat)
               )
           )
       ) $ insertNode (getTokenName tn) $ mkNode

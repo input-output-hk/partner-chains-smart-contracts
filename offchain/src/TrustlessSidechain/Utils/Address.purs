@@ -48,8 +48,7 @@ import Ctl.Internal.Serialization.Address
   )
 import Data.Array as Array
 import TrustlessSidechain.Error
-  ( InternalError(NotFoundOwnPubKeyHash, NotFoundOwnAddress)
-  , OffchainError(InternalError)
+  ( OffchainError(NotFoundOwnPubKeyHash, NotFoundOwnAddress)
   )
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
@@ -117,19 +116,19 @@ addressFromBech32Bytes bechBytes = do
 getOwnPaymentPubKeyHash ∷
   Contract PaymentPubKeyHash
 getOwnPaymentPubKeyHash =
-  liftedM (show (InternalError NotFoundOwnPubKeyHash))
+  liftedM (show NotFoundOwnPubKeyHash)
     (ownPaymentPubKeyHashes >>= pure <<< Array.head)
 
 -- | Return a single own wallet address without generating warnings.
 getOwnWalletAddress ∷
   Contract Address
 getOwnWalletAddress =
-  liftedM (show (InternalError NotFoundOwnAddress))
+  liftedM (show NotFoundOwnAddress)
     (getWalletAddresses >>= pure <<< Array.head)
 
 -- | Convert Address to ValidatorHash, raising an error if an address does not
 -- | represent a script.
 toValidatorHash ∷ Address → Contract ValidatorHash
 toValidatorHash addr =
-  liftContractM "Cannto convert Address to ValidatorHash"
+  liftContractM "Cannot convert Address to ValidatorHash"
     (Address.toValidatorHash addr)

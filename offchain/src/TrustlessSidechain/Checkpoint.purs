@@ -55,8 +55,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript, NotFoundUtxo, ConversionError)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidScript, NotFoundUtxo, ConversionError)
   )
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -102,8 +101,7 @@ saveCheckpoint
     sidechainParams
   currentCommitteeUtxo ←
     liftedM
-      ( show $ InternalError $ NotFoundUtxo
-          "failed to find current committee UTxO"
+      ( show $ NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
       $ UpdateCommitteeHash
@@ -130,8 +128,7 @@ saveCheckpoint
   ------------------------------------
   scMsg ←
     liftContractM
-      ( show $ InternalError $ ConversionError
-          "failed serializing the MerkleRootInsertionMessage"
+      ( show $ ConversionError "failed serializing the MerkleRootInsertionMessage"
       )
       $ serialiseCheckpointMessage checkpointMessage
 
@@ -219,7 +216,7 @@ saveCheckpointLookupsAndConstraints
   , value: checkpointTxOut
   } ←
     liftContractM
-      (show $ InternalError $ NotFoundUtxo "Failed to find checkpoint UTxO")
+      (show $ NotFoundUtxo "Failed to find checkpoint UTxO")
       checkpointUtxoLookup
 
   -- Building / submitting the transaction.
@@ -266,9 +263,7 @@ getCheckpointPolicy (SidechainParams sp) = do
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
   checkpointCurrencySymbol ← liftContractM
-    ( show
-        (InternalError (InvalidScript "Failed to get checkpoint CurrencySymbol"))
-    )
+    (show $ InvalidScript "Failed to get checkpoint CurrencySymbol")
     (Value.scriptCurrencySymbol checkpointPolicy)
   let checkpointTokenName = initCheckpointMintTn
   pure

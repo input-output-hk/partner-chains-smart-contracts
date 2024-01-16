@@ -76,9 +76,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( InternalError(ConversionError, InvalidScript)
-  , InvalidInputError(NoGenesisUTxO)
-  , OffchainError(InternalError, InvalidInputError)
+  ( OffchainError(ConversionError, InvalidScript, NoGenesisUTxO)
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
@@ -430,7 +428,7 @@ initDistributedSetLookupsAndContraints isp = do
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
   dsConfPolicyCurrencySymbol ←
     Monad.liftContractM
-      (show (InternalError (InvalidScript "DsConfPolicy")))
+      (show $ InvalidScript "DsConfPolicy")
       $ Value.scriptCurrencySymbol dsConfPolicy
 
   -- Validator for insertion of the distributed set / the associated datum and
@@ -447,16 +445,12 @@ initDistributedSetLookupsAndContraints isp = do
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
   dsKeyPolicyCurrencySymbol ←
     Monad.liftContractM
-      (show (InternalError (InvalidScript "DsKeyPolicy")))
+      (show $ InvalidScript "DsKeyPolicy")
       $ Value.scriptCurrencySymbol dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
-      ( show
-          ( InternalError
-              ( ConversionError
-                  "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
-              )
-          )
+      ( show $ ConversionError
+          "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
       )
       $ Value.mkTokenName
       $ (unwrap DistributedSet.rootNode).nKey
@@ -475,7 +469,7 @@ initDistributedSetLookupsAndContraints isp = do
 
   fuelMintingPolicyCurrencySymbol ←
     Monad.liftContractM
-      (show (InternalError (InvalidScript "FuelMintingPolicy")))
+      (show $ InvalidScript "FuelMintingPolicy")
       $ Value.scriptCurrencySymbol fuelMintingPolicy
 
   -- Validator for the configuration of the distributed set / the associated
@@ -561,7 +555,7 @@ initSidechainTokens isp version = do
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (show (InvalidInputError NoGenesisUTxO)) $
+  txOut ← liftedM (show NoGenesisUTxO) $
     getUtxo
       txIn
 
@@ -709,7 +703,7 @@ initSidechain (InitSidechainParams isp) version = do
   let
     txIn = isp.initUtxo
 
-  txOut ← liftedM (show (InvalidInputError NoGenesisUTxO)) $
+  txOut ← liftedM (show NoGenesisUTxO) $
     getUtxo
       txIn
 
@@ -783,6 +777,6 @@ getCheckpointPolicy isp = do
   checkpointPolicy ← Checkpoint.checkpointPolicy $
     InitCheckpointMint { icTxOutRef: isp.initUtxo }
   checkpointCurrencySymbol ← Monad.liftContractM
-    (show (InternalError (InvalidScript "CheckpointPolicy")))
+    (show $ InvalidScript "CheckpointPolicy")
     (Value.scriptCurrencySymbol checkpointPolicy)
   pure { checkpointPolicy, checkpointCurrencySymbol }

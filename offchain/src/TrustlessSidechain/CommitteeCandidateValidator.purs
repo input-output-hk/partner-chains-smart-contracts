@@ -56,9 +56,7 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript)
-  , InvalidInputError(InvalidCLIParams, NotFoundInputUtxo)
-  , OffchainError(InternalError, InvalidInputError)
+  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo, InvalidScript)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -252,10 +250,7 @@ register
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    ( show
-        ( InternalError
-            (InvalidScript "Couldn't convert validator hash to address")
-        )
+    ( show $ InvalidScript "Couldn't convert validator hash to address"
     )
     (validatorHashEnterpriseAddress netId valHash)
 
@@ -288,7 +283,7 @@ register
 
   when (any (matchingKeys datum) ownRegistrationDatums) $
     throwContractError
-      ( InvalidInputError $ InvalidCLIParams
+      ( InvalidCLIParams
           "BlockProducer with given set of keys is already registered"
       )
 
@@ -353,10 +348,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
   valAddr ← liftContractM
-    ( show
-        ( InternalError
-            (InvalidScript "Couldn't convert validator hash to address")
-        )
+    ( show $ InvalidScript "Couldn't convert validator hash to address"
     )
     (validatorHashEnterpriseAddress netId valHash)
   ownUtxos ← utxosAt ownAddr
@@ -366,7 +358,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
   when (null ownRegistrationUtxos)
     $ throwContractError
-        (InvalidInputError $ NotFoundInputUtxo "Couldn't find registration UTxO")
+        (NotFoundInputUtxo "Couldn't find registration UTxO")
 
   let
     lookups ∷ Lookups.ScriptLookups Void

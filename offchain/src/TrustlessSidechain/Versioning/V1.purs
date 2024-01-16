@@ -20,8 +20,7 @@ import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidScript)
   )
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
@@ -90,7 +89,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       atmsKind
 
   merkleRootTokenCurrencySymbol ← liftContractM
-    (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
+    (show $ InvalidScript "MerkleRootTokenMintingPolicy")
     (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
 
   { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp

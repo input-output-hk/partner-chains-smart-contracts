@@ -35,8 +35,7 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Error
-  ( InternalError(NotFoundUtxo, InvalidScript)
-  , OffchainError(InternalError)
+  ( OffchainError(NotFoundUtxo, InvalidScript)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data
@@ -95,7 +94,7 @@ getCandidatePermissionMintingPolicy ∷
 getCandidatePermissionMintingPolicy cpm = do
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
   candidatePermissionCurrencySymbol ← Monad.liftContractM
-    (show (InternalError (InvalidScript "CandidatePermissionToken")))
+    (show $ InvalidScript "CandidatePermissionToken")
     (Value.scriptCurrencySymbol candidatePermissionPolicy)
   pure
     { candidatePermissionPolicy
@@ -155,7 +154,7 @@ candidatePermissionTokenLookupsAndConstraints
     candidateMintPermissionMint
 
   let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
-  txOut ← Monad.liftedM (show (InternalError (NotFoundUtxo "Genesis UTxO"))) $
+  txOut ← Monad.liftedM (show (NotFoundUtxo "Candidate permission UTxO")) $
     Utxos.getUtxo
       txIn
 

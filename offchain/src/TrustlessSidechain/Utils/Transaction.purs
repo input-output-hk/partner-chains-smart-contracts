@@ -23,8 +23,7 @@ import Contract.Transaction
 import Contract.TxConstraints (TxConstraints)
 import Data.Bifunctor (lmap)
 import TrustlessSidechain.Error
-  ( InternalError(BalanceTxError, BuildTxError)
-  , OffchainError(InternalError)
+  ( OffchainError(BalanceTxError, BuildTxError)
   )
 
 -- | Build a transaction from lookups and constraints, balance, sign and submit it to the network
@@ -42,11 +41,11 @@ balanceSignAndSubmit ∷
   Contract TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
   ubTx ← liftedE
-    ( lmap (BuildTxError >>> InternalError) <$>
+    ( lmap BuildTxError <$>
         mkUnbalancedTx lookups constraints
     )
   bsTx ← liftedE
-    (lmap (BalanceTxError >>> InternalError) <$> balanceTx ubTx)
+    (lmap BalanceTxError <$> balanceTx ubTx)
   signedTx ← signTransaction bsTx
   txId ← submit signedTx
   logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
@@ -71,13 +70,13 @@ balanceSignAndSubmitWithoutSpendingUtxo
   txName
   { lookups, constraints } = do
   ubTx ← liftedE
-    ( lmap (BuildTxError >>> InternalError) <$>
+    ( lmap BuildTxError <$>
         mkUnbalancedTx lookups constraints
     )
   let balanceTxConstraints = mustNotSpendUtxoWithOutRef forbiddenUtxo
 
   bsTx ← liftedE
-    ( lmap (BalanceTxError >>> InternalError) <$>
+    ( lmap BalanceTxError <$>
         balanceTxWithConstraints ubTx balanceTxConstraints
     )
   signedTx ← signTransaction bsTx

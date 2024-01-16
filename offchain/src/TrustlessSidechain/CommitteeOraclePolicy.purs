@@ -21,8 +21,7 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidScript)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
@@ -82,7 +81,7 @@ getCommitteeOraclePolicy (SidechainParams sp) = do
   policy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
   committeeOracleCurrencySymbol ← Monad.liftContractM
-    (show (InternalError (InvalidScript "CommitteeHashPolicy")))
+    (show (InvalidScript "CommitteeHashPolicy"))
     (Value.scriptCurrencySymbol policy)
   let committeeOracleTokenName = committeeOracleTn
   pure

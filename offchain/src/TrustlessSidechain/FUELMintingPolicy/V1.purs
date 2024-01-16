@@ -66,8 +66,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( InternalError(InvalidData, NotFoundUtxo, InvalidScript)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidData, NotFoundUtxo, InvalidScript)
   )
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
@@ -280,9 +279,7 @@ mkMintFuelLookupAndConstraints
 
     bech32BytesRecipient ←
       liftContractM
-        ( show
-            (InternalError (InvalidData "Cannot convert address to bech 32 bytes"))
-        )
+        (show $ InvalidData "Cannot convert address to bech 32 bytes")
         $ bech32BytesFromAddress recipient
     let
       merkleTreeEntry =
@@ -300,14 +297,14 @@ mkMintFuelLookupAndConstraints
 
     cborMteHashedTn ←
       liftContractM
-        (show (InternalError (InvalidData "Token name exceeds size limit")))
+        (show $ InvalidData "Token name exceeds size limit")
         $ mkTokenName
         $ cborMteHashed
 
     { index: mptUtxo, value: mptTxOut } ←
       liftContractM
         ( show
-            ( InternalError $ NotFoundUtxo
+            ( NotFoundUtxo
                 "Couldn't find the parent Merkle tree root hash of the transaction"
             )
         )
@@ -323,9 +320,8 @@ mkMintFuelLookupAndConstraints
     } ← case dsUtxo of
       Nothing →
         liftedM
-          ( show
-              (InternalError (NotFoundUtxo "Couldn't find distributed set nodes"))
-          ) $ DistributedSet.slowFindDsOutput ds cborMteHashedTn
+          (show $ NotFoundUtxo "Couldn't find distributed set nodes")
+          $ DistributedSet.slowFindDsOutput ds cborMteHashedTn
       Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
@@ -337,10 +333,7 @@ mkMintFuelLookupAndConstraints
 
     recipientPkh ←
       liftContractM
-        ( show
-            ( InternalError
-                (InvalidData "Couldn't convert recipient to public key hash")
-            )
+        ( show $ InvalidData "Couldn't convert recipient to public key hash"
         )
         $ PaymentPubKeyHash
         <$> toPubKeyHash recipient
@@ -451,12 +444,8 @@ findMerkleRootTokenUtxoByRootHash ∷
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   merkleRootTokenName ←
     liftContractM
-      ( show
-          ( InternalError
-              ( InvalidData
-                  "Invalid Merkle root TokenName for MerkleRootTokenMintingPolicy"
-              )
-          )
+      ( show $ InvalidData
+          "Invalid Merkle root TokenName for MerkleRootTokenMintingPolicy"
       )
       $ Value.mkTokenName
       $ unRootHash rootHash

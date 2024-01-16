@@ -40,8 +40,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( InternalError(ConversionError, InvalidScript, NotFoundUtxo)
-  , OffchainError(InternalError)
+  ( OffchainError(ConversionError, InvalidScript, NotFoundUtxo)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
@@ -139,7 +138,7 @@ updateCommitteeHash
 
   scMsg ←
     liftContractM
-      ( show $ InternalError $ ConversionError
+      ( show $ ConversionError
           "bad UpdateCommitteeHashMessage serialization"
       )
       $ serialiseUchmHash
@@ -213,7 +212,7 @@ updateCommitteeHashLookupsAndConstraints
     sidechainParams
   merkleRootTokenCurrencySymbol ←
     liftContractM
-      (show (InternalError (InvalidScript "MerkleRootTokenCurrencySymbol")))
+      (show $ InvalidScript "MerkleRootTokenCurrencySymbol")
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
 
   -- Getting the validator / building the validator hash
@@ -244,7 +243,7 @@ updateCommitteeHashLookupsAndConstraints
         committeeOracleTxOut
     } ←
     liftContractM
-      (show $ InternalError $ NotFoundUtxo "Failed to find committee UTxO") $ lkup
+      (show $ NotFoundUtxo "Failed to find committee UTxO") $ lkup
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------

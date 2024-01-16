@@ -43,8 +43,7 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidScript)
   )
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
@@ -258,7 +257,7 @@ getAddr v = do
 -- | currency symbol
 getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
 getCurrencySymbolHex name mp = do
-  cs ← Monad.liftContractM (show (InternalError (InvalidScript $ show name))) $
+  cs ← Monad.liftContractM (show $ InvalidScript $ show name) $
     Value.scriptCurrencySymbol mp
   pure $ currencySymbolToHex cs
 

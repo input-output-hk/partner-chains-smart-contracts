@@ -56,8 +56,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( InternalError(InvalidScript, NotFoundUtxo, InvalidData, VerificationError)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidScript, NotFoundUtxo, InvalidData, VerificationError)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -144,7 +143,7 @@ getCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
 getCommitteePlainEcdsaSecp256k1ATMSPolicy param = do
   committeePlainEcdsaSecp256k1ATMSPolicy ← committeePlainEcdsaSecp256k1ATMS param
   committeePlainEcdsaSecp256k1ATMSCurrencySymbol ← Monad.liftContractM
-    ( show $ InternalError $ InvalidScript
+    ( show $ InvalidScript
         "Failed to get committee plainEcdsaSecp256k1 ATMS currency symbol"
     )
     (Value.scriptCurrencySymbol committeePlainEcdsaSecp256k1ATMSPolicy)
@@ -219,12 +218,12 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
 
   comitteeHashDatum ←
     Monad.liftContractM
-      ( show $ InternalError $ InvalidData
+      ( show $ InvalidData
           "Update committee UTxO is missing inline datum"
       )
       $ outputDatumDatum tOut.datum
   UpdateCommitteeDatum datum ← Monad.liftContractM
-    ( show $ InternalError $ InvalidData
+    ( show $ InvalidData
         "Datum at update committee UTxO fromData failed"
     )
     (fromData $ unwrap comitteeHashDatum)
@@ -233,7 +232,6 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
   when (datum.aggregatePubKeys /= curCommitteeHash)
     $ Monad.throwContractError
     $ show
-    $ InternalError
     $ VerificationError "Incorrect committee provided"
 
   unless
@@ -249,7 +247,6 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
     )
     $ Monad.throwContractError
     $ show
-    $ InternalError
     $ VerificationError
         "Invalid committee signatures for the sidechain message"
 
@@ -407,7 +404,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
     sidechainParams
   merkleRootTokenCurrencySymbol ←
     Monad.liftContractM
-      ( show $ InternalError $ InvalidScript
+      ( show $ InvalidScript
           "Failed to get merkleRootTokenCurrencySymbol"
       )
       $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
@@ -426,6 +423,6 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Finding the current committee
   -------------------------------------------------------------
   lkup ← Monad.liftedM
-    (show $ InternalError $ NotFoundUtxo "current committee not found")
+    (show $ NotFoundUtxo "current committee not found")
     (UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch)
   pure lkup

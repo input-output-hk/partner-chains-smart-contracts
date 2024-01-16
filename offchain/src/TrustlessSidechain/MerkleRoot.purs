@@ -35,8 +35,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( InternalError(InvalidData, InvalidScript, NotFoundUtxo)
-  , OffchainError(InternalError)
+  ( OffchainError(InvalidData, InvalidScript, NotFoundUtxo)
   )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
@@ -112,8 +111,7 @@ saveRoot
     sidechainParams
   currentCommitteeUtxo ←
     liftedM
-      ( show $ InternalError $ NotFoundUtxo
-          "failed to find current committee UTxO"
+      ( show $ NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
       $ UpdateCommitteeHash
@@ -177,10 +175,9 @@ getMerkleRootTokenMintingPolicy ∷
     , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
     }
 getMerkleRootTokenMintingPolicy sidechainParams = do
-
   policy ← merkleRootTokenMintingPolicy sidechainParams
   merkleRootTokenCurrencySymbol ←
-    liftContractM (show (InternalError (InvalidScript "MerkleRootPolicy"))) $
+    liftContractM (show $ InvalidScript "MerkleRootPolicy") $
       Value.scriptCurrencySymbol policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
@@ -209,16 +206,14 @@ saveRootLookupsAndConstraints
   rootTokenMP ← merkleRootTokenMintingPolicy sidechainParams
   rootTokenCS ←
     liftContractM
-      (show (InternalError (InvalidScript "MerkleRootTokenMintingPolicy")))
+      (show $ InvalidScript "MerkleRootTokenMintingPolicy")
       $ Value.scriptCurrencySymbol rootTokenMP
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM
       ( show
-          ( InternalError
-              ( InvalidData
-                  "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
-              )
+          ( InvalidData
+              "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
           )
       )
       $ Value.mkTokenName

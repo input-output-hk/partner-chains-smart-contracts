@@ -19,7 +19,7 @@ import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Map as Map
 import TrustlessSidechain.Error
-  ( InternalError
+  ( OffchainError
       ( InvalidScript
       , InvalidScriptArgs
       , InvalidScriptId

@@ -1,7 +1,5 @@
 module TrustlessSidechain.Error
   ( OffchainError(..)
-  , InternalError(..)
-  , InvalidInputError(..)
   ) where
 
 import Contract.Prelude
@@ -13,19 +11,6 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 
 -- | Error raised from the off-chain code of the application
 data OffchainError
-  -- | Error type for internal errors, with information to developers and maintainers
-  = InternalError InternalError
-  -- | Error occured because of an invalid input, with informaton to the end-user
-  | InvalidInputError InvalidInputError
-
-derive instance Generic OffchainError _
-
-instance Show OffchainError where
-  show = genericShow
-
--- | Error type for internal errors, with error information to developers and
--- | maintainers
-data InternalError
   -- | A UTxO that should exist (not given as user input) could not be found
   = NotFoundUtxo String
   -- | Own payment public key hashes cannot be found
@@ -55,22 +40,15 @@ data InternalError
   | DsInsertError String
   -- | Error verifying a signature or a hash
   | VerificationError String
-
-derive instance Generic InternalError _
-
-instance Show InternalError where
-  show = genericShow
-
-data InvalidInputError
   -- | Parameters passed on the command line are invalid in some way.
-  = InvalidCLIParams String
+  | InvalidCLIParams String
   -- | A UTxO that should exist (given as user input) could not be found
   | NotFoundInputUtxo String
   -- | A special case of not finding an input UTxO, used when genesis UTxO
   -- | cannot be found.
   | NoGenesisUTxO
 
-derive instance Generic InvalidInputError _
+derive instance Generic OffchainError _
 
-instance Show InvalidInputError where
+instance Show OffchainError where
   show = genericShow

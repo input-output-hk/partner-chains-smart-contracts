@@ -34,9 +34,7 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error
-  ( InternalError(InvalidData)
-  , InvalidInputError(InvalidCLIParams)
-  , OffchainError(InternalError, InvalidInputError)
+  ( OffchainError(InvalidData, InvalidCLIParams)
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.PermissionedCandidates.Types
@@ -126,7 +124,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
           { output: TransactionOutput { datum: outputDatum } }
       ) →
       maybe
-        ( throwContractError $ show $ InternalError $ InvalidData
+        ( throwContractError $ show $ InvalidData
             "could not decode PermissionedCandidatesValidatorDatum"
         )
         pure $ do
@@ -152,7 +150,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
   when (sort newCandidates == sort oldCandidates)
     $ throwContractError
     $
-      ( InvalidInputError $ InvalidCLIParams
+      ( InvalidCLIParams
           "New candidates list is the same as the currently stored list."
       )
 

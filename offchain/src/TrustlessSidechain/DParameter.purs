@@ -43,9 +43,7 @@ import TrustlessSidechain.DParameter.Types
   )
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Error
-  ( InternalError(NotFoundUtxo)
-  , InvalidInputError(InvalidCLIParams)
-  , OffchainError(InternalError, InvalidInputError)
+  ( OffchainError(NotFoundUtxo, InvalidCLIParams)
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -153,7 +151,6 @@ mkRemoveDParameterLookupsAndConstraints sidechainParams = do
   when (amountToBurn == zero)
     $ throwContractError
     $ show
-    $ InternalError
     $ NotFoundUtxo "Unable to remove non-existent d-param"
 
   { lookups: governanceLookups, constraints: governanceConstraints } ←
@@ -223,9 +220,7 @@ mkUpdateDParameterLookupsAndConstraints
 
   (oldDParameterInput /\ oldDParameterOutput) ← liftContractM
     ( show
-        ( InternalError
-            (NotFoundUtxo "Old D parameter not found")
-        )
+        (NotFoundUtxo "Old D parameter not found")
     )
     mOldDParameter
 
@@ -247,10 +242,8 @@ mkUpdateDParameterLookupsAndConstraints
             && dParameter.registeredCandidatesCount
             == registeredCandidatesCount → throwContractError
             ( show
-                ( InvalidInputError
-                    ( InvalidCLIParams
-                        "Provided values have already been set. Please check."
-                    )
+                ( InvalidCLIParams
+                    "Provided values have already been set. Please check."
                 )
             )
       _ → pure unit
