@@ -66,7 +66,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidData, NotFoundUtxo, InvalidScript)
+  ( OffchainError(InvalidData, NotFoundUtxo)
   )
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
@@ -77,6 +77,7 @@ import TrustlessSidechain.Utils.Address
   ( Bech32Bytes
   , addressFromBech32Bytes
   , bech32BytesFromAddress
+  , getCurrencySymbol
   , getOwnPaymentPubKeyHash
   )
 import TrustlessSidechain.Utils.Scripts
@@ -235,9 +236,8 @@ getFuelMintingPolicy ∷
     }
 getFuelMintingPolicy sidechainParams = do
   fuelMintingPolicy ← decodeFuelMintingPolicy sidechainParams
-  fuelMintingCurrencySymbol ←
-    liftContractM (show (InvalidScript "Fuel V1 minting policy")) $
-      Value.scriptCurrencySymbol fuelMintingPolicy
+  fuelMintingCurrencySymbol ← getCurrencySymbol FUELMintingPolicy
+    fuelMintingPolicy
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
 -- | `FuelMintParams` is the data for the FUEL mint endpoint.

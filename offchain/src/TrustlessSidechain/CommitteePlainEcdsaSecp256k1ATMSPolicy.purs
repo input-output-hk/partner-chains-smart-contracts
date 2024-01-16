@@ -56,7 +56,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidScript, NotFoundUtxo, InvalidData, VerificationError)
+  ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -66,7 +66,8 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address
-  ( getOwnWalletAddress
+  ( getCurrencySymbol
+  , getOwnWalletAddress
   )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
@@ -79,7 +80,7 @@ import TrustlessSidechain.Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(CommitteePlainEcdsaSecp256k1ATMSPolicy)
+  ( ScriptId(CommitteePlainEcdsaSecp256k1ATMSPolicy, MerkleRootTokenPolicy)
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
@@ -142,11 +143,9 @@ getCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
     }
 getCommitteePlainEcdsaSecp256k1ATMSPolicy param = do
   committeePlainEcdsaSecp256k1ATMSPolicy ← committeePlainEcdsaSecp256k1ATMS param
-  committeePlainEcdsaSecp256k1ATMSCurrencySymbol ← Monad.liftContractM
-    ( show $ InvalidScript
-        "Failed to get committee plainEcdsaSecp256k1 ATMS currency symbol"
-    )
-    (Value.scriptCurrencySymbol committeePlainEcdsaSecp256k1ATMSPolicy)
+  committeePlainEcdsaSecp256k1ATMSCurrencySymbol ←
+    getCurrencySymbol CommitteePlainEcdsaSecp256k1ATMSPolicy
+      committeePlainEcdsaSecp256k1ATMSPolicy
   pure
     { committeePlainEcdsaSecp256k1ATMSPolicy
     , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
@@ -403,11 +402,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     sidechainParams
   merkleRootTokenCurrencySymbol ←
-    Monad.liftContractM
-      ( show $ InvalidScript
-          "Failed to get merkleRootTokenCurrencySymbol"
-      )
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+    getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
 
   -- Build the UpdateCommitteeHash parameter
   -------------------------------------------------------------

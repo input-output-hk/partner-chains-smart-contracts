@@ -8,6 +8,11 @@ module TrustlessSidechain.Utils.Address
   , getOwnPaymentPubKeyHash
   , getOwnWalletAddress
   , toValidatorHash
+  , getCurrencySymbol
+  , getCurrencySymbolHex
+  , getValidatorHashHex
+  , getValidatorHash
+  , currencySymbolToHex
   ) where
 
 import Contract.Prelude
@@ -18,9 +23,18 @@ import Contract.Address
   )
 import Contract.Address as Address
 import Contract.Monad (Contract, liftContractM, liftedM)
+import Contract.Monad as Monad
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
-import Contract.Scripts (ValidatorHash)
+import Contract.Prim.ByteArray as ByteArray
+import Contract.Scripts
+  ( MintingPolicy
+  , Validator
+  , ValidatorHash(ValidatorHash)
+  , validatorHash
+  )
+import Contract.Value (CurrencySymbol)
+import Contract.Value as Value
 import Contract.Wallet
   ( getWalletAddresses
   , ownPaymentPubKeyHashes
@@ -46,10 +60,16 @@ import Ctl.Internal.Serialization.Address
   , rewardAddressFromBytes
   , rewardAddressToAddress
   )
+import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundOwnPubKeyHash, NotFoundOwnAddress)
+  ( OffchainError
+      ( NotFoundOwnPubKeyHash
+      , NotFoundOwnAddress
+      , InvalidCurrencySymbol
+      )
   )
+import TrustlessSidechain.Versioning.Types (ScriptId)
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
 -- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
@@ -132,3 +152,29 @@ toValidatorHash ∷ Address → Contract ValidatorHash
 toValidatorHash addr =
   liftContractM "Cannot convert Address to ValidatorHash"
     (Address.toValidatorHash addr)
+
+-- | `getCurrencySymbolHex` converts a minting policy to its currency symbol
+getCurrencySymbol ∷ ScriptId → MintingPolicy → Contract CurrencySymbol
+getCurrencySymbol name mp = do
+  Monad.liftContractM (show $ InvalidCurrencySymbol name mp) $
+    Value.scriptCurrencySymbol mp
+
+-- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
+-- | currency symbol
+getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
+getCurrencySymbolHex name mp =
+  currencySymbolToHex <$> getCurrencySymbol name mp
+
+-- | `getValidatorHashHex` converts a validator hash to a hex encoded string
+getValidatorHashHex ∷ ValidatorHash → String
+getValidatorHashHex (ValidatorHash sh) =
+  ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
+
+-- | `getValidatorHash` converts a validator to a hex encoded string
+getValidatorHash ∷ Validator → String
+getValidatorHash = getValidatorHashHex <<< validatorHash
+
+-- | Convert a currency symbol to hex encoded string
+currencySymbolToHex ∷ CurrencySymbol → String
+currencySymbolToHex =
+  ByteArray.byteArrayToHex <<< Value.getCurrencySymbol

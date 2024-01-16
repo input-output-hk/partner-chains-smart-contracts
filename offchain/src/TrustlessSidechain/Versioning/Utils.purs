@@ -16,7 +16,6 @@ import Contract.Prelude
 
 import Contract.Address (Address, getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Monad (Contract, liftContractM, throwContractError)
-import Contract.Monad as Monad
 import Contract.PlutusData
   ( Datum(Datum)
   , OutputDatum(OutputDatum)
@@ -59,6 +58,7 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -111,9 +111,8 @@ getVersionOraclePolicy ∷
     }
 getVersionOraclePolicy gscp = do
   versionOracleMintingPolicy ← versionOraclePolicy gscp
-  versionOracleCurrencySymbol ← Monad.liftContractM
-    "Failed to get version oracle CurrencySymbol"
-    (Value.scriptCurrencySymbol versionOracleMintingPolicy)
+  versionOracleCurrencySymbol ←
+    getCurrencySymbol VersionOraclePolicy versionOracleMintingPolicy
   pure { versionOracleMintingPolicy, versionOracleCurrencySymbol }
 
 -- | Return configuration of the versioning system, i.e. VersionOracleValidator
@@ -122,12 +121,7 @@ getVersionOracleConfig ∷
   SidechainParams →
   Contract VersionOracleConfig
 getVersionOracleConfig sp = do
-  -- get versionning currency symbol
-  versionOracleMintingPolicy ← versionOraclePolicy sp
-  versionOracleCurrencySymbol ← Monad.liftContractM
-    "Failed to get version oracle CurrencySymbol"
-    (Value.scriptCurrencySymbol versionOracleMintingPolicy)
-
+  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
   pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
 -- | Take a versionable script (either a validator or a minting policy) with its

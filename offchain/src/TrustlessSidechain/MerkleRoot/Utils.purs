@@ -35,6 +35,7 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
@@ -91,10 +92,7 @@ findMerkleRootTokenUtxo merkleRoot sp = do
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 
   mintingPolicy ← merkleRootTokenMintingPolicy sp
-  currencySymbol ←
-    Monad.liftContractM
-      "error 'findMerkleRootTokenUtxo': failed to get currency symbol for minting policy"
-      $ Value.scriptCurrencySymbol mintingPolicy
+  currencySymbol ← getCurrencySymbol MerkleRootTokenPolicy mintingPolicy
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: we just need the existence of the token i.e., there is a nonzero

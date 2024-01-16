@@ -20,8 +20,8 @@ import Contract.Scripts
   , validatorHash
   )
 import Contract.Value (CurrencySymbol)
-import Contract.Value as Value
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -76,8 +76,8 @@ getPermissionedCandidatesMintingPolicyAndCurrencySymbol ∷
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol sidechainParams = do
   permissionedCandidatesMintingPolicy ← decodePermissionedCandidatesMintingPolicy
     sidechainParams
-  permissionedCandidatesCurrencySymbol ← liftContractM
-    "Failed to get PermissionedCandidatesMintingPolicy"
-    (Value.scriptCurrencySymbol permissionedCandidatesMintingPolicy)
+  permissionedCandidatesCurrencySymbol ←
+    getCurrencySymbol PermissionedCandidatesPolicy
+      permissionedCandidatesMintingPolicy
   pure
     { permissionedCandidatesMintingPolicy, permissionedCandidatesCurrencySymbol }

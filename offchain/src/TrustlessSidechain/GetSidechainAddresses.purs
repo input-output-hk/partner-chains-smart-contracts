@@ -5,7 +5,6 @@ module TrustlessSidechain.GetSidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   , SidechainAddressesExtra
   , getSidechainAddresses
-  , currencySymbolToHex
   ) where
 
 import Contract.Prelude
@@ -13,17 +12,11 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash(ValidatorHash)
+  ( Validator
   , validatorHash
   )
 import Contract.Transaction (TransactionInput)
-import Contract.Value (CurrencySymbol)
-import Contract.Value as Value
-import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
 import Data.Functor (map)
 import Data.Map as Map
@@ -42,15 +35,33 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.Error
-  ( OffchainError(InvalidScript)
-  )
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address
+  ( currencySymbolToHex
+  , getCurrencySymbolHex
+  , getValidatorHash
+  )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
-  ( ScriptId(..)
+  ( ScriptId
+      ( DsConfPolicy
+      , CandidatePermissionPolicy
+      , CheckpointPolicy
+      , FUELProxyPolicy
+      , VersionOraclePolicy
+      , PermissionedCandidatesPolicy
+      , DParameterPolicy
+      , CommitteePlainEcdsaSecp256k1ATMSPolicy
+      , CommitteePlainSchnorrSecp256k1ATMSPolicy
+      , CommitteeCandidateValidator
+      , DsConfValidator
+      , DsInsertValidator
+      , VersionOracleValidator
+      , PermissionedCandidatesValidator
+      , DParameterValidator
+      )
   )
 import TrustlessSidechain.Versioning.Utils
   ( getVersionOraclePolicy
@@ -252,25 +263,3 @@ getAddr v = do
       (validatorHash v)
   serialised ← Address.addressToBech32 addr
   pure serialised
-
--- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
--- | currency symbol
-getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
-getCurrencySymbolHex name mp = do
-  cs ← Monad.liftContractM (show $ InvalidScript $ show name) $
-    Value.scriptCurrencySymbol mp
-  pure $ currencySymbolToHex cs
-
--- | `getValidatorHashHex` converts a validator hash to a hex encoded string
-getValidatorHashHex ∷ ValidatorHash → String
-getValidatorHashHex (ValidatorHash sh) =
-  ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
-
--- | `getValidatorHash` converts a validator to a hex encoded string
-getValidatorHash ∷ Validator → String
-getValidatorHash = getValidatorHashHex <<< validatorHash
-
--- | Convert a currency symbol to hex encoded string
-currencySymbolToHex ∷ CurrencySymbol → String
-currencySymbolToHex =
-  ByteArray.byteArrayToHex <<< Value.getCurrencySymbol

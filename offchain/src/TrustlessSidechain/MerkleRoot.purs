@@ -65,6 +65,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types
@@ -176,9 +177,7 @@ getMerkleRootTokenMintingPolicy ∷
     }
 getMerkleRootTokenMintingPolicy sidechainParams = do
   policy ← merkleRootTokenMintingPolicy sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    liftContractM (show $ InvalidScript "MerkleRootPolicy") $
-      Value.scriptCurrencySymbol policy
+  merkleRootTokenCurrencySymbol ← getCurrencySymbol MerkleRootTokenPolicy policy
   pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
 
 -- | `saveRootLookupsAndConstraints` creates the lookups and constraints (and
@@ -204,10 +203,7 @@ saveRootLookupsAndConstraints
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
   rootTokenMP ← merkleRootTokenMintingPolicy sidechainParams
-  rootTokenCS ←
-    liftContractM
-      (show $ InvalidScript "MerkleRootTokenMintingPolicy")
-      $ Value.scriptCurrencySymbol rootTokenMP
+  rootTokenCS ← getCurrencySymbol MerkleRootTokenPolicy rootTokenMP
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM

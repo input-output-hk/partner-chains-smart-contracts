@@ -9,7 +9,6 @@ module TrustlessSidechain.CommitteeOraclePolicy
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData
   ( class ToData
   , toData
@@ -20,11 +19,9 @@ import Contract.Transaction (TransactionInput)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.Error
-  ( OffchainError(InvalidScript)
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, assetClass)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -55,9 +52,7 @@ committeeOraclePolicy ichm =
 committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
 committeeOracleAssetClass ichm = do
   cp ← committeeOraclePolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get committee oracle currency symbol"
-    (Value.scriptCurrencySymbol cp)
-
+  curSym ← getCurrencySymbol CommitteeOraclePolicy cp
   pure $ assetClass curSym committeeOracleTn
 
 -- | `committeeOracleTn` is the token name of the NFT which identifies
@@ -80,9 +75,7 @@ getCommitteeOraclePolicy ∷
 getCommitteeOraclePolicy (SidechainParams sp) = do
   policy ← committeeOraclePolicy $
     InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
-  committeeOracleCurrencySymbol ← Monad.liftContractM
-    (show (InvalidScript "CommitteeHashPolicy"))
-    (Value.scriptCurrencySymbol policy)
+  committeeOracleCurrencySymbol ← getCurrencySymbol CommitteeOraclePolicy policy
   let committeeOracleTokenName = committeeOracleTn
   pure
     { committeeOraclePolicy: policy

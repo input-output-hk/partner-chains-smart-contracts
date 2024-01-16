@@ -8,7 +8,6 @@ module TrustlessSidechain.FUELProxyPolicy
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
@@ -35,6 +34,7 @@ import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -85,9 +85,7 @@ getFuelProxyMintingPolicy ∷
     }
 getFuelProxyMintingPolicy sp = do
   fuelProxyPolicy ← decodeFuelProxyPolicy sp
-  fuelProxyCurrencySymbol ← Monad.liftContractM
-    "Failed to get FUEL proxy CurrencySymbol"
-    (Value.scriptCurrencySymbol fuelProxyPolicy)
+  fuelProxyCurrencySymbol ← getCurrencySymbol FUELProxyPolicy fuelProxyPolicy
   pure { fuelProxyPolicy, fuelProxyCurrencySymbol }
 
 data FuelMintParams

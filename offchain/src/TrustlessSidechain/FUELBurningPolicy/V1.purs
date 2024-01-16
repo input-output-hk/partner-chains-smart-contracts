@@ -7,7 +7,7 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
@@ -28,8 +28,8 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.Error (OffchainError(InvalidScript))
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -58,14 +58,10 @@ getFuelBurningPolicy ∷
     , fuelBurningCurrencySymbol ∷ CurrencySymbol
     }
 getFuelBurningPolicy sidechainParams = do
-  policy ← decodeFuelBurningPolicy sidechainParams
+  fuelBurningPolicy ← decodeFuelBurningPolicy sidechainParams
   fuelBurningCurrencySymbol ←
-    liftContractM (show (InvalidScript "Fuel V1 burning policy")) $
-      Value.scriptCurrencySymbol policy
-  pure
-    { fuelBurningPolicy: policy
-    , fuelBurningCurrencySymbol
-    }
+    getCurrencySymbol FUELBurningPolicy fuelBurningPolicy
+  pure { fuelBurningPolicy, fuelBurningCurrencySymbol }
 
 -- | `FuelBurnParams` is the data needed to mint FUELBurningToken
 data FuelBurnParams = FuelBurnParams

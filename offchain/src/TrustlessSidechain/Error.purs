@@ -5,7 +5,7 @@ module TrustlessSidechain.Error
 import Contract.Prelude
 
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (ApplyArgsError)
+import Contract.Scripts (ApplyArgsError, MintingPolicy)
 import Contract.Transaction as Transaction
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 
@@ -47,6 +47,13 @@ data OffchainError
   -- | A special case of not finding an input UTxO, used when genesis UTxO
   -- | cannot be found.
   | NoGenesisUTxO
+
+  -- Below are the impossible errors, i.e. things that should never happen, but
+  -- CTL forces us to handle these cases anyway.
+
+  -- | Given minting policy cannot be converted to a currency symbol.  This
+  -- | should never really happen, but CTL forces
+  | InvalidCurrencySymbol ScriptId MintingPolicy
 
 derive instance Generic OffchainError _
 

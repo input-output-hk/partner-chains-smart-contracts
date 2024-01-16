@@ -76,7 +76,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( OffchainError(ConversionError, InvalidScript, NoGenesisUTxO)
+  ( OffchainError(ConversionError, NoGenesisUTxO)
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
@@ -92,8 +92,17 @@ import TrustlessSidechain.UpdateCommitteeHash
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( CheckpointPolicy
+      , FUELMintingPolicy
+      , DsKeyPolicy
+      , DsConfPolicy
+      )
+  )
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -426,10 +435,7 @@ initDistributedSetLookupsAndContraints isp = do
   -----------------------------------
   -- Configuration policy of the distributed set
   dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
-  dsConfPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (show $ InvalidScript "DsConfPolicy")
-      $ Value.scriptCurrencySymbol dsConfPolicy
+  dsConfPolicyCurrencySymbol ← getCurrencySymbol DsConfPolicy dsConfPolicy
 
   -- Validator for insertion of the distributed set / the associated datum and
   -- tokens that should be paid to this validator.
@@ -443,10 +449,7 @@ initDistributedSetLookupsAndContraints isp = do
       }
 
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
-  dsKeyPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (show $ InvalidScript "DsKeyPolicy")
-      $ Value.scriptCurrencySymbol dsKeyPolicy
+  dsKeyPolicyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
       ( show $ ConversionError
@@ -468,9 +471,7 @@ initDistributedSetLookupsAndContraints isp = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sc
 
   fuelMintingPolicyCurrencySymbol ←
-    Monad.liftContractM
-      (show $ InvalidScript "FuelMintingPolicy")
-      $ Value.scriptCurrencySymbol fuelMintingPolicy
+    getCurrencySymbol FUELMintingPolicy fuelMintingPolicy
 
   -- Validator for the configuration of the distributed set / the associated
   -- datum and tokens that should be paid to this validator.
@@ -776,7 +777,5 @@ getCheckpointPolicy ∷
 getCheckpointPolicy isp = do
   checkpointPolicy ← Checkpoint.checkpointPolicy $
     InitCheckpointMint { icTxOutRef: isp.initUtxo }
-  checkpointCurrencySymbol ← Monad.liftContractM
-    (show $ InvalidScript "CheckpointPolicy")
-    (Value.scriptCurrencySymbol checkpointPolicy)
+  checkpointCurrencySymbol ← getCurrencySymbol CheckpointPolicy checkpointPolicy
   pure { checkpointPolicy, checkpointCurrencySymbol }

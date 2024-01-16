@@ -40,7 +40,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( OffchainError(ConversionError, InvalidScript, NotFoundUtxo)
+  ( OffchainError(ConversionError, NotFoundUtxo)
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
@@ -68,8 +68,14 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( MerkleRootTokenPolicy
+      )
+  )
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -210,10 +216,8 @@ updateCommitteeHashLookupsAndConstraints
 
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      (show $ InvalidScript "MerkleRootTokenCurrencySymbol")
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+  merkleRootTokenCurrencySymbol ← getCurrencySymbol MerkleRootTokenPolicy
+    merkleRootTokenMintingPolicy
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------

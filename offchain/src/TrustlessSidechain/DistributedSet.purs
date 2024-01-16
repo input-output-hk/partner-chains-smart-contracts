@@ -58,14 +58,14 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error
   ( OffchainError
-      ( InvalidScript
-      , NotFoundUtxo
+      ( NotFoundUtxo
       , ConversionError
       , InvalidData
       , InvalidAddress
       , DsInsertError
       )
   )
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -311,16 +311,12 @@ dsConfValidator ds = mkValidatorWithParams DsConfValidator $ map
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
 dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
-dsConfPolicy dsm = mkMintingPolicyWithParams DsConfPolicy $ map
-  toData
-  [ dsm ]
+dsConfPolicy dsm = mkMintingPolicyWithParams DsConfPolicy $ [ toData dsm ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
 dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
-dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy $ map
-  toData
-  [ dskm ]
+dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy [ toData dskm ]
 
 -- | The address for the insert validator of the distributed set.
 insertAddress ∷ NetworkId → Ds → Contract Address
@@ -369,10 +365,7 @@ insertNode str (Node node)
 getDs ∷ TransactionInput → Contract Ds
 getDs txInput = do
   dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
-  dsConfPolicyCurrencySymbol ←
-    liftContractM
-      (show (InvalidScript "DsConfPolicy"))
-      $ Value.scriptCurrencySymbol dsConfPolicy'
+  dsConfPolicyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsConfPolicy'
   pure $ Ds dsConfPolicyCurrencySymbol
 
 -- | `getDsKeyPolicy` grabs the key policy and currency symbol from the given
@@ -394,10 +387,7 @@ getDsKeyPolicy ds = do
       }
   policy ← dsKeyPolicy dskm
 
-  currencySymbol ←
-    liftContractM
-      (show (InvalidScript "DsKeyPolicy"))
-      $ Value.scriptCurrencySymbol policy
+  currencySymbol ← getCurrencySymbol DsKeyPolicy policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
 
@@ -588,8 +578,7 @@ slowFindDsOutput ds tn = do
   dskm ← dsToDsKeyMint ds
   policy ← dsKeyPolicy dskm
 
-  dsKeyCurSym ← liftContractM "Cannot get currency symbol" $
-    Value.scriptCurrencySymbol policy
+  dsKeyCurSym ← getCurrencySymbol DsKeyPolicy policy
 
   go dsKeyCurSym utxos
 

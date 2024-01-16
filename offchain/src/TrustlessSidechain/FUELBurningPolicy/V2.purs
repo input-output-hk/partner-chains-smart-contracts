@@ -33,6 +33,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Test.PoCRawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams'
   )
@@ -68,9 +69,8 @@ getFuelBurningPolicy ∷
     }
 getFuelBurningPolicy sidechainParams = do
   fuelBurningPolicy ← decodeDummyBurningPolicy sidechainParams
-  fuelBurningCurrencySymbol ← Monad.liftContractM
-    "Failed to get dummy CurrencySymbol"
-    (Value.scriptCurrencySymbol fuelBurningPolicy)
+  fuelBurningCurrencySymbol ←
+    getCurrencySymbol FUELBurningPolicy fuelBurningPolicy
   pure { fuelBurningPolicy, fuelBurningCurrencySymbol }
 
 mkBurnFuelLookupAndConstraints ∷

@@ -35,9 +35,10 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundUtxo, InvalidScript)
+  ( OffchainError(NotFoundUtxo)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -93,9 +94,8 @@ getCandidatePermissionMintingPolicy ∷
     }
 getCandidatePermissionMintingPolicy cpm = do
   candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
-  candidatePermissionCurrencySymbol ← Monad.liftContractM
-    (show $ InvalidScript "CandidatePermissionToken")
-    (Value.scriptCurrencySymbol candidatePermissionPolicy)
+  candidatePermissionCurrencySymbol ←
+    getCurrencySymbol CandidatePermissionPolicy candidatePermissionPolicy
   pure
     { candidatePermissionPolicy
     , candidatePermissionCurrencySymbol

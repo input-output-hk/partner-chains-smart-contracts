@@ -18,7 +18,6 @@ import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
-import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint.Types
@@ -55,7 +54,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidScript, NotFoundUtxo, ConversionError)
+  ( OffchainError(NotFoundUtxo, ConversionError)
   )
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -64,8 +63,14 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( CheckpointPolicy
+      )
+  )
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 saveCheckpoint
@@ -262,9 +267,7 @@ getCheckpointPolicy ∷
 getCheckpointPolicy (SidechainParams sp) = do
   checkpointPolicy ← checkpointPolicy $
     InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
-  checkpointCurrencySymbol ← liftContractM
-    (show $ InvalidScript "Failed to get checkpoint CurrencySymbol")
-    (Value.scriptCurrencySymbol checkpointPolicy)
+  checkpointCurrencySymbol ← getCurrencySymbol CheckpointPolicy checkpointPolicy
   let checkpointTokenName = initCheckpointMintTn
   pure
     { checkpointPolicy, checkpointCurrencySymbol, checkpointTokenName }

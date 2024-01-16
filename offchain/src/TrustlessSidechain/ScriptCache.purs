@@ -43,7 +43,7 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
-import TrustlessSidechain.Error (OffchainError(InvalidScript))
+import TrustlessSidechain.Error (OffchainError(ConversionError))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Scripts
@@ -67,7 +67,12 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   netId ← getNetworkId
   valAddr ← liftContractM
-    (show (InvalidScript "script cache enterprise address"))
+    ( show
+        ( ConversionError $ "Cannot convert validator hash "
+            <> show scriptCacheValidatorHash
+            <> " to an enterprise address"
+        )
+    )
     (validatorHashEnterpriseAddress netId scriptCacheValidatorHash)
 
   scriptCacheUtxos ← utxosAt valAddr
@@ -118,7 +123,12 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   netId ← getNetworkId
   valAddr ← liftContractM
-    (show (InvalidScript "script cache enterprise address"))
+    ( show
+        ( ConversionError $ "Cannot convert validator hash "
+            <> show scriptCacheValidatorHash
+            <> " to an enterprise address"
+        )
+    )
     (validatorHashEnterpriseAddress netId scriptCacheValidatorHash)
 
   scriptCacheUtxos ← utxosAt valAddr

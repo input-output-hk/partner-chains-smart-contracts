@@ -33,6 +33,7 @@ import TrustlessSidechain.Checkpoint.Types
   , InitCheckpointMint
   )
 import TrustlessSidechain.Types (AssetClass, assetClass)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
@@ -66,8 +67,7 @@ initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
 checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
 checkpointAssetClass ichm = do
   cp ← checkpointPolicy ichm
-  curSym ← Monad.liftContractM "Couldn't get checkpoint currency symbol"
-    (Value.scriptCurrencySymbol cp)
+  curSym ← getCurrencySymbol CheckpointPolicy cp
 
   pure $ assetClass curSym initCheckpointMintTn
 

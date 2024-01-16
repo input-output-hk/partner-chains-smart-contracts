@@ -8,7 +8,6 @@ module TrustlessSidechain.FUELMintingPolicy.V2
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -33,6 +32,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Test.PoCRawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams'
   )
@@ -68,9 +68,8 @@ getFuelMintingPolicy ∷
     }
 getFuelMintingPolicy sidechainParams = do
   fuelMintingPolicy ← decodePoCMintingPolicy sidechainParams
-  fuelMintingCurrencySymbol ← Monad.liftContractM
-    "Failed to get dummy CurrencySymbol"
-    (Value.scriptCurrencySymbol fuelMintingPolicy)
+  fuelMintingCurrencySymbol ←
+    getCurrencySymbol FUELMintingPolicy fuelMintingPolicy
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
 mkMintFuelLookupAndConstraints ∷

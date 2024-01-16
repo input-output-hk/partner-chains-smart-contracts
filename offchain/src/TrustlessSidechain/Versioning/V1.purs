@@ -4,9 +4,8 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy, Validator)
-import Contract.Value as Value
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types
@@ -19,9 +18,6 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.Error
-  ( OffchainError(InvalidScript)
-  )
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -33,15 +29,28 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Versioning.Types as Types
+import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( MerkleRootTokenValidator
+      , CheckpointValidator
+      , CommitteeHashValidator
+      , MerkleRootTokenPolicy
+      , FUELMintingPolicy
+      , FUELBurningPolicy
+      , DsKeyPolicy
+      , CommitteeCertificateVerificationPolicy
+      , CommitteeOraclePolicy
+      )
+  )
 
 getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Contract
-    { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
-    , versionedValidators ∷ Map.Map Types.ScriptId Validator
+    { versionedPolicies ∷ Map.Map ScriptId MintingPolicy
+    , versionedValidators ∷ Map.Map ScriptId Validator
     }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
@@ -72,13 +81,13 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   let
     versionedPolicies = Map.fromFoldable
-      [ Types.MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
-      , Types.FUELMintingPolicy /\ fuelMintingPolicy
-      , Types.FUELBurningPolicy /\ fuelBurningPolicy
-      , Types.DsKeyPolicy /\ dsKeyPolicy
-      , Types.CommitteeCertificateVerificationPolicy /\
+      [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
+      , FUELMintingPolicy /\ fuelMintingPolicy
+      , FUELBurningPolicy /\ fuelBurningPolicy
+      , DsKeyPolicy /\ dsKeyPolicy
+      , CommitteeCertificateVerificationPolicy /\
           committeeCertificateVerificationMintingPolicy
-      , Types.CommitteeOraclePolicy /\ committeeOraclePolicy
+      , CommitteeOraclePolicy /\ committeeOraclePolicy
       ]
 
   -- Helper currency symbols
@@ -88,9 +97,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind
 
-  merkleRootTokenCurrencySymbol ← liftContractM
-    (show $ InvalidScript "MerkleRootTokenMintingPolicy")
-    (Value.scriptCurrencySymbol merkleRootTokenMintingPolicy)
+  merkleRootTokenCurrencySymbol ←
+    getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
 
   { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp
 
@@ -121,11 +129,11 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   let
     versionedValidators = Map.fromFoldable
-      [ Types.MerkleRootTokenValidator /\ merkleRootTokenValidator
-      , Types.CheckpointValidator /\ checkpointValidator
-      , Types.CommitteeHashValidator /\ committeeHashValidator
-      --, Types.DParameterValidator /\ dParameterValidator
-      --, Types.PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      [ MerkleRootTokenValidator /\ merkleRootTokenValidator
+      , CheckpointValidator /\ checkpointValidator
+      , CommitteeHashValidator /\ committeeHashValidator
+      --, DParameterValidator /\ dParameterValidator
+      --, PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       ]
 
   pure $ { versionedPolicies, versionedValidators }

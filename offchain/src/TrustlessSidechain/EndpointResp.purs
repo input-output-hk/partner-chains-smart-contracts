@@ -20,13 +20,13 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof
   )
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
-import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.MerkleTree
   ( MerkleTree
   , RootHash
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs (scParamsCodec)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
@@ -179,8 +179,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         , "candidatePermissionCurrencySymbol"
             /\ J.fromString
-              ( GetSidechainAddresses.currencySymbolToHex
-                  candidatePermissionCurrencySymbol
+              ( currencySymbolToHex candidatePermissionCurrencySymbol
               )
         ]
     GetAddrsResp { sidechainAddresses } →
