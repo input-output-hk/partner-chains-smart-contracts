@@ -22,7 +22,6 @@ import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
@@ -100,7 +99,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   merkleRootTokenCurrencySymbol ←
     getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
 
-  { checkpointCurrencySymbol } ← Checkpoint.getCheckpointPolicy sp
+  checkpointAssetClass ← Checkpoint.getCheckpointAssetClass sp
 
   -- Getting validators to version
   -----------------------------------
@@ -120,8 +119,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
     let
       checkpointParam = CheckpointParameter
         { sidechainParams: sp
-        , checkpointAssetClass: assetClass checkpointCurrencySymbol
-            Checkpoint.initCheckpointMintTn
+        , checkpointAssetClass
         , committeeOracleCurrencySymbol
         , committeeCertificateVerificationCurrencySymbol
         }

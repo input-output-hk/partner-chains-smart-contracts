@@ -5,6 +5,7 @@ module TrustlessSidechain.Types
   , Signature
   , Ed25519Signature
   , AssetClass
+  , CurrencyInfo
   , assetClass
   , assetClassValueOf
   , assetClassValue
@@ -13,6 +14,9 @@ module TrustlessSidechain.Types
 import Contract.Prelude
 
 import Contract.Prim.ByteArray (ByteArray)
+import Contract.Scripts
+  ( MintingPolicy
+  )
 import Contract.Value (CurrencySymbol, TokenName, Value, valueOf)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
@@ -26,6 +30,12 @@ type Ed25519Signature = ByteArray
 
 -- * Utility types and functions for working with `CurrencySymbol`s and `TokenName`s
 type AssetClass = CurrencySymbol /\ TokenName
+
+-- | Commonly used currency information packed paired together
+type CurrencyInfo =
+  { mintingPolicy ∷ MintingPolicy
+  , currencySymbol ∷ CurrencySymbol
+  }
 
 assetClass ∷ CurrencySymbol → TokenName → AssetClass
 assetClass currencySymbol tokenName =

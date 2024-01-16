@@ -8,7 +8,6 @@ module TrustlessSidechain.FUELBurningPolicy.V2
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData

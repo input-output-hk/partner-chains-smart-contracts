@@ -2,7 +2,6 @@ module TrustlessSidechain.Checkpoint
   ( module ExportTypes
   , module ExportUtils
   , saveCheckpoint
-  , getCheckpointPolicy
   ) where
 
 import Contract.Prelude
@@ -12,12 +11,11 @@ import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.Checkpoint.Types
@@ -26,7 +24,6 @@ import TrustlessSidechain.Checkpoint.Types
   , CheckpointMessage(CheckpointMessage)
   , CheckpointParameter(CheckpointParameter)
   , CheckpointRedeemer(CheckpointRedeemer)
-  , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
@@ -37,16 +34,17 @@ import TrustlessSidechain.Checkpoint.Types
 import TrustlessSidechain.Checkpoint.Utils
   ( checkpointPolicy
   , checkpointValidator
-  , findCheckpointUtxo
-  , initCheckpointMintTn
-  , serialiseCheckpointMessage
-  )
-import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointPolicy
-  , checkpointValidator
+  , getCheckpointAssetClass
+  , getCheckpointPolicy
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
+import TrustlessSidechain.Checkpoint.Utils
+  ( checkpointValidator
+  , findCheckpointUtxo
+  , getCheckpointAssetClass
+  , serialiseCheckpointMessage
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -57,20 +55,14 @@ import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, ConversionError)
   )
 import TrustlessSidechain.MerkleRoot as MerkleRoot
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Types (assetClass, assetClassValue)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( CheckpointPolicy
-      )
-  )
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 saveCheckpoint
@@ -197,8 +189,7 @@ saveCheckpointLookupsAndConstraints
 
   -- Getting the associated plutus scripts / UTXOs for checkpointing
   -------------------------------------------------------------
-  { checkpointCurrencySymbol, checkpointTokenName } ← getCheckpointPolicy
-    sidechainParams
+  checkpointAssetClass ← getCheckpointAssetClass sidechainParams
 
   { committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
@@ -207,8 +198,7 @@ saveCheckpointLookupsAndConstraints
   let
     checkpointParam = CheckpointParameter
       { sidechainParams
-      , checkpointAssetClass: assetClass checkpointCurrencySymbol
-          checkpointTokenName
+      , checkpointAssetClass
       , committeeOracleCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       }
@@ -254,20 +244,3 @@ saveCheckpointLookupsAndConstraints
     { lookupsAndConstraints: { constraints, lookups }
     , checkpointMessage
     }
-
--- | `getCheckpointPolicy` grabs the checkpoint policy, currency symbol and token name
--- | (potentially throwing an error in the case that it is not possible).
-getCheckpointPolicy ∷
-  SidechainParams →
-  Contract
-    { checkpointPolicy ∷ MintingPolicy
-    , checkpointCurrencySymbol ∷ CurrencySymbol
-    , checkpointTokenName ∷ TokenName
-    }
-getCheckpointPolicy (SidechainParams sp) = do
-  checkpointPolicy ← checkpointPolicy $
-    InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
-  checkpointCurrencySymbol ← getCurrencySymbol CheckpointPolicy checkpointPolicy
-  let checkpointTokenName = initCheckpointMintTn
-  pure
-    { checkpointPolicy, checkpointCurrencySymbol, checkpointTokenName }

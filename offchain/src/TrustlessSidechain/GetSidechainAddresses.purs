@@ -146,7 +146,7 @@ getSidechainAddresses
         candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
 
-  { checkpointCurrencySymbol } ← do
+  { currencySymbol: checkpointCurrencySymbol } ← do
     Checkpoint.getCheckpointPolicy scParams
   let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
 

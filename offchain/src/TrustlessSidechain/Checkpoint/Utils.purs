@@ -5,6 +5,8 @@ module TrustlessSidechain.Checkpoint.Utils
   , checkpointAssetClass
   , serialiseCheckpointMessage
   , findCheckpointUtxo
+  , getCheckpointPolicy
+  , getCheckpointAssetClass
   ) where
 
 import Contract.Prelude
@@ -17,8 +19,7 @@ import Contract.Monad as Monad
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
-  ( MintingPolicy
-  , Validator
+  ( Validator
   )
 import Contract.Scripts as Scripts
 import Contract.Transaction
@@ -30,15 +31,15 @@ import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
-  , InitCheckpointMint
+  , InitCheckpointMint(InitCheckpointMint)
   )
-import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  , mkValidatorWithParams
+  ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.ScriptId
@@ -48,13 +49,13 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 
-checkpointPolicy ∷ InitCheckpointMint → Contract MintingPolicy
-checkpointPolicy sidechainParams =
-  mkMintingPolicyWithParams CheckpointPolicy [ toData sidechainParams ]
+checkpointPolicy ∷ InitCheckpointMint → Contract CurrencyInfo
+checkpointPolicy icm =
+  getCurrencyInfo CheckpointPolicy [ toData icm ]
 
 checkpointValidator ∷ CheckpointParameter → Contract Validator
-checkpointValidator sidechainParams =
-  mkValidatorWithParams CheckpointValidator [ toData sidechainParams ]
+checkpointValidator cp =
+  mkValidatorWithParams CheckpointValidator [ toData cp ]
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
@@ -66,10 +67,8 @@ initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
 
 checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
 checkpointAssetClass ichm = do
-  cp ← checkpointPolicy ichm
-  curSym ← getCurrencySymbol CheckpointPolicy cp
-
-  pure $ assetClass curSym initCheckpointMintTn
+  { currencySymbol } ← checkpointPolicy ichm
+  pure $ assetClass currencySymbol initCheckpointMintTn
 
 -- | `serialiseCheckpointMessage` is an alias for
 -- | ```
@@ -100,3 +99,17 @@ findCheckpointUtxo checkpointParameter = do
     Value.valueOf value (fst (unwrap checkpointParameter).checkpointAssetClass)
       initCheckpointMintTn
       /= zero
+
+-- | Wrapper around `checkpointPolicy` that accepts `SidechainParams`.
+getCheckpointPolicy ∷
+  SidechainParams →
+  Contract CurrencyInfo
+getCheckpointPolicy (SidechainParams sp) = do
+  checkpointPolicy $ InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
+
+-- | Wrapper around `checkpointAssetClass` that accepts `SidechainParams`.
+getCheckpointAssetClass ∷
+  SidechainParams →
+  Contract AssetClass
+getCheckpointAssetClass (SidechainParams sp) = do
+  checkpointAssetClass $ InitCheckpointMint { icTxOutRef: sp.genesisUtxo }

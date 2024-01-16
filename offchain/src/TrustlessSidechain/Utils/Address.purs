@@ -8,6 +8,7 @@ module TrustlessSidechain.Utils.Address
   , getOwnPaymentPubKeyHash
   , getOwnWalletAddress
   , toValidatorHash
+  , getCurrencyInfo
   , getCurrencySymbol
   , getCurrencySymbolHex
   , getValidatorHashHex
@@ -24,7 +25,7 @@ import Contract.Address
 import Contract.Address as Address
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData (class FromData, class ToData)
+import Contract.PlutusData (class FromData, class ToData, PlutusData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
@@ -68,6 +69,10 @@ import TrustlessSidechain.Error
       , NotFoundOwnAddress
       , InvalidCurrencySymbol
       )
+  )
+import TrustlessSidechain.Types (CurrencyInfo)
+import TrustlessSidechain.Utils.Scripts
+  ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Versioning.Types (ScriptId)
 
@@ -153,10 +158,21 @@ toValidatorHash addr =
   liftContractM "Cannot convert Address to ValidatorHash"
     (Address.toValidatorHash addr)
 
+-- | `getCurrencyInfo` returns minting policy and currency symbol of a given
+-- | script.  Requires providing parameters of that script.
+getCurrencyInfo ∷
+  ScriptId →
+  Array PlutusData →
+  Contract CurrencyInfo
+getCurrencyInfo scriptId params = do
+  mintingPolicy ← mkMintingPolicyWithParams scriptId params
+  currencySymbol ← getCurrencySymbol scriptId mintingPolicy
+  pure $ { mintingPolicy, currencySymbol }
+
 -- | `getCurrencySymbolHex` converts a minting policy to its currency symbol
 getCurrencySymbol ∷ ScriptId → MintingPolicy → Contract CurrencySymbol
-getCurrencySymbol name mp = do
-  Monad.liftContractM (show $ InvalidCurrencySymbol name mp) $
+getCurrencySymbol scriptId mp = do
+  Monad.liftContractM (show $ InvalidCurrencySymbol scriptId mp) $
     Value.scriptCurrencySymbol mp
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded

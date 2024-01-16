@@ -20,7 +20,6 @@ module TrustlessSidechain.InitSidechain
   , initSidechainTokens
   , InitTokensParams
   , paySidechainTokens
-  , initCheckpointMintLookupsAndConstraints
   , toSidechainParams
   ) where
 
@@ -33,7 +32,7 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, validatorHash)
+import Contract.Scripts (validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -43,7 +42,6 @@ import Contract.Transaction
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
-import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -57,7 +55,6 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint
   ( CheckpointDatum(CheckpointDatum)
-  , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
@@ -97,8 +94,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
-      ( CheckpointPolicy
-      , FUELMintingPolicy
+      ( FUELMintingPolicy
       , DsKeyPolicy
       , DsConfPolicy
       )
@@ -233,18 +229,18 @@ initCheckpointMintLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 initCheckpointMintLookupsAndConstraints inp = do
-
-  { checkpointPolicy, checkpointCurrencySymbol } ← getCheckpointPolicy inp
+  { currencySymbol, mintingPolicy } ←
+    Checkpoint.getCheckpointPolicy (toSidechainParams inp)
 
   let
     checkpointValue =
       Value.singleton
-        checkpointCurrencySymbol
+        currencySymbol
         Checkpoint.initCheckpointMintTn
         one
 
     lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy checkpointPolicy
+    lookups = Lookups.mintingPolicy mintingPolicy
 
     constraints ∷ TxConstraints Void Void
     constraints = Constraints.mustMintValue checkpointValue
@@ -266,11 +262,12 @@ initCheckpointLookupsAndConstraints inp = do
   -- Get checkpoint / associated values
   -----------------------------------
   let
-    sc = toSidechainParams inp
-  { checkpointCurrencySymbol } ← getCheckpointPolicy inp
+    sidechainParams = toSidechainParams inp
+  { currencySymbol } ← Checkpoint.getCheckpointPolicy sidechainParams
+  checkpointAssetClass ← Checkpoint.getCheckpointAssetClass sidechainParams
 
   { committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sc
+    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   let
     committeeCertificateMint =
@@ -281,14 +278,13 @@ initCheckpointLookupsAndConstraints inp = do
 
   { committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: sc }
+      { committeeCertificateMint, sidechainParams }
       inp.initATMSKind
 
   let
     checkpointParameter = Checkpoint.Types.CheckpointParameter
-      { sidechainParams: sc
-      , checkpointAssetClass: checkpointCurrencySymbol /\
-          Checkpoint.initCheckpointMintTn
+      { sidechainParams
+      , checkpointAssetClass
       , committeeOracleCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       }
@@ -300,7 +296,7 @@ initCheckpointLookupsAndConstraints inp = do
           }
     checkpointValue =
       Value.singleton
-        checkpointCurrencySymbol
+        currencySymbol
         Checkpoint.initCheckpointMintTn
         one
 
@@ -766,16 +762,3 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainParams
     , sidechainAddresses
     }
-
-getCheckpointPolicy ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
-  Contract
-    { checkpointPolicy ∷ MintingPolicy
-    , checkpointCurrencySymbol ∷ CurrencySymbol
-    }
-getCheckpointPolicy isp = do
-  checkpointPolicy ← Checkpoint.checkpointPolicy $
-    InitCheckpointMint { icTxOutRef: isp.initUtxo }
-  checkpointCurrencySymbol ← getCurrencySymbol CheckpointPolicy checkpointPolicy
-  pure { checkpointPolicy, checkpointCurrencySymbol }
