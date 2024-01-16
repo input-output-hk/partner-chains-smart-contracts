@@ -36,9 +36,6 @@ data InternalError
   | InvalidAddress String
   -- | ScriptId not found in rawScriptsMap
   | InvalidScriptId ScriptId
-  -- | Cannot decode script from a text envelope.  Use 'String' field to pass
-  -- | the envelope that failed.
-  | InvalidScriptEnvelope String -- JSTOLAREK: merge with InvalidScript
   -- | Cannot apply arguments to a script
   | InvalidScriptArgs ApplyArgsError
   -- | Invalid policy or validator script, conversion to currency symbol /

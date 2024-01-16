@@ -20,7 +20,7 @@ import Data.Bifunctor (lmap)
 import Data.Map as Map
 import TrustlessSidechain.Error
   ( InternalError
-      ( InvalidScriptEnvelope
+      ( InvalidScript
       , InvalidScriptArgs
       , InvalidScriptId
       )
@@ -49,7 +49,7 @@ mkValidatorWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
 
-  unapplied ← liftContractM (show $ InvalidScriptEnvelope hexScript) script
+  unapplied ← liftContractM (show $ InvalidScript hexScript) script
   applied ←
     if Array.null params then pure unapplied
     else liftContractE $
@@ -77,7 +77,7 @@ mkMintingPolicyWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
 
-  unapplied ← liftContractM (show $ InvalidScriptEnvelope hexScript) script
+  unapplied ← liftContractM (show $ InvalidScript hexScript) script
   applied ←
     if Array.null params then pure unapplied
     else liftContractE $
