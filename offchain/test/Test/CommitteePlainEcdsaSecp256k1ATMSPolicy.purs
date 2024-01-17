@@ -124,7 +124,7 @@ testScenario1 =
             sidechainParams
 
         { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
             { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
             , sidechainParams
             }

@@ -55,14 +55,14 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
     EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
       sidechainParams
 
-  { mintingPolicy: getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  { mintingPolicy: committeePlainEcdsaSecp256k1ATMSCurrencyInfo
   , currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-  } ← EcdsaATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  } ← EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
     { committeeCertificateMint, sidechainParams }
 
-  { mintingPolicy: getCommitteePlainSchnorrSecp256k1ATMSPolicy
+  { mintingPolicy: committeePlainSchnorrSecp256k1ATMSCurrencyInfo
   , currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-  } ← SchnorrATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+  } ← SchnorrATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
     { committeeCertificateMint, sidechainParams }
 
   { fuelMintingPolicy
@@ -104,7 +104,7 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
                 ( Scripts.mintingPolicyHash
-                    getCommitteePlainEcdsaSecp256k1ATMSPolicy
+                    committeePlainEcdsaSecp256k1ATMSCurrencyInfo
                 )
                 (Redeemer $ toData EcdsaATMSPolicy.ATMSBurn)
                 tokenName
@@ -119,7 +119,7 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
                 ( Scripts.mintingPolicyHash
-                    getCommitteePlainSchnorrSecp256k1ATMSPolicy
+                    committeePlainSchnorrSecp256k1ATMSCurrencyInfo
                 )
                 (Redeemer $ toData SchnorrATMSPolicy.ATMSBurn)
                 tokenName

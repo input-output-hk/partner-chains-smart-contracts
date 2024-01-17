@@ -8,7 +8,7 @@ module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
   , ATMSRedeemer(ATMSMint, ATMSBurn)
   , committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
 
-  , getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  , committeePlainEcdsaSecp256k1ATMSCurrencyInfo
 
   , findUpdateCommitteeHashUtxoFromSidechainParams
 
@@ -55,7 +55,7 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )
-import TrustlessSidechain.MerkleRoot.Utils (getMerkleRootCurrencyInfo)
+import TrustlessSidechain.MerkleRoot.Utils (merkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -115,12 +115,12 @@ instance ToData ATMSRedeemer where
 
 -- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the
 -- | committee plainEcdsaSecp256k1 ATMS policy
-getCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
+committeePlainEcdsaSecp256k1ATMSCurrencyInfo ∷
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
   Contract CurrencyInfo
-getCommitteePlainEcdsaSecp256k1ATMSPolicy
+committeePlainEcdsaSecp256k1ATMSCurrencyInfo
   { committeeCertificateMint, sidechainParams } =
   do
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
@@ -176,7 +176,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
 
   -- Grabbing CommitteePlainEcdsaSecp256k1ATMSPolicy
   -------------------------------------------------------------
-  committeePlainEcdsaSecp256k1ATMS ← getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  committeePlainEcdsaSecp256k1ATMS ← committeePlainEcdsaSecp256k1ATMSCurrencyInfo
     { committeeCertificateMint, sidechainParams }
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
@@ -364,7 +364,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo
       sidechainParams
   let
     committeeCertificateMint =
@@ -374,13 +374,13 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
         }
 
   { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    getCommitteePlainEcdsaSecp256k1ATMSPolicy
+    committeePlainEcdsaSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint, sidechainParams }
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
   { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    getMerkleRootCurrencyInfo sidechainParams
+    merkleRootCurrencyInfo sidechainParams
 
   -- Build the UpdateCommitteeHash parameter
   -------------------------------------------------------------

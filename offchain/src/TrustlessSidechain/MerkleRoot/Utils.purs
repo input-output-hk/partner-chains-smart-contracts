@@ -9,7 +9,7 @@
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module TrustlessSidechain.MerkleRoot.Utils
-  ( getMerkleRootCurrencyInfo
+  ( merkleRootCurrencyInfo
   , merkleRootTokenValidator
   , findMerkleRootTokenUtxo
   , findPreviousMerkleRootTokenUtxo
@@ -52,10 +52,10 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 
--- | `getMerkleRootCurrencyInfo` gets the minting policy and currency symbol
+-- | `merkleRootCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `MerkleRootTokenPolicy`
-getMerkleRootCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
-getMerkleRootCurrencyInfo sidechainParams = do
+merkleRootCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+merkleRootCurrencyInfo sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mintingPolicy ← mkMintingPolicyWithParams MerkleRootTokenPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
@@ -94,7 +94,7 @@ findMerkleRootTokenUtxo merkleRoot sp = do
     "error 'findMerkleRootTokenUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 
-  { currencySymbol } ← getMerkleRootCurrencyInfo sp
+  { currencySymbol } ← merkleRootCurrencyInfo sp
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: we just need the existence of the token i.e., there is a nonzero

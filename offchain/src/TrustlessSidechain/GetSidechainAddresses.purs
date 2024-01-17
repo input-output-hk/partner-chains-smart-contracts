@@ -147,7 +147,7 @@ getSidechainAddresses
       pure $ Just candidatePermissionPolicyId
 
   { currencySymbol: checkpointCurrencySymbol } ← do
-    Checkpoint.getCheckpointPolicy scParams
+    Checkpoint.checkpointCurrencyInfo scParams
   let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
 
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy scParams
@@ -187,17 +187,17 @@ getSidechainAddresses
     versionedPolicies
 
   { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint, sidechainParams: scParams }
   let
-    getCommitteePlainEcdsaSecp256k1ATMSPolicyId = currencySymbolToHex
+    committeePlainEcdsaSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
       committeePlainEcdsaSecp256k1ATMSCurrencySymbol
 
   { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
-    CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+    CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint, sidechainParams: scParams }
   let
-    getCommitteePlainSchnorrSecp256k1ATMSPolicyId = currencySymbolToHex
+    committeePlainSchnorrSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
       committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
   { permissionedCandidatesValidator } ←
@@ -226,11 +226,11 @@ getSidechainAddresses
           ( case atmsKind of
               ATMSPlainEcdsaSecp256k1 →
                 [ CommitteePlainEcdsaSecp256k1ATMSPolicy
-                    /\ getCommitteePlainEcdsaSecp256k1ATMSPolicyId
+                    /\ committeePlainEcdsaSecp256k1ATMSCurrencyInfoId
                 ]
               ATMSPlainSchnorrSecp256k1 →
                 [ CommitteePlainSchnorrSecp256k1ATMSPolicy
-                    /\ getCommitteePlainSchnorrSecp256k1ATMSPolicyId
+                    /\ committeePlainSchnorrSecp256k1ATMSCurrencyInfoId
                 ]
               _ → []
           )

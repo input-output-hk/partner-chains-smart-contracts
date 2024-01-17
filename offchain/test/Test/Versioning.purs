@@ -27,7 +27,7 @@ import TrustlessSidechain.InitSidechain
   , initSidechain
   )
 import TrustlessSidechain.MerkleRoot
-  ( getMerkleRootCurrencyInfo
+  ( merkleRootCurrencyInfo
   )
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
@@ -81,7 +81,7 @@ testScenarioSuccess =
         { sidechainParams } ← initSidechain initScParams 1
 
         { mintingPolicy: merkleRootTokenMintingPolicy } ←
-          getMerkleRootCurrencyInfo sidechainParams
+          merkleRootCurrencyInfo sidechainParams
         committeeCandidateValidator ←
           getCommitteeCandidateValidator sidechainParams
 

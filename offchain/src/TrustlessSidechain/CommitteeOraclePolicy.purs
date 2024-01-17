@@ -3,7 +3,7 @@ module TrustlessSidechain.CommitteeOraclePolicy
   , committeeOraclePolicy
   , committeeOracleAssetClass
   , committeeOracleTn
-  , getCommitteeOraclePolicy
+  , committeeOracleCurrencyInfo
   ) where
 
 import Contract.Prelude
@@ -57,8 +57,8 @@ committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
 -- | Wrapper around `committeeOraclePolicy` that accepts `SidechainParams`.
-getCommitteeOraclePolicy ∷
+committeeOracleCurrencyInfo ∷
   SidechainParams →
   Contract CurrencyInfo
-getCommitteeOraclePolicy (SidechainParams sp) = do
+committeeOracleCurrencyInfo (SidechainParams sp) = do
   committeeOraclePolicy $ InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }

@@ -289,11 +289,11 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       -- quickly (it's not that quick) grab the address of the validator for
       -- the update committee hash
       { currencySymbol: committeeOracleCurrencySymbol
-      } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+      } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
       { currencySymbol: committeeCertificateVerificationCurrencySymbol
       } ←
-        CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+        CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
           { committeeCertificateMint: CommitteeCertificateMint
               { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
               , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
@@ -302,7 +302,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           }
 
       { currencySymbol: merkleRootTokenCurrencySymbol } ←
-        MerkleRoot.Utils.getMerkleRootCurrencyInfo sidechainParams
+        MerkleRoot.Utils.merkleRootCurrencyInfo sidechainParams
 
       let
         uch = UpdateCommitteeHash

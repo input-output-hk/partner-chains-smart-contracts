@@ -58,7 +58,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { mintingPolicy: committeeOraclePolicy
   , currencySymbol: committeeOracleCurrencySymbol
   } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sp
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sp
 
   let
     committeeCertificateMint =
@@ -73,7 +73,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       atmsKind
 
   { mintingPolicy: merkleRootTokenMintingPolicy } ←
-    MerkleRoot.getMerkleRootCurrencyInfo sp
+    MerkleRoot.merkleRootCurrencyInfo sp
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
 
@@ -101,7 +101,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   merkleRootTokenCurrencySymbol ←
     getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
 
-  checkpointAssetClass ← Checkpoint.getCheckpointAssetClass sp
+  checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
 
   -- Getting validators to version
   -----------------------------------

@@ -44,7 +44,7 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.MerkleRoot.Utils
   ( findPreviousMerkleRootTokenUtxo
-  , getMerkleRootCurrencyInfo
+  , merkleRootCurrencyInfo
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -206,12 +206,12 @@ updateCommitteeHashLookupsAndConstraints
   -- committee hash
   -------------------------------------------------------------
   { currencySymbol: committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+  } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
   { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    getMerkleRootCurrencyInfo sidechainParams
+    merkleRootCurrencyInfo sidechainParams
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------

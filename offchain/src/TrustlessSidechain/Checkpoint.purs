@@ -32,18 +32,18 @@ import TrustlessSidechain.Checkpoint.Types
   , InitCheckpointMint(InitCheckpointMint)
   ) as ExportTypes
 import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointValidator
-  , findCheckpointUtxo
-  , getCheckpointAssetClass
-  , serialiseCheckpointMessage
-  )
-import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointValidator
-  , getCheckpointAssetClass
-  , getCheckpointPolicy
+  ( checkpointAssetClass
+  , checkpointCurrencyInfo
+  , checkpointValidator
   , initCheckpointMintTn
   , serialiseCheckpointMessage
   ) as ExportUtils
+import TrustlessSidechain.Checkpoint.Utils
+  ( checkpointAssetClass
+  , checkpointValidator
+  , findCheckpointUtxo
+  , serialiseCheckpointMessage
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -76,7 +76,7 @@ saveCheckpoint
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   let
     committeeCertificateMint =
@@ -94,7 +94,7 @@ saveCheckpoint
   -- Find the UTxO with the current committee.
   ------------------------------------
   { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.getMerkleRootCurrencyInfo sidechainParams
+    MerkleRoot.merkleRootCurrencyInfo sidechainParams
 
   currentCommitteeUtxo ←
     liftedM
@@ -189,10 +189,10 @@ saveCheckpointLookupsAndConstraints
 
   -- Getting the associated plutus scripts / UTXOs for checkpointing
   -------------------------------------------------------------
-  checkpointAssetClass ← getCheckpointAssetClass sidechainParams
+  checkpointAssetClass ← checkpointAssetClass sidechainParams
 
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   -- Getting checkpoint validator
   let

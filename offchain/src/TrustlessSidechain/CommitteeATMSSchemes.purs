@@ -123,10 +123,10 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
   Contract CurrencyInfo
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
   ATMSPlainEcdsaSecp256k1 →
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
       params
   ATMSPlainSchnorrSecp256k1 →
-    CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+    CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
       params
   ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
   ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"

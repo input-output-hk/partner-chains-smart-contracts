@@ -45,13 +45,13 @@ import TrustlessSidechain.MerkleRoot.Types
   ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
-  , getMerkleRootCurrencyInfo
+  , merkleRootCurrencyInfo
   , merkleRootTokenValidator
   , serialiseMrimHash
   ) as ExportUtils
 import TrustlessSidechain.MerkleRoot.Utils
   ( findPreviousMerkleRootTokenUtxo
-  , getMerkleRootCurrencyInfo
+  , merkleRootCurrencyInfo
   , merkleRootTokenValidator
   , serialiseMrimHash
   )
@@ -87,7 +87,7 @@ saveRoot
   -- Set up for the committee ATMS schemes
   ------------------------------------
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   let
     committeeCertificateMint =
@@ -104,7 +104,7 @@ saveRoot
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { currencySymbol: merkleRootTokenCurrencySymbol } ← getMerkleRootCurrencyInfo
+  { currencySymbol: merkleRootTokenCurrencySymbol } ← merkleRootCurrencyInfo
     sidechainParams
   currentCommitteeUtxo ←
     liftedM
@@ -187,7 +187,7 @@ saveRootLookupsAndConstraints
   ---------------------------------------------------------
   { mintingPolicy: rootTokenMP
   , currencySymbol: rootTokenCS
-  } ← getMerkleRootCurrencyInfo sidechainParams
+  } ← merkleRootCurrencyInfo sidechainParams
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM

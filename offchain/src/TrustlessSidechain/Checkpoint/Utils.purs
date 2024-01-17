@@ -1,11 +1,10 @@
 module TrustlessSidechain.Checkpoint.Utils
   ( checkpointValidator
   , initCheckpointMintTn
-  , checkpointAssetClass
   , serialiseCheckpointMessage
   , findCheckpointUtxo
-  , getCheckpointPolicy
-  , getCheckpointAssetClass
+  , checkpointCurrencyInfo
+  , checkpointAssetClass
   ) where
 
 import Contract.Prelude
@@ -48,9 +47,23 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 
-checkpointPolicy ∷ InitCheckpointMint → Contract CurrencyInfo
-checkpointPolicy icm =
-  getCurrencyInfo CheckpointPolicy [ toData icm ]
+-- | Wrapper around `checkpointPolicy` that accepts `SidechainParams`.
+checkpointCurrencyInfo ∷
+  SidechainParams →
+  Contract CurrencyInfo
+checkpointCurrencyInfo (SidechainParams sp) =
+  let
+    icm = InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
+  in
+    getCurrencyInfo CheckpointPolicy [ toData icm ]
+
+checkpointAssetClass ∷
+  SidechainParams →
+  Contract AssetClass
+checkpointAssetClass (SidechainParams sp) = do
+  let ichm = InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
+  { currencySymbol } ← getCurrencyInfo CheckpointPolicy [ toData ichm ]
+  pure $ assetClass currencySymbol initCheckpointMintTn
 
 checkpointValidator ∷ CheckpointParameter → Contract Validator
 checkpointValidator cp =
@@ -63,11 +76,6 @@ checkpointValidator cp =
 initCheckpointMintTn ∷ Value.TokenName
 initCheckpointMintTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
-
-checkpointAssetClass ∷ InitCheckpointMint → Contract AssetClass
-checkpointAssetClass ichm = do
-  { currencySymbol } ← checkpointPolicy ichm
-  pure $ assetClass currencySymbol initCheckpointMintTn
 
 -- | `serialiseCheckpointMessage` is an alias for
 -- | ```
@@ -98,17 +106,3 @@ findCheckpointUtxo checkpointParameter = do
     Value.valueOf value (fst (unwrap checkpointParameter).checkpointAssetClass)
       initCheckpointMintTn
       /= zero
-
--- | Wrapper around `checkpointPolicy` that accepts `SidechainParams`.
-getCheckpointPolicy ∷
-  SidechainParams →
-  Contract CurrencyInfo
-getCheckpointPolicy (SidechainParams sp) = do
-  checkpointPolicy $ InitCheckpointMint { icTxOutRef: sp.genesisUtxo }
-
--- | Wrapper around `checkpointAssetClass` that accepts `SidechainParams`.
-getCheckpointAssetClass ∷
-  SidechainParams →
-  Contract AssetClass
-getCheckpointAssetClass (SidechainParams sp) = do
-  checkpointAssetClass $ InitCheckpointMint { icTxOutRef: sp.genesisUtxo }

@@ -99,11 +99,11 @@ generateUchmSignatures
   -- committee oracle back to the same address)
   ---------------------------
   { currencySymbol: committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+  } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   { currencySymbol: committeeCertificateVerificationCurrencySymbol
   } ←
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint: CommitteeCertificateMint
           { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
           , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
@@ -112,7 +112,7 @@ generateUchmSignatures
       }
 
   { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.Utils.getMerkleRootCurrencyInfo sidechainParams
+    MerkleRoot.Utils.merkleRootCurrencyInfo sidechainParams
 
   let
     uch = UpdateCommitteeHash

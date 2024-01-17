@@ -166,7 +166,7 @@ initCommitteeHashMintLookupsAndConstraints isp = do
   -- Get committee hash / associated values
   -----------------------------------
   { mintingPolicy, currencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo $ toSidechainParams isp
   let
     committeeHashValue =
       Value.singleton
@@ -230,7 +230,7 @@ initCheckpointMintLookupsAndConstraints ∷
     }
 initCheckpointMintLookupsAndConstraints inp = do
   { currencySymbol, mintingPolicy } ←
-    Checkpoint.getCheckpointPolicy (toSidechainParams inp)
+    Checkpoint.checkpointCurrencyInfo (toSidechainParams inp)
 
   let
     checkpointValue =
@@ -265,11 +265,11 @@ initCheckpointLookupsAndConstraints inp = do
     sidechainParams = toSidechainParams inp
 
   { currencySymbol: checkpointCurrencySymbol } ←
-    Checkpoint.getCheckpointPolicy sidechainParams
-  checkpointAssetClass ← Checkpoint.getCheckpointAssetClass sidechainParams
+    Checkpoint.checkpointCurrencyInfo sidechainParams
+  checkpointAssetClass ← Checkpoint.checkpointAssetClass sidechainParams
 
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   let
     committeeCertificateMint =
@@ -338,12 +338,12 @@ initCommitteeHashLookupsAndConstraints isp = do
   -- Getting the update committee hash policy
   -----------------------------------
   { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo $ toSidechainParams isp
 
   -- Getting the merkle root token minting policy
   -----------------------------------
   { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.getMerkleRootCurrencyInfo sp
+    MerkleRoot.merkleRootCurrencyInfo sp
 
   -- Setting up the update committee hash validator
   -----------------------------------
