@@ -135,8 +135,8 @@ getSidechainAddresses
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
     Nothing → pure Nothing
     Just permissionTokenUtxo → do
-      { candidatePermissionPolicy } ←
-        CandidatePermissionToken.getCandidatePermissionMintingPolicy
+      { mintingPolicy: candidatePermissionPolicy } ←
+        CandidatePermissionToken.candidatePermissionCurrencyInfo
           $ CandidatePermissionMint
               { sidechainParams: scParams
               , candidatePermissionTokenUtxo: permissionTokenUtxo

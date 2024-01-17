@@ -87,8 +87,8 @@ testScenarioSuccess1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        { candidatePermissionCurrencySymbol } ←
-          CandidatePermissionToken.getCandidatePermissionMintingPolicy
+        candidatePermissionInfo ←
+          CandidatePermissionToken.candidatePermissionCurrencyInfo
             candidateMintPermissionMint
 
         committeeCandidiateValidatorAddr ← do
@@ -104,7 +104,7 @@ testScenarioSuccess1 =
 
         Test.Utils.assertHasOutputWithAsset registerTxId
           committeeCandidiateValidatorAddr
-          candidatePermissionCurrencySymbol
+          candidatePermissionInfo.currencySymbol
           candidatePermissionTokenName
 
         -----------------------------
@@ -113,7 +113,8 @@ testScenarioSuccess1 =
         _ ← Test.CommitteeCandidateValidator.runDeregister
           scParams
 
-        Test.Utils.assertIHaveOutputWithAsset candidatePermissionCurrencySymbol
+        Test.Utils.assertIHaveOutputWithAsset
+          candidatePermissionInfo.currencySymbol
           candidatePermissionTokenName
 
         pure unit
@@ -132,11 +133,12 @@ assertIHaveCandidatePermissionToken
         , candidatePermissionTokenUtxo
         }
 
-  { candidatePermissionCurrencySymbol } ←
-    CandidatePermissionToken.getCandidatePermissionMintingPolicy
+  candidatePermissionInfo ←
+    CandidatePermissionToken.candidatePermissionCurrencyInfo
       candidateMintPermissionMint
 
-  Test.Utils.assertIHaveOutputWithAsset candidatePermissionCurrencySymbol
+  Test.Utils.assertIHaveOutputWithAsset
+    candidatePermissionInfo.currencySymbol
     candidatePermissionTokenName
 
   pure unit
@@ -177,8 +179,8 @@ testScenarioFailure1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        { candidatePermissionCurrencySymbol } ←
-          CandidatePermissionToken.getCandidatePermissionMintingPolicy
+        candidatePermissionInfo ←
+          CandidatePermissionToken.candidatePermissionCurrencyInfo
             candidateMintPermissionMint
 
         committeeCandidiateValidatorAddr ← do
@@ -193,7 +195,7 @@ testScenarioFailure1 =
           pure addr
 
         Test.Utils.assertHasOutputWithAsset txId committeeCandidiateValidatorAddr
-          candidatePermissionCurrencySymbol
+          candidatePermissionInfo.currencySymbol
           tokenName
           # Test.Utils.fails
 

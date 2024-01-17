@@ -1,7 +1,6 @@
 module TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(..)
-  , getCandidatePermissionMintingPolicy
-  , candidatePermissionMintingPolicy
+  , candidatePermissionCurrencyInfo
   , CandidatePermissionMintParams(..)
   , CandidatePermissionTokenInfo
   , CandidatePermissionTokenMintInfo
@@ -21,7 +20,6 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -38,6 +36,7 @@ import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
@@ -84,29 +83,16 @@ instance FromData CandidatePermissionMint where
           }
     )
 
--- | `getCandidatePermissionMintingPolicy` grabs both the minting policy /
+-- | `candidatePermissionCurrencyInfo` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.
-getCandidatePermissionMintingPolicy ∷
+candidatePermissionCurrencyInfo ∷
   CandidatePermissionMint →
-  Contract
-    { candidatePermissionPolicy ∷ MintingPolicy
-    , candidatePermissionCurrencySymbol ∷ CurrencySymbol
-    }
-getCandidatePermissionMintingPolicy cpm = do
-  candidatePermissionPolicy ← candidatePermissionMintingPolicy cpm
-  candidatePermissionCurrencySymbol ←
-    getCurrencySymbol CandidatePermissionPolicy candidatePermissionPolicy
-  pure
-    { candidatePermissionPolicy
-    , candidatePermissionCurrencySymbol
-    }
-
--- | `candidatePermissionMintingPolicy` gets the minting policy for the
--- | candidate permission minting policy
-candidatePermissionMintingPolicy ∷
-  CandidatePermissionMint → Contract MintingPolicy
-candidatePermissionMintingPolicy cpm = do
-  mkMintingPolicyWithParams CandidatePermissionPolicy [ toData cpm ]
+  Contract CurrencyInfo
+candidatePermissionCurrencyInfo cpm = do
+  mintingPolicy ←
+    mkMintingPolicyWithParams CandidatePermissionPolicy [ toData cpm ]
+  currencySymbol ← getCurrencySymbol CandidatePermissionPolicy mintingPolicy
+  pure { mintingPolicy, currencySymbol }
 
 --------------------------------
 -- Endpoint code
@@ -148,10 +134,8 @@ candidatePermissionTokenLookupsAndConstraints
   ( CandidatePermissionMintParams
       { candidateMintPermissionMint, candidatePermissionTokenName, amount }
   ) = do
-  { candidatePermissionPolicy
-  , candidatePermissionCurrencySymbol
-  } ← getCandidatePermissionMintingPolicy
-    candidateMintPermissionMint
+  { mintingPolicy, currencySymbol } ←
+    candidatePermissionCurrencyInfo candidateMintPermissionMint
 
   let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
   txOut ← Monad.liftedM (show (NotFoundUtxo "Candidate permission UTxO")) $
@@ -160,13 +144,13 @@ candidatePermissionTokenLookupsAndConstraints
 
   let
     value = Value.singleton
-      candidatePermissionCurrencySymbol
+      currencySymbol
       candidatePermissionTokenName
       amount
 
     lookups ∷ ScriptLookups Void
     lookups =
-      Lookups.mintingPolicy candidatePermissionPolicy
+      Lookups.mintingPolicy mintingPolicy
         <>
           Lookups.unspentOutputs
             ( Map.singleton txIn
@@ -196,8 +180,8 @@ runCandidatePermissionToken
     ( CandidatePermissionMintParams
         { candidateMintPermissionMint }
     ) = do
-  { candidatePermissionCurrencySymbol } ← getCandidatePermissionMintingPolicy
-    candidateMintPermissionMint
+  { currencySymbol: candidatePermissionCurrencySymbol } ←
+    candidatePermissionCurrencyInfo candidateMintPermissionMint
 
   txId ← candidatePermissionTokenLookupsAndConstraints cpmp >>=
     balanceSignAndSubmit "Mint CandidatePermissionToken"

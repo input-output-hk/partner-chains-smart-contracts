@@ -296,7 +296,7 @@ register
         ( \rec → Just $ Record.union rec
             { candidatePermissionTokenName: pTokenName }
         )
-        $ CandidatePermissionToken.getCandidatePermissionMintingPolicy
+        $ CandidatePermissionToken.candidatePermissionCurrencyInfo
         $ CandidatePermissionMint
             { sidechainParams
             , candidatePermissionTokenUtxo: pUtxo
@@ -307,9 +307,9 @@ register
     val = Value.lovelaceValueOf (BigInt.fromInt 1)
       <> case maybeCandidatePermissionMintingPolicy of
         Nothing → mempty
-        Just { candidatePermissionTokenName, candidatePermissionCurrencySymbol } →
+        Just { candidatePermissionTokenName, currencySymbol } →
           Value.singleton
-            candidatePermissionCurrencySymbol
+            currencySymbol
             candidatePermissionTokenName
             one
 
@@ -319,8 +319,8 @@ register
       <> Lookups.unspentOutputs valUtxos
       <> case maybeCandidatePermissionMintingPolicy of
         Nothing → mempty
-        Just { candidatePermissionPolicy } →
-          Lookups.mintingPolicy candidatePermissionPolicy
+        Just { mintingPolicy } →
+          Lookups.mintingPolicy mintingPolicy
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints =
