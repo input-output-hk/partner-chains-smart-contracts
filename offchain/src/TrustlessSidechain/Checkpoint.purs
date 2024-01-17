@@ -93,8 +93,9 @@ saveCheckpoint
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sidechainParams
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    MerkleRoot.getMerkleRootCurrencyInfo sidechainParams
+
   currentCommitteeUtxo ←
     liftedM
       ( show $ NotFoundUtxo "failed to find current committee UTxO"

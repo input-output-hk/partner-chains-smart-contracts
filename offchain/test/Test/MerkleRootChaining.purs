@@ -8,7 +8,6 @@ import Contract.Log as Log
 import Contract.Monad (liftContractM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -302,13 +301,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           , sidechainParams
           }
 
-      -- JSTOLAREK: fixme
-      merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-        sidechainParams
-      merkleRootTokenCurrencySymbol ←
-        liftContractM
-          "Failed to get merkleRootTokenCurrencySymbol"
-          $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+      { currencySymbol: merkleRootTokenCurrencySymbol } ←
+        MerkleRoot.Utils.getMerkleRootCurrencyInfo sidechainParams
 
       let
         uch = UpdateCommitteeHash

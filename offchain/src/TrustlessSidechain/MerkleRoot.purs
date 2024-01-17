@@ -3,7 +3,6 @@ module TrustlessSidechain.MerkleRoot
   ( module ExportTypes
   , module ExportUtils
   , saveRoot
-  , getMerkleRootTokenMintingPolicy
   ) where
 
 import Contract.Prelude
@@ -16,7 +15,6 @@ import Contract.Monad
 import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -24,7 +22,6 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -48,13 +45,13 @@ import TrustlessSidechain.MerkleRoot.Types
   ) as ExportTypes
 import TrustlessSidechain.MerkleRoot.Utils
   ( findMerkleRootTokenUtxo
-  , merkleRootTokenMintingPolicy
+  , getMerkleRootCurrencyInfo
   , merkleRootTokenValidator
   , serialiseMrimHash
   ) as ExportUtils
 import TrustlessSidechain.MerkleRoot.Utils
   ( findPreviousMerkleRootTokenUtxo
-  , merkleRootTokenMintingPolicy
+  , getMerkleRootCurrencyInfo
   , merkleRootTokenValidator
   , serialiseMrimHash
   )
@@ -65,7 +62,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types
@@ -108,7 +104,7 @@ saveRoot
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { merkleRootTokenCurrencySymbol } ← getMerkleRootTokenMintingPolicy
+  { currencySymbol: merkleRootTokenCurrencySymbol } ← getMerkleRootCurrencyInfo
     sidechainParams
   currentCommitteeUtxo ←
     liftedM
@@ -167,19 +163,6 @@ saveRoot
 
   balanceSignAndSubmit "Save Merkle root" { lookups, constraints }
 
--- | `getMerkleRootTokenMintingPolicy` gets the minting policy and currency
--- | symbol of the MerkleRootToken
-getMerkleRootTokenMintingPolicy ∷
-  SidechainParams →
-  Contract
-    { merkleRootTokenMintingPolicy ∷ MintingPolicy
-    , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
-    }
-getMerkleRootTokenMintingPolicy sidechainParams = do
-  policy ← merkleRootTokenMintingPolicy sidechainParams
-  merkleRootTokenCurrencySymbol ← getCurrencySymbol MerkleRootTokenPolicy policy
-  pure $ { merkleRootTokenMintingPolicy: policy, merkleRootTokenCurrencySymbol }
-
 -- | `saveRootLookupsAndConstraints` creates the lookups and constraints (and
 -- | the message to be signed) for saving a Merkle root
 saveRootLookupsAndConstraints ∷
@@ -202,8 +185,9 @@ saveRootLookupsAndConstraints
 
   -- Getting the required validators / minting policies...
   ---------------------------------------------------------
-  rootTokenMP ← merkleRootTokenMintingPolicy sidechainParams
-  rootTokenCS ← getCurrencySymbol MerkleRootTokenPolicy rootTokenMP
+  { mintingPolicy: rootTokenMP
+  , currencySymbol: rootTokenCS
+  } ← getMerkleRootCurrencyInfo sidechainParams
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
     liftContractM

@@ -42,7 +42,10 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(ConversionError, NotFoundUtxo)
   )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot.Utils
+  ( findPreviousMerkleRootTokenUtxo
+  , getMerkleRootCurrencyInfo
+  )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -68,14 +71,8 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   , serialiseUchmHash
   , updateCommitteeHashValidator
   ) as ExportUtils
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( MerkleRootTokenPolicy
-      )
-  )
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -213,12 +210,8 @@ updateCommitteeHashLookupsAndConstraints
 
   -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
-
-  -- JSTOLAREK: fixme
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
-  merkleRootTokenCurrencySymbol ← getCurrencySymbol MerkleRootTokenPolicy
-    merkleRootTokenMintingPolicy
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    getMerkleRootCurrencyInfo sidechainParams
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------
@@ -252,9 +245,8 @@ updateCommitteeHashLookupsAndConstraints
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------
-  maybePreviousMerkleRoot ← MerkleRoot.Utils.findPreviousMerkleRootTokenUtxo
-    previousMerkleRoot
-    sidechainParams
+  maybePreviousMerkleRoot ←
+    findPreviousMerkleRootTokenUtxo previousMerkleRoot sidechainParams
 
   -- Building the transaction.
   -------------------------------------------------------------

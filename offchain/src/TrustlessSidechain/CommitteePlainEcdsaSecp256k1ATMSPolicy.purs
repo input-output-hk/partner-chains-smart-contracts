@@ -55,7 +55,7 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot.Utils (getMerkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -65,7 +65,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address
   ( getCurrencyInfo
-  , getCurrencySymbol
   , getOwnWalletAddress
   )
 import TrustlessSidechain.Utils.Crypto
@@ -76,7 +75,7 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(CommitteePlainEcdsaSecp256k1ATMSPolicy, MerkleRootTokenPolicy)
+  ( ScriptId(CommitteePlainEcdsaSecp256k1ATMSPolicy)
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
@@ -380,11 +379,8 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
-  -- JSTOLAREK: fix this
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    getMerkleRootCurrencyInfo sidechainParams
 
   -- Build the UpdateCommitteeHash parameter
   -------------------------------------------------------------

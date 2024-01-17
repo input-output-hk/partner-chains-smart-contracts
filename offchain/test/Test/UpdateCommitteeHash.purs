@@ -15,7 +15,6 @@ import Contract.Log (logInfo')
 import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt (BigInt)
@@ -112,12 +111,8 @@ generateUchmSignatures
       , sidechainParams
       }
 
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    liftContractM
-      "Failed to get merkleRootTokenCurrencySymbol"
-      $ Value.scriptCurrencySymbol merkleRootTokenMintingPolicy
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    MerkleRoot.Utils.getMerkleRootCurrencyInfo sidechainParams
 
   let
     uch = UpdateCommitteeHash

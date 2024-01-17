@@ -58,7 +58,7 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, NotFoundUtxo, VerificationError)
   )
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
+import TrustlessSidechain.MerkleRoot.Utils (getMerkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -66,7 +66,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
-import TrustlessSidechain.Utils.Address (getCurrencyInfo, getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PublicKey
@@ -76,7 +76,7 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(MerkleRootTokenPolicy, CommitteePlainSchnorrSecp256k1ATMSPolicy)
+  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
@@ -385,11 +385,8 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- minting policy for the merkle root token
   -------------------------------------------------------------
 
-  -- JSTOLAREK: fix this
-  merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
-    sidechainParams
-  merkleRootTokenCurrencySymbol ←
-    getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    getMerkleRootCurrencyInfo sidechainParams
 
   -- Build the UpdateCommitteeHash parameter
   -------------------------------------------------------------

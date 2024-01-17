@@ -72,8 +72,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind
 
-  { merkleRootTokenMintingPolicy } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sp
+  { mintingPolicy: merkleRootTokenMintingPolicy } ←
+    MerkleRoot.getMerkleRootCurrencyInfo sp
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
 

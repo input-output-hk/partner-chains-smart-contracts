@@ -9,7 +9,7 @@
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module TrustlessSidechain.MerkleRoot.Utils
-  ( merkleRootTokenMintingPolicy
+  ( getMerkleRootCurrencyInfo
   , merkleRootTokenValidator
   , findMerkleRootTokenUtxo
   , findPreviousMerkleRootTokenUtxo
@@ -24,7 +24,7 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData (serializeData, toData)
-import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
@@ -35,6 +35,7 @@ import TrustlessSidechain.MerkleRoot.Types
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -51,13 +52,15 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 
--- | `merkleRootTokenMintingPolicy` gets the minting policy corresponding to
--- | `MerkleRootTokenPolicy`
-merkleRootTokenMintingPolicy ∷ SidechainParams → Contract MintingPolicy
-merkleRootTokenMintingPolicy sidechainParams = do
+-- | `getMerkleRootCurrencyInfo` gets the minting policy and currency symbol
+-- | corresponding to `MerkleRootTokenPolicy`
+getMerkleRootCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+getMerkleRootCurrencyInfo sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mkMintingPolicyWithParams MerkleRootTokenPolicy
+  mintingPolicy ← mkMintingPolicyWithParams MerkleRootTokenPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
+  currencySymbol ← getCurrencySymbol MerkleRootTokenPolicy mintingPolicy
+  pure { mintingPolicy, currencySymbol }
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
 -- | 'MerkleRootTokenValidator' paramaterized by `SidechainParams`.
@@ -91,8 +94,7 @@ findMerkleRootTokenUtxo merkleRoot sp = do
     "error 'findMerkleRootTokenUtxo': failed to get validator address"
     (Address.validatorHashEnterpriseAddress netId validatorHash)
 
-  mintingPolicy ← merkleRootTokenMintingPolicy sp
-  currencySymbol ← getCurrencySymbol MerkleRootTokenPolicy mintingPolicy
+  { currencySymbol } ← getMerkleRootCurrencyInfo sp
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: we just need the existence of the token i.e., there is a nonzero

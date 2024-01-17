@@ -342,8 +342,8 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Getting the merkle root token minting policy
   -----------------------------------
-  { merkleRootTokenCurrencySymbol } ← MerkleRoot.getMerkleRootTokenMintingPolicy
-    sp
+  { currencySymbol: merkleRootTokenCurrencySymbol } ←
+    MerkleRoot.getMerkleRootCurrencyInfo sp
 
   -- Setting up the update committee hash validator
   -----------------------------------
