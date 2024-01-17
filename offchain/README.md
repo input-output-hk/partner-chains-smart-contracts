@@ -15,10 +15,10 @@ runtime dependencies:
 - kupo
 
 Luckily, we have a dockerised setup, that spins up all these easily with a
-preset test network. Just run:
+preset Preview or Preprod. Just run:
 
 ```
-nix run .#ctl-runtime
+nix run .#ctl-runtime-preview
 ```
 
 To change the testnet you're using, you have to change the network name in the `flake.nix`
@@ -652,7 +652,6 @@ nix run .#sidechain-main-cli -- update-permissioned-candidates \
 Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
-
 
 #### 3.3.21 Garbage collect redundant tokens
 

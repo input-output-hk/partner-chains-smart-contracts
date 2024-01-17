@@ -11,7 +11,7 @@ call to `make`. The workflow for updating/adding dependencies is outlined below 
 in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/develop/doc).
 
 # General Rules of Thumb
-* To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime` first.
+* To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime-preview` first.
 * The Makefile is the central source of truth for how to deal with the environment.
 * Never invoke `npm install` without `--package-lock-only`.
 

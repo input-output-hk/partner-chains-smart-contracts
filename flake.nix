@@ -41,13 +41,6 @@
     plutip,
     ...
   } @ inputs: let
-    vasilDevRuntimeConfig = {
-      network = {
-        name = "vasil-dev";
-        magic = 9;
-      };
-    };
-
     previewRuntimeConfig = {
       # Conveniently, by default the ctl runtime configuration uses the
       # preview network. See here:
@@ -62,6 +55,17 @@
       node = {
         # the version of the node to use, corresponds to the image version tag,
         # i.e. `"inputoutput/cardano-node:${tag}"`
+        tag = "1.35.4";
+      };
+    };
+
+    preprodRuntimeConfig = {
+      network = {
+        name = "preprod";
+        magic = 1;
+      };
+
+      node = {
         tag = "1.35.4";
       };
     };
@@ -307,8 +311,6 @@
       (system:
         self.flake.${system}.packages
         // {
-          # ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
-          # ctl-runtime = (nixpkgsFor system).buildCtlRuntime vasilDevRuntimeConfig;
           sidechain-main-cli = ctlMainFor system;
           # TODO: Fix web bundling
           # ctl-bundle-web = (psProjectFor system).bundlePursProject {
@@ -324,8 +326,8 @@
     apps = perSystem (system:
       self.flake.${system}.apps
       // {
-        ctl-runtime = (nixpkgsFor system).launchCtlRuntime vasilDevRuntimeConfig;
         ctl-runtime-preview = (nixpkgsFor system).launchCtlRuntime previewRuntimeConfig;
+        ctl-runtime-preprod = (nixpkgsFor system).launchCtlRuntime preprodRuntimeConfig;
         sidechain-main-cli = {
           type = "app";
           program = "${ctlMainFor system}/bin/sidechain-main-cli";
@@ -366,6 +368,6 @@
         '';
       };
     });
-    _packages.x86_64-linux = builtins.removeAttrs self.packages.x86_64-linux ["ctl-runtime" "ctl-runtime-preview"];
+    _packages.x86_64-linux = builtins.removeAttrs self.packages.x86_64-linux ["ctl-runtime-preview" "ctl-runtime-preprod"];
   };
 }

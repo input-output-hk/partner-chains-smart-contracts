@@ -23,9 +23,13 @@ In order to run the system, we require the following runtime dependencies.
 [^1]: The CTL documentation doesn't specify this, but a laborious inspection of the code will reveal this fact. In particular, this was the root cause of the CTL project "hanging forever" waiting for transactions to be confirmed -- see issue [#234](https://github.com/mlabs-haskell/trustless-sidechain/issues/234).
 
 We have provided a convenient way to launch the runtime dependencies in `docker` images for you.
-In a separate terminal window in the project's root directory, execute the following command to launch the runtime dependences in `docker` images for the preview test net.
+In a separate terminal window in the project's root directory, execute the following command to launch the runtime dependencies in `docker` images for the preview test net.
 ```
 $ nix run .#ctl-runtime-preview
+```
+There is also a config for preprod test net.
+```
+$ nix run .#ctl-runtime-preprod
 ```
 
 This will run

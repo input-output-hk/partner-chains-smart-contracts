@@ -188,7 +188,7 @@ In order to run the system, we need the following runtime dependencies.
 - `kupo` which provides a method to query onchain information.
 
 We have provided a convenient way to launch the runtime dependencies
-    for the preview test net with `docker`.
+    for the preview and preprod test nets with `docker`.
 Consider running the following command.
 
 ```bash
