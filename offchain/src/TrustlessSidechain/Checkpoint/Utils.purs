@@ -9,11 +9,9 @@ module TrustlessSidechain.Checkpoint.Utils
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Scripts
@@ -33,7 +31,7 @@ import TrustlessSidechain.Checkpoint.Types
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
-import TrustlessSidechain.Utils.Address (getCurrencyInfo)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo, toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
@@ -93,13 +91,8 @@ findCheckpointUtxo ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findCheckpointUtxo checkpointParameter = do
-  netId ← Address.getNetworkId
   validator ← checkpointValidator checkpointParameter
-  let validatorHash = Scripts.validatorHash validator
-
-  validatorAddress ← Monad.liftContractM
-    "error 'findCheckpointUtxo': failed to get validator address"
-    (Address.validatorHashEnterpriseAddress netId validatorHash)
+  validatorAddress ← toAddress (Scripts.validatorHash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this checkpoint nft.

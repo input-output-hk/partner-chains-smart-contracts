@@ -13,12 +13,9 @@ import Contract.Prelude
 
 import Contract.Address
   ( PaymentPubKeyHash
-  , getNetworkId
-  , validatorHashEnterpriseAddress
   )
 import Contract.Monad
   ( Contract
-  , liftContractM
   , throwContractError
   )
 import Contract.Numeric.BigNum as BigNum
@@ -56,13 +53,14 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo, InvalidScript)
+  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , getOwnWalletAddress
+  , toAddress
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
@@ -242,17 +240,12 @@ register
       , grandpaKey
       }
   ) = do
-  netId ← getNetworkId
-
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = validatorHash validator
-  valAddr ← liftContractM
-    ( show $ InvalidScript "Couldn't convert validator hash to address"
-    )
-    (validatorHashEnterpriseAddress netId valHash)
+  valAddr ← toAddress valHash
 
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
@@ -343,14 +336,8 @@ deregister ∷ DeregisterParams → Contract TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
-  netId ← getNetworkId
-
   validator ← getCommitteeCandidateValidator sidechainParams
-  let valHash = validatorHash validator
-  valAddr ← liftContractM
-    ( show $ InvalidScript "Couldn't convert validator hash to address"
-    )
-    (validatorHashEnterpriseAddress netId valHash)
+  valAddr ← toAddress (validatorHash validator)
   ownUtxos ← utxosAt ownAddr
   valUtxos ← utxosAt valAddr
 

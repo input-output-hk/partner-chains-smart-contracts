@@ -11,7 +11,6 @@ import Contract.Prelude
 
 import Contract.Address as Address
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Scripts
   ( Validator
   , validatorHash
@@ -42,6 +41,7 @@ import TrustlessSidechain.Utils.Address
   ( currencySymbolToHex
   , getCurrencySymbolHex
   , getValidatorHash
+  , toAddress
   )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
@@ -256,10 +256,6 @@ getSidechainAddresses
 -- | Print the bech32 serialised address of a given validator
 getAddr ∷ Validator → Contract String
 getAddr v = do
-  netId ← Address.getNetworkId
-  addr ← Monad.liftContractM ("Cannot get validator address") $
-    Address.validatorHashEnterpriseAddress
-      netId
-      (validatorHash v)
+  addr ← toAddress (validatorHash v)
   serialised ← Address.addressToBech32 addr
   pure serialised

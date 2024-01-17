@@ -12,8 +12,6 @@ import Contract.Prelude
 
 import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
-  , getNetworkId
-  , validatorHashEnterpriseAddress
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
 import Contract.Log (logInfo')
@@ -43,9 +41,11 @@ import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
-import TrustlessSidechain.Error (OffchainError(ConversionError))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Address
+  ( getOwnPaymentPubKeyHash
+  , toAddress
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
@@ -65,15 +65,7 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
   scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
 
-  netId ← getNetworkId
-  valAddr ← liftContractM
-    ( show
-        ( ConversionError $ "Cannot convert validator hash "
-            <> show scriptCacheValidatorHash
-            <> " to an enterprise address"
-        )
-    )
-    (validatorHashEnterpriseAddress netId scriptCacheValidatorHash)
+  valAddr ← toAddress scriptCacheValidatorHash
 
   scriptCacheUtxos ← utxosAt valAddr
 
@@ -121,15 +113,7 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
     <> show versioningScriptRefUtxoTxId
   awaitTxConfirmed versioningScriptRefUtxoTxId
 
-  netId ← getNetworkId
-  valAddr ← liftContractM
-    ( show
-        ( ConversionError $ "Cannot convert validator hash "
-            <> show scriptCacheValidatorHash
-            <> " to an enterprise address"
-        )
-    )
-    (validatorHashEnterpriseAddress netId scriptCacheValidatorHash)
+  valAddr ← toAddress scriptCacheValidatorHash
 
   scriptCacheUtxos ← utxosAt valAddr
 

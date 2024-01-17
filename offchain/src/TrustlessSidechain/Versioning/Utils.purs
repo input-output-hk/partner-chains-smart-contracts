@@ -14,7 +14,7 @@ module TrustlessSidechain.Versioning.Utils
 
 import Contract.Prelude
 
-import Contract.Address (Address, getNetworkId, validatorHashEnterpriseAddress)
+import Contract.Address (Address)
 import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
@@ -58,7 +58,7 @@ import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -225,10 +225,7 @@ invalidateVersionTokenLookupsAndConstraints scp ver scriptId = do
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
-  netId ← getNetworkId
-  versionOracleValidatorAddr ←
-    liftContractM "cannot get version oracle validator address"
-      (validatorHashEnterpriseAddress netId (validatorHash vValidator))
+  versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
   scriptUtxos ← utxosAt versionOracleValidatorAddr
 
   -- Prepare datum and other boilerplate
@@ -323,10 +320,7 @@ updateVersionTokenLookupsAndConstraints
 
       -- Get UTxOs located at the version oracle validator script address
       -----------------------------------
-      netId ← getNetworkId
-      versionOracleValidatorAddr ←
-        liftContractM "cannot get version oracle validator address"
-          (validatorHashEnterpriseAddress netId (validatorHash vValidator))
+      versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
       scriptUtxos ← utxosAt versionOracleValidatorAddr
 
       -- Prepare datum and other boilerplate
@@ -411,9 +405,7 @@ getVersionedScriptRefUtxo sp versionOracle = do
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
   versionOracleValidatorHash ←
     validatorHash <$> versionOracleValidator sp versionOracleCurrencySymbol
-  netId ← getNetworkId
-  valAddr ← liftContractM "cannot get validator address"
-    (validatorHashEnterpriseAddress netId versionOracleValidatorHash)
+  valAddr ← toAddress versionOracleValidatorHash
 
   versionOracleUtxos ← utxosAt valAddr
 
@@ -484,9 +476,4 @@ getVersionedValidatorAddress sp versionOracle = do
   case referenceScript of
     Nothing → throwContractError
       ("Script for given version oracle was not found: " <> show versionOracle)
-    Just scriptHash → do
-      netId ← getNetworkId
-      versionOracleValidatorAddr ←
-        liftContractM "cannot get version oracle validator address"
-          (validatorHashEnterpriseAddress netId (ValidatorHash scriptHash))
-      pure $ versionOracleValidatorAddr
+    Just scriptHash → toAddress (ValidatorHash scriptHash)

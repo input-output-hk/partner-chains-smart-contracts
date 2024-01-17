@@ -28,8 +28,7 @@ module TrustlessSidechain.DistributedSet
 
 import Contract.Prelude
 
-import Contract.Address (Address, NetworkId, getNetworkId)
-import Contract.Address as Address
+import Contract.Address (Address)
 import Contract.AssocMap as AssocMap
 import Contract.Log as Log
 import Contract.Monad (Contract, liftContractM, liftedM, throwContractError)
@@ -65,7 +64,7 @@ import TrustlessSidechain.Error
       , DsInsertError
       )
   )
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -319,11 +318,10 @@ dsKeyPolicy ∷ DsKeyMint → Contract MintingPolicy
 dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy [ toData dskm ]
 
 -- | The address for the insert validator of the distributed set.
-insertAddress ∷ NetworkId → Ds → Contract Address
-insertAddress netId ds = do
+insertAddress ∷ Ds → Contract Address
+insertAddress ds = do
   v ← insertValidator ds
-  liftContractM "Couldn't derive distributed set insert validator address"
-    $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
+  toAddress (Scripts.validatorHash v)
 
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
@@ -401,13 +399,8 @@ findDsConfOutput ∷
     , confDat ∷ DsConfDatum
     }
 findDsConfOutput ds = do
-  netId ← getNetworkId
   v ← dsConfValidator ds
-  scriptAddr ←
-    liftContractM
-      "Couldn't derive distributed set configuration validator address"
-      $ Address.validatorHashEnterpriseAddress netId (Scripts.validatorHash v)
-
+  scriptAddr ← toAddress (Scripts.validatorHash v)
   utxos ← Utxos.utxosAt scriptAddr
 
   out ←
@@ -488,8 +481,7 @@ findDsOutput ds tn txInput = do
   -- information about it
   -- `tn'` is the distributed set node onchain.
   tn' ← do
-    netId ← getNetworkId
-    scriptAddr ← insertAddress netId ds
+    scriptAddr ← insertAddress ds
 
     unless
       (scriptAddr == (unwrap txOut).address)
@@ -572,8 +564,7 @@ slowFindDsOutput ds tn = do
   Log.logWarn'
     "Finding the required distributed set node (this may take a while)..."
 
-  netId ← getNetworkId
-  scriptAddr ← insertAddress netId ds
+  scriptAddr ← insertAddress ds
   utxos ← Map.toUnfoldable <$> Utxos.utxosAt scriptAddr
   dskm ← dsToDsKeyMint ds
   policy ← dsKeyPolicy dskm

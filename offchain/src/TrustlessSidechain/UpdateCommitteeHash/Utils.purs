@@ -20,11 +20,9 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData (class ToData, serializeData, toData)
 import Contract.Scripts
   ( Validator
@@ -38,6 +36,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHash
   , UpdateCommitteeHashMessage
   )
+import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
@@ -62,13 +61,9 @@ getUpdateCommitteeHashValidator ∷
     , address ∷ Address
     }
 getUpdateCommitteeHashValidator uch = do
-  netId ← Address.getNetworkId
   validator ← updateCommitteeHashValidator uch
   let validatorHash = Scripts.validatorHash validator
-
-  address ← Monad.liftContractM
-    "error 'getUpdateCommitteeHashValidator': failed to get validator address"
-    (Address.validatorHashEnterpriseAddress netId validatorHash)
+  address ← toAddress validatorHash
   pure { validator, validatorHash, address }
 
 -- | `serialiseUchmHash` is an alias for (ignoring the `Maybe`)
@@ -96,13 +91,8 @@ findUpdateCommitteeHashUtxo ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUpdateCommitteeHashUtxo uch = do
-  netId ← Address.getNetworkId
   validator ← updateCommitteeHashValidator uch
-  let validatorHash = Scripts.validatorHash validator
-
-  validatorAddress ← Monad.liftContractM
-    "error 'findUpdateCommitteeHashUtxo': failed to get validator address"
-    (Address.validatorHashEnterpriseAddress netId validatorHash)
+  validatorAddress ← toAddress (Scripts.validatorHash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.

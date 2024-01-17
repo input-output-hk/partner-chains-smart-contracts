@@ -8,6 +8,7 @@ module TrustlessSidechain.Utils.Address
   , getOwnPaymentPubKeyHash
   , getOwnWalletAddress
   , toValidatorHash
+  , toAddress
   , getCurrencyInfo
   , getCurrencySymbol
   , getCurrencySymbolHex
@@ -21,6 +22,8 @@ import Contract.Prelude
 import Contract.Address
   ( Address
   , PaymentPubKeyHash
+  , getNetworkId
+  , validatorHashEnterpriseAddress
   )
 import Contract.Address as Address
 import Contract.Monad (Contract, liftContractM, liftedM)
@@ -66,6 +69,7 @@ import Data.Array as Array
 import TrustlessSidechain.Error
   ( OffchainError
       ( NotFoundOwnPubKeyHash
+      , ConversionError
       , NotFoundOwnAddress
       , InvalidCurrencySymbol
       )
@@ -157,6 +161,17 @@ toValidatorHash ∷ Address → Contract ValidatorHash
 toValidatorHash addr =
   liftContractM "Cannot convert Address to ValidatorHash"
     (Address.toValidatorHash addr)
+
+-- | Convert ValidatorHash to Address in the current network, raising an error
+-- | if the hash is not valid.
+toAddress ∷ ValidatorHash → Contract Address
+toAddress vh = do
+  netId ← getNetworkId
+  liftContractM
+    ( show $ ConversionError $ "Cannot convert validator hash " <> show vh
+        <> " to an enterprise address"
+    )
+    (validatorHashEnterpriseAddress netId vh)
 
 -- | `getCurrencyInfo` returns minting policy and currency symbol of a given
 -- | script.  Requires providing parameters of that script.

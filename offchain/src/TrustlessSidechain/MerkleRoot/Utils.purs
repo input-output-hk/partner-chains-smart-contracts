@@ -18,7 +18,6 @@ module TrustlessSidechain.MerkleRoot.Utils
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
@@ -36,7 +35,7 @@ import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
-import TrustlessSidechain.Utils.Address (getCurrencyInfo)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo, toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
@@ -83,14 +82,8 @@ findMerkleRootTokenUtxo ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxo merkleRoot sp = do
-  netId ← Address.getNetworkId
   validator ← merkleRootTokenValidator sp
-  let validatorHash = Scripts.validatorHash validator
-
-  validatorAddress ← Monad.liftContractM
-    "error 'findMerkleRootTokenUtxo': failed to get validator address"
-    (Address.validatorHashEnterpriseAddress netId validatorHash)
-
+  validatorAddress ← toAddress (Scripts.validatorHash validator)
   { currencySymbol } ← merkleRootCurrencyInfo sp
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →

@@ -7,10 +7,8 @@ import Contract.Prelude
 
 import Contract.Address
   ( Address
-  , getNetworkId
-  , validatorHashEnterpriseAddress
   )
-import Contract.Monad (Contract, liftContractM)
+import Contract.Monad (Contract)
 import Contract.PlutusData
   ( toData
   )
@@ -21,7 +19,7 @@ import Contract.Scripts
   )
 import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -54,10 +52,8 @@ getDParameterValidatorAndAddress ∷
     }
 getDParameterValidatorAndAddress sidechainParams = do
   dParameterValidator ← decodeDParameterValidator sidechainParams
-  netId ← getNetworkId
   dParameterValidatorAddress ←
-    liftContractM "cannot get d parameter validator address"
-      (validatorHashEnterpriseAddress netId (validatorHash dParameterValidator))
+    toAddress (validatorHash dParameterValidator)
 
   pure { dParameterValidator, dParameterValidatorAddress }
 
