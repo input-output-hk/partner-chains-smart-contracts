@@ -9,10 +9,7 @@ module TrustlessSidechain.CommitteeOraclePolicy
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.PlutusData
-  ( class ToData
-  , toData
-  )
+import Contract.PlutusData (class FromData, class ToData, fromData, toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Transaction (TransactionInput)
 import Contract.Value as Value
@@ -29,13 +26,21 @@ import TrustlessSidechain.Versioning.ScriptId
 newtype InitCommitteeHashMint = InitCommitteeHashMint
   { icTxOutRef ∷ TransactionInput }
 
+derive instance Eq InitCommitteeHashMint
+
 derive instance Generic InitCommitteeHashMint _
+
+instance Show InitCommitteeHashMint where
+  show = genericShow
 
 derive instance Newtype InitCommitteeHashMint _
 
 instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
+
+instance FromData InitCommitteeHashMint where
+  fromData = map (InitCommitteeHashMint <<< { icTxOutRef: _ }) <$> fromData
 
 committeeOraclePolicy ∷ InitCommitteeHashMint → Contract CurrencyInfo
 committeeOraclePolicy ichm =

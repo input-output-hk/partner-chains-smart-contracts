@@ -14,6 +14,7 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
+  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
@@ -36,8 +37,9 @@ newtype CheckpointDatum = CheckpointDatum
   }
 
 derive instance Generic CheckpointDatum _
-
 derive instance Newtype CheckpointDatum _
+derive newtype instance Eq CheckpointDatum
+derive newtype instance Show CheckpointDatum
 
 instance ToData CheckpointDatum where
   toData (CheckpointDatum { blockHash, blockNumber }) =
@@ -96,16 +98,27 @@ derive instance Generic InitCheckpointMint _
 
 derive instance Newtype InitCheckpointMint _
 
+derive newtype instance Eq InitCheckpointMint
+
+derive newtype instance Show InitCheckpointMint
+
 instance ToData InitCheckpointMint where
   toData (InitCheckpointMint { icTxOutRef }) =
     toData icTxOutRef
 
-data CheckpointRedeemer = CheckpointRedeemer
+instance FromData InitCheckpointMint where
+  fromData = map (InitCheckpointMint <<< { icTxOutRef: _ }) <$> fromData
+
+newtype CheckpointRedeemer = CheckpointRedeemer
   { newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   }
 
 derive instance Generic CheckpointRedeemer _
+
+derive newtype instance Eq CheckpointRedeemer
+
+derive newtype instance Show CheckpointRedeemer
 
 instance ToData CheckpointRedeemer where
   toData
@@ -116,6 +129,11 @@ instance ToData CheckpointRedeemer where
     ) = productToData2
     newCheckpointBlockHash
     newCheckpointBlockNumber
+
+instance FromData CheckpointRedeemer where
+  fromData = productFromData2
+    $ \newCheckpointBlockHash newCheckpointBlockNumber →
+        CheckpointRedeemer { newCheckpointBlockHash, newCheckpointBlockNumber }
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam
@@ -137,6 +155,10 @@ newtype CheckpointMessage = CheckpointMessage
 
 derive instance Generic CheckpointMessage _
 
+derive newtype instance Eq CheckpointMessage
+
+derive newtype instance Show CheckpointMessage
+
 instance ToData CheckpointMessage where
   toData
     ( CheckpointMessage
@@ -151,3 +173,18 @@ instance ToData CheckpointMessage where
     , toData checkpointBlockNumber
     , toData sidechainEpoch
     ]
+
+instance FromData CheckpointMessage where
+  fromData = case _ of
+    Constr tag [ t1, t2, t3, t4 ] | tag == BigNum.fromInt 0 → do
+      sidechainParams ← fromData t1
+      checkpointBlockHash ← fromData t2
+      checkpointBlockNumber ← fromData t3
+      sidechainEpoch ← fromData t4
+      pure $ CheckpointMessage
+        { sidechainParams
+        , checkpointBlockHash
+        , checkpointBlockNumber
+        , sidechainEpoch
+        }
+    _ → Nothing

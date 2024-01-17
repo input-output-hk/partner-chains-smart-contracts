@@ -22,7 +22,8 @@ import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
-  ( class ToData
+  ( class FromData
+  , class ToData
   , PlutusData(Constr)
   , Redeemer(Redeemer)
   , fromData
@@ -89,7 +90,12 @@ newtype ATMSPlainEcdsaSecp256k1Multisignature =
     , currentCommitteeSignatures ∷ Array EcdsaSecp256k1Signature
     }
 
+derive instance Eq ATMSPlainEcdsaSecp256k1Multisignature
+
 derive instance Generic ATMSPlainEcdsaSecp256k1Multisignature _
+
+instance Show ATMSPlainEcdsaSecp256k1Multisignature where
+  show = genericShow
 
 derive instance Newtype ATMSPlainEcdsaSecp256k1Multisignature _
 
@@ -102,15 +108,37 @@ instance ToData ATMSPlainEcdsaSecp256k1Multisignature where
     , toData currentCommitteeSignatures
     ]
 
+instance FromData ATMSPlainEcdsaSecp256k1Multisignature where
+  fromData = case _ of
+    Constr tag [ t1, t2 ] | tag == BigNum.fromInt 0 → do
+      currentCommittee ← fromData t1
+      currentCommitteeSignatures ← fromData t2
+      pure $ ATMSPlainEcdsaSecp256k1Multisignature
+        { currentCommittee, currentCommitteeSignatures }
+    _ → Nothing
+
 data ATMSRedeemer
   = ATMSMint ATMSPlainEcdsaSecp256k1Multisignature
   | ATMSBurn
 
+derive instance Eq ATMSRedeemer
+
 derive instance Generic ATMSRedeemer _
+
+instance Show ATMSRedeemer where
+  show = genericShow
 
 instance ToData ATMSRedeemer where
   toData (ATMSMint sig) = Constr (BigNum.fromInt 0) [ toData sig ]
   toData ATMSBurn = Constr (BigNum.fromInt 1) []
+
+instance FromData ATMSRedeemer where
+  fromData = case _ of
+    Constr tag [ t1 ] | tag == BigNum.fromInt 0 → do
+      sig ← fromData t1
+      pure $ ATMSMint sig
+    Constr tag [] | tag == BigNum.fromInt 1 → pure ATMSBurn
+    _ → Nothing
 
 -- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the
 -- | committee plainEcdsaSecp256k1 ATMS policy

@@ -214,13 +214,28 @@ data FUELMintingRedeemer
   = FUELMintingRedeemer MerkleTreeEntry MerkleProof
   | FUELBurningRedeemer
 
+derive instance Eq FUELMintingRedeemer
+
 derive instance Generic FUELMintingRedeemer _
+
+instance Show FUELMintingRedeemer where
+  show = genericShow
+
 instance ToData FUELMintingRedeemer where
   toData (FUELMintingRedeemer s1 s2) = Constr (BigNum.fromInt 0)
     [ toData s1
     , toData s2
     ]
   toData FUELBurningRedeemer = Constr (BigNum.fromInt 1) []
+
+instance FromData FUELMintingRedeemer where
+  fromData = case _ of
+    Constr tag [ t1, t2 ] | tag == BigNum.fromInt 0 → do
+      s1 ← fromData t1
+      s2 ← fromData t2
+      pure $ FUELMintingRedeemer s1 s2
+    Constr tag [] | tag == BigNum.fromInt 1 → pure FUELBurningRedeemer
+    _ → Nothing
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy

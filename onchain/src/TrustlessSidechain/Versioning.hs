@@ -69,6 +69,7 @@ import Plutus.V2.Ledger.Api (
 import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   SidechainParams,
@@ -153,6 +154,7 @@ data VersionOracle = VersionOracle
     -- @since Unreleased
     scriptId :: Integer
   }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since Unreleased
 instance ToData VersionOracle where
@@ -183,6 +185,7 @@ newtype VersionOracleConfig = VersionOracleConfig
   { -- | @since Unreleased
     versionOracleCurrencySymbol :: CurrencySymbol
   }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since Unreleased
 instance ToData VersionOracleConfig where

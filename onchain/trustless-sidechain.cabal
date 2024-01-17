@@ -276,10 +276,16 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Test.TrustlessSidechain.Golden.DistributedSet
+    Test.TrustlessSidechain.Golden.FUELProxyPolicy
+    Test.TrustlessSidechain.Golden.Tests
+    Test.TrustlessSidechain.Golden.Types
+    Test.TrustlessSidechain.Golden.UpdateCommitteeHash
+    Test.TrustlessSidechain.Golden.Versioning
+    Test.TrustlessSidechain.GoldenTest
     Test.TrustlessSidechain.MerkleProofSerialisation
     Test.TrustlessSidechain.MerkleTree
     Test.TrustlessSidechain.MultiSig
-    Test.TrustlessSidechain.Types
 
   build-depends:
     , base16-bytestring

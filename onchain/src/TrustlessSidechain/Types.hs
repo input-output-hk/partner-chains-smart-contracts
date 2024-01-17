@@ -421,6 +421,10 @@ makeHasField ''CombinedMerkleProof
 data FUELMintingRedeemer
   = FUELMintingRedeemer MerkleTreeEntry MerkleProof
   | FUELBurningRedeemer
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 PlutusTx.makeIsDataIndexed
@@ -605,6 +609,10 @@ data CheckpointDatum = CheckpointDatum
   , -- | @since v4.0.0
     blockNumber :: Integer
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since v4.0.0
 instance ToData CheckpointDatum where
@@ -685,6 +693,10 @@ data ATMSRedeemer
     ATMSMint ATMSPlainMultisignature
   | -- | @since Unreleased
     ATMSBurn
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
 
@@ -694,6 +706,10 @@ data CheckpointRedeemer = CheckpointRedeemer
   { newCheckpointBlockHash :: LedgerBytes
   , newCheckpointBlockNumber :: Integer
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since v4.0.0
 instance ToData CheckpointRedeemer where
@@ -781,6 +797,10 @@ data CheckpointMessage = CheckpointMessage
   , -- | @since v4.0.0
     sidechainEpoch :: Integer
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 
@@ -796,6 +816,10 @@ data DParameterPolicyRedeemer
     DParameterMint
   | -- | @since Unreleased
     DParameterBurn
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData DParameterPolicyRedeemer where
@@ -834,6 +858,10 @@ data DParameterValidatorDatum = DParameterValidatorDatum
   , -- | @since Unreleased
     registeredCandidatesCount :: Integer
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 makeHasField ''DParameterValidatorDatum
@@ -867,6 +895,10 @@ data DParameterValidatorRedeemer
     UpdateDParameter
   | -- | @since Unreleased
     RemoveDParameter
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData DParameterValidatorRedeemer where
@@ -903,6 +935,10 @@ data PermissionedCandidatesPolicyRedeemer
     PermissionedCandidatesMint
   | -- | @since Unreleased
     PermissionedCandidatesBurn
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData PermissionedCandidatesPolicyRedeemer where
@@ -941,6 +977,10 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
   , -- | @since Unreleased
     grandpaKey :: LedgerBytes
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData PermissionedCandidateKeys where
@@ -968,6 +1008,10 @@ makeHasField ''PermissionedCandidateKeys
 newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates :: [PermissionedCandidateKeys]
   }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
   deriving newtype (ToData, FromData, UnsafeFromData)
 
 -- | @since Unreleased
@@ -982,6 +1026,10 @@ data PermissionedCandidatesValidatorRedeemer
     UpdatePermissionedCandidates
   | -- | @since Unreleased
     RemovePermissionedCandidates
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
 
 -- | @since Unreleased
 instance ToData PermissionedCandidatesValidatorRedeemer where

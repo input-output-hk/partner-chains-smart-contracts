@@ -1,24 +1,21 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Test.TrustlessSidechain.Types (tests) where
+module Test.TrustlessSidechain.Golden.Types (tests) where
 
 import TrustlessSidechain.HaskellPrelude
 
 import Data.ByteString.Base16 (decodeLenient)
-import Data.ByteString.Lazy (fromStrict)
-import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef), ValidatorHash (ValidatorHash), toBuiltin)
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Golden (goldenVsString)
+import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
+import TrustlessSidechain.CheckpointValidator (InitCheckpointMint (InitCheckpointMint))
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.Governance (mkGovernanceAuthority)
-import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
-import TrustlessSidechain.OffChain (showBuiltinBS)
+import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), MerkleTree (Bin, Tip), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
   ATMSPlainMultisignature (
@@ -169,6 +166,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot
   ),
  )
+import TrustlessSidechain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint))
 
 -- | Tests for all data types with @IsData@ implementation
 -- Some of the data types are only checked transitively (included by some other type)
@@ -177,7 +175,7 @@ import TrustlessSidechain.Types (
 tests :: TestTree
 tests =
   testGroup
-    "Golden tests of ToData encoded data"
+    "Golden tests for Types module"
     [ dataEncoderGoldenTest "SidechainParams" sampleSidechainParams
     , dataEncoderGoldenTest "CandidatePermissionMint" sampleCandidatePermissionMint
     , dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
@@ -218,6 +216,9 @@ tests =
     , dataEncoderGoldenTest "FUELMintingRedeemer2" sampleFUELMintingRedeemer2
     , dataEncoderGoldenTest "ATMSRedeemer1" sampleATMSRedeemer1
     , dataEncoderGoldenTest "ATMSRedeemer2" sampleATMSRedeemer2
+    , dataEncoderGoldenTest "MerkleTree" sampleMerkleTree
+    , dataEncoderGoldenTest "InitCheckpointMint" sampleInitCheckpointMint
+    , dataEncoderGoldenTest "InitCommitteeHashMint" sampleInitCommitteeHashMint
     ]
 
 -- * Sample data - building blocks
@@ -342,6 +343,18 @@ sampleMerkleTreeEntry2 =
     , recipient = "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
     , previousMerkleRoot = Nothing
     }
+
+sampleMerkleTree :: MerkleTree
+sampleMerkleTree = Bin (RootHash "595a007f79ffff017f802effeb013f804935ff008054807f9a48e27f8c80004b") lChild rChild
+  where
+    lChild = Tip $ RootHash "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
+    rChild = Tip $ RootHash "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
+
+sampleInitCheckpointMint :: InitCheckpointMint
+sampleInitCheckpointMint = InitCheckpointMint sampleTxOutRef
+
+sampleInitCommitteeHashMint :: InitCommitteeHashMint
+sampleInitCommitteeHashMint = InitCommitteeHashMint sampleTxOutRef
 
 sampleMerkleRootInsertionMessage1 :: MerkleRootInsertionMessage
 sampleMerkleRootInsertionMessage1 =
@@ -546,23 +559,6 @@ sampleATMSRedeemer1 = ATMSMint sampleATMSPlainMultisignature
 
 sampleATMSRedeemer2 :: ATMSRedeemer
 sampleATMSRedeemer2 = ATMSBurn
-
--- | Creating a test group with two golden tests:
--- - encoding data using `toBuiltinData`
--- - serialising BuiltinData to CBOR
---
--- Results of the tests are compared to the files under ./test/golden/*.golden
--- If no file exists for the given data type, a new one will be created automatically
-dataEncoderGoldenTest :: ToData a => HString.String -> a -> TestTree
-dataEncoderGoldenTest name sampleData =
-  let builtinData = toBuiltinData sampleData
-      plutusDataBS = fromStrict $ encodeUtf8 $ Text.pack $ show builtinData
-      cborBS = fromStrict $ encodeUtf8 $ Text.pack $ showBuiltinBS $ Builtins.serialiseData builtinData
-   in testGroup
-        ("Serialising " <> name)
-        [ goldenVsString "IsData encoding" ("./test/golden/" <> name <> "-isdata.golden") $ pure plutusDataBS
-        , goldenVsString "CBOR encoding" ("./test/golden/" <> name <> "-cbor.golden") $ pure cborBS
-        ]
 
 -- Function to convert hex encoded Text to BuiltinByteString
 hexTextToBuiltinByteString :: Text.Text -> Builtins.BuiltinByteString

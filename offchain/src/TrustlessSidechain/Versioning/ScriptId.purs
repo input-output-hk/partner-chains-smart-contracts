@@ -29,6 +29,9 @@ import Data.Show.Generic (genericShow)
 -- |
 -- | Names of constructors must match names used in serialize application in
 -- | on-chain directory.  See Note [Serialized script names].
+-- |
+-- | ScriptId generator in tests needs to be updated whenever
+-- | its definition is changed.
 data ScriptId
   = FUELMintingPolicy
   | MerkleRootTokenPolicy

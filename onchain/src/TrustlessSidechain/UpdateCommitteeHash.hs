@@ -181,6 +181,8 @@ newtype InitCommitteeHashMint = InitCommitteeHashMint
     , TSPrelude.Eq
     , TSPrelude.Ord
     , PlutusTx.UnsafeFromData
+    , PlutusTx.ToData
+    , PlutusTx.FromData
     )
 
 PlutusTx.makeLift ''InitCommitteeHashMint

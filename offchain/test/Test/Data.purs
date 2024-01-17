@@ -2,8 +2,9 @@ module Test.Data (tests) where
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash(..))
+import Contract.Address (PaymentPubKeyHash(PaymentPubKeyHash))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
+import Contract.Scripts (ValidatorHash(ValidatorHash))
 import Control.Alt ((<|>))
 import Data.Array.NonEmpty as NE
 import Data.BigInt (BigInt)
@@ -12,6 +13,7 @@ import Data.String.CodeUnits (fromCharArray)
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
+import Test.QuickCheck.Gen as QGen
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
@@ -33,7 +35,11 @@ import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(CandidatePermissionMint)
   )
 import TrustlessSidechain.Checkpoint.Types
-  ( CheckpointParameter(CheckpointParameter)
+  ( CheckpointDatum(CheckpointDatum)
+  , CheckpointMessage(CheckpointMessage)
+  , CheckpointParameter(CheckpointParameter)
+  , CheckpointRedeemer(CheckpointRedeemer)
+  , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeCertificateMint(CommitteeCertificateMint)
@@ -42,6 +48,20 @@ import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistration(BlockProducerRegistration)
   , BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
   , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
+  )
+import TrustlessSidechain.CommitteeOraclePolicy
+  ( InitCommitteeHashMint(InitCommitteeHashMint)
+  )
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
+  ( ATMSPlainSchnorrSecp256k1Multisignature
+      ( ATMSPlainSchnorrSecp256k1Multisignature
+      )
+  )
+import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as Schnorr
+import TrustlessSidechain.DParameter.Types
+  ( DParameterPolicyRedeemer(DParameterMint, DParameterBurn)
+  , DParameterValidatorDatum(DParameterValidatorDatum)
+  , DParameterValidatorRedeemer(UpdateDParameter, RemoveDParameter)
   )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -53,9 +73,10 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
+  , FUELMintingRedeemer(FUELMintingRedeemer, FUELBurningRedeemer)
   , MerkleTreeEntry(MerkleTreeEntry)
   )
-import TrustlessSidechain.Governance (GovernanceAuthority(..))
+import TrustlessSidechain.Governance (GovernanceAuthority(GovernanceAuthority))
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
@@ -66,6 +87,18 @@ import TrustlessSidechain.MerkleTree
   , Side(L, R)
   , Up(Up)
   , byteArrayToRootHashUnsafe
+  )
+import TrustlessSidechain.PermissionedCandidates.Types
+  ( PermissionedCandidateKeys(PermissionedCandidateKeys)
+  , PermissionedCandidatesPolicyRedeemer
+      ( PermissionedCandidatesMint
+      , PermissionedCandidatesBurn
+      )
+  , PermissionedCandidatesValidatorDatum(PermissionedCandidatesValidatorDatum)
+  , PermissionedCandidatesValidatorRedeemer
+      ( UpdatePermissionedCandidates
+      , RemovePermissionedCandidates
+      )
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash.Types
@@ -78,6 +111,47 @@ import TrustlessSidechain.Utils.Address (byteArrayToBech32BytesUnsafe)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , ecdsaSecp256k1PubKey
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PublicKey(SchnorrSecp256k1PublicKey)
+  , SchnorrSecp256k1Signature(SchnorrSecp256k1Signature)
+  )
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( FUELMintingPolicy
+      , MerkleRootTokenPolicy
+      , MerkleRootTokenValidator
+      , CommitteeCandidateValidator
+      , CandidatePermissionPolicy
+      , CommitteeHashValidator
+      , DsKeyPolicy
+      , DsConfPolicy
+      , DsConfValidator
+      , DsInsertValidator
+      , CheckpointValidator
+      , CheckpointPolicy
+      , FUELBurningPolicy
+      , VersionOraclePolicy
+      , VersionOracleValidator
+      , FUELProxyPolicy
+      , CommitteeCertificateVerificationPolicy
+      , CommitteeOraclePolicy
+      , CommitteePlainEcdsaSecp256k1ATMSPolicy
+      , CommitteePlainSchnorrSecp256k1ATMSPolicy
+      , DParameterPolicy
+      , DParameterValidator
+      , PermissionedCandidatesPolicy
+      , PermissionedCandidatesValidator
+      , ScriptCache
+      )
+  , VersionOracle(VersionOracle)
+  , VersionOracleConfig(VersionOracleConfig)
+  , VersionOraclePolicyRedeemer
+      ( InitializeVersionOracle
+      , MintVersionOracle
+      , BurnVersionOracle
+      )
+  , VersionOracleValidatorRedeemer(InvalidateVersionOracle, UpdateVersionOracle)
   )
 
 tests ∷ WrappedTests
@@ -112,6 +186,47 @@ tests = pureGroup "Data roundtrip tests" $ do
   test "DsConfMint" $ liftEffect $ toDataLaws testCount genDsConfMint
   test "DsKeyMint" $ liftEffect $ toDataLaws testCount genDsKeyMint
   test "Node" $ liftEffect $ toDataLaws testCount genNode
+  test "CheckpointDatum" $ liftEffect $ toDataLaws testCount genCheckpointDatum
+  test "CheckpointParameter" $ liftEffect $ toDataLaws testCount
+    genCheckpointParameter
+  test "InitCheckpointMint" $ liftEffect $ toDataLaws testCount
+    genInitCheckpointMint
+  test "CheckpointRedeemer" $ liftEffect $ toDataLaws testCount
+    genCheckpointRedeemer
+  test "CheckpointMessage" $ liftEffect $ toDataLaws testCount
+    genCheckpointMessage
+  test "DParameterValidatorRedeemer" $ liftEffect $ toDataLaws testCount
+    genDParameterValidatorRedeemer
+  test "DParameterValidatorDatum" $ liftEffect $ toDataLaws testCount
+    genDParameterValidatorDatum
+  test "DParameterPolicyRedeemer" $ liftEffect $ toDataLaws testCount
+    genDParameterPolicyRedeemer
+  test "FUELMintingRedeemer" $ liftEffect $ toDataLaws testCount
+    genFUELMintingRedeemer
+  test "PermissionedCandidatesValidatorRedeemer" $ liftEffect $ toDataLaws
+    testCount
+    genPermissionedCandidatesValidatorRedeemer
+  test "PermissionedCandidatesValidatorDatum" $ liftEffect $ toDataLaws testCount
+    genPermissionedCandidatesValidatorDatum
+  test "PermissionedCandidatesPolicyRedeemer" $ liftEffect $ toDataLaws testCount
+    genPermissionedCandidatesPolicyRedeemer
+  test "PermissionedCandidateKeys" $ liftEffect $ toDataLaws testCount
+    genPermissionedCandidateKeys
+  test "ScriptId" $ liftEffect $ toDataLaws testCount genScriptId
+  test "VersionOracle" $ liftEffect $ toDataLaws testCount genVersionOracle
+  test "VersionOracleConfig" $ liftEffect $ toDataLaws testCount
+    genVersionOracleConfig
+  test "VersionOraclePolicyRedeemer" $ liftEffect $ toDataLaws testCount
+    genVersionOraclePolicyRedeemer
+  test "VersionOracleValidatorRedeemer" $ liftEffect $ toDataLaws testCount
+    genVersionOracleValidatorRedeemer
+  test "InitCommitteeHashMint" $ liftEffect $ toDataLaws testCount
+    genInitCommitteeHashMint
+  test "ATMSPlainSchnorrSecp256k1Multisignature" $ liftEffect $ toDataLaws
+    testCount
+    genATMSPlainSchnorrSecp256k1Multisignature
+  test "ATMSRedeemerSchnorr" $ liftEffect $ toDataLaws testCount
+    genATMSRedeemerSchnorr
   where
   testCount ∷ Int
   testCount = 10_000
@@ -140,6 +255,201 @@ genNode = do
     { nKey
     , nNext
     }
+
+genCheckpointDatum ∷ Gen CheckpointDatum
+genCheckpointDatum = do
+  blockHash ← arbitrary
+  blockNumber ← BigInt.fromInt <$> arbitrary
+  pure $ CheckpointDatum
+    { blockHash
+    , blockNumber
+    }
+
+genCheckpointParameter ∷ Gen CheckpointParameter
+genCheckpointParameter = do
+  sidechainParams ← genSP
+  ArbitraryAssetClass checkpointAssetClass ← arbitrary
+  ArbitraryCurrencySymbol committeeOracleCurrencySymbol ← arbitrary
+  ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol ←
+    arbitrary
+
+  pure $ CheckpointParameter
+    { sidechainParams
+    , checkpointAssetClass
+    , committeeOracleCurrencySymbol
+    , committeeCertificateVerificationCurrencySymbol
+    }
+
+genInitCheckpointMint ∷ Gen InitCheckpointMint
+genInitCheckpointMint = InitCheckpointMint <<< { icTxOutRef: _ } <$> do
+  ArbitraryTransactionInput input ← arbitrary
+  pure input
+
+genCheckpointRedeemer ∷ Gen CheckpointRedeemer
+genCheckpointRedeemer = do
+  newCheckpointBlockHash ← arbitrary
+  newCheckpointBlockNumber ← BigInt.fromInt <$> arbitrary
+  pure $ CheckpointRedeemer
+    { newCheckpointBlockHash
+    , newCheckpointBlockNumber
+    }
+
+genCheckpointMessage ∷ Gen CheckpointMessage
+genCheckpointMessage = do
+  sidechainParams ← genSP
+  checkpointBlockHash ← arbitrary
+  checkpointBlockNumber ← BigInt.fromInt <$> arbitrary
+  sidechainEpoch ← BigInt.fromInt <$> arbitrary
+
+  pure $ CheckpointMessage
+    { sidechainParams
+    , checkpointBlockHash
+    , checkpointBlockNumber
+    , sidechainEpoch
+    }
+
+genDParameterValidatorRedeemer ∷ Gen DParameterValidatorRedeemer
+genDParameterValidatorRedeemer = QGen.oneOf $ NE.cons' (pure UpdateDParameter)
+  [ pure RemoveDParameter ]
+
+genDParameterValidatorDatum ∷ Gen DParameterValidatorDatum
+genDParameterValidatorDatum = do
+  permissionedCandidatesCount ← BigInt.fromInt <$> arbitrary
+  registeredCandidatesCount ← BigInt.fromInt <$> arbitrary
+
+  pure $ DParameterValidatorDatum
+    { permissionedCandidatesCount
+    , registeredCandidatesCount
+    }
+
+genDParameterPolicyRedeemer ∷ Gen DParameterPolicyRedeemer
+genDParameterPolicyRedeemer = QGen.oneOf $ NE.cons' (pure DParameterMint)
+  [ pure DParameterBurn ]
+
+genFUELMintingRedeemer ∷ Gen FUELMintingRedeemer
+genFUELMintingRedeemer = QGen.oneOf $ NE.cons' (pure FUELBurningRedeemer)
+  [ FUELMintingRedeemer <$> genMTE <*> genMP
+  ]
+
+genPermissionedCandidatesValidatorRedeemer ∷
+  Gen PermissionedCandidatesValidatorRedeemer
+genPermissionedCandidatesValidatorRedeemer = QGen.oneOf $ NE.cons'
+  (pure UpdatePermissionedCandidates)
+  [ pure RemovePermissionedCandidates ]
+
+genPermissionedCandidatesValidatorDatum ∷
+  Gen PermissionedCandidatesValidatorDatum
+genPermissionedCandidatesValidatorDatum = do
+  PermissionedCandidatesValidatorDatum <<< { candidates: _ } <$> QGen.arrayOf
+    genPermissionedCandidateKeys
+
+genPermissionedCandidatesPolicyRedeemer ∷
+  Gen PermissionedCandidatesPolicyRedeemer
+genPermissionedCandidatesPolicyRedeemer = QGen.oneOf $ NE.cons'
+  (pure PermissionedCandidatesMint)
+  [ pure PermissionedCandidatesBurn ]
+
+genPermissionedCandidateKeys ∷ Gen PermissionedCandidateKeys
+genPermissionedCandidateKeys = do
+  sidechainKey ← arbitrary
+  auraKey ← arbitrary
+  grandpaKey ← arbitrary
+
+  pure $ PermissionedCandidateKeys
+    { sidechainKey
+    , auraKey
+    , grandpaKey
+    }
+
+genScriptId ∷ Gen ScriptId
+genScriptId = QGen.oneOf $ NE.cons' (pure FUELMintingPolicy) $ pure <$>
+  [ MerkleRootTokenPolicy
+  , MerkleRootTokenValidator
+  , CommitteeCandidateValidator
+  , CandidatePermissionPolicy
+  , CommitteeHashValidator
+  , DsKeyPolicy
+  , DsConfPolicy
+  , DsConfValidator
+  , DsInsertValidator
+  , CheckpointValidator
+  , CheckpointPolicy
+  , FUELBurningPolicy
+  , VersionOraclePolicy
+  , VersionOracleValidator
+  , FUELProxyPolicy
+  , CommitteeCertificateVerificationPolicy
+  , CommitteeOraclePolicy
+  , CommitteePlainEcdsaSecp256k1ATMSPolicy
+  , CommitteePlainSchnorrSecp256k1ATMSPolicy
+  , DParameterPolicy
+  , DParameterValidator
+  , PermissionedCandidatesPolicy
+  , PermissionedCandidatesValidator
+  , ScriptCache
+  ]
+
+genVersionOracle ∷ Gen VersionOracle
+genVersionOracle = do
+  version ← BigInt.fromInt <$> arbitrary
+  scriptId ← genScriptId
+  pure $ VersionOracle
+    { version
+    , scriptId
+    }
+
+genVersionOracleConfig ∷ Gen VersionOracleConfig
+genVersionOracleConfig = do
+  ArbitraryCurrencySymbol versionOracleCurrencySymbol ← arbitrary
+  pure $ VersionOracleConfig
+    { versionOracleCurrencySymbol
+    }
+
+genVersionOraclePolicyRedeemer ∷ Gen VersionOraclePolicyRedeemer
+genVersionOraclePolicyRedeemer = QGen.oneOf $ NE.cons'
+  (pure InitializeVersionOracle)
+  [ do
+      versionOracle ← genVersionOracle
+      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
+      pure $ MintVersionOracle versionOracle scriptHash
+  , BurnVersionOracle <$> genVersionOracle
+  ]
+
+genVersionOracleValidatorRedeemer ∷ Gen VersionOracleValidatorRedeemer
+genVersionOracleValidatorRedeemer = QGen.oneOf $ NE.cons'
+  ( do
+      versionOracle ← genVersionOracle
+      pure $ InvalidateVersionOracle versionOracle
+  )
+  [ do
+      versionOracle ← genVersionOracle
+      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
+      pure $ UpdateVersionOracle versionOracle scriptHash
+  ]
+
+genInitCommitteeHashMint ∷ Gen InitCommitteeHashMint
+genInitCommitteeHashMint = do
+  ArbitraryTransactionInput icTxOutRef ← arbitrary
+  pure $ InitCommitteeHashMint
+    { icTxOutRef }
+
+genATMSPlainSchnorrSecp256k1Multisignature ∷
+  Gen Schnorr.ATMSPlainSchnorrSecp256k1Multisignature
+genATMSPlainSchnorrSecp256k1Multisignature = do
+  currentCommittee ← map SchnorrSecp256k1PublicKey <$> QGen.arrayOf arbitrary
+  currentCommitteeSignatures ← map SchnorrSecp256k1Signature <$> QGen.arrayOf
+    arbitrary
+  pure $ ATMSPlainSchnorrSecp256k1Multisignature
+    { currentCommittee
+    , currentCommitteeSignatures
+    }
+
+genATMSRedeemerSchnorr ∷ Gen Schnorr.ATMSRedeemer
+genATMSRedeemerSchnorr = QGen.oneOf $ NE.cons'
+  ( pure Schnorr.ATMSBurn
+  )
+  [ Schnorr.ATMSMint <$> genATMSPlainSchnorrSecp256k1Multisignature
+  ]
 
 genDsKeyMint ∷ Gen DsKeyMint
 genDsKeyMint = do
@@ -196,11 +506,9 @@ genCCM = do
     }
 
 genUCHR ∷ Gen UpdateCommitteeHashRedeemer
-genUCHR = do
-  previousMerkleRoot ← liftArbitrary genRH
-  pure $ UpdateCommitteeHashRedeemer
-    { previousMerkleRoot
-    }
+genUCHR =
+  UpdateCommitteeHashRedeemer <<< { previousMerkleRoot: _ } <$> liftArbitrary
+    genRH
 
 genUCHM ∷ Gen (UpdateCommitteeHashMessage DA)
 genUCHM = do
@@ -265,11 +573,8 @@ genSide ∷ Gen Side
 genSide = elements $ NE.cons' L [ R ]
 
 genSMRR ∷ Gen SignedMerkleRootRedeemer
-genSMRR = do
-  previousMerkleRoot ← liftArbitrary genRH
-  pure $ SignedMerkleRootRedeemer
-    { previousMerkleRoot
-    }
+genSMRR =
+  SignedMerkleRootRedeemer <<< { previousMerkleRoot: _ } <$> liftArbitrary genRH
 
 genMRIM ∷ Gen MerkleRootInsertionMessage
 genMRIM = do

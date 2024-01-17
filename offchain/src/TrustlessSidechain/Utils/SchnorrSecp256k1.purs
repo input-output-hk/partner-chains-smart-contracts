@@ -26,9 +26,7 @@ module TrustlessSidechain.Utils.SchnorrSecp256k1
 
 import Contract.Prelude
 
-import Contract.PlutusData
-  ( class ToData
-  )
+import Contract.PlutusData (class FromData, class ToData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 
@@ -55,8 +53,14 @@ derive instance Generic SchnorrSecp256k1PublicKey _
 
 derive instance Newtype SchnorrSecp256k1PublicKey _
 
+derive newtype instance showSchnorrSecp256k1PublicKey ∷
+  Show SchnorrSecp256k1PublicKey
+
 derive newtype instance toDataSchnorrSecp256k1PublicKey ∷
   ToData SchnorrSecp256k1PublicKey
+
+derive newtype instance fromDataSchnorrSecp256k1PublicKey ∷
+  FromData SchnorrSecp256k1PublicKey
 
 derive newtype instance ordSchnorrSecp256k1PublicKey ∷
   Ord SchnorrSecp256k1PublicKey
@@ -71,8 +75,14 @@ derive instance Generic SchnorrSecp256k1Signature _
 
 derive instance Newtype SchnorrSecp256k1Signature _
 
+derive newtype instance showSchnorrSecp256k1Signature ∷
+  Show SchnorrSecp256k1Signature
+
 derive newtype instance toDataSchnorrSecp256k1Signature ∷
   ToData SchnorrSecp256k1Signature
+
+derive newtype instance fromDataSchnorrSecp256k1Signature ∷
+  FromData SchnorrSecp256k1Signature
 
 derive newtype instance ordSchnorrSecp256k1Signature ∷
   Ord SchnorrSecp256k1Signature

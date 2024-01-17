@@ -23,7 +23,7 @@ module TrustlessSidechain.MerkleTree (
   -- * Types
   RootHash (RootHash, unRootHash),
   MerkleProof (MerkleProof, unMerkleProof),
-  MerkleTree,
+  MerkleTree (Bin, Tip),
 
   -- * Building the Merkle Tree
   fromList,

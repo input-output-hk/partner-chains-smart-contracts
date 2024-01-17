@@ -12,11 +12,17 @@
 module TrustlessSidechain.FUELProxyPolicy (
   serialisableFuelProxyPolicy,
   mkFuelProxyPolicy,
-  FuelProxyRedeemer,
+  FuelProxyRedeemer (
+    FuelProxyMint,
+    FuelProxyBurn,
+    version,
+    recipient
+  ),
 ) where
 
 import Plutus.V2.Ledger.Api
 import PlutusTx
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
@@ -39,6 +45,7 @@ data FuelProxyRedeemer
       , -- | Recipient's sidechain address
         recipient :: BuiltinByteString
       }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
 makeIsDataIndexed
   ''FuelProxyRedeemer

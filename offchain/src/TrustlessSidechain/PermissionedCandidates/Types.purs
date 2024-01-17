@@ -31,6 +31,13 @@ data PermissionedCandidatesValidatorRedeemer
   = UpdatePermissionedCandidates
   | RemovePermissionedCandidates
 
+derive instance Eq PermissionedCandidatesValidatorRedeemer
+
+derive instance Generic PermissionedCandidatesValidatorRedeemer _
+
+instance Show PermissionedCandidatesValidatorRedeemer where
+  show = genericShow
+
 instance ToData PermissionedCandidatesValidatorRedeemer where
   toData UpdatePermissionedCandidates = Integer (BigInt.fromInt 0)
   toData RemovePermissionedCandidates = Integer (BigInt.fromInt 1)
@@ -50,6 +57,11 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
 derive instance Eq PermissionedCandidateKeys
 derive instance Ord PermissionedCandidateKeys
 
+derive instance Generic PermissionedCandidateKeys _
+
+instance Show PermissionedCandidateKeys where
+  show = genericShow
+
 instance ToData PermissionedCandidateKeys where
   toData
     ( PermissionedCandidateKeys
@@ -68,6 +80,13 @@ data PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates ∷ Array PermissionedCandidateKeys
   }
 
+derive instance Eq PermissionedCandidatesValidatorDatum
+
+derive instance Generic PermissionedCandidatesValidatorDatum _
+
+instance Show PermissionedCandidatesValidatorDatum where
+  show = genericShow
+
 instance ToData PermissionedCandidatesValidatorDatum where
   toData (PermissionedCandidatesValidatorDatum { candidates }) = toData
     candidates
@@ -80,6 +99,13 @@ instance FromData PermissionedCandidatesValidatorDatum where
 data PermissionedCandidatesPolicyRedeemer
   = PermissionedCandidatesMint
   | PermissionedCandidatesBurn
+
+derive instance Eq PermissionedCandidatesPolicyRedeemer
+
+derive instance Generic PermissionedCandidatesPolicyRedeemer _
+
+instance Show PermissionedCandidatesPolicyRedeemer where
+  show = genericShow
 
 instance ToData PermissionedCandidatesPolicyRedeemer where
   toData PermissionedCandidatesMint = Integer (BigInt.fromInt 0)

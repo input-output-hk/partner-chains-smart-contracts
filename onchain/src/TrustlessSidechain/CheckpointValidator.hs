@@ -164,6 +164,8 @@ newtype InitCheckpointMint = InitCheckpointMint
     , TSPrelude.Eq
     , TSPrelude.Ord
     , PlutusTx.UnsafeFromData
+    , PlutusTx.ToData
+    , PlutusTx.FromData
     )
 
 PlutusTx.makeLift ''InitCheckpointMint

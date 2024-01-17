@@ -20,6 +20,7 @@ import Test.QuickCheck (
   chooseBoundedIntegral,
   chooseInteger,
   elements,
+  frequency,
   liftArbitrary,
   liftShrink,
   oneof,
@@ -37,6 +38,7 @@ import Test.QuickCheck.Extra (
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
+import TrustlessSidechain.CheckpointValidator (InitCheckpointMint (InitCheckpointMint))
 import TrustlessSidechain.DistributedSet (
   Ds (Ds),
   DsConfDatum (DsConfDatum),
@@ -46,10 +48,12 @@ import TrustlessSidechain.DistributedSet (
   Ib (Ib),
   Node (Node),
  )
+import TrustlessSidechain.FUELProxyPolicy (FuelProxyRedeemer (FuelProxyBurn, FuelProxyMint))
 import TrustlessSidechain.Governance (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleProof (MerkleProof),
+  MerkleTree (Bin, Tip),
   RootHash (RootHash),
   Side (L, R),
   Up (Up),
@@ -58,6 +62,7 @@ import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey),
   ATMSPlainMultisignature (ATMSPlainMultisignature),
+  ATMSRedeemer (ATMSBurn, ATMSMint),
   BlockProducerRegistration (
     BlockProducerRegistration,
     auraKey,
@@ -79,6 +84,8 @@ import TrustlessSidechain.Types (
     sidechainParams,
     utxo
   ),
+  CheckpointDatum (CheckpointDatum),
+  CheckpointMessage (CheckpointMessage),
   CheckpointParameter (
     CheckpointParameter,
     assetClass,
@@ -86,13 +93,18 @@ import TrustlessSidechain.Types (
     committeeOracleCurrencySymbol,
     sidechainParams
   ),
+  CheckpointRedeemer (CheckpointRedeemer),
   CombinedMerkleProof (CombinedMerkleProof),
   CommitteeCertificateMint (
     CommitteeCertificateMint,
     thresholdDenominator,
     thresholdNumerator
   ),
+  DParameterPolicyRedeemer (DParameterBurn, DParameterMint),
+  DParameterValidatorDatum (DParameterValidatorDatum),
+  DParameterValidatorRedeemer (RemoveDParameter, UpdateDParameter),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
+  FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -106,6 +118,10 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     recipient
   ),
+  PermissionedCandidateKeys (PermissionedCandidateKeys),
+  PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
+  PermissionedCandidatesValidatorDatum (PermissionedCandidatesValidatorDatum),
+  PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
   PubKey (PubKey),
   SidechainParams (
     SidechainParams,
@@ -136,6 +152,11 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
  )
+import TrustlessSidechain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint))
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle),
+  VersionOracleConfig (VersionOracleConfig),
+ )
 
 main :: IO ()
 main =
@@ -152,6 +173,8 @@ main =
     , testProperty "BlockProducerRegistrationMsg (unsafe)" . toDataUnsafeLaws' genBPRM shrinkBPRM $ show
     , testProperty "MerkleTreeEntry (safe)" . toDataSafeLaws' genMTE shrinkMTE $ show
     , testProperty "MerkleTreeEntry (unsafe)" . toDataUnsafeLaws' genMTE shrinkMTE $ show
+    , testProperty "MerkleTree (safe)" . toDataSafeLaws' genMT shrinkMT $ show
+    , testProperty "MerkleTree (unsafe)" . toDataUnsafeLaws' genMT shrinkMT $ show
     , testProperty "MerkleRootInsertionMessage (safe)" . toDataSafeLaws' genMRIM shrinkMRIM $ show
     , testProperty "MerkleRootInsertionMessage (unsafe)" . toDataUnsafeLaws' genMRIM shrinkMRIM $ show
     , testProperty "SignedMerkleRootRedeemer (safe)" . toDataSafeLaws' genSMRR shrinkSMRR $ show
@@ -164,6 +187,14 @@ main =
     , testProperty "Up (unsafe)" . toDataUnsafeLaws' genUp shrinkUp $ show
     , testProperty "MerkleProof (safe)" . toDataSafeLaws' genMP shrinkMP $ show
     , testProperty "MerkleProof (unsafe)" . toDataUnsafeLaws' genMP shrinkMP $ show
+    , testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
+    , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
+    , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
+    , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
+    , testProperty "FUELProxyRedeemer (safe)" . toDataSafeLaws' genFPR shrinkFPR $ show
+    , testProperty "FUELProxyRedeemer (unsafe)" . toDataUnsafeLaws' genFPR shrinkFPR $ show
+    , testProperty "InitCommitteeHashMint (safe)" . toDataSafeLaws' genICHM shrinkICHM $ show
+    , testProperty "InitCommitteeHashMint (unsafe)" . toDataUnsafeLaws' genICHM shrinkICHM $ show
     , testProperty "CombinedMerkleProof (safe)" . toDataSafeLaws' genCMP shrinkCMP $ show
     , testProperty "CombinedMerkleProof (unsafe)" . toDataUnsafeLaws' genCMP shrinkCMP $ show
     , testProperty "UpdateCommitteeDatum (safe)" . toDataSafeLaws' genUPD shrinkUPD $ show
@@ -199,6 +230,32 @@ main =
     , testProperty "DsConfMint (unsafe)" . toDataUnsafeLaws' genDsConfMint shrinkDsConfMint $ show
     , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
     , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
+    , testProperty "InitCheckpointMint (safe)" . toDataSafeLaws' genICM shrinkICM $ show
+    , testProperty "InitCheckpointMint (unsafe)" . toDataUnsafeLaws' genICM shrinkICM $ show
+    , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
+    , testProperty "ATMSRedeemer (unsafe)" . toDataUnsafeLaws' genATMSR shrinkATMSR $ show
+    , testProperty "CheckpointDatum (safe)" . toDataSafeLaws' genCHPD shrinkCHPD $ show
+    , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
+    , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
+    , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
+    , testProperty "CheckpointRedeemer (safe)" . toDataSafeLaws' genCHPR shrinkCHPR $ show
+    , testProperty "CheckpointRedeemer (unsafe)" . toDataUnsafeLaws' genCHPR shrinkCHPR $ show
+    , testProperty "DParameterPolicyRedeemer (safe)" . toDataSafeLaws' genDPPR shrinkDPPR $ show
+    , testProperty "DParameterPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genDPPR shrinkDPPR $ show
+    , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
+    , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
+    , testProperty "DParameterValidatorRedeemer (safe)" . toDataSafeLaws' genDPVR shrinkDPVR $ show
+    , testProperty "DParameterValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genDPVR shrinkDPVR $ show
+    , testProperty "FUELMintingRedeemer (safe)" . toDataSafeLaws' genFMR shrinkFRM $ show
+    , testProperty "FUELMintingRedeemer (unsafe)" . toDataUnsafeLaws' genFMR shrinkFRM $ show
+    , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
+    , testProperty "PermissionedCandidateKeys (unsafe)" . toDataUnsafeLaws' genPCK shrinkPCK $ show
+    , testProperty "PermissionedCandidatesPolicyRedeemer (safe)" . toDataSafeLaws' genPCPR shrinkPCPR $ show
+    , testProperty "PermissionedCandidatesPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genPCPR shrinkPCPR $ show
+    , testProperty "PermissionedCandidatesValidatorDatum (safe)" . toDataSafeLaws' genPCVD shrinkPCVD $ show
+    , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
+    , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
+    , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
     ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -257,6 +314,71 @@ genDsKeyMint = DsKeyMint <$> go <*> go2
       ArbitraryCurrencySymbol sym <- arbitrary
       pure sym
 
+genICM :: Gen InitCheckpointMint
+genICM =
+  InitCheckpointMint <$> do
+    ArbitraryTxOutRef tor <- arbitrary
+    pure tor
+
+genATMSR :: Gen ATMSRedeemer
+genATMSR =
+  oneof
+    [ ATMSMint <$> genAPM
+    , pure ATMSBurn
+    ]
+
+genCHPD :: Gen CheckpointDatum
+genCHPD = do
+  ArbitraryBytes lb <- arbitrary
+  bn <- arbitrary
+  pure $ CheckpointDatum lb bn
+
+genCHPM :: Gen CheckpointMessage
+genCHPM = do
+  sp <- genSP
+  ArbitraryBytes lb <- arbitrary
+  bn <- arbitrary
+  se <- arbitrary
+  pure $ CheckpointMessage sp lb bn se
+
+genCHPR :: Gen CheckpointRedeemer
+genCHPR = do
+  ArbitraryBytes ncbh <- arbitrary
+  ncbn <- arbitrary
+  pure $ CheckpointRedeemer ncbh ncbn
+
+genDPPR :: Gen DParameterPolicyRedeemer
+genDPPR = oneof [pure DParameterMint, pure DParameterBurn]
+
+genDPVD :: Gen DParameterValidatorDatum
+genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
+
+genDPVR :: Gen DParameterValidatorRedeemer
+genDPVR = oneof [pure UpdateDParameter, pure RemoveDParameter]
+
+genFMR :: Gen FUELMintingRedeemer
+genFMR =
+  oneof
+    [ pure FUELBurningRedeemer
+    , FUELMintingRedeemer <$> genMTE <*> genMP
+    ]
+
+genPCK :: Gen PermissionedCandidateKeys
+genPCK = do
+  ArbitraryBytes sk <- arbitrary
+  ArbitraryBytes ak <- arbitrary
+  ArbitraryBytes gk <- arbitrary
+  pure $ PermissionedCandidateKeys sk ak gk
+
+genPCPR :: Gen PermissionedCandidatesPolicyRedeemer
+genPCPR = oneof [pure PermissionedCandidatesMint, pure PermissionedCandidatesBurn]
+
+genPCVD :: Gen PermissionedCandidatesValidatorDatum
+genPCVD = PermissionedCandidatesValidatorDatum <$> liftArbitrary genPCK
+
+genPCVR :: Gen PermissionedCandidatesValidatorRedeemer
+genPCVR = oneof [pure UpdatePermissionedCandidates, pure RemovePermissionedCandidates]
+
 genCP :: Gen CheckpointParameter
 genCP = do
   sp <- genSP
@@ -304,6 +426,28 @@ genCMP = CombinedMerkleProof <$> genMTE <*> genMP
 genMP :: Gen MerkleProof
 genMP = MerkleProof <$> liftArbitrary genUp
 
+genVO :: Gen VersionOracle
+genVO = VersionOracle <$> arbitrary <*> arbitrary
+
+genVOC :: Gen VersionOracleConfig
+genVOC =
+  VersionOracleConfig <$> do
+    ArbitraryCurrencySymbol sym <- arbitrary
+    pure sym
+
+genFPR :: Gen FuelProxyRedeemer
+genFPR =
+  oneof
+    [ FuelProxyMint <$> arbitrary
+    , FuelProxyBurn <$> arbitrary <*> pure ""
+    ]
+
+genICHM :: Gen InitCommitteeHashMint
+genICHM =
+  InitCommitteeHashMint <$> do
+    ArbitraryTxOutRef tor <- arbitrary
+    pure tor
+
 genUp :: Gen Up
 genUp = Up <$> genSide <*> genRH
 
@@ -322,6 +466,13 @@ genMTE = do
   ArbitraryBytes r <- arbitrary
   pmr <- genPMR
   pure . MerkleTreeEntry i a r $ pmr
+
+genMT :: Gen MerkleTree
+genMT =
+  frequency
+    [ (2, Bin <$> genRH <*> genMT <*> genMT)
+    , (8, Tip <$> genRH)
+    ]
 
 genSMRR :: Gen SignedMerkleRootRedeemer
 genSMRR = SignedMerkleRootRedeemer <$> genPMR
@@ -468,6 +619,67 @@ shrinkDsKeyMint (DsKeyMint vh cs) = do
   ArbitraryCurrencySymbol cs' <- shrink (ArbitraryCurrencySymbol cs)
   pure . DsKeyMint vh' $ cs'
 
+shrinkICM :: InitCheckpointMint -> [InitCheckpointMint]
+shrinkICM (InitCheckpointMint tor) = do
+  ArbitraryTxOutRef tor' <- shrink $ ArbitraryTxOutRef tor
+  pure $ InitCheckpointMint tor'
+
+shrinkATMSR :: ATMSRedeemer -> [ATMSRedeemer]
+shrinkATMSR = \case
+  ATMSMint apm -> ATMSMint <$> shrinkAPM apm
+  ATMSBurn -> []
+
+shrinkCHPD :: CheckpointDatum -> [CheckpointDatum]
+shrinkCHPD (CheckpointDatum lb bn) = do
+  ArbitraryBytes lb' <- shrink $ ArbitraryBytes lb
+  bn' <- shrink bn
+  pure $ CheckpointDatum lb' bn'
+
+shrinkCHPM :: CheckpointMessage -> [CheckpointMessage]
+shrinkCHPM (CheckpointMessage sp bh bn se) = do
+  sp' <- shrinkSP sp
+  ArbitraryBytes bh' <- shrink $ ArbitraryBytes bh
+  bn' <- shrink bn
+  se' <- shrink se
+  pure $ CheckpointMessage sp' bh' bn' se'
+
+shrinkCHPR :: CheckpointRedeemer -> [CheckpointRedeemer]
+shrinkCHPR (CheckpointRedeemer ncbh ncbn) = do
+  ArbitraryBytes ncbh' <- shrink $ ArbitraryBytes ncbh
+  ncbn' <- shrink ncbn
+  pure $ CheckpointRedeemer ncbh' ncbn'
+
+shrinkDPPR :: DParameterPolicyRedeemer -> [DParameterPolicyRedeemer]
+shrinkDPPR = const []
+
+shrinkDPVD :: DParameterValidatorDatum -> [DParameterValidatorDatum]
+shrinkDPVD (DParameterValidatorDatum pcc rcc) = DParameterValidatorDatum <$> shrink pcc <*> shrink rcc
+
+shrinkDPVR :: DParameterValidatorRedeemer -> [DParameterValidatorRedeemer]
+shrinkDPVR = const []
+
+shrinkFRM :: FUELMintingRedeemer -> [FUELMintingRedeemer]
+shrinkFRM = \case
+  FUELBurningRedeemer -> []
+  FUELMintingRedeemer mte mp ->
+    FUELMintingRedeemer <$> shrinkMTE mte <*> shrinkMP mp
+
+shrinkPCK :: PermissionedCandidateKeys -> [PermissionedCandidateKeys]
+shrinkPCK (PermissionedCandidateKeys sk ak gk) = do
+  ArbitraryBytes sk' <- shrink $ ArbitraryBytes sk
+  ArbitraryBytes ak' <- shrink $ ArbitraryBytes ak
+  ArbitraryBytes gk' <- shrink $ ArbitraryBytes gk
+  pure $ PermissionedCandidateKeys sk' ak' gk'
+
+shrinkPCPR :: PermissionedCandidatesPolicyRedeemer -> [PermissionedCandidatesPolicyRedeemer]
+shrinkPCPR = const []
+
+shrinkPCVD :: PermissionedCandidatesValidatorDatum -> [PermissionedCandidatesValidatorDatum]
+shrinkPCVD (PermissionedCandidatesValidatorDatum apck) = PermissionedCandidatesValidatorDatum <$> liftShrink shrinkPCK apck
+
+shrinkPCVR :: PermissionedCandidatesValidatorRedeemer -> [PermissionedCandidatesValidatorRedeemer]
+shrinkPCVR = const []
+
 shrinkCP :: CheckpointParameter -> [CheckpointParameter]
 shrinkCP (CheckpointParameter {..}) = do
   sp' <- shrinkSP sidechainParams
@@ -525,6 +737,29 @@ shrinkCMP (CombinedMerkleProof t mp) =
 shrinkMP :: MerkleProof -> [MerkleProof]
 shrinkMP (MerkleProof ups) = MerkleProof <$> liftShrink shrinkUp ups
 
+shrinkVO :: VersionOracle -> [VersionOracle]
+shrinkVO (VersionOracle version scriptID) = do
+  v <- shrink version
+  sid <- shrink scriptID
+  pure $ VersionOracle v sid
+
+shrinkVOC :: VersionOracleConfig -> [VersionOracleConfig]
+shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
+  ArbitraryCurrencySymbol sym <- shrink (ArbitraryCurrencySymbol versionOracleCurrencySymbol)
+  pure $ VersionOracleConfig sym
+
+shrinkFPR :: FuelProxyRedeemer -> [FuelProxyRedeemer]
+shrinkFPR = \case
+  FuelProxyMint n -> FuelProxyMint <$> shrink n
+  FuelProxyBurn n _ ->
+    FuelProxyBurn <$> shrink n <*> pure ""
+
+shrinkICHM :: InitCommitteeHashMint -> [InitCommitteeHashMint]
+shrinkICHM (InitCommitteeHashMint txOutRef) =
+  InitCommitteeHashMint <$> do
+    ArbitraryTxOutRef tor <- shrink (ArbitraryTxOutRef txOutRef)
+    pure tor
+
 shrinkUp :: Up -> [Up]
 shrinkUp (Up ss sib) =
   Up <$> shrinkSide ss <*> shrinkRH sib
@@ -544,6 +779,11 @@ shrinkMTE (MerkleTreeEntry {..}) = do
   guard (i' >= 0)
   guard (a' >= 0)
   pure . MerkleTreeEntry i' a' r' $ pmr'
+
+shrinkMT :: MerkleTree -> [MerkleTree]
+shrinkMT = \case
+  Bin _ l r -> [l, r]
+  Tip _ -> []
 
 shrinkSMRR :: SignedMerkleRootRedeemer -> [SignedMerkleRootRedeemer]
 shrinkSMRR (SignedMerkleRootRedeemer pmr) =

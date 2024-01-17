@@ -62,6 +62,13 @@ data VersionOraclePolicyRedeemer
   | -- | Burn existing version token.
     BurnVersionOracle VersionOracle
 
+derive instance Eq VersionOraclePolicyRedeemer
+
+derive instance Generic VersionOraclePolicyRedeemer _
+
+instance Show VersionOraclePolicyRedeemer where
+  show = genericShow
+
 instance FromData VersionOraclePolicyRedeemer where
   fromData (Constr n []) | n == (BigNum.fromInt 0) =
     pure InitializeVersionOracle
@@ -88,6 +95,13 @@ data VersionOracleValidatorRedeemer
   | -- | Update existing version token.
     UpdateVersionOracle VersionOracle ScriptHash
 
+derive instance Eq VersionOracleValidatorRedeemer
+
+derive instance Generic VersionOracleValidatorRedeemer _
+
+instance Show VersionOracleValidatorRedeemer where
+  show = genericShow
+
 instance FromData VersionOracleValidatorRedeemer where
   fromData (Constr n [ vo ]) | n == (BigNum.fromInt 0) =
     InvalidateVersionOracle <$> fromData vo
@@ -108,6 +122,10 @@ instance ToData VersionOracleValidatorRedeemer where
 newtype VersionOracleConfig = VersionOracleConfig
   { versionOracleCurrencySymbol ∷ CurrencySymbol -- ^ VersionOraclePolicy
   }
+
+derive instance Eq VersionOracleConfig
+instance Show VersionOracleConfig where
+  show = genericShow
 
 derive instance Generic VersionOracleConfig _
 derive instance Newtype VersionOracleConfig _

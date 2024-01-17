@@ -22,6 +22,13 @@ data DParameterValidatorRedeemer
   = UpdateDParameter
   | RemoveDParameter
 
+derive instance Eq DParameterValidatorRedeemer
+
+derive instance Generic DParameterValidatorRedeemer _
+
+instance Show DParameterValidatorRedeemer where
+  show = genericShow
+
 instance ToData DParameterValidatorRedeemer where
   toData UpdateDParameter = Integer (BigInt.fromInt 0)
   toData RemoveDParameter = Integer (BigInt.fromInt 1)
@@ -36,6 +43,13 @@ data DParameterValidatorDatum = DParameterValidatorDatum
   { permissionedCandidatesCount ∷ BigInt
   , registeredCandidatesCount ∷ BigInt
   }
+
+derive instance Eq DParameterValidatorDatum
+
+derive instance Generic DParameterValidatorDatum _
+
+instance Show DParameterValidatorDatum where
+  show = genericShow
 
 instance ToData DParameterValidatorDatum where
   toData
@@ -57,6 +71,13 @@ instance FromData DParameterValidatorDatum where
 data DParameterPolicyRedeemer
   = DParameterMint
   | DParameterBurn
+
+derive instance Eq DParameterPolicyRedeemer
+
+derive instance Generic DParameterPolicyRedeemer _
+
+instance Show DParameterPolicyRedeemer where
+  show = genericShow
 
 instance ToData DParameterPolicyRedeemer where
   toData DParameterMint = Integer (BigInt.fromInt 0)
