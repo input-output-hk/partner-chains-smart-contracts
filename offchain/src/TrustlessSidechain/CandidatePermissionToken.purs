@@ -37,13 +37,10 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
-  )
-import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
@@ -89,10 +86,7 @@ candidatePermissionCurrencyInfo ∷
   CandidatePermissionMint →
   Contract CurrencyInfo
 candidatePermissionCurrencyInfo cpm = do
-  mintingPolicy ←
-    mkMintingPolicyWithParams CandidatePermissionPolicy [ toData cpm ]
-  currencySymbol ← getCurrencySymbol CandidatePermissionPolicy mintingPolicy
-  pure { mintingPolicy, currencySymbol }
+  getCurrencyInfo CandidatePermissionPolicy [ toData cpm ]
 
 --------------------------------
 -- Endpoint code

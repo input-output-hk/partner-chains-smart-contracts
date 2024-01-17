@@ -36,12 +36,11 @@ import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  , mkValidatorWithParams
+  ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.ScriptId
@@ -57,10 +56,8 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 merkleRootCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
 merkleRootCurrencyInfo sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-  mintingPolicy ← mkMintingPolicyWithParams MerkleRootTokenPolicy
+  getCurrencyInfo MerkleRootTokenPolicy
     [ toData sidechainParams, toData versionOracleConfig ]
-  currencySymbol ← getCurrencySymbol MerkleRootTokenPolicy mintingPolicy
-  pure { mintingPolicy, currencySymbol }
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
 -- | 'MerkleRootTokenValidator' paramaterized by `SidechainParams`.
