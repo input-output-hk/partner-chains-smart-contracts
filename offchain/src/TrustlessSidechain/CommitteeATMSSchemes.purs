@@ -23,9 +23,7 @@ import Contract.PlutusData (PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts (MintingPolicy)
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value (CurrencySymbol)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures
       ( Multisignature
@@ -64,6 +62,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 
@@ -103,10 +102,7 @@ atmsCommitteeCertificateVerificationMintingPolicy ∷
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSAggregateSignatures →
-  Contract
-    { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
-    , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-    }
+  Contract CurrencyInfo
 atmsCommitteeCertificateVerificationMintingPolicy params sig =
   atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params $
     case sig of
@@ -124,35 +120,14 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSKinds →
-  Contract
-    { committeeCertificateVerificationMintingPolicy ∷ MintingPolicy
-    , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-    }
+  Contract CurrencyInfo
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
-  ATMSPlainEcdsaSecp256k1 → do
-    { committeePlainEcdsaSecp256k1ATMSPolicy
-    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-    } ←
-      CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
-        params
-    pure
-      { committeeCertificateVerificationMintingPolicy:
-          committeePlainEcdsaSecp256k1ATMSPolicy
-      , committeeCertificateVerificationCurrencySymbol:
-          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-      }
-  ATMSPlainSchnorrSecp256k1 → do
-    { committeePlainSchnorrSecp256k1ATMSPolicy
-    , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-    } ←
-      CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
-        params
-    pure
-      { committeeCertificateVerificationMintingPolicy:
-          committeePlainSchnorrSecp256k1ATMSPolicy
-      , committeeCertificateVerificationCurrencySymbol:
-          committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-      }
+  ATMSPlainEcdsaSecp256k1 →
+    CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
+      params
+  ATMSPlainSchnorrSecp256k1 →
+    CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
+      params
   ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
   ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"
   ATMSMultisignature → Monad.throwContractError

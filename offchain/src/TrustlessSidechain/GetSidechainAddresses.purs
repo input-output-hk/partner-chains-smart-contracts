@@ -186,18 +186,18 @@ getSidechainAddresses
     getCurrencySymbolHex
     versionedPolicies
 
-  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+  { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
       { committeeCertificateMint, sidechainParams: scParams }
   let
-    committeePlainEcdsaSecp256k1ATMSPolicyId = currencySymbolToHex
+    getCommitteePlainEcdsaSecp256k1ATMSPolicyId = currencySymbolToHex
       committeePlainEcdsaSecp256k1ATMSCurrencySymbol
 
-  { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+  { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainSchnorrSecp256k1ATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
       { committeeCertificateMint, sidechainParams: scParams }
   let
-    committeePlainSchnorrSecp256k1ATMSPolicyId = currencySymbolToHex
+    getCommitteePlainSchnorrSecp256k1ATMSPolicyId = currencySymbolToHex
       committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
   { permissionedCandidatesValidator } ←
@@ -226,11 +226,11 @@ getSidechainAddresses
           ( case atmsKind of
               ATMSPlainEcdsaSecp256k1 →
                 [ CommitteePlainEcdsaSecp256k1ATMSPolicy
-                    /\ committeePlainEcdsaSecp256k1ATMSPolicyId
+                    /\ getCommitteePlainEcdsaSecp256k1ATMSPolicyId
                 ]
               ATMSPlainSchnorrSecp256k1 →
                 [ CommitteePlainSchnorrSecp256k1ATMSPolicy
-                    /\ committeePlainSchnorrSecp256k1ATMSPolicyId
+                    /\ getCommitteePlainSchnorrSecp256k1ATMSPolicyId
                 ]
               _ → []
           )

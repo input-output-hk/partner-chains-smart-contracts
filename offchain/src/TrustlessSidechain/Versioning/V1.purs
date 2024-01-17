@@ -55,7 +55,9 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
-  { committeeOraclePolicy, committeeOracleCurrencySymbol } ←
+  { mintingPolicy: committeeOraclePolicy
+  , currencySymbol: committeeOracleCurrencySymbol
+  } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sp
 
   let
@@ -65,7 +67,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
         , thresholdDenominator: (unwrap sp).thresholdDenominator
         }
 
-  { committeeCertificateVerificationMintingPolicy } ←
+  { mintingPolicy: committeeCertificateVerificationMintingPolicy } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind
@@ -91,7 +93,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   -- Helper currency symbols
   -----------------------------------
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
       atmsKind

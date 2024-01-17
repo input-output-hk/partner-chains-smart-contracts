@@ -165,12 +165,12 @@ initCommitteeHashMintLookupsAndConstraints ∷
 initCommitteeHashMintLookupsAndConstraints isp = do
   -- Get committee hash / associated values
   -----------------------------------
-  { committeeOraclePolicy, committeeOracleCurrencySymbol } ←
+  { mintingPolicy, currencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
   let
     committeeHashValue =
       Value.singleton
-        committeeOracleCurrencySymbol
+        currencySymbol
         CommitteeOraclePolicy.committeeOracleTn
         one
 
@@ -178,7 +178,7 @@ initCommitteeHashMintLookupsAndConstraints isp = do
   -----------------------------------
   let
     lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy committeeOraclePolicy
+    lookups = Lookups.mintingPolicy mintingPolicy
 
     constraints ∷ TxConstraints Void Void
     constraints = Constraints.mustMintValue committeeHashValue
@@ -263,10 +263,12 @@ initCheckpointLookupsAndConstraints inp = do
   -----------------------------------
   let
     sidechainParams = toSidechainParams inp
-  { currencySymbol } ← Checkpoint.getCheckpointPolicy sidechainParams
+
+  { currencySymbol: checkpointCurrencySymbol } ←
+    Checkpoint.getCheckpointPolicy sidechainParams
   checkpointAssetClass ← Checkpoint.getCheckpointAssetClass sidechainParams
 
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   let
@@ -276,7 +278,7 @@ initCheckpointLookupsAndConstraints inp = do
         , thresholdDenominator: inp.initThresholdDenominator
         }
 
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams }
       inp.initATMSKind
@@ -296,7 +298,7 @@ initCheckpointLookupsAndConstraints inp = do
           }
     checkpointValue =
       Value.singleton
-        currencySymbol
+        checkpointCurrencySymbol
         Checkpoint.initCheckpointMintTn
         one
 
@@ -335,7 +337,7 @@ initCommitteeHashLookupsAndConstraints isp = do
 
   -- Getting the update committee hash policy
   -----------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy $ toSidechainParams isp
 
   -- Getting the merkle root token minting policy
@@ -352,7 +354,7 @@ initCommitteeHashLookupsAndConstraints isp = do
         , thresholdDenominator: isp.initThresholdDenominator
         }
 
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
       { committeeCertificateMint, sidechainParams: sp }
       isp.initATMSKind

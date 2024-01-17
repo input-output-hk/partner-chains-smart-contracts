@@ -10,7 +10,6 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
       ( ATMSPlainSchnorrSecp256k1Multisignature
       )
   , ATMSRedeemer(..)
-  , committeePlainSchnorrSecp256k1ATMS
   , committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
   , findUpdateCommitteeHashUtxoFromSidechainParams
   , getCommitteePlainSchnorrSecp256k1ATMSPolicy
@@ -32,7 +31,6 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -47,9 +45,6 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.Value
-  ( CurrencySymbol
-  )
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Types.Value (flattenValue)
 import Data.Array as Array
@@ -65,21 +60,19 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo, getCurrencySymbol)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PublicKey
   , SchnorrSecp256k1Signature
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
-import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.ScriptId
@@ -123,37 +116,17 @@ instance ToData ATMSRedeemer where
 
 -- | `committeePlainSchnorrSecp256k1ATMS` grabs the minting policy for the committee plainSchnorrSecp256k1 ATMS
 -- | policy
-committeePlainSchnorrSecp256k1ATMS ∷
-  { committeeCertificateMint ∷ CommitteeCertificateMint
-  , sidechainParams ∷ SidechainParams
-  } →
-  Contract MintingPolicy
-committeePlainSchnorrSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
-  do
-    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-    mkMintingPolicyWithParams CommitteePlainSchnorrSecp256k1ATMSPolicy
-      [ toData committeeCertificateMint, toData versionOracleConfig ]
-
--- | `getCommitteePlainSchnorrSecp256k1ATMSPolicy` grabs the committee plainSchnorrSecp256k1 ATMS currency
--- | symbol and policy
 getCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
-  Contract
-    { committeePlainSchnorrSecp256k1ATMSPolicy ∷ MintingPolicy
-    , committeePlainSchnorrSecp256k1ATMSCurrencySymbol ∷ CurrencySymbol
-    }
-getCommitteePlainSchnorrSecp256k1ATMSPolicy param = do
-  committeePlainSchnorrSecp256k1ATMSPolicy ← committeePlainSchnorrSecp256k1ATMS
-    param
-  committeePlainSchnorrSecp256k1ATMSCurrencySymbol ←
-    getCurrencySymbol CommitteePlainSchnorrSecp256k1ATMSPolicy
-      committeePlainSchnorrSecp256k1ATMSPolicy
-  pure
-    { committeePlainSchnorrSecp256k1ATMSPolicy
-    , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-    }
+  Contract CurrencyInfo
+getCommitteePlainSchnorrSecp256k1ATMSPolicy
+  { committeeCertificateMint, sidechainParams } =
+  do
+    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+    getCurrencyInfo CommitteePlainSchnorrSecp256k1ATMSPolicy
+      [ toData committeeCertificateMint, toData versionOracleConfig ]
 
 -- | `committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams` grabs the `CommitteePlainSchnorrSecp256k1ATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
@@ -208,10 +181,9 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
 
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy
   -------------------------------------------------------------
-  { committeePlainSchnorrSecp256k1ATMSPolicy
-  , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-  } ← getCommitteePlainSchnorrSecp256k1ATMSPolicy
-    { committeeCertificateMint, sidechainParams }
+  committeePlainSchnorrSecp256k1ATMS ←
+    getCommitteePlainSchnorrSecp256k1ATMSPolicy
+      { committeeCertificateMint, sidechainParams }
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
   -- the current committee isn't as expected.
@@ -306,12 +278,14 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         -- should be optimised.
         Array.find
           ( \(cs /\ _ /\ _) → cs ==
-              committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+              committeePlainSchnorrSecp256k1ATMS.currencySymbol
           )
           (flattenValue ownValue)
       pure $
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
+          ( Scripts.mintingPolicyHash
+              committeePlainSchnorrSecp256k1ATMS.mintingPolicy
+          )
           redeemer
           tokenName
           (negate amount)
@@ -327,7 +301,9 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
           <> versioningLookups
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
+          ( Scripts.mintingPolicyHash
+              committeePlainSchnorrSecp256k1ATMS.mintingPolicy
+          )
           redeemer
           message
           one
@@ -392,7 +368,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy
       sidechainParams
   let
@@ -402,13 +378,14 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
         , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
         }
 
-  { committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     getCommitteePlainSchnorrSecp256k1ATMSPolicy
       { committeeCertificateMint, sidechainParams }
 
   -- minting policy for the merkle root token
   -------------------------------------------------------------
 
+  -- JSTOLAREK: fix this
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     sidechainParams
   merkleRootTokenCurrencySymbol ←
@@ -419,10 +396,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol:
-          committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
 
   -- Finding the current committee

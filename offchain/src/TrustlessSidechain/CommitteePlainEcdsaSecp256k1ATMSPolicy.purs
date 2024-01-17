@@ -8,7 +8,6 @@ module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
   , ATMSRedeemer(ATMSMint, ATMSBurn)
   , committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
 
-  , committeePlainEcdsaSecp256k1ATMS
   , getCommitteePlainEcdsaSecp256k1ATMSPolicy
 
   , findUpdateCommitteeHashUtxoFromSidechainParams
@@ -31,7 +30,6 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -44,7 +42,6 @@ import Contract.Transaction
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
-import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Types.Value (flattenValue)
 import Data.Array as Array
@@ -60,13 +57,15 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address
-  ( getCurrencySymbol
+  ( getCurrencyInfo
+  , getCurrencySymbol
   , getOwnWalletAddress
   )
 import TrustlessSidechain.Utils.Crypto
@@ -74,9 +73,6 @@ import TrustlessSidechain.Utils.Crypto
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  )
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.ScriptId
@@ -118,38 +114,19 @@ instance ToData ATMSRedeemer where
   toData (ATMSMint sig) = Constr (BigNum.fromInt 0) [ toData sig ]
   toData ATMSBurn = Constr (BigNum.fromInt 1) []
 
--- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the committee plainEcdsaSecp256k1 ATMS
--- | policy
-committeePlainEcdsaSecp256k1ATMS ∷
-  { committeeCertificateMint ∷ CommitteeCertificateMint
-  , sidechainParams ∷ SidechainParams
-  } →
-  Contract MintingPolicy
-committeePlainEcdsaSecp256k1ATMS { committeeCertificateMint, sidechainParams } =
-  do
-    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
-    mkMintingPolicyWithParams CommitteePlainEcdsaSecp256k1ATMSPolicy
-      [ toData committeeCertificateMint, toData versionOracleConfig ]
-
--- | `getCommitteePlainEcdsaSecp256k1ATMSPolicy` grabs the committee plainEcdsaSecp256k1 ATMS currency
--- | symbol and policy
+-- | `committeePlainEcdsaSecp256k1ATMS` grabs the minting policy for the
+-- | committee plainEcdsaSecp256k1 ATMS policy
 getCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
-  Contract
-    { committeePlainEcdsaSecp256k1ATMSPolicy ∷ MintingPolicy
-    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol ∷ CurrencySymbol
-    }
-getCommitteePlainEcdsaSecp256k1ATMSPolicy param = do
-  committeePlainEcdsaSecp256k1ATMSPolicy ← committeePlainEcdsaSecp256k1ATMS param
-  committeePlainEcdsaSecp256k1ATMSCurrencySymbol ←
-    getCurrencySymbol CommitteePlainEcdsaSecp256k1ATMSPolicy
-      committeePlainEcdsaSecp256k1ATMSPolicy
-  pure
-    { committeePlainEcdsaSecp256k1ATMSPolicy
-    , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-    }
+  Contract CurrencyInfo
+getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  { committeeCertificateMint, sidechainParams } =
+  do
+    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+    getCurrencyInfo CommitteePlainEcdsaSecp256k1ATMSPolicy
+      [ toData committeeCertificateMint, toData versionOracleConfig ]
 
 -- | `committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams` grabs the `CommitteePlainEcdsaSecp256k1ATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
@@ -200,9 +177,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
 
   -- Grabbing CommitteePlainEcdsaSecp256k1ATMSPolicy
   -------------------------------------------------------------
-  { committeePlainEcdsaSecp256k1ATMSPolicy
-  , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-  } ← getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  committeePlainEcdsaSecp256k1ATMS ← getCommitteePlainEcdsaSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
   -- Grabbing the current committee as stored onchain / fail offchain early if
@@ -297,11 +272,15 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
         -- Filtering the entire list is probably suboptimal. If possible this
         -- should be optimised.
         Array.find
-          (\(cs /\ _ /\ _) → cs == committeePlainEcdsaSecp256k1ATMSCurrencySymbol)
+          ( \(cs /\ _ /\ _) → cs ==
+              committeePlainEcdsaSecp256k1ATMS.currencySymbol
+          )
           (flattenValue ownValue)
       pure $
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
+          ( Scripts.mintingPolicyHash
+              committeePlainEcdsaSecp256k1ATMS.mintingPolicy
+          )
           redeemer
           tokenName
           (negate amount)
@@ -321,7 +300,9 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
           <> ScriptLookups.unspentOutputs ownUtxos
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
+          ( Scripts.mintingPolicyHash
+              committeePlainEcdsaSecp256k1ATMS.mintingPolicy
+          )
           redeemer
           message
           one
@@ -383,7 +364,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy
       sidechainParams
   let
@@ -393,12 +374,13 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
         , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
         }
 
-  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     getCommitteePlainEcdsaSecp256k1ATMSPolicy
       { committeeCertificateMint, sidechainParams }
 
   -- Getting the validator / minting policy for the merkle root token
   -------------------------------------------------------------
+  -- JSTOLAREK: fix this
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     sidechainParams
   merkleRootTokenCurrencySymbol ←
@@ -409,10 +391,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeOracleCurrencySymbol
       , merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol:
-          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+      , committeeCertificateVerificationCurrencySymbol
       }
 
   -- Finding the current committee

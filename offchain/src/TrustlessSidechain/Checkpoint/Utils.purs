@@ -1,6 +1,5 @@
 module TrustlessSidechain.Checkpoint.Utils
-  ( checkpointPolicy
-  , checkpointValidator
+  ( checkpointValidator
   , initCheckpointMintTn
   , checkpointAssetClass
   , serialiseCheckpointMessage

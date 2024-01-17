@@ -120,7 +120,7 @@ updateCommitteeHash
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
@@ -208,12 +208,13 @@ updateCommitteeHashLookupsAndConstraints
   -- Getting the minting policy / currency symbol / token name for update
   -- committee hash
   -------------------------------------------------------------
-  { committeeOracleCurrencySymbol
+  { currencySymbol: committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting the minting policy for the merkle root token
   -------------------------------------------------------------
 
+  -- JSTOLAREK: fixme
   merkleRootTokenMintingPolicy ← MerkleRoot.Utils.merkleRootTokenMintingPolicy
     sidechainParams
   merkleRootTokenCurrencySymbol ← getCurrencySymbol MerkleRootTokenPolicy
@@ -224,7 +225,7 @@ updateCommitteeHashLookupsAndConstraints
   let
     uch = UpdateCommitteeHash
       { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
+      , committeeOracleCurrencySymbol
       , committeeCertificateVerificationCurrencySymbol
       , merkleRootTokenCurrencySymbol
       }

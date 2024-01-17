@@ -32,19 +32,18 @@ import TrustlessSidechain.Checkpoint.Types
   , InitCheckpointMint(InitCheckpointMint)
   ) as ExportTypes
 import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointPolicy
-  , checkpointValidator
-  , getCheckpointAssetClass
-  , getCheckpointPolicy
-  , initCheckpointMintTn
-  , serialiseCheckpointMessage
-  ) as ExportUtils
-import TrustlessSidechain.Checkpoint.Utils
   ( checkpointValidator
   , findCheckpointUtxo
   , getCheckpointAssetClass
   , serialiseCheckpointMessage
   )
+import TrustlessSidechain.Checkpoint.Utils
+  ( checkpointValidator
+  , getCheckpointAssetClass
+  , getCheckpointPolicy
+  , initCheckpointMintTn
+  , serialiseCheckpointMessage
+  ) as ExportUtils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
@@ -76,7 +75,7 @@ saveCheckpoint
   ) = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   let
@@ -87,7 +86,7 @@ saveCheckpoint
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { committeeCertificateVerificationCurrencySymbol } ←
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
     CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
@@ -191,7 +190,7 @@ saveCheckpointLookupsAndConstraints
   -------------------------------------------------------------
   checkpointAssetClass ← getCheckpointAssetClass sidechainParams
 
-  { committeeOracleCurrencySymbol } ←
+  { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
   -- Getting checkpoint validator

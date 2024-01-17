@@ -55,13 +55,13 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
     EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
       sidechainParams
 
-  { committeePlainEcdsaSecp256k1ATMSPolicy
-  , committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+  { mintingPolicy: getCommitteePlainEcdsaSecp256k1ATMSPolicy
+  , currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol
   } ← EcdsaATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
-  { committeePlainSchnorrSecp256k1ATMSPolicy
-  , committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+  { mintingPolicy: getCommitteePlainSchnorrSecp256k1ATMSPolicy
+  , currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol
   } ← SchnorrATMSPolicy.getCommitteePlainSchnorrSecp256k1ATMSPolicy
     { committeeCertificateMint, sidechainParams }
 
@@ -103,7 +103,9 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
       [ { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                (Scripts.mintingPolicyHash committeePlainEcdsaSecp256k1ATMSPolicy)
+                ( Scripts.mintingPolicyHash
+                    getCommitteePlainEcdsaSecp256k1ATMSPolicy
+                )
                 (Redeemer $ toData EcdsaATMSPolicy.ATMSBurn)
                 tokenName
                 (-amount)
@@ -116,7 +118,9 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
       , { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                (Scripts.mintingPolicyHash committeePlainSchnorrSecp256k1ATMSPolicy)
+                ( Scripts.mintingPolicyHash
+                    getCommitteePlainSchnorrSecp256k1ATMSPolicy
+                )
                 (Redeemer $ toData SchnorrATMSPolicy.ATMSBurn)
                 tokenName
                 (-amount)

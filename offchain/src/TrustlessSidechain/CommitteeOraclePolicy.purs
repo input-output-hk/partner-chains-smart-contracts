@@ -14,17 +14,12 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (MintingPolicy)
 import Contract.Transaction (TransactionInput)
-import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Types (AssetClass, assetClass)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
-import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  )
+import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
+import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeOraclePolicy)
   )
@@ -42,18 +37,16 @@ instance ToData InitCommitteeHashMint where
   toData (InitCommitteeHashMint { icTxOutRef }) =
     toData icTxOutRef
 
-committeeOraclePolicy ∷ InitCommitteeHashMint → Contract MintingPolicy
+committeeOraclePolicy ∷ InitCommitteeHashMint → Contract CurrencyInfo
 committeeOraclePolicy ichm =
-  mkMintingPolicyWithParams CommitteeOraclePolicy [ toData ichm ]
+  getCurrencyInfo CommitteeOraclePolicy [ toData ichm ]
 
 -- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name
-{-# INLINEABLE committeeOracleAssetClass #-}
 committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
 committeeOracleAssetClass ichm = do
-  cp ← committeeOraclePolicy ichm
-  curSym ← getCurrencySymbol CommitteeOraclePolicy cp
-  pure $ assetClass curSym committeeOracleTn
+  { currencySymbol } ← committeeOraclePolicy ichm
+  pure $ assetClass currencySymbol committeeOracleTn
 
 -- | `committeeOracleTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
@@ -63,22 +56,9 @@ committeeOracleTn ∷ Value.TokenName
 committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
--- | `getCommitteeOraclePolicy` grabs the committee oracle policy, currency symbol and token name
--- | (potentially throwing an error in the case that it is not possible).
+-- | Wrapper around `committeeOraclePolicy` that accepts `SidechainParams`.
 getCommitteeOraclePolicy ∷
   SidechainParams →
-  Contract
-    { committeeOraclePolicy ∷ MintingPolicy
-    , committeeOracleCurrencySymbol ∷ CurrencySymbol
-    , committeeOracleTokenName ∷ TokenName
-    }
+  Contract CurrencyInfo
 getCommitteeOraclePolicy (SidechainParams sp) = do
-  policy ← committeeOraclePolicy $
-    InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
-  committeeOracleCurrencySymbol ← getCurrencySymbol CommitteeOraclePolicy policy
-  let committeeOracleTokenName = committeeOracleTn
-  pure
-    { committeeOraclePolicy: policy
-    , committeeOracleCurrencySymbol
-    , committeeOracleTokenName
-    }
+  committeeOraclePolicy $ InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }

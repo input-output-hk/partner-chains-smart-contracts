@@ -86,7 +86,7 @@ testScenarioSuccess =
           CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
             sidechainParams
 
-        { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+        { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
             { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
             , sidechainParams
@@ -164,7 +164,7 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
     CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
       sidechainParams
 
-  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+  { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
       { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
       , sidechainParams

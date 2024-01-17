@@ -99,11 +99,10 @@ generateUchmSignatures
   -- Creating the update committee hash validator (since we want to pay the
   -- committee oracle back to the same address)
   ---------------------------
-  { committeeOracleCurrencySymbol
+  { currencySymbol: committeeOracleCurrencySymbol
   } ← CommitteeOraclePolicy.getCommitteeOraclePolicy sidechainParams
 
-  { committeePlainEcdsaSecp256k1ATMSCurrencySymbol:
-      committeeCertificateVerificationCurrencySymbol
+  { currencySymbol: committeeCertificateVerificationCurrencySymbol
   } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.getCommitteePlainEcdsaSecp256k1ATMSPolicy
       { committeeCertificateMint: CommitteeCertificateMint
