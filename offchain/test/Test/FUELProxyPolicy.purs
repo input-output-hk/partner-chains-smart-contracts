@@ -53,6 +53,7 @@ tests ∷ WrappedTests
 tests = plutipGroup "Claiming and burning FUEL tokens using proxy mechanism" $
   do
     testScenarioSuccess
+    testScenarioSuccess2
     testScenarioFailure
 
 -- | Mint and burn multiuple times, updating minting and burning strategies
@@ -180,6 +181,116 @@ testScenarioSuccess =
               }
           >>=
             balanceSignAndSubmit "Test: burn fuel via v2 proxy"
+
+testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 =
+  Mote.Monad.test "Minting FUELProxy, and then minting again"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
+    $ \alice → Wallet.withKeyWallet alice do
+
+        pkh ← getOwnPaymentPubKeyHash
+        ownRecipient ←
+          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        genesisUtxo ← getOwnTransactionInput
+        let
+          keyCount = 25
+        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initScParams = InitSidechainParams
+            { initChainId: BigInt.fromInt 1
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: toData $ aggregateKeys
+                $ map unwrap initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                pkh
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            }
+
+        { sidechainParams } ← initSidechain initScParams 1
+        let
+          amount = BigInt.fromInt 5
+          amount2 = BigInt.fromInt 10
+          recipient = pubKeyHashAddress pkh Nothing
+          index = BigInt.fromInt 0
+          index2 = BigInt.fromInt 1
+          previousMerkleRoot = Nothing
+          ownEntry =
+            MerkleTreeEntry
+              { index
+              , amount
+              , previousMerkleRoot
+              , recipient: ownRecipient
+              }
+          ownEntry2 =
+            MerkleTreeEntry
+              { index: index2
+              , amount: amount2
+              , previousMerkleRoot
+              , recipient: ownRecipient
+              }
+
+          ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
+          ownEntryBytes2 = unwrap $ PlutusData.serializeData ownEntry2
+
+          merkleTree =
+            unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
+              [ ownEntryBytes, ownEntryBytes2 ]
+
+          merkleProof = unsafePartial $ fromJust $ MerkleTree.lookupMp
+            ownEntryBytes
+            merkleTree
+          merkleProof2 = unsafePartial $ fromJust $ MerkleTree.lookupMp
+            ownEntryBytes2
+            merkleTree
+        void $ Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries: [ ownEntry, ownEntry2 ]
+          , currentCommitteePrvKeys: initCommitteePrvKeys
+          , previousMerkleRoot: Nothing
+          }
+
+        let
+          fuelMintingParams = FuelMintParamsV1 $
+            Mint.V1.FuelMintParams
+              { amount
+              , recipient
+              , sidechainParams
+              , merkleProof
+              , index
+              , previousMerkleRoot
+              , dsUtxo: Nothing
+              }
+          fuelMintingParams2 = FuelMintParamsV1 $
+            Mint.V1.FuelMintParams
+              { amount: amount2
+              , recipient
+              , sidechainParams
+              , merkleProof: merkleProof2
+              , index: index2
+              , previousMerkleRoot
+              , dsUtxo: Nothing
+              }
+
+        -- Mint 5 fuel tokens using FUEL policy v1
+        void
+          $ mkFuelProxyMintLookupsAndConstraints sidechainParams
+              fuelMintingParams
+          >>=
+            balanceSignAndSubmit "Test: mint fuel via v1 proxy"
+
+        void
+          $ mkFuelProxyMintLookupsAndConstraints sidechainParams
+              fuelMintingParams2
+          >>=
+            balanceSignAndSubmit "Test: mint fuel via v1 proxy"
 
 -- | Mint using version 1, update to version 2, burn using version 2
 -- | this should fail

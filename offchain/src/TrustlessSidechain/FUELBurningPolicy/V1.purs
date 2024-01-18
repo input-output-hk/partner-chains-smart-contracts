@@ -19,14 +19,11 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.TxConstraints as TxConstraints
 import Contract.Value
   ( CurrencySymbol
   , TokenName
   )
 import Contract.Value as Value
-import Ctl.Internal.Plutus.Types.Value (flattenValue)
-import Data.Array (filter)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
@@ -36,7 +33,6 @@ import TrustlessSidechain.Utils.Error (InternalError(InvalidScript))
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
-import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
   , VersionOracle(VersionOracle)
@@ -89,30 +85,8 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
     ( VersionOracle
         { version: BigInt.fromInt 1, scriptId: FUELBurningPolicy }
     )
-  { fuelBurningPolicy: fuelBurningPolicy'
-  , fuelBurningCurrencySymbol
-  } ← getFuelBurningPolicy
+  { fuelBurningPolicy: fuelBurningPolicy' } ← getFuelBurningPolicy
     sidechainParams
-
-  ownValue ← getOwnUTxOsTotalValue
-  let
-    burnWasteTokenConstraints = fold $ do
-      (_ /\ tokenName /\ amount') ←
-        -- Filtering the entire list is probably suboptimal. If possible this
-        -- should be optimised.
-        filter
-          (\(cs /\ _ /\ _) → cs == fuelBurningCurrencySymbol)
-          (flattenValue ownValue)
-      pure $
-        TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          (Scripts.mintingPolicyHash fuelBurningPolicy')
-          (Redeemer $ toData unit)
-          tokenName
-          (negate amount')
-          ( RefInput $ mkTxUnspentOut
-              scriptRefTxInput
-              scriptRefTxOutput
-          )
 
   pure
     { lookups: mempty
@@ -123,5 +97,4 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
           fuelTokenName
           amount
           (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
-          <> burnWasteTokenConstraints
     }
