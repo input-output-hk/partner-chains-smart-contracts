@@ -39,8 +39,12 @@ import Contract.TxConstraints
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
+import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import TrustlessSidechain.Error
+  ( OffchainError(GenericInternalError, BuildTxError, BalanceTxError)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
@@ -104,9 +108,12 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
     balanceTxConstraints =
       BalanceTxConstraints.mustNotSpendUtxoWithOutRef sp.genesisUtxo
 
-  ubTx ← liftedE (Lookups.mkUnbalancedTx lookups constraints)
+  ubTx ← liftedE
+    ( lmap BuildTxError <$>
+        Lookups.mkUnbalancedTx lookups constraints
+    )
   bsTx ← liftedE
-    (balanceTxWithConstraints ubTx balanceTxConstraints)
+    (lmap BalanceTxError <$> balanceTxWithConstraints ubTx balanceTxConstraints)
   signedTx ← signTransaction bsTx
   versioningScriptRefUtxoTxId ← submit signedTx
   logInfo' $ "Submitted create script ref utxo: "
@@ -129,7 +136,10 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   txInput /\ txOutput ←
     liftContractM
-      "Could not find unspent output with correct script ref locked at script cache address"
+      ( show $ GenericInternalError
+          $ "Could not find unspent output with correct "
+          <> "script ref locked at script cache address"
+      )
       $ find correctOutput (Map.toUnfoldable scriptCacheUtxos ∷ Array _)
 
   pure (txInput /\ txOutput)

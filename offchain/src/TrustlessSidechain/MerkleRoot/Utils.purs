@@ -20,14 +20,14 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
+import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
 import Contract.Value as Value
+import TrustlessSidechain.Error (OffchainError(InvalidData))
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
   )
@@ -107,14 +107,14 @@ findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
   case maybeLastMerkleRoot of
     Nothing → pure Nothing
     Just lastMerkleRoot' → do
-      lastMerkleRootTokenName ← Monad.liftContractM
-        "error 'saveRoot': invalid lastMerkleRoot token name"
+      lastMerkleRootTokenName ← liftContractM
+        (show $ InvalidData "Invalid lastMerkleRoot token name")
         (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
       lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName sp
       lkup' ←
-        Monad.liftContractM
-          "error 'findPreviousMerkleRootTokenUtxo': failed to find last merkle root"
-          $ lkup
+        liftContractM
+          (show $ InvalidData "failed to find last merkle root")
+          lkup
       pure $ Just lkup'
 
 -- | `serialiseMrimHash` is an alias for (ignoring the `Maybe`)

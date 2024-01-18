@@ -23,6 +23,7 @@ import Contract.Credential
   , StakingCredential(StakingHash)
   )
 import Contract.Hashing (blake2b256Hash)
+import Contract.Log (logWarn')
 import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -66,7 +67,12 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidData, NotFoundUtxo)
+  ( OffchainError
+      ( InvalidData
+      , NotFoundUtxo
+      , InvalidAddress
+      , GenericInternalError
+      )
   )
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
@@ -279,7 +285,9 @@ mkMintFuelLookupAndConstraints
 
     bech32BytesRecipient ←
       liftContractM
-        (show $ InvalidData "Cannot convert address to bech 32 bytes")
+        ( show $ InvalidAddress "Cannot convert address to bech 32 bytes"
+            recipient
+        )
         $ bech32BytesFromAddress recipient
     let
       merkleTreeEntry =
@@ -333,12 +341,16 @@ mkMintFuelLookupAndConstraints
 
     recipientPkh ←
       liftContractM
-        ( show $ InvalidData "Couldn't convert recipient to public key hash"
+        ( show $ InvalidAddress "Couldn't convert recipient to public key hash: "
+            recipient
         )
         $ PaymentPubKeyHash
         <$> toPubKeyHash recipient
 
     let recipientSt = toStakePubKeyHash recipient
+
+    when (isNothing recipientSt) $
+      logWarn' "Recipient address does not contain staking key."
 
     let
       node = DistributedSet.mkNode (getTokenName tnNode) datNode
@@ -368,9 +380,14 @@ mkMintFuelLookupAndConstraints
 
     let
       mkNodeConstraints n = do
-        nTn ← liftContractM "Couldn't convert node token name"
-          $ mkTokenName
-          $ (unwrap n).nKey
+        nTn ←
+          liftContractM
+            ( show $ GenericInternalError $ "Couldn't convert node key to token "
+                <> "name.  The key is "
+                <> show (unwrap n).nKey
+            )
+            $ mkTokenName
+            $ (unwrap n).nKey
 
         let val = Value.singleton dsKeyPolicyCurrencySymbol nTn (BigInt.fromInt 1)
         if getTokenName nTn == (unwrap node).nKey then

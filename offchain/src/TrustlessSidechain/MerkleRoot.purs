@@ -131,9 +131,11 @@ saveRoot
   -- Grab the lookups + constraints for the committee certificate
   -- verification
   ------------------------------------
-  scMsg ← liftContractM "failed serializing the MerkleRootInsertionMessage"
-    $
-      serialiseMrimHash merkleRootInsertionMessage
+  scMsg ←
+    liftContractM
+      (show $ InvalidData "failed serializing the MerkleRootInsertionMessage")
+      $
+        serialiseMrimHash merkleRootInsertionMessage
 
   atmsLookupsAndConstraints ←
     CommitteeATMSSchemes.atmsSchemeLookupsAndConstraints sidechainParams

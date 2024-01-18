@@ -61,6 +61,12 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.Error
+  ( OffchainError
+      ( VerificationError
+      , NotImplemented
+      )
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -157,13 +163,20 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
       $
         \(pk /\ mSig) → do
           pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
-            Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
+            Nothing → Left
+              ( show $ VerificationError $ "invalid ECDSA SECP256k1 public key: "
+                  <> show pk
+              )
             Just pk' → Right pk'
 
           sig' ← case mSig of
             Nothing → Right Nothing
             Just sig → case Utils.Crypto.ecdsaSecp256k1Signature sig of
-              Nothing → Left $ "invalid ECDSA SECP256k1 signature: " <> show sig
+              Nothing → Left
+                ( show $ VerificationError
+                    $ "invalid ECDSA SECP256k1 signature: "
+                    <> show sig
+                )
               Just sig' → Right $ Just sig'
 
           pure $ pk' /\ sig'
@@ -173,20 +186,28 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
       $
         \(pk /\ mSig) → do
           pk' ← case SchnorrSecp256k1.parsePublicKey pk of
-            Nothing → Left $ "invalid Schnorr SECP256k1 public key: " <> show pk
+            Nothing → Left
+              ( show $ VerificationError
+                  $ "invalid Schnorr SECP256k1 public key: "
+                  <> show pk
+              )
             Just pk' → Right pk'
 
           sig' ← case mSig of
             Nothing → Right Nothing
             Just sig → case SchnorrSecp256k1.parseSignature sig of
-              Nothing → Left $ "invalid Schnorr SECP256k1 signature: " <> show sig
+              Nothing → Left
+                ( show $ VerificationError
+                    $ "invalid Schnorr SECP256k1 signature: "
+                    <> show sig
+                )
               Just sig' → Right $ Just sig'
 
           pure $ pk' /\ sig'
 
-    ATMSDummy → Left "ATMS dummy not implemented yet"
-    ATMSPoK → Left "ATMS PoK not implemented yet"
-    ATMSMultisignature → Left "ATMS multisignature not implemented yet"
+    ATMSDummy → Left (show $ NotImplemented "ATMS dummy")
+    ATMSPoK → Left (show $ NotImplemented "ATMS PoK")
+    ATMSMultisignature → Left (show $ NotImplemented "ATMS multisignature")
 
 -- | `aggregateATMSPublicKeys` aggregates the public keys of an ATMS key for
 -- | the given `ATMSKind`
@@ -205,7 +226,11 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
         $
           \pk → do
             pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
-              Nothing → Left $ "invalid ECDSA SECP256k1 public key: " <> show pk
+              Nothing → Left
+                ( show $ VerificationError
+                    $ "invalid ECDSA SECP256k1 public key: "
+                    <> show pk
+                )
               Just pk' → Right pk'
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
@@ -214,9 +239,13 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
         $
           \pk → do
             pk' ← case SchnorrSecp256k1.parsePublicKey pk of
-              Nothing → Left $ "invalid Schnorr SECP256k1 public key: " <> show pk
+              Nothing → Left
+                ( show $ VerificationError
+                    $ "invalid Schnorr SECP256k1 public key: "
+                    <> show pk
+                )
               Just pk' → Right pk'
             pure $ pk'
-    ATMSDummy → Left "ATMS dummy not implemented yet"
-    ATMSPoK → Left "ATMS PoK not implemented yet"
-    ATMSMultisignature → Left "ATMS multisignature not implemented yet"
+    ATMSDummy → Left (show $ NotImplemented "ATMS dummy")
+    ATMSPoK → Left (show $ NotImplemented "ATMS PoK")
+    ATMSMultisignature → Left (show $ NotImplemented "ATMS multisignature")

@@ -4,6 +4,7 @@ module TrustlessSidechain.Error
 
 import Contract.Prelude
 
+import Contract.Address (Address)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts (ApplyArgsError, MintingPolicy)
 import Contract.Transaction as Transaction
@@ -18,7 +19,7 @@ data OffchainError
   -- | Own address cannot be found
   | NotFoundOwnAddress
   -- | Invalid script address
-  | InvalidAddress String
+  | InvalidAddress String Address
   -- | ScriptId not found in rawScriptsMap
   | InvalidScriptId ScriptId
   -- | Cannot apply arguments to a script
@@ -47,6 +48,11 @@ data OffchainError
   -- | A special case of not finding an input UTxO, used when genesis UTxO
   -- | cannot be found.
   | NoGenesisUTxO
+  -- | Anything that involves complicated internal logic, happens only once or
+  -- | twice in the code, and isn't worth having a dedicated constructor
+  | GenericInternalError String
+  -- | Feature that has not yet been implemented
+  | NotImplemented String
 
   -- Below are the impossible errors, i.e. things that should never happen, but
   -- CTL forces us to handle these cases anyway.

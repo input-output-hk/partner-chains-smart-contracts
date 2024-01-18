@@ -60,7 +60,7 @@ import TrustlessSidechain.Error
       ( NotFoundUtxo
       , ConversionError
       , InvalidData
-      , InvalidAddress
+      , GenericInternalError
       , DsInsertError
       )
   )
@@ -486,8 +486,13 @@ findDsOutput ds tn txInput = do
     unless
       (scriptAddr == (unwrap txOut).address)
       $ throwContractError
-      $ InvalidAddress
-          "provided transaction is not at distributed set node address"
+      $ GenericInternalError
+      $ "Provided transaction is not at distributed set node address. "
+      <> "It should sent output to address "
+      <> show (unwrap txOut).address
+      <> " but sends to "
+      <> show scriptAddr
+      <> " instead."
 
     keyNodeTn ← liftContractM
       ( show

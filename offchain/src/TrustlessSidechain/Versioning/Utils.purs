@@ -55,6 +55,7 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Effect.Exception (error)
 import Partial.Unsafe as Unsafe
+import TrustlessSidechain.Error (OffchainError(InvalidData))
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -434,7 +435,10 @@ getVersionedScriptRefUtxo sp versionOracle = do
 
   txInput /\ txOutput ←
     liftContractM
-      ( "Could not find unspent output with correct script ref locked at version oracle validator address. Looking for: "
+      ( show
+          $ InvalidData
+          $ "Could not find unspent output with correct script ref locked at "
+          <> "version oracle validator address. Looking for: "
           <> show versionOracle
           <> ". Available are: "
           <> show

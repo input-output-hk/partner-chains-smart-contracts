@@ -72,6 +72,7 @@ import TrustlessSidechain.Error
       , ConversionError
       , NotFoundOwnAddress
       , InvalidCurrencySymbol
+      , InvalidAddress
       )
   )
 import TrustlessSidechain.Types (CurrencyInfo)
@@ -159,7 +160,8 @@ getOwnWalletAddress =
 -- | represent a script.
 toValidatorHash ∷ Address → Contract ValidatorHash
 toValidatorHash addr =
-  liftContractM "Cannot convert Address to ValidatorHash"
+  liftContractM
+    (show $ InvalidAddress "Cannot convert Address to ValidatorHash" addr)
     (Address.toValidatorHash addr)
 
 -- | Convert ValidatorHash to Address in the current network, raising an error
