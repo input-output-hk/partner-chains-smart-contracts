@@ -149,6 +149,12 @@ mkRemoveDParameterLookupsAndConstraints sidechainParams = do
           )
       $ Map.values dParameterUTxOs
 
+  when (amountToBurn == zero)
+    $ throwContractError
+    $ show
+    $ InternalError
+    $ NotFoundUtxo "Unable to remove non-existent d-param"
+
   { lookups: governanceLookups, constraints: governanceConstraints } ←
     Governance.governanceAuthorityLookupsAndConstraints
       (unwrap sidechainParams).governanceAuthority
