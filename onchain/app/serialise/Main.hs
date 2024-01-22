@@ -31,6 +31,7 @@ import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
+import TrustlessSidechain.GenesisUtxoCache qualified as GenesisUtxoCache
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
@@ -304,6 +305,7 @@ main =
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
+          , ("GenesisUtxoCache", GenesisUtxoCache.serialisableGenesisUtxoCache)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)
           , -- Versioning System
             ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)

@@ -55,6 +55,7 @@ data ScriptId
   | PermissionedCandidatesPolicy
   | PermissionedCandidatesValidator
   | ScriptCache
+  | GenesisUTxOCache
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -113,6 +114,8 @@ instance FromData ScriptId where
     Just PermissionedCandidatesValidator
   fromData (Integer i) | i == BigInt.fromInt 26 =
     Just ScriptCache
+  fromData (Integer i) | i == BigInt.fromInt 27 =
+    Just GenesisUTxOCache
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -141,3 +144,4 @@ instance ToData ScriptId where
   toData PermissionedCandidatesPolicy = Integer (BigInt.fromInt 24)
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
+  toData GenesisUTxOCache = Integer (BigInt.fromInt 27)

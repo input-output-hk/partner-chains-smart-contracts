@@ -90,6 +90,7 @@ library
     TrustlessSidechain.DParameter
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
+    TrustlessSidechain.GenesisUtxoCache
     TrustlessSidechain.Governance
     TrustlessSidechain.MerkleRootTokenMintingPolicy
     TrustlessSidechain.MerkleRootTokenValidator
