@@ -487,7 +487,7 @@ findDsOutput ds tn txInput = do
       (scriptAddr == (unwrap txOut).address)
       $ throwContractError
       $ GenericInternalError
-      $ "Provided transaction is not at distributed set node address. "
+      $ "Provided Distributed Set UTxO is not at the correct address. "
       <> "It should sent output to address "
       <> show (unwrap txOut).address
       <> " but sends to "
