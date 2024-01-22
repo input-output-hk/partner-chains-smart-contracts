@@ -69,6 +69,7 @@ data Options
     UtilsOptions
       { utilsOptions ∷ UtilsEndpoint
       }
+  | CLIVersion
 
 -- | Sidechain configuration file including common parameters.
 -- Any parameter can be set `null` requiring a CLI argument instead

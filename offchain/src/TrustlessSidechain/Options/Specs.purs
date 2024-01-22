@@ -92,7 +92,11 @@ import TrustlessSidechain.Options.Types
   ( CandidatePermissionTokenMintInit
   , Config
   , InputArgOrFile(InputFromArg, InputFromFile)
-  , Options(TxOptions, UtilsOptions)
+  , Options
+      ( TxOptions
+      , UtilsOptions
+      , CLIVersion
+      )
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( ClaimActV1
@@ -248,6 +252,12 @@ optSpec maybeConfig =
     , command "init-token-status"
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
+        )
+    , command "cli-version"
+        ( info (pure CLIVersion)
+            ( progDesc
+                "Display semantic version of the CLI and its git hash"
+            )
         )
     ]
 

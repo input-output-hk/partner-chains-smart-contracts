@@ -16,6 +16,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
 import Run (EFFECT, Run)
+import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -82,6 +83,7 @@ import TrustlessSidechain.Options.Types
   ( Options
       ( TxOptions
       , UtilsOptions
+      , CLIVersion
       )
   , SidechainEndpointParams
   , TxEndpoint
@@ -179,6 +181,8 @@ main = do
     UtilsOptions opts → do
       endpointResp ← runUtilsEndpoint opts.utilsOptions
       printEndpointResp endpointResp
+
+    CLIVersion → log versionString
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

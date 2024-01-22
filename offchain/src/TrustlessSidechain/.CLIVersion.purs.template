@@ -1,0 +1,12 @@
+module TrustlessSidechain.CLIVersion (versionString) where
+
+import Prelude
+
+semVer ∷ String
+semVer =
+
+gitHash ∷ String
+gitHash =
+
+versionString ∷ String
+versionString = "Version: " <> semVer <> ", " <> gitHash
