@@ -305,7 +305,7 @@ main =
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
-          , ("GenesisUtxoCache", GenesisUtxoCache.serialisableGenesisUtxoCache)
+          , ("GenesisUTxOCache", GenesisUtxoCache.serialisableGenesisUtxoCache)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)
           , -- Versioning System
             ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)

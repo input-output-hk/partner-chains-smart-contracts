@@ -102,6 +102,7 @@ import TrustlessSidechain.Options.Types
       , ClaimActV2
       , BurnActV2
       , GetAddrs
+      , PrepareGenesisUTxO
       , CandidiatePermissionTokenAct
       , Init
       , InitTokens
@@ -151,7 +152,11 @@ options maybeConfig = info (helper <*> optSpec maybeConfig)
 optSpec ∷ Maybe Config → Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
-    [ command "init-tokens-mint"
+    [ command "prepare-genesis-utxo"
+        ( info (withCommonOpts maybeConfig prepareGenesisUTxOSpec)
+            (progDesc "Create a small genesis UTxO and block it from spending")
+        )
+    , command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensSpec)
             (progDesc "Pre-mint tokens without setting the initial committee")
         )
@@ -1021,6 +1026,9 @@ parseVersion =
         , help "Protocol version"
         ]
     )
+
+prepareGenesisUTxOSpec ∷ Parser TxEndpoint
+prepareGenesisUTxOSpec = pure PrepareGenesisUTxO
 
 -- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint
 -- candidate permission tokens), and parsers for the initial committee

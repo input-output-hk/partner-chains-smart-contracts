@@ -198,6 +198,7 @@ data TxEndpoint
       }
   | GetAddrs
       SidechainAddressesExtra
+  | PrepareGenesisUTxO -- No need to store chainId, since it's in SidechainParams
   | InitTokens
       { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit

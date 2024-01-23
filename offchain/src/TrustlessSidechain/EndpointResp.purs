@@ -60,6 +60,10 @@ data EndpointResp
       { saveRootTransactionId ∷ ByteArray
       , committeeHashTransactionId ∷ ByteArray
       }
+  | PrepareGenesisUTxOResp
+      { transactionId ∷ ByteArray
+      , outputIndex ∷ Int
+      }
   | InitTokensResp
       { transactionId ∷ ByteArray
       , versioningTransactionIds ∷ Array ByteArray
@@ -221,6 +225,14 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (byteArrayToHex saveRootTransactionId)
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
+        ]
+    PrepareGenesisUTxOResp { transactionId, outputIndex } →
+      J.fromObject $ Object.fromFoldable
+        [ "genesisUtxo" /\
+            J.fromString
+              ( byteArrayToHex transactionId <> "#"
+                  <> show outputIndex
+              )
         ]
     InitTokensResp
       { transactionId

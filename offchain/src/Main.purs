@@ -33,6 +33,7 @@ import TrustlessSidechain.EndpointResp
       , BurnActRespV1
       , ClaimActRespV2
       , BurnActRespV2
+      , PrepareGenesisUTxOResp
       , CommitteeCandidateRegResp
       , CandidatePermissionTokenResp
       , CommitteeCandidateDeregResp
@@ -68,6 +69,7 @@ import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
 import TrustlessSidechain.GarbageCollector as GarbageCollector
+import TrustlessSidechain.GenesisUTxOCache (prepareGenesisUTxO)
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
@@ -98,6 +100,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeCandidateDereg
       , CommitteeHash
       , SaveRoot
+      , PrepareGenesisUTxO
       , InitTokens
       , Init
       , CommitteeHandover
@@ -376,6 +379,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> SaveRootResp
+
+      PrepareGenesisUTxO → do
+        { transactionId, outputIndex } ←
+          prepareGenesisUTxO (unwrap scParams).chainId
+        pure $ PrepareGenesisUTxOResp
+          { transactionId: unwrap transactionId
+          , outputIndex
+          }
 
       InitTokens { initCandidatePermissionTokenMintInfo, genesisHash, version } →
         do
