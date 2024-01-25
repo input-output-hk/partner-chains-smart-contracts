@@ -16,12 +16,14 @@ import Contract.Prim.ByteArray
   , hexToByteArray
   , hexToByteArrayUnsafe
   )
-import Contract.Transaction (TransactionHash(TransactionHash))
+import Contract.Transaction
+  ( TransactionHash(TransactionHash)
+  , TransactionInput(TransactionInput)
+  )
 import Ctl.Internal.Serialization.Hash
   ( ed25519KeyHashFromBytes
   , ed25519KeyHashToBytes
   )
-import Ctl.Internal.Types.Transaction (TransactionInput(TransactionInput))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Codec.Argonaut as CA

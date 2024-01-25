@@ -22,7 +22,7 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Contract.Value (flattenValue)
 import Data.Array (filter)
 import Data.BigInt as BigInt
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy

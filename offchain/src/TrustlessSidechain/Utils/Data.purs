@@ -24,9 +24,13 @@ module TrustlessSidechain.Utils.Data
 
 import Contract.Prelude
 
-import Ctl.Internal.FromData (class FromData, fromData)
-import Ctl.Internal.ToData (class ToData, toData)
-import Ctl.Internal.Types.PlutusData (PlutusData(List))
+import Contract.PlutusData
+  ( class FromData
+  , class ToData
+  , PlutusData(List)
+  , fromData
+  , toData
+  )
 
 productToData2 ∷
   ∀ (a ∷ Type) (b ∷ Type).

@@ -41,10 +41,14 @@ import Contract.Prelude
 
 import Contract.Address (Address, PubKeyHash(PubKeyHash))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
+import Contract.Credential
+  ( Credential(ScriptCredential)
+  )
 import Contract.PlutusData (class FromData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.Scripts (ValidatorHash(ValidatorHash))
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -52,15 +56,11 @@ import Contract.Transaction
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
-import Ctl.Internal.Plutus.Types.Credential
-  ( Credential(ScriptCredential)
-  )
 import Ctl.Internal.Serialization.Address as Serialization.Address
 import Ctl.Internal.Serialization.Hash
   ( ed25519KeyHashFromBytes
   , scriptHashFromBytes
   )
-import Ctl.Internal.Types.Scripts (ValidatorHash(ValidatorHash))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Either as Either

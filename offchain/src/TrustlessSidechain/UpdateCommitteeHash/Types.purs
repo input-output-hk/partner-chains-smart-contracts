@@ -18,8 +18,8 @@ import Contract.PlutusData
   , fromData
   , toData
   )
+import Contract.Scripts (ValidatorHash)
 import Contract.Value (CurrencySymbol)
-import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)

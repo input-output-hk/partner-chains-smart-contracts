@@ -11,6 +11,7 @@ import Contract.Config
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
+import Contract.Scripts (ValidatorHash)
 import Contract.Value as Value
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
@@ -19,7 +20,6 @@ import Contract.Wallet
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
 import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
-import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)

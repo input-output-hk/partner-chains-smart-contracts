@@ -45,8 +45,7 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.Value as Value
-import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Contract.Value (flattenValue, getTokenName)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -163,7 +162,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   , sidechainParams
   } = do
   let
-    messageByteArray = Value.getTokenName message
+    messageByteArray = getTokenName message
 
     -- ensure that the signatures provided are sorted, and do an optimization
     -- to only provide the minimum number of signatures for the onchain code to

@@ -42,8 +42,7 @@ import Contract.Transaction
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos as Utxos
-import Contract.Value as Value
-import Ctl.Internal.Plutus.Types.Value (flattenValue)
+import Contract.Value (flattenValue, getTokenName)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
@@ -158,7 +157,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
       }
   ) = do
   let
-    messageByteArray = Value.getTokenName message
+    messageByteArray = getTokenName message
 
     -- ensure that the signatures provided are sorted, and do an optimization
     -- to only provide the minimum number of signatures for the onchain code to

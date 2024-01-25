@@ -20,6 +20,7 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
+import Contract.Scripts (ValidatorHash)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput
@@ -29,7 +30,6 @@ import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Ctl.Internal.Types.Scripts (ValidatorHash)
 import Data.BigInt (BigInt)
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
