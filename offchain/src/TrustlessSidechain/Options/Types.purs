@@ -198,16 +198,9 @@ data TxEndpoint
       }
   | GetAddrs
       SidechainAddressesExtra
-  | InitTokens
-      { initCandidatePermissionTokenMintInfo ∷
-          Maybe CandidatePermissionTokenMintInit
-      , genesisHash ∷ ByteArray
-      , version ∷ Int
-      }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt
-      , useInitTokens ∷ Boolean
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
       , genesisHash ∷ ByteArray

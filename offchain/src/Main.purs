@@ -12,11 +12,9 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Data.List.Types as Data.List.Types
-import Data.Symbol (SProxy(SProxy))
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
-import Record as Record
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionMint(CandidatePermissionMint)
   , CandidatePermissionMintParams(CandidatePermissionMintParams)
@@ -73,8 +71,6 @@ import TrustlessSidechain.GetSidechainAddresses
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( initSidechain
-  , initSidechainTokens
-  , paySidechainTokens
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -97,7 +93,6 @@ import TrustlessSidechain.Options.Types
       , CommitteeCandidateDereg
       , CommitteeHash
       , SaveRoot
-      , InitTokens
       , Init
       , CommitteeHandover
       , SaveCheckpoint
@@ -375,52 +370,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> SaveRootResp
 
-      InitTokens { initCandidatePermissionTokenMintInfo, genesisHash, version } →
-        do
-          let
-            sc = unwrap scParams
-            isc =
-              { initChainId: sc.chainId
-              , initGenesisHash: genesisHash
-              , initUtxo: sc.genesisUtxo
-              , initThresholdNumerator: sc.thresholdNumerator
-              , initThresholdDenominator: sc.thresholdDenominator
-              , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-              , initCandidatePermissionTokenMintInfo:
-                  case initCandidatePermissionTokenMintInfo of
-                    Nothing → Nothing
-                    Just
-                      { candidatePermissionTokenAmount
-                      , candidatePermissionTokenName
-                      , candidatePermissionTokenUtxo
-                      } → Just
-                      { amount: candidatePermissionTokenAmount
-                      , permissionToken:
-                          { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
-                              candidatePermissionTokenUtxo
-                          , candidatePermissionTokenName
-                          }
-                      }
-              , initGovernanceAuthority: sc.governanceAuthority
-              }
-          { transactionId
-          , sidechainParams
-          , sidechainAddresses
-          , versioningTransactionIds
-          } ←
-            initSidechainTokens isc version
-
-          pure $ InitResp
-            { transactionId: unwrap transactionId
-            , sidechainParams
-            , sidechainAddresses
-            , versioningTransactionIds: map unwrap versioningTransactionIds
-            }
-
       Init
         { committeePubKeysInput
         , initSidechainEpoch
-        , useInitTokens
         , initCandidatePermissionTokenMintInfo
         , genesisHash
         , version
@@ -470,11 +422,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainAddresses
         , versioningTransactionIds
         } ←
-          if useInitTokens then do
-            resp ← paySidechainTokens isc version
-            pure $ Record.insert (SProxy ∷ _ "versioningTransactionIds") mempty
-              resp
-          else initSidechain (wrap isc) version
+          initSidechain (wrap isc) version
 
         pure $ InitResp
           { transactionId: unwrap transactionId

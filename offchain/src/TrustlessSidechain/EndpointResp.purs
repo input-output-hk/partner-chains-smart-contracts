@@ -60,12 +60,6 @@ data EndpointResp
       { saveRootTransactionId ∷ ByteArray
       , committeeHashTransactionId ∷ ByteArray
       }
-  | InitTokensResp
-      { transactionId ∷ ByteArray
-      , versioningTransactionIds ∷ Array ByteArray
-      , sidechainParams ∷ SidechainParams
-      , sidechainAddresses ∷ SidechainAddresses
-      }
   | InitResp
       { transactionId ∷ ByteArray
       , versioningTransactionIds ∷ Array ByteArray
@@ -220,38 +214,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
         ]
-    InitTokensResp
-      { transactionId
-      , sidechainParams
-      , sidechainAddresses
-      , versioningTransactionIds
-      } →
-      J.fromObject $
-        Object.fromFoldable
-          [ "endpoint" /\ J.fromString "Init"
-          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-          , "versioningTransactionIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
-          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
-          , "addresses" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.addresses
-                  )
-              )
-          , "validatorHashes" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.validatorHashes
-                  )
-              )
-          , "mintingPolicies" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.mintingPolicies
-                  )
-              )
-          ]
     InitResp
       { transactionId
       , versioningTransactionIds

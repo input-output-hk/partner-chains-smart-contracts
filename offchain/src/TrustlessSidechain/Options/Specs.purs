@@ -104,7 +104,6 @@ import TrustlessSidechain.Options.Types
       , GetAddrs
       , CandidiatePermissionTokenAct
       , Init
-      , InitTokens
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -150,11 +149,7 @@ options maybeConfig = info (helper <*> optSpec maybeConfig)
 optSpec ∷ Maybe Config → Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
-    [ command "init-tokens-mint"
-        ( info (withCommonOpts maybeConfig initTokensSpec)
-            (progDesc "Pre-mint tokens without setting the initial committee")
-        )
-    , command "init"
+    [ command "init"
         ( info (withCommonOpts maybeConfig initSpec)
             (progDesc "Initialise sidechain")
         )
@@ -992,20 +987,6 @@ initCandidatePermissionTokenMintHelper = ado
     , candidatePermissionTokenAmount
     }
 
--- parser for the `init-tokens` endpoint
-initTokensSpec ∷ Parser TxEndpoint
-initTokensSpec = ado
-  initCandidatePermissionTokenMintInfo ← optional
-    initCandidatePermissionTokenMintHelper
-  genesisHash ← parseGenesisHash
-  version ← parseVersion
-  in
-    InitTokens
-      { initCandidatePermissionTokenMintInfo
-      , genesisHash
-      , version
-      }
-
 parseVersion ∷ Parser Int
 parseVersion =
   option
@@ -1029,10 +1010,6 @@ initSpec = ado
     \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
 
   initSidechainEpoch ← parseSidechainEpoch
-  useInitTokens ← flag false true $ fold
-    [ long "use-init-tokens"
-    , help "Use previously minted init tokens from the wallet"
-    ]
   initCandidatePermissionTokenMintInfo ← optional
     initCandidatePermissionTokenMintHelper
   genesisHash ← parseGenesisHash
@@ -1041,7 +1018,6 @@ initSpec = ado
     Init
       { committeePubKeysInput
       , initSidechainEpoch
-      , useInitTokens
       , initCandidatePermissionTokenMintInfo
       , genesisHash
       , version
