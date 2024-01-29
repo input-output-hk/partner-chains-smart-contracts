@@ -19,6 +19,7 @@ module TrustlessSidechain.Types (
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
+  InitTokenRedeemer (..),
   MerkleRootInsertionMessage (..),
   MerkleTreeEntry (..),
   PermissionedCandidateKeys (..),
@@ -845,8 +846,9 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
 -- | @since v5.0.0
 makeHasField ''PermissionedCandidatesValidatorDatum
 
--- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
---update the list of permissioned candidates or remove the list altogether.
+-- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
+-- supposed to update the list of permissioned candidates or remove the list
+-- altogether.
 --
 -- @since v5.0.0
 data PermissionedCandidatesValidatorRedeemer
@@ -883,4 +885,42 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
      in case integerValue :: Integer of
           0 -> UpdatePermissionedCandidates
           1 -> RemovePermissionedCandidates
+          _ -> error ()
+
+-- | 'InitTokenRedeemer' signals whether the init tokens should be minted
+-- (possible only in transaction that initializes the sidechain) or burned.
+data InitTokenRedeemer
+  = -- | @since Unreleased
+    MintInitToken
+  | -- | @since Unreleased
+    BurnInitToken
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+-- | @since Unreleased
+instance ToData InitTokenRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData MintInitToken = BuiltinData $ PlutusTx.I 0
+  toBuiltinData BurnInitToken = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData InitTokenRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just MintInitToken
+      1 -> Just BurnInitToken
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData InitTokenRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> MintInitToken
+          1 -> BurnInitToken
           _ -> error ()

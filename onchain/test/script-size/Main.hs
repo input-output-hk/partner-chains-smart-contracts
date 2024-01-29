@@ -16,6 +16,7 @@ import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
+import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
@@ -192,6 +193,14 @@ main =
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
             3_468
+        , fitsInto
+            "mkInitTokenPolicy (InitToken)"
+            Compiled.mkInitTokenPolicyCode
+            471
+        , scriptFitsInto
+            "mkInitTokenPolicy (InitToken) serialized"
+            InitToken.serialisableInitTokenPolicy
+            2_234
         ]
     , testGroup
         "Distributed set"

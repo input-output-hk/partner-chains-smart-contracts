@@ -82,6 +82,10 @@ import TrustlessSidechain.Types (
     FUELBurningRedeemer,
     FUELMintingRedeemer
   ),
+  InitTokenRedeemer (
+    BurnInitToken,
+    MintInitToken
+  ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -191,6 +195,8 @@ tests =
     , dataEncoderGoldenTest "MerkleTree" sampleMerkleTree
     , dataEncoderGoldenTest "InitCheckpointMint" sampleInitCheckpointMint
     , dataEncoderGoldenTest "InitCommitteeHashMint" sampleInitCommitteeHashMint
+    , dataEncoderGoldenTest "InitTokenRedeemer1" sampleInitTokenRedeemer1
+    , dataEncoderGoldenTest "InitTokenRedeemer2" sampleInitTokenRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -501,6 +507,12 @@ sampleATMSRedeemer1 = ATMSMint sampleATMSPlainMultisignature
 
 sampleATMSRedeemer2 :: ATMSRedeemer
 sampleATMSRedeemer2 = ATMSBurn
+
+sampleInitTokenRedeemer1 :: InitTokenRedeemer
+sampleInitTokenRedeemer1 = MintInitToken
+
+sampleInitTokenRedeemer2 :: InitTokenRedeemer
+sampleInitTokenRedeemer2 = BurnInitToken
 
 -- Function to convert hex encoded Text to BuiltinByteString
 hexTextToBuiltinByteString :: Text.Text -> Builtins.BuiltinByteString

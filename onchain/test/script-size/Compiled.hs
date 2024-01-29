@@ -53,6 +53,7 @@ module Compiled (
   mkCommitteePlainATMSPolicyCode,
   mkVersionOraclePolicyCode,
   mkVersionOracleValidatorCode,
+  mkInitTokenPolicyCode,
 ) where
 
 import Data.Generated qualified as Generated
@@ -77,6 +78,7 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as Co
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
+import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Versioning qualified as Versioning
 
@@ -101,6 +103,7 @@ import TrustlessSidechain.Types (
   CheckpointParameter,
   CommitteeCertificateMint,
   FUELMintingRedeemer,
+  InitTokenRedeemer,
   PermissionedCandidatesPolicyRedeemer,
   PermissionedCandidatesValidatorRedeemer,
   SidechainParams,
@@ -361,3 +364,12 @@ mkVersionOracleValidatorCode ::
       Bool
     )
 mkVersionOracleValidatorCode = $$(compile [||Versioning.mkVersionOracleValidator||])
+
+mkInitTokenPolicyCode ::
+  CompiledCode
+    ( SidechainParams ->
+      InitTokenRedeemer ->
+      ScriptContext ->
+      Bool
+    )
+mkInitTokenPolicyCode = $$(compile [||InitToken.mkInitTokenPolicy||])

@@ -100,6 +100,10 @@ import TrustlessSidechain.Types (
   DParameterValidatorDatum (DParameterValidatorDatum),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
+  InitTokenRedeemer (
+    BurnInitToken,
+    MintInitToken
+  ),
   MerkleRootInsertionMessage (
     MerkleRootInsertionMessage,
     merkleRoot,
@@ -195,6 +199,8 @@ main =
     , testProperty "UpdateCommitteeHashRedeemer (unsafe)" . toDataUnsafeLaws' genUCHR shrinkUCHR $ show
     , testProperty "CommitteeCertificateMint (safe)" . toDataSafeLaws' genCCM shrinkCCM $ show
     , testProperty "CommitteeCertificateMint (unsafe)" . toDataUnsafeLaws' genCCM shrinkCCM $ show
+    , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
+    , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
     , -- CheckpointDatum needs format clarification
       testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
     , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
@@ -535,6 +541,9 @@ genCPM = do
   ArbitraryTxOutRef x <- arbitrary
   pure . CandidatePermissionMint sp $ x
 
+genITR :: Gen InitTokenRedeemer
+genITR = oneof [pure MintInitToken, pure BurnInitToken]
+
 -- Shrinkers
 
 shrinkDs :: Ds -> [Ds]
@@ -809,6 +818,9 @@ shrinkCPM (CandidatePermissionMint {..}) = do
   sp' <- shrinkSP sidechainParams
   ArbitraryTxOutRef x' <- shrink (ArbitraryTxOutRef utxo)
   pure . CandidatePermissionMint sp' $ x'
+
+shrinkITR :: InitTokenRedeemer -> [InitTokenRedeemer]
+shrinkITR = const []
 
 -- | Wrapper for 'PubKey' to provide QuickCheck instances.
 --

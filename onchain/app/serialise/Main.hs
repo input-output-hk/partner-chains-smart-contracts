@@ -32,6 +32,7 @@ import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
+import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
@@ -304,6 +305,7 @@ main =
           , ("CommitteeHashValidator", UpdateCommitteeHash.serialisableCommitteeHashValidator)
           , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
           , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
+          , ("InitTokenPolicy", InitToken.serialisableInitTokenPolicy)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)
           , -- Versioning System
             ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)

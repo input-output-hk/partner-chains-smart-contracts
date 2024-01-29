@@ -48,7 +48,6 @@ mkCandidatePermissionMintingPolicy cpm _red ctx =
       [] -> False
       (txIn : txIns) -> (utxo == txInInfoOutRef txIn) || go txIns
 
--- Ctl hack..
 mkCandidatePermissionMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCandidatePermissionMintingPolicyUntyped =
   mkUntypedMintingPolicy
