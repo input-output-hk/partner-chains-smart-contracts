@@ -3,6 +3,7 @@
 module TrustlessSidechain.Utils (
   fromSingleton,
   currencySymbolValueOf,
+  oneTokenBurned,
   mkUntypedValidator,
   mkUntypedMintingPolicy,
   scriptToPlutusScript,
@@ -18,8 +19,15 @@ import Data.ByteString.Short (toShort)
 import Data.Kind (Type)
 import Plutonomy.UPLC qualified
 import Plutus.V1.Ledger.Scripts (Script)
-import Plutus.V1.Ledger.Value (CurrencySymbol, Value, getValue)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import Plutus.V2.Ledger.Api (
+  CurrencySymbol,
+  ScriptContext,
+  TokenName,
+  TxInfo (txInfoMint),
+  Value,
+  getValue,
+ )
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.AssocMap qualified as Map
 
 -- | Unwrap a singleton list, or produce an error if not possible.
@@ -34,6 +42,22 @@ currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
 currencySymbolValueOf v c = case Map.lookup c (getValue v) of
   Nothing -> 0
   Just x -> sum (Map.elems x)
+
+-- | Check that exactly on specified asset was burned by a transaction.  Note
+-- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
+-- but with different 'TokenName's.  This is intended for use with 'InitToken's,
+-- so that we permit multiple 'InitToken's with different names burned in the
+-- same transaction.
+{-# INLINEABLE oneTokenBurned #-}
+oneTokenBurned :: TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenBurned txInfo cs tn =
+  case fmap AssocMap.toList $ AssocMap.lookup cs $ getValue $ txInfoMint txInfo of
+    Just tns ->
+      let go :: [(TokenName, Integer)] -> Bool
+          go [] = False
+          go ((tn', amt) : xs) = if tn' == tn && amt == -1 then True else go xs
+       in go tns
+    _ -> False
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types

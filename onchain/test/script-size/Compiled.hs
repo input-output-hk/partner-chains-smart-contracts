@@ -65,7 +65,6 @@ import TrustlessSidechain.CandidatePermissionMintingPolicy (
   mkCandidatePermissionMintingPolicy,
  )
 import TrustlessSidechain.CheckpointValidator (
-  InitCheckpointMint,
   mkCheckpointPolicy,
   mkCheckpointValidator,
  )
@@ -103,6 +102,7 @@ import TrustlessSidechain.Types (
   CheckpointParameter,
   CommitteeCertificateMint,
   FUELMintingRedeemer,
+  InitTokenAssetClass,
   InitTokenRedeemer,
   PermissionedCandidatesPolicyRedeemer,
   PermissionedCandidatesValidatorRedeemer,
@@ -287,7 +287,7 @@ mkCommitteeOraclePolicyCode = $$(compile [||mkCommitteeOraclePolicy||])
 
 mkCPCode ::
   CompiledCode
-    ( InitCheckpointMint ->
+    ( InitTokenAssetClass ->
       () ->
       ScriptContext ->
       Bool

@@ -23,6 +23,7 @@ import Test.Utils.QuickCheck
   , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
   , ArbitraryPubKey(ArbitraryPubKey)
   , ArbitrarySignature(ArbitrarySignature)
+  , ArbitraryTokenName(ArbitraryTokenName)
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
   , ArbitraryValidatorHash(ArbitraryValidatorHash)
   , DA
@@ -38,7 +39,6 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointMessage(CheckpointMessage)
   , CheckpointParameter(CheckpointParameter)
-  , InitCheckpointMint(InitCheckpointMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeCertificateMint(CommitteeCertificateMint)
@@ -74,6 +74,9 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   , MerkleTreeEntry(MerkleTreeEntry)
   )
 import TrustlessSidechain.Governance (GovernanceAuthority(GovernanceAuthority))
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenAssetClass(InitTokenAssetClass)
+  )
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SignedMerkleRootRedeemer(SignedMerkleRootRedeemer)
@@ -184,8 +187,8 @@ tests = pureGroup "Data roundtrip tests" $ do
   test "CheckpointDatum" $ liftEffect $ toDataLaws testCount genCheckpointDatum
   test "CheckpointParameter" $ liftEffect $ toDataLaws testCount
     genCheckpointParameter
-  test "InitCheckpointMint" $ liftEffect $ toDataLaws testCount
-    genInitCheckpointMint
+  test "InitTokenAssetClass" $ liftEffect $ toDataLaws testCount
+    genInitTokenAssetClass
   test "CheckpointMessage" $ liftEffect $ toDataLaws testCount
     genCheckpointMessage
   test "DParameterValidatorDatum" $ liftEffect $ toDataLaws testCount
@@ -264,10 +267,11 @@ genCheckpointParameter = do
     , checkpointAssetClass
     }
 
-genInitCheckpointMint ∷ Gen InitCheckpointMint
-genInitCheckpointMint = InitCheckpointMint <<< { icTxOutRef: _ } <$> do
-  ArbitraryTransactionInput input ← arbitrary
-  pure input
+genInitTokenAssetClass ∷ Gen InitTokenAssetClass
+genInitTokenAssetClass = do
+  ArbitraryCurrencySymbol initTokenCurrencySymbol ← arbitrary
+  ArbitraryTokenName initTokenName ← arbitrary
+  pure $ InitTokenAssetClass { initTokenCurrencySymbol, initTokenName }
 
 genCheckpointMessage ∷ Gen CheckpointMessage
 genCheckpointMessage = do

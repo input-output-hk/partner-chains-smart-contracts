@@ -12,7 +12,6 @@ import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef), ValidatorHash (ValidatorHash),
 import PlutusTx.Builtins qualified as Builtins
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.CheckpointValidator (InitCheckpointMint (InitCheckpointMint))
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.Governance (mkGovernanceAuthority)
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), MerkleTree (Bin, Tip), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
@@ -81,6 +80,11 @@ import TrustlessSidechain.Types (
   FUELMintingRedeemer (
     FUELBurningRedeemer,
     FUELMintingRedeemer
+  ),
+  InitTokenAssetClass (
+    InitTokenAssetClass,
+    initTokenCurrencySymbol,
+    initTokenName
   ),
   InitTokenRedeemer (
     BurnInitToken,
@@ -193,10 +197,10 @@ tests =
     , dataEncoderGoldenTest "ATMSRedeemer1" sampleATMSRedeemer1
     , dataEncoderGoldenTest "ATMSRedeemer2" sampleATMSRedeemer2
     , dataEncoderGoldenTest "MerkleTree" sampleMerkleTree
-    , dataEncoderGoldenTest "InitCheckpointMint" sampleInitCheckpointMint
     , dataEncoderGoldenTest "InitCommitteeHashMint" sampleInitCommitteeHashMint
     , dataEncoderGoldenTest "InitTokenRedeemer1" sampleInitTokenRedeemer1
     , dataEncoderGoldenTest "InitTokenRedeemer2" sampleInitTokenRedeemer2
+    , dataEncoderGoldenTest "InitTokenAssetClass" sampleInitTokenAssetClass
     ]
 
 -- * Sample data - building blocks
@@ -327,9 +331,6 @@ sampleMerkleTree = Bin (RootHash "595a007f79ffff017f802effeb013f804935ff00805480
   where
     lChild = Tip $ RootHash "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
     rChild = Tip $ RootHash "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
-
-sampleInitCheckpointMint :: InitCheckpointMint
-sampleInitCheckpointMint = InitCheckpointMint sampleTxOutRef
 
 sampleInitCommitteeHashMint :: InitCommitteeHashMint
 sampleInitCommitteeHashMint = InitCommitteeHashMint sampleTxOutRef
@@ -513,6 +514,13 @@ sampleInitTokenRedeemer1 = MintInitToken
 
 sampleInitTokenRedeemer2 :: InitTokenRedeemer
 sampleInitTokenRedeemer2 = BurnInitToken
+
+sampleInitTokenAssetClass :: InitTokenAssetClass
+sampleInitTokenAssetClass =
+  InitTokenAssetClass
+    { initTokenCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , initTokenName = "foo bar"
+    }
 
 -- Function to convert hex encoded Text to BuiltinByteString
 hexTextToBuiltinByteString :: Text.Text -> Builtins.BuiltinByteString

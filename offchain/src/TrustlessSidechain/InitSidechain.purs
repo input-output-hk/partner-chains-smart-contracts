@@ -25,7 +25,10 @@ import Contract.Prelude
 
 import Contract.Monad (Contract, liftedM)
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(Datum), PlutusData)
+import Contract.PlutusData
+  ( Datum(Datum)
+  , PlutusData
+  )
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
@@ -53,6 +56,7 @@ import TrustlessSidechain.CandidatePermissionToken
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint
   ( CheckpointDatum(CheckpointDatum)
+  , checkpointNftTn
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
@@ -93,7 +97,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , DsConfPolicy
       )
   )
-import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig) as Versioning
+import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -213,38 +217,9 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
             , amount
             }
 
--- | `initCheckpointMintLookupsAndConstraints` creates lookups and
--- | constraints to mint the NFT which uniquely
--- | identifies the utxo that holds the checkpoint
-initCheckpointMintLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-initCheckpointMintLookupsAndConstraints inp = do
-  { currencySymbol, mintingPolicy } ←
-    Checkpoint.checkpointCurrencyInfo (toSidechainParams inp)
-
-  let
-    checkpointValue =
-      Value.singleton
-        currencySymbol
-        Checkpoint.initCheckpointMintTn
-        one
-
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy mintingPolicy
-
-    constraints ∷ TxConstraints Void Void
-    constraints = Constraints.mustMintValue checkpointValue
-
-  pure { constraints, lookups }
-
--- | `initCheckpointLookupsAndConstraints` creates lookups and
--- | constraints pay the NFT which uniquely
--- | identifies the utxo that holds the checkpoint
+-- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
+-- | mint and pay the NFT which uniquely identifies the utxo that holds the
+-- | checkpoint.
 initCheckpointLookupsAndConstraints ∷
   ∀ (r ∷ Row Type).
   InitTokensParams r →
@@ -259,8 +234,24 @@ initCheckpointLookupsAndConstraints inp = do
   let
     sidechainParams = toSidechainParams inp
 
-  { currencySymbol: checkpointCurrencySymbol } ←
-    Checkpoint.checkpointCurrencyInfo sidechainParams
+  -- Build lookups and constraints to burn checkpoint init token
+  burnCheckpointInitToken ←
+    Checkpoint.burnOneCheckpointInitToken sidechainParams
+
+  -- Build lookups and constraints to mint checkpoint NFT
+  checkpointNft ← Checkpoint.checkpointCurrencyInfo sidechainParams
+
+  let
+    checkpointNftValue =
+      Value.singleton checkpointNft.currencySymbol checkpointNftTn one
+
+    mintCheckpointNft =
+      { lookups: Lookups.mintingPolicy checkpointNft.mintingPolicy
+      , constraints: Constraints.mustMintValue checkpointNftValue
+      }
+
+  -- Construct initial checkpoint datum and pay it together with checkpoint NFT
+  -- to checkpoint validator
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sidechainParams
 
   let
@@ -274,32 +265,24 @@ initCheckpointLookupsAndConstraints inp = do
           { blockHash: inp.initGenesisHash
           , blockNumber: BigInt.fromInt 0
           }
-    checkpointValue =
-      Value.singleton
-        checkpointCurrencySymbol
-        Checkpoint.initCheckpointMintTn
-        one
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  versionOracleConfig ← getVersionOracleConfig sidechainParams
   checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
     versionOracleConfig
 
-  -- Building the transaction
-  -----------------------------------
   let
     checkpointValidatorHash = validatorHash checkpointValidator
 
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.validator checkpointValidator
+    payNftToCheckpointValidator =
+      { lookups: Lookups.validator checkpointValidator
+      , constraints: Constraints.mustPayToScript checkpointValidatorHash
+          checkpointDatum
+          DatumInline
+          checkpointNftValue
+      }
 
-    constraints ∷ TxConstraints Void Void
-    constraints =
-      Constraints.mustPayToScript checkpointValidatorHash
-        checkpointDatum
-        DatumInline
-        checkpointValue
-
-  pure { constraints, lookups }
+  pure $ burnCheckpointInitToken <> mintCheckpointNft <>
+    payNftToCheckpointValidator
 
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
@@ -336,7 +319,7 @@ initCommitteeHashLookupsAndConstraints isp = do
         CommitteeOraclePolicy.committeeOracleTn
         one
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  versionOracleConfig ← getVersionOracleConfig sp
 
   committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
     sp
@@ -500,8 +483,7 @@ initSidechain ∷
     , sidechainAddresses ∷ SidechainAddresses
     }
 initSidechain (InitSidechainParams isp) version = do
-  -- Warning: this code is essentially duplicated code from
-  -- `initSidechainTokens` and `paySidechainTokens`....
+  let sidechainParams = toSidechainParams isp
 
   -- Querying the distinguished 'InitSidechainParams.initUtxo'
   ----------------------------------------
@@ -524,8 +506,6 @@ initSidechain (InitSidechainParams isp) version = do
         <> initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
-        <> initCheckpointMintLookupsAndConstraints
-        <> initCheckpointLookupsAndConstraints
         <> \_ → pure
           -- distinguished input to spend from 'InitSidechainParams.initUtxo'
           { constraints: Constraints.mustSpendPubKeyOutput txIn
@@ -536,7 +516,8 @@ initSidechain (InitSidechainParams isp) version = do
                   )
               )
           }
-    ) isp
+    ) isp <>
+      (Checkpoint.mintOneCheckpointInitToken sidechainParams)
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
@@ -548,10 +529,14 @@ initSidechain (InitSidechainParams isp) version = do
     { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
     version
 
+  -- FIXME: transaction IDs discarded here.  We should accumulate them and
+  -- return all of them as part of endpoint response
+  _ ← initCheckpointLookupsAndConstraints isp >>= balanceSignAndSubmit
+    "Checkpoint init"
+
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224
   -----------------------------------------
-  let sidechainParams = toSidechainParams isp
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams

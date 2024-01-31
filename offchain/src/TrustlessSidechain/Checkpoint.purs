@@ -22,19 +22,20 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
-  , CheckpointParameter(CheckpointParameter)
-  )
+  ) as ExportTypes
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
-  , InitCheckpointMint(InitCheckpointMint)
-  ) as ExportTypes
+  , CheckpointParameter(CheckpointParameter)
+  )
 import TrustlessSidechain.Checkpoint.Utils
-  ( checkpointAssetClass
+  ( burnOneCheckpointInitToken
+  , checkpointAssetClass
   , checkpointCurrencyInfo
+  , checkpointNftTn
   , checkpointValidator
-  , initCheckpointMintTn
+  , mintOneCheckpointInitToken
   , serialiseCheckpointMessage
   ) as ExportUtils
 import TrustlessSidechain.Checkpoint.Utils

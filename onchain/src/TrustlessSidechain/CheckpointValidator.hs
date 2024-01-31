@@ -3,7 +3,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module TrustlessSidechain.CheckpointValidator (
-  InitCheckpointMint (..),
   mkCheckpointValidator,
   serializeCheckpointMsg,
   initCheckpointMintTn,
@@ -23,10 +22,9 @@ import Plutus.V2.Ledger.Api (
   Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName),
-  TxInInfo (txInInfoOutRef, txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoReferenceInputs),
+  TxInInfo (txInInfoResolved),
+  TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutDatum, txOutValue),
-  TxOutRef,
   Value (getValue),
   fromCompiledCode,
  )
@@ -35,7 +33,6 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
@@ -48,12 +45,14 @@ import TrustlessSidechain.Types (
     sidechainParams
   ),
   CheckpointParameter,
+  InitTokenAssetClass (),
   SidechainParams,
   UpdateCommitteeDatum,
  )
 import TrustlessSidechain.Utils (
   mkUntypedMintingPolicy,
   mkUntypedValidator,
+  oneTokenBurned,
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
@@ -178,27 +177,6 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
               Nothing -> False
             Nothing -> False
 
--- | 'InitCheckpointMint' is used as the parameter for the minting policy
-newtype InitCheckpointMint = InitCheckpointMint
-  { -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    -- |
-    -- | @since v4.0.0
-    txOutRef :: TxOutRef
-  }
-  deriving newtype
-    ( TSPrelude.Show
-    , TSPrelude.Eq
-    , TSPrelude.Ord
-    , PlutusTx.UnsafeFromData
-    , PlutusTx.ToData
-    , PlutusTx.FromData
-    )
-
-PlutusTx.makeLift ''InitCheckpointMint
-
--- | @since v4.0.0
-makeHasField ''InitCheckpointMint
-
 -- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
 -- the utxo which contains the checkpoint. We use an empty bytestring for
 -- this because the name really doesn't matter, so we mighaswell save a few
@@ -223,19 +201,20 @@ initCheckpointMintAmount = 1
 --
 --   ERROR-CHECKPOINT-POLICY-02: wrong amount minted
 {-# INLINEABLE mkCheckpointPolicy #-}
-mkCheckpointPolicy :: InitCheckpointMint -> () -> ScriptContext -> Bool
-mkCheckpointPolicy ichm _red ctx =
-  traceIfFalse "ERROR-CHECKPOINT-POLICY-01" hasUtxo
+mkCheckpointPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkCheckpointPolicy itcs _red ctx =
+  traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
-    oref :: TxOutRef
-    oref = get @"txOutRef" ichm
-
-    hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
+    initTokenBurned :: Bool
+    initTokenBurned =
+      oneTokenBurned
+        info
+        (get @"initTokenCurrencySymbol" itcs)
+        (get @"initTokenName" itcs)
 
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool

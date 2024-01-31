@@ -9,6 +9,7 @@ module TrustlessSidechain.Utils.Address
   , getOwnWalletAddress
   , toValidatorHash
   , toAddress
+  , toCurrencySymbol
   , getCurrencyInfo
   , getCurrencySymbol
   , getCurrencySymbolHex
@@ -72,6 +73,7 @@ import TrustlessSidechain.Error
       , ConversionError
       , NotFoundOwnAddress
       , InvalidCurrencySymbol
+      , InvalidScript
       , InvalidAddress
       )
   )
@@ -186,10 +188,18 @@ getCurrencyInfo scriptId params = do
   currencySymbol ← getCurrencySymbol scriptId mintingPolicy
   pure $ { mintingPolicy, currencySymbol }
 
--- | `getCurrencySymbolHex` converts a minting policy to its currency symbol
+-- | `getCurrencySymbolHex` converts a minting policy with known script IDto its
+-- | currency symbol
 getCurrencySymbol ∷ ScriptId → MintingPolicy → Contract CurrencySymbol
 getCurrencySymbol scriptId mp = do
   Monad.liftContractM (show $ InvalidCurrencySymbol scriptId mp) $
+    Value.scriptCurrencySymbol mp
+
+-- | `getCurrencySymbolHex` converts a minting policy with unknown script ID to
+-- | its currency symbol
+toCurrencySymbol ∷ MintingPolicy → Contract CurrencySymbol
+toCurrencySymbol mp = do
+  Monad.liftContractM (show $ InvalidScript (show mp)) $
     Value.scriptCurrencySymbol mp
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded

@@ -19,6 +19,7 @@ module TrustlessSidechain.Types (
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
+  InitTokenAssetClass (..),
   InitTokenRedeemer (..),
   MerkleRootInsertionMessage (..),
   MerkleTreeEntry (..),
@@ -40,7 +41,9 @@ import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V2.Ledger.Api (
   BuiltinData (BuiltinData),
+  CurrencySymbol,
   LedgerBytes (LedgerBytes),
+  TokenName,
   TxOutRef,
   ValidatorHash,
  )
@@ -924,3 +927,34 @@ instance UnsafeFromData InitTokenRedeemer where
           0 -> MintInitToken
           1 -> BurnInitToken
           _ -> error ()
+
+-- | 'InitTokenAssetClass' stores a currency symbol and a token name for an init
+-- token.  This data type is used to parameterize minting policies that require
+-- burning of an init token in order to mint their corresponding token.
+data InitTokenAssetClass = InitTokenAssetClass
+  { initTokenCurrencySymbol :: CurrencySymbol
+  , initTokenName :: TokenName
+  }
+  deriving stock
+    ( TSPrelude.Show
+    , TSPrelude.Eq
+    )
+
+PlutusTx.makeLift ''InitTokenAssetClass
+makeHasField ''InitTokenAssetClass
+
+-- | @since Unreleased
+instance ToData InitTokenAssetClass where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (InitTokenAssetClass {..}) =
+    productToData2 initTokenCurrencySymbol initTokenName
+
+-- | @since Unreleased
+instance FromData InitTokenAssetClass where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 InitTokenAssetClass
+
+-- | @since Unreleased
+instance UnsafeFromData InitTokenAssetClass where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass

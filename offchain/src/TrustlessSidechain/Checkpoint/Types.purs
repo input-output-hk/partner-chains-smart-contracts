@@ -1,7 +1,6 @@
 module TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointParameter(CheckpointParameter)
-  , InitCheckpointMint(InitCheckpointMint)
   , CheckpointEndpointParam(CheckpointEndpointParam)
   , CheckpointMessage(CheckpointMessage)
   ) where
@@ -17,7 +16,6 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -77,24 +75,6 @@ instance FromData CheckpointParameter where
       }
 
 derive newtype instance Show CheckpointParameter
-
-newtype InitCheckpointMint = InitCheckpointMint
-  { icTxOutRef ∷ TransactionInput }
-
-derive instance Generic InitCheckpointMint _
-
-derive instance Newtype InitCheckpointMint _
-
-derive newtype instance Eq InitCheckpointMint
-
-derive newtype instance Show InitCheckpointMint
-
-instance ToData InitCheckpointMint where
-  toData (InitCheckpointMint { icTxOutRef }) =
-    toData icTxOutRef
-
-instance FromData InitCheckpointMint where
-  fromData = map (InitCheckpointMint <<< { icTxOutRef: _ }) <$> fromData
 
 -- | `CheckpointEndpointParam` is the offchain parameter for the checkpoint endpoint
 newtype CheckpointEndpointParam = CheckpointEndpointParam

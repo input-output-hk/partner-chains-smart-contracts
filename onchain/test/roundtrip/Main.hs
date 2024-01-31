@@ -32,13 +32,13 @@ import Test.QuickCheck.Extra (
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
+  ArbitraryTokenName (ArbitraryTokenName),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
   ArbitraryValidatorHash (ArbitraryValidatorHash),
   DA,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
-import TrustlessSidechain.CheckpointValidator (InitCheckpointMint (InitCheckpointMint))
 import TrustlessSidechain.DistributedSet (
   Ds (Ds),
   DsConfDatum (DsConfDatum),
@@ -100,6 +100,9 @@ import TrustlessSidechain.Types (
   DParameterValidatorDatum (DParameterValidatorDatum),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
+  InitTokenAssetClass (
+    InitTokenAssetClass
+  ),
   InitTokenRedeemer (
     BurnInitToken,
     MintInitToken
@@ -201,6 +204,8 @@ main =
     , testProperty "CommitteeCertificateMint (unsafe)" . toDataUnsafeLaws' genCCM shrinkCCM $ show
     , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
     , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
+    , testProperty "InitTokenAssetClass (safe)" . toDataSafeLaws' genITAC shrinkITAC $ show
+    , testProperty "InitTokenAssetClass (unsafe)" . toDataUnsafeLaws' genITAC shrinkITAC $ show
     , -- CheckpointDatum needs format clarification
       testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
     , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
@@ -221,8 +226,6 @@ main =
     , testProperty "DsConfMint (unsafe)" . toDataUnsafeLaws' genDsConfMint shrinkDsConfMint $ show
     , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
     , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
-    , testProperty "InitCheckpointMint (safe)" . toDataSafeLaws' genICM shrinkICM $ show
-    , testProperty "InitCheckpointMint (unsafe)" . toDataUnsafeLaws' genICM shrinkICM $ show
     , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
     , testProperty "ATMSRedeemer (unsafe)" . toDataUnsafeLaws' genATMSR shrinkATMSR $ show
     , testProperty "CheckpointDatum (safe)" . toDataSafeLaws' genCHPD shrinkCHPD $ show
@@ -299,11 +302,11 @@ genDsKeyMint = DsKeyMint <$> go <*> go2
       ArbitraryCurrencySymbol sym <- arbitrary
       pure sym
 
-genICM :: Gen InitCheckpointMint
-genICM =
-  InitCheckpointMint <$> do
-    ArbitraryTxOutRef tor <- arbitrary
-    pure tor
+genITAC :: Gen InitTokenAssetClass
+genITAC = do
+  ArbitraryCurrencySymbol itcs <- arbitrary
+  ArbitraryTokenName itn <- arbitrary
+  pure $ InitTokenAssetClass itcs itn
 
 genATMSR :: Gen ATMSRedeemer
 genATMSR =
@@ -585,10 +588,11 @@ shrinkDsKeyMint (DsKeyMint vh cs) = do
   ArbitraryCurrencySymbol cs' <- shrink (ArbitraryCurrencySymbol cs)
   pure . DsKeyMint vh' $ cs'
 
-shrinkICM :: InitCheckpointMint -> [InitCheckpointMint]
-shrinkICM (InitCheckpointMint tor) = do
-  ArbitraryTxOutRef tor' <- shrink $ ArbitraryTxOutRef tor
-  pure $ InitCheckpointMint tor'
+shrinkITAC :: InitTokenAssetClass -> [InitTokenAssetClass]
+shrinkITAC (InitTokenAssetClass itcs itn) = do
+  ArbitraryCurrencySymbol itcs' <- shrink $ ArbitraryCurrencySymbol itcs
+  ArbitraryTokenName itn' <- shrink $ ArbitraryTokenName itn
+  pure $ InitTokenAssetClass itcs' itn'
 
 shrinkATMSR :: ATMSRedeemer -> [ATMSRedeemer]
 shrinkATMSR = \case

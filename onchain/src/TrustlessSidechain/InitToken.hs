@@ -23,9 +23,11 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 
--- | 'mkInitTokenPolicy' is a minting policy which verifies:
+-- | 'mkInitTokenPolicy' is a minting policy which allows to:
 --
---      - The UTxO 'cpmUtxo' in 'InitTokenMint' is spent
+--     * mint any amount of tokens when genesis UTxO is being spent
+--
+--     * always burn tokens
 --
 --  OnChain error descriptions:
 --

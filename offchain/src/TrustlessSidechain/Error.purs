@@ -51,15 +51,15 @@ data OffchainError
   -- | Anything that involves complicated internal logic, happens only once or
   -- | twice in the code, and isn't worth having a dedicated constructor
   | GenericInternalError String
-  -- | Feature that has not yet been implemented
-  | NotImplemented String
 
   -- Below are the impossible errors, i.e. things that should never happen, but
   -- CTL forces us to handle these cases anyway.
 
   -- | Given minting policy cannot be converted to a currency symbol.  This
-  -- | should never really happen, but CTL forces
+  -- | should never really happen, but CTL forces us to handle this case
   | InvalidCurrencySymbol ScriptId MintingPolicy
+  -- | Feature that has not yet been implemented
+  | NotImplemented String
 
 derive instance Generic OffchainError _
 

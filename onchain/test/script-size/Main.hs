@@ -112,11 +112,11 @@ main =
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
-            400
+            429
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            2_091
+            2_094
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
@@ -166,13 +166,13 @@ main =
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
             1_981
         , fitsInto
-            "mkDParameterValidatorCode (PermissionedCandidates)"
+            "mkPermissionedCandidatesValidatorCode (PermissionedCandidates)"
             Compiled.mkPermissionedCandidatesValidatorCode
             236
         , scriptFitsInto
-            "mkDParameterValidatorCode (PermissionedCandidates) serialized"
+            "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableValidator
-            2_029
+            2_019
         , fitsInto
             "mkCommitteePlainATMSPolicyCode (CommitteePlainATMSPolicy)"
             Compiled.mkCommitteePlainATMSPolicyCode
