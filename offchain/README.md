@@ -368,13 +368,12 @@ nix run .#sidechain-main-cli -- burn-v2 \
 In order to generate the signatures, you can use the signature generator tool:
 
 ```
-cabal run trustless-sidechain-gen-signatures -- \
-  register \
+cabal run trustless-sidechain-gen-signatures -- register \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold 2/3  \
   --atms-kind plain \
-  --payment-signing-key-file fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --payment-signing-key-file $SIGNING_KEY \
   --governance-authority 406c5efd11681585d81a0f65258e9822175d851115919ab63f01722c \
   --spo-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
   --sidechain-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
@@ -384,7 +383,7 @@ And use it's output for the registration:
 
 ```
 nix run .#sidechain-main-cli -- register \
-  --payment-signing-key-file fa832cc7ad4a0990f36db287df51c62a64c12287e161c07fbc8a4bde0b587c0a \
+  --payment-signing-key-file $SIGNING_KEY \
   --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
   --sidechain-id 1 \
   --threshold-numerator 2 \
