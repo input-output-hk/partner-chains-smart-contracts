@@ -215,7 +215,7 @@ testScenarioSuccess2 =
           }
 
         void do
-          ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+          ds ← DistributedSet.getDs sidechainParams
 
           -- we first grab the distributed set UTxO (the slow way as we have no
           -- other mechanism for doing this with ctl)

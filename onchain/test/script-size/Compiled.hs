@@ -84,7 +84,6 @@ import TrustlessSidechain.Versioning qualified as Versioning
 import Plutus.V1.Ledger.Address (Address)
 import TrustlessSidechain.DistributedSet (
   Ds,
-  DsConfMint,
   DsDatum,
   DsKeyMint,
   mkDsConfPolicy,
@@ -299,7 +298,7 @@ mkInsertValidatorCode ::
 mkInsertValidatorCode = $$(compile [||mkInsertValidator||])
 
 mkDsConfPolicyCode ::
-  CompiledCode (DsConfMint -> () -> ScriptContext -> Bool)
+  CompiledCode (InitTokenAssetClass -> () -> ScriptContext -> Bool)
 mkDsConfPolicyCode = $$(compile [||mkDsConfPolicy||])
 
 mkDsKeyPolicyCode ::

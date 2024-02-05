@@ -45,7 +45,7 @@ import TrustlessSidechain.Types (
     sidechainParams
   ),
   CheckpointParameter,
-  InitTokenAssetClass (),
+  InitTokenAssetClass,
   SidechainParams,
   UpdateCommitteeDatum,
  )
@@ -196,13 +196,12 @@ initCheckpointMintAmount = 1
 --
 -- OnChain error descriptions:
 --
---   ERROR-CHECKPOINT-POLICY-01: The transaction doesn't spend txOutRef
---   indicated in InitCheckpointMint.
+--   ERROR-CHECKPOINT-POLICY-01: The transaction doesn't spend init token.
 --
 --   ERROR-CHECKPOINT-POLICY-02: wrong amount minted
 {-# INLINEABLE mkCheckpointPolicy #-}
 mkCheckpointPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
-mkCheckpointPolicy itcs _red ctx =
+mkCheckpointPolicy itac _red ctx =
   traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
@@ -213,8 +212,8 @@ mkCheckpointPolicy itcs _red ctx =
     initTokenBurned =
       oneTokenBurned
         info
-        (get @"initTokenCurrencySymbol" itcs)
-        (get @"initTokenName" itcs)
+        (get @"initTokenCurrencySymbol" itac)
+        (get @"initTokenName" itac)
 
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool

@@ -296,7 +296,7 @@ mkMintFuelLookupAndConstraints
 
     { fuelMintingPolicy, fuelMintingCurrencySymbol } ← getFuelMintingPolicy sp
 
-    ds ← DistributedSet.getDs (unwrap sidechainParams).genesisUtxo
+    ds ← DistributedSet.getDs sidechainParams
 
     bech32BytesRecipient ←
       liftContractM

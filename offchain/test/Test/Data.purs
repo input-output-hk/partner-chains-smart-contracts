@@ -63,7 +63,6 @@ import TrustlessSidechain.DParameter.Types
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
-  , DsConfMint(DsConfMint)
   , DsDatum(DsDatum)
   , DsKeyMint(DsKeyMint)
   , Node(Node)
@@ -181,7 +180,6 @@ tests = pureGroup "Data roundtrip tests" $ do
   test "DsDatum" $ liftEffect $ toDataLaws testCount genDsDatum
   test "DsConfDatum" $ liftEffect $ toDataLaws smallTestCount genDsConfDatum
   -- Ib not exported
-  test "DsConfMint" $ liftEffect $ toDataLaws testCount genDsConfMint
   test "DsKeyMint" $ liftEffect $ toDataLaws testCount genDsKeyMint
   test "Node" $ liftEffect $ toDataLaws testCount genNode
   test "CheckpointDatum" $ liftEffect $ toDataLaws testCount genCheckpointDatum
@@ -430,11 +428,6 @@ genDsKeyMint = do
     { dskmValidatorHash
     , dskmConfCurrencySymbol
     }
-
-genDsConfMint ∷ Gen DsConfMint
-genDsConfMint = DsConfMint <$> do
-  ArbitraryTransactionInput ti ← arbitrary
-  pure ti
 
 genDsConfDatum ∷ Gen DsConfDatum
 genDsConfDatum = do

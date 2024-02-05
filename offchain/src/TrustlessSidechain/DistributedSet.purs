@@ -6,8 +6,6 @@ module TrustlessSidechain.DistributedSet
   , DsDatum(DsDatum)
   , dsNext
   , DsConfDatum(DsConfDatum)
-  , dscmTxOutRef
-  , DsConfMint(DsConfMint)
   , DsKeyMint(DsKeyMint)
   , Node(Node)
   , Ib(Ib)
@@ -17,13 +15,15 @@ module TrustlessSidechain.DistributedSet
   , dsConfTokenName
   , insertValidator
   , dsConfValidator
-  , dsConfPolicy
+  , dsConfCurrencyInfo
   , dsKeyPolicy
   , getDs
   , getDsKeyPolicy
   , findDsConfOutput
   , slowFindDsOutput
   , findDsOutput
+  , mintOneDsInitToken
+  , burnOneDsInitToken
   ) where
 
 import Contract.Prelude
@@ -38,8 +38,9 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray)
+import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.Prim.ByteArray as ByteArray
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy, Validator, ValidatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
@@ -47,6 +48,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   , outputDatumDatum
   )
+import Contract.TxConstraints (TxConstraints)
 import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
 import Contract.Value as Value
@@ -64,7 +66,21 @@ import TrustlessSidechain.Error
       , DsInsertError
       )
   )
-import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenAssetClass(InitTokenAssetClass)
+  )
+import TrustlessSidechain.InitSidechain.Utils
+  ( burnOneInitToken
+  , initTokenCurrencyInfo
+  , mintOneInitToken
+  )
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (CurrencyInfo)
+import TrustlessSidechain.Utils.Address
+  ( getCurrencyInfo
+  , getCurrencySymbol
+  , toAddress
+  )
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -155,28 +171,6 @@ instance Show DsConfDatum where
 instance ToData DsConfDatum where
   toData (DsConfDatum { dscKeyPolicy, dscFUELPolicy }) =
     productToData2 dscKeyPolicy dscFUELPolicy
-
--- | `DsConfMint` is the type which paramaterizes the minting policy of the NFT
--- | which initializes the distributed set (i.e., the parameter for the
--- | minting policy that is the configuration of the distributed set).
-newtype DsConfMint = DsConfMint TransactionInput
-
-derive instance Generic DsConfMint _
-
-derive instance Newtype DsConfMint _
-
-derive newtype instance ToData DsConfMint
-
-derive newtype instance FromData DsConfMint
-
-derive newtype instance Eq DsConfMint
-
-instance Show DsConfMint where
-  show = genericShow
-
--- | `dscmTxOutRef` accesses the underlying `TransactionInput` of `DsConfMint`
-dscmTxOutRef ∷ DsConfMint → TransactionInput
-dscmTxOutRef (DsConfMint transactionInput) = transactionInput
 
 -- | `DsKeyMint` is the type which paramterizes the minting policy of the
 -- | tokens which are keys in the distributed set.
@@ -281,6 +275,14 @@ rootNode = Node
   -- where `[0,..,0]` is of length 31.
   }
 
+-- | A name for the distributed set initialization token.  Must be unique among
+-- | initialization tokens.
+dsInitTokenName ∷ TokenName
+dsInitTokenName =
+  Unsafe.unsafePartial $ Maybe.fromJust
+    $ Value.mkTokenName
+    =<< byteArrayFromAscii "DistributedSet InitToken"
+
 -- | `dsConfTokenName` is the `TokenName` for the token of the configuration.
 -- | This doesn't matter, so we set it to be the empty string.
 -- | Note: this corresponds to the Haskell function.
@@ -309,8 +311,15 @@ dsConfValidator ds = mkValidatorWithParams DsConfValidator $ map
 
 -- | `dsConfPolicy` gets corresponding `dsConfPolicy` from the serialized
 -- | on chain code.
-dsConfPolicy ∷ DsConfMint → Contract MintingPolicy
-dsConfPolicy dsm = mkMintingPolicyWithParams DsConfPolicy $ [ toData dsm ]
+dsConfCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+dsConfCurrencyInfo sp = do
+  { currencySymbol } ← initTokenCurrencyInfo sp
+  let
+    itac = InitTokenAssetClass
+      { initTokenCurrencySymbol: currencySymbol
+      , initTokenName: dsInitTokenName
+      }
+  getCurrencyInfo DsConfPolicy [ toData itac ]
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
@@ -360,11 +369,10 @@ insertNode str (Node node)
 
 -- | `getDs` grabs the `Ds` type given `TransactionInput`. Often, the
 -- | `TransactionInput` should be the `genesisUtxo` of a given `SidechainParams`
-getDs ∷ TransactionInput → Contract Ds
-getDs txInput = do
-  dsConfPolicy' ← dsConfPolicy $ DsConfMint txInput
-  dsConfPolicyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsConfPolicy'
-  pure $ Ds dsConfPolicyCurrencySymbol
+getDs ∷ SidechainParams → Contract Ds
+getDs sp = do
+  { currencySymbol } ← dsConfCurrencyInfo sp
+  pure $ Ds currencySymbol
 
 -- | `getDsKeyPolicy` grabs the key policy and currency symbol from the given
 -- | `TransactionInput` (potentially throwing an error in the case that it is
@@ -372,7 +380,7 @@ getDs txInput = do
 -- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
   Ds →
-  Contract
+  Contract -- JSTOLAREK: use CurrencyInfo here
     { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
 getDsKeyPolicy ds = do
   insertValidator' ← insertValidator ds
@@ -388,6 +396,26 @@ getDsKeyPolicy ds = do
   currencySymbol ← getCurrencySymbol DsKeyPolicy policy
 
   pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
+
+-- | Build lookups and constraints to mint distributed set initialization token.
+mintOneDsInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mintOneDsInitToken sp =
+  mintOneInitToken sp dsInitTokenName
+
+-- | Build lookups and constraints to burn distributed set initialization token.
+burnOneDsInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+burnOneDsInitToken sp =
+  burnOneInitToken sp dsInitTokenName
 
 -- | `findDsConfOutput` finds the (unique) utxo (as identified by an NFT) which
 -- | holds the configuration of the distributed set.

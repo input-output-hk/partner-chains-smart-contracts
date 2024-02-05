@@ -42,7 +42,6 @@ import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
 import TrustlessSidechain.DistributedSet (
   Ds (Ds),
   DsConfDatum (DsConfDatum),
-  DsConfMint (DsConfMint),
   DsDatum (DsDatum),
   DsKeyMint (DsKeyMint),
   Ib (Ib),
@@ -222,8 +221,6 @@ main =
     , testProperty "DsConfDatum (unsafe)" . toDataUnsafeLaws' genDsConfDatum shrinkDsConfDatum $ show
     , testProperty "Ib (safe)" . toDataSafeLaws' genIb shrinkIb $ show
     , testProperty "Ib (unsafe)" . toDataUnsafeLaws' genIb shrinkIb $ show
-    , testProperty "DsConfMint (safe)" . toDataSafeLaws' genDsConfMint shrinkDsConfMint $ show
-    , testProperty "DsConfMint (unsafe)" . toDataUnsafeLaws' genDsConfMint shrinkDsConfMint $ show
     , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
     , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
     , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
@@ -283,12 +280,6 @@ genDsConfDatum = DsConfDatum <$> go <*> go
 
 genIb :: Gen (Ib DA)
 genIb = Ib <$> arbitrary
-
-genDsConfMint :: Gen DsConfMint
-genDsConfMint =
-  DsConfMint <$> do
-    ArbitraryTxOutRef tout <- arbitrary
-    pure tout
 
 genDsKeyMint :: Gen DsKeyMint
 genDsKeyMint = DsKeyMint <$> go <*> go2
@@ -575,12 +566,6 @@ shrinkDsConfDatum (DsConfDatum kp fp) = do
 
 shrinkIb :: Ib DA -> [Ib DA]
 shrinkIb (Ib x) = Ib <$> shrink x
-
-shrinkDsConfMint :: DsConfMint -> [DsConfMint]
-shrinkDsConfMint (DsConfMint tout) =
-  DsConfMint <$> do
-    ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef tout)
-    pure tout'
 
 shrinkDsKeyMint :: DsKeyMint -> [DsKeyMint]
 shrinkDsKeyMint (DsKeyMint vh cs) = do

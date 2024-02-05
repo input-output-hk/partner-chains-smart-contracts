@@ -126,10 +126,9 @@ getSidechainAddresses
         , thresholdDenominator: (unwrap scParams).thresholdDenominator
         }
 
-  ds ← DistributedSet.getDs (unwrap scParams).genesisUtxo
+  ds ← DistributedSet.getDs scParams
 
-  dsConfPolicy ← DistributedSet.dsConfPolicy
-    (wrap (unwrap scParams).genesisUtxo)
+  { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo scParams
   dsConfPolicyId ← getCurrencySymbolHex DsConfPolicy dsConfPolicy
 
   mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of

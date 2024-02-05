@@ -215,11 +215,11 @@ main =
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
-            457
+            409
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            2_085
+            2_092
         , fitsInto
             "mkDsKeyPolicy"
             Compiled.mkDsKeyPolicyCode

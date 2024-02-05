@@ -13,7 +13,6 @@ module TrustlessSidechain.DistributedSet (
   DsDatum (..),
   Node (..),
   DsConfDatum (..),
-  DsConfMint (..),
   DsKeyMint (..),
   Ib (..),
 
@@ -55,7 +54,6 @@ import Plutus.V2.Ledger.Api (
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
-  TxOutRef,
   ValidatorHash,
   Value (getValue),
   fromCompiledCode,
@@ -66,9 +64,13 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.Types (
+  InitTokenAssetClass,
+ )
 import TrustlessSidechain.Utils (
   mkUntypedMintingPolicy,
   mkUntypedValidator,
+  oneTokenBurned,
  )
 
 -- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
@@ -195,23 +197,6 @@ instance (PlutusTx.FromData a) => PlutusTx.FromData (Ib a) where
 instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 (curry Ib)
-
--- | 'DsConfMint' is the parameter for the NFT to initialize the distributed
--- set. See 'mkDsConfPolicy' for more details.
-newtype DsConfMint = DsConfMint
-  { -- | @since v4.0.0
-    txOutRef :: TxOutRef
-  }
-  deriving newtype (PlutusTx.FromData, PlutusTx.ToData, PlutusTx.UnsafeFromData)
-  deriving stock
-    ( -- | @since v4.0.0
-      TSPrelude.Eq
-    , -- | @since v4.0.0
-      TSPrelude.Show
-    )
-
--- | @since v4.0.0
-makeHasField ''DsConfMint
 
 -- | 'DsKeyMint' is the parameter for the minting policy. In particular, the
 -- 'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
@@ -498,14 +483,13 @@ mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 --
 -- OnChain error descriptions:
 --
---   ERROR-DS-CONF-POLICY-01: The transaction doesn't spend txOutRef indicated
---   in DsConfMint.
+--   ERROR-DS-CONF-POLICY-01: The transaction doesn't spend init token.
 --
 --   ERROR-DS-CONF-POLICY-02: Invalid mint.  Transaction should mint only one
 --   dsConfTokenName token, but it doesn't.
-mkDsConfPolicy :: DsConfMint -> () -> ScriptContext -> Bool
-mkDsConfPolicy dsc _red ctx =
-  traceIfFalse "ERROR-DS-CONF-POLICY-01" spendsTxOutRef
+mkDsConfPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkDsConfPolicy itac _red ctx =
+  traceIfFalse "ERROR-DS-CONF-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-DS-CONF-POLICY-02" mintingChecks
   where
     -- Aliases
@@ -515,9 +499,12 @@ mkDsConfPolicy dsc _red ctx =
     ownCurSymb :: CurrencySymbol
     ownCurSymb = Contexts.ownCurrencySymbol ctx
 
-    -- Checks
-    spendsTxOutRef :: Bool
-    spendsTxOutRef = isJust $ Contexts.findTxInByTxOutRef (get @"txOutRef" dsc) info
+    initTokenBurned :: Bool
+    initTokenBurned =
+      oneTokenBurned
+        info
+        (get @"initTokenCurrencySymbol" itac)
+        (get @"initTokenName" itac)
 
     mintingChecks :: Bool
     mintingChecks

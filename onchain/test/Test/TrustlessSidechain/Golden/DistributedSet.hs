@@ -1,14 +1,11 @@
 module Test.TrustlessSidechain.Golden.DistributedSet (tests) where
 
 import Data.String
-import GHC.Num (fromInteger)
-import Plutus.V1.Ledger.Api (TxOutRef (TxOutRef))
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.DistributedSet (
   Ds (..),
   DsConfDatum (..),
-  DsConfMint (..),
   DsDatum (..),
   DsKeyMint (..),
   Ib (..),
@@ -23,7 +20,6 @@ tests =
     , dataEncoderGoldenTest "DsDatum" sampleDsDatum
     , dataEncoderGoldenTest "Node" sampleNode
     , dataEncoderGoldenTest "DsConfDatum" sampleDsConfDatum
-    , dataEncoderGoldenTest "DsConfMint" sampleDsConfMint
     , dataEncoderGoldenTest "DsKeyMint" sampleDsKeyMint
     , dataEncoderGoldenTest "IbUnit" sampleIbUnit
     ]
@@ -54,21 +50,12 @@ sampleDsConfDatum =
     , fuelPolicy = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     }
 
-sampleDsConfMint :: DsConfMint
-sampleDsConfMint =
-  DsConfMint
-    { txOutRef = sampleTxOutRef
-    }
-
 sampleDsKeyMint :: DsKeyMint
 sampleDsKeyMint =
   DsKeyMint
     { validatorHash = "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084"
     , confCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     }
-
-sampleTxOutRef :: TxOutRef
-sampleTxOutRef = TxOutRef "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa" 4
 
 sampleIbUnit :: Ib ()
 sampleIbUnit =

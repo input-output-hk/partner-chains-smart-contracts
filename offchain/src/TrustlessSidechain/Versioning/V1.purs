@@ -73,7 +73,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
 
-  ds ← DistributedSet.getDs (unwrap sp).genesisUtxo
+  ds ← DistributedSet.getDs sp
   { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
 
   let

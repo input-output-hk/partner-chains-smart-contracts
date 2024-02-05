@@ -67,7 +67,6 @@ import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
-  , DsConfMint(DsConfMint)
   , DsDatum(DsDatum)
   , DsKeyMint(DsKeyMint)
   )
@@ -94,7 +93,6 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
       ( FUELMintingPolicy
       , DsKeyPolicy
-      , DsConfPolicy
       )
   )
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
@@ -359,38 +357,36 @@ initCommitteeHashLookupsAndConstraints isp = do
 -- | Note: this does NOT include a lookup or constraint to spend the distinguished
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
-initDistributedSetLookupsAndContraints ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
+initDistributedSetLookupsAndConstraints ∷
+  SidechainParams →
   Contract
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initDistributedSetLookupsAndContraints isp = do
-  -- Sidechain parameters
-  -----------------------------------
-  let
-    sc = toSidechainParams isp
+initDistributedSetLookupsAndConstraints sidechainParams = do
+  -- Build lookups and constraints to burn distributed set init token
+  burnDsInitToken ←
+    DistributedSet.burnOneDsInitToken sidechainParams
 
   -- Initializing the distributed set
   -----------------------------------
   -- Configuration policy of the distributed set
-  dsConfPolicy ← DistributedSet.dsConfPolicy $ DsConfMint isp.initUtxo
-  dsConfPolicyCurrencySymbol ← getCurrencySymbol DsConfPolicy dsConfPolicy
+  { currencySymbol: dsConfCurrencySymbol, mintingPolicy: dsConfPolicy } ←
+    DistributedSet.dsConfCurrencyInfo sidechainParams
 
   -- Validator for insertion of the distributed set / the associated datum and
   -- tokens that should be paid to this validator.
-  let ds = Ds dsConfPolicyCurrencySymbol
+  let ds = Ds dsConfCurrencySymbol
   insertValidator ← DistributedSet.insertValidator ds
   let
     insertValidatorHash = Scripts.validatorHash insertValidator
     dskm = DsKeyMint
       { dskmValidatorHash: insertValidatorHash
-      , dskmConfCurrencySymbol: dsConfPolicyCurrencySymbol
+      , dskmConfCurrencySymbol: dsConfCurrencySymbol
       }
 
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
-  dsKeyPolicyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsKeyPolicy
+  dsKeyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsKeyPolicy
   dsKeyPolicyTokenName ←
     Monad.liftContractM
       ( show $ ConversionError
@@ -400,7 +396,7 @@ initDistributedSetLookupsAndContraints isp = do
       $ (unwrap DistributedSet.rootNode).nKey
 
   let
-    insertValidatorValue = Value.singleton dsKeyPolicyCurrencySymbol
+    insertValidatorValue = Value.singleton dsKeyCurrencySymbol
       dsKeyPolicyTokenName
       one
     insertValidatorDatum = Datum
@@ -409,7 +405,8 @@ initDistributedSetLookupsAndContraints isp = do
           (unwrap DistributedSet.rootNode).nNext
 
   -- FUEL minting policy
-  { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sc
+  { fuelMintingPolicy } ←
+    FUELMintingPolicy.V1.getFuelMintingPolicy sidechainParams
 
   fuelMintingPolicyCurrencySymbol ←
     getCurrencySymbol FUELMintingPolicy fuelMintingPolicy
@@ -419,13 +416,13 @@ initDistributedSetLookupsAndContraints isp = do
   dsConfValidator ← DistributedSet.dsConfValidator ds
   let
     dsConfValidatorHash = Scripts.validatorHash dsConfValidator
-    dsConfValue = Value.singleton dsConfPolicyCurrencySymbol
+    dsConfValue = Value.singleton dsConfCurrencySymbol
       DistributedSet.dsConfTokenName
       one
     dsConfValidatorDatum = Datum
       $ PlutusData.toData
       $ DsConfDatum
-          { dscKeyPolicy: dsKeyPolicyCurrencySymbol
+          { dscKeyPolicy: dsKeyCurrencySymbol
           , dscFUELPolicy: fuelMintingPolicyCurrencySymbol
           }
 
@@ -451,7 +448,7 @@ initDistributedSetLookupsAndContraints isp = do
           DatumInline
           dsConfValue
 
-  pure { lookups, constraints }
+  pure $ burnDsInitToken <> { lookups, constraints }
 
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
@@ -502,8 +499,7 @@ initSidechain (InitSidechainParams isp) version = do
   -- TODO: lookups and constraints should be constructed depending on the
   -- version argument.  See Issue #10
   { constraints, lookups } ←
-    ( initDistributedSetLookupsAndContraints
-        <> initCommitteeHashMintLookupsAndConstraints
+    ( initCommitteeHashMintLookupsAndConstraints
         <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
         <> \_ → pure
@@ -517,7 +513,9 @@ initSidechain (InitSidechainParams isp) version = do
               )
           }
     ) isp <>
-      (Checkpoint.mintOneCheckpointInitToken sidechainParams)
+      ( Checkpoint.mintOneCheckpointInitToken sidechainParams <>
+          DistributedSet.mintOneDsInitToken sidechainParams
+      )
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
@@ -531,8 +529,10 @@ initSidechain (InitSidechainParams isp) version = do
 
   -- FIXME: transaction IDs discarded here.  We should accumulate them and
   -- return all of them as part of endpoint response
-  _ ← initCheckpointLookupsAndConstraints isp >>= balanceSignAndSubmit
-    "Checkpoint init"
+  _ ← initCheckpointLookupsAndConstraints isp
+    >>= balanceSignAndSubmit "Checkpoint init"
+  _ ← initDistributedSetLookupsAndConstraints sidechainParams
+    >>= balanceSignAndSubmit "DistributedSet init"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224
