@@ -16,8 +16,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  , CandidatePermissionMintParams(CandidatePermissionMintParams)
+  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
@@ -245,7 +244,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainPubKey
         , sidechainSig
         , inputUtxo
-        , permissionToken
+        , usePermissionToken
         , auraKey
         , grandpaKey
         } →
@@ -256,7 +255,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainPubKey
             , sidechainSig
             , inputUtxo
-            , permissionToken
+            , usePermissionToken
             , auraKey
             , grandpaKey
             }
@@ -266,22 +265,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
             >>> { transactionId: _ }
             >>> CommitteeCandidateRegResp
 
-      CandidiatePermissionTokenAct
-        { permissionToken:
-            { candidatePermissionTokenUtxo
-            , candidatePermissionTokenName
-            }
-        , amount
-        } →
+      CandidiatePermissionTokenAct { candidatePermissionTokenAmount: amount } →
         let
           params = CandidatePermissionMintParams
-            { candidatePermissionTokenName
-            , amount
-            , candidateMintPermissionMint:
-                CandidatePermissionMint
-                  { sidechainParams: scParams
-                  , candidatePermissionTokenUtxo
-                  }
+            { amount
+            , sidechainParams: scParams
             }
         in
           CandidatePermissionToken.runCandidatePermissionToken params
@@ -307,8 +295,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           $ SidechainAddressesEndpointParams
               { sidechainParams: scParams
               , atmsKind
-              , mCandidatePermissionTokenUtxo:
-                  extraInfo.mCandidatePermissionTokenUtxo
+              , usePermissionToken: extraInfo.usePermissionToken
               , version: extraInfo.version
               }
         pure $ GetAddrsResp { sidechainAddresses }
@@ -393,24 +380,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initUtxo: sc.genesisUtxo
             , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
             , initAggregatedCommittee: committeePubKeys
-
-            , -- duplicated from the `InitTokens` case
-              initCandidatePermissionTokenMintInfo:
-                case initCandidatePermissionTokenMintInfo of
-                  Nothing → Nothing
-                  Just
-                    { candidatePermissionTokenAmount
-                    , candidatePermissionTokenName
-                    , candidatePermissionTokenUtxo
-                    } → Just
-                    { amount: candidatePermissionTokenAmount
-                    , permissionToken:
-                        { candidatePermissionTokenUtxo: fromMaybe sc.genesisUtxo
-                            candidatePermissionTokenUtxo
-                        , candidatePermissionTokenName
-                        }
-                    }
-
+            , initCandidatePermissionTokenMintInfo
             , initSidechainEpoch
             , initThresholdNumerator: sc.thresholdNumerator
             , initThresholdDenominator: sc.thresholdDenominator

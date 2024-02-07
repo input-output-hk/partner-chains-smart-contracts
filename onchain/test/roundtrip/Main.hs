@@ -78,11 +78,6 @@ import TrustlessSidechain.Types (
     sidechainParams,
     sidechainPubKey
   ),
-  CandidatePermissionMint (
-    CandidatePermissionMint,
-    sidechainParams,
-    utxo
-  ),
   CheckpointDatum (CheckpointDatum),
   CheckpointMessage (CheckpointMessage),
   CheckpointParameter (
@@ -159,8 +154,6 @@ main =
     , testProperty "SidechainParams (unsafe)" . toDataUnsafeLaws' genSP shrinkSP $ show
     , testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
     , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
-    , testProperty "CandidatePermissionMint (safe)" . toDataSafeLaws' genCPM shrinkCPM $ show
-    , testProperty "CandidatePermissionMint (unsafe)" . toDataUnsafeLaws' genCPM shrinkCPM $ show
     , testProperty "BlockProducerRegistration (safe)" . toDataSafeLaws' genBPR shrinkBPR $ show
     , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
     , testProperty "BlockProducerRegistrationMsg (safe)" . toDataSafeLaws' genBPRM shrinkBPRM $ show
@@ -529,12 +522,6 @@ genSP = do
   ga <- genGA
   pure . SidechainParams cid gu n d $ ga
 
-genCPM :: Gen CandidatePermissionMint
-genCPM = do
-  sp <- genSP
-  ArbitraryTxOutRef x <- arbitrary
-  pure . CandidatePermissionMint sp $ x
-
 genITR :: Gen InitTokenRedeemer
 genITR = oneof [pure MintInitToken, pure BurnInitToken]
 
@@ -801,12 +788,6 @@ shrinkSP (SidechainParams {..}) = do
   ga <- shrinkGA governanceAuthority
   -- We don't shrink the denominator, as this could make the result _bigger_.
   pure . SidechainParams cid' gu' n' thresholdDenominator $ ga
-
-shrinkCPM :: CandidatePermissionMint -> [CandidatePermissionMint]
-shrinkCPM (CandidatePermissionMint {..}) = do
-  sp' <- shrinkSP sidechainParams
-  ArbitraryTxOutRef x' <- shrink (ArbitraryTxOutRef utxo)
-  pure . CandidatePermissionMint sp' $ x'
 
 shrinkITR :: InitTokenRedeemer -> [InitTokenRedeemer]
 shrinkITR = const []

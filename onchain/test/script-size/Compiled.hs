@@ -96,7 +96,6 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSRedeemer,
   BlockProducerRegistration,
-  CandidatePermissionMint,
   CheckpointDatum,
   CheckpointParameter,
   CommitteeCertificateMint,
@@ -220,7 +219,7 @@ newVerify ::
 newVerify = $$(compile [||verifyPlainMultisig verifyEcdsaSecp256k1Signature||])
 
 mkCPMPCode ::
-  CompiledCode (CandidatePermissionMint -> () -> ScriptContext -> Bool)
+  CompiledCode (InitTokenAssetClass -> () -> ScriptContext -> Bool)
 mkCPMPCode = $$(compile [||mkCandidatePermissionMintingPolicy||])
 
 mkCVCode ::

@@ -7,11 +7,8 @@ module Test.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Contract.Address as Address
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Scripts as Scripts
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
@@ -21,13 +18,14 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  , CandidatePermissionMintParams(CandidatePermissionMintParams)
-  , CandidatePermissionTokenInfo
+  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import TrustlessSidechain.InitSidechain (initSpendGenesisUtxo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address as Utils
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
 -- | `tests` wraps up all the tests conveniently
 tests ∷ WrappedTests
@@ -51,95 +49,82 @@ testScenarioSuccess1 =
         ]
     $ \alice → Wallet.withKeyWallet alice do
 
-        myTxInput ← Test.Utils.getOwnTransactionInput
+        -- Generate genesis UTxO
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
+
         let
-          scParams = Test.Utils.dummySidechainParams
-          candidateMintPermissionMint =
-            CandidatePermissionMint
-              { sidechainParams: scParams
-              , candidatePermissionTokenUtxo: myTxInput
-              }
-          -- doesn't matter, so just use ada's token name
-          candidatePermissionTokenName = Value.adaToken
+          -- Put genesis UTxO into sidechain params
+          sidechainParams = wrap
+            ( (unwrap Test.Utils.dummySidechainParams)
+                { genesisUtxo = genesisUtxo }
+            )
 
         -----------------------------
-        -- Running the candidate permission token endpoint..
+        -- Mint candidate permission init token and use it to mint a single
+        -- candidate permission token
         -----------------------------
+        _ ←
+          ( initSpendGenesisUtxo sidechainParams <>
+              CandidatePermissionToken.mintOneCandidatePermissionInitToken
+                sidechainParams
+          ) >>=
+            balanceSignAndSubmit "Mint candidate permission init token"
+
         _ ← CandidatePermissionToken.runCandidatePermissionToken $
           CandidatePermissionMintParams
-            { candidateMintPermissionMint
-            , candidatePermissionTokenName: candidatePermissionTokenName
+            { sidechainParams
             , amount: BigInt.fromInt 1
             }
 
         -----------------------------
-        -- Running the register endpoint
+        -- Register candidate using a permission token
         -----------------------------
         registerTxId ←
           Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
-            ( Just
-                { candidatePermissionTokenUtxo: myTxInput
-                , candidatePermissionTokenName
-                }
-            )
-            scParams
+            true
+            sidechainParams
 
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
         candidatePermissionInfo ←
           CandidatePermissionToken.candidatePermissionCurrencyInfo
-            candidateMintPermissionMint
+            sidechainParams
 
         committeeCandidiateValidatorAddr ← do
           committeeCandidateValidator ←
             CommitteeCandidateValidator.getCommitteeCandidateValidator
-              scParams
-          netId ← Address.getNetworkId
-          addr ← Monad.liftContractM ("Cannot get validator address") $
-            Address.validatorHashEnterpriseAddress
-              netId
-              (Scripts.validatorHash committeeCandidateValidator)
-          pure addr
+              sidechainParams
+          Utils.toAddress (Scripts.validatorHash committeeCandidateValidator)
 
         Test.Utils.assertHasOutputWithAsset registerTxId
           committeeCandidiateValidatorAddr
           candidatePermissionInfo.currencySymbol
-          candidatePermissionTokenName
+          CandidatePermissionToken.candidatePermissionTokenName
 
         -----------------------------
         -- Running the deregister endpoint
         -----------------------------
-        _ ← Test.CommitteeCandidateValidator.runDeregister
-          scParams
+        _ ← Test.CommitteeCandidateValidator.runDeregister sidechainParams
 
         Test.Utils.assertIHaveOutputWithAsset
           candidatePermissionInfo.currencySymbol
-          candidatePermissionTokenName
+          CandidatePermissionToken.candidatePermissionTokenName
 
         pure unit
 
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
 assertIHaveCandidatePermissionToken ∷
-  SidechainParams → CandidatePermissionTokenInfo → Contract Unit
-assertIHaveCandidatePermissionToken
-  scParams
-  { candidatePermissionTokenUtxo, candidatePermissionTokenName } = do
-  let
-    candidateMintPermissionMint =
-      CandidatePermissionMint
-        { sidechainParams: scParams
-        , candidatePermissionTokenUtxo
-        }
-
+  SidechainParams → Contract Unit
+assertIHaveCandidatePermissionToken sidechainParams = do
   candidatePermissionInfo ←
     CandidatePermissionToken.candidatePermissionCurrencyInfo
-      candidateMintPermissionMint
+      sidechainParams
 
   Test.Utils.assertIHaveOutputWithAsset
     candidatePermissionInfo.currencySymbol
-    candidatePermissionTokenName
+    CandidatePermissionToken.candidatePermissionTokenName
 
   pure unit
 
@@ -157,46 +142,33 @@ testScenarioFailure1 =
         ]
     $ \alice → Wallet.withKeyWallet alice do
 
-        myTxInput ← Test.Utils.getOwnTransactionInput
         let
-          scParams = Test.Utils.dummySidechainParams
-          candidateMintPermissionMint =
-            CandidatePermissionMint
-              { sidechainParams: scParams
-              , candidatePermissionTokenUtxo: myTxInput
-              }
-          -- doesn't matter, so just use ada's token name
-          tokenName = Value.adaToken
+          sidechainParams = Test.Utils.dummySidechainParams
 
         -----------------------------
         -- Running the endpoints..
         -----------------------------
         txId ←
           Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
-            Nothing
-            scParams
+            false
+            sidechainParams
 
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
         candidatePermissionInfo ←
           CandidatePermissionToken.candidatePermissionCurrencyInfo
-            candidateMintPermissionMint
+            sidechainParams
 
         committeeCandidiateValidatorAddr ← do
           committeeCandidateValidator ←
             CommitteeCandidateValidator.getCommitteeCandidateValidator
-              scParams
-          netId ← Address.getNetworkId
-          addr ← Monad.liftContractM ("Cannot get validator address") $
-            Address.validatorHashEnterpriseAddress
-              netId
-              (Scripts.validatorHash committeeCandidateValidator)
-          pure addr
+              sidechainParams
+          Utils.toAddress (Scripts.validatorHash committeeCandidateValidator)
 
         Test.Utils.assertHasOutputWithAsset txId committeeCandidiateValidatorAddr
           candidatePermissionInfo.currencySymbol
-          tokenName
+          CandidatePermissionToken.candidatePermissionTokenName
           # Test.Utils.fails
 
         pure unit

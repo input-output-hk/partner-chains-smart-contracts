@@ -34,7 +34,6 @@
   , "profunctor"
   , "quickcheck"
   , "random"
-  , "record"
   , "strings"
   , "tailrec"
   , "test-unit"

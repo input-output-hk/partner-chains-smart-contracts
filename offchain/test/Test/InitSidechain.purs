@@ -8,7 +8,6 @@ import Contract.Log as Log
 import Contract.Monad as Monad
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
@@ -162,10 +161,6 @@ testScenario3 =
           initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
             <$> getOwnPaymentPubKeyHash
           let
-            permissionToken =
-              { candidatePermissionTokenUtxo: genesisUtxo
-              , candidatePermissionTokenName: Value.adaToken
-              }
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
             initScParams = InitSidechain.InitSidechainParams
               { initChainId: BigInt.fromInt 69
@@ -179,12 +174,10 @@ testScenario3 =
               , initATMSKind: ATMSPlainEcdsaSecp256k1
               , initCandidatePermissionTokenMintInfo:
                   Just
-                    { amount: one
-                    , permissionToken
+                    { candidatePermissionTokenAmount: one
                     }
               , initGovernanceAuthority
               }
 
           { sidechainParams: sc } ← InitSidechain.initSidechain initScParams 1
           Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
-            permissionToken

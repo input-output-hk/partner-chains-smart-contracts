@@ -1,47 +1,45 @@
 module TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(..)
-  , candidatePermissionCurrencyInfo
+  ( candidatePermissionCurrencyInfo
+  , candidatePermissionTokenName
   , CandidatePermissionMintParams(..)
   , CandidatePermissionTokenInfo
   , CandidatePermissionTokenMintInfo
   , candidatePermissionTokenLookupsAndConstraints
   , runCandidatePermissionToken
+  , mintOneCandidatePermissionInitToken
   ) where
 
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData
-  ( class FromData
-  , class ToData
-  , toData
+  ( toData
   , unitRedeemer
   )
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Utxos as Utxos
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
-import Data.Map as Map
-import TrustlessSidechain.Error
-  ( OffchainError(NotFoundUtxo)
+import Data.Maybe as Maybe
+import Partial.Unsafe (unsafePartial)
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenAssetClass(InitTokenAssetClass)
+  )
+import TrustlessSidechain.InitSidechain.Utils
+  ( burnOneInitToken
+  , initTokenCurrencyInfo
+  , mintOneInitToken
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (CurrencyInfo)
+import TrustlessSidechain.Types (AssetClass, CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
-import TrustlessSidechain.Utils.Data
-  ( productFromData2
-  , productToData2
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CandidatePermissionPolicy)
@@ -50,43 +48,52 @@ import TrustlessSidechain.Versioning.ScriptId
 --------------------------------
 -- Working with the onchain code
 --------------------------------
--- | `CandidatePermissionMint` is the parameter for
--- | `candidatePermissionMintingPolicy`
-newtype CandidatePermissionMint = CandidatePermissionMint
-  { sidechainParams ∷ SidechainParams
-  , candidatePermissionTokenUtxo ∷ TransactionInput
-  }
+-- | A name for the candidate permission initialization token.  Must be unique
+-- | among initialization tokens.
+candidatePermissionInitTokenName ∷ TokenName
+candidatePermissionInitTokenName =
+  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
+    =<< byteArrayFromAscii "CandidatePermission InitToken"
 
-derive instance Generic CandidatePermissionMint _
-
-derive instance Newtype CandidatePermissionMint _
-
-derive newtype instance Eq CandidatePermissionMint
-
-instance Show CandidatePermissionMint where
-  show = genericShow
-
-instance ToData CandidatePermissionMint where
-  toData
-    (CandidatePermissionMint { sidechainParams, candidatePermissionTokenUtxo }) =
-    productToData2 sidechainParams candidatePermissionTokenUtxo
-
-instance FromData CandidatePermissionMint where
-  fromData = productFromData2
-    ( \sidechainParams candidatePermissionTokenUtxo →
-        CandidatePermissionMint
-          { sidechainParams
-          , candidatePermissionTokenUtxo
-          }
-    )
+-- | A name for the candidate permission token.
+candidatePermissionTokenName ∷ TokenName
+candidatePermissionTokenName =
+  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
+    =<< byteArrayFromAscii ""
 
 -- | `candidatePermissionCurrencyInfo` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.
 candidatePermissionCurrencyInfo ∷
-  CandidatePermissionMint →
+  SidechainParams →
   Contract CurrencyInfo
-candidatePermissionCurrencyInfo cpm = do
-  getCurrencyInfo CandidatePermissionPolicy [ toData cpm ]
+candidatePermissionCurrencyInfo sp = do
+  { currencySymbol } ← initTokenCurrencyInfo sp
+  let
+    itac = InitTokenAssetClass
+      { initTokenCurrencySymbol: currencySymbol
+      , initTokenName: candidatePermissionInitTokenName
+      }
+  getCurrencyInfo CandidatePermissionPolicy [ toData itac ]
+
+-- | Build lookups and constraints to mint checkpoint initialization token.
+mintOneCandidatePermissionInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mintOneCandidatePermissionInitToken sp =
+  mintOneInitToken sp candidatePermissionInitTokenName
+
+-- | Build lookups and constraints to burn checkpoint initialization token.
+burnOneCandidatePermissionInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+burnOneCandidatePermissionInitToken sp =
+  burnOneInitToken sp candidatePermissionInitTokenName
 
 --------------------------------
 -- Endpoint code
@@ -95,26 +102,20 @@ candidatePermissionCurrencyInfo cpm = do
 -- | `CandidatePermissionMintParams` is the endpoint parameters for the
 -- | candidate permission token.
 newtype CandidatePermissionMintParams = CandidatePermissionMintParams
-  { candidateMintPermissionMint ∷ CandidatePermissionMint
-  , candidatePermissionTokenName ∷ TokenName
+  { sidechainParams ∷ SidechainParams
   , amount ∷ BigInt
   }
 
 -- | `CandidatePermissionTokenInfo` wraps up some of the required information for
 -- | referring to a candidate permission token. This isn't used onchain, but used
 -- | offchain for wrapping up this data consistently
-type CandidatePermissionTokenInfo =
-  { candidatePermissionTokenUtxo ∷ TransactionInput
-  , candidatePermissionTokenName ∷ TokenName
-  }
+type CandidatePermissionTokenInfo = AssetClass
 
 -- | `CandidatePermissionTokenMintInfo` wraps up some of the required information for
 -- | minting a candidate permission token. This isn't used onchain, but used
 -- | offchain for wrapping up this data consistently
 type CandidatePermissionTokenMintInfo =
-  { amount ∷ BigInt
-  , permissionToken ∷ CandidatePermissionTokenInfo
-  }
+  { candidatePermissionTokenAmount ∷ BigInt }
 
 -- | `candidatePermissionTokenLookupsAndConstraints` creates the required
 -- | lookups and constraints to build the transaction to mint the tokens.
@@ -125,16 +126,13 @@ candidatePermissionTokenLookupsAndConstraints ∷
     , constraints ∷ TxConstraints Void Void
     }
 candidatePermissionTokenLookupsAndConstraints
-  ( CandidatePermissionMintParams
-      { candidateMintPermissionMint, candidatePermissionTokenName, amount }
+  ( CandidatePermissionMintParams { sidechainParams, amount }
   ) = do
   { mintingPolicy, currencySymbol } ←
-    candidatePermissionCurrencyInfo candidateMintPermissionMint
+    candidatePermissionCurrencyInfo sidechainParams
 
-  let txIn = (unwrap candidateMintPermissionMint).candidatePermissionTokenUtxo
-  txOut ← Monad.liftedM (show (NotFoundUtxo "Candidate permission UTxO")) $
-    Utxos.getUtxo
-      txIn
+  -- Build lookups and constraints to burn candidate permission init token
+  burnInitToken ← burnOneCandidatePermissionInitToken sidechainParams
 
   let
     value = Value.singleton
@@ -145,21 +143,13 @@ candidatePermissionTokenLookupsAndConstraints
     lookups ∷ ScriptLookups Void
     lookups =
       Lookups.mintingPolicy mintingPolicy
-        <>
-          Lookups.unspentOutputs
-            ( Map.singleton txIn
-                ( TransactionOutputWithRefScript
-                    { output: txOut, scriptRef: Nothing }
-                )
-            )
 
     constraints ∷ TxConstraints Void Void
     constraints =
       TxConstraints.mustMintValueWithRedeemer
         unitRedeemer
         value
-        <> TxConstraints.mustSpendPubKeyOutput txIn
-  pure { lookups, constraints }
+  pure (burnInitToken <> { lookups, constraints })
 
 -- | `runCandidatePermissionToken` is the endpoint for minting candidate
 -- | permission tokens.
@@ -172,10 +162,10 @@ runCandidatePermissionToken ∷
 runCandidatePermissionToken
   cpmp@
     ( CandidatePermissionMintParams
-        { candidateMintPermissionMint }
+        { sidechainParams }
     ) = do
   { currencySymbol: candidatePermissionCurrencySymbol } ←
-    candidatePermissionCurrencyInfo candidateMintPermissionMint
+    candidatePermissionCurrencyInfo sidechainParams
 
   txId ← candidatePermissionTokenLookupsAndConstraints cpmp >>=
     balanceSignAndSubmit "Mint CandidatePermissionToken"

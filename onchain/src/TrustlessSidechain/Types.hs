@@ -10,7 +10,6 @@ module TrustlessSidechain.Types (
   ATMSRedeemer (..),
   BlockProducerRegistration (..),
   BlockProducerRegistrationMsg (..),
-  CandidatePermissionMint (..),
   CheckpointDatum (..),
   CheckpointMessage (..),
   CheckpointParameter (..),
@@ -178,40 +177,6 @@ newtype Signature = Signature
     via LedgerBytes
 
 -- * Committee Candidate Validator data
-
--- | 'CandidatePermissionMint' is used to parameterize the minting policy in
--- 'TrustlessSidechain.CommitteeCandidateMintingPolicy'.
-data CandidatePermissionMint = CandidatePermissionMint
-  { -- | @since v4.0.0
-    sidechainParams :: SidechainParams
-  , -- | @since v4.0.0
-    utxo :: TxOutRef
-  }
-  deriving stock
-    ( -- | @since v4.0.0
-      TSPrelude.Eq
-    , -- | @since v4.0.0
-      TSPrelude.Show
-    )
-
--- | @since v4.0.0
-instance ToData CandidatePermissionMint where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (CandidatePermissionMint {..}) =
-    productToData2 sidechainParams utxo
-
--- | @since v4.0.0
-instance FromData CandidatePermissionMint where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 CandidatePermissionMint
-
--- | @since v4.0.0
-instance UnsafeFromData CandidatePermissionMint where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 CandidatePermissionMint
-
--- | @since v4.0.0
-makeHasField ''CandidatePermissionMint
 
 {- Sum type distinguishing different Stake ownership models
  Ada based staking requires the SPO public key and the signature on

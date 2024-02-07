@@ -17,14 +17,12 @@ import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
 import Contract.Transaction (TransactionInput)
-import Contract.Value (TokenName)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
 import Node.Path (FilePath)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenInfo
-  , CandidatePermissionTokenMintInfo
+  ( CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.CommitteeCandidateValidator
@@ -161,7 +159,7 @@ data TxEndpoint
       , sidechainPubKey ∷ ByteArray
       , sidechainSig ∷ ByteArray
       , inputUtxo ∷ TransactionInput
-      , permissionToken ∷ Maybe CandidatePermissionTokenInfo
+      , usePermissionToken ∷ Boolean
       , auraKey ∷ ByteArray
       , grandpaKey ∷ ByteArray
       }
@@ -254,13 +252,6 @@ data TxEndpoint
 -- | candidate permission token when initializing the sidechain
 type CandidatePermissionTokenMintInit =
   { candidatePermissionTokenAmount ∷ BigInt
-  , candidatePermissionTokenName ∷ TokenName
-  ,
-    -- `Nothing`, indicates that we will replace this `TransactionInput` with
-    -- whatever was used as the sidechain genesis utxo.
-    -- Note that we can't just pass the sidechain params' genesis utxo in
-    -- because this is an applicative parser
-    candidatePermissionTokenUtxo ∷ Maybe TransactionInput
   }
 
 -- | `InputArgOrFile` represents that we may either allow an option as input

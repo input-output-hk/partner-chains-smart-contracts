@@ -46,11 +46,6 @@ import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import Record as Record
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  , CandidatePermissionTokenInfo
-  )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Error
   ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
@@ -76,7 +71,7 @@ newtype RegisterParams = RegisterParams
   , sidechainPubKey ∷ ByteArray
   , sidechainSig ∷ ByteArray
   , inputUtxo ∷ TransactionInput
-  , permissionToken ∷ Maybe CandidatePermissionTokenInfo
+  , usePermissionToken ∷ Boolean
   , auraKey ∷ ByteArray
   , grandpaKey ∷ ByteArray
   }
@@ -235,7 +230,7 @@ register
       , sidechainPubKey
       , sidechainSig
       , inputUtxo
-      , permissionToken
+      , usePermissionToken
       , auraKey
       , grandpaKey
       }
@@ -280,40 +275,25 @@ register
           "BlockProducer with given set of keys is already registered"
       )
 
-  maybeCandidatePermissionMintingPolicy ← case permissionToken of
-    Just
-      { candidatePermissionTokenUtxo: pUtxo
-      , candidatePermissionTokenName: pTokenName
-      } →
-      map
-        ( \rec → Just $ Record.union rec
-            { candidatePermissionTokenName: pTokenName }
-        )
-        $ CandidatePermissionToken.candidatePermissionCurrencyInfo
-        $ CandidatePermissionMint
-            { sidechainParams
-            , candidatePermissionTokenUtxo: pUtxo
-            }
-    Nothing → pure Nothing
+  { currencySymbol: candidateCurrencySymbol
+  , mintingPolicy: candidateMintingPolicy
+  } ← CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
 
   let
     val = Value.lovelaceValueOf (BigInt.fromInt 1)
-      <> case maybeCandidatePermissionMintingPolicy of
-        Nothing → mempty
-        Just { candidatePermissionTokenName, currencySymbol } →
-          Value.singleton
-            currencySymbol
-            candidatePermissionTokenName
-            one
+      <>
+        if usePermissionToken then Value.singleton candidateCurrencySymbol
+          CandidatePermissionToken.candidatePermissionTokenName
+          one
+        else mempty
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
       <> Lookups.unspentOutputs valUtxos
-      <> case maybeCandidatePermissionMintingPolicy of
-        Nothing → mempty
-        Just { mintingPolicy } →
-          Lookups.mintingPolicy mintingPolicy
+      <>
+        if usePermissionToken then Lookups.mintingPolicy candidateMintingPolicy
+        else mempty
 
     constraints ∷ Constraints.TxConstraints Void Void
     constraints =

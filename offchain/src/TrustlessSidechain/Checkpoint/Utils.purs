@@ -31,7 +31,6 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
-import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
@@ -61,8 +60,7 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 -- | initialization tokens.
 checkpointInitTokenName ∷ TokenName
 checkpointInitTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
+  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
     =<< byteArrayFromAscii "Checkpoint InitToken"
 
 -- | Build lookups and constraints to mint checkpoint initialization token.

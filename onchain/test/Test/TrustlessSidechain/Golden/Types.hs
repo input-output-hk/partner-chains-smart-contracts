@@ -39,11 +39,6 @@ import TrustlessSidechain.Types (
     sidechainParams,
     sidechainPubKey
   ),
-  CandidatePermissionMint (
-    CandidatePermissionMint,
-    sidechainParams,
-    utxo
-  ),
   CheckpointDatum (
     CheckpointDatum,
     blockHash,
@@ -163,7 +158,6 @@ tests =
   testGroup
     "Golden tests for Types module"
     [ dataEncoderGoldenTest "SidechainParams" sampleSidechainParams
-    , dataEncoderGoldenTest "CandidatePermissionMint" sampleCandidatePermissionMint
     , dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
     , dataEncoderGoldenTest "BlockProducerRegistration2" sampleBlockProducerRegistration2
     , dataEncoderGoldenTest "BlockProducerRegistrationMsg" sampleBlockProducerRegistrationMsg
@@ -267,13 +261,6 @@ sampleSidechainParams =
     , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     , thresholdNumerator = 2
     , thresholdDenominator = 3
-    }
-
-sampleCandidatePermissionMint :: CandidatePermissionMint
-sampleCandidatePermissionMint =
-  CandidatePermissionMint
-    { sidechainParams = sampleSidechainParams
-    , utxo = sampleTxOutRef
     }
 
 sampleBlockProducerRegistration1 :: BlockProducerRegistration

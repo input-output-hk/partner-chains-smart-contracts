@@ -32,9 +32,6 @@ import Test.Utils.QuickCheck
   , liftArbitrary
   , suchThatMap
   )
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  )
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointMessage(CheckpointMessage)
@@ -156,7 +153,6 @@ tests ∷ WrappedTests
 tests = pureGroup "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
   test "EcdsaSecp256k1PubKey" $ liftEffect $ toDataLaws smallTestCount genPK
-  test "CandidatePermissionMint" $ liftEffect $ toDataLaws testCount genCPM
   test "BlockProducerRegistration" $ liftEffect $ toDataLaws testCount genBPR
   test "BlockProducerRegistrationMsg" $ liftEffect $ toDataLaws testCount
     genBPRM
@@ -576,15 +572,6 @@ genBPR = do
     , ownPkh
     , auraKey
     , grandpaKey
-    }
-
-genCPM ∷ Gen CandidatePermissionMint
-genCPM = do
-  sidechainParams ← genSP
-  ArbitraryTransactionInput candidatePermissionTokenUtxo ← arbitrary
-  pure $ CandidatePermissionMint
-    { sidechainParams
-    , candidatePermissionTokenUtxo
     }
 
 genPK ∷ Gen EcdsaSecp256k1PubKey

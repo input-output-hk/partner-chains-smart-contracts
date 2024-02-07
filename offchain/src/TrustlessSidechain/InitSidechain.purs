@@ -15,6 +15,7 @@
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
   ( initSidechain
+  , initSpendGenesisUtxo
   , InitSidechainParams(InitSidechainParams)
   , InitSidechainParams'
   , InitTokensParams
@@ -47,10 +48,10 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Data.Maybe (isJust)
 import Data.Monoid (mempty)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  , CandidatePermissionMintParams(CandidatePermissionMintParams)
+  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
   , CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -107,9 +108,7 @@ type InitTokensParams r =
     initUtxo ∷ TransactionInput
   , initThresholdNumerator ∷ BigInt
   , initThresholdDenominator ∷ BigInt
-  , initCandidatePermissionTokenMintInfo ∷
-      Maybe
-        CandidatePermissionTokenMintInfo
+  , initCandidatePermissionTokenMintInfo ∷ Maybe CandidatePermissionTokenMintInfo
   , initATMSKind ∷ ATMSKinds
   , initGovernanceAuthority ∷ Governance.GovernanceAuthority
   | r
@@ -199,21 +198,11 @@ initCandidatePermissionTokenLookupsAndConstraints ∷
 initCandidatePermissionTokenLookupsAndConstraints isp =
   case isp.initCandidatePermissionTokenMintInfo of
     Nothing → pure mempty
-    Just
-      { amount
-      , permissionToken:
-          { candidatePermissionTokenUtxo, candidatePermissionTokenName }
-      } → do
+    Just { candidatePermissionTokenAmount: amount } → do
+      let sidechainParams = toSidechainParams isp
+
       CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
-        $ CandidatePermissionMintParams
-            { candidateMintPermissionMint:
-                CandidatePermissionMint
-                  { sidechainParams: toSidechainParams isp
-                  , candidatePermissionTokenUtxo: candidatePermissionTokenUtxo
-                  }
-            , candidatePermissionTokenName
-            , amount
-            }
+        $ CandidatePermissionMintParams { sidechainParams, amount }
 
 -- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the
@@ -450,6 +439,28 @@ initDistributedSetLookupsAndConstraints sidechainParams = do
 
   pure $ burnDsInitToken <> { lookups, constraints }
 
+-- | Build lookups and constraints to spend the genesis UTxO.  This is
+-- | re-exported from the module for the purposes of testing, so that we can
+-- | mint init tokens in tests when needed.
+initSpendGenesisUtxo ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initSpendGenesisUtxo sidechainParams = do
+  let txIn = (unwrap sidechainParams).genesisUtxo
+  txOut ← liftedM (show NoGenesisUTxO) (getUtxo txIn)
+  pure
+    { constraints: Constraints.mustSpendPubKeyOutput txIn
+    , lookups: Lookups.unspentOutputs
+        ( Map.singleton txIn
+            ( TransactionOutputWithRefScript
+                { output: txOut, scriptRef: Nothing }
+            )
+        )
+    }
+
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
 -- | this will do the following:
@@ -482,15 +493,6 @@ initSidechain ∷
 initSidechain (InitSidechainParams isp) version = do
   let sidechainParams = toSidechainParams isp
 
-  -- Querying the distinguished 'InitSidechainParams.initUtxo'
-  ----------------------------------------
-  let
-    txIn = isp.initUtxo
-
-  txOut ← liftedM (show NoGenesisUTxO) $
-    getUtxo
-      txIn
-
   -- Grabbing all contraints for initialising the committee hash
   -- and distributed set.
   -- Note: this uses the monoid instance of functions to monoids to run
@@ -500,21 +502,14 @@ initSidechain (InitSidechainParams isp) version = do
   -- version argument.  See Issue #10
   { constraints, lookups } ←
     ( initCommitteeHashMintLookupsAndConstraints
-        <> initCandidatePermissionTokenLookupsAndConstraints
         <> initCommitteeHashLookupsAndConstraints
-        <> \_ → pure
-          -- distinguished input to spend from 'InitSidechainParams.initUtxo'
-          { constraints: Constraints.mustSpendPubKeyOutput txIn
-          , lookups: Lookups.unspentOutputs
-              ( Map.singleton txIn
-                  ( TransactionOutputWithRefScript
-                      { output: txOut, scriptRef: Nothing }
-                  )
-              )
-          }
     ) isp <>
-      ( Checkpoint.mintOneCheckpointInitToken sidechainParams <>
-          DistributedSet.mintOneDsInitToken sidechainParams
+      ( Checkpoint.mintOneCheckpointInitToken sidechainParams
+          <> DistributedSet.mintOneDsInitToken sidechainParams
+          <>
+            CandidatePermissionToken.mintOneCandidatePermissionInitToken
+              sidechainParams
+          <> initSpendGenesisUtxo sidechainParams
       )
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
@@ -532,7 +527,9 @@ initSidechain (InitSidechainParams isp) version = do
   _ ← initCheckpointLookupsAndConstraints isp
     >>= balanceSignAndSubmit "Checkpoint init"
   _ ← initDistributedSetLookupsAndConstraints sidechainParams
-    >>= balanceSignAndSubmit "DistributedSet init"
+    >>= balanceSignAndSubmit "Distributed set init"
+  _ ← initCandidatePermissionTokenLookupsAndConstraints isp
+    >>= balanceSignAndSubmit "Candidate permission tokens init"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224
@@ -542,11 +539,7 @@ initSidechain (InitSidechainParams isp) version = do
       SidechainAddressesEndpointParams
         { sidechainParams
         , atmsKind: isp.initATMSKind
-        , mCandidatePermissionTokenUtxo:
-            case isp.initCandidatePermissionTokenMintInfo of
-              Nothing → Nothing
-              Just { permissionToken: { candidatePermissionTokenUtxo } } →
-                Just candidatePermissionTokenUtxo
+        , usePermissionToken: isJust isp.initCandidatePermissionTokenMintInfo
         , version
         }
   pure

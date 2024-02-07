@@ -12,7 +12,6 @@ import Contract.Config
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
-import Contract.Value as Value
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
   , WalletSpec(UseKeys)
@@ -84,7 +83,6 @@ import TrustlessSidechain.Options.Parsers
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
-  , tokenName
   , transactionInput
   , uint
   , validatorHashParser
@@ -645,30 +643,21 @@ regSpec = ado
     , help "Input UTxO to be spend with the commitee candidate registration"
     ]
   stakeOwnership ← stakeOwnershipSpec
-  permissionToken ← optional $ ado
-    permissionTokenUtxo ← option transactionInput $ fold
-      [ long "candidate-permission-token-utxo"
-      , metavar "TX_ID#TX_IDX"
-      , help "Input UTxO used to create the permission token"
-      ]
-    permissionTokenName ← option tokenName $ fold
-      [ long "candidate-permission-token-name"
-      , metavar "HEX_STR"
-      , value Value.adaToken
-      , help
-          "Hex encoded string that is the token name of the permission token (default is `\"\"`)"
-      ]
-    in
-      { candidatePermissionTokenUtxo: permissionTokenUtxo
-      , candidatePermissionTokenName: permissionTokenName
-      }
+  usePermissionToken ← switch $ fold
+    -- `switch` is
+    --  No flag given ==> false
+    --  Flag given ==> true
+    [ long "use-candidate-permission-token"
+    , help
+        "Use candidate permission tokens during committee candidate registration"
+    ]
   in
     CommitteeCandidateReg
       { stakeOwnership
       , sidechainPubKey: sidechainKey
       , sidechainSig
       , inputUtxo
-      , permissionToken
+      , usePermissionToken
       , auraKey
       , grandpaKey
       }
@@ -967,25 +956,7 @@ initCandidatePermissionTokenMintHelper = ado
     , metavar "INT"
     , help "Amount of the candidate permission token to be minted"
     ]
-  candidatePermissionTokenName ← option tokenName $ fold
-    [ long "candidate-permission-token-name"
-    , metavar "TOKEN_NAME"
-    , value Value.adaToken
-    , help
-        "Hex encoded token name of the candidate permission token to be minted (default `\"\"`)"
-    ]
-
-  candidatePermissionTokenUtxo ← optional $ option transactionInput $ fold
-    [ long "candidate-permission-token-utxo"
-    , metavar "TX_ID#TX_IDX"
-    , help
-        "UTxO used to mint the candidate permission token (must be a pub key output) and defaults to the Sidechain parameter's `genesis-committee-hash-utxo` UTxO"
-    ]
-  in
-    { candidatePermissionTokenName
-    , candidatePermissionTokenUtxo
-    , candidatePermissionTokenAmount
-    }
+  in { candidatePermissionTokenAmount }
 
 parseVersion ∷ Parser Int
 parseVersion =
@@ -1010,8 +981,8 @@ initSpec = ado
     \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
 
   initSidechainEpoch ← parseSidechainEpoch
-  initCandidatePermissionTokenMintInfo ← optional
-    initCandidatePermissionTokenMintHelper
+  initCandidatePermissionTokenMintInfo ←
+    optional initCandidatePermissionTokenMintHelper
   genesisHash ← parseGenesisHash
   version ← parseVersion
   in
@@ -1176,32 +1147,12 @@ burnNFTsSpec = pure BurnNFTs
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado
-  amount ← option bigInt $ fold
+  candidatePermissionTokenAmount ← option bigInt $ fold
     [ long "candidate-permission-token-amount"
     , metavar "INT"
     , help "Amount of the candidate permission token to be minted"
     ]
-  candidatePermissionTokenName ← option tokenName $ fold
-    [ long "candidate-permission-token-name"
-    , metavar "TOKEN_NAME"
-    , value Value.adaToken
-    , help
-        "Hex encoded token name of the candidate permission token to be minted (default `\"\"`)"
-    ]
-
-  candidatePermissionTokenUtxo ← option transactionInput $ fold
-    [ long "candidate-permission-token-utxo"
-    , metavar "TX_ID#TX_IDX"
-    , help
-        "UTxO used to mint the candidate permission token (must be a pub key output)"
-    ]
-  in
-    { permissionToken:
-        { candidatePermissionTokenUtxo
-        , candidatePermissionTokenName
-        }
-    , amount
-    }
+  in { candidatePermissionTokenAmount }
 
 -- | Parse all parameters for the `candidiate-permission-token` endpoint
 candidatePermissionTokenSpec ∷ Parser TxEndpoint
@@ -1212,16 +1163,18 @@ candidatePermissionTokenSpec =
 -- | the `addresses` endpoint
 getAddrSpec ∷ Parser TxEndpoint
 getAddrSpec = ado
-  mCandidatePermissionTokenUtxo ← optional $ option transactionInput $ fold
-    [ long "candidate-permission-token-utxo"
-    , metavar "TX_ID#TX_IDX"
+  usePermissionToken ← switch $ fold
+    -- `switch` is
+    --  No flag given ==> false
+    --  Flag given ==> true
+    [ long "use-candidate-permission-token"
     , help
-        "UTxO used to mint the candidate permission token to return its currency symbol"
+        "Use candidate permission tokens during committee candidate registration"
     ]
   version ← parseVersion
   in
     GetAddrs
-      { mCandidatePermissionTokenUtxo
+      { usePermissionToken
       , version
       }
 

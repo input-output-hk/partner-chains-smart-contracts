@@ -26,9 +26,6 @@ import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, dummySidechainParams, fails, plutipGroup)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenInfo
-  )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -55,44 +52,45 @@ tests = plutipGroup "Committe candidate registration/deregistration" $ do
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
 runRegister ∷ SidechainParams → Contract TransactionHash
-runRegister = runRegisterWithCandidatePermissionInfo Nothing
+runRegister = runRegisterWithCandidatePermissionInfo false
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
 runRegisterWithFixedKeys ∷ SidechainParams → Contract TransactionHash
-runRegisterWithFixedKeys = runRegisterWithCandidatePermissionInfoWithFixedKeys
-  Nothing
+runRegisterWithFixedKeys =
+  runRegisterWithCandidatePermissionInfoWithFixedKeys false
 
 runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
-  Maybe CandidatePermissionTokenInfo →
+  Boolean →
   SidechainParams →
   Contract TransactionHash
-runRegisterWithCandidatePermissionInfoWithFixedKeys cpti scParams = do
-  ownAddr ← getOwnWalletAddress
-  ownUtxos ← utxosAt ownAddr
-  registrationUtxo ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
-  register $ RegisterParams
-    { sidechainParams: scParams
-    , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
-    , sidechainPubKey: hexToByteArrayUnsafe
-        "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
-    , sidechainSig: hexToByteArrayUnsafe
-        "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
-    , inputUtxo: registrationUtxo
-    , permissionToken: cpti
-    , auraKey: hexToByteArrayUnsafe
-        "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
-    , grandpaKey: hexToByteArrayUnsafe
-        "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
-    }
+runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
+  do
+    ownAddr ← getOwnWalletAddress
+    ownUtxos ← utxosAt ownAddr
+    registrationUtxo ← liftContractM "No UTxOs found at key wallet"
+      $ Set.findMin
+      $ Map.keys ownUtxos
+    register $ RegisterParams
+      { sidechainParams: scParams
+      , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
+      , sidechainPubKey: hexToByteArrayUnsafe
+          "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
+      , sidechainSig: hexToByteArrayUnsafe
+          "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
+      , inputUtxo: registrationUtxo
+      , usePermissionToken
+      , auraKey: hexToByteArrayUnsafe
+          "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
+      , grandpaKey: hexToByteArrayUnsafe
+          "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
+      }
 
 runRegisterWithCandidatePermissionInfo ∷
-  Maybe CandidatePermissionTokenInfo →
+  Boolean →
   SidechainParams →
   Contract TransactionHash
-runRegisterWithCandidatePermissionInfo cpti scParams = do
+runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   let
     generateKey = byteArrayFromIntArrayUnsafe <$>
       (sequence $ Array.replicate 32 (randomInt 0 255))
@@ -116,7 +114,7 @@ runRegisterWithCandidatePermissionInfo cpti scParams = do
     , sidechainSig: hexToByteArrayUnsafe
         "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
     , inputUtxo: registrationUtxo
-    , permissionToken: cpti
+    , usePermissionToken
     , auraKey
     , grandpaKey
     }

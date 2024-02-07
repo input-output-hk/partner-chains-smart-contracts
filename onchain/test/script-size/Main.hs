@@ -80,11 +80,11 @@ main =
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
-            147
+            209
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            1_981
+            1_915
         , fitsInto
             "mkCommitteeOraclePolicy"
             Compiled.mkCommitteeOraclePolicyCode

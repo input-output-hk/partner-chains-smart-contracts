@@ -15,14 +15,10 @@ import Contract.Scripts
   ( Validator
   , validatorHash
   )
-import Contract.Transaction (TransactionInput)
 import Data.Array as Array
 import Data.Functor (map)
 import Data.Map as Map
 import Data.TraversableWithIndex (traverseWithIndex)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMint(CandidatePermissionMint)
-  )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
@@ -87,7 +83,7 @@ type SidechainAddresses =
 -- | In particular, this allows us to optionally grab the minting policy of the
 -- | candidate permission token.
 type SidechainAddressesExtra =
-  { mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+  { usePermissionToken ∷ Boolean
   , version ∷ Int
   }
 
@@ -98,7 +94,7 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   , atmsKind ∷ ATMSKinds
   , -- Used to optionally grab the minting policy of candidate permission
     -- token.
-    mCandidatePermissionTokenUtxo ∷ Maybe TransactionInput
+    usePermissionToken ∷ Boolean
   , version ∷ Int
   }
 
@@ -111,9 +107,9 @@ getSidechainAddresses ∷
   SidechainAddressesEndpointParams → Contract SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
-      { sidechainParams: scParams
+      { sidechainParams
       , atmsKind
-      , mCandidatePermissionTokenUtxo
+      , usePermissionToken
       , version
       }
   ) = do
@@ -122,64 +118,61 @@ getSidechainAddresses
   let
     committeeCertificateMint =
       CommitteeCertificateMint
-        { thresholdNumerator: (unwrap scParams).thresholdNumerator
-        , thresholdDenominator: (unwrap scParams).thresholdDenominator
+        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
+        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
         }
 
-  ds ← DistributedSet.getDs scParams
+  ds ← DistributedSet.getDs sidechainParams
 
-  { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo scParams
+  { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo
+    sidechainParams
   dsConfPolicyId ← getCurrencySymbolHex DsConfPolicy dsConfPolicy
 
-  mCandidatePermissionPolicyId ← case mCandidatePermissionTokenUtxo of
-    Nothing → pure Nothing
-    Just permissionTokenUtxo → do
+  mCandidatePermissionPolicyId ←
+    if usePermissionToken then do
       { mintingPolicy: candidatePermissionPolicy } ←
-        CandidatePermissionToken.candidatePermissionCurrencyInfo
-          $ CandidatePermissionMint
-              { sidechainParams: scParams
-              , candidatePermissionTokenUtxo: permissionTokenUtxo
-              }
+        CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
       candidatePermissionPolicyId ← getCurrencySymbolHex
         CandidatePermissionPolicy
         candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
+    else pure Nothing
 
   { currencySymbol: checkpointCurrencySymbol } ← do
-    Checkpoint.checkpointCurrencyInfo scParams
+    Checkpoint.checkpointCurrencyInfo sidechainParams
   let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
 
-  { versionOracleCurrencySymbol } ← getVersionOraclePolicy scParams
+  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sidechainParams
   let versionOraclePolicyId = currencySymbolToHex versionOracleCurrencySymbol
 
-  { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy scParams
+  { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy sidechainParams
   let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
 
   { permissionedCandidatesCurrencySymbol } ←
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
-      scParams
+      sidechainParams
   let
     permissionedCandidatesPolicyId =
       currencySymbolToHex permissionedCandidatesCurrencySymbol
 
   { dParameterCurrencySymbol } ←
     DParameter.getDParameterMintingPolicyAndCurrencySymbol
-      scParams
+      sidechainParams
   let dParameterPolicyId = currencySymbolToHex dParameterCurrencySymbol
 
   -- Validators
   committeeCandidateValidator ←
-    CommitteeCandidateValidator.getCommitteeCandidateValidator scParams
+    CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
 
   dsInsertValidator ← DistributedSet.insertValidator ds
   dsConfValidator ← DistributedSet.dsConfValidator ds
 
   veresionOracleValidator ←
-    versionOracleValidator scParams versionOracleCurrencySymbol
+    versionOracleValidator sidechainParams versionOracleCurrencySymbol
 
   { versionedPolicies, versionedValidators } ←
     Versioning.getVersionedPoliciesAndValidators
-      { sidechainParams: scParams, atmsKind }
+      { sidechainParams: sidechainParams, atmsKind }
       version
   versionedCurrencySymbols ← Map.toUnfoldable <$> traverseWithIndex
     getCurrencySymbolHex
@@ -187,24 +180,24 @@ getSidechainAddresses
 
   { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint, sidechainParams: scParams }
+      { committeeCertificateMint, sidechainParams }
   let
     committeePlainEcdsaSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
       committeePlainEcdsaSecp256k1ATMSCurrencySymbol
 
   { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint, sidechainParams: scParams }
+      { committeeCertificateMint, sidechainParams }
   let
     committeePlainSchnorrSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
       committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
   { permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
-      scParams
+      sidechainParams
 
   { dParameterValidator } ←
-    DParameter.getDParameterValidatorAndAddress scParams
+    DParameter.getDParameterValidatorAndAddress sidechainParams
 
   let
     mintingPolicies =
