@@ -13,6 +13,25 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 # v5.0.0
 
 ## Added
+
+  * Added `use-candidate-permission-token` switch to `register` and `addresses`
+    command.  Using this flag will assume usage of candidate permission tokens.
+
+## Changed
+
+## Removed
+
+  * Removed `init-tokens-mint` command.
+  * Removed `use-init-tokens` flag from `init` command.
+  * Removed `candidate-permission-token-utxo` and
+    `candidate-permission-token-name` optional parameters from all `register`
+    and `candidate-permission-token` commands.
+  * Removed `candidate-permission-token-utxo` optional parameter from
+    `addresses` command.
+
+# Unreleased
+
+## Added
 * Added `update-permissioned-candidates` command takes candidates to add and candidates to remove.
   It can also remove all current permissioned-candidates with `--remove-all-candidates` flag.
   ([631](https://github.com/input-output-hk/trustless-sidechain/pull/631))
