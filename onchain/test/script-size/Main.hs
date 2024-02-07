@@ -179,19 +179,19 @@ main =
         , fitsInto
             "mkVersionOraclePolicyCode (Versioning)"
             Compiled.mkVersionOraclePolicyCode
-            1_643
+            1_828
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_036
+            3_126
         , fitsInto
             "mkVersionOracleValidatorCode (Versioning)"
             Compiled.mkVersionOracleValidatorCode
-            1_994
+            2_313
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
-            3_468
+            3_728
         ]
     , testGroup
         "Distributed set"

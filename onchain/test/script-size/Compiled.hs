@@ -57,7 +57,7 @@ module Compiled (
 
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
-import Plutus.V2.Ledger.Api (CurrencySymbol, LedgerBytes, ScriptContext)
+import Plutus.V2.Ledger.Api (LedgerBytes, ScriptContext)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.CandidatePermissionMintingPolicy (
@@ -346,6 +346,7 @@ mkCommitteePlainATMSPolicyCode = $$(compile [||CommitteePlainATMSPolicy.mkMintin
 mkVersionOraclePolicyCode ::
   CompiledCode
     ( SidechainParams ->
+      Address ->
       Versioning.VersionOraclePolicyRedeemer ->
       ScriptContext ->
       Bool
@@ -355,8 +356,7 @@ mkVersionOraclePolicyCode = $$(compile [||Versioning.mkVersionOraclePolicy||])
 mkVersionOracleValidatorCode ::
   CompiledCode
     ( SidechainParams ->
-      CurrencySymbol ->
-      Versioning.VersionOracle ->
+      Versioning.VersionOracleDatum ->
       Versioning.VersionOracleValidatorRedeemer ->
       ScriptContext ->
       Bool

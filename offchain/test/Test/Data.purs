@@ -146,8 +146,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   , VersionOracleConfig(VersionOracleConfig)
   , VersionOraclePolicyRedeemer
-      ( InitializeVersionOracle
-      , MintVersionOracle
+      ( MintVersionOracle
       , BurnVersionOracle
       )
   , VersionOracleValidatorRedeemer(InvalidateVersionOracle, UpdateVersionOracle)
@@ -395,13 +394,12 @@ genVersionOracleConfig = do
 
 genVersionOraclePolicyRedeemer ∷ Gen VersionOraclePolicyRedeemer
 genVersionOraclePolicyRedeemer = QGen.oneOf $ NE.cons'
-  (pure InitializeVersionOracle)
-  [ do
+  ( do
       versionOracle ← genVersionOracle
       ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
       pure $ MintVersionOracle versionOracle scriptHash
-  , BurnVersionOracle <$> genVersionOracle
-  ]
+  )
+  [ BurnVersionOracle <$> genVersionOracle ]
 
 genVersionOracleValidatorRedeemer ∷ Gen VersionOracleValidatorRedeemer
 genVersionOracleValidatorRedeemer = QGen.oneOf $ NE.cons'

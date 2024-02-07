@@ -4,6 +4,7 @@ module TrustlessSidechain.Versioning.Types
   , toScriptHash
   , toPlutusScript
   , VersionOracle(..)
+  , VersionOracleDatum(..)
   , VersionOracleConfig(..)
   , VersionOraclePolicyRedeemer(..)
   , VersionOracleValidatorRedeemer(..)
@@ -35,6 +36,29 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId(..)) as ScriptId
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.
+newtype VersionOracleDatum = VersionOracleDatum
+  { versionOracle ∷ VersionOracle -- ^ unique identifier of the versioned script
+  , versionCurrencySymbol ∷ CurrencySymbol -- ^ currency symbol of the version oracle policy
+  }
+
+derive instance Eq VersionOracleDatum
+derive instance Generic VersionOracleDatum _
+instance Show VersionOracleDatum where
+  show = genericShow
+
+instance FromData VersionOracleDatum where
+  fromData = productFromData2
+    ( \o c → VersionOracleDatum
+        { versionOracle: o
+        , versionCurrencySymbol: c
+        }
+    )
+
+instance ToData VersionOracleDatum where
+  toData (VersionOracleDatum { versionOracle, versionCurrencySymbol }) =
+    productToData2 versionOracle versionCurrencySymbol
+
+-- VersionOracle uniquiely identifies a versioned script.
 newtype VersionOracle = VersionOracle
   { version ∷ BigInt -- ^ version of the protocol
   , scriptId ∷ ScriptId.ScriptId -- ^ unique identifier of the validator
@@ -54,9 +78,7 @@ instance ToData VersionOracle where
 -- | Redeemer for the version oracle minting policy that instructs the script
 -- | whether to mint or burn version tokens.
 data VersionOraclePolicyRedeemer
-  = -- | Mint initial version tokens.  Used during sidechain initialization.
-    InitializeVersionOracle
-  | -- | Mint a new version token ensuring it contains correct datum and
+  = -- | Mint a new version token ensuring it contains correct datum and
     -- | reference script.
     MintVersionOracle VersionOracle ScriptHash
   | -- | Burn existing version token.
@@ -70,21 +92,17 @@ instance Show VersionOraclePolicyRedeemer where
   show = genericShow
 
 instance FromData VersionOraclePolicyRedeemer where
-  fromData (Constr n []) | n == (BigNum.fromInt 0) =
-    pure InitializeVersionOracle
-  fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 1) =
+  fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 0) =
     MintVersionOracle <$> fromData vo <*> fromData sh
-  fromData (Constr n [ vo ]) | n == (BigNum.fromInt 2) =
+  fromData (Constr n [ vo ]) | n == (BigNum.fromInt 1) =
     BurnVersionOracle <$> fromData vo
   fromData _ = Nothing
 
 instance ToData VersionOraclePolicyRedeemer where
-  toData InitializeVersionOracle =
-    Constr (BigNum.fromInt 0) []
   toData (MintVersionOracle vo sh) =
-    Constr (BigNum.fromInt 1) [ toData vo, toData sh ]
+    Constr (BigNum.fromInt 0) [ toData vo, toData sh ]
   toData (BurnVersionOracle vo) =
-    Constr (BigNum.fromInt 2) [ toData vo ]
+    Constr (BigNum.fromInt 1) [ toData vo ]
 
 -- | Redeemer for version oracle validator script.  Used when existing
 -- | version tokens are spent from the script, either to be burned or updated
