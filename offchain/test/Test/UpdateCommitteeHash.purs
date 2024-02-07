@@ -28,19 +28,14 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
   , getUpdateCommitteeHashValidator
   )
@@ -98,32 +93,8 @@ generateUchmSignatures
   -- Creating the update committee hash validator (since we want to pay the
   -- committee oracle back to the same address)
   ---------------------------
-  { currencySymbol: committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol
-  } ←
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint: CommitteeCertificateMint
-          { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-          , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-          }
-      , sidechainParams
-      }
-
-  { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.Utils.merkleRootCurrencyInfo sidechainParams
-
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      }
-
   { validatorHash: updateCommitteeHashValidatorHash } ←
-    getUpdateCommitteeHashValidator uch
+    getUpdateCommitteeHashValidator sidechainParams
 
   -- Building the message to sign
   ---------------------------

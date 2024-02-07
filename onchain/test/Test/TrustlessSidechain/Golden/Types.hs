@@ -60,8 +60,6 @@ import TrustlessSidechain.Types (
   CheckpointParameter (
     CheckpointParameter,
     assetClass,
-    committeeCertificateVerificationCurrencySymbol,
-    committeeOracleCurrencySymbol,
     sidechainParams
   ),
   CombinedMerkleProof (
@@ -141,13 +139,6 @@ import TrustlessSidechain.Types (
     aggregateCommitteePubKeys,
     sidechainEpoch
   ),
-  UpdateCommitteeHash (
-    UpdateCommitteeHash,
-    committeeCertificateVerificationCurrencySymbol,
-    committeeOracleCurrencySymbol,
-    mptRootTokenCurrencySymbol,
-    sidechainParams
-  ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -187,7 +178,6 @@ tests =
     , dataEncoderGoldenTest "UpdateCommitteeDatum" sampleUpdateCommitteeDatum
     , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer1" sampleUpdateCommitteeHashRedeemer1
     , dataEncoderGoldenTest "UpdateCommitteeHashRedeemer2" sampleUpdateCommitteeHashRedeemer2
-    , dataEncoderGoldenTest "UpdateCommitteeHash" sampleUpdateCommitteeHash
     , dataEncoderGoldenTest "UpdateCommitteeHashMessage1" sampleUpdateCommitteeHashMessage1
     , dataEncoderGoldenTest "UpdateCommitteeHashMessage2" sampleUpdateCommitteeHashMessage2
     , dataEncoderGoldenTest "CheckpointDatum" sampleCheckpointDatum
@@ -411,15 +401,6 @@ sampleUpdateCommitteeHashRedeemer2 =
     { previousMerkleRoot = Nothing
     }
 
-sampleUpdateCommitteeHash :: UpdateCommitteeHash
-sampleUpdateCommitteeHash =
-  UpdateCommitteeHash
-    { sidechainParams = sampleSidechainParams
-    , committeeOracleCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-    , committeeCertificateVerificationCurrencySymbol = "ba14173257eec781ca12722cd0b76274caa2a5300ca35e80a0a4f2d9"
-    , mptRootTokenCurrencySymbol = "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
-    }
-
 sampleUpdateCommitteeHashMessage1 :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
 sampleUpdateCommitteeHashMessage1 =
   UpdateCommitteeHashMessage
@@ -452,8 +433,6 @@ sampleCheckpointParameter =
   CheckpointParameter
     { sidechainParams = sampleSidechainParams
     , assetClass = Value.assetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
-    , committeeOracleCurrencySymbol = "ba057436091a591a90329bd86e0e1617ac05cff039fb594b577a4084"
-    , committeeCertificateVerificationCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     }
 
 sampleCheckpointMessage :: CheckpointMessage

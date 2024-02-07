@@ -89,8 +89,6 @@ import TrustlessSidechain.Types (
   CheckpointParameter (
     CheckpointParameter,
     assetClass,
-    committeeCertificateVerificationCurrencySymbol,
-    committeeOracleCurrencySymbol,
     sidechainParams
   ),
   CombinedMerkleProof (CombinedMerkleProof),
@@ -134,13 +132,6 @@ import TrustlessSidechain.Types (
   SignedMerkleRootRedeemer (SignedMerkleRootRedeemer),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
   UpdateCommitteeDatum (UpdateCommitteeDatum),
-  UpdateCommitteeHash (
-    UpdateCommitteeHash,
-    committeeCertificateVerificationCurrencySymbol,
-    committeeOracleCurrencySymbol,
-    mptRootTokenCurrencySymbol,
-    sidechainParams
-  ),
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -200,8 +191,6 @@ main =
     , testProperty "UpdateCommitteeDatum (unsafe)" . toDataUnsafeLaws' genUPD shrinkUPD $ show
     , testProperty "ATMSPlainAggregatePubKey (safe)" . toDataSafeLaws' genAPAPK shrinkAPAPK $ show
     , testProperty "ATMSPlainAggregatePubKey (unsafe)" . toDataUnsafeLaws' genAPAPK shrinkAPAPK $ show
-    , testProperty "UpdateCommitteeHash (safe)" . toDataSafeLaws' genUCH shrinkUCH $ show
-    , testProperty "UpdateCommitteeHash (unsafe)" . toDataUnsafeLaws' genUCH shrinkUCH $ show
     , testProperty "UpdateCommitteeHashMessage (safe)" . toDataSafeLaws' genUCHM shrinkUCHM $ show
     , testProperty "UpdateCommitteeHashMessage (unsafe)" . toDataUnsafeLaws' genUCHM shrinkUCHM $ show
     , testProperty "UpdateCommitteeHashRedeemer (safe)" . toDataSafeLaws' genUCHR shrinkUCHR $ show
@@ -373,9 +362,7 @@ genCP :: Gen CheckpointParameter
 genCP = do
   sp <- genSP
   ArbitraryAssetClass ac <- arbitrary
-  ArbitraryCurrencySymbol sym <- arbitrary
-  ArbitraryCurrencySymbol sym' <- arbitrary
-  pure . CheckpointParameter sp ac sym $ sym'
+  pure . CheckpointParameter sp $ ac
 
 -- Generates arbitrary bytes
 genAPM :: Gen ATMSPlainMultisignature
@@ -540,14 +527,6 @@ genCCM = do
   Positive td <- arbitrary
   pure . CommitteeCertificateMint tn $ td
 
-genUCH :: Gen UpdateCommitteeHash
-genUCH = do
-  sp <- genSP
-  ArbitraryCurrencySymbol cocs <- arbitrary
-  ArbitraryCurrencySymbol ccvcs <- arbitrary
-  ArbitraryCurrencySymbol rtcs <- arbitrary
-  pure . UpdateCommitteeHash sp cocs ccvcs $ rtcs
-
 genGA :: Gen GovernanceAuthority
 genGA = do
   ArbitraryPubKeyHash pkh <- arbitrary
@@ -668,9 +647,7 @@ shrinkCP :: CheckpointParameter -> [CheckpointParameter]
 shrinkCP (CheckpointParameter {..}) = do
   sp' <- shrinkSP sidechainParams
   ArbitraryAssetClass ac' <- shrink (ArbitraryAssetClass assetClass)
-  ArbitraryCurrencySymbol sym' <- shrink (ArbitraryCurrencySymbol committeeOracleCurrencySymbol)
-  ArbitraryCurrencySymbol sym'' <- shrink (ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol)
-  pure . CheckpointParameter sp' ac' sym' $ sym''
+  pure . CheckpointParameter sp' $ ac'
 
 shrinkAPM ::
   ATMSPlainMultisignature ->
@@ -830,14 +807,6 @@ shrinkCCM (CommitteeCertificateMint {..}) = do
   Positive tn' <- shrink (Positive thresholdNumerator)
   Positive td' <- shrink (Positive thresholdDenominator)
   pure . CommitteeCertificateMint tn' $ td'
-
-shrinkUCH :: UpdateCommitteeHash -> [UpdateCommitteeHash]
-shrinkUCH (UpdateCommitteeHash {..}) = do
-  sp' <- shrinkSP sidechainParams
-  ArbitraryCurrencySymbol cocs' <- shrink (ArbitraryCurrencySymbol committeeOracleCurrencySymbol)
-  ArbitraryCurrencySymbol csvcs' <- shrink (ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol)
-  ArbitraryCurrencySymbol rtcs' <- shrink (ArbitraryCurrencySymbol mptRootTokenCurrencySymbol)
-  pure . UpdateCommitteeHash sp' cocs' csvcs' $ rtcs'
 
 shrinkGA :: GovernanceAuthority -> [GovernanceAuthority]
 shrinkGA (GovernanceAuthority pkh) = do

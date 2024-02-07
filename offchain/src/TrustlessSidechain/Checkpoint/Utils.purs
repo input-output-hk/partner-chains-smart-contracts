@@ -14,14 +14,9 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts
-  ( Validator
-  )
+import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Checkpoint.Types
@@ -34,16 +29,13 @@ import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo, toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.Scripts
-  ( mkValidatorWithParams
-  )
+import TrustlessSidechain.Utils.Scripts (mkValidatorWithParams)
 import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( CheckpointPolicy
-      , CheckpointValidator
-      )
+  ( ScriptId(CheckpointPolicy, CheckpointValidator)
   )
+import TrustlessSidechain.Versioning.Types (VersionOracleConfig)
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | Wrapper around `checkpointPolicy` that accepts `SidechainParams`.
 checkpointCurrencyInfo ∷
@@ -63,9 +55,10 @@ checkpointAssetClass (SidechainParams sp) = do
   { currencySymbol } ← getCurrencyInfo CheckpointPolicy [ toData ichm ]
   pure $ assetClass currencySymbol initCheckpointMintTn
 
-checkpointValidator ∷ CheckpointParameter → Contract Validator
-checkpointValidator cp =
-  mkValidatorWithParams CheckpointValidator [ toData cp ]
+checkpointValidator ∷
+  CheckpointParameter → VersionOracleConfig → Contract Validator
+checkpointValidator cp voc =
+  mkValidatorWithParams CheckpointValidator [ toData cp, toData voc ]
 
 -- | `initCheckpointMintTn` is the token name of the NFT which identifies
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
@@ -91,7 +84,9 @@ findCheckpointUtxo ∷
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findCheckpointUtxo checkpointParameter = do
-  validator ← checkpointValidator checkpointParameter
+  versionOracleConfig ← Versioning.getVersionOracleConfig $
+    (unwrap checkpointParameter).sidechainParams
+  validator ← checkpointValidator checkpointParameter versionOracleConfig
   validatorAddress ← toAddress (Scripts.validatorHash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →

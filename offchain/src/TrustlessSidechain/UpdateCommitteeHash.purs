@@ -31,6 +31,7 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -44,19 +45,16 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.MerkleRoot.Utils
   ( findPreviousMerkleRootTokenUtxo
-  , merkleRootCurrencyInfo
   )
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   ) as ExportTypes
@@ -73,6 +71,11 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   ) as ExportUtils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId(CommitteeOraclePolicy, MerkleRootTokenPolicy)
+  , VersionOracle(VersionOracle)
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -199,33 +202,14 @@ updateCommitteeHashLookupsAndConstraints
   , newAggregatePubKeys
   , previousMerkleRoot
   , sidechainEpoch
-  , committeeCertificateVerificationCurrencySymbol
   , mNewCommitteeValidatorHash
   } = do
-  -- Getting the minting policy / currency symbol / token name for update
-  -- committee hash
-  -------------------------------------------------------------
-  { currencySymbol: committeeOracleCurrencySymbol
-  } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
-  -- Getting the minting policy for the merkle root token
-  -------------------------------------------------------------
-  { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    merkleRootCurrencyInfo sidechainParams
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      }
-
   { validator: updateValidator
   , validatorHash: updateValidatorHash
-  } ← getUpdateCommitteeHashValidator uch
+  } ← getUpdateCommitteeHashValidator sidechainParams
 
   -- if we have provided a new validator hash to upgrade to, then move
   -- the NFT to an address coressponding to the new validator hash
@@ -234,7 +218,7 @@ updateCommitteeHashLookupsAndConstraints
 
   -- Get the UTxO with the current committee
   ------------------------------------------------------
-  lkup ← findUpdateCommitteeHashUtxo uch
+  lkup ← findUpdateCommitteeHashUtxo sidechainParams
   currentCommitteeUtxo@
     { index: oref
     , value:
@@ -248,6 +232,20 @@ updateCommitteeHashLookupsAndConstraints
   maybePreviousMerkleRoot ←
     findPreviousMerkleRootTokenUtxo previousMerkleRoot sidechainParams
 
+  committeeOracleCurrencySymbol ←
+    Versioning.getVersionedCurrencySymbol
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+      )
+
+  (mrtPolicyRefTxInput /\ mrtPolicyRefTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+      )
+
   -- Building the transaction.
   -------------------------------------------------------------
   let
@@ -257,7 +255,7 @@ updateCommitteeHashLookupsAndConstraints
       )
     value =
       Value.singleton
-        (unwrap uch).committeeOracleCurrencySymbol
+        committeeOracleCurrencySymbol
         CommitteeOraclePolicy.committeeOracleTn
         one
     uchm = UpdateCommitteeHashMessage
@@ -279,12 +277,15 @@ updateCommitteeHashLookupsAndConstraints
           Nothing → mempty
           Just { index: txORef, value: txOut } → Lookups.unspentOutputs
             (Map.singleton txORef txOut)
+        <> Lookups.unspentOutputs
+          (Map.singleton mrtPolicyRefTxInput mrtPolicyRefTxOutput)
     constraints = TxConstraints.mustSpendScriptOutput oref redeemer
       <> TxConstraints.mustPayToScript newValidatorHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
         Nothing → mempty
         Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
           previousMerkleRootORef
+      <> TxConstraints.mustReferenceOutput mrtPolicyRefTxInput
 
   pure
     { lookupsAndConstraints: { lookups, constraints }

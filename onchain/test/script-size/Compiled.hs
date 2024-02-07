@@ -108,7 +108,6 @@ import TrustlessSidechain.Types (
   SidechainParams,
   SignedMerkleRootRedeemer,
   UpdateCommitteeDatum,
-  UpdateCommitteeHash,
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
@@ -227,6 +226,7 @@ mkCPMPCode = $$(compile [||mkCandidatePermissionMintingPolicy||])
 mkCVCode ::
   CompiledCode
     ( CheckpointParameter ->
+      VersionOracleConfig ->
       CheckpointDatum ->
       () ->
       ScriptContext ->
@@ -266,7 +266,8 @@ mkMPMerkleRootCode = $$(compile [||MerkleRoot.mkMintingPolicy||])
 
 mkUPCVCode ::
   CompiledCode
-    ( UpdateCommitteeHash ->
+    ( SidechainParams ->
+      VersionOracleConfig ->
       UpdateCommitteeDatum BuiltinData ->
       UpdateCommitteeHashRedeemer ->
       ScriptContext ->

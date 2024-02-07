@@ -22,13 +22,9 @@ import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  )
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( MerkleRootTokenValidator
@@ -42,6 +38,7 @@ import TrustlessSidechain.Versioning.Types
       , CommitteeOraclePolicy
       )
   )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
@@ -56,7 +53,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -----------------------------------
   -- some awkwardness that we need the committee hash policy first.
   { mintingPolicy: committeeOraclePolicy
-  , currencySymbol: committeeOracleCurrencySymbol
   } ←
     CommitteeOraclePolicy.committeeOracleCurrencyInfo sp
 
@@ -91,16 +87,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       , CommitteeOraclePolicy /\ committeeOraclePolicy
       ]
 
-  -- Helper currency symbols
-  -----------------------------------
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: sp }
-      atmsKind
-
-  merkleRootTokenCurrencySymbol ←
-    getCurrencySymbol MerkleRootTokenPolicy merkleRootTokenMintingPolicy
-
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
 
   -- Getting validators to version
@@ -108,24 +94,16 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
   { validator: committeeHashValidator } ←
     do
-      let
-        uch = UpdateCommitteeHash
-          { sidechainParams: sp
-          , committeeOracleCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          }
-      getUpdateCommitteeHashValidator uch
+      getUpdateCommitteeHashValidator sp
 
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
   checkpointValidator ← do
     let
       checkpointParam = CheckpointParameter
         { sidechainParams: sp
         , checkpointAssetClass
-        , committeeOracleCurrencySymbol
-        , committeeCertificateVerificationCurrencySymbol
         }
-    Checkpoint.checkpointValidator checkpointParam
+    Checkpoint.checkpointValidator checkpointParam versionOracleConfig
 
   let
     versionedValidators = Map.fromFoldable

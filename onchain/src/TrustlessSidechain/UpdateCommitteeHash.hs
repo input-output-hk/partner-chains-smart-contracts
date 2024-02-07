@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,6 +17,7 @@ module TrustlessSidechain.UpdateCommitteeHash (
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
   Credential (ScriptCredential),
+  CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
@@ -38,8 +40,8 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  SidechainParams,
   UpdateCommitteeDatum,
-  UpdateCommitteeHash,
   UpdateCommitteeHashMessage (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
@@ -50,7 +52,18 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashRedeemer,
  )
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy, mkUntypedValidator)
+import TrustlessSidechain.Utils (
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+ )
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracleConfig,
+  committeeCertificateVerificationPolicyId,
+  committeeOraclePolicyId,
+  getVersionedCurrencySymbol,
+  merkleRootTokenPolicyId,
+ )
 
 -- * Updating the committee hash
 
@@ -94,12 +107,13 @@ initCommitteeOracleMintAmount = 1
 -- increasing
 {-# INLINEABLE mkUpdateCommitteeHashValidator #-}
 mkUpdateCommitteeHashValidator ::
-  UpdateCommitteeHash ->
+  SidechainParams ->
+  VersionOracleConfig ->
   UpdateCommitteeDatum BuiltinData ->
   UpdateCommitteeHashRedeemer ->
   ScriptContext ->
   Bool
-mkUpdateCommitteeHashValidator uch dat red ctx =
+mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01" committeeOutputIsValid
     && traceIfFalse
       "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02"
@@ -108,6 +122,27 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
+    committeeOracleCurrencySymbol :: CurrencySymbol
+    committeeOracleCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
+        ctx
+
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+    committeeCertificateVerificationCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = committeeCertificateVerificationPolicyId})
+        ctx
+
+    mptRootTokenCurrencySymbol :: CurrencySymbol
+    mptRootTokenCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
+        ctx
+
     committeeOutputIsValid :: Bool
     committeeOutputIsValid =
       let go :: [TxOut] -> Bool
@@ -115,7 +150,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
           go (o : os)
             | -- recall that 'committeeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
-              Value.valueOf (txOutValue o) (get @"committeeOracleCurrencySymbol" uch) initCommitteeOracleTn > 0
+              Value.valueOf (txOutValue o) committeeOracleCurrencySymbol initCommitteeOracleTn > 0
               , OutputDatum d <- txOutDatum o
               , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
               -- Note that we build the @msg@ that we check is signed
@@ -130,7 +165,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
 
                   msg =
                     UpdateCommitteeHashMessage
-                      { sidechainParams = get @"sidechainParams" uch
+                      { sidechainParams = sp
                       , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
                       , previousMerkleRoot = get @"previousMerkleRoot" red
                       , sidechainEpoch = get @"sidechainEpoch" ucd
@@ -140,7 +175,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
                     "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
                     ( Value.valueOf
                         (txInfoMint info)
-                        (get @"committeeCertificateVerificationCurrencySymbol" uch)
+                        committeeCertificateVerificationCurrencySymbol
                         (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
                         > 0
                     )
@@ -163,7 +198,7 @@ mkUpdateCommitteeHashValidator uch dat red ctx =
         Just (LedgerBytes tn) ->
           let go :: [TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) (get @"mptRootTokenCurrencySymbol" uch) (TokenName tn) > 0)
+                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) mptRootTokenCurrencySymbol (TokenName tn) > 0)
                     || go rest
                 )
               go [] = False
@@ -215,17 +250,29 @@ mkCommitteeOraclePolicy ichm _red ctx =
         Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 
-mkCommitteeOraclePolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkCommitteeOraclePolicyUntyped ::
+  BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCommitteeOraclePolicyUntyped =
-  mkUntypedMintingPolicy . mkCommitteeOraclePolicy . PlutusTx.unsafeFromBuiltinData
+  mkUntypedMintingPolicy
+    . mkCommitteeOraclePolicy
+    . PlutusTx.unsafeFromBuiltinData
 
 serialisableCommitteeOraclePolicy :: Script
 serialisableCommitteeOraclePolicy =
   fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
 
-mkCommitteeHashValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeHashValidatorUntyped =
-  mkUntypedValidator . mkUpdateCommitteeHashValidator . PlutusTx.unsafeFromBuiltinData
+mkCommitteeHashValidatorUntyped ::
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  ()
+mkCommitteeHashValidatorUntyped uch versioningConfig =
+  mkUntypedValidator $
+    mkUpdateCommitteeHashValidator
+      (PlutusTx.unsafeFromBuiltinData uch)
+      (PlutusTx.unsafeFromBuiltinData versioningConfig)
 
 serialisableCommitteeHashValidator :: Script
 serialisableCommitteeHashValidator =

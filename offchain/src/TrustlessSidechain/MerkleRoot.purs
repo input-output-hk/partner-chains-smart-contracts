@@ -30,7 +30,6 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, NotFoundUtxo)
   )
@@ -58,9 +57,6 @@ import TrustlessSidechain.MerkleRoot.Utils
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
@@ -86,8 +82,6 @@ saveRoot
   ) = do
   -- Set up for the committee ATMS schemes
   ------------------------------------
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
   let
     committeeCertificateMint =
@@ -97,26 +91,15 @@ saveRoot
         , thresholdDenominator:
             (unwrap sidechainParams).thresholdDenominator
         }
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicy
-      { committeeCertificateMint, sidechainParams }
-      aggregateSignature
 
   -- Find the UTxO with the current committee.
   ------------------------------------
-  { currencySymbol: merkleRootTokenCurrencySymbol } ← merkleRootCurrencyInfo
-    sidechainParams
   currentCommitteeUtxo ←
     liftedM
       ( show $ NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
-      $ UpdateCommitteeHash
-          { sidechainParams
-          , committeeOracleCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          }
+          sidechainParams
 
   -- Grab the lookups + constraints for saving a merkle root
   ------------------------------------

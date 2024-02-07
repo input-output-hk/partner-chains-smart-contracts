@@ -18,16 +18,13 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
-import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
-  , productFromData4
   , productToData2
-  , productToData4
   )
 
 newtype CheckpointDatum = CheckpointDatum
@@ -53,8 +50,6 @@ instance FromData CheckpointDatum where
 newtype CheckpointParameter = CheckpointParameter
   { sidechainParams ∷ SidechainParams
   , checkpointAssetClass ∷ AssetClass
-  , committeeOracleCurrencySymbol ∷ CurrencySymbol
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   }
 
 derive instance Generic CheckpointParameter _
@@ -68,24 +63,17 @@ instance ToData CheckpointParameter where
     ( CheckpointParameter
         { sidechainParams
         , checkpointAssetClass
-        , committeeOracleCurrencySymbol
-        , committeeCertificateVerificationCurrencySymbol
         }
-    ) = productToData4 sidechainParams
+    ) = productToData2
+    sidechainParams
     checkpointAssetClass
-    committeeOracleCurrencySymbol
-    committeeCertificateVerificationCurrencySymbol
 
 instance FromData CheckpointParameter where
-  fromData = productFromData4 $
+  fromData = productFromData2 $
     \sidechainParams
-     checkpointAssetClass
-     committeeOracleCurrencySymbol
-     committeeCertificateVerificationCurrencySymbol → CheckpointParameter
+     checkpointAssetClass → CheckpointParameter
       { sidechainParams
       , checkpointAssetClass
-      , committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
       }
 
 derive newtype instance Show CheckpointParameter

@@ -51,16 +51,13 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, NotFoundUtxo, VerificationError)
   )
-import TrustlessSidechain.MerkleRoot.Utils (merkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
@@ -390,41 +387,9 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
   SidechainParams →
   Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
-  -- Set up for the committee ATMS schemes
-  ------------------------------------
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo
-      sidechainParams
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        }
-
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    committeePlainSchnorrSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint, sidechainParams }
-
-  -- minting policy for the merkle root token
-  -------------------------------------------------------------
-
-  { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    merkleRootCurrencyInfo sidechainParams
-
-  -- Build the UpdateCommitteeHash parameter
-  -------------------------------------------------------------
-  let
-    uch = UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      }
-
   -- Finding the current committee
   -------------------------------------------------------------
   lkup ← Monad.liftedM
     (show $ NotFoundUtxo "current committee not found")
-    (UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo uch)
+    (UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo sidechainParams)
   pure lkup

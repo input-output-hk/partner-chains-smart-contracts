@@ -102,7 +102,6 @@ import TrustlessSidechain.PermissionedCandidates.Types
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
@@ -172,7 +171,6 @@ tests = pureGroup "Data roundtrip tests" $ do
   test "CombinedMerkleProof" $ liftEffect $ toDataLaws smallTestCount genCMP
   -- FUELRedeemer not exported
   test "UpdateCommitteeDatum" $ liftEffect $ toDataLaws testCount genUCD
-  test "UpdateCommitteeHash" $ liftEffect $ toDataLaws smallTestCount genUCH
   test "UpdateCommitteeHashMessage" $ liftEffect $ toDataLaws smallTestCount
     genUCHM
   test "UpdateCommitteeHashRedeemer" $ liftEffect $ toDataLaws testCount genUCHR
@@ -266,15 +264,10 @@ genCheckpointParameter ∷ Gen CheckpointParameter
 genCheckpointParameter = do
   sidechainParams ← genSP
   ArbitraryAssetClass checkpointAssetClass ← arbitrary
-  ArbitraryCurrencySymbol committeeOracleCurrencySymbol ← arbitrary
-  ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol ←
-    arbitrary
 
   pure $ CheckpointParameter
     { sidechainParams
     , checkpointAssetClass
-    , committeeOracleCurrencySymbol
-    , committeeCertificateVerificationCurrencySymbol
     }
 
 genInitCheckpointMint ∷ Gen InitCheckpointMint
@@ -474,14 +467,9 @@ genCP ∷ Gen CheckpointParameter
 genCP = do
   sidechainParams ← genSP
   ArbitraryAssetClass checkpointAssetClass ← arbitrary
-  ArbitraryCurrencySymbol committeeOracleCurrencySymbol ← arbitrary
-  ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol ←
-    arbitrary
   pure $ CheckpointParameter
     { sidechainParams
     , checkpointAssetClass
-    , committeeOracleCurrencySymbol
-    , committeeCertificateVerificationCurrencySymbol
     }
 
 genCCM ∷ Gen CommitteeCertificateMint
@@ -511,20 +499,6 @@ genUCHM = do
     , previousMerkleRoot
     , sidechainEpoch
     , validatorHash
-    }
-
-genUCH ∷ Gen UpdateCommitteeHash
-genUCH = do
-  sidechainParams ← genSP
-  ArbitraryCurrencySymbol committeeOracleCurrencySymbol ← arbitrary
-  ArbitraryCurrencySymbol committeeCertificateVerificationCurrencySymbol ←
-    arbitrary
-  ArbitraryCurrencySymbol merkleRootTokenCurrencySymbol ← arbitrary
-  pure $ UpdateCommitteeHash
-    { sidechainParams
-    , committeeOracleCurrencySymbol
-    , committeeCertificateVerificationCurrencySymbol
-    , merkleRootTokenCurrencySymbol
     }
 
 genUCD ∷ Gen (UpdateCommitteeDatum DA)

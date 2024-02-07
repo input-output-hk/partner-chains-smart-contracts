@@ -31,10 +31,11 @@ import Contract.Scripts
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
+import Data.BigInt as BigInt
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash
-  , UpdateCommitteeHashMessage
+  ( UpdateCommitteeHashMessage
   )
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
@@ -46,22 +47,31 @@ import TrustlessSidechain.Utils.Utxos as Utils.Utxos
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeHashValidator)
   )
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId(CommitteeOraclePolicy)
+  , VersionOracle(VersionOracle)
+  , VersionOracleConfig
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 
-updateCommitteeHashValidator ∷ UpdateCommitteeHash → Contract Validator
-updateCommitteeHashValidator sidechainParams =
-  mkValidatorWithParams CommitteeHashValidator [ toData sidechainParams ]
+updateCommitteeHashValidator ∷
+  SidechainParams → VersionOracleConfig → Contract Validator
+updateCommitteeHashValidator sp versionOracleConfig =
+  mkValidatorWithParams CommitteeHashValidator
+    [ toData sp, toData versionOracleConfig ]
 
 -- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
 -- | also returns the hash and address
 getUpdateCommitteeHashValidator ∷
-  UpdateCommitteeHash →
+  SidechainParams →
   Contract
     { validator ∷ Validator
     , validatorHash ∷ ValidatorHash
     , address ∷ Address
     }
-getUpdateCommitteeHashValidator uch = do
-  validator ← updateCommitteeHashValidator uch
+getUpdateCommitteeHashValidator sp = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  validator ← updateCommitteeHashValidator sp versionOracleConfig
   let validatorHash = Scripts.validatorHash validator
   address ← toAddress validatorHash
   pure { validator, validatorHash, address }
@@ -87,15 +97,23 @@ serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
 -- Time complexity: bad, it looks at all utxos at the update committee hash
 -- validator, then linearly scans through each utxo to determine which has token
 findUpdateCommitteeHashUtxo ∷
-  UpdateCommitteeHash →
+  SidechainParams →
   Contract
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
-findUpdateCommitteeHashUtxo uch = do
-  validator ← updateCommitteeHashValidator uch
+findUpdateCommitteeHashUtxo sp = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  validator ← updateCommitteeHashValidator sp versionOracleConfig
   validatorAddress ← toAddress (Scripts.validatorHash validator)
+
+  committeeOracleCurrencySymbol ←
+    Versioning.getVersionedCurrencySymbol
+      sp
+      ( VersionOracle
+          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+      )
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
-    Value.valueOf value ((unwrap uch).committeeOracleCurrencySymbol)
+    Value.valueOf value committeeOracleCurrencySymbol
       CommitteeOraclePolicy.committeeOracleTn
       /= zero

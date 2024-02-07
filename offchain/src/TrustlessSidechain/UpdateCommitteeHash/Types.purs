@@ -5,7 +5,6 @@
 -- | there are some cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash`
 module TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   ) where
@@ -19,16 +18,13 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Scripts (ValidatorHash)
-import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
-  , productFromData4
   , productFromData5
   , productToData2
-  , productToData4
   , productToData5
   )
 
@@ -90,49 +86,6 @@ instance ToData UpdateCommitteeHashRedeemer where
 instance FromData UpdateCommitteeHashRedeemer where
   fromData d = UpdateCommitteeHashRedeemer <$>
     ({ previousMerkleRoot: _ } <$> fromData d)
-
--- | `UpdateCommitteeHash` paramaterizes the the validator for the update
--- | committee hash policy.
-newtype UpdateCommitteeHash = UpdateCommitteeHash
-  { sidechainParams ∷ SidechainParams
-  , committeeOracleCurrencySymbol ∷ CurrencySymbol
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-  , merkleRootTokenCurrencySymbol ∷ CurrencySymbol
-  }
-
-derive newtype instance Eq UpdateCommitteeHash
-
-derive instance Generic UpdateCommitteeHash _
-
-derive instance Newtype UpdateCommitteeHash _
-
-instance Show UpdateCommitteeHash where
-  show = genericShow
-
-instance ToData UpdateCommitteeHash where
-  toData
-    ( UpdateCommitteeHash
-        { sidechainParams
-        , committeeOracleCurrencySymbol
-        , committeeCertificateVerificationCurrencySymbol
-        , merkleRootTokenCurrencySymbol
-        }
-    ) = productToData4 sidechainParams
-    committeeOracleCurrencySymbol
-    committeeCertificateVerificationCurrencySymbol
-    merkleRootTokenCurrencySymbol
-
-instance FromData UpdateCommitteeHash where
-  fromData = productFromData4 $
-    \sidechainParams
-     committeeOracleCurrencySymbol
-     committeeCertificateVerificationCurrencySymbol
-     merkleRootTokenCurrencySymbol → UpdateCommitteeHash
-      { sidechainParams
-      , committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      , merkleRootTokenCurrencySymbol
-      }
 
 -- | `UpdateCommitteeHashMessage` corresponds to the on chain type which is
 -- | signed by the committee (technically, if `uchm` is an

@@ -60,9 +60,7 @@ import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds
-  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -82,11 +80,9 @@ import TrustlessSidechain.GetSidechainAddresses
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
-  , UpdateCommitteeHash(UpdateCommitteeHash)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
@@ -99,6 +95,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , DsConfPolicy
       )
   )
+import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig) as Versioning
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -268,27 +265,10 @@ initCheckpointLookupsAndConstraints inp = do
     Checkpoint.checkpointCurrencyInfo sidechainParams
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sidechainParams
 
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: inp.initThresholdNumerator
-        , thresholdDenominator: inp.initThresholdDenominator
-        }
-
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams }
-      inp.initATMSKind
-
   let
     checkpointParameter = Checkpoint.Types.CheckpointParameter
       { sidechainParams
       , checkpointAssetClass
-      , committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
       }
     checkpointDatum = Datum
       $ PlutusData.toData
@@ -302,7 +282,9 @@ initCheckpointLookupsAndConstraints inp = do
         Checkpoint.initCheckpointMintTn
         one
 
+  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   checkpointValidator ← Checkpoint.checkpointValidator checkpointParameter
+    versionOracleConfig
 
   -- Building the transaction
   -----------------------------------
@@ -340,33 +322,10 @@ initCommitteeHashLookupsAndConstraints isp = do
   { currencySymbol: committeeOracleCurrencySymbol } ←
     CommitteeOraclePolicy.committeeOracleCurrencyInfo $ toSidechainParams isp
 
-  -- Getting the merkle root token minting policy
-  -----------------------------------
-  { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.merkleRootCurrencyInfo sp
-
   -- Setting up the update committee hash validator
   -----------------------------------
   let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: isp.initThresholdNumerator
-        , thresholdDenominator: isp.initThresholdDenominator
-        }
-
-  { currencySymbol: committeeCertificateVerificationCurrencySymbol } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: sp }
-      isp.initATMSKind
-
-  let
     aggregatedKeys = isp.initAggregatedCommittee
-    committeeHashParam = UpdateCommitteeHash
-      { sidechainParams: sp
-      , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-      , merkleRootTokenCurrencySymbol: merkleRootTokenCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
-      }
     committeeHashDatum = Datum
       $ PlutusData.toData
       $ UpdateCommitteeDatum
@@ -379,8 +338,11 @@ initCommitteeHashLookupsAndConstraints isp = do
         CommitteeOraclePolicy.committeeOracleTn
         one
 
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+
   committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
-    committeeHashParam
+    sp
+    versionOracleConfig
 
   let
     committeeHashValidatorHash = validatorHash committeeHashValidator

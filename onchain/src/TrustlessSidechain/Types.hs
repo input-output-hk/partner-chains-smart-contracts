@@ -33,13 +33,12 @@ module TrustlessSidechain.Types (
   SignedMerkleRootRedeemer (..),
   StakeOwnership (..),
   UpdateCommitteeDatum (..),
-  UpdateCommitteeHash (..),
   UpdateCommitteeHashMessage (..),
   UpdateCommitteeHashRedeemer (..),
 ) where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Value (AssetClass, CurrencySymbol)
+import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V2.Ledger.Api (
   BuiltinData (BuiltinData),
   LedgerBytes (LedgerBytes),
@@ -494,50 +493,6 @@ newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
       TSPrelude.Show
     )
 
--- | 'UpdateCommitteeHash' is used as the parameter for the validator.
-data UpdateCommitteeHash = UpdateCommitteeHash
-  { sidechainParams :: SidechainParams
-  , -- | 'committeeOracleCurrencySymbol' is the 'CurrencySymbol' of the NFT that is used to
-    -- identify the transaction the current committee.
-    committeeOracleCurrencySymbol :: CurrencySymbol
-  , -- | 'committeeCertificateVerificationCurrencySymbol' is the currency
-    -- symbol for the committee certificate verification policy i.e., the
-    -- currency symbol whose minted token name indicates that the current
-    -- committee has signed the token name.
-    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
-  , -- | 'mptRootTokenCurrencySymbol' is the currency symbol of the corresponding merkle
-    -- root token. This is needed for verifying that the previous merkle root is verified.
-    mptRootTokenCurrencySymbol :: CurrencySymbol
-  }
-  deriving stock
-    ( -- | @since v4.0.0
-      TSPrelude.Eq
-    , -- | @since v4.0.0
-      TSPrelude.Show
-    )
-
--- | @since v4.0.0
-instance ToData UpdateCommitteeHash where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (UpdateCommitteeHash {..}) =
-    productToData4
-      sidechainParams
-      committeeOracleCurrencySymbol
-      committeeCertificateVerificationCurrencySymbol
-      mptRootTokenCurrencySymbol
-
--- | @since v4.0.0
-makeHasField ''UpdateCommitteeHash
-
-instance FromData UpdateCommitteeHash where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 UpdateCommitteeHash
-
--- | @since v4.0.0
-instance UnsafeFromData UpdateCommitteeHash where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 UpdateCommitteeHash
-
 -- | = Important note
 --
 -- The 'Data' serializations for this type /cannot/ be changed.
@@ -710,16 +665,6 @@ data CheckpointParameter = CheckpointParameter
     --
     -- @since v4.0.0
     assetClass :: AssetClass
-  , -- | The currency symbol which uniquely identifies the
-    -- current committee.
-    --
-    -- @since v4.0.0
-    committeeOracleCurrencySymbol :: CurrencySymbol
-  , -- | The currency symbol of the committee certificate verification minting
-    -- policy.
-    --
-    -- @since v4.0.0
-    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -732,11 +677,9 @@ data CheckpointParameter = CheckpointParameter
 instance ToData CheckpointParameter where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (CheckpointParameter {..}) =
-    productToData4
+    productToData2
       sidechainParams
       assetClass
-      committeeOracleCurrencySymbol
-      committeeCertificateVerificationCurrencySymbol
 
 -- | @since v4.0.0
 makeHasField ''CheckpointParameter
@@ -744,12 +687,12 @@ makeHasField ''CheckpointParameter
 -- | @since v4.0.0
 instance FromData CheckpointParameter where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData4 CheckpointParameter
+  fromBuiltinData = productFromData2 CheckpointParameter
 
 -- | @since v4.0.0
 instance UnsafeFromData CheckpointParameter where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData4 CheckpointParameter
+  unsafeFromBuiltinData = productUnsafeFromData2 CheckpointParameter
 
 -- | = Important note
 --

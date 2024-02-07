@@ -17,6 +17,7 @@ module TrustlessSidechain.CheckpointValidator (
 
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
+  CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
   Script,
@@ -50,7 +51,19 @@ import TrustlessSidechain.Types (
   SidechainParams,
   UpdateCommitteeDatum,
  )
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy, mkUntypedValidator)
+import TrustlessSidechain.Utils (
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+ )
+import TrustlessSidechain.Versioning (
+  VersionOracle (VersionOracle),
+  VersionOracleConfig,
+  committeeCertificateVerificationPolicyId,
+  committeeOraclePolicyId,
+  getVersionedCurrencySymbol,
+  scriptId,
+  version,
+ )
 
 serializeCheckpointMsg :: CheckpointMessage -> BuiltinByteString
 serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
@@ -75,11 +88,12 @@ serializeCheckpointMsg = Builtins.serialiseData . IsData.toBuiltinData
 --   ERROR-CHECKPOINT-VALIDATOR-07: Missing output inline datum.
 mkCheckpointValidator ::
   CheckpointParameter ->
+  VersionOracleConfig ->
   CheckpointDatum ->
   () ->
   ScriptContext ->
   Bool
-mkCheckpointValidator checkpointParam datum _red ctx =
+mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
   traceIfFalse "ERROR-CHECKPOINT-VALIDATOR-01" outputContainsCheckpointNft
     && traceIfFalse "ERROR-CHECKPOINT-VALIDATOR-02" signedByCurrentCommittee
     && traceIfFalse
@@ -92,6 +106,20 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
+    committeeOracleCurrencySymbol :: CurrencySymbol
+    committeeOracleCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
+        ctx
+
+    committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
+    committeeCertificateVerificationCurrencySymbol =
+      getVersionedCurrencySymbol
+        versioningConfig
+        (VersionOracle {version = 1, scriptId = committeeCertificateVerificationPolicyId})
+        ctx
+
     minted :: Value
     minted = txInfoMint info
 
@@ -103,7 +131,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in case AssocMap.lookup (get @"committeeOracleCurrencySymbol" checkpointParam) $ getValue outputValue of
+       in case AssocMap.lookup committeeOracleCurrencySymbol $ getValue outputValue of
             Just tns -> case AssocMap.lookup (TokenName "") tns of
               Just amount -> amount == 1
               Nothing -> False
@@ -131,7 +159,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
       _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-07"
 
-    -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+    -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/681)
     outputContainsCheckpointNft :: Bool
     outputContainsCheckpointNft = Value.assetClassValueOf (txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
 
@@ -144,8 +172,7 @@ mkCheckpointValidator checkpointParam datum _red ctx =
               , blockNumber = get @"blockNumber" outputDatum
               , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
-       in -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/595)
-          case AssocMap.lookup (get @"committeeCertificateVerificationCurrencySymbol" checkpointParam) $ getValue minted of
+       in case AssocMap.lookup committeeCertificateVerificationCurrencySymbol $ getValue minted of
             Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
               Just amount -> amount > 0
               Nothing -> False
@@ -227,11 +254,18 @@ serialisableCheckpointPolicy :: Script
 serialisableCheckpointPolicy =
   fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])
 
-mkCheckpointValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCheckpointValidatorUntyped =
-  mkUntypedValidator
-    . mkCheckpointValidator
-    . PlutusTx.unsafeFromBuiltinData
+mkCheckpointValidatorUntyped ::
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  ()
+mkCheckpointValidatorUntyped checkpointParam versioningConfig =
+  mkUntypedValidator $
+    mkCheckpointValidator
+      (PlutusTx.unsafeFromBuiltinData checkpointParam)
+      (PlutusTx.unsafeFromBuiltinData versioningConfig)
 
 serialisableCheckpointValidator :: Script
 serialisableCheckpointValidator =

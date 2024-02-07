@@ -21,19 +21,14 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
-import TrustlessSidechain.MerkleRoot.Utils as MerkleRoot.Utils
 import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
+  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
@@ -286,33 +281,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         committee3PubKeys = map Utils.Crypto.toPubKeyUnsafe committee3PrvKeys
       -- the message updates committee1 to be committee3
 
-      -- quickly (it's not that quick) grab the address of the validator for
-      -- the update committee hash
-      { currencySymbol: committeeOracleCurrencySymbol
-      } ← CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
-      { currencySymbol: committeeCertificateVerificationCurrencySymbol
-      } ←
-        CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
-          { committeeCertificateMint: CommitteeCertificateMint
-              { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-              , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-              }
-          , sidechainParams
-          }
-
-      { currencySymbol: merkleRootTokenCurrencySymbol } ←
-        MerkleRoot.Utils.merkleRootCurrencyInfo sidechainParams
-
-      let
-        uch = UpdateCommitteeHash
-          { sidechainParams
-          , committeeOracleCurrencySymbol: committeeOracleCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          }
       { validatorHash: updateCommitteeHashValidatorHash } ←
-        UpdateCommitteeHash.getUpdateCommitteeHashValidator uch
+        UpdateCommitteeHash.getUpdateCommitteeHashValidator sidechainParams
 
       -- finally, build the message
       committee1Message ←

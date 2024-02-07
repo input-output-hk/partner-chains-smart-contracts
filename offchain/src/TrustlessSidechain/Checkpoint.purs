@@ -48,19 +48,15 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, ConversionError)
   )
-import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHash(UpdateCommitteeHash)
-  )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.Utils as Versioning
 
 saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
 saveCheckpoint
@@ -72,11 +68,6 @@ saveCheckpoint
       , sidechainEpoch
       }
   ) = do
-  -- Set up for the committee ATMS schemes
-  ------------------------------------
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
   let
     committeeCertificateMint =
       CommitteeCertificateMint
@@ -90,22 +81,12 @@ saveCheckpoint
       { committeeCertificateMint, sidechainParams }
       aggregateSignature
 
-  -- Find the UTxO with the current committee.
-  ------------------------------------
-  { currencySymbol: merkleRootTokenCurrencySymbol } ←
-    MerkleRoot.merkleRootCurrencyInfo sidechainParams
-
   currentCommitteeUtxo ←
     liftedM
       ( show $ NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
-      $ UpdateCommitteeHash
-          { sidechainParams
-          , committeeOracleCurrencySymbol
-          , committeeCertificateVerificationCurrencySymbol
-          , merkleRootTokenCurrencySymbol
-          }
+          sidechainParams
 
   -- Grab the lookups + constraints for saving a merkle root
   ------------------------------------
@@ -173,7 +154,6 @@ saveCheckpointLookupsAndConstraints
   { sidechainParams
   , newCheckpointBlockHash
   , newCheckpointBlockNumber
-  , committeeCertificateVerificationCurrencySymbol
   , sidechainEpoch
   } = do
   -- Create the message to be signed
@@ -190,18 +170,14 @@ saveCheckpointLookupsAndConstraints
   -------------------------------------------------------------
   checkpointAssetClass ← checkpointAssetClass sidechainParams
 
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
-
   -- Getting checkpoint validator
   let
     checkpointParam = CheckpointParameter
       { sidechainParams
       , checkpointAssetClass
-      , committeeOracleCurrencySymbol
-      , committeeCertificateVerificationCurrencySymbol
       }
-  validator ← checkpointValidator checkpointParam
+  versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+  validator ← checkpointValidator checkpointParam versionOracleConfig
   let checkpointValidatorHash = Scripts.validatorHash validator
 
   -- Getting the checkpoint utxo
