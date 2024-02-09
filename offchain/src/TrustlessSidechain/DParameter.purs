@@ -1,6 +1,5 @@
 module TrustlessSidechain.DParameter
-  ( mkRemoveDParameterLookupsAndConstraints
-  , mkUpdateDParameterLookupsAndConstraints
+  ( mkUpdateDParameterLookupsAndConstraints
   , mkInsertDParameterLookupsAndConstraints
   ) where
 
@@ -36,9 +35,9 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DParameter.Types
-  ( DParameterPolicyRedeemer(DParameterBurn, DParameterMint)
+  ( DParameterPolicyRedeemer(DParameterMint)
   , DParameterValidatorDatum(DParameterValidatorDatum)
-  , DParameterValidatorRedeemer(RemoveDParameter, UpdateDParameter)
+  , DParameterValidatorRedeemer(UpdateDParameter)
 
   )
 import TrustlessSidechain.DParameter.Utils as DParameter
@@ -109,78 +108,6 @@ mkInsertDParameterLookupsAndConstraints
           DatumInline
           value
         <> governanceConstraints
-  pure { lookups, constraints }
-
-mkRemoveDParameterLookupsAndConstraints ∷
-  SidechainParams →
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-mkRemoveDParameterLookupsAndConstraints sidechainParams = do
-  { dParameterCurrencySymbol, dParameterMintingPolicy } ←
-    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
-
-  let
-    dParameterMintingPolicyHash =
-      Value.currencyMPSHash dParameterCurrencySymbol
-
-  { dParameterValidatorAddress, dParameterValidator } ←
-    DParameter.getDParameterValidatorAndAddress sidechainParams
-
-  -- find all UTxOs at DParameterValidator address that contain DParameterToken
-  dParameterUTxOs ←
-    Map.filter
-      ( \( TransactionOutputWithRefScript
-             { output: (TransactionOutput { amount }) }
-         ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName >
-          BigInt.fromInt 0
-      )
-      <$> utxosAt dParameterValidatorAddress
-
-  -- check how much DParameterToken is stored in UTxOs that we're trying to remove
-  let
-    amountToBurn = sum
-      $ map
-          ( \( TransactionOutputWithRefScript
-                 { output: (TransactionOutput { amount }) }
-             ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
-          )
-      $ Map.values dParameterUTxOs
-
-  when (amountToBurn == zero)
-    $ throwContractError
-    $ show
-    $ NotFoundUtxo "Unable to remove non-existent d-param"
-
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
-
-  let
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.validator dParameterValidator
-      <> Lookups.mintingPolicy dParameterMintingPolicy
-      <> Lookups.unspentOutputs dParameterUTxOs
-      <> governanceLookups
-
-    spendScriptOutputConstraints ∷ TxConstraints Void Void
-    spendScriptOutputConstraints =
-      foldMap
-        ( \txInput → Constraints.mustSpendScriptOutput txInput
-            (Redeemer $ toData RemoveDParameter)
-        ) $ Map.keys dParameterUTxOs
-
-    constraints ∷ TxConstraints Void Void
-    constraints =
-      Constraints.mustMintCurrencyWithRedeemer
-        dParameterMintingPolicyHash
-        (Redeemer $ toData DParameterBurn)
-        dParameterTokenName
-        (-amountToBurn)
-        <> spendScriptOutputConstraints
-        <> governanceConstraints
-
   pure { lookups, constraints }
 
 mkUpdateDParameterLookupsAndConstraints ∷

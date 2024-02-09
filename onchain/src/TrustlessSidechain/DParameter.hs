@@ -21,8 +21,8 @@ import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  DParameterPolicyRedeemer (DParameterBurn, DParameterMint),
-  DParameterValidatorRedeemer (RemoveDParameter, UpdateDParameter),
+  DParameterPolicyRedeemer (DParameterMint),
+  DParameterValidatorRedeemer (UpdateDParameter),
   SidechainParams,
  )
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
@@ -35,12 +35,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, 
 --   ERROR-DPARAMETER-POLICY-02: some tokens were not sent to the
 --   dParameterValidatorAddress
 --
---   ERROR-DPARAMETER-POLICY-03: transaction not signed by the governance
---   authority
---
---   ERROR-DPARAMETER-POLICY-04: transaction outputs some dParameterTokens
---
---   ERROR-DPARAMETER-POLICY-05: Wrong ScriptContext - this should never happen
+--   ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
 mkMintingPolicy ::
   SidechainParams ->
   Address ->
@@ -81,35 +76,13 @@ mkMintingPolicy
       -- sent to the DParameterValidator address
       allTokensSentToDParameterValidator :: Bool
       allTokensSentToDParameterValidator = mintAmount == outAmount
-mkMintingPolicy sp _ DParameterBurn (ScriptContext txInfo (Minting cs)) =
-  traceIfFalse "ERROR-DPARAMETER-POLICY-03" signedByGovernanceAuthority
-    && traceIfFalse "ERROR-DPARAMETER-POLICY-04" noOutputsWithDParameterToken
-  where
-    -- Check that transaction was approved by governance authority
-    signedByGovernanceAuthority :: Bool
-    signedByGovernanceAuthority =
-      txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
-    -- Amount of DParameterToken sent output by this transaction
-    outAmount :: Integer
-    outAmount =
-      sum
-        [ currencySymbolValueOf value cs
-        | (TxOut _ value _ _) <-
-            txInfoOutputs txInfo
-        ]
-    -- Check wether this transaction output any DParameter tokens
-    noOutputsWithDParameterToken :: Bool
-    noOutputsWithDParameterToken = outAmount == 0
-mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-05"
+mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
 -- OnChain error descriptions:
 --
 --   ERROR-DPARAMETER-VALIDATOR-01: transaction not signed by the governance
 --   authority
 --
---   ERROR-DPARAMETER-VALIDATOR-03: transaction not signed by the governance
---   authority
 
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
@@ -127,17 +100,6 @@ dParameterValidator
   UpdateDParameter
   (ScriptContext txInfo _) =
     traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
-    where
-      -- Check that transaction was approved by governance authority
-      signedByGovernanceAuthority :: Bool
-      signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-dParameterValidator
-  sp
-  _
-  RemoveDParameter
-  (ScriptContext txInfo _) =
-    traceIfFalse "ERROR-DPARAMETER-VALIDATOR-02" signedByGovernanceAuthority
     where
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool

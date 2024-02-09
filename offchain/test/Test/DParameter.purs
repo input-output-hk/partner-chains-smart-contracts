@@ -44,13 +44,11 @@ tests ∷ WrappedTests
 tests = plutipGroup "Minting, and burning a DParameter Token" $
   do
     testScenarioSuccess
-    testScenarioFailure1
-    testScenarioFailure2
-    testScenarioFailure3
+    testScenarioFailure
 
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
-  Mote.Monad.test "Minting, updating and removing a DParameter Token"
+  Mote.Monad.test "Minting and updating a DParameter Token"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 1_000_000
         , BigInt.fromInt 5_000_000
@@ -109,166 +107,11 @@ testScenarioSuccess =
                     "Test: update D param"
             )
 
-        void
-          $
-            ( DParameter.mkRemoveDParameterLookupsAndConstraints
-                sidechainParams
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: remove D param"
-            )
-
         _ ← initSidechain initScParams 1
         pure unit
 
-testScenarioFailure1 ∷ PlutipTest
-testScenarioFailure1 =
-  Mote.Monad.test
-    "Minting and removing twice a DParameter Token. (this should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 1_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 150_000_000
-        ]
-    $ \alice → Wallet.withKeyWallet alice do
-
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-
-          sidechainParams = toSidechainParams (unwrap initScParams)
-
-        void
-          $
-            ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 2
-                , registeredCandidatesCount: BigInt.fromInt 3
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert D param"
-            )
-
-        void
-          $
-            ( DParameter.mkRemoveDParameterLookupsAndConstraints
-                sidechainParams
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: remove D param"
-            )
-
-        ( void
-            $
-              ( DParameter.mkRemoveDParameterLookupsAndConstraints
-                  sidechainParams
-                  >>=
-                    balanceSignAndSubmitWithoutSpendingUtxo
-                      (unwrap sidechainParams).genesisUtxo
-                      "Test: remove D param again"
-              )
-        ) # fails
-
-testScenarioFailure2 ∷ PlutipTest
-testScenarioFailure2 =
-  Mote.Monad.test
-    "Minting, removing and updating a DParameter Token. (this should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 1_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 150_000_000
-        ]
-    $ \alice → Wallet.withKeyWallet alice do
-
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        genesisOutput ← getUtxo genesisUtxo
-        logInfo' (show genesisOutput)
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-
-          sidechainParams = toSidechainParams (unwrap initScParams)
-
-        void
-          $
-            ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 2
-                , registeredCandidatesCount: BigInt.fromInt 3
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert D param"
-            )
-
-        void
-          $
-            ( DParameter.mkRemoveDParameterLookupsAndConstraints
-                sidechainParams
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: remove D param"
-            )
-
-        ( void
-            $
-              ( DParameter.mkUpdateDParameterLookupsAndConstraints
-                  sidechainParams
-                  { permissionedCandidatesCount: BigInt.fromInt 1
-                  , registeredCandidatesCount: BigInt.fromInt 0
-                  }
-                  >>=
-                    balanceSignAndSubmitWithoutSpendingUtxo
-                      (unwrap sidechainParams).genesisUtxo
-                      "Test: update removed D param"
-              )
-        ) # fails
-
-testScenarioFailure3 ∷ PlutipTest
-testScenarioFailure3 =
+testScenarioFailure ∷ PlutipTest
+testScenarioFailure =
   Mote.Monad.test
     "Minting, and updating a DParameter Token with the same value. (this should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest

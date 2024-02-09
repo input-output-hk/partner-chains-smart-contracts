@@ -1,7 +1,7 @@
 module TrustlessSidechain.DParameter.Types
-  ( DParameterValidatorRedeemer(UpdateDParameter, RemoveDParameter)
+  ( DParameterValidatorRedeemer(UpdateDParameter)
   , DParameterValidatorDatum(DParameterValidatorDatum)
-  , DParameterPolicyRedeemer(DParameterMint, DParameterBurn)
+  , DParameterPolicyRedeemer(DParameterMint)
   ) where
 
 import Contract.Prelude
@@ -18,9 +18,7 @@ import TrustlessSidechain.Utils.Data
   , productToData2
   )
 
-data DParameterValidatorRedeemer
-  = UpdateDParameter
-  | RemoveDParameter
+data DParameterValidatorRedeemer = UpdateDParameter
 
 derive instance Eq DParameterValidatorRedeemer
 
@@ -31,12 +29,10 @@ instance Show DParameterValidatorRedeemer where
 
 instance ToData DParameterValidatorRedeemer where
   toData UpdateDParameter = Integer (BigInt.fromInt 0)
-  toData RemoveDParameter = Integer (BigInt.fromInt 1)
 
 instance FromData DParameterValidatorRedeemer where
   fromData (Integer x)
     | x == BigInt.fromInt 0 = Just $ UpdateDParameter
-    | x == BigInt.fromInt 1 = Just $ RemoveDParameter
   fromData _ = Nothing
 
 data DParameterValidatorDatum = DParameterValidatorDatum
@@ -68,9 +64,7 @@ instance FromData DParameterValidatorDatum where
         , registeredCandidatesCount
         }
 
-data DParameterPolicyRedeemer
-  = DParameterMint
-  | DParameterBurn
+data DParameterPolicyRedeemer = DParameterMint
 
 derive instance Eq DParameterPolicyRedeemer
 
@@ -81,10 +75,8 @@ instance Show DParameterPolicyRedeemer where
 
 instance ToData DParameterPolicyRedeemer where
   toData DParameterMint = Integer (BigInt.fromInt 0)
-  toData DParameterBurn = Integer (BigInt.fromInt 1)
 
 instance FromData DParameterPolicyRedeemer where
   fromData (Integer x)
     | x == BigInt.fromInt 0 = Just $ DParameterMint
-    | x == BigInt.fromInt 1 = Just $ DParameterBurn
   fromData _ = Nothing
