@@ -57,6 +57,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Removed
 
+
+* `remove-d-parameter` command has been removed.
+  ([679](https://github.com/input-output-hk/trustless-sidechain/pull/679))
 * `genesisHash` field has been removed from the `"sidechainParameters"` record
   in the configuration file.
 
