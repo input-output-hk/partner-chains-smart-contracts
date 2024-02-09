@@ -97,9 +97,9 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  DParameterPolicyRedeemer (DParameterBurn, DParameterMint),
+  DParameterPolicyRedeemer (DParameterMint),
   DParameterValidatorDatum (DParameterValidatorDatum),
-  DParameterValidatorRedeemer (RemoveDParameter, UpdateDParameter),
+  DParameterValidatorRedeemer (UpdateDParameter),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   MerkleRootInsertionMessage (
@@ -327,13 +327,13 @@ genCHPM = do
   pure $ CheckpointMessage sp lb bn se
 
 genDPPR :: Gen DParameterPolicyRedeemer
-genDPPR = oneof [pure DParameterMint, pure DParameterBurn]
+genDPPR = pure DParameterMint
 
 genDPVD :: Gen DParameterValidatorDatum
 genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
 
 genDPVR :: Gen DParameterValidatorRedeemer
-genDPVR = oneof [pure UpdateDParameter, pure RemoveDParameter]
+genDPVR = pure UpdateDParameter
 
 genFMR :: Gen FUELMintingRedeemer
 genFMR =

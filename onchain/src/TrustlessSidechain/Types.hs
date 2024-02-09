@@ -724,8 +724,6 @@ makeHasField ''CheckpointMessage
 data DParameterPolicyRedeemer
   = -- | @since v5.0.0
     DParameterMint
-  | -- | @since v5.0.0
-    DParameterBurn
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
@@ -735,7 +733,6 @@ data DParameterPolicyRedeemer
 instance ToData DParameterPolicyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData DParameterMint = BuiltinData $ PlutusTx.I 0
-  toBuiltinData DParameterBurn = BuiltinData $ PlutusTx.I 1
 
 -- | @since v5.0.0
 instance FromData DParameterPolicyRedeemer where
@@ -744,7 +741,6 @@ instance FromData DParameterPolicyRedeemer where
     integerValue <- fromBuiltinData x
     case integerValue :: Integer of
       0 -> Just DParameterMint
-      1 -> Just DParameterBurn
       _ -> Nothing
 
 -- | @since v5.0.0
@@ -754,7 +750,6 @@ instance UnsafeFromData DParameterPolicyRedeemer where
     let integerValue = unsafeFromBuiltinData x
      in case integerValue :: Integer of
           0 -> DParameterMint
-          1 -> DParameterBurn
           _ -> error ()
 
 -- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
@@ -803,8 +798,6 @@ instance UnsafeFromData DParameterValidatorDatum where
 data DParameterValidatorRedeemer
   = -- | @since v5.0.0
     UpdateDParameter
-  | -- | @since v5.0.0
-    RemoveDParameter
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
@@ -814,7 +807,6 @@ data DParameterValidatorRedeemer
 instance ToData DParameterValidatorRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData UpdateDParameter = BuiltinData $ PlutusTx.I 0
-  toBuiltinData RemoveDParameter = BuiltinData $ PlutusTx.I 1
 
 -- | @since v5.0.0
 instance FromData DParameterValidatorRedeemer where
@@ -823,7 +815,6 @@ instance FromData DParameterValidatorRedeemer where
     integerValue <- fromBuiltinData x
     case integerValue :: Integer of
       0 -> Just UpdateDParameter
-      1 -> Just RemoveDParameter
       _ -> Nothing
 
 -- | @since v5.0.0
@@ -833,7 +824,6 @@ instance UnsafeFromData DParameterValidatorRedeemer where
     let integerValue = unsafeFromBuiltinData x
      in case integerValue :: Integer of
           0 -> UpdateDParameter
-          1 -> RemoveDParameter
           _ -> error ()
 
 -- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or

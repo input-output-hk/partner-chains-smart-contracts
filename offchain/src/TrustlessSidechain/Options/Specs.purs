@@ -116,7 +116,6 @@ import TrustlessSidechain.Options.Types
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
-      , RemoveDParameter
       , UpdatePermissionedCandidates
       , BurnNFTs
       )
@@ -236,10 +235,6 @@ optSpec maybeConfig =
     , command "update-d-parameter"
         ( info (withCommonOpts maybeConfig updateDParameterSpec)
             (progDesc "Update a D parameter")
-        )
-    , command "remove-d-parameter"
-        ( info (withCommonOpts maybeConfig removeDParameterSpec)
-            (progDesc "Remove a D parameter")
         )
     , command "update-permissioned-candidates"
         ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
@@ -1123,9 +1118,6 @@ updateDParameterSpec = ado
   permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
   registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
   in UpdateDParameter { permissionedCandidatesCount, registeredCandidatesCount }
-
-removeDParameterSpec ∷ Parser TxEndpoint
-removeDParameterSpec = pure RemoveDParameter
 
 parseRegistrationSidechainKeys ∷
   Parser

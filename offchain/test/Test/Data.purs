@@ -58,9 +58,9 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
   )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as Schnorr
 import TrustlessSidechain.DParameter.Types
-  ( DParameterPolicyRedeemer(DParameterMint, DParameterBurn)
+  ( DParameterPolicyRedeemer(DParameterMint)
   , DParameterValidatorDatum(DParameterValidatorDatum)
-  , DParameterValidatorRedeemer(UpdateDParameter, RemoveDParameter)
+  , DParameterValidatorRedeemer(UpdateDParameter)
   )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -290,8 +290,7 @@ genCheckpointMessage = do
     }
 
 genDParameterValidatorRedeemer ∷ Gen DParameterValidatorRedeemer
-genDParameterValidatorRedeemer = QGen.oneOf $ NE.cons' (pure UpdateDParameter)
-  [ pure RemoveDParameter ]
+genDParameterValidatorRedeemer = pure UpdateDParameter
 
 genDParameterValidatorDatum ∷ Gen DParameterValidatorDatum
 genDParameterValidatorDatum = do
@@ -304,8 +303,7 @@ genDParameterValidatorDatum = do
     }
 
 genDParameterPolicyRedeemer ∷ Gen DParameterPolicyRedeemer
-genDParameterPolicyRedeemer = QGen.oneOf $ NE.cons' (pure DParameterMint)
-  [ pure DParameterBurn ]
+genDParameterPolicyRedeemer = pure DParameterMint
 
 genFUELMintingRedeemer ∷ Gen FUELMintingRedeemer
 genFUELMintingRedeemer = QGen.oneOf $ NE.cons' (pure FUELBurningRedeemer)

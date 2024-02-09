@@ -58,7 +58,6 @@ import TrustlessSidechain.EndpointResp
       , CborPlainAggregatePublicKeysResp
       , InsertDParameterResp
       , UpdateDParameterResp
-      , RemoveDParameterResp
       , UpdatePermissionedCandidatesResp
       , BurnNFTsResp
       )
@@ -107,7 +106,6 @@ import TrustlessSidechain.Options.Types
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
-      , RemoveDParameter
       , UpdatePermissionedCandidates
       , BurnNFTs
       )
@@ -620,15 +618,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> UpdateDParameterResp
-
-      RemoveDParameter →
-        DParameter.mkRemoveDParameterLookupsAndConstraints scParams
-          >>= balanceSignAndSubmitWithoutSpendingUtxo
-            (unwrap scParams).genesisUtxo
-            "RemoveDParameter"
-          <#> unwrap
-          >>> { transactionId: _ }
-          >>> RemoveDParameterResp
 
       UpdatePermissionedCandidates
         { permissionedCandidatesToAdd, permissionedCandidatesToRemove } →

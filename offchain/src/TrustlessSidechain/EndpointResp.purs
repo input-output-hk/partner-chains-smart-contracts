@@ -120,8 +120,6 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | UpdateDParameterResp
       { transactionId ∷ ByteArray }
-  | RemoveDParameterResp
-      { transactionId ∷ ByteArray }
   | UpdatePermissionedCandidatesResp
       { transactionId ∷ ByteArray }
   | BurnNFTsResp
@@ -405,13 +403,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdateDParameter"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-
-    RemoveDParameterResp
-      { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "RemoveDParameter"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 

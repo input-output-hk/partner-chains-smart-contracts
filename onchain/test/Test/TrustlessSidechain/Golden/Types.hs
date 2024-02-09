@@ -73,7 +73,6 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   DParameterPolicyRedeemer (
-    DParameterBurn,
     DParameterMint
   ),
   DParameterValidatorDatum (
@@ -82,7 +81,6 @@ import TrustlessSidechain.Types (
     registeredCandidatesCount
   ),
   DParameterValidatorRedeemer (
-    RemoveDParameter,
     UpdateDParameter
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
@@ -186,10 +184,8 @@ tests =
     , dataEncoderGoldenTest "CommitteeCertificateMint" sampleCommitteeCertificateMint
     , dataEncoderGoldenTest "ATMSPlainMultisignature" sampleATMSPlainMultisignature
     , dataEncoderGoldenTest "DParameterPolicyRedeemer1" sampleDParameterPolicyRedeemer1
-    , dataEncoderGoldenTest "DParameterPolicyRedeemer2" sampleDParameterPolicyRedeemer2
     , dataEncoderGoldenTest "DParameterValidatorDatum" sampleDParameterValidatorDatum
     , dataEncoderGoldenTest "DParameterValidatorRedeemer1" sampleDParameterValidatorRedeemer1
-    , dataEncoderGoldenTest "DParameterValidatorRedeemer2" sampleDParameterValidatorRedeemer2
     , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer1" samplePermissionedCandidatesPolicyRedeemer1
     , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer2" samplePermissionedCandidatesPolicyRedeemer2
     , dataEncoderGoldenTest "PermissionedCandidateKeys" samplePermissionedCandidateKeys
@@ -469,9 +465,6 @@ sampleATMSPlainMultisignature =
 sampleDParameterPolicyRedeemer1 :: DParameterPolicyRedeemer
 sampleDParameterPolicyRedeemer1 = DParameterMint
 
-sampleDParameterPolicyRedeemer2 :: DParameterPolicyRedeemer
-sampleDParameterPolicyRedeemer2 = DParameterBurn
-
 sampleDParameterValidatorDatum :: DParameterValidatorDatum
 sampleDParameterValidatorDatum =
   DParameterValidatorDatum
@@ -481,9 +474,6 @@ sampleDParameterValidatorDatum =
 
 sampleDParameterValidatorRedeemer1 :: DParameterValidatorRedeemer
 sampleDParameterValidatorRedeemer1 = UpdateDParameter
-
-sampleDParameterValidatorRedeemer2 :: DParameterValidatorRedeemer
-sampleDParameterValidatorRedeemer2 = RemoveDParameter
 
 samplePermissionedCandidatesPolicyRedeemer1 :: PermissionedCandidatesPolicyRedeemer
 samplePermissionedCandidatesPolicyRedeemer1 = PermissionedCandidatesMint

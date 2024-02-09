@@ -239,7 +239,6 @@ data TxEndpoint
       { permissionedCandidatesCount ∷ BigInt
       , registeredCandidatesCount ∷ BigInt
       }
-  | RemoveDParameter
   | UpdatePermissionedCandidates
       { permissionedCandidatesToAdd ∷
           List
