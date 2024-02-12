@@ -45,9 +45,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
   , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
-import TrustlessSidechain.CommitteeOraclePolicy
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
   ( ATMSPlainSchnorrSecp256k1Multisignature
       ( ATMSPlainSchnorrSecp256k1Multisignature
@@ -206,8 +203,6 @@ tests = pureGroup "Data roundtrip tests" $ do
     genVersionOraclePolicyRedeemer
   test "VersionOracleValidatorRedeemer" $ liftEffect $ toDataLaws testCount
     genVersionOracleValidatorRedeemer
-  test "InitCommitteeHashMint" $ liftEffect $ toDataLaws testCount
-    genInitCommitteeHashMint
   test "ATMSPlainSchnorrSecp256k1Multisignature" $ liftEffect $ toDataLaws
     testCount
     genATMSPlainSchnorrSecp256k1Multisignature
@@ -391,12 +386,6 @@ genVersionOracleValidatorRedeemer = QGen.oneOf $ NE.cons'
       ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
       pure $ UpdateVersionOracle versionOracle scriptHash
   ]
-
-genInitCommitteeHashMint ∷ Gen InitCommitteeHashMint
-genInitCommitteeHashMint = do
-  ArbitraryTransactionInput icTxOutRef ← arbitrary
-  pure $ InitCommitteeHashMint
-    { icTxOutRef }
 
 genATMSPlainSchnorrSecp256k1Multisignature ∷
   Gen Schnorr.ATMSPlainSchnorrSecp256k1Multisignature

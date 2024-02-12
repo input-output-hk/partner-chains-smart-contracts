@@ -24,7 +24,7 @@ source-repository head
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fexpose-all-unfoldings
 
   build-depends:      base ^>=4.14
@@ -281,7 +281,6 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.Golden.FUELProxyPolicy
     Test.TrustlessSidechain.Golden.Tests
     Test.TrustlessSidechain.Golden.Types
-    Test.TrustlessSidechain.Golden.UpdateCommitteeHash
     Test.TrustlessSidechain.Golden.Versioning
     Test.TrustlessSidechain.GoldenTest
     Test.TrustlessSidechain.MerkleProofSerialisation

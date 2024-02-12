@@ -110,7 +110,6 @@ import TrustlessSidechain.Types (
   UpdateCommitteeHashRedeemer,
  )
 import TrustlessSidechain.UpdateCommitteeHash (
-  InitCommitteeHashMint,
   mkCommitteeOraclePolicy,
   mkUpdateCommitteeHashValidator,
  )
@@ -276,7 +275,7 @@ mkUPCVCode = $$(compile [||mkUpdateCommitteeHashValidator||])
 
 mkCommitteeOraclePolicyCode ::
   CompiledCode
-    ( InitCommitteeHashMint ->
+    ( InitTokenAssetClass ->
       () ->
       ScriptContext ->
       Bool

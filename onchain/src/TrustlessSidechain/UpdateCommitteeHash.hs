@@ -5,7 +5,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module TrustlessSidechain.UpdateCommitteeHash (
-  InitCommitteeHashMint (..),
   initCommitteeOracleTn,
   initCommitteeOracleMintAmount,
   mkCommitteeOraclePolicy,
@@ -24,10 +23,9 @@ import Plutus.V2.Ledger.Api (
   Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName),
-  TxInInfo (txInInfoOutRef, txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
+  TxInInfo (txInInfoResolved),
+  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
-  TxOutRef,
   Value (getValue),
   addressCredential,
   fromCompiledCode,
@@ -37,9 +35,9 @@ import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
-import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  InitTokenAssetClass,
   SidechainParams,
   UpdateCommitteeDatum,
   UpdateCommitteeHashMessage (
@@ -55,6 +53,7 @@ import TrustlessSidechain.Types (
 import TrustlessSidechain.Utils (
   mkUntypedMintingPolicy,
   mkUntypedValidator,
+  oneTokenBurned,
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
@@ -206,43 +205,32 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
 
 -- * Initializing the committee hash
 
--- | 'InitCommitteeHashMint' is used as the parameter for the minting policy
-newtype InitCommitteeHashMint = InitCommitteeHashMint
-  { -- | 'TxOutRef' is the output reference to mint the NFT initially.
-    icTxOutRef :: TxOutRef
-  }
-  deriving newtype
-    ( TSPrelude.Show
-    , TSPrelude.Eq
-    , TSPrelude.Ord
-    , PlutusTx.UnsafeFromData
-    , PlutusTx.ToData
-    , PlutusTx.FromData
-    )
-
-PlutusTx.makeLift ''InitCommitteeHashMint
-
 -- | 'mkCommitteeOraclePolicy' is the minting policy for the NFT which identifies
 -- the committee hash.
 --
 -- OnChain error descriptions:
 --
--- ERROR-UPDATE-COMMITTEE-HASH-POLICY-01: UTxO not consumed
+-- ERROR-UPDATE-COMMITTEE-HASH-POLICY-01: The transaction does not spend init
+-- token.
 --
 -- ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
 -- increasing
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
-mkCommitteeOraclePolicy :: InitCommitteeHashMint -> () -> ScriptContext -> Bool
-mkCommitteeOraclePolicy ichm _red ctx =
-  traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" hasUtxo
+mkCommitteeOraclePolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkCommitteeOraclePolicy itac _red ctx =
+  traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-02" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-    oref :: TxOutRef
-    oref = icTxOutRef ichm
-    hasUtxo :: Bool
-    hasUtxo = any ((oref ==) . txInInfoOutRef) $ txInfoInputs info
+
+    initTokenBurned :: Bool
+    initTokenBurned =
+      oneTokenBurned
+        info
+        (get @"initTokenCurrencySymbol" itac)
+        (get @"initTokenName" itac)
+
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =

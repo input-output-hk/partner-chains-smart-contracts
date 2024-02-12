@@ -88,11 +88,11 @@ main =
         , fitsInto
             "mkCommitteeOraclePolicy"
             Compiled.mkCommitteeOraclePolicyCode
-            400
+            429
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            2_091
+            2_094
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode

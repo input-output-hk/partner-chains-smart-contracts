@@ -148,39 +148,6 @@ toSidechainParams isp = SidechainParams
   , governanceAuthority: isp.initGovernanceAuthority
   }
 
--- | `initCommitteeHashMintLookupsAndConstraints` creates lookups and
--- | constraints to mint (but NOT pay to someone) the NFT which uniquely
--- | identifies the utxo that holds the committee hash.
-initCommitteeHashMintLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type).
-  InitTokensParams r →
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-initCommitteeHashMintLookupsAndConstraints isp = do
-  -- Get committee hash / associated values
-  -----------------------------------
-  { mintingPolicy, currencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo $ toSidechainParams isp
-  let
-    committeeHashValue =
-      Value.singleton
-        currencySymbol
-        CommitteeOraclePolicy.committeeOracleTn
-        one
-
-  -- Building the transaction
-  -----------------------------------
-  let
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy mintingPolicy
-
-    constraints ∷ TxConstraints Void Void
-    constraints = Constraints.mustMintValue committeeHashValue
-
-  pure { lookups, constraints }
-
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT
 -- | submit any transaction). In particular, it includes lookups / constraints
@@ -283,12 +250,28 @@ initCommitteeHashLookupsAndConstraints ∷
 initCommitteeHashLookupsAndConstraints isp = do
   -- Sidechain parameters
   -----------------------------------
-  let sp = toSidechainParams isp
+  let sidechainParams = toSidechainParams isp
 
-  -- Getting the update committee hash policy
+  -- Build lookups and constraints to burn committee oracle init token
+  burnCommitteeOracleInitToken ←
+    CommitteeOraclePolicy.burnOneCommitteeOracleInitToken sidechainParams
+
+  -- Build lookups and constraints to mint committee oracle NFT
   -----------------------------------
-  { currencySymbol: committeeOracleCurrencySymbol } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo $ toSidechainParams isp
+  committeeNft ←
+    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
+
+  let
+    committeeNftValue =
+      Value.singleton
+        committeeNft.currencySymbol
+        CommitteeOraclePolicy.committeeOracleTn
+        one
+
+    mintCommitteeNft =
+      { lookups: Lookups.mintingPolicy committeeNft.mintingPolicy
+      , constraints: Constraints.mustMintValue committeeNftValue
+      }
 
   -- Setting up the update committee hash validator
   -----------------------------------
@@ -300,16 +283,11 @@ initCommitteeHashLookupsAndConstraints isp = do
           { aggregatePubKeys: aggregatedKeys
           , sidechainEpoch: isp.initSidechainEpoch
           }
-    committeeHashValue =
-      Value.singleton
-        committeeOracleCurrencySymbol
-        CommitteeOraclePolicy.committeeOracleTn
-        one
 
-  versionOracleConfig ← getVersionOracleConfig sp
+  versionOracleConfig ← getVersionOracleConfig sidechainParams
 
   committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
-    sp
+    sidechainParams
     versionOracleConfig
 
   let
@@ -326,9 +304,10 @@ initCommitteeHashLookupsAndConstraints isp = do
     constraints = Constraints.mustPayToScript committeeHashValidatorHash
       committeeHashDatum
       DatumInline
-      committeeHashValue
+      committeeNftValue
 
-  pure { constraints, lookups }
+  pure $ burnCommitteeOracleInitToken <> mintCommitteeNft <>
+    { constraints, lookups }
 
 -- | `initDistributedSetLookupsAndContraints` creates the lookups and
 -- | constraints required when initalizing the distributed set (this does NOT
@@ -501,16 +480,12 @@ initSidechain (InitSidechainParams isp) version = do
   -- TODO: lookups and constraints should be constructed depending on the
   -- version argument.  See Issue #10
   { constraints, lookups } ←
-    ( initCommitteeHashMintLookupsAndConstraints
-        <> initCommitteeHashLookupsAndConstraints
-    ) isp <>
-      ( Checkpoint.mintOneCheckpointInitToken sidechainParams
-          <> DistributedSet.mintOneDsInitToken sidechainParams
-          <>
-            CandidatePermissionToken.mintOneCandidatePermissionInitToken
-              sidechainParams
-          <> initSpendGenesisUtxo sidechainParams
-      )
+    ( Checkpoint.mintOneCheckpointInitToken
+        <> DistributedSet.mintOneDsInitToken
+        <> CandidatePermissionToken.mintOneCandidatePermissionInitToken
+        <> CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
+        <> initSpendGenesisUtxo
+    ) sidechainParams
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
@@ -519,7 +494,7 @@ initSidechain (InitSidechainParams isp) version = do
   -- versioning before it can be used to mint NFTs.
   ----------------------------------------
   versioningTxIds ← Versioning.insertVersion
-    { atmsKind: isp.initATMSKind, sidechainParams: (toSidechainParams isp) }
+    { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
   -- FIXME: transaction IDs discarded here.  We should accumulate them and
@@ -530,6 +505,8 @@ initSidechain (InitSidechainParams isp) version = do
     >>= balanceSignAndSubmit "Distributed set init"
   _ ← initCandidatePermissionTokenLookupsAndConstraints isp
     >>= balanceSignAndSubmit "Candidate permission tokens init"
+  _ ← initCommitteeHashLookupsAndConstraints isp
+    >>= balanceSignAndSubmit "Committte init"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224

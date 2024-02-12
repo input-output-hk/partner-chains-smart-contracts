@@ -1,57 +1,55 @@
 module TrustlessSidechain.CommitteeOraclePolicy
-  ( InitCommitteeHashMint(InitCommitteeHashMint)
-  , committeeOraclePolicy
-  , committeeOracleAssetClass
+  ( committeeOracleAssetClass
   , committeeOracleTn
   , committeeOracleCurrencyInfo
+  , mintOneCommitteeOracleInitToken
+  , burnOneCommitteeOracleInitToken
   ) where
 
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.PlutusData (class FromData, class ToData, fromData, toData)
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Transaction (TransactionInput)
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.TxConstraints (TxConstraints)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenAssetClass(InitTokenAssetClass)
+  )
+import TrustlessSidechain.InitSidechain.Utils
+  ( burnOneInitToken
+  , initTokenCurrencyInfo
+  , mintOneInitToken
+  )
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeOraclePolicy)
   )
 
--- | `InitCommitteeHashMint` parameterizes the minting policy which identifies
--- | the utxo with the update committee hash validator script.
-newtype InitCommitteeHashMint = InitCommitteeHashMint
-  { icTxOutRef ∷ TransactionInput }
-
-derive instance Eq InitCommitteeHashMint
-
-derive instance Generic InitCommitteeHashMint _
-
-instance Show InitCommitteeHashMint where
-  show = genericShow
-
-derive instance Newtype InitCommitteeHashMint _
-
-instance ToData InitCommitteeHashMint where
-  toData (InitCommitteeHashMint { icTxOutRef }) =
-    toData icTxOutRef
-
-instance FromData InitCommitteeHashMint where
-  fromData = map (InitCommitteeHashMint <<< { icTxOutRef: _ }) <$> fromData
-
-committeeOraclePolicy ∷ InitCommitteeHashMint → Contract CurrencyInfo
-committeeOraclePolicy ichm =
-  getCurrencyInfo CommitteeOraclePolicy [ toData ichm ]
+committeeOracleCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+committeeOracleCurrencyInfo sp = do
+  { currencySymbol } ← initTokenCurrencyInfo sp
+  let
+    itac = InitTokenAssetClass
+      { initTokenCurrencySymbol: currencySymbol
+      , initTokenName: committeeOracleInitTokenName
+      }
+  getCurrencyInfo CommitteeOraclePolicy [ toData itac ]
 
 -- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
 -- | for details on the token name
-committeeOracleAssetClass ∷ InitCommitteeHashMint → Contract AssetClass
-committeeOracleAssetClass ichm = do
-  { currencySymbol } ← committeeOraclePolicy ichm
+committeeOracleAssetClass ∷ SidechainParams → Contract AssetClass
+committeeOracleAssetClass sp = do
+  { currencySymbol } ← committeeOracleCurrencyInfo sp
   pure $ assetClass currencySymbol committeeOracleTn
+
+committeeOracleInitTokenName ∷ Value.TokenName
+committeeOracleInitTokenName = unsafePartial $ fromJust $ Value.mkTokenName $
+  ByteArray.hexToByteArrayUnsafe "Committee oracle InitToken"
 
 -- | `committeeOracleTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
@@ -61,9 +59,24 @@ committeeOracleTn ∷ Value.TokenName
 committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
   ByteArray.hexToByteArrayUnsafe ""
 
--- | Wrapper around `committeeOraclePolicy` that accepts `SidechainParams`.
-committeeOracleCurrencyInfo ∷
+-- | Build lookups and constraints to mint committee oracle initialization
+-- | token.
+mintOneCommitteeOracleInitToken ∷
   SidechainParams →
-  Contract CurrencyInfo
-committeeOracleCurrencyInfo (SidechainParams sp) = do
-  committeeOraclePolicy $ InitCommitteeHashMint { icTxOutRef: sp.genesisUtxo }
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mintOneCommitteeOracleInitToken sp =
+  mintOneInitToken sp committeeOracleInitTokenName
+
+-- | Build lookups and constraints to burn committee oracle initialization
+-- | token.
+burnOneCommitteeOracleInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+burnOneCommitteeOracleInitToken sp =
+  burnOneInitToken sp committeeOracleInitTokenName

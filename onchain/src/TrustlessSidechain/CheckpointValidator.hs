@@ -196,9 +196,9 @@ initCheckpointMintAmount = 1
 --
 -- OnChain error descriptions:
 --
---   ERROR-CHECKPOINT-POLICY-01: The transaction doesn't spend init token.
+--   ERROR-CHECKPOINT-POLICY-01: The transaction does not spend init token.
 --
---   ERROR-CHECKPOINT-POLICY-02: wrong amount minted
+--   ERROR-CHECKPOINT-POLICY-02: Wrong amount minted.
 {-# INLINEABLE mkCheckpointPolicy #-}
 mkCheckpointPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
 mkCheckpointPolicy itac _red ctx =

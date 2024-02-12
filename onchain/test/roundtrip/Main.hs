@@ -141,7 +141,6 @@ import TrustlessSidechain.Types (
   ),
   UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
  )
-import TrustlessSidechain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint))
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
   VersionOracleConfig (VersionOracleConfig),
@@ -180,8 +179,6 @@ main =
     , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
     , testProperty "FUELProxyRedeemer (safe)" . toDataSafeLaws' genFPR shrinkFPR $ show
     , testProperty "FUELProxyRedeemer (unsafe)" . toDataUnsafeLaws' genFPR shrinkFPR $ show
-    , testProperty "InitCommitteeHashMint (safe)" . toDataSafeLaws' genICHM shrinkICHM $ show
-    , testProperty "InitCommitteeHashMint (unsafe)" . toDataUnsafeLaws' genICHM shrinkICHM $ show
     , testProperty "CombinedMerkleProof (safe)" . toDataSafeLaws' genCMP shrinkCMP $ show
     , testProperty "CombinedMerkleProof (unsafe)" . toDataUnsafeLaws' genCMP shrinkCMP $ show
     , testProperty "UpdateCommitteeDatum (safe)" . toDataSafeLaws' genUPD shrinkUPD $ show
@@ -399,12 +396,6 @@ genFPR =
     [ FuelProxyMint <$> arbitrary
     , FuelProxyBurn <$> arbitrary <*> pure ""
     ]
-
-genICHM :: Gen InitCommitteeHashMint
-genICHM =
-  InitCommitteeHashMint <$> do
-    ArbitraryTxOutRef tor <- arbitrary
-    pure tor
 
 genUp :: Gen Up
 genUp = Up <$> genSide <*> genRH
@@ -681,12 +672,6 @@ shrinkFPR = \case
   FuelProxyMint n -> FuelProxyMint <$> shrink n
   FuelProxyBurn n _ ->
     FuelProxyBurn <$> shrink n <*> pure ""
-
-shrinkICHM :: InitCommitteeHashMint -> [InitCommitteeHashMint]
-shrinkICHM (InitCommitteeHashMint txOutRef) =
-  InitCommitteeHashMint <$> do
-    ArbitraryTxOutRef tor <- shrink (ArbitraryTxOutRef txOutRef)
-    pure tor
 
 shrinkUp :: Up -> [Up]
 shrinkUp (Up ss sib) =

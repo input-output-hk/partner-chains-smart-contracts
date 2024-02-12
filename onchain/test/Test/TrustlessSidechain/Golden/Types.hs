@@ -147,7 +147,6 @@ import TrustlessSidechain.Types (
     previousMerkleRoot
   ),
  )
-import TrustlessSidechain.UpdateCommitteeHash (InitCommitteeHashMint (InitCommitteeHashMint))
 
 -- | Tests for all data types with @IsData@ implementation
 -- Some of the data types are only checked transitively (included by some other type)
@@ -191,7 +190,6 @@ tests =
     , dataEncoderGoldenTest "ATMSRedeemer1" sampleATMSRedeemer1
     , dataEncoderGoldenTest "ATMSRedeemer2" sampleATMSRedeemer2
     , dataEncoderGoldenTest "MerkleTree" sampleMerkleTree
-    , dataEncoderGoldenTest "InitCommitteeHashMint" sampleInitCommitteeHashMint
     , dataEncoderGoldenTest "InitTokenRedeemer1" sampleInitTokenRedeemer1
     , dataEncoderGoldenTest "InitTokenRedeemer2" sampleInitTokenRedeemer2
     , dataEncoderGoldenTest "InitTokenAssetClass" sampleInitTokenAssetClass
@@ -318,9 +316,6 @@ sampleMerkleTree = Bin (RootHash "595a007f79ffff017f802effeb013f804935ff00805480
   where
     lChild = Tip $ RootHash "8073190a01517350690100944edbffffff01e54e130069ffeee4337f807fa0ff"
     rChild = Tip $ RootHash "00ffab800eff01ffc4ff8080ff77017b3d010100e60097010100ffd6ff3a0162"
-
-sampleInitCommitteeHashMint :: InitCommitteeHashMint
-sampleInitCommitteeHashMint = InitCommitteeHashMint sampleTxOutRef
 
 sampleMerkleRootInsertionMessage1 :: MerkleRootInsertionMessage
 sampleMerkleRootInsertionMessage1 =
