@@ -7,11 +7,45 @@ on:
       - develop
   workflow_dispatch:
 
+env:
+  AWS_DEFAULT_REGION: eu-central-1
 
 jobs:
-  build-and-test:
-    runs-on: self-hosted
+  build-and-test-x64-linux:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: [ self-hosted, Linux ]
     steps:
-      - uses: actions/checkout@v3
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nixci -v
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Acquire AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      - run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
+      - run: nixci -v | nix copy --stdin --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
+  # build-and-test-arm64-darwin:
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   runs-on: [ self-hosted, macOS ]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         token: ${{ github.token }}
+
+  #     - name: Acquire AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v2
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+  #         aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+  #     - run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
+  #     - run: nixci -v | nix copy --stdin --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
