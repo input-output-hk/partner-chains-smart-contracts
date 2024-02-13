@@ -224,7 +224,6 @@ Available commands:
                            messages.
   insert-d-parameter       Insert new D parameter
   update-d-parameter       Update a D parameter
-  remove-d-parameter       Remove a D parameter
   update-permissioned-candidates
                            Update a Permissioned Candidates list
   collect-garbage          Burn unneccessary NFTs
@@ -590,18 +589,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.3.17 Remove a D parameter value
-
-```
-nix run .#sidechain-main-cli -- remove-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1
-```
-
-This removes all inserted D parameter values.
-
-#### 3.3.18 Insert a list of permissioned candidates
+#### 3.3.17 Insert a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -621,7 +609,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.3.19 Update a list of permissioned candidates
+#### 3.3.18 Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -638,7 +626,7 @@ You can add and remove candidates in a single transaction.  Each candidate is
 listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.3.20 Remove all permissioned candidates
+#### 3.3.19 Remove all permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -652,7 +640,7 @@ Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
 
-#### 3.3.21 Garbage collect redundant tokens
+#### 3.3.20 Garbage collect redundant tokens
 
 ```
 nix run .#sidechain-main-cli -- collect-garbage \
@@ -667,6 +655,6 @@ the system after they are minted. Their only purpose is to be minted alongside
 some other tokens, as a proof that some kind of check has passed. After that
 there is no other way to use them.
 
-#### 3.3.22 Utils
+#### 3.3.21 Utils
 
 TODO: who wrote this command?
