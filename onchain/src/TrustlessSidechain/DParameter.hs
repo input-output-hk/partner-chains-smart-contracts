@@ -21,8 +21,6 @@ import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  DParameterPolicyRedeemer (DParameterMint),
-  DParameterValidatorRedeemer (UpdateDParameter),
   SidechainParams,
  )
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
@@ -39,13 +37,13 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, 
 mkMintingPolicy ::
   SidechainParams ->
   Address ->
-  DParameterPolicyRedeemer ->
+  BuiltinData ->
   ScriptContext ->
   Bool
 mkMintingPolicy
   sp
   dParameterValidatorAddress
-  DParameterMint
+  _
   (ScriptContext txInfo (Minting cs)) =
     traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
       && traceIfFalse
@@ -91,13 +89,13 @@ dParameterValidator ::
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
   BuiltinData ->
-  DParameterValidatorRedeemer ->
+  BuiltinData ->
   ScriptContext ->
   Bool
 dParameterValidator
   sp
   _
-  UpdateDParameter
+  _
   (ScriptContext txInfo _) =
     traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
     where

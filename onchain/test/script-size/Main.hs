@@ -139,7 +139,7 @@ main =
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
-            1963
+            1_946
         , fitsInto
             "mkDParameterPolicyCode (DParameter)"
             Compiled.mkDParameterPolicyCode
@@ -147,7 +147,7 @@ main =
         , scriptFitsInto
             "mkDParameterPolicyCode (DParameter) serialized"
             DParameter.serialisableMintingPolicy
-            2459
+            2_442
         , fitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy)"
             Compiled.mkFuelProxyPolicyCode

@@ -11,6 +11,7 @@ import Contract.PlutusData
   , Redeemer(Redeemer)
   , fromData
   , toData
+  , unitRedeemer
   )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
@@ -35,10 +36,7 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.DParameter.Types
-  ( DParameterPolicyRedeemer(DParameterMint)
-  , DParameterValidatorDatum(DParameterValidatorDatum)
-  , DParameterValidatorRedeemer(UpdateDParameter)
-
+  ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Error
@@ -101,7 +99,7 @@ mkInsertDParameterLookupsAndConstraints
     constraints =
       Constraints.mustMintCurrencyWithRedeemer
         dParameterMintingPolicyHash
-        (Redeemer $ toData DParameterMint)
+        unitRedeemer
         dParameterTokenName
         (BigInt.fromInt 1)
         <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
@@ -204,7 +202,7 @@ mkUpdateDParameterLookupsAndConstraints
     spendScriptOutputConstraints ∷ TxConstraints Void Void
     spendScriptOutputConstraints = Constraints.mustSpendScriptOutput
       oldDParameterInput
-      (Redeemer $ toData UpdateDParameter)
+      unitRedeemer
 
     constraints ∷ TxConstraints Void Void
     constraints =

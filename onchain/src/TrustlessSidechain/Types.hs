@@ -16,9 +16,7 @@ module TrustlessSidechain.Types (
   CheckpointParameter (..),
   CombinedMerkleProof (..),
   CommitteeCertificateMint (..),
-  DParameterPolicyRedeemer (..),
   DParameterValidatorDatum (..),
-  DParameterValidatorRedeemer (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
   MerkleRootInsertionMessage (..),
@@ -717,41 +715,6 @@ PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 -- | @since v4.0.0
 makeHasField ''CheckpointMessage
 
--- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
---burn DParameter tokens
---
--- @since v5.0.0
-data DParameterPolicyRedeemer
-  = -- | @since v5.0.0
-    DParameterMint
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
-
--- | @since v5.0.0
-instance ToData DParameterPolicyRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData DParameterMint = BuiltinData $ PlutusTx.I 0
-
--- | @since v5.0.0
-instance FromData DParameterPolicyRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = do
-    integerValue <- fromBuiltinData x
-    case integerValue :: Integer of
-      0 -> Just DParameterMint
-      _ -> Nothing
-
--- | @since v5.0.0
-instance UnsafeFromData DParameterPolicyRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x =
-    let integerValue = unsafeFromBuiltinData x
-     in case integerValue :: Integer of
-          0 -> DParameterMint
-          _ -> error ()
-
 -- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
 --ratio is represented as a pair of integers - permissionedCandidatesCount and
 --registeredCandidatesCount.
@@ -790,41 +753,6 @@ instance FromData DParameterValidatorDatum where
 instance UnsafeFromData DParameterValidatorDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DParameterValidatorDatum
-
--- | 'DParameterValidatorRedeemer' signals whether transaction is supposed to
---update the d parameter or remove it.
---
--- @since v5.0.0
-data DParameterValidatorRedeemer
-  = -- | @since v5.0.0
-    UpdateDParameter
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
-
--- | @since v5.0.0
-instance ToData DParameterValidatorRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData UpdateDParameter = BuiltinData $ PlutusTx.I 0
-
--- | @since v5.0.0
-instance FromData DParameterValidatorRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = do
-    integerValue <- fromBuiltinData x
-    case integerValue :: Integer of
-      0 -> Just UpdateDParameter
-      _ -> Nothing
-
--- | @since v5.0.0
-instance UnsafeFromData DParameterValidatorRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x =
-    let integerValue = unsafeFromBuiltinData x
-     in case integerValue :: Integer of
-          0 -> UpdateDParameter
-          _ -> error ()
 
 -- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
 --burn PermissionedCandidates tokens

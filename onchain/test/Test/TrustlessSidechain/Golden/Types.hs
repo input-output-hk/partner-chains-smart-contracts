@@ -72,16 +72,10 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  DParameterPolicyRedeemer (
-    DParameterMint
-  ),
   DParameterValidatorDatum (
     DParameterValidatorDatum,
     permissionedCandidatesCount,
     registeredCandidatesCount
-  ),
-  DParameterValidatorRedeemer (
-    UpdateDParameter
   ),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
   FUELMintingRedeemer (
@@ -183,9 +177,7 @@ tests =
     , dataEncoderGoldenTest "CheckpointMessage" sampleCheckpointMessage
     , dataEncoderGoldenTest "CommitteeCertificateMint" sampleCommitteeCertificateMint
     , dataEncoderGoldenTest "ATMSPlainMultisignature" sampleATMSPlainMultisignature
-    , dataEncoderGoldenTest "DParameterPolicyRedeemer1" sampleDParameterPolicyRedeemer1
     , dataEncoderGoldenTest "DParameterValidatorDatum" sampleDParameterValidatorDatum
-    , dataEncoderGoldenTest "DParameterValidatorRedeemer1" sampleDParameterValidatorRedeemer1
     , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer1" samplePermissionedCandidatesPolicyRedeemer1
     , dataEncoderGoldenTest "PermissionedCandidatesPolicyRedeemer2" samplePermissionedCandidatesPolicyRedeemer2
     , dataEncoderGoldenTest "PermissionedCandidateKeys" samplePermissionedCandidateKeys
@@ -462,18 +454,12 @@ sampleATMSPlainMultisignature =
         ]
     }
 
-sampleDParameterPolicyRedeemer1 :: DParameterPolicyRedeemer
-sampleDParameterPolicyRedeemer1 = DParameterMint
-
 sampleDParameterValidatorDatum :: DParameterValidatorDatum
 sampleDParameterValidatorDatum =
   DParameterValidatorDatum
     { permissionedCandidatesCount = 17
     , registeredCandidatesCount = 42
     }
-
-sampleDParameterValidatorRedeemer1 :: DParameterValidatorRedeemer
-sampleDParameterValidatorRedeemer1 = UpdateDParameter
 
 samplePermissionedCandidatesPolicyRedeemer1 :: PermissionedCandidatesPolicyRedeemer
 samplePermissionedCandidatesPolicyRedeemer1 = PermissionedCandidatesMint

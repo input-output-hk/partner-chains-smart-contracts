@@ -100,8 +100,6 @@ import TrustlessSidechain.Types (
   CheckpointDatum,
   CheckpointParameter,
   CommitteeCertificateMint,
-  DParameterPolicyRedeemer,
-  DParameterValidatorRedeemer,
   FUELMintingRedeemer,
   PermissionedCandidatesPolicyRedeemer,
   PermissionedCandidatesValidatorRedeemer,
@@ -314,11 +312,11 @@ mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])
 
 mkDParameterValidatorCode ::
-  CompiledCode (SidechainParams -> BuiltinData -> DParameterValidatorRedeemer -> ScriptContext -> Bool)
+  CompiledCode (SidechainParams -> BuiltinData -> BuiltinData -> ScriptContext -> Bool)
 mkDParameterValidatorCode = $$(compile [||DParameter.dParameterValidator||])
 
 mkDParameterPolicyCode ::
-  CompiledCode (SidechainParams -> Address -> DParameterPolicyRedeemer -> ScriptContext -> Bool)
+  CompiledCode (SidechainParams -> Address -> BuiltinData -> ScriptContext -> Bool)
 mkDParameterPolicyCode = $$(compile [||DParameter.mkMintingPolicy||])
 
 mkFuelProxyPolicyCode ::
