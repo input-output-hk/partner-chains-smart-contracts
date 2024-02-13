@@ -58,9 +58,7 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
   )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as Schnorr
 import TrustlessSidechain.DParameter.Types
-  ( DParameterPolicyRedeemer(DParameterMint)
-  , DParameterValidatorDatum(DParameterValidatorDatum)
-  , DParameterValidatorRedeemer(UpdateDParameter)
+  ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -192,12 +190,8 @@ tests = pureGroup "Data roundtrip tests" $ do
     genInitCheckpointMint
   test "CheckpointMessage" $ liftEffect $ toDataLaws testCount
     genCheckpointMessage
-  test "DParameterValidatorRedeemer" $ liftEffect $ toDataLaws testCount
-    genDParameterValidatorRedeemer
   test "DParameterValidatorDatum" $ liftEffect $ toDataLaws testCount
     genDParameterValidatorDatum
-  test "DParameterPolicyRedeemer" $ liftEffect $ toDataLaws testCount
-    genDParameterPolicyRedeemer
   test "FUELMintingRedeemer" $ liftEffect $ toDataLaws testCount
     genFUELMintingRedeemer
   test "PermissionedCandidatesValidatorRedeemer" $ liftEffect $ toDataLaws
@@ -296,9 +290,6 @@ genCheckpointMessage = do
     , sidechainEpoch
     }
 
-genDParameterValidatorRedeemer ∷ Gen DParameterValidatorRedeemer
-genDParameterValidatorRedeemer = pure UpdateDParameter
-
 genDParameterValidatorDatum ∷ Gen DParameterValidatorDatum
 genDParameterValidatorDatum = do
   permissionedCandidatesCount ← BigInt.fromInt <$> arbitrary
@@ -308,9 +299,6 @@ genDParameterValidatorDatum = do
     { permissionedCandidatesCount
     , registeredCandidatesCount
     }
-
-genDParameterPolicyRedeemer ∷ Gen DParameterPolicyRedeemer
-genDParameterPolicyRedeemer = pure DParameterMint
 
 genFUELMintingRedeemer ∷ Gen FUELMintingRedeemer
 genFUELMintingRedeemer = QGen.oneOf $ NE.cons' (pure FUELBurningRedeemer)

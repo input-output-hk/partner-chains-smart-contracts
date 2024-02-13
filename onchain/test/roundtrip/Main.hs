@@ -99,9 +99,7 @@ import TrustlessSidechain.Types (
     thresholdDenominator,
     thresholdNumerator
   ),
-  DParameterPolicyRedeemer (DParameterMint),
   DParameterValidatorDatum (DParameterValidatorDatum),
-  DParameterValidatorRedeemer (UpdateDParameter),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   MerkleRootInsertionMessage (
@@ -236,12 +234,8 @@ main =
     , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
     , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
     , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
-    , testProperty "DParameterPolicyRedeemer (safe)" . toDataSafeLaws' genDPPR shrinkDPPR $ show
-    , testProperty "DParameterPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genDPPR shrinkDPPR $ show
     , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
     , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
-    , testProperty "DParameterValidatorRedeemer (safe)" . toDataSafeLaws' genDPVR shrinkDPVR $ show
-    , testProperty "DParameterValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genDPVR shrinkDPVR $ show
     , testProperty "FUELMintingRedeemer (safe)" . toDataSafeLaws' genFMR shrinkFRM $ show
     , testProperty "FUELMintingRedeemer (unsafe)" . toDataUnsafeLaws' genFMR shrinkFRM $ show
     , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
@@ -337,14 +331,8 @@ genCHPM = do
   se <- arbitrary
   pure $ CheckpointMessage sp lb bn se
 
-genDPPR :: Gen DParameterPolicyRedeemer
-genDPPR = pure DParameterMint
-
 genDPVD :: Gen DParameterValidatorDatum
 genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
-
-genDPVR :: Gen DParameterValidatorRedeemer
-genDPVR = pure UpdateDParameter
 
 genFMR :: Gen FUELMintingRedeemer
 genFMR =
@@ -633,14 +621,8 @@ shrinkCHPM (CheckpointMessage sp bh bn se) = do
   se' <- shrink se
   pure $ CheckpointMessage sp' bh' bn' se'
 
-shrinkDPPR :: DParameterPolicyRedeemer -> [DParameterPolicyRedeemer]
-shrinkDPPR = const []
-
 shrinkDPVD :: DParameterValidatorDatum -> [DParameterValidatorDatum]
 shrinkDPVD (DParameterValidatorDatum pcc rcc) = DParameterValidatorDatum <$> shrink pcc <*> shrink rcc
-
-shrinkDPVR :: DParameterValidatorRedeemer -> [DParameterValidatorRedeemer]
-shrinkDPVR = const []
 
 shrinkFRM :: FUELMintingRedeemer -> [FUELMintingRedeemer]
 shrinkFRM = \case
