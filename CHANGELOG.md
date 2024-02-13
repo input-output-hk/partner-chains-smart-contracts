@@ -3,7 +3,7 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
-# Unreleased
+# v5.0.0
 
 ## Added
 * Added `update-permissioned-candidates` command takes candidates to add and candidates to remove.

@@ -86,7 +86,7 @@ data SidechainParams = SidechainParams
     -- make updates to versioned scripts.  For now we just use a master public
     -- key, whose owner is allowed to make any decisions about script versions.
     --
-    -- @since Unreleased
+    -- @since v5.0.0
     governanceAuthority :: Governance.GovernanceAuthority
   }
   deriving stock
@@ -125,7 +125,7 @@ newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
     )
     via LedgerBytes
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''EcdsaSecp256k1PubKey
 
 -- | Ed25519 public key
@@ -255,10 +255,10 @@ data BlockProducerRegistration = BlockProducerRegistration
     -- | @since v4.0.0
     ownPkh :: PubKeyHash
   , -- | Sidechain authority discovery key
-    -- | @since Unreleased
+    -- | @since v5.0.0
     auraKey :: LedgerBytes
   , -- | Sidechain grandpa key
-    -- | @since Unreleased
+    -- | @since v5.0.0
     grandpaKey :: LedgerBytes
   }
   deriving stock
@@ -380,7 +380,7 @@ newtype SignedMerkleRootRedeemer = SignedMerkleRootRedeemer
       TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''SignedMerkleRootRedeemer
 
 -- | 'CombinedMerkleProof' is a product type to include both the
@@ -416,7 +416,7 @@ makeHasField ''CombinedMerkleProof
 -- to the main chain (hence the 'MerkleTreeEntry'), and the proof that this
 -- actually happened on the sidechain (hence the 'MerkleProof')
 --
--- @since Unreleased
+-- @since v5.0.0
 data FUELMintingRedeemer
   = FUELMintingRedeemer MerkleTreeEntry MerkleProof
   | FUELBurningRedeemer
@@ -425,7 +425,7 @@ data FUELMintingRedeemer
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 PlutusTx.makeIsDataIndexed
   ''FUELMintingRedeemer
   [ ('FUELMintingRedeemer, 0)
@@ -550,7 +550,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     newAggregateCommitteePubKeys :: aggregatePubKeys
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
-  , -- | @since Unreleased
+  , -- | @since v5.0.0
     validatorHash :: ValidatorHash
   }
   deriving stock
@@ -598,7 +598,7 @@ newtype UpdateCommitteeHashRedeemer = UpdateCommitteeHashRedeemer
       TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''UpdateCommitteeHashRedeemer
 
 -- | Datum for a checkpoint
@@ -636,7 +636,7 @@ makeHasField ''CheckpointDatum
 -- certificate verification minting policies.
 -- See SIP05 in @docs/SIPs/@ for details.
 --
--- @since Unreleased
+-- @since v5.0.0
 data CommitteeCertificateMint = CommitteeCertificateMint
   { thresholdNumerator :: Integer
   , thresholdDenominator :: Integer
@@ -682,15 +682,15 @@ data ATMSPlainMultisignature = ATMSPlainMultisignature
 
 PlutusTx.makeIsDataIndexed ''ATMSPlainMultisignature [('ATMSPlainMultisignature, 0)]
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''ATMSPlainMultisignature
 
 -- | 'ATMSReddemer' allows for either minting or burning
--- @since Unreleased
+-- @since v5.0.0
 data ATMSRedeemer
-  = -- | @since Unreleased
+  = -- | @since v5.0.0
     ATMSMint ATMSPlainMultisignature
-  | -- | @since Unreleased
+  | -- | @since v5.0.0
     ATMSBurn
   deriving stock
     ( TSPrelude.Eq
@@ -777,24 +777,24 @@ makeHasField ''CheckpointMessage
 -- | 'DParameterPolicyRedeemer' signals whether transaction is supposed to mint or
 --burn DParameter tokens
 --
--- @since Unreleased
+-- @since v5.0.0
 data DParameterPolicyRedeemer
-  = -- | @since Unreleased
+  = -- | @since v5.0.0
     DParameterMint
-  | -- | @since Unreleased
+  | -- | @since v5.0.0
     DParameterBurn
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData DParameterPolicyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData DParameterMint = BuiltinData $ PlutusTx.I 0
   toBuiltinData DParameterBurn = BuiltinData $ PlutusTx.I 1
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData DParameterPolicyRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -804,7 +804,7 @@ instance FromData DParameterPolicyRedeemer where
       1 -> Just DParameterBurn
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData DParameterPolicyRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -818,11 +818,11 @@ instance UnsafeFromData DParameterPolicyRedeemer where
 --ratio is represented as a pair of integers - permissionedCandidatesCount and
 --registeredCandidatesCount.
 --
--- @since Unreleased
+-- @since v5.0.0
 data DParameterValidatorDatum = DParameterValidatorDatum
-  { -- | @since Unreleased
+  { -- | @since v5.0.0
     permissionedCandidatesCount :: Integer
-  , -- | @since Unreleased
+  , -- | @since v5.0.0
     registeredCandidatesCount :: Integer
   }
   deriving stock
@@ -830,10 +830,10 @@ data DParameterValidatorDatum = DParameterValidatorDatum
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''DParameterValidatorDatum
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData DParameterValidatorDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData
@@ -843,12 +843,12 @@ instance ToData DParameterValidatorDatum where
       ) =
       productToData2 permissionedCandidatesCount registeredCandidatesCount
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData DParameterValidatorDatum where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 DParameterValidatorDatum
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData DParameterValidatorDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 DParameterValidatorDatum
@@ -856,24 +856,24 @@ instance UnsafeFromData DParameterValidatorDatum where
 -- | 'DParameterValidatorRedeemer' signals whether transaction is supposed to
 --update the d parameter or remove it.
 --
--- @since Unreleased
+-- @since v5.0.0
 data DParameterValidatorRedeemer
-  = -- | @since Unreleased
+  = -- | @since v5.0.0
     UpdateDParameter
-  | -- | @since Unreleased
+  | -- | @since v5.0.0
     RemoveDParameter
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData DParameterValidatorRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData UpdateDParameter = BuiltinData $ PlutusTx.I 0
   toBuiltinData RemoveDParameter = BuiltinData $ PlutusTx.I 1
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData DParameterValidatorRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -883,7 +883,7 @@ instance FromData DParameterValidatorRedeemer where
       1 -> Just RemoveDParameter
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData DParameterValidatorRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -896,24 +896,24 @@ instance UnsafeFromData DParameterValidatorRedeemer where
 -- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
 --burn PermissionedCandidates tokens
 --
--- @since Unreleased
+-- @since v5.0.0
 data PermissionedCandidatesPolicyRedeemer
-  = -- | @since Unreleased
+  = -- | @since v5.0.0
     PermissionedCandidatesMint
-  | -- | @since Unreleased
+  | -- | @since v5.0.0
     PermissionedCandidatesBurn
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData PermissionedCandidatesMint = BuiltinData $ PlutusTx.I 0
   toBuiltinData PermissionedCandidatesBurn = BuiltinData $ PlutusTx.I 1
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -923,7 +923,7 @@ instance FromData PermissionedCandidatesPolicyRedeemer where
       1 -> Just PermissionedCandidatesBurn
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -935,13 +935,13 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
 
 -- | 'PermissionedCandidateKeys' stores the keys of some permissioned candiate.
 --
--- @since Unreleased
+-- @since v5.0.0
 data PermissionedCandidateKeys = PermissionedCandidateKeys
-  { -- | @since Unreleased
+  { -- | @since v5.0.0
     sidechainKey :: LedgerBytes
-  , -- | @since Unreleased
+  , -- | @since v5.0.0
     auraKey :: LedgerBytes
-  , -- | @since Unreleased
+  , -- | @since v5.0.0
     grandpaKey :: LedgerBytes
   }
   deriving stock
@@ -949,29 +949,29 @@ data PermissionedCandidateKeys = PermissionedCandidateKeys
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData PermissionedCandidateKeys where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (PermissionedCandidateKeys s a g) =
     productToData3 s a g
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData PermissionedCandidateKeys where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData3 PermissionedCandidateKeys
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData PermissionedCandidateKeys where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData3 PermissionedCandidateKeys
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''PermissionedCandidateKeys
 
 -- | 'PermissionedCandidatesValidatorDatum' stores a list of permissioned
 --   candidates' keys.
 --
--- @since Unreleased
+-- @since v5.0.0
 newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
   { candidates :: [PermissionedCandidateKeys]
   }
@@ -981,30 +981,30 @@ newtype PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDa
     )
   deriving newtype (ToData, FromData, UnsafeFromData)
 
--- | @since Unreleased
+-- | @since v5.0.0
 makeHasField ''PermissionedCandidatesValidatorDatum
 
 -- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is supposed to
 --update the list of permissioned candidates or remove the list altogether.
 --
--- @since Unreleased
+-- @since v5.0.0
 data PermissionedCandidatesValidatorRedeemer
-  = -- | @since Unreleased
+  = -- | @since v5.0.0
     UpdatePermissionedCandidates
-  | -- | @since Unreleased
+  | -- | @since v5.0.0
     RemovePermissionedCandidates
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData UpdatePermissionedCandidates = BuiltinData $ PlutusTx.I 0
   toBuiltinData RemovePermissionedCandidates = BuiltinData $ PlutusTx.I 1
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -1014,7 +1014,7 @@ instance FromData PermissionedCandidatesValidatorRedeemer where
       1 -> Just RemovePermissionedCandidates
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =

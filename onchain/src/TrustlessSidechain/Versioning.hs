@@ -145,34 +145,34 @@ scriptCacheId = 26
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.
 --
--- @since Unreleased
+-- @since v5.0.0
 data VersionOracle = VersionOracle
   { -- | Version of the script.
-    -- @since Unreleased
+    -- @since v5.0.0
     version :: Integer
   , -- | Unique identifier of the validator.
-    -- @since Unreleased
+    -- @since v5.0.0
     scriptId :: Integer
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData VersionOracle where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (VersionOracle {..}) =
     productToData2 version scriptId
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData VersionOracle where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 VersionOracle
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData VersionOracle where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 VersionOracle
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance Eq VersionOracle where
   VersionOracle v s == VersionOracle v' s' = v == v' && s == s'
 
@@ -180,25 +180,25 @@ instance Eq VersionOracle where
 -- VersionOraclePolicy tokens.  Required to identify versioning tokens that can be
 -- trusted.
 --
--- @since Unreleased
+-- @since v5.0.0
 newtype VersionOracleConfig = VersionOracleConfig
-  { -- | @since Unreleased
+  { -- | @since v5.0.0
     versionOracleCurrencySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance ToData VersionOracleConfig where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (VersionOracleConfig {..}) =
     toBuiltinData versionOracleCurrencySymbol
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance FromData VersionOracleConfig where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = VersionOracleConfig <$> fromBuiltinData x
 
--- | @since Unreleased
+-- | @since v5.0.0
 instance UnsafeFromData VersionOracleConfig where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
@@ -211,17 +211,17 @@ versionOracleTokenName = TokenName "Version oracle"
 -- | Redeemer for the versioning oracle minting policy that instructs the script
 -- whether to mint or burn versioning tokens.
 --
--- @since Unreleased
+-- @since v5.0.0
 data VersionOraclePolicyRedeemer
   = -- | Mint initial versioning tokens.  Used during sidechain initialization.
-    -- @since Unreleased
+    -- @since v5.0.0
     InitializeVersionOracle
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.
-    -- @since Unreleased
+    -- @since v5.0.0
     MintVersionOracle VersionOracle ScriptHash
   | -- | Burn existing versioning token.
-    -- @since Unreleased
+    -- @since v5.0.0
     BurnVersionOracle VersionOracle
 
 PlutusTx.makeIsDataIndexed
@@ -235,13 +235,13 @@ PlutusTx.makeIsDataIndexed
 -- versioning tokens are spent from the script, either to be burned or updated
 -- with a new script and datum.
 --
--- @since Unreleased
+-- @since v5.0.0
 data VersionOracleValidatorRedeemer
   = -- | Invalidate existing versioning token.
-    -- @since Unreleased
+    -- @since v5.0.0
     InvalidateVersionOracle VersionOracle
   | -- | Update existing versioning token.
-    -- @since Unreleased
+    -- @since v5.0.0
     UpdateVersionOracle VersionOracle ScriptHash
 
 PlutusTx.makeIsDataIndexed

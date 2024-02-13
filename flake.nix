@@ -254,7 +254,7 @@
 
     ctlBundleCliFor = system: let
       name = "trustless-sidechain-cli";
-      version = "4.0.0";
+      version = "5.0.0";
       src = ./offchain;
       pkgs = import nixpkgs {
         inherit system;
