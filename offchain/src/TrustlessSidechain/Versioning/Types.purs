@@ -55,7 +55,7 @@ instance ToData VersionOracle where
 -- | whether to mint or burn version tokens.
 data VersionOraclePolicyRedeemer
   = -- | Mint initial version tokens.  Used during sidechain initialization.
-    InitializeVersionOracle
+    InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new version token ensuring it contains correct datum and
     -- | reference script.
     MintVersionOracle VersionOracle ScriptHash
@@ -70,8 +70,8 @@ instance Show VersionOraclePolicyRedeemer where
   show = genericShow
 
 instance FromData VersionOraclePolicyRedeemer where
-  fromData (Constr n []) | n == (BigNum.fromInt 0) =
-    pure InitializeVersionOracle
+  fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 0) =
+    InitializeVersionOracle <$> fromData vo <*> fromData sh
   fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 1) =
     MintVersionOracle <$> fromData vo <*> fromData sh
   fromData (Constr n [ vo ]) | n == (BigNum.fromInt 2) =
@@ -79,8 +79,8 @@ instance FromData VersionOraclePolicyRedeemer where
   fromData _ = Nothing
 
 instance ToData VersionOraclePolicyRedeemer where
-  toData InitializeVersionOracle =
-    Constr (BigNum.fromInt 0) []
+  toData (InitializeVersionOracle vo sh) =
+    Constr (BigNum.fromInt 0) [ toData vo, toData sh ]
   toData (MintVersionOracle vo sh) =
     Constr (BigNum.fromInt 1) [ toData vo, toData sh ]
   toData (BurnVersionOracle vo) =

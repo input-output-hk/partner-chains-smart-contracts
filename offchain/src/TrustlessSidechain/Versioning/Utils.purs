@@ -4,11 +4,13 @@ module TrustlessSidechain.Versioning.Utils
   , getVersionedCurrencySymbol
   , getVersionedScriptRefUtxo
   , getVersionedValidatorAddress
-  , insertVersionTokenLookupsAndConstraints
-  , invalidateVersionTokenLookupsAndConstraints
-  , updateVersionTokenLookupsAndConstraints
+  , initializeVersionLookupsAndConstraints
+  , insertVersionLookupsAndConstraints
+  , invalidateVersionLookupsAndConstraints
+  , updateVersionLookupsAndConstraints
   , versionOraclePolicy
   , versionOracleTokenName
+  , versionOracleInitTokenName
   , versionOracleValidator
   ) where
 
@@ -57,6 +59,13 @@ import Effect.Exception (error)
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.Error (OffchainError(InvalidData))
 import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenAssetClass(InitTokenAssetClass)
+  )
+import TrustlessSidechain.InitSidechain.Utils
+  ( burnOneInitToken
+  , initTokenCurrencyInfo
+  )
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
@@ -75,7 +84,11 @@ import TrustlessSidechain.Versioning.Types
   , ScriptId
   , VersionOracle(VersionOracle)
   , VersionOracleConfig(VersionOracleConfig)
-  , VersionOraclePolicyRedeemer(MintVersionOracle, BurnVersionOracle)
+  , VersionOraclePolicyRedeemer
+      ( MintVersionOracle
+      , InitializeVersionOracle
+      , BurnVersionOracle
+      )
   , VersionOracleValidatorRedeemer(UpdateVersionOracle, InvalidateVersionOracle)
   , toPlutusScript
   , toScriptHash
@@ -89,11 +102,35 @@ versionOracleTokenName =
     $ Value.mkTokenName
     =<< byteArrayFromAscii "Version oracle"
 
+-- | Token name for version init tokens.
+versionOracleInitTokenName ∷ TokenName
+versionOracleInitTokenName =
+  Unsafe.unsafePartial $ Maybe.fromJust
+    $ Value.mkTokenName
+    =<< byteArrayFromAscii "Version oracle InitToken"
+
+-- | Build lookups and constraints to burn version oracle initialization token.
+burnOneVersionInitToken ∷
+  SidechainParams →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+burnOneVersionInitToken sp =
+  burnOneInitToken sp versionOracleInitTokenName
+
 -- | Deserialize VersionOraclePolicy minting policy script, applying it to all
 -- | required parameters.
-versionOraclePolicy ∷ SidechainParams → Contract MintingPolicy
-versionOraclePolicy gscp =
-  mkMintingPolicyWithParams VersionOraclePolicy [ toData gscp ]
+versionOraclePolicy ∷
+  SidechainParams → Contract MintingPolicy
+versionOraclePolicy sp = do
+  { currencySymbol } ← initTokenCurrencyInfo sp
+  let
+    itac = InitTokenAssetClass
+      { initTokenCurrencySymbol: currencySymbol
+      , initTokenName: versionOracleInitTokenName
+      }
+  mkMintingPolicyWithParams VersionOraclePolicy [ toData sp, toData itac ]
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
 -- | required parameters.
@@ -129,8 +166,8 @@ getVersionOracleConfig sp = do
 -- | ID and initial version, and construct transaction lookups and constraints
 -- | for minting a new version token that stores this script as a Plutus
 -- | reference script.  Additionally, equip minted token with a VersionOracle
--- | datum.
-insertVersionTokenLookupsAndConstraints ∷
+-- | datum.  Requires burning one init token.
+initializeVersionLookupsAndConstraints ∷
   ∀ a.
   Versionable a ⇒
   SidechainParams →
@@ -140,18 +177,20 @@ insertVersionTokenLookupsAndConstraints ∷
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-insertVersionTokenLookupsAndConstraints scp ver (Tuple scriptId script) =
+initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
   case toPlutusScript script of
     Nothing → -- Special case for minting policies that use NativeScript.
 
       pure { lookups: mempty, constraints: mempty }
     Just versionedScript → do
 
+      burnVersionInitToken ← burnOneVersionInitToken sp
+
       -- Preparing versioning scripts and tokens
       -----------------------------------
       { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-        getVersionOraclePolicy scp
-      vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+        getVersionOraclePolicy sp
+      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
 
       -- Prepare datum and other boilerplate
       -----------------------------------
@@ -164,14 +203,88 @@ insertVersionTokenLookupsAndConstraints scp ver (Tuple scriptId script) =
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           one
-        SidechainParams { governanceAuthority } = scp
+
+      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getPolicyScriptRefUtxo
+        sp
+        versionOracleMintingPolicy
+
+      let
+        initializeVersioningTokensConstraints ∷ TxConstraints Void Void
+        initializeVersioningTokensConstraints =
+          Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+            (mintingPolicyHash versionOracleMintingPolicy)
+            ( Redeemer $ toData $ InitializeVersionOracle versionOracle
+                versionedScriptHash
+            )
+            versionOracleTokenName
+            (BigInt.fromInt 1)
+            (RefInput $ mkTxUnspentOut scriptReftxInput scriptReftxOutput)
+
+        lookups ∷ ScriptLookups Void
+        lookups = Lookups.mintingPolicy versionOracleMintingPolicy
+          <> Lookups.validator vValidator
+
+        constraints ∷ TxConstraints Void Void
+        constraints =
+          -- Pay versioning token to the versioning script with datum
+          -- and reference script attached.
+          Constraints.mustPayToScriptWithScriptRef
+            (validatorHash vValidator)
+            (Datum $ toData versionOracle)
+            DatumInline
+            (PlutusScriptRef versionedScript)
+            oneVersionOracleAsset
+            <> initializeVersioningTokensConstraints
+
+      pure $ burnVersionInitToken <> { lookups, constraints }
+
+-- | Take a versionable script (either a validator or a minting policy) with its
+-- | ID and initial version, and construct transaction lookups and constraints
+-- | for minting a new version token that stores this script as a Plutus
+-- | reference script.  Additionally, equip minted token with a VersionOracle
+-- | datum.  Requires governance approval
+insertVersionLookupsAndConstraints ∷
+  ∀ a.
+  Versionable a ⇒
+  SidechainParams →
+  Int → -- ^ Script version
+  Tuple ScriptId a → -- ^ Script ID and the script itself
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
+  case toPlutusScript script of
+    Nothing → -- Special case for minting policies that use NativeScript.
+
+      pure { lookups: mempty, constraints: mempty }
+    Just versionedScript → do
+
+      -- Preparing versioning scripts and tokens
+      -----------------------------------
+      { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+        getVersionOraclePolicy sp
+      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
+
+      -- Prepare datum and other boilerplate
+      -----------------------------------
+      let
+        versionedScriptHash = toScriptHash script
+        versionOracle = VersionOracle
+          { version: BigInt.fromInt ver
+          , scriptId
+          }
+        oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+          versionOracleTokenName
+          one
+        SidechainParams { governanceAuthority } = sp
 
       { lookups: governanceAuthorityLookups
       , constraints: governanceAuthorityConstraints
       } ← Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
 
       scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getPolicyScriptRefUtxo
-        scp
+        sp
         versionOracleMintingPolicy
 
       let
@@ -209,7 +322,7 @@ insertVersionTokenLookupsAndConstraints scp ver (Tuple scriptId script) =
 -- | Take a script ID and version, and construct transaction lookups and
 -- | constraints for removing that version of a script from the versioning
 -- | system.
-invalidateVersionTokenLookupsAndConstraints ∷
+invalidateVersionLookupsAndConstraints ∷
   SidechainParams →
   Int → -- ^ Script version
   ScriptId → -- ^ Script ID
@@ -217,12 +330,12 @@ invalidateVersionTokenLookupsAndConstraints ∷
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-invalidateVersionTokenLookupsAndConstraints scp ver scriptId = do
+invalidateVersionLookupsAndConstraints sp ver scriptId = do
   -- Prepare versioning scripts and tokens
   -----------------------------------
   { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-    getVersionOraclePolicy scp
-  vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+    getVersionOraclePolicy sp
+  vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
@@ -239,7 +352,7 @@ invalidateVersionTokenLookupsAndConstraints scp ver scriptId = do
     oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
       versionOracleTokenName
       (negate one)
-    SidechainParams { governanceAuthority } = scp
+    SidechainParams { governanceAuthority } = sp
 
   -- Find UTxO that stores script to be removed.  UTxO must contain a single
   -- version oracle token equipped with VersionOracle datum that matches script
@@ -293,7 +406,7 @@ invalidateVersionTokenLookupsAndConstraints scp ver scriptId = do
 -- | that scrript with a new version.  Old script is no longer available in the
 -- | versioning system and is replaced by the new version.  No sanity checks on
 -- | the version numbers are performed.
-updateVersionTokenLookupsAndConstraints ∷
+updateVersionLookupsAndConstraints ∷
   ∀ a.
   Versionable a ⇒
   SidechainParams →
@@ -304,8 +417,8 @@ updateVersionTokenLookupsAndConstraints ∷
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-updateVersionTokenLookupsAndConstraints
-  scp
+updateVersionLookupsAndConstraints
+  sp
   oldVersion
   newVersion
   (Tuple scriptId script) =
@@ -316,8 +429,8 @@ updateVersionTokenLookupsAndConstraints
     Just versionedScript → do
       -- Prepare versioning scripts and tokens
       -----------------------------------
-      { versionOracleCurrencySymbol } ← getVersionOraclePolicy scp
-      vValidator ← versionOracleValidator scp versionOracleCurrencySymbol
+      { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
+      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
 
       -- Get UTxOs located at the version oracle validator script address
       -----------------------------------
@@ -339,7 +452,7 @@ updateVersionTokenLookupsAndConstraints
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           one
-        SidechainParams { governanceAuthority } = scp
+        SidechainParams { governanceAuthority } = sp
 
       -- Find UTxO that stores script to be updated.  UTxO must contain a single
       -- version oracle token equipped with VersionOracle datum that matches

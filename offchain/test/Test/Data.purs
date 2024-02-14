@@ -367,7 +367,11 @@ genVersionOracleConfig = do
 
 genVersionOraclePolicyRedeemer ∷ Gen VersionOraclePolicyRedeemer
 genVersionOraclePolicyRedeemer = QGen.oneOf $ NE.cons'
-  (pure InitializeVersionOracle)
+  ( do
+      versionOracle ← genVersionOracle
+      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
+      pure $ InitializeVersionOracle versionOracle scriptHash
+  )
   [ do
       versionOracle ← genVersionOracle
       ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary

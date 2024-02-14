@@ -345,6 +345,7 @@ mkCommitteePlainATMSPolicyCode = $$(compile [||CommitteePlainATMSPolicy.mkMintin
 mkVersionOraclePolicyCode ::
   CompiledCode
     ( SidechainParams ->
+      InitTokenAssetClass ->
       Versioning.VersionOraclePolicyRedeemer ->
       ScriptContext ->
       Bool

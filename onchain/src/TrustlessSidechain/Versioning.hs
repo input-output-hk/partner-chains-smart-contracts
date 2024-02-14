@@ -63,7 +63,6 @@ import Plutus.V2.Ledger.Api (
   TxOut (TxOut),
   ValidatorHash (ValidatorHash),
   fromCompiledCode,
-  txInInfoOutRef,
   txInfoInputs,
   txInfoOutputs,
   txOutValue,
@@ -74,9 +73,15 @@ import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  InitTokenAssetClass,
   SidechainParams,
  )
-import TrustlessSidechain.Utils (fromSingleton, mkUntypedMintingPolicy, mkUntypedValidator)
+import TrustlessSidechain.Utils (
+  fromSingleton,
+  mkUntypedMintingPolicy,
+  mkUntypedValidator,
+  oneTokenBurned,
+ )
 
 -- Note [Versioned script identifiers]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -181,8 +186,8 @@ instance Eq VersionOracle where
   VersionOracle v s == VersionOracle v' s' = v == v' && s == s'
 
 -- | Configuration of the versioning system.  Contains currency symbol of
--- VersionOraclePolicy tokens.  Required to identify versioning tokens that can be
--- trusted.
+-- VersionOraclePolicy tokens.  Required to identify versioning tokens that can
+-- be trusted.
 --
 -- @since v5.0.0
 newtype VersionOracleConfig = VersionOracleConfig
@@ -217,9 +222,10 @@ versionOracleTokenName = TokenName "Version oracle"
 --
 -- @since v5.0.0
 data VersionOraclePolicyRedeemer
-  = -- | Mint initial versioning tokens.  Used during sidechain initialization.
-    -- @since v5.0.0
-    InitializeVersionOracle
+  = -- | Mint versioning tokens from init tokens.  Used during sidechain
+    -- initialization.
+    -- @since Unreleased
+    InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.
     -- @since v5.0.0
@@ -258,27 +264,77 @@ PlutusTx.makeIsDataIndexed
 -- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
 -- versioning tokens during sidechain initialization, other than the usual
 -- requirement of burning a genesis UTxO.
+--
+-- OnChain error descriptions:
+--
+--   ERROR-VERSION-POLICY-01: Transaction should burn exactly one init token.
+--
+--   ERROR-VERSION-POLICY-02: Transaction should attach datum and reference
+--     script to output containing one versioning token.
+--
+--   ERROR-VERSION-POLICY-03: Transaction should attach datum and reference
+--     script to output containing one versioning token.
+--
+--   ERROR-VERSION-POLICY-04: Transaction should be signed by the governance.
+--
+--   ERROR-VERSION-POLICY-05: Script to be invalidated should be present in
+--     exactly one transaction input.
+--
+--   ERROR-VERSION-POLICY-06: Transaction should burn all versioning tokens in
+--     the input.
+--
+--   ERROR-VERSION-POLICY-07: Transaction should attach datum and reference
+--     script to output containing one versioning token.
+--
+--   ERROR-VERSION-POLICY-08: Script can only be used for Minting purpose.
 mkVersionOraclePolicy ::
   SidechainParams ->
+  InitTokenAssetClass ->
   VersionOraclePolicyRedeemer ->
   ScriptContext ->
   Bool
 mkVersionOraclePolicy
-  sp
-  InitializeVersionOracle
-  (ScriptContext txInfo (Minting _)) =
-    traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
+  _
+  itac
+  (InitializeVersionOracle versionOracle scriptHash)
+  (ScriptContext txInfo (Minting currSymbol)) =
+    traceIfFalse "ERROR-VERSION-POLICY-01" initTokenBurned
+      && fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
     where
-      -- Ensure that the genesis UTxO is used by the transaction.
-      isGenesisUtxoUsed :: Bool
-      isGenesisUtxoUsed =
-        get @"genesisUtxo" sp `elem` map txInInfoOutRef (txInfoInputs txInfo)
+      versionToken :: AssetClass
+      versionToken = AssetClass (currSymbol, versionOracleTokenName)
+
+      -- Did we burn exactly one init token?  Again, we prevent initializing
+      -- multiple scripts in a single transaction
+      initTokenBurned :: Bool
+      initTokenBurned =
+        oneTokenBurned
+          txInfo
+          (get @"initTokenCurrencySymbol" itac)
+          (get @"initTokenName" itac)
+
+      -- Check that this transaction mints a token with correct datum and script
+      -- hash.
+      verifyOut :: [Bool]
+      verifyOut =
+        [ True
+        | (TxOut _ value (OutputDatum (Datum datum)) (Just scriptHash')) <-
+            txInfoOutputs txInfo
+        , Just versionOracle' <- [PlutusTx.fromBuiltinData datum]
+        , -- Check that output contains correct version oracle and a reference
+        -- script with correct hash.
+        versionOracle' == versionOracle
+        , scriptHash' == scriptHash
+        , -- Check that datum is attached to a single version token.
+        assetClassValueOf value versionToken == 1
+        ]
 mkVersionOraclePolicy
   sp
+  _
   (MintVersionOracle newVersionOracle newScriptHash)
   (ScriptContext txInfo (Minting currSymbol)) =
-    fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
-      && traceIfFalse "ERROR-VERSION-POLICY-03" signedByGovernanceAuthority
+    fromSingleton "ERROR-VERSION-POLICY-03" verifyOut
+      && traceIfFalse "ERROR-VERSION-POLICY-04" signedByGovernanceAuthority
     where
       versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
@@ -305,11 +361,12 @@ mkVersionOraclePolicy
         ]
 mkVersionOraclePolicy
   sp
+  _
   (BurnVersionOracle oldVersion)
   (ScriptContext txInfo (Minting currSymbol)) =
-    fromSingleton "ERROR-VERSION-POLICY-04" versionInputPresent
-      && traceIfFalse "ERROR-VERSION-POLICY-05" versionOutputAbsent
-      && traceIfFalse "ERROR-VERSION-POLICY-06" signedByGovernanceAuthority
+    fromSingleton "ERROR-VERSION-POLICY-05" versionInputPresent
+      && traceIfFalse "ERROR-VERSION-POLICY-06" versionOutputAbsent
+      && traceIfFalse "ERROR-VERSION-POLICY-07" signedByGovernanceAuthority
     where
       versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
@@ -343,22 +400,25 @@ mkVersionOraclePolicy
           | txOut <- txInfoOutputs txInfo
           , assetClassValueOf (txOutValue txOut) versionToken > 0
           ]
-mkVersionOraclePolicy _ _ _ =
-  trace "ERROR-ORACLE-POLICY-07" False
+mkVersionOraclePolicy _ _ _ _ =
+  trace "ERROR-ORACLE-POLICY-08" False
 
 {-# INLINEABLE mkVersionOraclePolicyUntyped #-}
 mkVersionOraclePolicyUntyped ::
   -- | Sidechain parameters
+  BuiltinData ->
+  -- | InitToken asset class
   BuiltinData ->
   -- | Redeemer
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
   ()
-mkVersionOraclePolicyUntyped params =
+mkVersionOraclePolicyUntyped sp itac =
   mkUntypedMintingPolicy $
     mkVersionOraclePolicy
-      (unsafeFromBuiltinData params)
+      (unsafeFromBuiltinData sp)
+      (unsafeFromBuiltinData itac)
 
 serialisableVersionOraclePolicy ::
   Script

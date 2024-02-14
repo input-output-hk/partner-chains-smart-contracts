@@ -1,24 +1,99 @@
 module TrustlessSidechain.Versioning
-  ( insertVersion
+  ( initializeVersion
+  , insertVersion
   , updateVersion
   , invalidateVersion
   , getVersionedPoliciesAndValidators
+  , mintVersionInitTokens
   ) where
 
 import Contract.Prelude
 
 import Contract.Monad (Contract, throwContractError)
+import Contract.PlutusData
+  ( Redeemer(Redeemer)
+  , toData
+  )
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction (TransactionHash)
+import Contract.TxConstraints (TxConstraints)
+import Contract.TxConstraints as Constraints
+import Contract.Value as Value
 import Data.Array as Array
+import Data.BigInt as BigInt
 import Data.Map as Map
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.InitSidechain.Types
+  ( InitTokenRedeemer(MintInitToken)
+  )
+import TrustlessSidechain.InitSidechain.Utils
+  ( initTokenCurrencyInfo
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types as Types
+import TrustlessSidechain.Versioning.Utils
+  ( versionOracleInitTokenName
+  )
 import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
 import TrustlessSidechain.Versioning.V2 as V2
+
+-- | Mint multiple version oracle init tokens.  Exact amount minted depends on
+-- | protocol version.
+mintVersionInitTokens ∷
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  } →
+  Int →
+  Contract
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mintVersionInitTokens { sidechainParams, atmsKind } version = do
+  { versionedPolicies, versionedValidators } ←
+    getVersionedPoliciesAndValidators { sidechainParams, atmsKind } version
+
+  let
+    amount = BigInt.fromInt
+      (Map.size versionedPolicies + Map.size versionedValidators)
+
+  { mintingPolicy, currencySymbol } ← initTokenCurrencyInfo sidechainParams
+
+  pure
+    { lookups: Lookups.mintingPolicy mintingPolicy
+    , constraints:
+        Constraints.mustMintValueWithRedeemer
+          (Redeemer $ toData MintInitToken)
+          (Value.singleton currencySymbol versionOracleInitTokenName amount)
+    }
+
+initializeVersion ∷
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  } →
+  Int →
+  Contract (Array TransactionHash)
+initializeVersion { sidechainParams, atmsKind } version = do
+  { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
+    { sidechainParams, atmsKind }
+    version
+
+  validatorsTxIds ←
+    traverse
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned validators"
+      )
+      $ Map.toUnfoldable versionedValidators
+  policiesTxIds ←
+    traverse
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
+      )
+      $ Map.toUnfoldable versionedPolicies
+  pure (validatorsTxIds <> policiesTxIds)
 
 insertVersion ∷
   { sidechainParams ∷ SidechainParams
@@ -26,20 +101,20 @@ insertVersion ∷
   } →
   Int →
   Contract (Array TransactionHash)
-insertVersion { sidechainParams: sp, atmsKind } version = do
+insertVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
-    { sidechainParams: sp, atmsKind }
+    { sidechainParams, atmsKind }
     version
 
   validatorsTxIds ←
     traverse
-      ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Insert versioned validators"
       )
       $ Map.toUnfoldable versionedValidators
   policiesTxIds ←
     traverse
-      ( Utils.insertVersionTokenLookupsAndConstraints sp version >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Insert versioned policies"
       )
       $ Map.toUnfoldable versionedPolicies
@@ -51,21 +126,21 @@ invalidateVersion ∷
   } →
   Int →
   Contract (Array TransactionHash)
-invalidateVersion { sidechainParams: sp, atmsKind } version = do
+invalidateVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
-    { sidechainParams: sp, atmsKind }
+    { sidechainParams, atmsKind }
     version
 
   validatorsTxIds ←
     traverse
-      ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Invalidate versioned validators"
       )
       $ Array.fromFoldable
       $ Map.keys versionedValidators
   policiesTxIds ←
     traverse
-      ( Utils.invalidateVersionTokenLookupsAndConstraints sp version >=>
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Invalidate versioned policies"
       )
       $ Array.fromFoldable
@@ -80,15 +155,15 @@ updateVersion ∷
   Int → -- old version
   Int → -- new version
   Contract (Array TransactionHash)
-updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
+updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
-  } ← getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind }
+  } ← getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     oldVersion
 
   { versionedPolicies: newVersionedPolicies
   , versionedValidators: newVersionedValidators
-  } ← getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind }
+  } ← getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     newVersion
 
   let
@@ -98,14 +173,16 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
 
   commonValidatorsTxIds ←
     traverse
-      ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
+      ( Utils.updateVersionLookupsAndConstraints sidechainParams oldVersion
+          newVersion >=>
           Utils.Transaction.balanceSignAndSubmit
             "Update common versioned validators"
       )
       $ Map.toUnfoldable commonValidators
   commonPoliciesTxIds ←
     traverse
-      ( Utils.updateVersionTokenLookupsAndConstraints sp oldVersion newVersion >=>
+      ( Utils.updateVersionLookupsAndConstraints sidechainParams oldVersion
+          newVersion >=>
           Utils.Transaction.balanceSignAndSubmit
             "Update common versioned policies"
       )
@@ -118,13 +195,13 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
 
   uniqueNewValidatorsTxIds ←
     traverse
-      ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams newVersion >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned validators"
       )
       $ Map.toUnfoldable uniqueNewValidators
   uniqueNewPoliciesTxIds ←
     traverse
-      ( Utils.insertVersionTokenLookupsAndConstraints sp newVersion >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams newVersion >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned policies"
       )
       $ Map.toUnfoldable uniqueNewPolicies
@@ -136,15 +213,18 @@ updateVersion { sidechainParams: sp, atmsKind } oldVersion newVersion = do
 
   uniqueOldValidatorsTxIds ←
     traverse
-      ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Transaction.balanceSignAndSubmit "Update old versioned validators"
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams oldVersion
+          >=>
+            Utils.Transaction.balanceSignAndSubmit
+              "Update old versioned validators"
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldValidators
   uniqueOldPoliciesTxIds ←
     traverse
-      ( Utils.invalidateVersionTokenLookupsAndConstraints sp oldVersion >=>
-          Utils.Transaction.balanceSignAndSubmit "Update old versioned policies"
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams oldVersion
+          >=>
+            Utils.Transaction.balanceSignAndSubmit "Update old versioned policies"
       )
       $ Array.fromFoldable
       $ Map.keys uniqueOldPolicies

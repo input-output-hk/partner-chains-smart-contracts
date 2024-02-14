@@ -86,7 +86,7 @@ testScenarioSuccess =
           getCommitteeCandidateValidator sidechainParams
 
         void
-          $ Versioning.insertVersionTokenLookupsAndConstraints
+          $ Versioning.insertVersionLookupsAndConstraints
               sidechainParams
               1
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
@@ -94,7 +94,7 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: insert policy version"
 
         void
-          $ Versioning.insertVersionTokenLookupsAndConstraints
+          $ Versioning.insertVersionLookupsAndConstraints
               sidechainParams
               1
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
@@ -102,7 +102,7 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: insert validator version"
 
         void
-          $ Versioning.updateVersionTokenLookupsAndConstraints
+          $ Versioning.updateVersionLookupsAndConstraints
               sidechainParams
               1
               2
@@ -111,7 +111,7 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: update policy version"
 
         void
-          $ Versioning.updateVersionTokenLookupsAndConstraints
+          $ Versioning.updateVersionLookupsAndConstraints
               sidechainParams
               1
               2
@@ -120,7 +120,7 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: update validator version"
 
         void
-          $ Versioning.invalidateVersionTokenLookupsAndConstraints
+          $ Versioning.invalidateVersionLookupsAndConstraints
               sidechainParams
               2
               MerkleRootTokenPolicy
@@ -128,7 +128,7 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: invalidate policy version"
 
         void
-          $ Versioning.invalidateVersionTokenLookupsAndConstraints
+          $ Versioning.invalidateVersionLookupsAndConstraints
               sidechainParams
               2
               CommitteeCandidateValidator

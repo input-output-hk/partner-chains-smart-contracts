@@ -4,6 +4,7 @@ module TrustlessSidechain.Utils (
   fromSingleton,
   currencySymbolValueOf,
   oneTokenBurned,
+  oneTokenMinted,
   mkUntypedValidator,
   mkUntypedMintingPolicy,
   scriptToPlutusScript,
@@ -19,6 +20,7 @@ import Data.ByteString.Short (toShort)
 import Data.Kind (Type)
 import Plutonomy.UPLC qualified
 import Plutus.V1.Ledger.Scripts (Script)
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   ScriptContext,
@@ -27,7 +29,6 @@ import Plutus.V2.Ledger.Api (
   Value,
   getValue,
  )
-import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.AssocMap qualified as Map
 
 -- | Unwrap a singleton list, or produce an error if not possible.
@@ -43,6 +44,14 @@ currencySymbolValueOf v c = case Map.lookup c (getValue v) of
   Nothing -> 0
   Just x -> sum (Map.elems x)
 
+-- | Check that exactly on specified asset was minted by a transaction.  Note
+-- that transaction is also allowed to mint/burn tokens of the same
+-- 'CurrencySymbol', but with different 'TokenName's.
+{-# INLINEABLE oneTokenMinted #-}
+oneTokenMinted :: TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenMinted txInfo cs tn =
+  assetClassValueOf (txInfoMint txInfo) (AssetClass (cs, tn)) == 1
+
 -- | Check that exactly on specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
 -- but with different 'TokenName's.  This is intended for use with 'InitToken's,
@@ -51,13 +60,7 @@ currencySymbolValueOf v c = case Map.lookup c (getValue v) of
 {-# INLINEABLE oneTokenBurned #-}
 oneTokenBurned :: TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurned txInfo cs tn =
-  case fmap AssocMap.toList $ AssocMap.lookup cs $ getValue $ txInfoMint txInfo of
-    Just tns ->
-      let go :: [(TokenName, Integer)] -> Bool
-          go [] = False
-          go ((tn', amt) : xs) = if tn' == tn && amt == -1 then True else go xs
-       in go tns
-    _ -> False
+  assetClassValueOf (txInfoMint txInfo) (AssetClass (cs, tn)) == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types

@@ -485,15 +485,18 @@ initSidechain (InitSidechainParams isp) version = do
         <> CandidatePermissionToken.mintOneCandidatePermissionInitToken
         <> CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
         <> initSpendGenesisUtxo
-    ) sidechainParams
+    ) sidechainParams <>
+      Versioning.mintVersionInitTokens
+        { atmsKind: isp.initATMSKind
+        , sidechainParams
+        }
+        version
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
-  -- Mint and pay versioning tokens to versioning script.  This needs to be done
-  -- after sidechain initialization.  Otherwise genesisUtxo can get spent by
-  -- versioning before it can be used to mint NFTs.
+  -- Mint and pay versioning tokens to versioning script.
   ----------------------------------------
-  versioningTxIds ← Versioning.insertVersion
+  versioningTxIds ← Versioning.initializeVersion
     { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
@@ -506,7 +509,7 @@ initSidechain (InitSidechainParams isp) version = do
   _ ← initCandidatePermissionTokenLookupsAndConstraints isp
     >>= balanceSignAndSubmit "Candidate permission tokens init"
   _ ← initCommitteeHashLookupsAndConstraints isp
-    >>= balanceSignAndSubmit "Committte init"
+    >>= balanceSignAndSubmit "Committee init"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224

@@ -80,19 +80,19 @@ main =
         , fitsInto
             "mkCandidatePermissionMintingPolicy"
             Compiled.mkCPMPCode
-            209
+            196
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            1_915
+            1_902
         , fitsInto
             "mkCommitteeOraclePolicy"
             Compiled.mkCommitteeOraclePolicyCode
-            429
+            416
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            2_094
+            2_081
         , fitsInto
             "mkUpdateCommitteeHashValidator"
             Compiled.mkUPCVCode
@@ -112,11 +112,11 @@ main =
         , fitsInto
             "mkCheckpointPolicy"
             Compiled.mkCPCode
-            429
+            416
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            2_094
+            2_081
         , fitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy)"
             Compiled.mkCommitteePlainEcdsaSecp256k1ATMSPolicyCode
@@ -164,7 +164,7 @@ main =
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-            1_981
+            1_902
         , fitsInto
             "mkPermissionedCandidatesValidatorCode (PermissionedCandidates)"
             Compiled.mkPermissionedCandidatesValidatorCode
@@ -180,11 +180,11 @@ main =
         , fitsInto
             "mkVersionOraclePolicyCode (Versioning)"
             Compiled.mkVersionOraclePolicyCode
-            1_643
+            1_857
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_036
+            3_152
         , fitsInto
             "mkVersionOracleValidatorCode (Versioning)"
             Compiled.mkVersionOracleValidatorCode
@@ -215,7 +215,7 @@ main =
         , fitsInto
             "mkDsConfPolicy"
             Compiled.mkDsConfPolicyCode
-            409
+            416
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
