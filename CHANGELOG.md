@@ -5,13 +5,6 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
-## Removed
-
-* `remove-d-parameter` command has been removed.
-  ([679](https://github.com/input-output-hk/trustless-sidechain/pull/679))
-
-# v5.0.0
-
 ## Added
 
   * Added `use-candidate-permission-token` switch to `register` and `addresses`
@@ -32,8 +25,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     and `candidate-permission-token` commands.
   * Removed `candidate-permission-token-utxo` optional parameter from
     `addresses` command.
+  * `remove-d-parameter` command has been removed.
+    ([679](https://github.com/input-output-hk/trustless-sidechain/pull/679))
 
-# Unreleased
+# v5.0.0
 
 ## Added
 * Added `update-permissioned-candidates` command takes candidates to add and candidates to remove.
