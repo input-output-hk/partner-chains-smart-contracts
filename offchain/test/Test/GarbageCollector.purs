@@ -8,7 +8,6 @@ import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Transaction (awaitTxConfirmed)
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
@@ -140,15 +139,11 @@ initializeSidechain = do
       , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
       }
 
-  { sidechainParams, transactionId, versioningTransactionIds } ←
-    initSidechain initScParams 1
-  awaitTxConfirmed transactionId
-  _ ← for versioningTransactionIds awaitTxConfirmed
+  { sidechainParams } ← initSidechain initScParams 1
 
-  versioningTransactionIds2 ← Versioning.insertVersion
+  _ ← Versioning.insertVersion
     { sidechainParams, atmsKind: ATMSPlainEcdsaSecp256k1 }
     2
-  _ ← for versioningTransactionIds2 awaitTxConfirmed
 
   pure { sidechainParams, initCommitteePrvKeys }
 
@@ -196,7 +191,7 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
   utxo ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
       sidechainParams
-  txHash ←
+  _ ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.runCommitteePlainEcdsaSecp256k1ATMSPolicy
       sidechainParams
       $ CommitteeATMSParams
@@ -205,8 +200,6 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
           , aggregateSignature: committeeSignatures
           , message: sidechainMessageTokenName
           }
-
-  awaitTxConfirmed txHash
 
   Test.Utils.assertIHaveOutputWithAsset
     committeePlainEcdsaSecp256k1ATMSCurrencySymbol

@@ -465,7 +465,7 @@ initSidechain ∷
   Int →
   Contract
     { transactionId ∷ TransactionHash
-    , versioningTransactionIds ∷ Array TransactionHash
+    , initTransactionIds ∷ Array TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
@@ -496,19 +496,18 @@ initSidechain (InitSidechainParams isp) version = do
 
   -- Mint and pay versioning tokens to versioning script.
   ----------------------------------------
-  versioningTxIds ← Versioning.initializeVersion
+  versionInitTxIds ← Versioning.initializeVersion
     { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
-  -- FIXME: transaction IDs discarded here.  We should accumulate them and
-  -- return all of them as part of endpoint response
-  _ ← initCheckpointLookupsAndConstraints isp
+  checkpointInitTxId ← initCheckpointLookupsAndConstraints isp
     >>= balanceSignAndSubmit "Checkpoint init"
-  _ ← initDistributedSetLookupsAndConstraints sidechainParams
+  dsInitTxId ← initDistributedSetLookupsAndConstraints sidechainParams
     >>= balanceSignAndSubmit "Distributed set init"
-  _ ← initCandidatePermissionTokenLookupsAndConstraints isp
-    >>= balanceSignAndSubmit "Candidate permission tokens init"
-  _ ← initCommitteeHashLookupsAndConstraints isp
+  permissionTokensInitTxId ←
+    initCandidatePermissionTokenLookupsAndConstraints isp
+      >>= balanceSignAndSubmit "Candidate permission tokens init"
+  committeeInitTxId ← initCommitteeHashLookupsAndConstraints isp
     >>= balanceSignAndSubmit "Committee init"
 
   -- Grabbing the required sidechain addresses of particular validators /
@@ -524,7 +523,12 @@ initSidechain (InitSidechainParams isp) version = do
         }
   pure
     { transactionId: txId
-    , versioningTransactionIds: versioningTxIds
+    , initTransactionIds: versionInitTxIds <>
+        [ checkpointInitTxId
+        , dsInitTxId
+        , permissionTokensInitTxId
+        , committeeInitTxId
+        ]
     , sidechainParams
     , sidechainAddresses
     }

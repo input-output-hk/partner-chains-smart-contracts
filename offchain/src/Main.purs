@@ -390,7 +390,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { transactionId
         , sidechainParams
         , sidechainAddresses
-        , versioningTransactionIds
+        , initTransactionIds
         } ←
           initSidechain (wrap isc) version
 
@@ -398,7 +398,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           { transactionId: unwrap transactionId
           , sidechainParams
           , sidechainAddresses
-          , versioningTransactionIds: map unwrap versioningTransactionIds
+          , initTransactionIds: map unwrap initTransactionIds
           }
 
       CommitteeHandover

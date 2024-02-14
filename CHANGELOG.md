@@ -19,6 +19,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
 
+  * `init` now returns a field `initTransactionIds` instead of
+    `versioningTransactionIds`.  This fields includes all initialization
+    transactions, not just the ones for the versioning system.
+
 ## Removed
 
   * Removed `init-tokens-mint` command.

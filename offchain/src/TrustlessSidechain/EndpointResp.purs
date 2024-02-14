@@ -62,7 +62,7 @@ data EndpointResp
       }
   | InitResp
       { transactionId ∷ ByteArray
-      , versioningTransactionIds ∷ Array ByteArray
+      , initTransactionIds ∷ Array ByteArray
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
@@ -216,7 +216,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         ]
     InitResp
       { transactionId
-      , versioningTransactionIds
+      , initTransactionIds
       , sidechainParams
       , sidechainAddresses
       } →
@@ -224,8 +224,8 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "Init"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-          , "versioningTransactionIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
+          , "initTransactionIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) initTransactionIds)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
           , "addresses" /\ J.fromObject
               ( Object.fromFoldable

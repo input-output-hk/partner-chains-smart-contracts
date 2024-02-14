@@ -8,13 +8,11 @@ import Contract.Prelude
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Transaction (awaitTxConfirmed)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
-import Data.Traversable (for)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipTest)
@@ -113,10 +111,8 @@ testScenario1 =
                 pkh
             }
 
-        { sidechainParams, transactionId, versioningTransactionIds } ←
-          initSidechain initScParams 1
-        awaitTxConfirmed transactionId
-        _ ← for versioningTransactionIds awaitTxConfirmed
+        { sidechainParams } ← initSidechain initScParams 1
+
         -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
         committeePlainEcdsaSecp256k1ATMSMint ←
