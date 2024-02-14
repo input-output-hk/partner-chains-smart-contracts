@@ -21,8 +21,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `init-tokens-mint` command.
   * Removed `use-init-tokens` flag from `init` command.
   * Removed `candidate-permission-token-utxo` and
-    `candidate-permission-token-name` optional parameters from all `register`
-    and `candidate-permission-token` commands.
+    `candidate-permission-token-name` optional parameters from `register` and
+    `candidate-permission-token` commands.
   * Removed `candidate-permission-token-utxo` optional parameter from
     `addresses` command.
   * `remove-d-parameter` command has been removed.
