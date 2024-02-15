@@ -28,8 +28,17 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      - run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
-      - run: nixci -v | nix copy --stdin --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
+      - name: Add signing key for nix
+        run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
+
+      - name: Run nixci to build/test all outputs
+        run: nixci -v > /tmp/outputs
+
+      - name: Copy nix scopes to nix cache
+        run: |
+          nix copy --stdin --to \
+          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
+          < /tmp/outputs && rm /tmp/outputs
   # build-and-test-arm64-darwin:
   #   permissions:
   #     id-token: write
