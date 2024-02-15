@@ -312,11 +312,11 @@ mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode ::
 mkCommitteePlainSchnorrSecp256k1ATMSPolicyCode = $$(compile [||CommitteePlainSchnorrSecp256k1ATMSPolicy.mkMintingPolicy||])
 
 mkDParameterValidatorCode ::
-  CompiledCode (SidechainParams -> BuiltinData -> BuiltinData -> ScriptContext -> Bool)
+  CompiledCode (SidechainParams -> BuiltinData -> () -> ScriptContext -> Bool)
 mkDParameterValidatorCode = $$(compile [||DParameter.dParameterValidator||])
 
 mkDParameterPolicyCode ::
-  CompiledCode (SidechainParams -> Address -> BuiltinData -> ScriptContext -> Bool)
+  CompiledCode (SidechainParams -> Address -> () -> ScriptContext -> Bool)
 mkDParameterPolicyCode = $$(compile [||DParameter.mkMintingPolicy||])
 
 mkFuelProxyPolicyCode ::
