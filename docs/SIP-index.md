@@ -13,7 +13,7 @@ The status of an improvement proposal can be `In Progress` `Accepted` or `Implem
 | [03: Reusable Modular Design](./SIPs/03-ReusableModularDesign.md)                                                                   | `Accepted`    |
 | [04: Light Wallet SDK](./SIPs/04-LightWalletSDK.md)                                                                                 | `In Progress` |
 | [05: Modular Committee Certificate Verification](./SIPs/05-ModularCommitteeCertificateVerification.md)                              | `In Progress` |
-| [06: Flexible Initialisation](./SIPs/06-FlexibleInitialisation.md)                                                                  | `In Progress` |
+| [06: Flexible Initialisation](./SIPs/06-FlexibleInitialisation.md)                                                                  | `Implemented` |
 | [07: Modularising Token Handling](./SIPs/07-ModularisingTokenHandling.md)                                                           | `In Progerss` |
 | [08: Cross-Chain Verification](./SIPs/08-CrossChainVerification.md)                                                                 | `In Progress` |
 | [09: Generalizing Token Transfer from Sidechain to Mainchain](./SIPs/09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md) | `In Progress` |
