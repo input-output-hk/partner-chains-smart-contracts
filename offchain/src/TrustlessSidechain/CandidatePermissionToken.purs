@@ -73,7 +73,8 @@ candidatePermissionCurrencyInfo sp = do
       }
   getCurrencyInfo CandidatePermissionPolicy [ toData itac ]
 
--- | Build lookups and constraints to mint checkpoint initialization token.
+-- | Build lookups and constraints to mint candidate permission initialization
+-- | token.
 mintOneCandidatePermissionInitToken ∷
   SidechainParams →
   Contract
@@ -83,7 +84,8 @@ mintOneCandidatePermissionInitToken ∷
 mintOneCandidatePermissionInitToken sp =
   mintOneInitToken sp candidatePermissionInitTokenName
 
--- | Build lookups and constraints to burn checkpoint initialization token.
+-- | Build lookups and constraints to burn candidate permission initialization
+-- | token.
 burnOneCandidatePermissionInitToken ∷
   SidechainParams →
   Contract
