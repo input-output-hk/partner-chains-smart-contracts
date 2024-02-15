@@ -37,7 +37,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, 
 mkMintingPolicy ::
   SidechainParams ->
   Address ->
-  BuiltinData ->
+  () ->
   ScriptContext ->
   Bool
 mkMintingPolicy
@@ -89,7 +89,7 @@ dParameterValidator ::
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
   BuiltinData ->
-  BuiltinData ->
+  () ->
   ScriptContext ->
   Bool
 dParameterValidator
