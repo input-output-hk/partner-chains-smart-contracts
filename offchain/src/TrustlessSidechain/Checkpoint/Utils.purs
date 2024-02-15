@@ -17,11 +17,11 @@ import Contract.Monad (Contract)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts as Scripts
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts
   ( Validator
   )
+import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutputWithRefScript
