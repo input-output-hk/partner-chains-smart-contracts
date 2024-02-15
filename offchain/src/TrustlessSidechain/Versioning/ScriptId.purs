@@ -51,8 +51,8 @@ data ScriptId
   | FUELProxyPolicy -- not versioned
   | CommitteeCertificateVerificationPolicy
   | CommitteeOraclePolicy
-  | CommitteePlainEcdsaSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
-  | CommitteePlainSchnorrSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (https://github.com/input-output-hk/trustless-sidechain/issues/595)
+  | CommitteePlainEcdsaSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (#686)
+  | CommitteePlainSchnorrSecp256k1ATMSPolicy -- TODO: implement versioning for this policy (#686)
   | DParameterPolicy
   | DParameterValidator
   | PermissionedCandidatesPolicy
