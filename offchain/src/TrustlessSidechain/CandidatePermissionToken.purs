@@ -2,7 +2,6 @@ module TrustlessSidechain.CandidatePermissionToken
   ( candidatePermissionCurrencyInfo
   , candidatePermissionTokenName
   , CandidatePermissionMintParams(..)
-  , CandidatePermissionTokenInfo
   , CandidatePermissionTokenMintInfo
   , candidatePermissionTokenLookupsAndConstraints
   , runCandidatePermissionToken
@@ -38,7 +37,7 @@ import TrustlessSidechain.InitSidechain.Utils
   , mintOneInitToken
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass, CurrencyInfo)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
@@ -105,11 +104,6 @@ newtype CandidatePermissionMintParams = CandidatePermissionMintParams
   { sidechainParams ∷ SidechainParams
   , amount ∷ BigInt
   }
-
--- | `CandidatePermissionTokenInfo` wraps up some of the required information for
--- | referring to a candidate permission token. This isn't used onchain, but used
--- | offchain for wrapping up this data consistently
-type CandidatePermissionTokenInfo = AssetClass
 
 -- | `CandidatePermissionTokenMintInfo` wraps up some of the required information for
 -- | minting a candidate permission token. This isn't used onchain, but used
