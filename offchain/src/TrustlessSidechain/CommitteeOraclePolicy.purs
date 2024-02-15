@@ -1,6 +1,5 @@
 module TrustlessSidechain.CommitteeOraclePolicy
-  ( committeeOracleAssetClass
-  , committeeOracleTn
+  ( committeeOracleTn
   , committeeOracleCurrencyInfo
   , mintOneCommitteeOracleInitToken
   , burnOneCommitteeOracleInitToken
@@ -24,7 +23,7 @@ import TrustlessSidechain.InitSidechain.Utils
   , mintOneInitToken
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
+import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeOraclePolicy)
@@ -39,13 +38,6 @@ committeeOracleCurrencyInfo sp = do
       , initTokenName: committeeOracleInitTokenName
       }
   getCurrencyInfo CommitteeOraclePolicy [ toData itac ]
-
--- | `committeeOracleAssetClass` is the asset class. See `committeeOracleTn`
--- | for details on the token name
-committeeOracleAssetClass ∷ SidechainParams → Contract AssetClass
-committeeOracleAssetClass sp = do
-  { currencySymbol } ← committeeOracleCurrencyInfo sp
-  pure $ assetClass currencySymbol committeeOracleTn
 
 committeeOracleInitTokenName ∷ Value.TokenName
 committeeOracleInitTokenName = unsafePartial $ fromJust $ Value.mkTokenName $
