@@ -267,12 +267,6 @@ sidechain, you can use the following command:
 
 ```
 nix run .#sidechain-main-cli -- addresses \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --version 1
 ```
 
@@ -283,12 +277,6 @@ policy of the candidate permission tokens.
 
 ```
 nix run .#sidechain-main-cli -- claim-v1 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --combined-proof aabb \
   --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
     # ^ Optional flag to avoid a linear scan through the UTxO set
@@ -301,10 +289,6 @@ to claim FUEL out of thin air:
 
 ```
 nix run .#sidechain-main-cli -- claim-v2 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3
   --amount 13
 ```
 
@@ -312,10 +296,6 @@ nix run .#sidechain-main-cli -- claim-v2 \
 
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
   --amount 5 \
   --recipient aabbcc
 ```
@@ -326,11 +306,6 @@ for demonstration purposes only and uses same arguments as `burn-v1`.
 
 ```
 nix run .#sidechain-main-cli -- burn-v2 \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --amount 5 \
   --recipient aabbcc
 ```
@@ -341,12 +316,6 @@ In order to generate the signatures, you can use the signature generator tool:
 
 ```
 cabal run trustless-sidechain-gen-signatures -- register \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3  \
-  --atms-kind plain \
-  --payment-signing-key-file $SIGNING_KEY \
-  --governance-authority 406c5efd11681585d81a0f65258e9822175d851115919ab63f01722c \
   --spo-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
   --sidechain-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
   --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1
@@ -355,12 +324,6 @@ And use it's output for the registration:
 
 ```
 nix run .#sidechain-main-cli -- register \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain \
   --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
   --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
   --spo-signature cf5fc5b10dff794ac0f5908c38d28a1d8e8430f17c2036cf14f4b28c990b6794f754ca809d69ecd52e4c4d542f90c43b017ff7f23cf46efc4d8f6b07a3895403 \
@@ -372,12 +335,6 @@ Optionally, assuming that we are using a permissioned candidates system, one
 can include the candidate permission token when registering as follows.
 ```
 nix run .#sidechain-main-cli -- register \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
   --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
   --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
@@ -390,12 +347,6 @@ nix run .#sidechain-main-cli -- register \
 
 ```
 nix run .#sidechain-main-cli -- deregister \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --spo-public-key aabbcc
 ```
 
@@ -403,12 +354,6 @@ nix run .#sidechain-main-cli -- deregister \
 
 ```
 nix run .#sidechain-main-cli -- committee-hash \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
   --committee-pub-key-and-signature aabbcc03:bbbbbb \
@@ -430,12 +375,6 @@ subcommand.
 
 ```
 nix run .#sidechain-main-cli -- save-root \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --sidechain-id 1 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --merkle-root abababab \
   --committee-pub-key-and-signature aabbcc01:aaaaaa \
   --committee-pub-key-and-signature aabbcc02 \
@@ -448,11 +387,6 @@ nix run .#sidechain-main-cli -- save-root \
 
 ```
 nix run .#sidechain-main-cli -- committee-handover \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --merkle-root abababab \
   --sidechain-epoch 6 \
   --previous-merkle-root abcdef \
@@ -471,12 +405,6 @@ nix run .#sidechain-main-cli -- committee-handover \
 
 ```
 nix run .#sidechain-main-cli -- candidate-permission-token \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --candidate-permission-token-amount 10
 ```
 
@@ -484,12 +412,6 @@ nix run .#sidechain-main-cli -- candidate-permission-token \
 
 ```
 nix run .#sidechain-main-cli -- save-checkpoint \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
   --new-checkpoint-block-number 42 \
   --sidechain-epoch 5
@@ -499,9 +421,6 @@ nix run .#sidechain-main-cli -- save-checkpoint \
 
 ```
 nix run .#sidechain-main-cli -- insert-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --version 2
 ```
 
@@ -509,9 +428,6 @@ nix run .#sidechain-main-cli -- insert-version \
 
 ```
 nix run .#sidechain-main-cli -- update-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --old-version 1 \
   --new-version 2
 ```
@@ -520,9 +436,6 @@ nix run .#sidechain-main-cli -- update-version \
 
 ```
 nix run .#sidechain-main-cli -- invalidate-version \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --version 1
 ```
 
@@ -530,9 +443,6 @@ nix run .#sidechain-main-cli -- invalidate-version \
 
 ```
 nix run .#sidechain-main-cli -- insert-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
 ```
@@ -545,9 +455,6 @@ safeguard against inserting multiple D parameter values.
 
 ```
 nix run .#sidechain-main-cli -- update-d-parameter \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
 ```
@@ -560,10 +467,6 @@ new value.
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
   --add-candidate "SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
   --add-candidate "SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
   --add-candidate "SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
@@ -580,10 +483,6 @@ safeguard against calling `insert-permissioned-candidates` multiple times.
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
-  --threshold 2/3 \
   --add-candidate "SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
   --add-candidate "SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
   --remove-candidate "SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
@@ -597,9 +496,6 @@ followed by a string of four keys separated from each other by a single colon.
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1 \
   --remove-all-candidates
 ```
 
@@ -610,10 +506,7 @@ candidates and add new ones in a single transaction. Just provide
 #### 3.3.20 Garbage collect redundant tokens
 
 ```
-nix run .#sidechain-main-cli -- collect-garbage \
-  --payment-signing-key-file $SIGNING_KEY \
-  --genesis-committee-hash-utxo df24e6edc13440da24f074442a858f565b5eba0a9c8d6238988485a3ed64cf1f#0 \
-  --sidechain-id 1
+nix run .#sidechain-main-cli -- collect-garbage
 ```
 
 Burn all waste tokens found on a user's PubKey address. These tokens include
