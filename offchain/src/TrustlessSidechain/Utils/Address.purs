@@ -188,15 +188,15 @@ getCurrencyInfo scriptId params = do
   currencySymbol ← getCurrencySymbol scriptId mintingPolicy
   pure $ { mintingPolicy, currencySymbol }
 
--- | `getCurrencySymbolHex` converts a minting policy with known script IDto its
+-- | `getCurrencySymbol` converts a minting policy with known script ID to its
 -- | currency symbol
 getCurrencySymbol ∷ ScriptId → MintingPolicy → Contract CurrencySymbol
 getCurrencySymbol scriptId mp = do
   Monad.liftContractM (show $ InvalidCurrencySymbol scriptId mp) $
     Value.scriptCurrencySymbol mp
 
--- | `getCurrencySymbolHex` converts a minting policy with unknown script ID to
--- | its currency symbol
+-- | `toCurrencySymbol` converts a minting policy with unknown script ID to its
+-- | currency symbol
 toCurrencySymbol ∷ MintingPolicy → Contract CurrencySymbol
 toCurrencySymbol mp = do
   Monad.liftContractM (show $ InvalidScript (show mp)) $
