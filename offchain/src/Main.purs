@@ -15,9 +15,6 @@ import Data.List.Types as Data.List.Types
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
-  )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
@@ -266,18 +263,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
             >>> CommitteeCandidateRegResp
 
       CandidiatePermissionTokenAct { candidatePermissionTokenAmount: amount } →
-        let
-          params = CandidatePermissionMintParams
-            { amount
-            , sidechainParams: scParams
-            }
-        in
-          CandidatePermissionToken.runCandidatePermissionToken params
-            <#> \{ transactionId, candidatePermissionCurrencySymbol } →
-              CandidatePermissionTokenResp
-                { transactionId: unwrap transactionId
-                , candidatePermissionCurrencySymbol
-                }
+        CandidatePermissionToken.runCandidatePermissionToken scParams amount
+          <#> \{ transactionId, candidatePermissionCurrencySymbol } →
+            CandidatePermissionTokenResp
+              { transactionId: unwrap transactionId
+              , candidatePermissionCurrencySymbol
+              }
 
       CommitteeCandidateDereg { spoPubKey } →
         let

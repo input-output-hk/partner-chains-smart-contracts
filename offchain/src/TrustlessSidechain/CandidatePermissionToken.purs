@@ -1,7 +1,6 @@
 module TrustlessSidechain.CandidatePermissionToken
   ( candidatePermissionCurrencyInfo
   , candidatePermissionTokenName
-  , CandidatePermissionMintParams(..)
   , CandidatePermissionTokenMintInfo
   , candidatePermissionTokenLookupsAndConstraints
   , runCandidatePermissionToken
@@ -98,13 +97,6 @@ burnOneCandidatePermissionInitToken sp =
 -- Endpoint code
 --------------------------------
 
--- | `CandidatePermissionMintParams` is the endpoint parameters for the
--- | candidate permission token.
-newtype CandidatePermissionMintParams = CandidatePermissionMintParams
-  { sidechainParams ∷ SidechainParams
-  , amount ∷ BigInt
-  }
-
 -- | `CandidatePermissionTokenMintInfo` wraps up some of the required information for
 -- | minting a candidate permission token. This isn't used onchain, but used
 -- | offchain for wrapping up this data consistently
@@ -114,14 +106,13 @@ type CandidatePermissionTokenMintInfo =
 -- | `candidatePermissionTokenLookupsAndConstraints` creates the required
 -- | lookups and constraints to build the transaction to mint the tokens.
 candidatePermissionTokenLookupsAndConstraints ∷
-  CandidatePermissionMintParams →
+  SidechainParams →
+  BigInt →
   Contract
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-candidatePermissionTokenLookupsAndConstraints
-  ( CandidatePermissionMintParams { sidechainParams, amount }
-  ) = do
+candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
   { mintingPolicy, currencySymbol } ←
     candidatePermissionCurrencyInfo sidechainParams
 
@@ -148,20 +139,17 @@ candidatePermissionTokenLookupsAndConstraints
 -- | `runCandidatePermissionToken` is the endpoint for minting candidate
 -- | permission tokens.
 runCandidatePermissionToken ∷
-  CandidatePermissionMintParams →
+  SidechainParams →
+  BigInt →
   Contract
     { transactionId ∷ TransactionHash
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }
-runCandidatePermissionToken
-  cpmp@
-    ( CandidatePermissionMintParams
-        { sidechainParams }
-    ) = do
+runCandidatePermissionToken sidechainParams amount = do
   { currencySymbol: candidatePermissionCurrencySymbol } ←
     candidatePermissionCurrencyInfo sidechainParams
 
-  txId ← candidatePermissionTokenLookupsAndConstraints cpmp >>=
+  txId ← candidatePermissionTokenLookupsAndConstraints sidechainParams amount >>=
     balanceSignAndSubmit "Mint CandidatePermissionToken"
 
   pure { transactionId: txId, candidatePermissionCurrencySymbol }

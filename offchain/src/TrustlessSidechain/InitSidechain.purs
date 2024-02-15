@@ -51,8 +51,7 @@ import Data.Map as Map
 import Data.Maybe (isJust)
 import Data.Monoid (mempty)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
-  , CandidatePermissionTokenMintInfo
+  ( CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint
@@ -169,7 +168,8 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
       let sidechainParams = toSidechainParams isp
 
       CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
-        $ CandidatePermissionMintParams { sidechainParams, amount }
+        sidechainParams
+        amount
 
 -- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the

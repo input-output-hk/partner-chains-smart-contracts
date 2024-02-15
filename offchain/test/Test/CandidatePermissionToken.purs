@@ -17,9 +17,6 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionMintParams(CandidatePermissionMintParams)
-  )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.InitSidechain (initSpendGenesisUtxo)
@@ -70,12 +67,9 @@ testScenarioSuccess1 =
           ) >>=
             balanceSignAndSubmit "Mint candidate permission init token"
 
-        _ ← CandidatePermissionToken.runCandidatePermissionToken $
-          CandidatePermissionMintParams
-            { sidechainParams
-            , amount: BigInt.fromInt 1
-            }
-
+        _ ← CandidatePermissionToken.runCandidatePermissionToken
+          sidechainParams
+          (BigInt.fromInt 1)
         -----------------------------
         -- Register candidate using a permission token
         -----------------------------
