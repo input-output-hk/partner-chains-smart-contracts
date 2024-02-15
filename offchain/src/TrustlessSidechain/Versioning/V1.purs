@@ -74,7 +74,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
 
   ds ← DistributedSet.getDs sp
-  { dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
+  { mintingPolicy: dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
 
   let
     versionedPolicies = Map.fromFoldable

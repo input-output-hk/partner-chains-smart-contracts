@@ -352,7 +352,7 @@ mkMintFuelLookupAndConstraints
     insertValidator ← DistributedSet.insertValidator ds
     let insertValidatorHash = Scripts.validatorHash insertValidator
 
-    { dsKeyPolicy, dsKeyPolicyCurrencySymbol } ← DistributedSet.getDsKeyPolicy ds
+    { mintingPolicy, currencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
       liftContractM
@@ -404,7 +404,7 @@ mkMintFuelLookupAndConstraints
             $ mkTokenName
             $ (unwrap n).nKey
 
-        let val = Value.singleton dsKeyPolicyCurrencySymbol nTn (BigInt.fromInt 1)
+        let val = Value.singleton currencySymbol nTn (BigInt.fromInt 1)
         if getTokenName nTn == (unwrap node).nKey then
           pure $ Constraints.mustPayToScript
             insertValidatorHash
@@ -419,7 +419,7 @@ mkMintFuelLookupAndConstraints
                 DatumInline
                 val
             <> Constraints.mustMintCurrencyUsingScriptRef
-              (Scripts.mintingPolicyHash dsKeyPolicy)
+              (Scripts.mintingPolicyHash mintingPolicy)
               nTn
               (BigInt.fromInt 1)
               ( RefInput $ mkTxUnspentOut dsKeyVersioningInput
@@ -431,7 +431,7 @@ mkMintFuelLookupAndConstraints
 
     pure
       { lookups:
-          Lookups.mintingPolicy dsKeyPolicy
+          Lookups.mintingPolicy mintingPolicy
             <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton mptUtxo mptTxOut)
             <> Lookups.unspentOutputs (Map.singleton confRef confO)

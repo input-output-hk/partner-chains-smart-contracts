@@ -380,8 +380,7 @@ getDs sp = do
 -- | of a given `SidechainParams`.
 getDsKeyPolicy ∷
   Ds →
-  Contract -- JSTOLAREK: use CurrencyInfo here
-    { dsKeyPolicy ∷ MintingPolicy, dsKeyPolicyCurrencySymbol ∷ CurrencySymbol }
+  Contract CurrencyInfo
 getDsKeyPolicy ds = do
   insertValidator' ← insertValidator ds
 
@@ -391,11 +390,11 @@ getDsKeyPolicy ds = do
       { dskmValidatorHash: insertValidatorHash
       , dskmConfCurrencySymbol: dsConf ds
       }
-  policy ← dsKeyPolicy dskm
+  mintingPolicy ← dsKeyPolicy dskm
 
-  currencySymbol ← getCurrencySymbol DsKeyPolicy policy
+  currencySymbol ← getCurrencySymbol DsKeyPolicy mintingPolicy
 
-  pure { dsKeyPolicy: policy, dsKeyPolicyCurrencySymbol: currencySymbol }
+  pure { mintingPolicy, currencySymbol }
 
 -- | Build lookups and constraints to mint distributed set initialization token.
 mintOneDsInitToken ∷
@@ -494,7 +493,7 @@ findDsOutput ds tn txInput = do
       ) $
       Utxos.getUtxo txInput
 
-  { dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
+  { currencySymbol: dsKeyPolicyCurrencySymbol } ← getDsKeyPolicy ds
 
   --  Grab the datum
   dat ←
