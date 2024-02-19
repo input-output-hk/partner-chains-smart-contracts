@@ -157,4 +157,4 @@ renderExcess tData mData diff =
 --    because then it can happen that making the AST size smaller will make the
 --    flat encoding larger.
 scriptSize :: Script -> Integer
-scriptSize (Script x) = UPLC.programSize (Plutonomy.UPLC.optimizeUPLC x)
+scriptSize (Script p) = UPLC.serialisedSize (Plutonomy.UPLC.optimizeUPLC p)
