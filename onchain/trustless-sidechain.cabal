@@ -319,7 +319,6 @@ test-suite script-size
     Data.Generated
     Data.Handwritten
     Data.Wrappers
-    Legacy
     Sizer
 
   build-depends:

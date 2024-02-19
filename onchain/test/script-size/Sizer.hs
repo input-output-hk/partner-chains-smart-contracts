@@ -1,6 +1,4 @@
 module Sizer (
-  fitsUnder,
-  fitsInto,
   scriptFitsInto,
   scriptFitsUnder,
 ) where
@@ -9,7 +7,6 @@ import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
 import Plutonomy.UPLC qualified
 import Plutus.V1.Ledger.Scripts (Script (Script))
-import PlutusTx.Code (CompiledCode, sizePlc)
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -21,30 +18,12 @@ import TrustlessSidechain.HaskellPrelude
 import Type.Reflection (Typeable)
 import UntypedPlutusCore qualified as UPLC
 
-fitsUnder ::
-  forall (a :: Type).
-  Typeable a =>
-  HString.String ->
-  (HString.String, CompiledCode a) ->
-  (HString.String, CompiledCode a) ->
-  TestTree
-fitsUnder name test target = singleTest name $ SizeComparison test target
-
 scriptFitsUnder ::
   HString.String ->
   (HString.String, Script) ->
   (HString.String, Script) ->
   TestTree
 scriptFitsUnder name test target = singleTest name $ ScriptSizeComparison @() test target
-
-fitsInto ::
-  forall (a :: Type).
-  Typeable a =>
-  HString.String ->
-  CompiledCode a ->
-  Integer ->
-  TestTree
-fitsInto name code limit = singleTest name $ SizeBound code limit
 
 scriptFitsInto ::
   HString.String ->
@@ -56,29 +35,12 @@ scriptFitsInto name script limit = singleTest name $ ScriptSizeBound @() script 
 -- Helpers
 
 data SizeTest (a :: Type)
-  = SizeBound (CompiledCode a) Integer
-  | SizeComparison (HString.String, CompiledCode a) (HString.String, CompiledCode a)
-  | ScriptSizeBound Script Integer
+  = ScriptSizeBound Script Integer
   | ScriptSizeComparison (HString.String, Script) (HString.String, Script)
 
 instance Typeable a => IsTest (SizeTest a) where
   testOptions = Tagged []
   run _ testData _ = case testData of
-    SizeBound code limit -> do
-      let estimate = sizePlc code
-      let diff = limit - estimate
-      pure $ case signum diff of
-        (-1) -> testFailed $ "Exceeded limit by " <> show (abs diff)
-        0 -> testPassed $ "Size: " <> show estimate
-        _ -> testPassed $ "Remaining headroom: " <> show diff
-    SizeComparison (mName, mCode) (tName, tCode) -> do
-      let tEstimate = sizePlc tCode
-      let mEstimate = sizePlc mCode
-      let diff = tEstimate - mEstimate
-      pure $ case signum diff of
-        (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
-        0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
-        _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
     ScriptSizeBound script limit -> do
       let estimate = scriptSize script
       let diff = limit - estimate
