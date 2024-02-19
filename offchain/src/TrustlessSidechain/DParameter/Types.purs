@@ -7,10 +7,8 @@ import Contract.Prelude
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Integer)
   )
 import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2

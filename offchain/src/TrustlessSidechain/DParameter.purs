@@ -8,7 +8,6 @@ import Contract.Prelude
 import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
-  , Redeemer(Redeemer)
   , fromData
   , toData
   , unitRedeemer
