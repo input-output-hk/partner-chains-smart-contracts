@@ -66,6 +66,7 @@ data EndpointResp
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
+  | InitTokensStatusResp --JSTOLAREK: finish this
   | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -245,6 +246,11 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                       sidechainAddresses.mintingPolicies
                   )
               )
+          ]
+    InitTokensStatusResp →
+      J.fromObject $
+        Object.fromFoldable
+          [ "JSTOLAREK" /\ J.fromString "TODO"
           ]
     SaveCheckpointResp { transactionId } →
       J.fromObject $ Object.fromFoldable

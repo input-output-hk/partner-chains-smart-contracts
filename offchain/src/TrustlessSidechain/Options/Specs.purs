@@ -102,6 +102,7 @@ import TrustlessSidechain.Options.Types
       , GetAddrs
       , CandidiatePermissionTokenAct
       , Init
+      , InitTokensStatus
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -150,6 +151,10 @@ optSpec maybeConfig =
     [ command "init"
         ( info (withCommonOpts maybeConfig initSpec)
             (progDesc "Initialise sidechain")
+        )
+    , command "init-tokens-status"
+        ( info (withCommonOpts maybeConfig (pure InitTokensStatus))
+            (progDesc "List owned init tokens")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)

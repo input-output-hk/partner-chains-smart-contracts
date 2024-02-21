@@ -204,6 +204,7 @@ data TxEndpoint
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
+  | InitTokensStatus
   | SaveCheckpoint
       { committeeSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))

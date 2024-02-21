@@ -34,6 +34,7 @@ import TrustlessSidechain.EndpointResp
       , CommitteeHashResp
       , SaveRootResp
       , InitResp
+      , InitTokensStatusResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -90,6 +91,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeHash
       , SaveRoot
       , Init
+      , InitTokensStatus
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion
@@ -391,6 +393,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainAddresses
           , initTransactionIds: map unwrap initTransactionIds
           }
+
+      InitTokensStatus → do
+        getInitTokenInfo scParams
+        --JSTOLAREK: finish this
+        pure InitTokensStatusResp
 
       CommitteeHandover
         { merkleRoot

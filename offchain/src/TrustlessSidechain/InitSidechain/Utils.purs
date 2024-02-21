@@ -2,15 +2,17 @@ module TrustlessSidechain.InitSidechain.Utils
   ( initTokenCurrencyInfo
   , mintOneInitToken
   , burnOneInitToken
+  , getInitTokenInfo
   ) where
 
 import Contract.Prelude
 
+import Contract.AssocMap as AssocMap
 import Contract.Monad (Contract)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value (TokenName)
+import Contract.Value (TokenName, getValue)
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenRedeemer(MintInitToken, BurnInitToken)
   )
@@ -23,6 +25,7 @@ import TrustlessSidechain.Utils.LookupsAndConstraints
   ( burnOneToken
   , mintOneToken
   )
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(InitTokenPolicy)
   )
@@ -58,3 +61,15 @@ burnOneInitToken ∷
     }
 burnOneInitToken sp tn =
   burnOneToken tn (Redeemer $ toData BurnInitToken) <$> initTokenCurrencyInfo sp
+
+getInitTokenInfo ∷ SidechainParams → Contract Unit
+getInitTokenInfo sidechainParams = do
+  -- Grab UTxOs we have at our own wallet
+  ownValue ← getOwnUTxOsTotalValue
+
+  -- Take only the init tokens
+  { currencySymbol } ← initTokenCurrencyInfo sidechainParams
+
+  case AssocMap.lookup currencySymbol (getValue ownValue) of
+    Nothing → pure unit
+    Just _ → pure unit
