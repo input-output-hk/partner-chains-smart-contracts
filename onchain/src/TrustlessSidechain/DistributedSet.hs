@@ -69,7 +69,6 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.Utils (
   mkUntypedMintingPolicy,
-  mkUntypedValidator,
   oneTokenBurned,
  )
 
@@ -370,7 +369,7 @@ insertNode str node
 --   ERROR-DS-INSERT-VALIDATOR-10: Value does not contain exactly one currency
 --   symbol, i.e. it either contains none or more than one.
 {-# INLINEABLE mkInsertValidator #-}
-mkInsertValidator :: Ds -> DsDatum -> () -> ScriptContext -> Bool
+mkInsertValidator :: Ds -> () -> () -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
       ( \nNodes ->
@@ -493,8 +492,8 @@ mkDsConfPolicy itac _red ctx =
     && traceIfFalse "ERROR-DS-CONF-POLICY-02" mintingChecks
   where
     -- Aliases
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    mint :: Value
+    mint = txInfoMint . scriptContextTxInfo $ ctx
 
     ownCurSymb :: CurrencySymbol
     ownCurSymb = Contexts.ownCurrencySymbol ctx
@@ -502,13 +501,13 @@ mkDsConfPolicy itac _red ctx =
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
-        info
+        mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
     mintingChecks :: Bool
     mintingChecks
-      | Just tns <- AssocMap.lookup ownCurSymb $ getValue (txInfoMint info)
+      | Just tns <- AssocMap.lookup ownCurSymb $ getValue mint
         , [(tn, amt)] <- AssocMap.toList tns
         , tn == dsConfTokenName
         , amt == 1 =
@@ -610,7 +609,7 @@ mkDsKeyPolicy dskm _red ctx = case ins of
 -- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
 -- needed for ctl)
 mkInsertValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkInsertValidatorUntyped = mkUntypedValidator . mkInsertValidator . PlutusTx.unsafeFromBuiltinData
+mkInsertValidatorUntyped ds _dat _red ctx = check $ mkInsertValidator (PlutusTx.unsafeFromBuiltinData ds) () () (PlutusTx.unsafeFromBuiltinData ctx)
 
 -- | 'serialisableInsertValidator' is a serialisable version of the validator
 -- (this is needed for ctl)

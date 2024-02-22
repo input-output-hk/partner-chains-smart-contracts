@@ -221,20 +221,20 @@ mkCommitteeOraclePolicy itac _red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-02" checkMintedAmount
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    mint :: Value
+    mint = txInfoMint . scriptContextTxInfo $ ctx
 
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
-        info
+        mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue mint of
         Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 

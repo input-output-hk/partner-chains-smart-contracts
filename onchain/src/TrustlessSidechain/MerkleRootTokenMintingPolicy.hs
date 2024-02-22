@@ -179,27 +179,3 @@ mkMintingPolicyUntyped sp versioningConfig =
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy =
   fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
-
--- Helpers
-
-{-# INLINE flattenValue #-}
-flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
-flattenValue = go . AssocMap.toList . getValue
-  where
-    go ::
-      [(CurrencySymbol, AssocMap.Map TokenName Integer)] ->
-      [(CurrencySymbol, TokenName, Integer)]
-    go = \case
-      [] -> []
-      ((cs, innerMap) : xs) -> goInner cs xs . AssocMap.toList $ innerMap
-    goInner ::
-      CurrencySymbol ->
-      [(CurrencySymbol, AssocMap.Map TokenName Integer)] ->
-      [(TokenName, Integer)] ->
-      [(CurrencySymbol, TokenName, Integer)]
-    goInner cs carryBack = \case
-      [] -> go carryBack
-      ((tn, i) : xs) ->
-        if i == 0
-          then goInner cs carryBack xs
-          else (cs, tn, i) : goInner cs carryBack xs

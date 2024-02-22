@@ -192,12 +192,12 @@ serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPol
 -- to check, wether user has FUEL Proxy tokens or not, because cardano itself
 -- won't allow for burning tokens, that the user doesn't have.
 {-# INLINEABLE mkBurningPolicy #-}
-mkBurningPolicy :: SidechainParams -> () -> ScriptContext -> Bool
-mkBurningPolicy _ () _ = True
+mkBurningPolicy :: () -> () -> () -> Bool
+mkBurningPolicy _ _ _ = True
 
 {-# INLINEABLE mkBurningPolicyUntyped #-}
 mkBurningPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkBurningPolicyUntyped = mkUntypedMintingPolicy . mkBurningPolicy . unsafeFromBuiltinData
+mkBurningPolicyUntyped _ _ _ = check $ mkBurningPolicy () () ()
 
 serialisableBurningPolicy :: Script
 serialisableBurningPolicy = fromCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])

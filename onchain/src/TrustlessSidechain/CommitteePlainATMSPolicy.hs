@@ -25,6 +25,7 @@ import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import PlutusTx.List qualified as List
 import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
@@ -200,9 +201,11 @@ verifyPlainMultisig verifySig pubKeys enough (LedgerBytes message) signatures = 
   where
     go :: [LedgerBytes] -> [LedgerBytes] -> Integer -> Bool
     go !pks !sigs !counted = case sigs of
+      -- Enough signatures are verified, we're done
+      _ | countedEnough -> True
       -- All signatures are verified, we're done
-      [] -> counted >= enough
-      (LedgerBytes s : ss) -> case pks of
+      [] -> countedEnough
+      LedgerBytes s : ss -> case pks of
         -- Unverified signature after checking all cases, give up
         [] -> False
         (LedgerBytes pk : pks') ->
@@ -211,6 +214,8 @@ verifyPlainMultisig verifySig pubKeys enough (LedgerBytes message) signatures = 
               go pks' ss (counted + 1)
             else -- Not found a verifying key yet, try again with the next one
               go pks' sigs counted
+      where
+        countedEnough = counted >= enough
 
 -- | 'aggregateKeys' aggregates a list of public keys into a single
 -- committee hash by concatenating them altogether, and taking the hash
@@ -218,7 +223,9 @@ verifyPlainMultisig verifySig pubKeys enough (LedgerBytes message) signatures = 
 -- We call the output of this function an /aggregate public key/.
 {-# INLINEABLE aggregateKeys #-}
 aggregateKeys :: [LedgerBytes] -> ATMSPlainAggregatePubKey
-aggregateKeys = ATMSPlainAggregatePubKey . LedgerBytes . Builtins.blake2b_256 . mconcat . fmap getLedgerBytes
+aggregateKeys = ATMSPlainAggregatePubKey . LedgerBytes . Builtins.blake2b_256 . concatLedgerBytes
+  where
+    concatLedgerBytes = List.foldr (mappend . getLedgerBytes) mempty
 
 {- Note [Aggregate Keys Append Scheme]
  Potential optimizations: instead of doing the concatenated hash, we could

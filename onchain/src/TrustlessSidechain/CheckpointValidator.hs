@@ -130,11 +130,8 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
     containsCommitteeNft txIn =
       let resolvedOutput = txInInfoResolved txIn
           outputValue = txOutValue resolvedOutput
-       in case AssocMap.lookup committeeOracleCurrencySymbol $ getValue outputValue of
-            Just tns -> case AssocMap.lookup (TokenName "") tns of
-              Just amount -> amount == 1
-              Nothing -> False
-            Nothing -> False
+          amount = Value.valueOf outputValue committeeOracleCurrencySymbol (TokenName "")
+       in amount == 1
 
     -- Extract the UpdateCommitteeDatum from the list of input transactions
     extractCommitteeDatum :: [TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
@@ -171,11 +168,9 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
               , blockNumber = get @"blockNumber" outputDatum
               , sidechainEpoch = get @"sidechainEpoch" committeeDatum
               }
-       in case AssocMap.lookup committeeCertificateVerificationCurrencySymbol $ getValue minted of
-            Just tns -> case AssocMap.lookup (TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)) tns of
-              Just amount -> amount > 0
-              Nothing -> False
-            Nothing -> False
+          tokenName = TokenName $ Builtins.blake2b_256 (serializeCheckpointMsg message)
+          amount = Value.valueOf minted committeeCertificateVerificationCurrencySymbol tokenName
+       in amount > 0
 
 -- | 'initCheckpointMintTn'  is the token name of the NFT which identifies
 -- the utxo which contains the checkpoint. We use an empty bytestring for
@@ -205,20 +200,20 @@ mkCheckpointPolicy itac _red ctx =
   traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    mint :: Value
+    mint = txInfoMint . scriptContextTxInfo $ ctx
 
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
-        info
+        mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue $ txInfoMint info of
+      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue mint of
         Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
         _ -> False
 

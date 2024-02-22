@@ -25,7 +25,6 @@ import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   ScriptContext,
   TokenName,
-  TxInfo (txInfoMint),
   Value,
   getValue,
  )
@@ -40,17 +39,15 @@ fromSingleton msg _ = traceError msg
 -- | Get amount of given currency in a value, ignoring token names.
 {-# INLINEABLE currencySymbolValueOf #-}
 currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
-currencySymbolValueOf v c = case Map.lookup c (getValue v) of
-  Nothing -> 0
-  Just x -> sum (Map.elems x)
+currencySymbolValueOf v c = maybe 0 sum (Map.lookup c (getValue v))
 
 -- | Check that exactly on specified asset was minted by a transaction.  Note
 -- that transaction is also allowed to mint/burn tokens of the same
 -- 'CurrencySymbol', but with different 'TokenName's.
 {-# INLINEABLE oneTokenMinted #-}
-oneTokenMinted :: TxInfo -> CurrencySymbol -> TokenName -> Bool
-oneTokenMinted txInfo cs tn =
-  assetClassValueOf (txInfoMint txInfo) (AssetClass (cs, tn)) == 1
+oneTokenMinted :: Value -> CurrencySymbol -> TokenName -> Bool
+oneTokenMinted txInfoMint cs tn =
+  assetClassValueOf txInfoMint (AssetClass (cs, tn)) == 1
 
 -- | Check that exactly on specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
@@ -58,9 +55,9 @@ oneTokenMinted txInfo cs tn =
 -- so that we permit multiple 'InitToken's with different names burned in the
 -- same transaction.
 {-# INLINEABLE oneTokenBurned #-}
-oneTokenBurned :: TxInfo -> CurrencySymbol -> TokenName -> Bool
-oneTokenBurned txInfo cs tn =
-  assetClassValueOf (txInfoMint txInfo) (AssetClass (cs, tn)) == -1
+oneTokenBurned :: Value -> CurrencySymbol -> TokenName -> Bool
+oneTokenBurned txInfoMint cs tn =
+  assetClassValueOf txInfoMint (AssetClass (cs, tn)) == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types

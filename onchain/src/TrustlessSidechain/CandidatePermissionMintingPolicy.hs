@@ -8,14 +8,14 @@ module TrustlessSidechain.CandidatePermissionMintingPolicy (
 
 import Plutus.V2.Ledger.Api (
   Script,
-  ScriptContext (scriptContextTxInfo),
-  TxInfo,
+  Value,
   fromCompiledCode,
  )
 import PlutusTx qualified
+import PlutusTx.Builtins qualified as PtxBI
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy, oneTokenBurned)
+import TrustlessSidechain.Utils (oneTokenBurned)
 
 -- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 --
@@ -28,26 +28,26 @@ import TrustlessSidechain.Utils (mkUntypedMintingPolicy, oneTokenBurned)
 mkCandidatePermissionMintingPolicy ::
   InitTokenAssetClass ->
   () ->
-  ScriptContext ->
+  Value ->
   Bool
-mkCandidatePermissionMintingPolicy itac () ctx =
+mkCandidatePermissionMintingPolicy itac () mint =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" initTokenBurned
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
-
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
-        info
+        mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
+getTxInfoMintFromScriptContext :: BuiltinData -> Value
+getTxInfoMintFromScriptContext bd = PlutusTx.unsafeFromBuiltinData mint
+  where
+    tinfo = head . snd . PtxBI.unsafeDataAsConstr $ bd -- 1st field of ScriptContext is TxInfo
+    mint = snd (PtxBI.unsafeDataAsConstr tinfo) !! 4 -- 5th field of TxInfo is txInfoMint
+
 mkCandidatePermissionMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCandidatePermissionMintingPolicyUntyped =
-  mkUntypedMintingPolicy
-    . mkCandidatePermissionMintingPolicy
-    . PlutusTx.unsafeFromBuiltinData
+mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass _ scriptContext = check $ mkCandidatePermissionMintingPolicy (PlutusTx.unsafeFromBuiltinData initTokenAssetClass) () (getTxInfoMintFromScriptContext scriptContext)
 
 serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =

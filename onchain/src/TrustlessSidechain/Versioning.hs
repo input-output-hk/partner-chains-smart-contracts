@@ -60,6 +60,7 @@ import Plutus.V2.Ledger.Api (
   ScriptPurpose (Minting, Spending),
   TokenName (TokenName),
   TxInInfo (TxInInfo),
+  TxInfo (txInfoMint),
   TxOut (TxOut),
   ValidatorHash (ValidatorHash),
   fromCompiledCode,
@@ -329,7 +330,7 @@ mkVersionOraclePolicy
       initTokenBurned :: Bool
       initTokenBurned =
         oneTokenBurned
-          txInfo
+          (txInfoMint txInfo)
           (get @"initTokenCurrencySymbol" itac)
           (get @"initTokenName" itac)
 

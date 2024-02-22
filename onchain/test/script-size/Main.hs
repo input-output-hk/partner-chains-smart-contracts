@@ -57,6 +57,10 @@ main =
             FUEL.serialisableMintingPolicy
             3_234
         , scriptFitsInto
+            "mkBurningPolicy (FUEL) serialized"
+            FUEL.serialisableBurningPolicy
+            8
+        , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
             2_607
@@ -67,11 +71,11 @@ main =
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            1_639
+            406
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            1_825
+            1_818
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
@@ -79,19 +83,19 @@ main =
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            3_242
+            3_103
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            1_803
+            1_796
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_763
+            2_731
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_763
+            2_731
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
@@ -99,15 +103,15 @@ main =
         , scriptFitsInto
             "mkDParameterPolicyCode (DParameter) serialized"
             DParameter.serialisableMintingPolicy
-            2_136
+            2_104
         , scriptFitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
             FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_493
+            2_461
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-            1_639
+            406
         , scriptFitsInto
             "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableValidator
@@ -115,7 +119,7 @@ main =
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_192
+            3_186
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
@@ -130,11 +134,11 @@ main =
         [ scriptFitsInto
             "mkInsertValidator (serialized)"
             DS.serialisableInsertValidator
-            2_894
+            2_863
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            1_801
+            1_793
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             DS.serialisableDsKeyPolicy
