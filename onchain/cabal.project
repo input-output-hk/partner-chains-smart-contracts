@@ -77,29 +77,6 @@ source-repository-package
       core
 
 source-repository-package
-   type: git
-   location: https://github.com/input-output-hk/cardano-node
-   tag: 1.35.4
-   --sha256: 1j01m2cp2vdcl26zx9xmipr551v3b2rz9kfn9ik8byfwj1z7652r
-   subdir:
-     cardano-api
-     cardano-cli
-     cardano-client-demo
-     cardano-git-rev
-     cardano-node
-     cardano-node-capi
-     cardano-node-chairman
-     cardano-submit-api
-     cardano-testnet
-     cardano-tracer
-     bench/cardano-topology
-     bench/locli
-     bench/tx-generator
-     trace-dispatcher
-     trace-resources
-     trace-forward
-
-source-repository-package
   type: git
   location: https://github.com/denisshevchenko/threepenny-gui
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
