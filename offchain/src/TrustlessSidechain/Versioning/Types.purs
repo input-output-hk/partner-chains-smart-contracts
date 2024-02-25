@@ -4,6 +4,7 @@ module TrustlessSidechain.Versioning.Types
   , toScriptHash
   , toPlutusScript
   , VersionOracle(..)
+  , VersionOracleDatum(..)
   , VersionOracleConfig(..)
   , VersionOraclePolicyRedeemer(..)
   , VersionOracleValidatorRedeemer(..)
@@ -35,6 +36,29 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId(..)) as ScriptId
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.
+newtype VersionOracleDatum = VersionOracleDatum
+  { versionOracle ∷ VersionOracle -- ^ unique identifier of the versioned script
+  , versionCurrencySymbol ∷ CurrencySymbol -- ^ currency symbol of the version oracle policy
+  }
+
+derive instance Eq VersionOracleDatum
+derive instance Generic VersionOracleDatum _
+instance Show VersionOracleDatum where
+  show = genericShow
+
+instance FromData VersionOracleDatum where
+  fromData = productFromData2
+    ( \o c → VersionOracleDatum
+        { versionOracle: o
+        , versionCurrencySymbol: c
+        }
+    )
+
+instance ToData VersionOracleDatum where
+  toData (VersionOracleDatum { versionOracle, versionCurrencySymbol }) =
+    productToData2 versionOracle versionCurrencySymbol
+
+-- VersionOracle uniquiely identifies a versioned script.
 newtype VersionOracle = VersionOracle
   { version ∷ BigInt -- ^ version of the protocol
   , scriptId ∷ ScriptId.ScriptId -- ^ unique identifier of the validator

@@ -84,6 +84,7 @@ import TrustlessSidechain.Versioning.Types
   , ScriptId
   , VersionOracle(VersionOracle)
   , VersionOracleConfig(VersionOracleConfig)
+  , VersionOracleDatum(VersionOracleDatum)
   , VersionOraclePolicyRedeemer
       ( MintVersionOracle
       , InitializeVersionOracle
@@ -130,16 +131,20 @@ versionOraclePolicy sp = do
       { initTokenCurrencySymbol: currencySymbol
       , initTokenName: versionOracleInitTokenName
       }
-  mkMintingPolicyWithParams VersionOraclePolicy [ toData sp, toData itac ]
+  validatorAddress ← (toAddress <<< validatorHash) =<< versionOracleValidator sp
+  mkMintingPolicyWithParams VersionOraclePolicy
+    [ toData sp
+    , toData itac
+    , toData validatorAddress
+    ]
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
 -- | required parameters.
 versionOracleValidator ∷
   SidechainParams →
-  CurrencySymbol →
   Contract Validator
-versionOracleValidator sp cs =
-  mkValidatorWithParams VersionOracleValidator [ toData sp, toData cs ]
+versionOracleValidator sp =
+  mkValidatorWithParams VersionOracleValidator [ toData sp ]
 
 getVersionOraclePolicy ∷
   SidechainParams →
@@ -190,7 +195,7 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       -----------------------------------
       { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
         getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
+      vValidator ← versionOracleValidator sp
 
       -- Prepare datum and other boilerplate
       -----------------------------------
@@ -200,6 +205,8 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
           { version: BigInt.fromInt ver
           , scriptId
           }
+        versionOracleDatum = VersionOracleDatum
+          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           one
@@ -230,7 +237,7 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
           -- and reference script attached.
           Constraints.mustPayToScriptWithScriptRef
             (validatorHash vValidator)
-            (Datum $ toData versionOracle)
+            (Datum $ toData versionOracleDatum)
             DatumInline
             (PlutusScriptRef versionedScript)
             oneVersionOracleAsset
@@ -264,7 +271,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       -----------------------------------
       { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
         getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
+      vValidator ← versionOracleValidator sp
 
       -- Prepare datum and other boilerplate
       -----------------------------------
@@ -274,6 +281,8 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
           { version: BigInt.fromInt ver
           , scriptId
           }
+        versionOracleDatum = VersionOracleDatum
+          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           one
@@ -310,7 +319,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
           -- and reference script attached.
           Constraints.mustPayToScriptWithScriptRef
             (validatorHash vValidator)
-            (Datum $ toData versionOracle)
+            (Datum $ toData versionOracleDatum)
             DatumInline
             (PlutusScriptRef versionedScript)
             oneVersionOracleAsset
@@ -335,7 +344,7 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
   -----------------------------------
   { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
     getVersionOraclePolicy sp
-  vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
+  vValidator ← versionOracleValidator sp
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
@@ -371,7 +380,10 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
                       amount
                       versionOracleCurrencySymbol
                       versionOracleTokenName
-                  ) == BigInt.fromInt 1 && Just versionOracle == fromData datum'
+                  ) == BigInt.fromInt 1 && case fromData datum' of
+                    Just (VersionOracleDatum { versionOracle: vO })
+                    → vO == versionOracle
+                    _ → false
                 _ → false
           )
           $ Map.toUnfoldable scriptUtxos
@@ -430,7 +442,7 @@ updateVersionLookupsAndConstraints
       -- Prepare versioning scripts and tokens
       -----------------------------------
       { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp versionOracleCurrencySymbol
+      vValidator ← versionOracleValidator sp
 
       -- Get UTxOs located at the version oracle validator script address
       -----------------------------------
@@ -448,6 +460,10 @@ updateVersionLookupsAndConstraints
         newVersionOracle = VersionOracle
           { version: BigInt.fromInt newVersion
           , scriptId
+          }
+        newVersionOracleDatum = VersionOracleDatum
+          { versionOracle: newVersionOracle
+          , versionCurrencySymbol: versionOracleCurrencySymbol
           }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
@@ -471,9 +487,10 @@ updateVersionLookupsAndConstraints
                           amount
                           versionOracleCurrencySymbol
                           versionOracleTokenName
-                      ) == BigInt.fromInt 1
-                        && Just oldVersionOracle
-                        == fromData datum'
+                      ) == BigInt.fromInt 1 && case fromData datum' of
+                        Just (VersionOracleDatum { versionOracle })
+                        → versionOracle == oldVersionOracle
+                        _ → false
                     _ → false
               )
               $ Map.toUnfoldable scriptUtxos
@@ -502,7 +519,7 @@ updateVersionLookupsAndConstraints
             -- and reference script attached.
             <> Constraints.mustPayToScriptWithScriptRef
               (validatorHash vValidator)
-              (Datum $ toData newVersionOracle)
+              (Datum $ toData newVersionOracleDatum)
               DatumInline
               (PlutusScriptRef versionedScript)
               oneVersionOracleAsset
@@ -518,7 +535,7 @@ getVersionedScriptRefUtxo ∷
 getVersionedScriptRefUtxo sp versionOracle = do
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
   versionOracleValidatorHash ←
-    validatorHash <$> versionOracleValidator sp versionOracleCurrencySymbol
+    validatorHash <$> versionOracleValidator sp
   valAddr ← toAddress versionOracleValidatorHash
 
   versionOracleUtxos ← utxosAt valAddr
@@ -533,8 +550,15 @@ getVersionedScriptRefUtxo sp versionOracle = do
           }
       ) =
       Array.elem versionOracleCurrencySymbol (Value.symbols value)
-        && fromData datum
-        == Just versionOracle
+        && case fromData datum of
+          Just
+            ( VersionOracleDatum
+                { versionOracle: vO
+                , versionCurrencySymbol: vC
+                }
+            )
+          → vO == versionOracle && vC == versionOracleCurrencySymbol
+          _ → false
     correctOutput _ = false
 
     getVersionFromOutput
@@ -543,7 +567,7 @@ getVersionedScriptRefUtxo sp versionOracle = do
               { datum: (OutputDatum (Datum datum))
               }
           }
-      ) = fromData datum ∷ Maybe VersionOracle
+      ) = fromData datum ∷ Maybe VersionOracleDatum
     getVersionFromOutput _ = Nothing
 
   txInput /\ txOutput ←

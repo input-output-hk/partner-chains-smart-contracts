@@ -168,7 +168,7 @@ getSidechainAddresses
   dsConfValidator ← DistributedSet.dsConfValidator ds
 
   veresionOracleValidator ←
-    versionOracleValidator sidechainParams versionOracleCurrencySymbol
+    versionOracleValidator sidechainParams
 
   { versionedPolicies, versionedValidators } ←
     Versioning.getVersionedPoliciesAndValidators
