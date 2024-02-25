@@ -55,11 +55,11 @@ main =
         [ scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            3_127
+            3_234
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            2_500
+            2_607
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
@@ -75,11 +75,11 @@ main =
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            2_534
+            2_641
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            3_136
+            3_242
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
@@ -87,11 +87,11 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_656
+            2_763
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_656
+            2_763
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
@@ -103,7 +103,7 @@ main =
         , scriptFitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
             FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_386
+            2_493
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
@@ -115,11 +115,11 @@ main =
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            2_849
+            3_088
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
-            3_061
+            3_258
         , scriptFitsInto
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
