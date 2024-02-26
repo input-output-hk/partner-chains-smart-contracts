@@ -378,10 +378,13 @@ testScenarioFailure =
               balanceSignAndSubmit "Test: mint fuel via v1 proxy"
 
           -- Update scripts, invalidating version 1 policies
-          void $ Versioning.updateVersion
+          void $ Versioning.insertVersion
+            { sidechainParams, atmsKind: (unwrap initScParams).initATMSKind }
+            2
+
+          void $ Versioning.invalidateVersion
             { sidechainParams, atmsKind: (unwrap initScParams).initATMSKind }
             1
-            2
 
           -- Attempt to burn fuel using invalidated version 1 policy.  Should
           -- fail.

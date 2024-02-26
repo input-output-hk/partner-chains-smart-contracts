@@ -7,7 +7,6 @@ module TrustlessSidechain.Versioning.Utils
   , initializeVersionLookupsAndConstraints
   , insertVersionLookupsAndConstraints
   , invalidateVersionLookupsAndConstraints
-  , updateVersionLookupsAndConstraints
   , versionOraclePolicy
   , versionOracleTokenName
   , versionOracleInitTokenName
@@ -90,7 +89,6 @@ import TrustlessSidechain.Versioning.Types
       , InitializeVersionOracle
       , BurnVersionOracle
       )
-  , VersionOracleValidatorRedeemer(UpdateVersionOracle, InvalidateVersionOracle)
   , toPlutusScript
   , toScriptHash
   )
@@ -409,123 +407,10 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
 
           Constraints.mustSpendScriptOutput
             txInput
-            (Redeemer $ toData (InvalidateVersionOracle versionOracle))
+            (Redeemer $ toData versionOracle)
         <> governanceAuthorityConstraints
 
   pure { lookups, constraints }
-
--- | Take a script ID and a script, and replace already existing old version of
--- | that scrript with a new version.  Old script is no longer available in the
--- | versioning system and is replaced by the new version.  No sanity checks on
--- | the version numbers are performed.
-updateVersionLookupsAndConstraints ∷
-  ∀ a.
-  Versionable a ⇒
-  SidechainParams →
-  Int → -- ^ Old script version
-  Int → -- ^ New script version
-  Tuple ScriptId a → -- ^ Script ID and the script itself
-  Contract
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-updateVersionLookupsAndConstraints
-  sp
-  oldVersion
-  newVersion
-  (Tuple scriptId script) =
-  case toPlutusScript script of
-    Nothing → -- Special case for minting policies that use NativeScript.
-
-      pure { lookups: mempty, constraints: mempty }
-    Just versionedScript → do
-      -- Prepare versioning scripts and tokens
-      -----------------------------------
-      { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp
-
-      -- Get UTxOs located at the version oracle validator script address
-      -----------------------------------
-      versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
-      scriptUtxos ← utxosAt versionOracleValidatorAddr
-
-      -- Prepare datum and other boilerplate
-      -----------------------------------
-      let
-        versionedScriptHash = toScriptHash script
-        oldVersionOracle = VersionOracle
-          { version: BigInt.fromInt oldVersion
-          , scriptId
-          }
-        newVersionOracle = VersionOracle
-          { version: BigInt.fromInt newVersion
-          , scriptId
-          }
-        newVersionOracleDatum = VersionOracleDatum
-          { versionOracle: newVersionOracle
-          , versionCurrencySymbol: versionOracleCurrencySymbol
-          }
-        oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
-          versionOracleTokenName
-          one
-        SidechainParams { governanceAuthority } = sp
-
-      -- Find UTxO that stores script to be updated.  UTxO must contain a single
-      -- version oracle token equipped with VersionOracle datum that matches
-      -- script ID and version to be removed.
-      -----------------------------------
-      (txInput /\ txOutput) ←
-        liftM (error "cannot find versioned utxo")
-          ( Array.find
-              ( \(_ /\ TransactionOutputWithRefScript { output }) →
-                  case output of
-                    TransactionOutput
-                      { amount
-                      , datum: OutputDatum (Datum datum')
-                      } →
-                      ( Value.valueOf
-                          amount
-                          versionOracleCurrencySymbol
-                          versionOracleTokenName
-                      ) == BigInt.fromInt 1 && case fromData datum' of
-                        Just (VersionOracleDatum { versionOracle })
-                        → versionOracle == oldVersionOracle
-                        _ → false
-                    _ → false
-              )
-              $ Map.toUnfoldable scriptUtxos
-          )
-
-      { lookups: governanceAuthorityLookups
-      , constraints: governanceAuthorityConstraints
-      } ← Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
-
-      let
-        lookups ∷ ScriptLookups Void
-        lookups = Lookups.validator vValidator
-          <> Lookups.unspentOutputs (Map.singleton txInput txOutput)
-          <> governanceAuthorityLookups
-
-        constraints ∷ TxConstraints Void Void
-        constraints =
-          Constraints.mustSpendScriptOutput
-            txInput
-            ( Redeemer $ toData
-                ( UpdateVersionOracle newVersionOracle
-                    versionedScriptHash
-                )
-            )
-            -- Pay versioning token to the versioning script with datum
-            -- and reference script attached.
-            <> Constraints.mustPayToScriptWithScriptRef
-              (validatorHash vValidator)
-              (Datum $ toData newVersionOracleDatum)
-              DatumInline
-              (PlutusScriptRef versionedScript)
-              oneVersionOracleAsset
-            <> governanceAuthorityConstraints
-
-      pure { lookups, constraints }
 
 -- | Find UTxO that stores a versioned reference script
 getVersionedScriptRefUtxo ∷

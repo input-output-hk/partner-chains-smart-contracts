@@ -143,7 +143,6 @@ import TrustlessSidechain.Versioning.Types
       , MintVersionOracle
       , BurnVersionOracle
       )
-  , VersionOracleValidatorRedeemer(InvalidateVersionOracle, UpdateVersionOracle)
   )
 
 tests ∷ WrappedTests
@@ -201,8 +200,6 @@ tests = pureGroup "Data roundtrip tests" $ do
     genVersionOracleConfig
   test "VersionOraclePolicyRedeemer" $ liftEffect $ toDataLaws testCount
     genVersionOraclePolicyRedeemer
-  test "VersionOracleValidatorRedeemer" $ liftEffect $ toDataLaws testCount
-    genVersionOracleValidatorRedeemer
   test "ATMSPlainSchnorrSecp256k1Multisignature" $ liftEffect $ toDataLaws
     testCount
     genATMSPlainSchnorrSecp256k1Multisignature
@@ -377,18 +374,6 @@ genVersionOraclePolicyRedeemer = QGen.oneOf $ NE.cons'
       ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
       pure $ MintVersionOracle versionOracle scriptHash
   , BurnVersionOracle <$> genVersionOracle
-  ]
-
-genVersionOracleValidatorRedeemer ∷ Gen VersionOracleValidatorRedeemer
-genVersionOracleValidatorRedeemer = QGen.oneOf $ NE.cons'
-  ( do
-      versionOracle ← genVersionOracle
-      pure $ InvalidateVersionOracle versionOracle
-  )
-  [ do
-      versionOracle ← genVersionOracle
-      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
-      pure $ UpdateVersionOracle versionOracle scriptHash
   ]
 
 genATMSPlainSchnorrSecp256k1Multisignature ∷

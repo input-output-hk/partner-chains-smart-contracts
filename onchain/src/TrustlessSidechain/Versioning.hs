@@ -18,7 +18,6 @@ module TrustlessSidechain.Versioning (
   VersionOracleDatum (..),
   VersionOracleConfig (..),
   VersionOraclePolicyRedeemer,
-  VersionOracleValidatorRedeemer,
   -- | Script IDs
   fuelMintingPolicyId,
   merkleRootTokenPolicyId,
@@ -68,7 +67,7 @@ import Plutus.V2.Ledger.Api (
   txInfoOutputs,
   txOutValue,
  )
-import Plutus.V2.Ledger.Contexts (getContinuingOutputs, txInfoReferenceInputs)
+import Plutus.V2.Ledger.Contexts (txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -274,25 +273,6 @@ PlutusTx.makeIsDataIndexed
   , ('BurnVersionOracle, 2)
   ]
 
--- | Redeemer for versioning oracle validator script.  Used when existing
--- versioning tokens are spent from the script, either to be burned or updated
--- with a new script and datum.
---
--- @since v5.0.0
-data VersionOracleValidatorRedeemer
-  = -- | Invalidate existing versioning token.
-    -- @since v5.0.0
-    InvalidateVersionOracle VersionOracle
-  | -- | Update existing versioning token.
-    -- @since v5.0.0
-    UpdateVersionOracle VersionOracle ScriptHash
-
-PlutusTx.makeIsDataIndexed
-  ''VersionOracleValidatorRedeemer
-  [ ('InvalidateVersionOracle, 0)
-  , ('UpdateVersionOracle, 1)
-  ]
-
 -- | Manages minting and burning of versioning tokens.  (Note that these are
 -- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
 -- versioning tokens during sidechain initialization, other than the usual
@@ -480,13 +460,13 @@ serialisableVersionOraclePolicy =
 mkVersionOracleValidator ::
   SidechainParams ->
   VersionOracleDatum ->
-  VersionOracleValidatorRedeemer ->
+  VersionOracle ->
   ScriptContext ->
   Bool
 mkVersionOracleValidator
   sp
   (VersionOracleDatum versionOracle currencySymbol)
-  (InvalidateVersionOracle versionOracle')
+  versionOracle'
   (ScriptContext txInfo (Spending _)) =
     traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
       && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
@@ -508,64 +488,8 @@ mkVersionOracleValidator
           | txOut <- txInfoOutputs txInfo
           , assetClassValueOf (txOutValue txOut) versionAsset > 0
           ]
-mkVersionOracleValidator
-  sp
-  (VersionOracleDatum versionOracle currencySymbol)
-  ( UpdateVersionOracle
-      newVersionOracle@(VersionOracle _ newScriptId)
-      newScriptHash
-    )
-  sc@(ScriptContext txInfo (Spending _)) =
-    traceIfFalse "ERROR-VERSION-ORACLE-04" signedByGovernanceAuthority
-      && fromSingleton "ERROR-VERSION-ORACLE-05" versionInputPresent
-      && fromSingleton "ERROR-VERSION-ORACLE-06" verifyOut
-    where
-      (VersionOracle oldVersion oldScriptId) = versionOracle
-
-      versionAsset :: AssetClass
-      versionAsset = AssetClass (currencySymbol, versionOracleTokenName)
-
-      -- Check that transaction was approved by governance authority
-      signedByGovernanceAuthority :: Bool
-      signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
-
-      -- Check that the script version to be invalidated is present in exactly
-      -- one transaction input.
-      versionInputPresent :: [Bool]
-      versionInputPresent =
-        [ True
-        | TxInInfo _ (TxOut _ value (OutputDatum (Datum datum)) _) <-
-            txInfoInputs txInfo
-        , Just (VersionOracleDatum (VersionOracle oldVersion' oldScriptId') _) <-
-            [PlutusTx.fromBuiltinData datum]
-        , -- Check we are invalidating correct token.
-        oldVersion' == oldVersion
-        , oldScriptId' == oldScriptId
-        , -- Check that this input contains exactly one version token.
-        assetClassValueOf value versionAsset == 1
-        ]
-
-      -- Check that this transaction produces exactly one output containing new
-      -- reference script with attached datum
-      verifyOut :: [Bool]
-      verifyOut =
-        [ True
-        | (TxOut _ value (OutputDatum (Datum datum)) (Just scriptHash')) <-
-            getContinuingOutputs sc
-        , Just (VersionOracleDatum versionOracle' _) <-
-            [PlutusTx.fromBuiltinData datum]
-        , -- Check that output contains correct version oracle and a reference
-        -- script with correct hash.
-        versionOracle' == newVersionOracle
-        , scriptHash' == newScriptHash
-        , -- Script ID must remain the same.
-        oldScriptId == newScriptId
-        , -- Check that this input contains exactly one version token.
-        assetClassValueOf value versionAsset == 1
-        ]
 mkVersionOracleValidator _ _ _ _ =
-  trace "ERROR-VERSION-ORACLE-07" False
+  trace "ERROR-VERSION-ORACLE-04" False
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::
