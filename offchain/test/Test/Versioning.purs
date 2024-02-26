@@ -46,7 +46,7 @@ tests = plutipGroup "Minting and burning versioning tokens" $ do
 
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
-  Mote.Monad.test "Insert new version, update it, and burn it"
+  Mote.Monad.test "Insert new version, then invalidate the old one"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
@@ -102,18 +102,16 @@ testScenarioSuccess =
             balanceSignAndSubmit "Test: insert validator version"
 
         void
-          $ Versioning.updateVersionLookupsAndConstraints
+          $ Versioning.insertVersionLookupsAndConstraints
               sidechainParams
-              1
               2
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
             balanceSignAndSubmit "Test: update policy version"
 
         void
-          $ Versioning.updateVersionLookupsAndConstraints
+          $ Versioning.insertVersionLookupsAndConstraints
               sidechainParams
-              1
               2
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
@@ -122,7 +120,7 @@ testScenarioSuccess =
         void
           $ Versioning.invalidateVersionLookupsAndConstraints
               sidechainParams
-              2
+              1
               MerkleRootTokenPolicy
           >>=
             balanceSignAndSubmit "Test: invalidate policy version"
@@ -130,7 +128,7 @@ testScenarioSuccess =
         void
           $ Versioning.invalidateVersionLookupsAndConstraints
               sidechainParams
-              2
+              1
               CommitteeCandidateValidator
           >>=
             balanceSignAndSubmit "Test: invalidate validator version"

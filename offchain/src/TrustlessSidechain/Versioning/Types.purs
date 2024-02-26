@@ -7,7 +7,6 @@ module TrustlessSidechain.Versioning.Types
   , VersionOracleDatum(..)
   , VersionOracleConfig(..)
   , VersionOraclePolicyRedeemer(..)
-  , VersionOracleValidatorRedeemer(..)
   ) where
 
 import Contract.Prelude
@@ -109,36 +108,6 @@ instance ToData VersionOraclePolicyRedeemer where
     Constr (BigNum.fromInt 1) [ toData vo, toData sh ]
   toData (BurnVersionOracle vo) =
     Constr (BigNum.fromInt 2) [ toData vo ]
-
--- | Redeemer for version oracle validator script.  Used when existing
--- | version tokens are spent from the script, either to be burned or updated
--- | with a new script and datum.
-data VersionOracleValidatorRedeemer
-  = -- | Invalidate existing version token.
-    InvalidateVersionOracle VersionOracle
-  | -- | Update existing version token.
-    UpdateVersionOracle VersionOracle ScriptHash
-
-derive instance Eq VersionOracleValidatorRedeemer
-
-derive instance Generic VersionOracleValidatorRedeemer _
-
-instance Show VersionOracleValidatorRedeemer where
-  show = genericShow
-
-instance FromData VersionOracleValidatorRedeemer where
-  fromData (Constr n [ vo ]) | n == (BigNum.fromInt 0) =
-    InvalidateVersionOracle <$> fromData vo
-  fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 1) =
-    UpdateVersionOracle <$> fromData vo <*> fromData sh
-  fromData _ = Nothing
-
-instance ToData VersionOracleValidatorRedeemer where
-  toData (InvalidateVersionOracle vo) = Constr (BigNum.fromInt 0) [ toData vo ]
-  toData (UpdateVersionOracle vo sh) = Constr (BigNum.fromInt 1)
-    [ toData vo
-    , toData sh
-    ]
 
 -- | Configuration of the versioning system.  Contains currency symbol of
 -- | VersionOraclePolicy tokens.  Required to identify version tokens that can

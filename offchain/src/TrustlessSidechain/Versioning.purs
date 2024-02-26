@@ -166,52 +166,20 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   } ← getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     newVersion
 
-  let
-    commonPolicies = Map.intersection newVersionedPolicies oldVersionedPolicies
-    commonValidators = Map.intersection newVersionedValidators
-      oldVersionedValidators
-
-  commonValidatorsTxIds ←
-    traverse
-      ( Utils.updateVersionLookupsAndConstraints sidechainParams oldVersion
-          newVersion >=>
-          Utils.Transaction.balanceSignAndSubmit
-            "Update common versioned validators"
-      )
-      $ Map.toUnfoldable commonValidators
-  commonPoliciesTxIds ←
-    traverse
-      ( Utils.updateVersionLookupsAndConstraints sidechainParams oldVersion
-          newVersion >=>
-          Utils.Transaction.balanceSignAndSubmit
-            "Update common versioned policies"
-      )
-      $ Map.toUnfoldable commonPolicies
-
-  let
-    uniqueNewPolicies = Map.difference newVersionedPolicies oldVersionedPolicies
-    uniqueNewValidators = Map.difference newVersionedValidators
-      oldVersionedValidators
-
-  uniqueNewValidatorsTxIds ←
+  newValidatorsTxIds ←
     traverse
       ( Utils.insertVersionLookupsAndConstraints sidechainParams newVersion >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned validators"
       )
-      $ Map.toUnfoldable uniqueNewValidators
-  uniqueNewPoliciesTxIds ←
+      $ Map.toUnfoldable newVersionedValidators
+  newPoliciesTxIds ←
     traverse
       ( Utils.insertVersionLookupsAndConstraints sidechainParams newVersion >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned policies"
       )
-      $ Map.toUnfoldable uniqueNewPolicies
+      $ Map.toUnfoldable newVersionedPolicies
 
-  let
-    uniqueOldPolicies = Map.difference oldVersionedPolicies newVersionedPolicies
-    uniqueOldValidators = Map.difference oldVersionedValidators
-      newVersionedValidators
-
-  uniqueOldValidatorsTxIds ←
+  oldValidatorsTxIds ←
     traverse
       ( Utils.invalidateVersionLookupsAndConstraints sidechainParams oldVersion
           >=>
@@ -219,22 +187,20 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
               "Update old versioned validators"
       )
       $ Array.fromFoldable
-      $ Map.keys uniqueOldValidators
-  uniqueOldPoliciesTxIds ←
+      $ Map.keys oldVersionedValidators
+  oldPoliciesTxIds ←
     traverse
       ( Utils.invalidateVersionLookupsAndConstraints sidechainParams oldVersion
           >=>
             Utils.Transaction.balanceSignAndSubmit "Update old versioned policies"
       )
       $ Array.fromFoldable
-      $ Map.keys uniqueOldPolicies
+      $ Map.keys oldVersionedPolicies
 
-  pure $ commonValidatorsTxIds
-    <> commonPoliciesTxIds
-    <> uniqueNewValidatorsTxIds
-    <> uniqueNewPoliciesTxIds
-    <> uniqueOldValidatorsTxIds
-    <> uniqueOldPoliciesTxIds
+  pure $ newValidatorsTxIds
+    <> newPoliciesTxIds
+    <> oldValidatorsTxIds
+    <> oldPoliciesTxIds
 
 getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
