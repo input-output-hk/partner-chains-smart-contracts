@@ -1,6 +1,7 @@
 module TrustlessSidechain.CandidatePermissionToken
   ( candidatePermissionCurrencyInfo
   , candidatePermissionTokenName
+  , candidatePermissionInitTokenName
   , CandidatePermissionTokenMintInfo
   , candidatePermissionTokenLookupsAndConstraints
   , runCandidatePermissionToken

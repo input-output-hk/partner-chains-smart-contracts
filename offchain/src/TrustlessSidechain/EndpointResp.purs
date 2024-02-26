@@ -6,14 +6,16 @@ module TrustlessSidechain.EndpointResp
 
 import Contract.Prelude
 
+import Contract.AssocMap as Plutus
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData (class ToData, PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray, byteArrayToHex)
-import Contract.Value (CurrencySymbol)
+import Contract.Value (CurrencySymbol, TokenName)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
+import Data.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
@@ -27,7 +29,10 @@ import TrustlessSidechain.MerkleTree
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (currencySymbolToHex)
-import TrustlessSidechain.Utils.Codecs (scParamsCodec)
+import TrustlessSidechain.Utils.Codecs
+  ( encodeInitTokenStatusData
+  , scParamsCodec
+  )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -118,6 +123,8 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | BurnNFTsResp
       { transactionId ∷ ByteArray }
+  | InitTokenStatusResp
+      { initTokenStatusData ∷ Plutus.Map TokenName BigInt }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -125,7 +132,18 @@ serialisePlutusDataToHex ∷ ∀ a. ToData a ⇒ a → String
 serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray <<<
   PlutusData.serializeData
 
--- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder
+-- Note [BigInt values and JSON]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- `BigInt` values are not supported in JSON and coercing them to
+-- `Number` can lead to loss of information. `Argonaut.Json` does not
+-- support `BigInt` encoding or decoding. Therefore, `BigInt` values
+-- are converted to strings before serializing to JSON. See the
+-- `BigInt` documentation at
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/
+
+-- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder.
+-- | See Note [BigInt values and JSON]
 endpointRespCodec ∷ CA.JsonCodec EndpointResp
 endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
   where
@@ -380,6 +398,13 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "BurnNFTs"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    InitTokenStatusResp
+      { initTokenStatusData } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "InitTokenStatus"
+        , "initTokenStatusData" /\ encodeInitTokenStatusData initTokenStatusData
         ]
 
 -- | Encode the endpoint response to a json object

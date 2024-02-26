@@ -17,6 +17,7 @@ module TrustlessSidechain.DistributedSet
   , dsConfValidator
   , dsConfCurrencyInfo
   , dsKeyPolicy
+  , dsInitTokenName
   , getDs
   , getDsKeyPolicy
   , findDsConfOutput

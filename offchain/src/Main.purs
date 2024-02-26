@@ -54,6 +54,7 @@ import TrustlessSidechain.EndpointResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
       , BurnNFTsResp
+      , InitTokenStatusResp
       )
   , stringifyEndpointResp
   )
@@ -66,7 +67,8 @@ import TrustlessSidechain.GetSidechainAddresses
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
-  ( initSidechain
+  ( getInitTokenStatus
+  , initSidechain
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -99,6 +101,7 @@ import TrustlessSidechain.Options.Types
       , UpdateDParameter
       , UpdatePermissionedCandidates
       , BurnNFTs
+      , InitTokenStatus
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -550,6 +553,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> BurnNFTsResp
+
+      InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

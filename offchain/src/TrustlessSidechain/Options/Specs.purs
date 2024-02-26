@@ -115,6 +115,7 @@ import TrustlessSidechain.Options.Types
       , UpdateDParameter
       , UpdatePermissionedCandidates
       , BurnNFTs
+      , InitTokenStatus
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -236,6 +237,10 @@ optSpec maybeConfig =
     , command "collect-garbage"
         ( info (withCommonOpts maybeConfig burnNFTsSpec)
             (progDesc "Burn unneccessary NFTs")
+        )
+    , command "init-token-status"
+        ( info (withCommonOpts maybeConfig initTokenStatusSpec)
+            (progDesc "List the number of each init token the wallet still holds")
         )
     ]
 
@@ -1144,6 +1149,9 @@ updatePermissionedCandidatesSpec = ado
 
 burnNFTsSpec ∷ Parser TxEndpoint
 burnNFTsSpec = pure BurnNFTs
+
+initTokenStatusSpec ∷ Parser TxEndpoint
+initTokenStatusSpec = pure InitTokenStatus
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado

@@ -5,11 +5,14 @@ module TrustlessSidechain.Utils.Codecs
   , atmsKindCodec
   , scParamsCodec
   , pubKeyHashCodec
+  , encodeInitTokenStatusData
   ) where
 
 import Contract.Prelude
 
+import Aeson as Aeson
 import Contract.Address (PubKeyHash)
+import Contract.AssocMap as Plutus.Map
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -20,10 +23,14 @@ import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
+import Contract.Value (TokenName)
 import Ctl.Internal.Serialization.Hash
   ( ed25519KeyHashFromBytes
   , ed25519KeyHashToBytes
   )
+import Data.Argonaut (Json)
+import Data.Argonaut.Core as J
+import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Codec.Argonaut as CA
@@ -31,6 +38,7 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
+import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
@@ -47,6 +55,16 @@ import TrustlessSidechain.Governance
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+
+-- Note [BigInt values and JSON]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- `BigInt` values are not supported in JSON and coercing them to
+-- `Number` can lead to loss of information. `Argonaut.Json` does not
+-- support `BigInt` encoding or decoding. Therefore conversions of
+-- `BigInt` values to JSON must compensate, for example by being partial
+-- or by first converting values to strings. See the `BigInt` documentation at
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
 byteArrayCodec ∷ CA.JsonCodec ByteArray
@@ -118,11 +136,12 @@ governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
   unwrap
   pubKeyHashCodec
 
+-- | See Note [BigInt values and JSON]
 scParamsCodec ∷ CA.JsonCodec SidechainParams
 scParamsCodec =
   wrapIso SidechainParams $
     ( CAR.object "sidechainParameters"
-        { chainId: chainIdCodec
+        { chainId: bigIntCodec
         , genesisUtxo: transactionInputCodec
         , thresholdNumerator:
             CA.prismaticCodec "thresholdNumerator"
@@ -137,15 +156,6 @@ scParamsCodec =
         , governanceAuthority: governanceAuthorityCodec
         }
     )
-  where
-  chainIdCodec ∷ CA.JsonCodec BigInt
-  chainIdCodec = CA.prismaticCodec "chainId"
-    (Just <<< BigInt.fromInt)
-    unsafeToInt
-    CA.int
-
-  unsafeToInt ∷ BigInt → Int
-  unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x
 
 -- | JSON codec for PubKeyHash.
 pubKeyHashCodec ∷ CA.JsonCodec PubKeyHash
@@ -153,3 +163,31 @@ pubKeyHashCodec = CA.prismaticCodec "PubKeyHash"
   (ed25519KeyHashFromBytes >=> wrap >>> pure)
   (unwrap <<< ed25519KeyHashToBytes <<< unwrap)
   byteArrayCodec
+
+-- | Json encoder for InitTokenStatusResp
+-- | See Note [BigInt values and JSON]
+-- | This function chooses to use unsafeToInt before converting to Number
+-- | since the BigInt values in all reasonable cases should be within the
+-- | range of Int.
+-- | TokenName is encoded as the defined in the EncodeAeson instance
+-- | provided in cardano-transaction-lib.
+encodeInitTokenStatusData ∷ Plutus.Map.Map TokenName BigInt → Json
+encodeInitTokenStatusData = J.fromObject <<< Object.fromFoldable <<< toKvs
+  where
+  toKvs m = Array.zipWith
+    ( \k v → (Aeson.stringifyAeson $ Aeson.encodeAeson k) /\
+        CA.encode bigIntCodec v
+    )
+    (Plutus.Map.keys m)
+    (Plutus.Map.values m)
+
+-- | JSON codec for `BigInt`.
+-- | See Note [BigInt values and JSON]
+bigIntCodec ∷ CA.JsonCodec BigInt
+bigIntCodec = CA.prismaticCodec "BigInt"
+  (Just <<< BigInt.fromInt)
+  unsafeToInt
+  CA.int
+
+unsafeToInt ∷ BigInt → Int
+unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x

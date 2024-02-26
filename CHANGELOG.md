@@ -9,6 +9,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
   * Added `use-candidate-permission-token` switch to `register` and `addresses`
     command.  Using this flag will assume usage of candidate permission tokens.
+  * Added CLI endpoint `init-token-status` to return all unspent init tokens
+    associated with the user's wallet.
 
 ## Changed
 

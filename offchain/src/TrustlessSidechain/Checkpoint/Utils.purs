@@ -7,6 +7,7 @@ module TrustlessSidechain.Checkpoint.Utils
   , findCheckpointUtxo
   , checkpointCurrencyInfo
   , checkpointAssetClass
+  , checkpointInitTokenName
   ) where
 
 import Contract.Prelude

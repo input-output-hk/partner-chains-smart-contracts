@@ -41,8 +41,7 @@ findUtxoByValueAt addr p = do
 
 getOwnUTxOsTotalValue ∷ Contract Value
 getOwnUTxOsTotalValue = do
-  ownAddr ← getOwnWalletAddress
-  ownUtxos ← Utxos.utxosAt ownAddr
+  ownUtxos ← getOwnUTxOs
   pure
     $ foldMap
         ( \( TransactionOutputWithRefScript
