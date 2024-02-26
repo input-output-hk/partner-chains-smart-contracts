@@ -115,11 +115,11 @@ main =
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_088
+            3_192
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
-            3_258
+            2_017
         , scriptFitsInto
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
