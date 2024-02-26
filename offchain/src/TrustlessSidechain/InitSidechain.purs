@@ -20,10 +20,13 @@ module TrustlessSidechain.InitSidechain
   , InitSidechainParams'
   , InitTokensParams
   , toSidechainParams
+  , initTokenStatus
+  , getInitTokenStatus
   ) where
 
 import Contract.Prelude
 
+import Contract.AssocMap as Plutus.Map
 import Contract.Monad (Contract, liftedM)
 import Contract.Monad as Monad
 import Contract.PlutusData
@@ -44,6 +47,7 @@ import Contract.Transaction
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
+import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -81,6 +85,7 @@ import TrustlessSidechain.GetSidechainAddresses
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.InitSidechain.Utils (initTokenCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
@@ -88,6 +93,7 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
@@ -532,3 +538,26 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainParams
     , sidechainAddresses
     }
+
+-- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
+-- | the InitTokenStatus endpoint.
+initTokenStatus ∷
+  CurrencySymbol →
+  Value →
+  { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+initTokenStatus sym =
+  Value.getValue
+    >>> Plutus.Map.lookup sym
+    >>> fromMaybe Plutus.Map.empty
+    >>> { initTokenStatusData: _ }
+
+-- | Get the init token data for the own wallet. Used in InitTokenStatus endpoint.
+getInitTokenStatus ∷
+  SidechainParams →
+  Contract { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+getInitTokenStatus scParams = do
+  { currencySymbol } ← initTokenCurrencyInfo scParams
+
+  -- NOTE: If Value later exposes a way to filter by currency (or to `map` or `lookup`),
+  -- save a little computation by doing that before combining in getOwnUTxOsTotalValue.
+  map (initTokenStatus currencySymbol) getOwnUTxOsTotalValue

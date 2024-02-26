@@ -3,6 +3,7 @@ module TrustlessSidechain.CommitteeOraclePolicy
   , committeeOracleCurrencyInfo
   , mintOneCommitteeOracleInitToken
   , burnOneCommitteeOracleInitToken
+  , committeeOracleInitTokenName
   ) where
 
 import Contract.Prelude
