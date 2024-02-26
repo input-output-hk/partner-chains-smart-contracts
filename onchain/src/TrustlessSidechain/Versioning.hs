@@ -64,6 +64,7 @@ import Plutus.V2.Ledger.Api (
   ValidatorHash (ValidatorHash),
   fromCompiledCode,
   txInfoInputs,
+  txInfoMint,
   txInfoOutputs,
   txOutValue,
  )
@@ -315,10 +316,14 @@ mkVersionOraclePolicy
   (ScriptContext txInfo (Minting currSymbol)) =
     traceIfFalse "ERROR-VERSION-POLICY-01" initTokenBurned
       && fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
+      && traceIfFalse "ERROR-VERSION-POLICY-03" mintOneVersionToken
     where
       versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
 
+      mintOneVersionToken :: Bool
+      mintOneVersionToken =
+        assetClassValueOf (txInfoMint txInfo) versionToken == 1
       -- Did we burn exactly one init token?  Again, we prevent initializing
       -- multiple scripts in a single transaction
       initTokenBurned :: Bool
@@ -351,11 +356,16 @@ mkVersionOraclePolicy
   validatorAddress
   (MintVersionOracle newVersionOracle newScriptHash)
   (ScriptContext txInfo (Minting currSymbol)) =
-    fromSingleton "ERROR-VERSION-POLICY-03" verifyOut
-      && traceIfFalse "ERROR-VERSION-POLICY-04" signedByGovernanceAuthority
+    fromSingleton "ERROR-VERSION-POLICY-04" verifyOut
+      && traceIfFalse "ERROR-VERSION-POLICY-05" signedByGovernanceAuthority
+      && traceIfFalse "ERROR-VERSION-POLICY-06" mintOneVersionToken
     where
       versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
+
+      mintOneVersionToken :: Bool
+      mintOneVersionToken =
+        assetClassValueOf (txInfoMint txInfo) versionToken == 1
 
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
@@ -385,9 +395,9 @@ mkVersionOraclePolicy
   validatorAddress
   (BurnVersionOracle oldVersion)
   (ScriptContext txInfo (Minting currSymbol)) =
-    fromSingleton "ERROR-VERSION-POLICY-05" versionInputPresent
-      && traceIfFalse "ERROR-VERSION-POLICY-06" versionOutputAbsent
-      && traceIfFalse "ERROR-VERSION-POLICY-07" signedByGovernanceAuthority
+    fromSingleton "ERROR-VERSION-POLICY-07" versionInputPresent
+      && traceIfFalse "ERROR-VERSION-POLICY-08" versionOutputAbsent
+      && traceIfFalse "ERROR-VERSION-POLICY-09" signedByGovernanceAuthority
     where
       versionToken :: AssetClass
       versionToken = AssetClass (currSymbol, versionOracleTokenName)
@@ -424,7 +434,7 @@ mkVersionOraclePolicy
           , assetClassValueOf (txOutValue txOut) versionToken > 0
           ]
 mkVersionOraclePolicy _ _ _ _ _ =
-  trace "ERROR-ORACLE-POLICY-08" False
+  trace "ERROR-ORACLE-POLICY-10" False
 
 {-# INLINEABLE mkVersionOraclePolicyUntyped #-}
 mkVersionOraclePolicyUntyped ::
