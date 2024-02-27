@@ -45,9 +45,20 @@ instance Typeable a => IsTest (SizeTest a) where
       let estimate = scriptSize script
       let diff = limit - estimate
       pure $ case signum diff of
-        (-1) -> testFailed $ "Exceeded limit by " <> show (abs diff)
+        -1 ->
+          testFailed $
+            "Known script size INCREASED by " <> show (abs diff)
+              <> " (New size: "
+              <> show estimate
+              <> ")"
+              <> " Please make sure this is intentional!"
         0 -> testPassed $ "Size: " <> show estimate
-        _ -> testPassed $ "Remaining headroom: " <> show diff
+        _ ->
+          testFailed $
+            "Known script size decreased by " <> show diff
+              <> " (New size: "
+              <> show estimate
+              <> ")"
     ScriptSizeComparison (mName, mScript) (tName, tScript) -> do
       let tEstimate = scriptSize tScript
       let mEstimate = scriptSize mScript
