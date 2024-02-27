@@ -12,6 +12,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
 
+  * `VersionOracleValidator` now doesn't allow updating utxos anymore. If you
+    want to update your scripts, you have to insert new versions and remove
+    old version in separate transactions. `update-version` does this under the
+    hood.
   * `init` now returns a field `initTransactionIds` instead of
     `versioningTransactionIds`.  This fields includes all initialization
     transactions, not just the ones for the versioning system.
