@@ -24,7 +24,10 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  )
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt

@@ -26,7 +26,10 @@ import Contract.Transaction
   , TransactionInput
   , TransactionOutputWithRefScript
   )
-import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
+import Contract.TxConstraints
+  ( DatumPresence(DatumInline)
+  , TxConstraints
+  )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value

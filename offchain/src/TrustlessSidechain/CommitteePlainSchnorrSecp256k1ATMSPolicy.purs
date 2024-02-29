@@ -275,6 +275,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
           , scriptId: CommitteeCertificateVerificationPolicy
           }
       )
+
   let
     versioningConstraints =
       TxConstraints.mustReferenceOutput

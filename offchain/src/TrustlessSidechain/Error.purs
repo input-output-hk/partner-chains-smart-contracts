@@ -18,6 +18,8 @@ data OffchainError
   | NotFoundOwnPubKeyHash
   -- | Own address cannot be found
   | NotFoundOwnAddress
+  -- | Reference script not found in UTXO
+  | NotFoundReferenceScript String
   -- | Invalid script address
   | InvalidAddress String Address
   -- | ScriptId not found in rawScriptsMap

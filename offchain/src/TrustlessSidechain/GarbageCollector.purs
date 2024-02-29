@@ -20,7 +20,10 @@ import Contract.Scripts as Scripts
 import Contract.Transaction
   ( mkTxUnspentOut
   )
-import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
+import Contract.TxConstraints
+  ( InputWithScriptRef(RefInput)
+  , TxConstraints
+  )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (flattenValue)
 import Data.Array (filter)

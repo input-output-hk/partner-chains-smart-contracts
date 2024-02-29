@@ -502,6 +502,7 @@ As a picture, the memory representation is as follows
 0                   ...                  31 32                  ...                  63
 |------------Currency symbol 0------------| |------------Currency symbol 1------------| ... etc.
 ```
+
 where the numbers on the top denote the index of the `i`th byte of the
 `ByteString` that `VersionMap` contains.
 

@@ -518,7 +518,7 @@ initSidechain (InitSidechainParams isp) version = do
 
   -- Mint and pay versioning tokens to versioning script.
   ----------------------------------------
-  versionInitTxIds ← Versioning.initializeVersion
+  versionedScriptsTxIds ← Versioning.initializeVersion
     { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
@@ -545,7 +545,7 @@ initSidechain (InitSidechainParams isp) version = do
         }
   pure
     { transactionId: txId
-    , initTransactionIds: versionInitTxIds <>
+    , initTransactionIds: versionedScriptsTxIds <>
         [ checkpointInitTxId
         , dsInitTxId
         , permissionTokensInitTxId

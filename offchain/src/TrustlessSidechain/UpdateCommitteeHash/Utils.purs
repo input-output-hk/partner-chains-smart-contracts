@@ -23,13 +23,20 @@ import Contract.Address (Address)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
-import Contract.PlutusData (class ToData, serializeData, toData)
+import Contract.PlutusData
+  ( class ToData
+  , serializeData
+  , toData
+  )
 import Contract.Scripts
   ( Validator
   , ValidatorHash
   )
 import Contract.Scripts as Scripts
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
+import Contract.Transaction
+  ( TransactionInput
+  , TransactionOutputWithRefScript
+  )
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy

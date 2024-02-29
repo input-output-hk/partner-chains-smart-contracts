@@ -8,7 +8,10 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 import Contract.Prelude
 
 import Contract.Monad (Contract)
-import Contract.PlutusData (Redeemer(Redeemer), toData)
+import Contract.PlutusData
+  ( Redeemer(Redeemer)
+  , toData
+  )
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts (MintingPolicy)
@@ -30,9 +33,7 @@ import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
-import TrustlessSidechain.Utils.Scripts
-  ( mkMintingPolicyWithParams
-  )
+import TrustlessSidechain.Utils.Scripts (mkMintingPolicyWithParams)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
   , VersionOracle(VersionOracle)
@@ -81,6 +82,7 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
     ( VersionOracle
         { version: BigInt.fromInt 1, scriptId: FUELBurningPolicy }
     )
+
   { fuelBurningPolicy: fuelBurningPolicy' } ← getFuelBurningPolicy
     sidechainParams
 

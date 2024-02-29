@@ -272,6 +272,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
           , scriptId: CommitteeCertificateVerificationPolicy
           }
       )
+
   let
     versioningConstraints =
       TxConstraints.mustReferenceOutput

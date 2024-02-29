@@ -2,8 +2,11 @@ module TrustlessSidechain.Versioning.Utils
   ( getVersionOracleConfig
   , getVersionOraclePolicy
   , getVersionedCurrencySymbol
+  , getVersionedCurrencySymbolEither
   , getVersionedScriptRefUtxo
+  , getVersionedScriptRefUtxoEither
   , getVersionedValidatorAddress
+  , getVersionedValidatorAddressEither
   , initializeVersionLookupsAndConstraints
   , insertVersionLookupsAndConstraints
   , invalidateVersionLookupsAndConstraints
@@ -16,7 +19,7 @@ module TrustlessSidechain.Versioning.Utils
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.Monad (Contract, liftContractM, throwContractError)
+import Contract.Monad (Contract, liftedE)
 import Contract.PlutusData
   ( Datum(Datum)
   , OutputDatum(OutputDatum)
@@ -56,7 +59,12 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Effect.Exception (error)
 import Partial.Unsafe as Unsafe
-import TrustlessSidechain.Error (OffchainError(InvalidData))
+import TrustlessSidechain.Error
+  ( OffchainError
+      ( NotFoundUtxo
+      , NotFoundReferenceScript
+      )
+  )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
@@ -418,6 +426,14 @@ getVersionedScriptRefUtxo ∷
   VersionOracle →
   Contract (TransactionInput /\ TransactionOutputWithRefScript)
 getVersionedScriptRefUtxo sp versionOracle = do
+  liftedE (getVersionedScriptRefUtxoEither sp versionOracle)
+
+getVersionedScriptRefUtxoEither ∷
+  SidechainParams →
+  VersionOracle →
+  Contract
+    (Either OffchainError (TransactionInput /\ TransactionOutputWithRefScript))
+getVersionedScriptRefUtxoEither sp versionOracle = do
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
   versionOracleValidatorHash ←
     validatorHash <$> versionOracleValidator sp
@@ -455,51 +471,79 @@ getVersionedScriptRefUtxo sp versionOracle = do
       ) = fromData datum ∷ Maybe VersionOracleDatum
     getVersionFromOutput _ = Nothing
 
-  txInput /\ txOutput ←
-    liftContractM
-      ( show
-          $ InvalidData
-          $ "Could not find unspent output with correct script ref locked at "
-          <> "version oracle validator address. Looking for: "
-          <> show versionOracle
-          <> ". Available are: "
-          <> show
-            ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ∷
-                Array _
-            )
-      )
-      $ find correctOutput (Map.toUnfoldable versionOracleUtxos ∷ Array _)
-  pure (txInput /\ txOutput)
+  let
+    correctVersionOracleUtxoM = find correctOutput
+      (Map.toUnfoldable versionOracleUtxos ∷ Array _)
+  case correctVersionOracleUtxoM of
+    Nothing → pure $ Left
+      $ NotFoundUtxo
+      $ "Could not find unspent output with correct script ref locked at "
+      <> "version oracle validator address. Looking for: "
+      <> show versionOracle
+      <> ". Available are: "
+      <> show
+        ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ∷
+            Array _
+        )
+    Just (txInput /\ txOutput) → pure $ Right (txInput /\ txOutput)
 
 getVersionedCurrencySymbol ∷
   SidechainParams →
   VersionOracle →
   Contract CurrencySymbol
 getVersionedCurrencySymbol sp versionOracle = do
-  _ /\ TransactionOutputWithRefScript
-    { output: TransactionOutput
-        { referenceScript
-        }
-    } ← getVersionedScriptRefUtxo sp versionOracle
+  liftedE (getVersionedCurrencySymbolEither sp versionOracle)
 
-  case referenceScript of
-    Nothing → throwContractError
-      ("Script for given version oracle was not found: " <> show versionOracle)
-    Just scriptHash →
-      pure $ scriptHashAsCurrencySymbol scriptHash
+getVersionedCurrencySymbolEither ∷
+  SidechainParams →
+  VersionOracle →
+  Contract (Either OffchainError CurrencySymbol)
+getVersionedCurrencySymbolEither sp versionOracle = do
+  txOutRefE ← getVersionedScriptRefUtxoEither sp versionOracle
+  case txOutRefE of
+    Left e → pure $ Left e
+    Right
+      ( _ /\ TransactionOutputWithRefScript
+          { output: TransactionOutput
+              { referenceScript
+              }
+          }
+      ) → do
+
+      case referenceScript of
+        Nothing → pure $ Left $ NotFoundReferenceScript $
+          ( "Script for given version oracle was not found: " <> show
+              versionOracle
+          )
+        Just scriptHash →
+          pure $ Right $ scriptHashAsCurrencySymbol scriptHash
 
 getVersionedValidatorAddress ∷
   SidechainParams →
   VersionOracle →
   Contract Address
 getVersionedValidatorAddress sp versionOracle = do
-  _ /\ TransactionOutputWithRefScript
-    { output: TransactionOutput
-        { referenceScript
-        }
-    } ← getVersionedScriptRefUtxo sp versionOracle
+  liftedE (getVersionedValidatorAddressEither sp versionOracle)
 
-  case referenceScript of
-    Nothing → throwContractError
-      ("Script for given version oracle was not found: " <> show versionOracle)
-    Just scriptHash → toAddress (ValidatorHash scriptHash)
+getVersionedValidatorAddressEither ∷
+  SidechainParams →
+  VersionOracle →
+  Contract (Either OffchainError Address)
+getVersionedValidatorAddressEither sp versionOracle = do
+  txOutRefE ← getVersionedScriptRefUtxoEither sp versionOracle
+  case txOutRefE of
+    Left e → pure $ Left e
+    Right
+      ( _ /\ TransactionOutputWithRefScript
+          { output: TransactionOutput
+              { referenceScript
+              }
+          }
+      ) → do
+
+      case referenceScript of
+        Nothing → pure $ Left $ NotFoundReferenceScript $
+          ( "Script for given version oracle was not found: " <> show
+              versionOracle
+          )
+        Just scriptHash → map Right $ toAddress (ValidatorHash scriptHash)

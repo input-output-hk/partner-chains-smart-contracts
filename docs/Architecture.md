@@ -7,7 +7,7 @@ trustless sidechain.
 
 _Plutus scripts_:
 These scripts are the main part of the system, also called on-chain code, their role is to validate
-some action on-chain. It can be either a **validator** or **minting policy**.
+some action on-chain. It can be either a **validator** or a **minting policy**.
 
 _Validator script_:
 A validator has it's own validator address, and can be thought of as a programmed actor on-chain:
@@ -27,18 +27,18 @@ A datum is an arbitrary data attached to UTxO. UTxOs at validator addresses must
 otherwise they are unspendable, for public key addresses datums are non-mandatory.
 
 _Redeemer_:
-Redeemers are similarly to a datum are arbitrary data, but they play a slightly different role:
-when spending from a validator, or minting using a minting policy a redeemer must be applied to
+A Redeemer, similarly to a datum, is an arbitrary data, but it plays a slightly different role:
+when spending from a validator, or minting using a minting policy, a redeemer must be applied to
 the script.
 
 _Transaction_:
 Commonly abbreviated as `tx`, the main role of a transaction is to spend UTxOs from
-certain address(es) and "send" them to somewhere else. Transactions can also mint tokens, if the
+certain address(es) and "send" them somewhere else. Transactions can also mint tokens, if the
 minting policy rules allow it. A transaction also has to declare its fees beforehand, and also
 send back all unconsumed values to the sender's wallet (UTxO's cannot be split in half, so the change
 will be a separate UTxO in the transaction outputs)
 
-_off-chain code_:
+_Off-chain code_:
 While on-chain code is responsible for gatekeeping on-chain, ensuring that only permitted transactions
 go through, off-chain code is the builder toolkit to construct these transactions. As briefly mentioned
 above, fees, changes etc. must be calculated and balanced in these transactions before submitting
@@ -108,7 +108,7 @@ The mainchain contracts of the system goes through the following lifecycle stage
 
     The initial state of the chain, after a stakeholder of the chain adopts a codebase and initialises
     some contracts of the chain:
-    - initalising the distributed set for double spending prevention
+    - initialising the distributed set for double spending prevention
     - candidate permission tokens are minted (if required)
     - mint NFTs for the checkpoint and committee hash validators
     - mint versioning tokens

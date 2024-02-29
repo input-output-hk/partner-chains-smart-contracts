@@ -6,7 +6,8 @@ import Contract.Prelude
 
 import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy, Validator)
-import Data.Map as Map
+import Data.List (List)
+import Data.List as List
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointParameter(CheckpointParameter)
@@ -16,6 +17,9 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.CommitteeCandidateValidator
+  ( getCommitteeCandidateValidator
+  )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
@@ -30,6 +34,7 @@ import TrustlessSidechain.Versioning.Types
       ( MerkleRootTokenValidator
       , CheckpointValidator
       , CommitteeHashValidator
+      , CommitteeCandidateValidator
       , MerkleRootTokenPolicy
       , FUELMintingPolicy
       , FUELBurningPolicy
@@ -45,8 +50,8 @@ getVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Contract
-    { versionedPolicies ∷ Map.Map ScriptId MintingPolicy
-    , versionedValidators ∷ Map.Map ScriptId Validator
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
     }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
@@ -77,7 +82,7 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   { mintingPolicy: dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
 
   let
-    versionedPolicies = Map.fromFoldable
+    versionedPolicies = List.fromFoldable
       [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
       , FUELMintingPolicy /\ fuelMintingPolicy
       , FUELBurningPolicy /\ fuelBurningPolicy
@@ -105,11 +110,14 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
         }
     Checkpoint.checkpointValidator checkpointParam versionOracleConfig
 
+  committeeCandidateValidator ← getCommitteeCandidateValidator sp
+
   let
-    versionedValidators = Map.fromFoldable
+    versionedValidators = List.fromFoldable
       [ MerkleRootTokenValidator /\ merkleRootTokenValidator
       , CheckpointValidator /\ checkpointValidator
       , CommitteeHashValidator /\ committeeHashValidator
+      , CommitteeCandidateValidator /\ committeeCandidateValidator
       --, DParameterValidator /\ dParameterValidator
       --, PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       ]

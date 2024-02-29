@@ -55,6 +55,7 @@ import TrustlessSidechain.EndpointResp
       , UpdatePermissionedCandidatesResp
       , BurnNFTsResp
       , InitTokenStatusResp
+      , ListVersionedScriptsResp
       )
   , stringifyEndpointResp
   )
@@ -102,6 +103,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , BurnNFTs
       , InitTokenStatus
+      , ListVersionedScripts
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -555,6 +557,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> BurnNFTsResp
 
       InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
+
+      ListVersionedScripts
+        { version } →
+        map ListVersionedScriptsResp
+          ( Versioning.getActualVersionedPoliciesAndValidators
+              { sidechainParams: scParams, atmsKind }
+              version
+          )
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

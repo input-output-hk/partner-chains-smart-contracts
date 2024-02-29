@@ -202,6 +202,7 @@ Available commands:
 
 ```
   init                     Initialise sidechain
+  list-versioned-scripts   List currently versioned scripts
   addresses                Get the script addresses for a given sidechain
   claim-v1                 Claim a FUEL tokens from a proof
   burn-v1                  Burn a certain amount of FUEL tokens
@@ -259,7 +260,21 @@ nix run .#sidechain-main-cli -- init \
   --candidate-permission-token-amount 42
 ```
 
-#### 3.3.2. Get script addresses of a sidechain
+#### 3.3.2. List currently versioned scripts
+
+```
+nix run .#sidechain-main-cli -- list-versioned-scripts \
+  --version 1
+```
+
+Returns the list of currently versioned scripts.
+
+More specifically, it returns all scripts that were inserted in the version
+oracle. This includes an initial set of scripts that were added by the `init`
+command, and the scripts that were added when inserting a new protocol version
+using the `insert-version`.
+
+#### 3.3.3. Get script addresses of a sidechain
 
 Script addresses depend on the sidechain parameters, so we get different
 addresses for different parameters. To get the script addresses for a given
@@ -273,7 +288,7 @@ nix run .#sidechain-main-cli -- addresses \
 An optional `--use-candidate-permission-token` flag can be used to also display
 policy of the candidate permission tokens.
 
-#### 3.3.3. Claim FUEL tokens
+#### 3.3.4. Claim FUEL tokens
 
 ```
 nix run .#sidechain-main-cli -- claim-v1 \
@@ -292,7 +307,7 @@ nix run .#sidechain-main-cli -- claim-v2 \
   --amount 13
 ```
 
-#### 3.3.4. Burn user owned FUEL tokens
+#### 3.3.5. Burn user owned FUEL tokens
 
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
@@ -310,7 +325,7 @@ nix run .#sidechain-main-cli -- burn-v2 \
   --recipient aabbcc
 ```
 
-#### 3.3.5. Register committee candidate
+#### 3.3.6. Register committee candidate
 
 In order to generate the signatures, you can use the signature generator tool:
 
@@ -343,14 +358,14 @@ nix run .#sidechain-main-cli -- register \
   --use-candidate-permission-token
 ```
 
-#### 3.3.6. Deregister committee candidate
+#### 3.3.7. Deregister committee candidate
 
 ```
 nix run .#sidechain-main-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
-#### 3.3.7. Committee hash update
+#### 3.3.8. Committee hash update
 
 ```
 nix run .#sidechain-main-cli -- committee-hash \
@@ -371,7 +386,7 @@ where we note that `--new-committee-validator-cbor-encoded-address` can be found
 from the JSON key `cborEncodedAddresses` from the output of the `addresses`
 subcommand.
 
-#### 3.3.8. Save merkle root
+#### 3.3.9. Save merkle root
 
 ```
 nix run .#sidechain-main-cli -- save-root \
@@ -383,7 +398,7 @@ nix run .#sidechain-main-cli -- save-root \
   --previous-merkle-root abcdef
 ```
 
-#### 3.3.9 Committee handover
+#### 3.3.10 Committee handover
 
 ```
 nix run .#sidechain-main-cli -- committee-handover \
@@ -401,14 +416,14 @@ nix run .#sidechain-main-cli -- committee-handover \
   --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
 ```
 
-#### 3.3.10 Candidiate permission token
+#### 3.3.11 Candidiate permission token
 
 ```
 nix run .#sidechain-main-cli -- candidate-permission-token \
   --candidate-permission-token-amount 10
 ```
 
-#### 3.3.11 Save checkpoint
+#### 3.3.12 Save checkpoint
 
 ```
 nix run .#sidechain-main-cli -- save-checkpoint \
@@ -417,14 +432,14 @@ nix run .#sidechain-main-cli -- save-checkpoint \
   --sidechain-epoch 5
 ```
 
-#### 3.3.12 Insert new protocol version
+#### 3.3.13 Insert new protocol version
 
 ```
 nix run .#sidechain-main-cli -- insert-version \
   --version 2
 ```
 
-#### 3.3.13 Update existing protocol version
+#### 3.3.14 Update existing protocol version
 
 ```
 nix run .#sidechain-main-cli -- update-version \
@@ -432,14 +447,14 @@ nix run .#sidechain-main-cli -- update-version \
   --new-version 2
 ```
 
-#### 3.3.14 Invalidate protocol version
+#### 3.3.15 Invalidate protocol version
 
 ```
 nix run .#sidechain-main-cli -- invalidate-version \
   --version 1
 ```
 
-#### 3.3.15 Insert a D parameter value
+#### 3.3.16 Insert a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- insert-d-parameter \
@@ -451,7 +466,7 @@ where N and M are integers.  Note that this should be only done once and then
 `update-d-parameter` value should be used (see below).  However, there is no
 safeguard against inserting multiple D parameter values.
 
-#### 3.3.16 Update a D parameter value
+#### 3.3.17 Update a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- update-d-parameter \
@@ -463,7 +478,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.3.17 Insert a list of permissioned candidates
+#### 3.3.18 Insert a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -479,7 +494,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.3.18 Update a list of permissioned candidates
+#### 3.3.19 Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -492,7 +507,7 @@ You can add and remove candidates in a single transaction.  Each candidate is
 listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.3.19 Remove all permissioned candidates
+#### 3.3.20 Remove all permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -503,7 +518,7 @@ Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
 
-#### 3.3.20 Garbage collect redundant tokens
+#### 3.3.21 Garbage collect redundant tokens
 
 ```
 nix run .#sidechain-main-cli -- collect-garbage
@@ -515,7 +530,7 @@ the system after they are minted. Their only purpose is to be minted alongside
 some other tokens, as a proof that some kind of check has passed. After that
 there is no other way to use them.
 
-#### 3.3.21 Utils
+#### 3.3.22 Utils
 
 All commands in this section are supposed to be used mostly by developers.
 

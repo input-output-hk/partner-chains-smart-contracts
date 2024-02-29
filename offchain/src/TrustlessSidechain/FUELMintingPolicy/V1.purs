@@ -77,7 +77,12 @@ import TrustlessSidechain.Error
 import TrustlessSidechain.MerkleRoot
   ( findMerkleRootTokenUtxo
   )
-import TrustlessSidechain.MerkleTree (MerkleProof, RootHash, rootMp, unRootHash)
+import TrustlessSidechain.MerkleTree
+  ( MerkleProof
+  , RootHash
+  , rootMp
+  , unRootHash
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( Bech32Bytes

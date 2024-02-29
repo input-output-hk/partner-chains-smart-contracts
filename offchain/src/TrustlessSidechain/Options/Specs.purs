@@ -116,6 +116,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , BurnNFTs
       , InitTokenStatus
+      , ListVersionedScripts
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -213,6 +214,12 @@ optSpec maybeConfig =
     , command "invalidate-version"
         ( info (withCommonOpts maybeConfig invalidateVersionSpec)
             (progDesc "Invalidate a protocol version")
+        )
+    , command "list-versioned-scripts"
+        ( info (withCommonOpts maybeConfig listVersionedScriptsSpec)
+            ( progDesc
+                "Get scripts (validators and minting policies) that are currently being versioned"
+            )
         )
 
     , command "utils"
@@ -1036,6 +1043,11 @@ invalidateVersionSpec ∷ Parser TxEndpoint
 invalidateVersionSpec = ado
   version ← parseVersion
   in InvalidateVersion { version }
+
+listVersionedScriptsSpec ∷ Parser TxEndpoint
+listVersionedScriptsSpec = ado
+  version ← parseVersion
+  in ListVersionedScripts { version }
 
 parseDParameterPermissionedCandidatesCount ∷ Parser BigInt
 parseDParameterPermissionedCandidatesCount =

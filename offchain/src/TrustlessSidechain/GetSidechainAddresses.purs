@@ -17,13 +17,17 @@ import Contract.Scripts
   )
 import Data.Array as Array
 import Data.Functor (map)
-import Data.Map as Map
-import Data.TraversableWithIndex (traverseWithIndex)
+import Data.List as List
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
-  , CommitteeCertificateMint(CommitteeCertificateMint)
+  ( ATMSKinds
+      ( ATMSPlainEcdsaSecp256k1
+      , ATMSPlainSchnorrSecp256k1
+      )
+  , CommitteeCertificateMint
+      ( CommitteeCertificateMint
+      )
   )
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -173,15 +177,17 @@ getSidechainAddresses
   dsInsertValidator ← DistributedSet.insertValidator ds
   dsConfValidator ← DistributedSet.dsConfValidator ds
 
-  veresionOracleValidator ←
+  versionOracleValidator ←
     versionOracleValidator sidechainParams
 
   { versionedPolicies, versionedValidators } ←
-    Versioning.getVersionedPoliciesAndValidators
+    Versioning.getExpectedVersionedPoliciesAndValidators
       { sidechainParams: sidechainParams, atmsKind }
       version
-  versionedCurrencySymbols ← Map.toUnfoldable <$> traverseWithIndex
-    getCurrencySymbolHex
+  versionedCurrencySymbols ← List.toUnfoldable <$> traverse
+    ( \(Tuple scriptId mps) → (Tuple scriptId) <$> getCurrencySymbolHex scriptId
+        mps
+    )
     versionedPolicies
 
   { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
@@ -238,10 +244,10 @@ getSidechainAddresses
       [ CommitteeCandidateValidator /\ committeeCandidateValidator
       , DsConfValidator /\ dsConfValidator
       , DsInsertValidator /\ dsInsertValidator
-      , VersionOracleValidator /\ veresionOracleValidator
+      , VersionOracleValidator /\ versionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       , DParameterValidator /\ dParameterValidator
-      ] <> Map.toUnfoldable versionedValidators
+      ] <> List.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators
   let validatorHashes = map (map getValidatorHash) validators

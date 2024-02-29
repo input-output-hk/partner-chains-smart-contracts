@@ -6,17 +6,36 @@ module TrustlessSidechain.EndpointResp
 
 import Contract.Prelude
 
+import Aeson
+  ( encodeAeson
+  , toStringifiedNumbersJson
+  )
 import Contract.AssocMap as Plutus
 import Contract.CborBytes (cborBytesToByteArray)
-import Contract.PlutusData (class ToData, PlutusData)
+import Contract.PlutusData
+  ( class ToData
+  , PlutusData
+  )
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray, byteArrayToHex)
-import Contract.Value (CurrencySymbol, TokenName)
+import Contract.Prim.ByteArray
+  ( ByteArray
+  , byteArrayToHex
+  )
+import Contract.Scripts
+  ( MintingPolicy
+  , ScriptHash
+  , Validator
+  )
+import Contract.Value
+  ( CurrencySymbol
+  , TokenName
+  )
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
+import Data.List (List)
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof
@@ -45,6 +64,8 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   , SchnorrSecp256k1Signature
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
+import TrustlessSidechain.Versioning.ScriptId (ScriptId)
+import TrustlessSidechain.Versioning.Types as Types
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
@@ -125,6 +146,10 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | InitTokenStatusResp
       { initTokenStatusData ∷ Plutus.Map TokenName BigInt }
+  | ListVersionedScriptsResp
+      { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+      }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -405,6 +430,19 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitTokenStatus"
         , "initTokenStatusData" /\ encodeInitTokenStatusData initTokenStatusData
+        ]
+
+    ListVersionedScriptsResp
+      { versionedPolicies, versionedValidators } → do
+      -- We encode in JSON the versioned script ids along with their hashes
+      let
+        (versionedScriptIdsWithHashes ∷ List (Tuple ScriptId ScriptHash)) =
+          (map (map Types.toScriptHash) versionedPolicies)
+            <> (map (map Types.toScriptHash) versionedValidators)
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "ListVersionedScripts"
+        , "versionedScripts" /\ toStringifiedNumbersJson
+            (encodeAeson $ map show $ versionedScriptIdsWithHashes)
         ]
 
 -- | Encode the endpoint response to a json object

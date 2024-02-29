@@ -222,6 +222,9 @@ data TxEndpoint
   | InvalidateVersion
       { version ∷ Int
       }
+  | ListVersionedScripts
+      { version ∷ Int
+      }
   | InsertDParameter
       { permissionedCandidatesCount ∷ BigInt
       , registeredCandidatesCount ∷ BigInt

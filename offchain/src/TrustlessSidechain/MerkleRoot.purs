@@ -12,7 +12,10 @@ import Contract.Monad
   , liftContractM
   , liftedM
   )
-import Contract.PlutusData (toData, unitDatum)
+import Contract.PlutusData
+  ( toData
+  , unitDatum
+  )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
@@ -20,7 +23,10 @@ import Contract.Transaction
   ( TransactionHash
   , mkTxUnspentOut
   )
-import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
+import Contract.TxConstraints
+  ( InputWithScriptRef(RefInput)
+  , TxConstraints
+  )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
@@ -195,14 +201,13 @@ saveRootLookupsAndConstraints
 
   ( committeeCertificateVerificationVersioningInput /\
       committeeCertificateVerificationVersioningOutput
-  ) ←
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigInt.fromInt 1
-          , scriptId: CommitteeCertificateVerificationPolicy
-          }
-      )
+  ) ← Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    ( VersionOracle
+        { version: BigInt.fromInt 1
+        , scriptId: CommitteeCertificateVerificationPolicy
+        }
+    )
 
   (merkleRootValidatorVersioningInput /\ merkleRootValidatorVersioningOutput) ←
     Versioning.getVersionedScriptRefUtxo
