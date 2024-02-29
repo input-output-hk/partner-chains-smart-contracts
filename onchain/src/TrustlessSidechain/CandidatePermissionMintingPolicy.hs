@@ -8,11 +8,10 @@ module TrustlessSidechain.CandidatePermissionMintingPolicy (
 
 import Plutus.V2.Ledger.Api (
   Script,
-  Value,
   fromCompiledCode,
  )
 import PlutusTx qualified
-import PlutusTx.Builtins qualified as PtxBI
+import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
 import TrustlessSidechain.Utils (oneTokenBurned)
@@ -27,12 +26,18 @@ import TrustlessSidechain.Utils (oneTokenBurned)
 --    CandidatePermissionMint was not consumed by the transaction
 mkCandidatePermissionMintingPolicy ::
   InitTokenAssetClass ->
-  () ->
-  Value ->
+  BuiltinData ->
+  BuiltinData ->
   Bool
-mkCandidatePermissionMintingPolicy itac () mint =
+mkCandidatePermissionMintingPolicy itac _ scriptContext =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" initTokenBurned
   where
+    mint =
+      PlutusTx.unsafeFromBuiltinData
+        . unsafeGetTxInfoMint
+        . unsafeGetTxInfo
+        $ scriptContext
+
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
@@ -40,14 +45,25 @@ mkCandidatePermissionMintingPolicy itac () mint =
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
-getTxInfoMintFromScriptContext :: BuiltinData -> Value
-getTxInfoMintFromScriptContext bd = PlutusTx.unsafeFromBuiltinData mint
-  where
-    tinfo = head . snd . PtxBI.unsafeDataAsConstr $ bd -- 1st field of ScriptContext is TxInfo
-    mint = snd (PtxBI.unsafeDataAsConstr tinfo) !! 4 -- 5th field of TxInfo is txInfoMint
+unsafeGetTxInfo :: BuiltinData -> BuiltinData
+-- 1st field of ScriptContext is TxInfo
+unsafeGetTxInfo bd = head . snd . Builtins.unsafeDataAsConstr $ bd
 
-mkCandidatePermissionMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass _ scriptContext = check $ mkCandidatePermissionMintingPolicy (PlutusTx.unsafeFromBuiltinData initTokenAssetClass) () (getTxInfoMintFromScriptContext scriptContext)
+unsafeGetTxInfoMint :: BuiltinData -> BuiltinData
+-- 5th field of TxInfo is txInfoMint
+unsafeGetTxInfoMint bd = snd (Builtins.unsafeDataAsConstr bd) !! 4
+
+mkCandidatePermissionMintingPolicyUntyped ::
+  BuiltinData ->
+  BuiltinData ->
+  BuiltinData ->
+  ()
+mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
+  check $
+    mkCandidatePermissionMintingPolicy
+      (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
+      a
+      scriptContext
 
 serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =

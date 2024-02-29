@@ -369,7 +369,7 @@ insertNode str node
 --   ERROR-DS-INSERT-VALIDATOR-10: Value does not contain exactly one currency
 --   symbol, i.e. it either contains none or more than one.
 {-# INLINEABLE mkInsertValidator #-}
-mkInsertValidator :: Ds -> () -> () -> ScriptContext -> Bool
+mkInsertValidator :: Ds -> BuiltinData -> BuiltinData -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
       ( \nNodes ->
@@ -609,7 +609,13 @@ mkDsKeyPolicy dskm _red ctx = case ins of
 -- | 'mkInsertValidatorUntyped' creates an untyped 'mkInsertValidator' (this is
 -- needed for ctl)
 mkInsertValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkInsertValidatorUntyped ds _dat _red ctx = check $ mkInsertValidator (PlutusTx.unsafeFromBuiltinData ds) () () (PlutusTx.unsafeFromBuiltinData ctx)
+mkInsertValidatorUntyped ds dat red ctx =
+  check $
+    mkInsertValidator
+      (PlutusTx.unsafeFromBuiltinData ds)
+      dat
+      red
+      (PlutusTx.unsafeFromBuiltinData ctx)
 
 -- | 'serialisableInsertValidator' is a serialisable version of the validator
 -- (this is needed for ctl)
