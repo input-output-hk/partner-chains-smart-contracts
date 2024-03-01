@@ -20,7 +20,7 @@ import Data.ByteString.Short (toShort)
 import Data.Kind (Type)
 import Plutonomy.UPLC qualified
 import Plutus.V1.Ledger.Scripts (Script)
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
+import Plutus.V1.Ledger.Value (valueOf)
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   ScriptContext,
@@ -47,7 +47,7 @@ currencySymbolValueOf v c = maybe 0 sum (Map.lookup c (getValue v))
 {-# INLINEABLE oneTokenMinted #-}
 oneTokenMinted :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenMinted txInfoMint cs tn =
-  assetClassValueOf txInfoMint (AssetClass (cs, tn)) == 1
+  valueOf txInfoMint cs tn == 1
 
 -- | Check that exactly on specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
@@ -57,7 +57,7 @@ oneTokenMinted txInfoMint cs tn =
 {-# INLINEABLE oneTokenBurned #-}
 oneTokenBurned :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurned txInfoMint cs tn =
-  assetClassValueOf txInfoMint (AssetClass (cs, tn)) == -1
+  valueOf txInfoMint cs tn == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types

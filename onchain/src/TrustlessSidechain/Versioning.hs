@@ -48,7 +48,7 @@ module TrustlessSidechain.Versioning (
 ) where
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
+import Plutus.V1.Ledger.Value (valueOf)
 import Plutus.V2.Ledger.Api (
   Address,
   CurrencySymbol (CurrencySymbol),
@@ -319,12 +319,9 @@ mkVersionOraclePolicy
       && fromSingleton "ERROR-VERSION-POLICY-02" verifyOut
       && traceIfFalse "ERROR-VERSION-POLICY-03" mintOneVersionToken
     where
-      versionToken :: AssetClass
-      versionToken = AssetClass (currSymbol, versionOracleTokenName)
-
       mintOneVersionToken :: Bool
       mintOneVersionToken =
-        assetClassValueOf (txInfoMint txInfo) versionToken == 1
+        valueOf (txInfoMint txInfo) currSymbol versionOracleTokenName == 1
       -- Did we burn exactly one init token?  Again, we prevent initializing
       -- multiple scripts in a single transaction
       initTokenBurned :: Bool
@@ -349,7 +346,7 @@ mkVersionOraclePolicy
         versionOracle' == versionOracle
         , scriptHash' == scriptHash
         , -- Check that datum is attached to a single version token.
-        assetClassValueOf value versionToken == 1
+        valueOf value currSymbol versionOracleTokenName == 1
         ]
 mkVersionOraclePolicy
   sp
@@ -361,12 +358,9 @@ mkVersionOraclePolicy
       && traceIfFalse "ERROR-VERSION-POLICY-05" signedByGovernanceAuthority
       && traceIfFalse "ERROR-VERSION-POLICY-06" mintOneVersionToken
     where
-      versionToken :: AssetClass
-      versionToken = AssetClass (currSymbol, versionOracleTokenName)
-
       mintOneVersionToken :: Bool
       mintOneVersionToken =
-        assetClassValueOf (txInfoMint txInfo) versionToken == 1
+        valueOf (txInfoMint txInfo) currSymbol versionOracleTokenName == 1
 
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
@@ -388,7 +382,7 @@ mkVersionOraclePolicy
         versionOracle' == newVersionOracle
         , scriptHash' == newScriptHash
         , -- Check that datum is attached to a single version token.
-        assetClassValueOf value versionToken == 1
+        valueOf value currSymbol versionOracleTokenName == 1
         ]
 mkVersionOraclePolicy
   sp
@@ -400,9 +394,6 @@ mkVersionOraclePolicy
       && traceIfFalse "ERROR-VERSION-POLICY-08" versionOutputAbsent
       && traceIfFalse "ERROR-VERSION-POLICY-09" signedByGovernanceAuthority
     where
-      versionToken :: AssetClass
-      versionToken = AssetClass (currSymbol, versionOracleTokenName)
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
@@ -422,7 +413,7 @@ mkVersionOraclePolicy
         oldVersion' == oldVersion
         , -- Check there is exactly one token in the input that we're going to
         -- burn.
-        assetClassValueOf value versionToken == 1
+        valueOf value currSymbol versionOracleTokenName == 1
         ]
 
       -- Check that the script version to be invalidated is absent from
@@ -432,7 +423,7 @@ mkVersionOraclePolicy
         null
           [ ()
           | txOut <- txInfoOutputs txInfo
-          , assetClassValueOf (txOutValue txOut) versionToken > 0
+          , valueOf (txOutValue txOut) currSymbol versionOracleTokenName > 0
           ]
 mkVersionOraclePolicy _ _ _ _ _ =
   trace "ERROR-ORACLE-POLICY-10" False
@@ -483,8 +474,6 @@ mkVersionOracleValidator
       && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
       && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
     where
-      versionAsset = AssetClass (currencySymbol, versionOracleTokenName)
-
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
         txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
@@ -497,7 +486,7 @@ mkVersionOracleValidator
         null
           [ ()
           | txOut <- txInfoOutputs txInfo
-          , assetClassValueOf (txOutValue txOut) versionAsset > 0
+          , valueOf (txOutValue txOut) currencySymbol versionOracleTokenName > 0
           ]
 mkVersionOracleValidator _ _ _ _ =
   trace "ERROR-VERSION-ORACLE-04" False
@@ -581,10 +570,5 @@ getVersionedScriptHash
       Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
       , versionOracle' == versionOracle
       , -- 2. Contains exactly one VersionOraclePolicy token.
-      let versionAsset =
-            AssetClass
-              ( versionOracleCurrencySymbol
-              , versionOracleTokenName
-              )
-      , assetClassValueOf value versionAsset == 1
+      valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
       ]
