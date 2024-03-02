@@ -8,6 +8,15 @@ module TrustlessSidechain.Utils (
   mkUntypedValidator,
   mkUntypedMintingPolicy,
   scriptToPlutusScript,
+  ScriptContextRaw (..),
+  ScriptPurposeRaw (..),
+  TxInfoRaw (..),
+  TxInfoMintRaw (..),
+  CurrencySymbolRaw (..),
+  safeGetTxInfo,
+  safeGetTxInfoMint,
+  safeGetScriptPurpose,
+  safeGetMinting,
 ) where
 
 import TrustlessSidechain.PlutusPrelude
@@ -29,6 +38,7 @@ import Plutus.V2.Ledger.Api (
   getValue,
  )
 import PlutusTx.AssocMap qualified as Map
+import PlutusTx.Builtins qualified as Builtins
 
 -- | Unwrap a singleton list, or produce an error if not possible.
 {-# INLINEABLE fromSingleton #-}
@@ -92,3 +102,33 @@ scriptToPlutusScript =
     . toStrict
     . serialise
     . Plutonomy.UPLC.optimizeUPLC
+
+------------------------
+
+newtype ScriptContextRaw = ScriptContextRaw {unScriptContextRaw :: BuiltinData}
+newtype TxInfoRaw = TxInfoRaw {unTxInfoRaw :: BuiltinData}
+newtype TxInfoMintRaw = TxInfoMintRaw {unTxInfoMintRaw :: BuiltinData}
+newtype ScriptPurposeRaw = ScriptPurposeRaw {unScriptPurposeRaw :: BuiltinData}
+newtype CurrencySymbolRaw = CurrencySymbolRaw {unCurrencySymbolRaw :: BuiltinData}
+
+{-# INLINE safeGetTxInfo #-}
+safeGetTxInfo :: ScriptContextRaw -> TxInfoRaw
+-- 1st field of ScriptContext is TxInfo
+safeGetTxInfo (ScriptContextRaw bd) = TxInfoRaw . head . snd . Builtins.unsafeDataAsConstr $ bd
+
+{-# INLINE safeGetScriptPurpose #-}
+safeGetScriptPurpose :: ScriptContextRaw -> ScriptPurposeRaw
+-- 2nd field of ScriptContext is ScriptPurpose
+safeGetScriptPurpose (ScriptContextRaw bd) = ScriptPurposeRaw $ snd (Builtins.unsafeDataAsConstr bd) !! 1
+
+{-# INLINE safeGetTxInfoMint #-}
+safeGetTxInfoMint :: TxInfoRaw -> TxInfoMintRaw
+-- 5th field of TxInfo is txInfoMint
+safeGetTxInfoMint (TxInfoRaw bd) = TxInfoMintRaw $ snd (Builtins.unsafeDataAsConstr bd) !! 4
+
+{-# INLINE safeGetMinting #-}
+safeGetMinting :: ScriptPurposeRaw -> Maybe CurrencySymbolRaw
+-- 1st ctor of ScriptPurpose is Minting
+safeGetMinting (ScriptPurposeRaw bd) = case Builtins.unsafeDataAsConstr bd of
+  (0, [cs]) -> Just (CurrencySymbolRaw cs)
+  _ -> Nothing

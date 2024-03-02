@@ -50,9 +50,14 @@ import TrustlessSidechain.Types (
   UpdateCommitteeDatum,
  )
 import TrustlessSidechain.Utils (
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
+  CurrencySymbolRaw (CurrencySymbolRaw),
+  ScriptContextRaw (ScriptContextRaw),
   oneTokenBurned,
+  safeGetMinting,
+  safeGetScriptPurpose,
+  safeGetTxInfo,
+  safeGetTxInfoMint,
+  unTxInfoMintRaw,
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
@@ -89,7 +94,7 @@ mkCheckpointValidator ::
   CheckpointParameter ->
   VersionOracleConfig ->
   CheckpointDatum ->
-  () ->
+  BuiltinData ->
   ScriptContext ->
   Bool
 mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
@@ -195,13 +200,17 @@ initCheckpointMintAmount = 1
 --
 --   ERROR-CHECKPOINT-POLICY-02: Wrong amount minted.
 {-# INLINEABLE mkCheckpointPolicy #-}
-mkCheckpointPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
-mkCheckpointPolicy itac _red ctx =
+mkCheckpointPolicy :: InitTokenAssetClass -> BuiltinData -> ScriptContextRaw -> Bool
+mkCheckpointPolicy itac _red scriptContext =
   traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
-    mint :: Value
-    mint = txInfoMint . scriptContextTxInfo $ ctx
+    mint =
+      PlutusTx.unsafeFromBuiltinData
+        . unTxInfoMintRaw
+        . safeGetTxInfoMint
+        . safeGetTxInfo
+        $ scriptContext
 
     initTokenBurned :: Bool
     initTokenBurned =
@@ -213,15 +222,17 @@ mkCheckpointPolicy itac _red ctx =
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue mint of
+      case fmap AssocMap.toList $ AssocMap.lookup (safeOwnCurrencySymbol scriptContext) $ getValue mint of
         Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
         _ -> False
 
 mkCheckpointPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCheckpointPolicyUntyped =
-  mkUntypedMintingPolicy
-    . mkCheckpointPolicy
-    . PlutusTx.unsafeFromBuiltinData
+mkCheckpointPolicyUntyped itac red ctx =
+  check $
+    mkCheckpointPolicy
+      (PlutusTx.unsafeFromBuiltinData itac)
+      (PlutusTx.unsafeFromBuiltinData red)
+      (ScriptContextRaw ctx)
 
 serialisableCheckpointPolicy :: Script
 serialisableCheckpointPolicy =
@@ -234,12 +245,24 @@ mkCheckpointValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkCheckpointValidatorUntyped checkpointParam versioningConfig =
-  mkUntypedValidator $
+mkCheckpointValidatorUntyped checkpointParam versioningConfig datum red ctx =
+  check $
     mkCheckpointValidator
       (PlutusTx.unsafeFromBuiltinData checkpointParam)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
+      (PlutusTx.unsafeFromBuiltinData datum)
+      red
+      (PlutusTx.unsafeFromBuiltinData ctx)
 
 serialisableCheckpointValidator :: Script
 serialisableCheckpointValidator =
   fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])
+
+{-# INLINEABLE safeOwnCurrencySymbol #-}
+
+-- | The 'CurrencySymbol' of the current validator script.
+--   Adapted from Plutus.V2.Ledger.Contexts.ownCurrencySymbol
+safeOwnCurrencySymbol :: ScriptContextRaw -> CurrencySymbol
+safeOwnCurrencySymbol bd = case safeGetMinting $ safeGetScriptPurpose bd of
+  Just (CurrencySymbolRaw cs) -> PlutusTx.unsafeFromBuiltinData cs
+  Nothing -> traceError "Lh" -- "Can't get currency symbol of the current validator script"

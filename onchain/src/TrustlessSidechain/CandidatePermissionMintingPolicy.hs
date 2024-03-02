@@ -11,10 +11,15 @@ import Plutus.V2.Ledger.Api (
   fromCompiledCode,
  )
 import PlutusTx qualified
-import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
-import TrustlessSidechain.Utils (oneTokenBurned)
+import TrustlessSidechain.Utils (
+  ScriptContextRaw (ScriptContextRaw),
+  TxInfoMintRaw (unTxInfoMintRaw),
+  oneTokenBurned,
+  safeGetTxInfo,
+  safeGetTxInfoMint,
+ )
 
 -- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 --
@@ -27,15 +32,16 @@ import TrustlessSidechain.Utils (oneTokenBurned)
 mkCandidatePermissionMintingPolicy ::
   InitTokenAssetClass ->
   BuiltinData ->
-  BuiltinData ->
+  ScriptContextRaw ->
   Bool
 mkCandidatePermissionMintingPolicy itac _ scriptContext =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" initTokenBurned
   where
     mint =
       PlutusTx.unsafeFromBuiltinData
-        . unsafeGetTxInfoMint
-        . unsafeGetTxInfo
+        . unTxInfoMintRaw
+        . safeGetTxInfoMint
+        . safeGetTxInfo
         $ scriptContext
 
     initTokenBurned :: Bool
@@ -44,14 +50,6 @@ mkCandidatePermissionMintingPolicy itac _ scriptContext =
         mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
-
-unsafeGetTxInfo :: BuiltinData -> BuiltinData
--- 1st field of ScriptContext is TxInfo
-unsafeGetTxInfo bd = head . snd . Builtins.unsafeDataAsConstr $ bd
-
-unsafeGetTxInfoMint :: BuiltinData -> BuiltinData
--- 5th field of TxInfo is txInfoMint
-unsafeGetTxInfoMint bd = snd (Builtins.unsafeDataAsConstr bd) !! 4
 
 mkCandidatePermissionMintingPolicyUntyped ::
   BuiltinData ->
@@ -63,7 +61,7 @@ mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
     mkCandidatePermissionMintingPolicy
       (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
       a
-      scriptContext
+      (ScriptContextRaw scriptContext)
 
 serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =
