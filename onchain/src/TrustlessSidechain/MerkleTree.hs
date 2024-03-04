@@ -55,8 +55,7 @@ module TrustlessSidechain.MerkleTree (
 ) where
 
 import Data.ByteString.Base16 qualified as Base16
-import Data.List qualified as List
-import Data.String qualified as HaskellString
+import Data.ByteString.Char8 qualified as ByteString.Char8
 import GHC.Generics (Generic)
 import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
 import PlutusPrelude (NonEmpty, on)
@@ -82,14 +81,13 @@ newtype RootHash = RootHash {unRootHash :: LedgerBytes}
 -- See #249 for the modified serialisation scheme
 
 -- | 'pureScriptShowRootHash' shows the RootHash in a purescript friendly way.
-pureScriptShowRootHash :: RootHash -> HaskellString.String
+pureScriptShowRootHash :: RootHash -> TSPrelude.ByteString
 pureScriptShowRootHash RootHash {unRootHash = rh} =
-  List.unwords
+  ByteString.Char8.unwords
     [ "RootHash"
     , "("
     , "hexToByteArrayUnsafe"
-    , TSPrelude.show $ case rh of
-        LedgerBytes (BuiltinByteString bs) -> Base16.encode bs
+    , case rh of LedgerBytes (BuiltinByteString bs) -> Base16.encode bs
     , ")"
     ]
 
@@ -174,15 +172,15 @@ data Up = Up {siblingSide :: Side, sibling :: RootHash}
   deriving stock (TSPrelude.Show, TSPrelude.Eq, Generic)
 
 -- | 'pureScriptShowUp' shows Up in a purescript friendly way.
-pureScriptShowUp :: Up -> HaskellString.String
+pureScriptShowUp :: Up -> TSPrelude.ByteString
 pureScriptShowUp (Up ss s) =
-  List.unwords
+  ByteString.Char8.unwords
     [ "("
     , "Up"
     , "{"
     , "siblingSide"
     , ":"
-    , TSPrelude.show ss
+    , ByteString.Char8.pack $ TSPrelude.show ss
     , ","
     , "sibling"
     , ":"
@@ -204,13 +202,13 @@ newtype MerkleProof = MerkleProof {unMerkleProof :: [Up]}
   deriving newtype (FromData, ToData, UnsafeFromData)
 
 -- | 'pureScriptShowMerkleProof' shows the MerkleProof in a purescript friendly way.
-pureScriptShowMerkleProof :: MerkleProof -> HaskellString.String
+pureScriptShowMerkleProof :: MerkleProof -> TSPrelude.ByteString
 pureScriptShowMerkleProof (MerkleProof proof) =
-  List.unwords
+  ByteString.Char8.unwords
     [ "("
     , "MerkleProof"
     , "["
-    , List.intercalate "," (map pureScriptShowUp proof)
+    , ByteString.Char8.intercalate "," (map pureScriptShowUp proof)
     , "]"
     , ")"
     ]
@@ -250,10 +248,10 @@ data MerkleTree
 makeIsDataIndexed ''MerkleTree [('Bin, 0), ('Tip, 1)]
 
 -- | 'pureScriptShowMerkleTree' shows the MerkleTree in a purescript friendly way.
-pureScriptShowMerkleTree :: MerkleTree -> HaskellString.String
+pureScriptShowMerkleTree :: MerkleTree -> TSPrelude.ByteString
 pureScriptShowMerkleTree = \case
   Bin rh l r ->
-    List.unwords
+    ByteString.Char8.unwords
       [ "Bin"
       , "("
       , pureScriptShowRootHash rh
@@ -266,7 +264,7 @@ pureScriptShowMerkleTree = \case
       , ")"
       ]
   Tip rh ->
-    List.unwords
+    ByteString.Char8.unwords
       [ "Tip"
       , "("
       , pureScriptShowRootHash rh

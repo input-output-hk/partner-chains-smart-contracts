@@ -15,6 +15,7 @@
 module Main (main) where
 
 import Control.Monad (return)
+import Data.ByteString.Char8 qualified as ByteString.Char8
 import GenOutput qualified
 import GetOpts (
   Args (Args),
@@ -25,7 +26,6 @@ import GetOpts (
   ),
  )
 import GetOpts qualified
-import System.IO qualified as IO
 import TrustlessSidechain.HaskellPrelude
 
 -- | Main entrypoint for the registration signature generator tool
@@ -34,13 +34,13 @@ main =
   GetOpts.getOpts >>= \Args {..} -> case aCommand of
     GenCliCommand {..} -> do
       putStrLn "Please call sidechain-main-cli with the following arguments:"
-      IO.putStrLn $
+      ByteString.Char8.putStrLn $
         GenOutput.genCliCommand
           gccSigningKeyFile
           gccSidechainParams
           gccATMSKind
           gccCliCommand
     MerkleTreeCommand {..} ->
-      GenOutput.merkleTreeCommand mtcCommand >>= IO.putStrLn
+      GenOutput.merkleTreeCommand mtcCommand >>= ByteString.Char8.putStrLn
     SidechainKeyCommand {..} ->
-      GenOutput.sidechainKeyCommand skCommand >>= IO.putStrLn
+      GenOutput.sidechainKeyCommand skCommand >>= ByteString.Char8.putStrLn

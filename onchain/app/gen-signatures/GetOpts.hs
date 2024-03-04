@@ -29,6 +29,7 @@ import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.ByteString.Char8 qualified as Char8
 import Data.ByteString.Lazy qualified as ByteString.Lazy
 import Data.Char qualified as Char
@@ -66,10 +67,16 @@ import Plutus.V2.Ledger.Api (
   toBuiltin,
  )
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString), BuiltinData (BuiltinData))
+import PlutusTx.Builtins.Internal (
+  BuiltinByteString (BuiltinByteString),
+  BuiltinData (BuiltinData),
+ )
 import System.IO (FilePath)
 import System.IO.Error (userError)
-import TrustlessSidechain.Governance (GovernanceAuthority, mkGovernanceAuthority)
+import TrustlessSidechain.Governance (
+  GovernanceAuthority,
+  mkGovernanceAuthority,
+ )
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleTree,
@@ -314,7 +321,8 @@ parseThreshold = eitherReader $ parseOnly thresholdParser . Text.pack
 parseSpoPrivKey :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKey = eitherReader toSpoPrivKey
   where
-    toSpoPrivKey :: HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
+    toSpoPrivKey ::
+      HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
     toSpoPrivKey =
       fmap (genKeyDSIGN @Ed25519DSIGN . mkSeedFromBytes)
         . mapLeft ("Invalid spo key hex: " <>)
@@ -334,7 +342,8 @@ parseSpoPrivKey = eitherReader toSpoPrivKey
 parseSpoPrivKeyCbor :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
   where
-    toSpoPrivKeyCbor :: HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
+    toSpoPrivKeyCbor ::
+      HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
     toSpoPrivKeyCbor str = do
       bin <-
         mapLeft ("Invalid spo key hex: " <>) $
@@ -344,12 +353,18 @@ parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
 
 -- | Parse SECP256K1 private key
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
-parseSidechainPrivKey = eitherReader OffChain.strToSecpPrivKey
+parseSidechainPrivKey =
+  eitherReader $
+    OffChain.strToSecpPrivKey . ByteString.Char8.pack
 
 -- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
 -- on the format
 parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
-parseSidechainPubKey = eitherReader (fmap OffChain.secpPubKeyToSidechainPubKey . OffChain.strToSecpPubKey)
+parseSidechainPubKey =
+  eitherReader $
+    fmap OffChain.secpPubKeyToSidechainPubKey
+      . OffChain.strToSecpPubKey
+      . ByteString.Char8.pack
 
 -- | Parse pub key hash.
 parseGovernanceAuthority :: OptParse.ReadM GovernanceAuthority
@@ -375,9 +390,16 @@ parsePreviousMerkleRoot =
 -- of a merkle tree given as a CLI argument.
 parseMerkleTree :: OptParse.ReadM MerkleTree
 parseMerkleTree = eitherReader $ \str -> do
-  binary <- mapLeft ("Invalid merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
-  builtindata :: Builtins.BuiltinData <- mapLeft show $ fmap BuiltinData $ Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
-  maybe (Left "'fromBuiltinData' for merkle tree failed") Right $ fromBuiltinData builtindata
+  binary <-
+    mapLeft ("Invalid merkle tree hex: " <>) . Base16.decode . Char8.pack $
+      str
+  builtindata :: Builtins.BuiltinData <-
+    mapLeft show $
+      fmap BuiltinData $
+        Serialise.deserialiseOrFail $
+          ByteString.Lazy.fromStrict binary
+  maybe (Left "'fromBuiltinData' for merkle tree failed") Right $
+    fromBuiltinData builtindata
 
 -- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
 -- of a root hash of a merkle tree given as a CLI argument.
@@ -403,28 +425,33 @@ parseRootHash =
 parseSpoPubKeyCbor :: OptParse.ReadM (VerKeyDSIGN Ed25519DSIGN)
 parseSpoPubKeyCbor = eitherReader toSpoPubKeyCbor
   where
-    toSpoPubKeyCbor :: HString.String -> Either HString.String (VerKeyDSIGN Ed25519DSIGN)
+    toSpoPubKeyCbor ::
+      HString.String -> Either HString.String (VerKeyDSIGN Ed25519DSIGN)
     toSpoPubKeyCbor str = do
       bin <-
         mapLeft ("Invalid spo key hex: " <>) $
           Base16.decode . Char8.pack $
             str
-      mapLeft ((<>) "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
+      mapLeft ((<>) "Invalid cbor spo key: " . show) $
+        Binary.decodeFull' bin
 
 -- Commented out this code for legacy reasons. Originally, we parsed the
 -- roothash in its cbor representation, but really we want to actually just
 -- parse / output the actual 32 byte root hash.
 -- > parseRootHash :: OptParse.ReadM RootHash
 -- > parseRootHash = eitherReader $ \str -> do
--- >   binary <- mapLeft ("Invalid root hash of merkle tree hex: " <>) . Base16.decode . Char8.pack $ str
+-- >   binary <- mapLeft ("Invalid root hash of merkle tree hex: " <>) . Base16.decode . Char8.pack
+-- >               $ str
 -- >   builtindata :: Builtins.BuiltinData <- mapLeft (mappend "Cbor deserialization failed: " . show)
 -- >     $ Codec.Serialise.deserialiseOrFail $ ByteString.Lazy.fromStrict binary
--- >   maybe (Left "'fromBuiltinData' for root hash of merkle tree failed") Right $ fromBuiltinData builtindata
+-- >   maybe (Left "'fromBuiltinData' for root hash of merkle tree failed") Right $
+-- >     fromBuiltinData builtindata
 
 -- | Decode a hexadecimal string into a BuiltinByteString
 decodeHash :: Parser Text -> Parser Builtins.BuiltinByteString
 decodeHash rawParser =
-  rawParser >>= \parsed -> either (const mzero) (pure . Builtins.toBuiltin) (tryDecode parsed)
+  rawParser >>= \parsed ->
+    either (const mzero) (pure . Builtins.toBuiltin) (tryDecode parsed)
 
 -- * CLI flag parsers.
 
@@ -441,21 +468,26 @@ currentCommitteePrivateKeysParser =
           mconcat
             [ long "current-committee-private-key"
             , metavar "PRIVATE_KEY"
-            , help "Secp256k1 private key of a current committee member (hex encoded)"
+            , help
+                "Secp256k1 private key of a current committee member (hex encoded)"
             ]
 
     currentCommitteeFile = do
+      let helptxt =
+            "Filepath of JSON generated committee from `fresh-sidechain-committee`"
       committeeFilepath <-
         option OptParse.str $
           mconcat
             [ long "current-committee"
             , metavar "FILEPATH"
-            , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
+            , help helptxt
             ]
       pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPrivateKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
+          Nothing ->
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
 newCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
@@ -469,22 +501,27 @@ newCommitteePublicKeysParser =
           mconcat
             [ long "new-committee-pub-key"
             , metavar "PUBLIC_KEY"
-            , help "Secp256k1 public key of a current committee member (hex DER encoded [33 bytes])"
+            , help
+                "Secp256k1 public key of a current committee member (hex DER encoded [33 bytes])"
             ]
 
     newCommitteeFile = do
+      let helptxt =
+            "Filepath of JSON generated committee from `fresh-sidechain-committee`"
       committeeFilepath <-
         option OptParse.str $
           mconcat
             [ long "new-committee"
             , metavar "FILEPATH"
-            , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
+            , help helptxt
             ]
 
       pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
+          Nothing ->
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | Parser for parsing a hex encoded CBOR encoded
 -- 'Plutus.V2.Ledger.Api.Address'
@@ -511,7 +548,8 @@ initCommitteePublicKeysParser =
           mconcat
             [ long "committee-pub-key"
             , metavar "PUBLIC_KEY"
-            , help "Secp256k1 public key of an initial committee member (hex DER encoded [33 bytes])"
+            , help
+                "Secp256k1 public key of an initial committee member (hex DER encoded [33 bytes])"
             ]
 
     newCommitteeFile = do
@@ -526,7 +564,9 @@ initCommitteePublicKeysParser =
       pure $
         Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
-          Nothing -> ioError $ userError $ "Invalid JSON committee file at: " <> committeeFilepath
+          Nothing ->
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for gathering the 'SidechainParams'
 sidechainParamsParser :: OptParse.Parser SidechainParams
@@ -584,7 +624,7 @@ genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
   atmsKind <-
-    option (maybeReader OffChain.parseATMSKind) $
+    option (maybeReader (OffChain.parseATMSKind . ByteString.Char8.pack)) $
       mconcat
         [ long "atms-kind"
         , metavar "ATMS_KIND"
@@ -638,7 +678,8 @@ registerCommand =
             mconcat
               [ long "registration-utxo"
               , metavar "TX_ID#TX_IDX"
-              , help "Input UTxO to be spend with the commitee candidate registration"
+              , help
+                  "Input UTxO to be spend with the commitee candidate registration"
               ]
 
         pure $ pure (scParamsAndSigningKeyFunction $ RegistrationCommand {..})
@@ -687,8 +728,8 @@ initSidechainCommand =
           pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
         <**> helper
 
--- | 'committeeHashCommand' parses the cli arguments for gathering the parameters for
--- 'UpdateCommitteeHashCommand'
+-- | 'committeeHashCommand' parses the cli arguments for gathering the
+-- parameters for 'UpdateCommitteeHashCommand'
 updateCommitteeHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 updateCommitteeHashCommand =
   command "committee-hash" $
@@ -730,8 +771,8 @@ updateCommitteeHashCommand =
           pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
         <**> helper
 
--- | 'saveRootCommand' parses the cli arguments to grab the required parameters for generating a CLI command
--- for saving a merkle root
+-- | 'saveRootCommand' parses the cli arguments to grab the required parameters
+-- for generating a CLI command for saving a merkle root.
 saveRootCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 saveRootCommand =
   command "save-root" $
@@ -910,7 +951,8 @@ freshSidechainCommittee = do
 
 -- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
 -- fresh sidechain private key
-sidechainPrivateKeyToPublicKeyCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
+sidechainPrivateKeyToPublicKeyCommand ::
+  OptParse.Mod OptParse.CommandFields (IO Command)
 sidechainPrivateKeyToPublicKeyCommand =
   command "sidechain-private-key-to-public-key" $
     flip

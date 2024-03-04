@@ -253,6 +253,7 @@ executable trustless-sidechain-serialise
     , onchain-poc
     , plutonomy
     , plutus-ledger-api
+    , text
     , trustless-sidechain
     , trustless-sidechain-prelude
 

@@ -8,9 +8,9 @@ module GenOutput (genCliCommand, merkleTreeCommand, sidechainKeyCommand) where
 import Control.Exception (ioError)
 import Control.Monad qualified as Monad
 import Data.Aeson qualified as Aeson
-import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
+import Data.ByteString.Char8 qualified as ByteString.Char8
+import Data.ByteString.Lazy qualified as ByteString
 import Data.List qualified as List
-import Data.String qualified as HString
 import GetOpts (
   GenCliCommand (
     DeregistrationCommand,
@@ -53,6 +53,7 @@ import GetOpts (
   uchcSidechainEpoch,
   uchcValidatorHash,
  )
+import Plutus.V1.Ledger.Bytes qualified as Plutus
 import Plutus.V2.Ledger.Api (
   ToData (toBuiltinData),
   ValidatorHash (ValidatorHash),
@@ -116,23 +117,23 @@ genCliCommand ::
   -- | Command we wish to generate
   GenCliCommand ->
   -- | CLI command to execute for purescript
-  HString.String
+  ByteString
 genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
-  let -- build the flags related to the sidechain params (this is common to
+  let bytesFromShow :: (Show a) => a -> ByteString
+      bytesFromShow = ByteString.Char8.pack . show
+      -- build the flags related to the sidechain params (this is common to
       -- all commands)
-      sidechainParamFlags :: [[HString.String]]
+      sidechainParamFlags :: [[ByteString]]
       sidechainParamFlags =
-        filter
-          (not . List.null)
-          [ ["--payment-signing-key-file", signingKeyFile]
-          , ["--genesis-committee-hash-utxo", OffChain.showTxOutRef genesisUtxo]
-          , ["--sidechain-id", show chainId]
-          , ["--threshold-numerator", show thresholdNumerator]
-          , ["--threshold-denominator", show thresholdDenominator]
-          , ["--atms-kind", OffChain.showATMSKind atmsKind]
-          ]
-   in List.intercalate " \\\n" $
-        fmap List.unwords $ case cliCommand of
+        [ ["--payment-signing-key-file", ByteString.Char8.pack signingKeyFile]
+        , ["--genesis-committee-hash-utxo", OffChain.encodeTxOutRef genesisUtxo]
+        , ["--sidechain-id", bytesFromShow chainId]
+        , ["--threshold-numerator", bytesFromShow thresholdNumerator]
+        , ["--threshold-denominator", bytesFromShow thresholdDenominator]
+        , ["--atms-kind", OffChain.showATMSKind atmsKind]
+        ]
+   in ByteString.Char8.intercalate " \\\n" $
+        fmap ByteString.Char8.unwords $ case cliCommand of
           InitSidechainCommand {..} ->
             -- note: this will look similar to the UpdateCommitteeHashCommand
             -- case
@@ -140,14 +141,14 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                   fmap
                     ( \pubKey ->
                         [ "--committee-pub-key"
-                        , show pubKey
+                        , bytesFromShow pubKey
                         ]
                     )
                     iscInitCommitteePubKeys
              in ["nix run .#sidechain-main-cli -- init"] :
                 sidechainParamFlags
                   <> committeeFlags
-                  <> [["--sidechain-epoch", show iscSidechainEpoch]]
+                  <> [["--sidechain-epoch", bytesFromShow iscSidechainEpoch]]
           RegistrationCommand {..} ->
             let msg =
                   BlockProducerRegistrationMsg
@@ -157,16 +158,16 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                     }
              in ["nix run .#sidechain-main-cli -- register"] :
                 sidechainParamFlags
-                  <> [ ["--spo-public-key", show $ OffChain.toSpoPubKey rcSpoPrivKey]
-                     , ["--sidechain-public-key", show $ OffChain.toSidechainPubKey rcSidechainPrivKey]
-                     , ["--spo-signature", show $ OffChain.signWithSPOKey rcSpoPrivKey msg]
-                     , ["--sidechain-signature", show $ OffChain.signWithSidechainKey rcSidechainPrivKey msg]
-                     , ["--registration-utxo", OffChain.showTxOutRef rcRegistrationUtxo]
+                  <> [ ["--spo-public-key", bytesFromShow $ OffChain.toSpoPubKey rcSpoPrivKey]
+                     , ["--sidechain-public-key", bytesFromShow $ OffChain.toSidechainPubKey rcSidechainPrivKey]
+                     , ["--spo-signature", bytesFromShow $ OffChain.signWithSPOKey rcSpoPrivKey msg]
+                     , ["--sidechain-signature", bytesFromShow $ OffChain.signWithSidechainKey rcSidechainPrivKey msg]
+                     , ["--registration-utxo", OffChain.encodeTxOutRef rcRegistrationUtxo]
                      ]
           DeregistrationCommand {..} ->
             ["nix run .#sidechain-main-cli -- deregister"] :
             sidechainParamFlags
-              <> [ ["--spo-public-key", show $ OffChain.vKeyToSpoPubKey drSpoPubKey]
+              <> [ ["--spo-public-key", bytesFromShow $ OffChain.vKeyToSpoPubKey drSpoPubKey]
                  ]
           UpdateCommitteeHashCommand {..} ->
             let msg =
@@ -188,7 +189,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                   fmap
                     ( \sidechainPrvKey ->
                         [ "--committee-pub-key-and-signature"
-                        , OffChain.showScPubKeyAndSig
+                        , OffChain.encodeScPubKeyAndSig
                             (OffChain.toSidechainPubKey sidechainPrvKey)
                             (OffChain.signWithSidechainKey sidechainPrvKey msg)
                         ]
@@ -198,21 +199,21 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                   fmap
                     ( \pubKey ->
                         [ "--new-committee-pub-key"
-                        , show pubKey
+                        , bytesFromShow pubKey
                         ]
                     )
                     uchcNewCommitteePubKeys
                 serialisedValidatorHash =
                   let ValidatorHash bs = uchcValidatorHash
-                   in showBuiltinBS bs
+                   in encodeHexBuiltinBS bs
              in ["nix run .#sidechain-main-cli -- committee-hash"] :
                 sidechainParamFlags
                   <> currentCommitteePubKeysAndSigsFlags
                   <> newCommitteeFlags
-                  <> [["--sidechain-epoch", show uchcSidechainEpoch]]
+                  <> [["--sidechain-epoch", bytesFromShow uchcSidechainEpoch]]
                   <> [ ["--new-committee-validator-hash", serialisedValidatorHash]
                      ]
-                  <> maybe [] (\bs -> [["--previous-merkle-root", show bs]]) uchcPreviousMerkleRoot
+                  <> maybe [] (\bs -> [["--previous-merkle-root", bytesFromShow bs]]) uchcPreviousMerkleRoot
           SaveRootCommand {..} ->
             let msg =
                   MerkleRootInsertionMessage
@@ -224,7 +225,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                   fmap
                     ( \sidechainPrvKey ->
                         [ "--committee-pub-key-and-signature"
-                        , OffChain.showScPubKeyAndSig
+                        , OffChain.encodeScPubKeyAndSig
                             (OffChain.toSidechainPubKey sidechainPrvKey)
                             (OffChain.signWithSidechainKey sidechainPrvKey msg)
                         ]
@@ -233,32 +234,32 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
              in ["nix run .#sidechain-main-cli -- save-root"] :
                 sidechainParamFlags
                   <> currentCommitteePubKeysAndSigsFlags
-                  <> [["--merkle-root", show srcMerkleRoot]]
-                  <> maybe [] (\bs -> [["--previous-merkle-root", show bs]]) srcPreviousMerkleRoot
+                  <> [["--merkle-root", bytesFromShow srcMerkleRoot]]
+                  <> maybe [] (\bs -> [["--previous-merkle-root", bytesFromShow bs]]) srcPreviousMerkleRoot
 
 -- | 'merkleTreeCommand' creates output for the merkle tree commands.
 --
 -- Note: this is in the IO monad to propogate errors via exceptions that may
 -- occur from malformed user data.
-merkleTreeCommand :: MerkleTreeCommand -> IO HString.String
+merkleTreeCommand :: MerkleTreeCommand -> IO ByteString
 merkleTreeCommand = \case
   MerkleTreeEntriesCommand {..} ->
     if List.null mtecEntries
       then ioError $ userError "Invalid empty list merkle tree entries"
-      else pure $ OffChain.showMerkleTree $ MerkleTree.fromList $ fmap (Builtins.serialiseData . toBuiltinData) mtecEntries
+      else pure $ OffChain.encodeHexMerkleTree $ MerkleTree.fromList $ fmap (Builtins.serialiseData . toBuiltinData) mtecEntries
   RootHashCommand {..} ->
-    pure $ show $ unRootHash $ MerkleTree.rootHash rhcMerkleTree
+    pure . Plutus.bytes . unRootHash $ MerkleTree.rootHash rhcMerkleTree
   MerkleProofCommand {..} ->
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData mpcMerkleTreeEntry)) mpcMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
-      Just mp -> pure $ OffChain.showMerkleProof mp
+      Just mp -> pure $ OffChain.encodeHexMerkleProof mp
   CombinedMerkleProofCommand {..} ->
     -- Mostly duplicated from the 'MerkleProofCommand' case
     case MerkleTree.lookupMp (Builtins.serialiseData (toBuiltinData cmpMerkleTreeEntry)) cmpMerkleTree of
       Nothing -> ioError $ userError "Merkle entry not found in merkle tree"
       Just mp ->
         pure $
-          OffChain.showCombinedMerkleProof
+          OffChain.encodeHexCombinedMerkleProof
             CombinedMerkleProof
               { transaction = cmpMerkleTreeEntry
               , merkleProof = mp
@@ -269,16 +270,13 @@ merkleTreeCommand = \case
 --
 -- Note: this is in the IO monad because generating fresh private keys is an IO
 -- action.
-sidechainKeyCommand :: SidechainKeyCommand -> IO HString.String
+sidechainKeyCommand :: SidechainKeyCommand -> IO ByteString
 sidechainKeyCommand = \case
-  FreshSidechainPrivateKey -> OffChain.showSecpPrivKey <$> OffChain.generateRandomSecpPrivKey
+  FreshSidechainPrivateKey -> OffChain.encodeHexSecpPrivKey <$> OffChain.generateRandomSecpPrivKey
   SidechainPrivateKeyToPublicKey {..} ->
-    pure $ show $ OffChain.toSidechainPubKey spktpkPrivateKey
+    pure . ByteString.Char8.pack . show $ OffChain.toSidechainPubKey spktpkPrivateKey
   FreshSidechainCommittee {..} -> do
     committeePrvKeys <- Monad.replicateM fscCommitteeSize OffChain.generateRandomSecpPrivKey
     let committeePubKeys = fmap OffChain.toSidechainPubKey committeePrvKeys
         committee = SidechainCommittee $ zipWith SidechainCommitteeMember committeePrvKeys committeePubKeys
-    pure $ ByteString.Lazy.Char8.unpack $ Aeson.encode committee
-
--- probably should just use bytestrings or text for all output
--- types intead of going through strings honestly.
+    pure . ByteString.toStrict $ Aeson.encode committee
