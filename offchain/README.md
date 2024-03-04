@@ -517,4 +517,247 @@ there is no other way to use them.
 
 #### 3.3.21 Utils
 
-TODO: who wrote this command?
+All commands in this section are supposed to be used mostly by developers.
+
+All commands in this section do not communicate with the Cardano network.
+
+Utils commands that start with `key-gen` allow for public / private key pair generation.
+
+Utils commands that start with `sign` are used to sign messages. Messages to be signed
+can be arbitrary byte strings.
+
+Utils commands that start with `encode` allow for producing messages in CBOR format.
+One needs to provide all necessary fields of a message as CLI arguments and the command
+produces CBOR encoded message of a desired type.
+
+##### 3.3.21.1 Generate an ECDSA SECP256k1 public / private key pair
+
+```
+nix run .#sidechain-main-cli -- utils key-gen ecdsa-secp256k1
+```
+
+Sample output:
+
+```
+{ "endpoint": "EcdsaSecp256k1KeyGen",
+  "rawHexPublicKey": "037e6950f2f2505990b7bdeea2125b6e1e75335831229e29bc451bec6ef2833ff6",
+  "rawHexPrivateKey":"2ed258ab93bacb119492d842a2a450c4bfd6f91f0914f22f3b97664dffb0b9d6"
+}
+```
+
+##### 3.3.21.2 Generate an Schnorr SECP256k1 public / private key pair
+
+```
+nix run .#sidechain-main-cli -- utils key-gen schnorr-secp256k1
+```
+
+Sample output:
+
+```
+{ "endpoint": "SchnorrSecp256k1KeyGen",
+  "rawHexPublicKey": "303e8f4b884b97349c39a5011d7e2cc8dca0a0cf7898a29d0e37524ee5ffb5f0",
+  "rawHexPrivateKey":"d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f"
+}
+```
+
+##### 3.3.21.3 Sign a message with an ECDSA SECP256k1 private key
+
+Available options:
+  - `--private-key SIDECHAIN_PRIVATE_KEY` \
+    Hex encoded raw bytes of an ECDSA SECP256k1 private key
+  - `--message MESSAGE` \
+    Hex encoded raw bytes of a message to sign
+  - `[-no-hash-message]` \
+    Do not hash the message with blake2b256 before signing
+
+```
+nix run .#sidechain-main-cli -- utils sign ecdsa-secp256k1 \
+  --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
+  --message "0xab40"
+```
+
+Sample output:
+
+```
+{ "endpoint": "EcdsaSecp256k1Sign",
+  "rawHexPublicKey":"03303e8f4b884b97349c39a5011d7e2cc8dca0a0cf7898a29d0e37524ee5ffb5f0",
+  "rawHexSignature":"fc2828280f31e6d8719eea9a826f7ed524d963ce07c42690181397445b856b2428aef1ca4a90d27bbc40d6c36c80cd58f1f3de78fffd770ad57e77c61cd4b3f3",
+  "rawHexSignedMessage":"e659246d29f751fad80b79a5d5e30874a016f046ddb7692636ba9a584d393568"
+}
+```
+
+##### 3.3.21.4 Sign a message with a Schnorr SECP256k1 private key
+
+Arguments and the output format are the same as in 3.3.21.3.
+
+```
+nix run .#sidechain-main-cli -- utils sign schnorr-secp256k1 \
+  --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
+  --message "0xab40"
+```
+
+##### 3.3.21.5 Produce a CBOR encoded aggregated public key of the sidechain committee
+
+The result corresponds to `UpdateCommitteeHashMessage` type in the code.
+
+Available options:
+  - `-i,--sidechain-id` \
+    Sidechain ID
+  - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
+    Input UTxO to be spent with the first committee hash setup
+  - `-g,--governance-authority PUB_KEY_HASH` \
+    Public key hash of governance authority
+  - `--threshold-numerator INT` \
+    The numerator for the ratio of the threshold
+  - `--threshold-denominator INT` \
+    The denominator for the ratio of the threshold
+  - `--sidechain-epoch INT` \
+    Sidechain epoch
+  - `--previous-merkle-root MERKLE_ROOT` \
+    Raw hex encoded previous merkle root if it exists
+  - `--cbor-aggregated-public-keys AGGREGATED_SIDECHAIN_PUBLIC_KEYS` \
+    A CBOR encoded aggregated public key of the sidechain committee
+  - `--new-committee-validator-hash VALIDATOR_HASH` \
+    Hex encoded validator hash to send the committee oracle to
+  - `--new-committee-validator-bech32-address BECH32_ADDRESS` \
+    bech32 of a validator address to send the committee oracle to
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-update-committee-message \
+  --sidechain-id 123 \
+  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
+  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+  --threshold-numerator 2 \
+  --threshold-denominator 3 \
+  --sidechain-epoch 5 \
+  --cbor-aggregated-public-keys aabb \
+  --new-committee-validator-hash ab2d6145e1700cd11dc074cad9f4194cc53b0dbab6bd25dfea6c501c
+```
+
+where we note that `--cbor-aggregated-public-keys` can be found
+from the JSON key `cborEncodedAddresses` from the output of the `addresses`
+subcommand.
+
+##### 3.3.21.6 Produce a CBOR encoded block producer registration message
+
+The result corresponds to `BlockProducerRegistrationMsg` type in the code.
+
+Available options:
+  - `-i,--sidechain-id` \
+    Sidechain ID
+  - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
+    Input UTxO to be spent with the first committee hash setup
+  - `-g,--governance-authority PUB_KEY_HASH` \
+    Public key hash of governance authority
+  - `--threshold-numerator INT` \
+    The numerator for the ratio of the threshold
+  - `--threshold-denominator INT` \
+    The denominator for the ratio of the threshold
+  - `--sidechain-public-key SIDECHAIN_PUB_KEY` \
+    Sidechain public key
+  - `--input-utxo TX_ID#TX_IDX` \
+    Input UTxO which must be spent by the transaction
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-block-producer-registration-message \
+  --sidechain-id 123 \
+  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
+  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+  --threshold-numerator 2 \
+  --threshold-denominator 3 \
+  --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
+  --input-utxo ab24c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#5
+```
+
+##### 3.3.21.7 Produce a CBOR of a Merkle tree entry
+
+The result corresponds to `MerkleTreeEntry` type in the code.
+
+Available options:
+  - `--index INDEX` \
+    Integer to ensure uniqueness amongst Merkle tree entries
+  - `-a,--amount` \
+    Amount of FUEL token to be burnt/minted
+  - `--recipient BECH32_ADDRESS` \
+    Human readable bech32 address of the recipient.
+  - `--previous-merkle-root MERKLE_ROOT` \
+    Raw hex encoded previous merkle root if it exists
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree-entry \
+  --index 5 \
+  --amount 100 \
+  --previous-merkle-root 0xabababababababaabababababababaababababababababbbabababababababab \
+  --recipient aabbcc
+```
+
+##### 3.3.21.8 Produce a CBOR of a Merkle tree and the Merkle root hash from the provided Merkle tree entries
+
+The result corresponds to `List MerkleTreeEntry` type in the code.
+
+Available options:
+  - `--cbor-merkle-tree-entry CBOR_MERKLE_TREE_ENTRY` \
+    Cbor encoded Merkle tree entry
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree \
+  --cbor-merkle-tree-entry abababababababaabababababababaababababababababbbabababababababab
+```
+
+##### 3.3.21.9 Produce a CBOR of a combined Merkle proof from the provided Merkle tree and Merkle tree entry
+
+The result corresponds to `(MerkleTreeEntry, MerkleTree)` type in the code.
+
+Available options:
+  - `--cbor-merkle-tree-entry CBOR_MERKLE_TREE_ENTRY` \
+    Cbor encoded Merkle tree entry
+  - `--cbor-merkle-tree CBOR_MERKLE_TREE` \
+    Cbor encoded Merkle tree
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-combined-merkle-proof \
+  --cbor-merkle-tree-entry abababababababaabababababababaababababababababbbabababababababab \
+  --cbor-merkle-tree abababababababaabababababababaababababababababbbabababababababab
+```
+
+##### 3.3.21.10 Produce a CBOR of a Merkle root insertion message
+
+The result corresponds to `MerkleRootInsertionMessage` type in the code.
+
+Available options:
+  - `-i,--sidechain-id` \
+    Sidechain ID
+  - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
+    Input UTxO to be spent with the first committee hash setup
+  - `-g,--governance-authority PUB_KEY_HASH` \
+    Public key hash of governance authority
+  - `--threshold-numerator INT` \
+    The numerator for the ratio of the threshold
+  - `--threshold-denominator INT` \
+    The denominator for the ratio of the threshold
+  - `--merkle-root MERKLE_ROOT` \
+    Raw hex encoded Merkle root signed by the committee
+  - `--previous-merkle-root MERKLE_ROOT` \
+    Raw hex encoded previous merkle root if it exists
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-merkle-root-insertion-message \
+  --sidechain-id 123 \
+  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
+  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+  --threshold-numerator 2 \
+  --threshold-denominator 3 \
+  --merkle-root 0xabababababababaabababababababaababababababababbbabababababababab \
+  --previous-merkle-root 0xabababababababaabababababababaababababababababbbabababababababab
+```
+
+##### 3.3.21.11 Aggregate the raw hex encoded public keys with the plain ATMS scheme which sorts, concatenates, and hashes
+
+Available options:
+  - `--public-key PUBLIC_KEY` \
+    Hex encoded raw bytes of a sidechain public key
+
+```
+nix run .#sidechain-main-cli -- utils encode cbor-plain-aggregate-public-keys \
+  --public-key 0xabababababababaabababababababaababababababababbbabababababababab
+```
