@@ -8,18 +8,12 @@ module TrustlessSidechain.Utils (
   mkUntypedValidator,
   mkUntypedMintingPolicy,
   scriptToPlutusScript,
-  ScriptContextRaw (..),
-  ScriptPurposeRaw (..),
-  TxInfoRaw (..),
-  TxInfoMintRaw (..),
-  CurrencySymbolRaw (..),
-  safeGetTxInfo,
-  safeGetTxInfoMint,
-  safeGetScriptPurpose,
-  safeGetMinting,
+  oneTokenMintedRaw,
+  oneTokenBurnedRaw,
 ) where
 
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.TypesRaw qualified as Raw
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
@@ -38,7 +32,6 @@ import Plutus.V2.Ledger.Api (
   getValue,
  )
 import PlutusTx.AssocMap qualified as Map
-import PlutusTx.Builtins qualified as Builtins
 
 -- | Unwrap a singleton list, or produce an error if not possible.
 {-# INLINEABLE fromSingleton #-}
@@ -49,7 +42,7 @@ fromSingleton msg _ = traceError msg
 -- | Get amount of given currency in a value, ignoring token names.
 {-# INLINEABLE currencySymbolValueOf #-}
 currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
-currencySymbolValueOf v c = maybe 0 sum (Map.lookup c (getValue v))
+currencySymbolValueOf v c = maybe 0 sum $ Map.lookup c $ getValue v
 
 -- | Check that exactly on specified asset was minted by a transaction.  Note
 -- that transaction is also allowed to mint/burn tokens of the same
@@ -59,7 +52,12 @@ oneTokenMinted :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenMinted txInfoMint cs tn =
   valueOf txInfoMint cs tn == 1
 
--- | Check that exactly on specified asset was burned by a transaction.  Note
+{-# INLINEABLE oneTokenMintedRaw #-}
+oneTokenMintedRaw :: Raw.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenMintedRaw txInfoRaw cs tn =
+  valueOf (Raw.txInfoMint txInfoRaw) cs tn == 1
+
+-- | Check that exactly one specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
 -- but with different 'TokenName's.  This is intended for use with 'InitToken's,
 -- so that we permit multiple 'InitToken's with different names burned in the
@@ -68,6 +66,11 @@ oneTokenMinted txInfoMint cs tn =
 oneTokenBurned :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurned txInfoMint cs tn =
   valueOf txInfoMint cs tn == -1
+
+{-# INLINEABLE oneTokenBurnedRaw #-}
+oneTokenBurnedRaw :: Raw.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenBurnedRaw txInfoRaw cs tn =
+  valueOf (Raw.txInfoMint txInfoRaw) cs tn == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types
@@ -102,33 +105,3 @@ scriptToPlutusScript =
     . toStrict
     . serialise
     . Plutonomy.UPLC.optimizeUPLC
-
-------------------------
-
-newtype ScriptContextRaw = ScriptContextRaw {unScriptContextRaw :: BuiltinData}
-newtype TxInfoRaw = TxInfoRaw {unTxInfoRaw :: BuiltinData}
-newtype TxInfoMintRaw = TxInfoMintRaw {unTxInfoMintRaw :: BuiltinData}
-newtype ScriptPurposeRaw = ScriptPurposeRaw {unScriptPurposeRaw :: BuiltinData}
-newtype CurrencySymbolRaw = CurrencySymbolRaw {unCurrencySymbolRaw :: BuiltinData}
-
-{-# INLINE safeGetTxInfo #-}
-safeGetTxInfo :: ScriptContextRaw -> TxInfoRaw
--- 1st field of ScriptContext is TxInfo
-safeGetTxInfo (ScriptContextRaw bd) = TxInfoRaw . head . snd . Builtins.unsafeDataAsConstr $ bd
-
-{-# INLINE safeGetScriptPurpose #-}
-safeGetScriptPurpose :: ScriptContextRaw -> ScriptPurposeRaw
--- 2nd field of ScriptContext is ScriptPurpose
-safeGetScriptPurpose (ScriptContextRaw bd) = ScriptPurposeRaw $ snd (Builtins.unsafeDataAsConstr bd) !! 1
-
-{-# INLINE safeGetTxInfoMint #-}
-safeGetTxInfoMint :: TxInfoRaw -> TxInfoMintRaw
--- 5th field of TxInfo is txInfoMint
-safeGetTxInfoMint (TxInfoRaw bd) = TxInfoMintRaw $ snd (Builtins.unsafeDataAsConstr bd) !! 4
-
-{-# INLINE safeGetMinting #-}
-safeGetMinting :: ScriptPurposeRaw -> Maybe CurrencySymbolRaw
--- 1st ctor of ScriptPurpose is Minting
-safeGetMinting (ScriptPurposeRaw bd) = case Builtins.unsafeDataAsConstr bd of
-  (0, [cs]) -> Just (CurrencySymbolRaw cs)
-  _ -> Nothing

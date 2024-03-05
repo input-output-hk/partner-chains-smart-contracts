@@ -14,6 +14,7 @@ module TrustlessSidechain.Versioning (
   mkVersionOracleValidator,
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
+  getVersionedCurrencySymbolRaw,
   VersionOracle (..),
   VersionOracleDatum (..),
   VersionOracleConfig (..),
@@ -78,6 +79,7 @@ import TrustlessSidechain.Types (
   InitTokenAssetClass,
   SidechainParams,
  )
+import TrustlessSidechain.TypesRaw qualified as Raw
 import TrustlessSidechain.Utils (
   fromSingleton,
   mkUntypedMintingPolicy,
@@ -537,6 +539,15 @@ getVersionedCurrencySymbol ::
 getVersionedCurrencySymbol voConfig vo sc =
   CurrencySymbol (getVersionedScriptHash voConfig vo sc)
 
+{-# INLINEABLE getVersionedCurrencySymbolRaw #-}
+getVersionedCurrencySymbolRaw ::
+  VersionOracleConfig ->
+  VersionOracle ->
+  Raw.ScriptContext ->
+  CurrencySymbol
+getVersionedCurrencySymbolRaw voConfig vo sc =
+  CurrencySymbol (getVersionedScriptHashRaw voConfig vo sc)
+
 -- | Searches script context for a reference input containing specified script
 -- as a reference input.  Said reference input must come from
 -- VersionOracleValidator script address.  Returns script hash if requested
@@ -566,6 +577,36 @@ getVersionedScriptHash
             (Just (ScriptHash hash))
           ) <-
         txInfoReferenceInputs txInfo
+      , -- 1. Contains datum that matches desired version and scriptId.
+      Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
+      , versionOracle' == versionOracle
+      , -- 2. Contains exactly one VersionOraclePolicy token.
+      valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
+      ]
+
+{-# INLINEABLE getVersionedScriptHashRaw #-}
+getVersionedScriptHashRaw ::
+  VersionOracleConfig ->
+  VersionOracle ->
+  Raw.ScriptContext ->
+  BuiltinByteString
+getVersionedScriptHashRaw
+  (VersionOracleConfig {..})
+  versionOracle
+  sc =
+    fromSingleton "ERROR-VERSION-CURRENCY-01" $
+      [ hash
+      | -- Lookup reference input that:
+      TxInInfo
+        _
+        ( TxOut
+            _
+            value
+            (OutputDatum (Datum datum))
+            (Just (ScriptHash hash))
+          ) <-
+        PlutusTx.unsafeFromBuiltinData . Raw.unTxInInfo
+          <$> (Raw.txInfoReferenceInputs . Raw.scriptContextTxInfo $ sc)
       , -- 1. Contains datum that matches desired version and scriptId.
       Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
       , versionOracle' == versionOracle

@@ -99,6 +99,7 @@ library
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.ScriptCache
     TrustlessSidechain.Types
+    TrustlessSidechain.TypesRaw
     TrustlessSidechain.UpdateCommitteeHash
     TrustlessSidechain.Utils
     TrustlessSidechain.Versioning

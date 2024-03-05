@@ -11,18 +11,13 @@ module TrustlessSidechain.CommitteeCandidateValidator (
 ) where
 
 import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
-import Plutus.V2.Ledger.Contexts (
-  ScriptContext (scriptContextTxInfo),
-  TxInfo,
-  txSignedBy,
- )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,
  )
-import TrustlessSidechain.Utils (mkUntypedValidator)
+import TrustlessSidechain.TypesRaw qualified as Raw
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
 -- OnChain error descriptions:
@@ -32,18 +27,18 @@ import TrustlessSidechain.Utils (mkUntypedValidator)
 mkCommitteeCandidateValidator ::
   SidechainParams ->
   BlockProducerRegistration ->
-  () ->
-  ScriptContext ->
+  BuiltinData ->
+  Raw.ScriptContext ->
   Bool
-mkCommitteeCandidateValidator _ datum _ ctx =
+mkCommitteeCandidateValidator _sidechainParams datum _redeemer ctx =
   traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    info :: Raw.TxInfo
+    info = Raw.scriptContextTxInfo ctx
     pkh :: PubKeyHash
     pkh = get @"ownPkh" datum
     isSigned :: Bool
-    isSigned = txSignedBy info pkh
+    isSigned = Raw.txSignedBy info pkh
 
 {-# INLINEABLE committeeCandidateValidatorUntyped #-}
 committeeCandidateValidatorUntyped ::
@@ -52,10 +47,13 @@ committeeCandidateValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-committeeCandidateValidatorUntyped =
-  mkUntypedValidator
-    . mkCommitteeCandidateValidator
-    . PlutusTx.unsafeFromBuiltinData
+committeeCandidateValidatorUntyped sidechainParams datum red ctx =
+  check $
+    mkCommitteeCandidateValidator
+      (PlutusTx.unsafeFromBuiltinData sidechainParams)
+      (PlutusTx.unsafeFromBuiltinData datum)
+      (PlutusTx.unsafeFromBuiltinData red)
+      (Raw.ScriptContext ctx)
 
 serialisableValidator :: Script
 serialisableValidator =
