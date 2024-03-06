@@ -1,6 +1,6 @@
-module TrustlessSidechain.TypesRaw where -- TODO get a better name
+module TrustlessSidechain.Types.Unsafe where
 
--- This module is intended to be imported qualified as ``.
+-- This module is intended to be imported qualified as `Unsafe`.
 -- This module provides wrappers and extractor functions to allow fine-grained
 -- and manual extraction of fields from script arguments.
 --

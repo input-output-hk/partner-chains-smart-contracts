@@ -13,7 +13,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
-import TrustlessSidechain.TypesRaw qualified as Raw
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
   oneTokenBurned,
  )
@@ -29,14 +29,14 @@ import TrustlessSidechain.Utils (
 mkCandidatePermissionMintingPolicy ::
   InitTokenAssetClass ->
   BuiltinData ->
-  Raw.ScriptContext ->
+  Unsafe.ScriptContext ->
   Bool
 mkCandidatePermissionMintingPolicy itac _ scriptContext =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" initTokenBurned
   where
     mint =
-      Raw.txInfoMint
-        . Raw.scriptContextTxInfo
+      Unsafe.txInfoMint
+        . Unsafe.scriptContextTxInfo
         $ scriptContext
 
     initTokenBurned :: Bool
@@ -56,7 +56,7 @@ mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
     mkCandidatePermissionMintingPolicy
       (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
       a
-      (Raw.ScriptContext scriptContext)
+      (Unsafe.ScriptContext scriptContext)
 
 serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =

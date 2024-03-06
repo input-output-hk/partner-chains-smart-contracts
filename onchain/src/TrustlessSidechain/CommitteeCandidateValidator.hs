@@ -17,7 +17,7 @@ import TrustlessSidechain.Types (
   BlockProducerRegistration,
   SidechainParams,
  )
-import TrustlessSidechain.TypesRaw qualified as Raw
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
 -- OnChain error descriptions:
@@ -28,17 +28,17 @@ mkCommitteeCandidateValidator ::
   SidechainParams ->
   BlockProducerRegistration ->
   BuiltinData ->
-  Raw.ScriptContext ->
+  Unsafe.ScriptContext ->
   Bool
 mkCommitteeCandidateValidator _sidechainParams datum _redeemer ctx =
   traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
-    info :: Raw.TxInfo
-    info = Raw.scriptContextTxInfo ctx
+    info :: Unsafe.TxInfo
+    info = Unsafe.scriptContextTxInfo ctx
     pkh :: PubKeyHash
     pkh = get @"ownPkh" datum
     isSigned :: Bool
-    isSigned = Raw.txSignedBy info pkh
+    isSigned = Unsafe.txSignedBy info pkh
 
 {-# INLINEABLE committeeCandidateValidatorUntyped #-}
 committeeCandidateValidatorUntyped ::
@@ -53,7 +53,7 @@ committeeCandidateValidatorUntyped sidechainParams datum red ctx =
       (PlutusTx.unsafeFromBuiltinData sidechainParams)
       (PlutusTx.unsafeFromBuiltinData datum)
       (PlutusTx.unsafeFromBuiltinData red)
-      (Raw.ScriptContext ctx)
+      (Unsafe.ScriptContext ctx)
 
 serialisableValidator :: Script
 serialisableValidator =

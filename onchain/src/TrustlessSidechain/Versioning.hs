@@ -79,7 +79,7 @@ import TrustlessSidechain.Types (
   InitTokenAssetClass,
   SidechainParams,
  )
-import TrustlessSidechain.TypesRaw qualified as Raw
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
   fromSingleton,
   mkUntypedMintingPolicy,
@@ -543,7 +543,7 @@ getVersionedCurrencySymbol voConfig vo sc =
 getVersionedCurrencySymbolRaw ::
   VersionOracleConfig ->
   VersionOracle ->
-  Raw.ScriptContext ->
+  Unsafe.ScriptContext ->
   CurrencySymbol
 getVersionedCurrencySymbolRaw voConfig vo sc =
   CurrencySymbol (getVersionedScriptHashRaw voConfig vo sc)
@@ -588,7 +588,7 @@ getVersionedScriptHash
 getVersionedScriptHashRaw ::
   VersionOracleConfig ->
   VersionOracle ->
-  Raw.ScriptContext ->
+  Unsafe.ScriptContext ->
   BuiltinByteString
 getVersionedScriptHashRaw
   (VersionOracleConfig {..})
@@ -605,8 +605,8 @@ getVersionedScriptHashRaw
             (OutputDatum (Datum datum))
             (Just (ScriptHash hash))
           ) <-
-        PlutusTx.unsafeFromBuiltinData . Raw.unTxInInfo
-          <$> (Raw.txInfoReferenceInputs . Raw.scriptContextTxInfo $ sc)
+        PlutusTx.unsafeFromBuiltinData . Unsafe.unTxInInfo
+          <$> (Unsafe.txInfoReferenceInputs . Unsafe.scriptContextTxInfo $ sc)
       , -- 1. Contains datum that matches desired version and scriptId.
       Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
       , versionOracle' == versionOracle

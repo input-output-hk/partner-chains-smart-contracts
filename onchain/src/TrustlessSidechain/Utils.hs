@@ -13,7 +13,7 @@ module TrustlessSidechain.Utils (
 ) where
 
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.TypesRaw qualified as Raw
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
@@ -53,9 +53,9 @@ oneTokenMinted txInfoMint cs tn =
   valueOf txInfoMint cs tn == 1
 
 {-# INLINEABLE oneTokenMintedRaw #-}
-oneTokenMintedRaw :: Raw.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenMintedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenMintedRaw txInfoRaw cs tn =
-  valueOf (Raw.txInfoMint txInfoRaw) cs tn == 1
+  valueOf (Unsafe.txInfoMint txInfoRaw) cs tn == 1
 
 -- | Check that exactly one specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
@@ -68,9 +68,9 @@ oneTokenBurned txInfoMint cs tn =
   valueOf txInfoMint cs tn == -1
 
 {-# INLINEABLE oneTokenBurnedRaw #-}
-oneTokenBurnedRaw :: Raw.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenBurnedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurnedRaw txInfoRaw cs tn =
-  valueOf (Raw.txInfoMint txInfoRaw) cs tn == -1
+  valueOf (Unsafe.txInfoMint txInfoRaw) cs tn == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types
