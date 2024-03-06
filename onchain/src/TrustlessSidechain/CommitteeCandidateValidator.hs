@@ -13,10 +13,6 @@ module TrustlessSidechain.CommitteeCandidateValidator (
 import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (
-  BlockProducerRegistration,
-  SidechainParams,
- )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
@@ -25,8 +21,8 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 --   ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01: Transaction not signed by the
 --   original submitter.
 mkCommitteeCandidateValidator ::
-  SidechainParams ->
-  BlockProducerRegistration ->
+  BuiltinData ->
+  Unsafe.BlockProducerRegistration ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
@@ -36,7 +32,7 @@ mkCommitteeCandidateValidator _sidechainParams datum _redeemer ctx =
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
     pkh :: PubKeyHash
-    pkh = get @"ownPkh" datum
+    pkh = Unsafe.ownPkh datum
     isSigned :: Bool
     isSigned = Unsafe.txSignedBy info pkh
 
@@ -50,9 +46,9 @@ committeeCandidateValidatorUntyped ::
 committeeCandidateValidatorUntyped sidechainParams datum red ctx =
   check $
     mkCommitteeCandidateValidator
-      (PlutusTx.unsafeFromBuiltinData sidechainParams)
-      (PlutusTx.unsafeFromBuiltinData datum)
-      (PlutusTx.unsafeFromBuiltinData red)
+      sidechainParams
+      (Unsafe.BlockProducerRegistration datum)
+      red
       (Unsafe.ScriptContext ctx)
 
 serialisableValidator :: Script

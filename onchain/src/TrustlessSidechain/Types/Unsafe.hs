@@ -11,13 +11,10 @@ module TrustlessSidechain.Types.Unsafe where
 --   how many fields are used.
 
 import Plutus.V2.Ledger.Api qualified as V2
+import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
 
--- import Plutus.V1.Ledger.Value qualified as V1
-import PlutusTx qualified
-
--- newtype SidechainParams = SidechainParams {unSidechainParams :: BuiltinData}
 newtype ScriptContext = ScriptContext {unScriptContext :: BuiltinData}
 newtype TxInfo = TxInfo {unTxInfo :: BuiltinData}
 newtype TxInInfo = TxInInfo {unTxInInfo :: BuiltinData}
@@ -25,6 +22,7 @@ newtype TxOut = TxOut {unTxOut :: BuiltinData}
 newtype TxOutRef = TxOutRef {unTxOutRef :: BuiltinData}
 newtype TxInfoMint = TxInfoMint {unTxInfoMint :: BuiltinData}
 newtype ScriptPurpose = ScriptPurpose {unScriptPurpose :: BuiltinData}
+newtype BlockProducerRegistration = BlockProducerRegistration {unBlockProducerRegistration :: BuiltinData}
 
 -- ScriptContext
 
@@ -105,6 +103,13 @@ getMinting (ScriptPurpose bd) = PlutusTx.unsafeFromBuiltinData <$> 0 `nthCtorOf`
 getSpending :: ScriptPurpose -> Maybe TxOutRef
 -- 1. ctor of ScriptPurpose is Spending
 getSpending (ScriptPurpose bd) = TxOutRef <$> 0 `nthCtorOf` bd
+
+-- BlockProducerRegistration
+
+{-# INLINE ownPkh #-}
+ownPkh :: BlockProducerRegistration -> V2.PubKeyHash
+-- 4. field of BlockProducerRegistration is ownPkh
+ownPkh (BlockProducerRegistration bd) = PlutusTx.unsafeFromBuiltinData $ 4 `nthFieldOf` bd
 
 -- Raw versions of plutus-ledger-api functions
 
