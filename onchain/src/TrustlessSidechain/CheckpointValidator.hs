@@ -46,7 +46,7 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.TypesRaw qualified as Raw
 import TrustlessSidechain.Utils (
-  oneTokenBurnedRaw,
+  oneTokenBurned,
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
@@ -194,13 +194,12 @@ mkCheckpointPolicy itac _red scriptContext =
   traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
-    txInfo = Raw.scriptContextTxInfo scriptContext
-    mint = Raw.txInfoMint txInfo
+    mint = Raw.txInfoMint (Raw.scriptContextTxInfo scriptContext)
 
     initTokenBurned :: Bool
     initTokenBurned =
-      oneTokenBurnedRaw
-        txInfo
+      oneTokenBurned
+        mint
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 

@@ -87,7 +87,7 @@ main =
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            1_128
+            1_108
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
