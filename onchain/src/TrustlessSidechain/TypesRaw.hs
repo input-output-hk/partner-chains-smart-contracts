@@ -34,9 +34,9 @@ scriptContextTxInfo :: ScriptContext -> TxInfo
 scriptContextTxInfo (ScriptContext bd) = TxInfo $ 0 `nthFieldOf` bd
 
 {-# INLINE scriptContextPurpose #-}
-scriptContextPurpose :: ScriptContext -> V2.ScriptPurpose
+scriptContextPurpose :: ScriptContext -> ScriptPurpose
 -- 1. field of ScriptContext is ScriptPurpose
-scriptContextPurpose (ScriptContext bd) = PlutusTx.unsafeFromBuiltinData $ 1 `nthFieldOf` bd
+scriptContextPurpose (ScriptContext bd) = ScriptPurpose $ 1 `nthFieldOf` bd
 
 -- TxOut
 
@@ -94,24 +94,17 @@ txInfoSignatories :: TxInfo -> [V2.PubKeyHash]
 -- 8. field of TxInfo is txInfoSignatories
 txInfoSignatories (TxInfo bd) = PlutusTx.unsafeFromBuiltinData $ 8 `nthFieldOf` bd
 
--- {-# INLINE getMinting #-}
--- getMinting :: ScriptPurpose -> Maybe V2.CurrencySymbol
--- -- 1st ctor of ScriptPurpose is Minting
--- getMinting (ScriptPurpose bd) = case Builtins.unsafeDataAsConstr bd of
---   (0, [cs]) -> Just (PlutusTx.unsafeFromBuiltinData cs)
---   _ -> Nothing
+-- ScriptPurpose
 
--- | Check if a transaction was signed by the given public key.
-{-# INLINEABLE txSignedBy #-}
-txSignedBy :: TxInfo -> V2.PubKeyHash -> Bool
--- TODO replace with `any` when we have newer Plutus vesion
-txSignedBy info k = case find ((==) k) (txInfoSignatories info) of
-  Just _ -> True
-  Nothing -> False
+{-# INLINE getMinting #-}
+getMinting :: ScriptPurpose -> Maybe V2.CurrencySymbol
+-- 0. ctor of ScriptPurpose is Minting
+getMinting (ScriptPurpose bd) = PlutusTx.unsafeFromBuiltinData <$> 0 `nthCtorOf` bd
 
-{-# INLINEABLE nthFieldOf #-}
-nthFieldOf :: Integer -> BuiltinData -> BuiltinData
-nthFieldOf n bd = snd (Builtins.unsafeDataAsConstr bd) !! n
+{-# INLINE getSpending #-}
+getSpending :: ScriptPurpose -> Maybe TxOutRef
+-- 1. ctor of ScriptPurpose is Spending
+getSpending (ScriptPurpose bd) = TxOutRef <$> 0 `nthCtorOf` bd
 
 -- Raw versions of plutus-ledger-api functions
 
@@ -119,9 +112,9 @@ nthFieldOf n bd = snd (Builtins.unsafeDataAsConstr bd) !! n
 --   Adapted from Plutus.V2.Ledger.Contexts.ownCurrencySymbol
 {-# INLINEABLE ownCurrencySymbol #-}
 ownCurrencySymbol :: ScriptContext -> V2.CurrencySymbol
-ownCurrencySymbol bd = case scriptContextPurpose bd of
-  V2.Minting cs -> cs
-  _ -> traceError "Lh" -- "Can't get currency symbol of the current validator script"
+ownCurrencySymbol bd = case getMinting $ scriptContextPurpose bd of
+  Just cs -> cs
+  Nothing -> traceError "Lh" -- "Can't get currency symbol of the current validator script"
 
 -- | Get all the outputs that pay to the same script address we are currently spending from, if any.
 --   Adapted from Plutus.V2.Ledger.Contexts.getContinuingOutputs
@@ -139,8 +132,29 @@ getContinuingOutputs _ = traceError "Lf" -- "Can't get any continuing outputs"
 {-# INLINEABLE findOwnInput #-}
 findOwnInput :: ScriptContext -> Maybe TxInInfo
 findOwnInput sc
-  | V2.Spending txOutRef <- scriptContextPurpose sc =
+  | Just txOutRef <- getSpending $ scriptContextPurpose sc =
     find
-      (\inInfo -> (PlutusTx.unsafeFromBuiltinData . unTxOutRef . txInInfoOutRef $ inInfo) == txOutRef)
+      (\inInfo -> (unTxOutRef . txInInfoOutRef $ inInfo) == unTxOutRef txOutRef)
       (txInfoInputs . scriptContextTxInfo $ sc)
 findOwnInput _ = Nothing
+
+-- | Check if a transaction was signed by the given public key.
+--   Adapted from Plutus.V2.Ledger.Contexts.txSignedBy
+{-# INLINEABLE txSignedBy #-}
+txSignedBy :: TxInfo -> V2.PubKeyHash -> Bool
+-- TODO replace with `any` when we have newer Plutus vesion
+txSignedBy info k = case find ((==) k) (txInfoSignatories info) of
+  Just _ -> True
+  Nothing -> False
+
+-- helpers
+
+{-# INLINEABLE nthFieldOf #-}
+nthFieldOf :: Integer -> BuiltinData -> BuiltinData
+n `nthFieldOf` bd = snd (Builtins.unsafeDataAsConstr bd) !! n
+
+{-# INLINEABLE nthCtorOf #-}
+nthCtorOf :: Integer -> BuiltinData -> Maybe BuiltinData
+n `nthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
+  (ix, [x]) | n == ix -> Just x
+  _ -> Nothing
