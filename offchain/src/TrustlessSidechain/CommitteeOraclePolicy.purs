@@ -9,7 +9,7 @@ import Contract.Prelude
 
 import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray as ByteArray
+import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
 import Contract.Value as Value
@@ -40,16 +40,18 @@ committeeOracleCurrencyInfo sp = do
   getCurrencyInfo CommitteeOraclePolicy [ toData itac ]
 
 committeeOracleInitTokenName ∷ Value.TokenName
-committeeOracleInitTokenName = unsafePartial $ fromJust $ Value.mkTokenName $
-  ByteArray.hexToByteArrayUnsafe "Committee oracle InitToken"
+committeeOracleInitTokenName =
+  unsafePartial $ fromJust $ Value.mkTokenName
+    =<< byteArrayFromAscii "Committee oracle InitToken"
 
 -- | `committeeOracleTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
 committeeOracleTn ∷ Value.TokenName
-committeeOracleTn = unsafePartial $ fromJust $ Value.mkTokenName $
-  ByteArray.hexToByteArrayUnsafe ""
+committeeOracleTn =
+  unsafePartial $ fromJust $ Value.mkTokenName
+    =<< byteArrayFromAscii ""
 
 -- | Build lookups and constraints to mint committee oracle initialization
 -- | token.

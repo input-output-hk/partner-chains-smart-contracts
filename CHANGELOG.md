@@ -19,6 +19,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * `init` now returns a field `initTransactionIds` instead of
     `versioningTransactionIds`.  This fields includes all initialization
     transactions, not just the ones for the versioning system.
+  * NFT token name for Checkpoint and Committee Oracle set to empty string.
+    Init token name for Committee Oracle set to `Committee oracle InitToken`.
+    Previuous values were invalid due to using wrong parsing function.
 
 ## Removed
 

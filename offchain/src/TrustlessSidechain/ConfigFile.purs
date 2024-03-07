@@ -38,7 +38,8 @@ optExample =
   { sidechainParameters: Just
       { chainId: Just 1
       , genesisUtxo: Just $ TransactionInput
-          { transactionId: TransactionHash (hexToByteArrayUnsafe "TxHash")
+          { transactionId: TransactionHash
+              (hexToByteArrayUnsafe "123456789abcdef0")
           , index: UInt.fromInt 2
           }
       , threshold: Just
@@ -46,7 +47,7 @@ optExample =
           , denominator: 3
           }
       , atmsKind: Just ATMSPlainEcdsaSecp256k1
-      , governanceAuthority: Just $ hexToByteArrayUnsafe "pubKeyHash"
+      , governanceAuthority: Just $ hexToByteArrayUnsafe "123456789abcdef0"
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

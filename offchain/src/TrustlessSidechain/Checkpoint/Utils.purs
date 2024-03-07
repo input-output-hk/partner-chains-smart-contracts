@@ -16,7 +16,6 @@ import Contract.Hashing as Hashing
 import Contract.Monad (Contract)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
-import Contract.Prim.ByteArray as ByteArray
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts
   ( Validator
@@ -113,8 +112,9 @@ checkpointValidator cp voc =
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
 checkpointNftTn ∷ Value.TokenName
-checkpointNftTn = unsafePartial $ fromJust $ Value.mkTokenName $
-  ByteArray.hexToByteArrayUnsafe ""
+checkpointNftTn =
+  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
+    =<< byteArrayFromAscii ""
 
 -- | `serialiseCheckpointMessage` is an alias for
 -- | ```
