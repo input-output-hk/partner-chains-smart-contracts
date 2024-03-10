@@ -106,7 +106,7 @@ file `$CWD/config.json` in the following format:
     "chainId": 123,
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
     "threshold": { "numerator": 2, "denominator": 3 },
-    "atmsKind": "plain-ecdsa-secp256k1"
+    "atmsKind": "plain-ecdsa-secp256k1",
     "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c"
   },
   "runtimeConfig": null,

@@ -91,7 +91,7 @@ is not implemented yet, and Kupo which is not a dependency of our currently used
 ## High level conceptual map of our Plutus contracts
 
 This section of the document will only serve as a high level guideline to understand the overall
-interactions of components. For a more detailed explanation please refer to the [specification](../Specification.md).
+interactions of components. For a more detailed explanation please refer to the [specification](./Specification.md).
 
 ### Sidechain lifecycle
 

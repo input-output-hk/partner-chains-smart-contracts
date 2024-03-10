@@ -503,7 +503,7 @@ As a picture, the memory representation is as follows
 |------------Currency symbol 0------------| |------------Currency symbol 1------------| ... etc.
 ```
 where the numbers on the top denote the index of the `i`th byte of the
-`ByteString` that ``VersionMap` contains.
+`ByteString` that `VersionMap` contains.
 
 So, if a participant was interested in version `i`, `FUELProxyPolicy` would use
 the builtin `sliceByteString` with the operation described in 2. to grab the
