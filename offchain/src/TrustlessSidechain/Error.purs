@@ -47,7 +47,7 @@ data OffchainError
   | NotFoundInputUtxo String
   -- | A special case of not finding an input UTxO, used when genesis UTxO
   -- | cannot be found.
-  | NoGenesisUTxO
+  | NoGenesisUTxO String
   -- | Anything that involves complicated internal logic, happens only once or
   -- | twice in the code, and isn't worth having a dedicated constructor
   | GenericInternalError String

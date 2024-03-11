@@ -27,7 +27,7 @@ module TrustlessSidechain.InitSidechain
 import Contract.Prelude
 
 import Contract.AssocMap as Plutus.Map
-import Contract.Monad (Contract, liftedM)
+import Contract.Monad (Contract, liftedM, throwContractError)
 import Contract.Monad as Monad
 import Contract.PlutusData
   ( Datum(Datum)
@@ -49,10 +49,11 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
+import Contract.Wallet (getWalletUtxos)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenMintInfo
@@ -435,7 +436,22 @@ initSpendGenesisUtxo ∷
     }
 initSpendGenesisUtxo sidechainParams = do
   let txIn = (unwrap sidechainParams).genesisUtxo
-  txOut ← liftedM (show NoGenesisUTxO) (getUtxo txIn)
+  txOut ← liftedM
+    ( show $ NoGenesisUTxO
+        "Provided genesis utxo does not exist or was already spent."
+    )
+    (getUtxo txIn)
+  ownAvailableInputs ← (Map.keys <<< fromMaybe Map.empty) <$> getWalletUtxos
+  when (not $ elem txIn ownAvailableInputs) $ throwContractError
+    $ show
+    $ NoGenesisUTxO
+        ( "The genesis UTxO is not present in the wallet. Perhaps you've used a "
+            <>
+              "wrong payment signing key, or maybe you ommited the stake signing key? "
+            <>
+              "Make sure that your wallet contains the genesis UTxO, and that you are "
+            <> "using the correct signing keys."
+        )
   pure
     { constraints: Constraints.mustSpendPubKeyOutput txIn
     , lookups: Lookups.unspentOutputs
