@@ -13,7 +13,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     associated with the user's wallet.
 
 ## Changed
-
+  * `init` now prints more human friendly message, when selected genesis utxo
+    is not available at user's wallet address.
+    ([714](https://github.com/input-output-hk/trustless-sidechain/pull/714))
   * `VersionOracleValidator` now doesn't allow updating utxos anymore. If you
     want to update your scripts, you have to insert new versions and remove
     old version in separate transactions. `update-version` does this under the
