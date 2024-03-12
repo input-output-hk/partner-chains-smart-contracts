@@ -57,6 +57,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    ViewPatterns
 
   default-language:   Haskell2010
 
