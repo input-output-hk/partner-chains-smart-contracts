@@ -46,7 +46,6 @@
   , "tuples"
   , "typelevel-prelude"
   , "uint"
-  , "undefined"
   , "unfoldable"
   ]
 , packages = ./packages.dhall
