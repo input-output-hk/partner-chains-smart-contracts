@@ -10,7 +10,7 @@ assignees: ''
 <!--
 After posting a new issue here on GitHub, make sure that there is a corresponding ticket on Jira:
 
-1. Go to Jira: <https://input-output.atlassian.net/jira/software/c/projects/ETCM/boards/1204>
+1. Go to Jira: https://input-output.atlassian.net/jira/software/c/projects/ETCM/boards/1204
 2. Create a new ticket there. Copy the issue title from GitHub. Put just the link to GitHub issue in the description.
 3. In order for the ticket to show on the board you need to add a label. In the client squad we use `Sidechains_Client_Squad`. This might later change once you start working in a different squad, but for now use that label
 4. Set the Epic to ETCM-5178 (Improve the trustless sidechain)
