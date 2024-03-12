@@ -11,6 +11,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     command.  Using this flag will assume usage of candidate permission tokens.
   * Added CLI endpoint `init-token-status` to return all unspent init tokens
     associated with the user's wallet.
+  * `getSidechainAddresses` now also returns the `InitTokenPolicy`. That
+    affects both the `init` and `addresses` CLI endpoints.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo

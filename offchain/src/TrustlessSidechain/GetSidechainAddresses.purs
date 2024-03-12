@@ -31,6 +31,7 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
+import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
@@ -57,6 +58,7 @@ import TrustlessSidechain.Versioning.Types
       , VersionOracleValidator
       , PermissionedCandidatesValidator
       , DParameterValidator
+      , InitTokenPolicy
       )
   )
 import TrustlessSidechain.Versioning.Utils
@@ -160,6 +162,10 @@ getSidechainAddresses
       sidechainParams
   let dParameterPolicyId = currencySymbolToHex dParameterCurrencySymbol
 
+  { currencySymbol: initTokenCurrencySymbol } ←
+    InitSidechain.initTokenCurrencyInfo sidechainParams
+  let initTokenPolicyId = currencySymbolToHex initTokenCurrencySymbol
+
   -- Validators
   committeeCandidateValidator ←
     CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
@@ -207,6 +213,7 @@ getSidechainAddresses
       , VersionOraclePolicy /\ versionOraclePolicyId
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
       , DParameterPolicy /\ dParameterPolicyId
+      , InitTokenPolicy /\ initTokenPolicyId
       ]
         <>
           Array.catMaybes
