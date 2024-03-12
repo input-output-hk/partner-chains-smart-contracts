@@ -1,3 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+-- Needed for Arbitrary instances for Plutus types
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -ddump-splices #-}
+
 module TrustlessSidechain.Types.Unsafe where
 
 -- This module is intended to be imported qualified as `Unsafe`.
@@ -14,102 +19,61 @@ import Plutus.V2.Ledger.Api qualified as V2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.Types qualified as Types
 
-newtype ScriptContext = ScriptContext {unScriptContext :: BuiltinData}
-newtype TxInfo = TxInfo {unTxInfo :: BuiltinData}
-newtype TxInInfo = TxInInfo {unTxInInfo :: BuiltinData}
-newtype TxOut = TxOut {unTxOut :: BuiltinData}
-newtype TxOutRef = TxOutRef {unTxOutRef :: BuiltinData}
-newtype TxInfoMint = TxInfoMint {unTxInfoMint :: BuiltinData}
-newtype ScriptPurpose = ScriptPurpose {unScriptPurpose :: BuiltinData}
-newtype BlockProducerRegistration = BlockProducerRegistration {unBlockProducerRegistration :: BuiltinData}
+class Packable a where
+  wrap :: BuiltinData -> a
+  unwrap :: a -> BuiltinData
 
--- ScriptContext
+{-# INLINE decode #-}
+decode :: (Packable unsafeA, UnsafeFromData safeA) => unsafeA -> safeA
+decode = PlutusTx.unsafeFromBuiltinData . unwrap
 
-{-# INLINE scriptContextTxInfo #-}
-scriptContextTxInfo :: ScriptContext -> TxInfo
--- 0. field of ScriptContext is TxInfo
-scriptContextTxInfo (ScriptContext bd) = TxInfo $ 0 `nthFieldOf` bd
+-- helpers
 
-{-# INLINE scriptContextPurpose #-}
-scriptContextPurpose :: ScriptContext -> ScriptPurpose
--- 1. field of ScriptContext is ScriptPurpose
-scriptContextPurpose (ScriptContext bd) = ScriptPurpose $ 1 `nthFieldOf` bd
+{-# INLINEABLE nthFieldOf #-}
+nthFieldOf :: Integer -> BuiltinData -> BuiltinData
+n `nthFieldOf` bd = snd (Builtins.unsafeDataAsConstr bd) !! n
 
--- TxOut
+{-# INLINEABLE nthCtorOf #-}
+nthCtorOf :: Integer -> BuiltinData -> Maybe BuiltinData
+n `nthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
+  (ix, [x]) | n == ix -> Just x
+  _ -> Nothing
 
-{-# INLINE txOutAddress #-}
-txOutAddress :: TxOut -> V2.Address
--- 0. field of TxOut is Address
-txOutAddress (TxOut bd) = PlutusTx.unsafeFromBuiltinData $ 0 `nthFieldOf` bd
+{-# INLINEABLE isNthCtorOf #-}
+isNthCtorOf :: Integer -> BuiltinData -> Bool
+n `isNthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
+  (ix, _) | n == ix -> True
+  _ -> False
 
-{-# INLINE txOutValue #-}
-txOutValue :: TxOut -> V2.Value
--- 1. field of TxOut is Datum
-txOutValue (TxOut bd) = PlutusTx.unsafeFromBuiltinData $ 1 `nthFieldOf` bd
+makeUnsafeNewtypes ''Types.BlockProducerRegistration
+makeUnsafeNewtypes ''V2.Address
+makeUnsafeNewtypes ''V2.CurrencySymbol
+makeUnsafeNewtypes ''V2.DCert
+makeUnsafeNewtypes ''V2.OutputDatum
+makeUnsafeNewtypes ''V2.ScriptContext
+makeUnsafeNewtypes ''V2.ScriptHash
+makeUnsafeNewtypes ''V2.ScriptPurpose
+makeUnsafeNewtypes ''V2.StakingCredential
+makeUnsafeNewtypes ''V2.TxInfo
+makeUnsafeNewtypes ''V2.TxInInfo
+makeUnsafeNewtypes ''V2.TxOut
+makeUnsafeNewtypes ''V2.TxId
+makeUnsafeNewtypes ''V2.POSIXTimeRange
+makeUnsafeNewtypes ''V2.TxOutRef
+makeUnsafeNewtypes ''V2.Value
+makeUnsafeNewtypes ''V2.LedgerBytes
+makeUnsafeNewtypes ''V2.PubKeyHash
+makeUnsafeNewtypes ''Types.Signature
+makeUnsafeNewtypes ''Types.StakeOwnership
 
-{-# INLINE txOutDatum #-}
-txOutDatum :: TxOut -> V2.OutputDatum
--- 2. field of TxOut is Datum
-txOutDatum (TxOut bd) = PlutusTx.unsafeFromBuiltinData $ 2 `nthFieldOf` bd
-
--- TxInInfo
-
-{-# INLINE txInInfoOutRef #-}
-txInInfoOutRef :: TxInInfo -> TxOutRef
--- 0. field of TxInInfo is OutRef
-txInInfoOutRef (TxInInfo bd) = TxOutRef $ 0 `nthFieldOf` bd
-
-{-# INLINE txInInfoResolved #-}
-txInInfoResolved :: TxInInfo -> TxOut
--- 1. field of TxInInfo is InfoResolved
-txInInfoResolved (TxInInfo bd) = TxOut $ 1 `nthFieldOf` bd
-
--- TxInfo
-
-{-# INLINE txInfoInputs #-}
-txInfoInputs :: TxInfo -> [TxInInfo]
--- 0. field of TxInfo is txInfoInputs
-txInfoInputs (TxInfo bd) = TxInInfo <$> (Builtins.unsafeDataAsList $ 0 `nthFieldOf` bd)
-
-{-# INLINE txInfoReferenceInputs #-}
-txInfoReferenceInputs :: TxInfo -> [TxInInfo]
--- 1. field of TxInfo is txInfoReferenceInputs
-txInfoReferenceInputs (TxInfo bd) = TxInInfo <$> (Builtins.unsafeDataAsList $ 1 `nthFieldOf` bd)
-
-{-# INLINE txInfoOutputs #-}
-txInfoOutputs :: TxInfo -> [TxOut]
--- 2. field of TxInfo is txInfoReferenceInputs
-txInfoOutputs (TxInfo bd) = TxOut <$> (Builtins.unsafeDataAsList $ 2 `nthFieldOf` bd)
-
-{-# INLINE txInfoMint #-}
-txInfoMint :: TxInfo -> V2.Value
--- 4. field of TxInfo is txInfoMint
-txInfoMint (TxInfo bd) = PlutusTx.unsafeFromBuiltinData $ 4 `nthFieldOf` bd
-
-{-# INLINE txInfoSignatories #-}
-txInfoSignatories :: TxInfo -> [V2.PubKeyHash]
--- 8. field of TxInfo is txInfoSignatories
-txInfoSignatories (TxInfo bd) = PlutusTx.unsafeFromBuiltinData $ 8 `nthFieldOf` bd
-
--- ScriptPurpose
-
-{-# INLINE getMinting #-}
-getMinting :: ScriptPurpose -> Maybe V2.CurrencySymbol
--- 0. ctor of ScriptPurpose is Minting
-getMinting (ScriptPurpose bd) = PlutusTx.unsafeFromBuiltinData <$> 0 `nthCtorOf` bd
-
-{-# INLINE getSpending #-}
-getSpending :: ScriptPurpose -> Maybe TxOutRef
--- 1. ctor of ScriptPurpose is Spending
-getSpending (ScriptPurpose bd) = TxOutRef <$> 0 `nthCtorOf` bd
-
--- BlockProducerRegistration
-
-{-# INLINE ownPkh #-}
-ownPkh :: BlockProducerRegistration -> V2.PubKeyHash
--- 4. field of BlockProducerRegistration is ownPkh
-ownPkh (BlockProducerRegistration bd) = PlutusTx.unsafeFromBuiltinData $ 4 `nthFieldOf` bd
+makeUnsafeGetters ''V2.ScriptContext
+makeUnsafeGetters ''V2.ScriptPurpose
+makeUnsafeGetters ''V2.TxInInfo
+makeUnsafeGetters ''Types.BlockProducerRegistration
+makeUnsafeGetters ''V2.TxOut
+makeUnsafeGetters ''V2.TxInfo
 
 -- Raw versions of plutus-ledger-api functions
 
@@ -118,7 +82,7 @@ ownPkh (BlockProducerRegistration bd) = PlutusTx.unsafeFromBuiltinData $ 4 `nthF
 {-# INLINEABLE ownCurrencySymbol #-}
 ownCurrencySymbol :: ScriptContext -> V2.CurrencySymbol
 ownCurrencySymbol bd = case getMinting $ scriptContextPurpose bd of
-  Just cs -> cs
+  Just cs -> decode cs
   Nothing -> traceError "Lh" -- "Can't get currency symbol of the current validator script"
 
 -- | Get all the outputs that pay to the same script address we are currently spending from, if any.
@@ -148,18 +112,6 @@ findOwnInput _ = Nothing
 {-# INLINEABLE txSignedBy #-}
 txSignedBy :: TxInfo -> V2.PubKeyHash -> Bool
 -- TODO replace with `any` when we have newer Plutus vesion
-txSignedBy info k = case find ((==) k) (txInfoSignatories info) of
+txSignedBy info k = case find ((k ==) . decode) (txInfoSignatories info) of
   Just _ -> True
   Nothing -> False
-
--- helpers
-
-{-# INLINEABLE nthFieldOf #-}
-nthFieldOf :: Integer -> BuiltinData -> BuiltinData
-n `nthFieldOf` bd = snd (Builtins.unsafeDataAsConstr bd) !! n
-
-{-# INLINEABLE nthCtorOf #-}
-nthCtorOf :: Integer -> BuiltinData -> Maybe BuiltinData
-n `nthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
-  (ix, [x]) | n == ix -> Just x
-  _ -> Nothing

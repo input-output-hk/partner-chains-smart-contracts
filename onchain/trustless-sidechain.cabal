@@ -32,6 +32,7 @@ common common-lang
     NoStarIsType
     BangPatterns
     BinaryLiterals
+    BlockArguments
     DataKinds
     DeriveTraversable
     DerivingVia
@@ -46,6 +47,7 @@ common common-lang
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
+    NamedFieldPuns
     NumericUnderscores
     OverloadedLabels
     OverloadedStrings

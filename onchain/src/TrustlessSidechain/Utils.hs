@@ -55,7 +55,7 @@ oneTokenMinted txInfoMint cs tn =
 {-# INLINEABLE oneTokenMintedRaw #-}
 oneTokenMintedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenMintedRaw txInfoRaw cs tn =
-  valueOf (Unsafe.txInfoMint txInfoRaw) cs tn == 1
+  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfoRaw) cs tn == 1
 
 -- | Check that exactly one specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
@@ -70,7 +70,7 @@ oneTokenBurned txInfoMint cs tn =
 {-# INLINEABLE oneTokenBurnedRaw #-}
 oneTokenBurnedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurnedRaw txInfoRaw cs tn =
-  valueOf (Unsafe.txInfoMint txInfoRaw) cs tn == -1
+  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfoRaw) cs tn == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types

@@ -35,7 +35,8 @@ mkCandidatePermissionMintingPolicy itac _ scriptContext =
   traceIfFalse "ERROR-CANDIDATE-PERMISSION-POLICY-01" initTokenBurned
   where
     mint =
-      Unsafe.txInfoMint
+      Unsafe.decode
+        . Unsafe.txInfoMint
         . Unsafe.scriptContextTxInfo
         $ scriptContext
 
@@ -56,7 +57,7 @@ mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
     mkCandidatePermissionMintingPolicy
       (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
       a
-      (Unsafe.ScriptContext scriptContext)
+      (Unsafe.wrap scriptContext)
 
 serialisableCandidatePermissionMintingPolicy :: Script
 serialisableCandidatePermissionMintingPolicy =

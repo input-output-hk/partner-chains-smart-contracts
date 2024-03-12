@@ -67,7 +67,7 @@ main =
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
-            358
+            369
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
@@ -83,7 +83,7 @@ main =
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            2_572
+            2_409
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy

@@ -32,7 +32,7 @@ mkCommitteeCandidateValidator _sidechainParams datum _redeemer ctx =
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
     pkh :: PubKeyHash
-    pkh = Unsafe.ownPkh datum
+    pkh = Unsafe.decode $ Unsafe.ownPkh datum
     isSigned :: Bool
     isSigned = Unsafe.txSignedBy info pkh
 

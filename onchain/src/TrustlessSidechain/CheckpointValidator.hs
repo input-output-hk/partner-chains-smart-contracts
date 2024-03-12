@@ -114,7 +114,7 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
         ctx
 
     minted :: Value
-    minted = Unsafe.txInfoMint info
+    minted = Unsafe.decode $ Unsafe.txInfoMint info
 
     sc :: SidechainParams
     sc = get @"sidechainParams" checkpointParam
@@ -123,7 +123,7 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
     containsCommitteeNft :: Unsafe.TxInInfo -> Bool
     containsCommitteeNft txIn =
       let resolvedOutput = Unsafe.txInInfoResolved txIn
-          outputValue = Unsafe.txOutValue resolvedOutput
+          outputValue = Unsafe.decode $ Unsafe.txOutValue resolvedOutput
           amount = Value.valueOf outputValue committeeOracleCurrencySymbol (TokenName "")
        in amount == 1
 
@@ -131,7 +131,7 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
     extractCommitteeDatum :: [Unsafe.TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
     extractCommitteeDatum [] = traceError "ERROR-CHECKPOINT-VALIDATOR-05"
     extractCommitteeDatum (txIn : txIns)
-      | containsCommitteeNft txIn = case Unsafe.txOutDatum (Unsafe.txInInfoResolved txIn) of
+      | containsCommitteeNft txIn = case Unsafe.decode . Unsafe.txOutDatum . Unsafe.txInInfoResolved $ txIn of
         OutputDatum d -> IsData.unsafeFromBuiltinData $ getDatum d
         _ -> extractCommitteeDatum txIns
       | otherwise = extractCommitteeDatum txIns
@@ -145,13 +145,13 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
       _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-06"
 
     outputDatum :: CheckpointDatum
-    outputDatum = case Unsafe.txOutDatum ownOutput of
+    outputDatum = case Unsafe.decode $ Unsafe.txOutDatum ownOutput of
       OutputDatum d -> IsData.unsafeFromBuiltinData (getDatum d)
       _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-07"
 
     -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/681)
     outputContainsCheckpointNft :: Bool
-    outputContainsCheckpointNft = Value.assetClassValueOf (Unsafe.txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
+    outputContainsCheckpointNft = Value.assetClassValueOf (Unsafe.decode $ Unsafe.txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
@@ -194,7 +194,7 @@ mkCheckpointPolicy itac _red scriptContext =
   traceIfFalse "ERROR-CHECKPOINT-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-CHECKPOINT-POLICY-02" checkMintedAmount
   where
-    mint = Unsafe.txInfoMint (Unsafe.scriptContextTxInfo scriptContext)
+    mint = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ scriptContext
 
     initTokenBurned :: Bool
     initTokenBurned =
@@ -206,7 +206,10 @@ mkCheckpointPolicy itac _red scriptContext =
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Unsafe.ownCurrencySymbol scriptContext) $ getValue mint of
+      case fmap AssocMap.toList $
+        AssocMap.lookup
+          (Unsafe.ownCurrencySymbol scriptContext)
+          $ getValue mint of
         Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
         _ -> False
 
