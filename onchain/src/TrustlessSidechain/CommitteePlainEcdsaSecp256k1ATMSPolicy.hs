@@ -34,13 +34,13 @@ mkMintingPolicy =
     verifyEcdsaSecp256k1Signature
 
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped ccm versionOracleConfig a b =
+mkMintingPolicyUntyped ccm versionOracleConfig redeemer ctx =
   check $
     mkMintingPolicy
       (unsafeFromBuiltinData ccm)
       (unsafeFromBuiltinData versionOracleConfig)
-      (unsafeFromBuiltinData a)
-      (Unsafe.wrap b)
+      (unsafeFromBuiltinData redeemer)
+      (Unsafe.wrap ctx)
 
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

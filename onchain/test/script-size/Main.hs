@@ -138,11 +138,11 @@ main =
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            1_793
+            597
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             DS.serialisableDsKeyPolicy
-            2_329
+            1_447
         ]
     , testGroup
         "Data rep"

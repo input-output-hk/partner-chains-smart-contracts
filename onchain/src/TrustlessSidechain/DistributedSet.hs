@@ -52,7 +52,7 @@ import Plutus.V2.Ledger.Api (
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoInputs, txInfoMint, txInfoOutputs, txInfoReferenceInputs),
+  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   ValidatorHash,
   Value (getValue),
@@ -67,8 +67,8 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   InitTokenAssetClass,
  )
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
-  mkUntypedMintingPolicy,
   oneTokenBurned,
  )
 
@@ -486,17 +486,17 @@ mkDsConfValidator _ds _dat _red _ctx = Builtins.error ()
 --
 --   ERROR-DS-CONF-POLICY-02: Invalid mint.  Transaction should mint only one
 --   dsConfTokenName token, but it doesn't.
-mkDsConfPolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkDsConfPolicy :: InitTokenAssetClass -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkDsConfPolicy itac _red ctx =
   traceIfFalse "ERROR-DS-CONF-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-DS-CONF-POLICY-02" mintingChecks
   where
     -- Aliases
     mint :: Value
-    mint = txInfoMint . scriptContextTxInfo $ ctx
+    mint = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
 
     ownCurSymb :: CurrencySymbol
-    ownCurSymb = Contexts.ownCurrencySymbol ctx
+    ownCurSymb = Unsafe.ownCurrencySymbol ctx
 
     initTokenBurned :: Bool
     initTokenBurned =
@@ -536,7 +536,7 @@ dsConfTokenName = TokenName emptyByteString
 --
 --   ERROR-DS-CONF-POLICY-04: Bad minted tokens.  Transaction should only mint
 --   one own token.
-mkDsKeyPolicy :: DsKeyMint -> () -> ScriptContext -> Bool
+mkDsKeyPolicy :: DsKeyMint -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkDsKeyPolicy dskm _red ctx = case ins of
   [_ownTn] -> True
   -- This is enough to imply that the validator succeeded. Since we know
@@ -546,12 +546,14 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   []
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
-      AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ txInfoMint info ->
+      AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ Unsafe.decode $ Unsafe.txInfoMint info ->
       case mintedTns of
         [tn] | unTokenName tn == get @"key" rootNode ->
           traceIfFalse "ERROR-DS-CONF-POLICY-01" $
-            case find (\txout -> txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)) (txInfoOutputs info) of
-              Just txout -> AssocMap.member ownCS $ getValue $ txOutValue txout
+            case find
+              (\txout -> Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm))
+              (Unsafe.txInfoOutputs info) of
+              Just txout -> AssocMap.member ownCS $ getValue $ Unsafe.decode $ Unsafe.txOutValue txout
               Nothing -> False
         -- Note: Why don't we have to verify that the 'DsConf' validator has
         -- 'ownCS' stored in the 'DsConfDatum' field 'dscKeyPolicy'? This is
@@ -563,20 +565,21 @@ mkDsKeyPolicy dskm _red ctx = case ins of
   _ -> traceError "ERROR-DS-CONF-POLICY-03"
   where
     -- Aliases
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    info :: Unsafe.TxInfo
+    info = Unsafe.scriptContextTxInfo ctx
 
     ownCS :: CurrencySymbol
-    ownCS = Contexts.ownCurrencySymbol ctx
+    ownCS = Unsafe.ownCurrencySymbol ctx
 
     -- determines the nodes we are consuming
     ins :: [TokenName]
     ins =
-      let go [] = []
+      let go :: [Unsafe.TxInInfo] -> [TokenName]
+          go [] = []
           go (t : ts)
-            | txout <- txInInfoResolved t
-              , txOutAddress txout == scriptHashAddress (get @"validatorHash" dskm)
-              , Just tns <- AssocMap.lookup ownCS $ getValue (txOutValue txout)
+            | txout <- Unsafe.txInInfoResolved t
+              , Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm)
+              , Just tns <- AssocMap.lookup ownCS $ getValue (Unsafe.decode $ Unsafe.txOutValue txout)
               , -- If it's more clear, we're checking the following condition:
                 -- > [(tn,1)] <- AssocMap.toList tns
                 -- In our case, it is implicit that there is exactly one
@@ -586,10 +589,10 @@ mkDsKeyPolicy dskm _red ctx = case ins of
             -- Need to keep recursing to ensure that this transaction
             -- is only spending one input
             | otherwise = go ts -- otherwise, we skip the element
-       in go (txInfoInputs info)
+       in go (Unsafe.txInfoInputs info)
 
     mintedTns :: [TokenName]
-    mintedTns = case AssocMap.lookup ownCS $ getValue (txInfoMint info) of
+    mintedTns = case AssocMap.lookup ownCS $ getValue (Unsafe.decode $ Unsafe.txInfoMint info) of
       Just mp | vs <- AssocMap.toList mp, all ((== 1) . snd) vs -> map fst vs
       _ -> traceError "ERROR-DS-CONF-POLICY-04"
 
@@ -635,7 +638,12 @@ serialisableDsConfValidator = fromCompiledCode $$(PlutusTx.compile [||mkDsConfVa
 -- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
 -- needed for ctl)
 mkDsConfPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkDsConfPolicyUntyped = mkUntypedMintingPolicy . mkDsConfPolicy . PlutusTx.unsafeFromBuiltinData
+mkDsConfPolicyUntyped keyMint redeemer ctx =
+  check $
+    mkDsConfPolicy
+      (PlutusTx.unsafeFromBuiltinData keyMint)
+      redeemer
+      (Unsafe.wrap ctx)
 
 -- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
 -- policy (this is needed for ctl)
@@ -645,7 +653,12 @@ serialisableDsConfPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolic
 -- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
 -- needed for ctl)
 mkDsKeyPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkDsKeyPolicyUntyped = mkUntypedMintingPolicy . mkDsKeyPolicy . PlutusTx.unsafeFromBuiltinData
+mkDsKeyPolicyUntyped keyMint redeemer ctx =
+  check $
+    mkDsKeyPolicy
+      (PlutusTx.unsafeFromBuiltinData keyMint)
+      redeemer
+      (Unsafe.wrap ctx)
 
 -- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
 -- policy (this is needed for ctl)
