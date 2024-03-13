@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 -- Needed for Arbitrary instances for Plutus types
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -ddump-splices #-}
 
 module TrustlessSidechain.Types.Unsafe where
 
@@ -29,6 +28,10 @@ class Packable a where
 decode :: (Packable unsafeA, UnsafeFromData safeA) => unsafeA -> safeA
 decode = PlutusTx.unsafeFromBuiltinData . unwrap
 
+{-# INLINE encode #-}
+encode :: (Packable unsafeA, ToData safeA) => safeA -> unsafeA
+encode = wrap . PlutusTx.toBuiltinData
+
 -- helpers
 
 {-# INLINEABLE nthFieldOf #-}
@@ -48,32 +51,32 @@ n `isNthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
   _ -> False
 
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
+makeUnsafeNewtypes ''Types.Signature
+makeUnsafeNewtypes ''Types.StakeOwnership
 makeUnsafeNewtypes ''V2.Address
 makeUnsafeNewtypes ''V2.CurrencySymbol
 makeUnsafeNewtypes ''V2.DCert
+makeUnsafeNewtypes ''V2.LedgerBytes
 makeUnsafeNewtypes ''V2.OutputDatum
+makeUnsafeNewtypes ''V2.POSIXTimeRange
+makeUnsafeNewtypes ''V2.PubKeyHash
 makeUnsafeNewtypes ''V2.ScriptContext
 makeUnsafeNewtypes ''V2.ScriptHash
 makeUnsafeNewtypes ''V2.ScriptPurpose
 makeUnsafeNewtypes ''V2.StakingCredential
+makeUnsafeNewtypes ''V2.TxId
 makeUnsafeNewtypes ''V2.TxInfo
 makeUnsafeNewtypes ''V2.TxInInfo
 makeUnsafeNewtypes ''V2.TxOut
-makeUnsafeNewtypes ''V2.TxId
-makeUnsafeNewtypes ''V2.POSIXTimeRange
 makeUnsafeNewtypes ''V2.TxOutRef
 makeUnsafeNewtypes ''V2.Value
-makeUnsafeNewtypes ''V2.LedgerBytes
-makeUnsafeNewtypes ''V2.PubKeyHash
-makeUnsafeNewtypes ''Types.Signature
-makeUnsafeNewtypes ''Types.StakeOwnership
 
+makeUnsafeGetters ''Types.BlockProducerRegistration
 makeUnsafeGetters ''V2.ScriptContext
 makeUnsafeGetters ''V2.ScriptPurpose
-makeUnsafeGetters ''V2.TxInInfo
-makeUnsafeGetters ''Types.BlockProducerRegistration
-makeUnsafeGetters ''V2.TxOut
 makeUnsafeGetters ''V2.TxInfo
+makeUnsafeGetters ''V2.TxInInfo
+makeUnsafeGetters ''V2.TxOut
 
 -- Raw versions of plutus-ledger-api functions
 

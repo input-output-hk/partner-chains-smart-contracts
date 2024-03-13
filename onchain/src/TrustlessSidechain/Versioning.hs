@@ -14,7 +14,7 @@ module TrustlessSidechain.Versioning (
   mkVersionOracleValidator,
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
-  getVersionedCurrencySymbolRaw,
+  getVersionedCurrencySymbolUnsafe,
   VersionOracle (..),
   VersionOracleDatum (..),
   VersionOracleConfig (..),
@@ -539,13 +539,13 @@ getVersionedCurrencySymbol ::
 getVersionedCurrencySymbol voConfig vo sc =
   CurrencySymbol (getVersionedScriptHash voConfig vo sc)
 
-{-# INLINEABLE getVersionedCurrencySymbolRaw #-}
-getVersionedCurrencySymbolRaw ::
+{-# INLINEABLE getVersionedCurrencySymbolUnsafe #-}
+getVersionedCurrencySymbolUnsafe ::
   VersionOracleConfig ->
   VersionOracle ->
   Unsafe.ScriptContext ->
   CurrencySymbol
-getVersionedCurrencySymbolRaw voConfig vo sc =
+getVersionedCurrencySymbolUnsafe voConfig vo sc =
   CurrencySymbol (getVersionedScriptHashRaw voConfig vo sc)
 
 -- | Searches script context for a reference input containing specified script

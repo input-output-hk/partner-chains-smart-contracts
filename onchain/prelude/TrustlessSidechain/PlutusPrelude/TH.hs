@@ -72,7 +72,7 @@ makeUnsafeNewtypes name = do
               (mkName "unwrap")
               [Clause [] (NormalB (VarE unNewtypeName)) []]
           ]
-  return $ [decNewtype, packInstance]
+  return [decNewtype, packInstance]
 
 -- `makeUnsafeGetters` generates getter functions for wrapper types generated
 -- by `makeUnsafeNewtypes`.
@@ -113,7 +113,7 @@ makeUnsafeGetters name = do
     [ConstructorInfo {constructorVariant, constructorFields}] ->
       return case constructorVariant of
         RecordConstructor fieldNames ->
-          (zipWithIndex $ zip (map makeNameUnqualified fieldNames) constructorFields)
+          zipWithIndex (zip (map makeNameUnqualified fieldNames) constructorFields)
             >>= mkGetter newtypeName
         _ -> []
     sumCtors -> do
@@ -175,7 +175,7 @@ makeUnsafeGetters name = do
           ]
       ]
       where
-        queryName = mkName $ "is" <> (getNameUnqualified ctorName)
+        queryName = mkName $ "is" <> getNameUnqualified ctorName
 
     mkVariantGetter :: Name -> Int -> Name -> Type -> [Dec]
     mkVariantGetter newtypeName ix ctorName fieldType =
@@ -202,7 +202,7 @@ makeUnsafeGetters name = do
               ]
           ]
           where
-            getterName = mkName $ "get" <> (getNameUnqualified ctorName)
+            getterName = mkName $ "get" <> getNameUnqualified ctorName
 
 -- | Derive a HasField instance for a given data type declaration.  Works only
 -- for single-constructor data types and newtypes.

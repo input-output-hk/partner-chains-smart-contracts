@@ -53,7 +53,7 @@ import TrustlessSidechain.Versioning (
   VersionOracleConfig,
   committeeCertificateVerificationPolicyId,
   committeeOraclePolicyId,
-  getVersionedCurrencySymbolRaw,
+  getVersionedCurrencySymbolUnsafe,
   scriptId,
   version,
  )
@@ -101,14 +101,14 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
 
     committeeOracleCurrencySymbol :: CurrencySymbol
     committeeOracleCurrencySymbol =
-      getVersionedCurrencySymbolRaw
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
         ctx
 
     committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
     committeeCertificateVerificationCurrencySymbol =
-      getVersionedCurrencySymbolRaw
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeCertificateVerificationPolicyId})
         ctx

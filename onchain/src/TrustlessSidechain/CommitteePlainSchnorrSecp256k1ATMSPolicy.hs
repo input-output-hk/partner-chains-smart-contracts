@@ -11,7 +11,6 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy (
 
 import Plutus.V2.Ledger.Api (
   Script,
-  ScriptContext,
   fromCompiledCode,
  )
 import PlutusTx qualified
@@ -21,7 +20,7 @@ import TrustlessSidechain.Types (
   ATMSRedeemer,
   CommitteeCertificateMint,
  )
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Versioning (VersionOracleConfig)
 
 {-# INLINEABLE mkMintingPolicy #-}
@@ -29,15 +28,19 @@ import TrustlessSidechain.Versioning (VersionOracleConfig)
 -- | 'mkMintingPolicy' wraps
 -- 'TrustlessSidechain.CommitteePlainATMSPolicy.mkMintingPolicy' and uses
 -- 'verifySchnorrSecp256k1Signature' to verify the signatures
-mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: CommitteeCertificateMint -> VersionOracleConfig -> ATMSRedeemer -> Unsafe.ScriptContext -> Bool
 mkMintingPolicy =
   CommitteePlainATMSPolicy.mkMintingPolicy
     verifySchnorrSecp256k1Signature
 
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped ccm versionOracleConfig =
-  mkUntypedMintingPolicy
-    (mkMintingPolicy (unsafeFromBuiltinData ccm) (unsafeFromBuiltinData versionOracleConfig))
+mkMintingPolicyUntyped ccm versionOracleConfig a b =
+  check $
+    mkMintingPolicy
+      (unsafeFromBuiltinData ccm)
+      (unsafeFromBuiltinData versionOracleConfig)
+      (unsafeFromBuiltinData a)
+      (Unsafe.wrap b)
 
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
