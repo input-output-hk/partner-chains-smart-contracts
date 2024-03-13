@@ -232,13 +232,32 @@
 
         touch $out
       '';
-
+    overrideBuilder = compiled: pkgs:
+      compiled.overrideAttrs (old: {
+        # Add a patchPhase for patching in the CLI version from a script
+        patchPhase = let
+          rev =
+            if builtins.hasAttr "rev" self
+            then self.rev
+            else self.dirtyRev;
+        in ''
+          srcDir=$(echo "$src" | sed 's|/nix/store/||')
+          chmod -R +w $srcDir/
+          substituteInPlace $srcDir/set_version.sh \
+            --replace 'jq' '${pkgs.jq}/bin/jq'
+          sed -i 's/gitHash=".*"/gitHash="${rev}"/' $srcDir/set_version.sh
+          pushd $srcDir
+          ${pkgs.bash}/bin/bash set_version.sh
+          popd
+        '';
+      });
     # CTL's `runPursTest` won't pass command-line arugments to the `node`
     # invocation, so we can essentially recreate `runPursTest` here with and
     # pass the arguments
     ctlMainFor = system: let
       pkgs = nixpkgsFor system;
       project = psProjectFor system;
+      output = overrideBuilder project.compiled pkgs;
     in
       pkgs.writeShellApplication {
         name = "sidechain-main-cli";
@@ -248,7 +267,7 @@
         # `"$@"`
         text = ''
           export NODE_PATH="${project.nodeModules}/lib/node_modules"
-          node --enable-source-maps -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
+          node --enable-source-maps -e 'require("${output}/output/Main").main()' sidechain-main-cli "$@"
         '';
       };
 
@@ -275,7 +294,7 @@
         ];
         runtimeInputs = [project.nodejs];
         unpackPhase = ''
-          ln -s ${project.compiled}/* .
+          ln -s ${overrideBuilder project.compiled pkgs}/* .
           ln -s ${project.nodeModules}/lib/node_modules node_modules
         '';
         buildPhase = ''
