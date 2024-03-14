@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Compiled qualified
-import Plutus.V1.Ledger.Api (fromCompiledCode)
+import PlutusLedgerApi.V1 ()
 import Sizer (scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
@@ -148,63 +148,63 @@ main =
         "Data rep"
         [ scriptFitsUnder
             "toBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
-            ("generated", fromCompiledCode Compiled.toDataGenerated)
+            ("handwritten",  Compiled.toDataHandwritten)
+            ("generated",  Compiled.toDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.fromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.fromDataGenerated)
+            ("handwritten",  Compiled.fromDataHandwritten)
+            ("generated",  Compiled.fromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
+            ("handwritten",  Compiled.unsafeFromDataHandwritten)
+            ("generated",  Compiled.unsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairToDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairToDataGenerated)
+            ("handwritten",  Compiled.pairToDataHandwritten)
+            ("generated",  Compiled.pairToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairFromDataGenerated)
+            ("handwritten",  Compiled.pairFromDataHandwritten)
+            ("generated",  Compiled.pairFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairUnsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairUnsafeFromDataGenerated)
+            ("handwritten",  Compiled.pairUnsafeFromDataHandwritten)
+            ("generated",  Compiled.pairUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listToDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listToDataGenerated)
+            ("handwritten",  Compiled.listToDataHandwritten)
+            ("generated",  Compiled.listToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listFromDataGenerated)
+            ("handwritten",  Compiled.listFromDataHandwritten)
+            ("generated",  Compiled.listFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
+            ("handwritten",  Compiled.listUnsafeFromDataHandwritten)
+            ("generated",  Compiled.listUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.toDataWrapper)
-            ("direct", fromCompiledCode Compiled.toDataDirect)
+            ("using wrappers",  Compiled.toDataWrapper)
+            ("direct",  Compiled.toDataDirect)
         , scriptFitsUnder
             "fromBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.fromDataWrapper)
-            ("direct", fromCompiledCode Compiled.fromDataDirect)
+            ("using wrappers",  Compiled.fromDataWrapper)
+            ("direct",  Compiled.fromDataDirect)
         , scriptFitsUnder
             "unsafeFromBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
-            ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
+            ("using wrappers",  Compiled.unsafeFromDataWrapper)
+            ("direct",  Compiled.unsafeFromDataDirect)
         , scriptFitsUnder
             "toBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.toData3CPS)
-            ("direct", fromCompiledCode Compiled.toData3Direct)
+            ("cps",  Compiled.toData3CPS)
+            ("direct",  Compiled.toData3Direct)
         , scriptFitsUnder
             "fromBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.fromData3CPS)
-            ("direct", fromCompiledCode Compiled.fromData3Direct)
+            ("cps",  Compiled.fromData3CPS)
+            ("direct",  Compiled.fromData3Direct)
         , scriptFitsUnder
             "unsafeFromBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.unsafeFromData3CPS)
-            ("direct", fromCompiledCode Compiled.unsafeFromData3Direct)
+            ("cps",  Compiled.unsafeFromData3CPS)
+            ("direct",  Compiled.unsafeFromData3Direct)
         ]
     ]

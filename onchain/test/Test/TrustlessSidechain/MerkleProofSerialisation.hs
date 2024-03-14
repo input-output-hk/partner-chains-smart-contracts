@@ -6,7 +6,7 @@ module Test.TrustlessSidechain.MerkleProofSerialisation (
 ) where
 
 import Data.ByteString (ByteString)
-import Plutus.V1.Ledger.Bytes qualified as Bytes
+import PlutusLedgerApi.V1.Bytes qualified as Bytes
 import PlutusCore.Data (Data (B, Constr, I, List))
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal (BuiltinByteString (BuiltinByteString))

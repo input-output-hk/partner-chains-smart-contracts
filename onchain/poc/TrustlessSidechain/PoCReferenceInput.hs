@@ -23,18 +23,16 @@ module TrustlessSidechain.PoCReferenceInput (
   serialisablePoCReferenceInputValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V2 (
   Address,
   Datum (getDatum),
   OutputDatum (OutputDatumHash),
-  Script,
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoReferenceInputs),
-  TxOut (txOutAddress, txOutDatum),
-  fromCompiledCode,
+  TxOut (txOutAddress, txOutDatum)
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Utils (mkUntypedValidator)
@@ -56,9 +54,10 @@ mkPoCToReferenceInputValidatorUntyped =
 
 -- | 'serialisablePoCToReferenceInputValidator' is a serialisable untyped script of
 -- 'mkPoCToReferenceInputValidator'
-serialisablePoCToReferenceInputValidator :: Script
+serialisablePoCToReferenceInputValidator ::
+  PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ())
 serialisablePoCToReferenceInputValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])
+  $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])
 
 -- * Reference
 
@@ -89,6 +88,7 @@ mkPoCReferenceInputValidatorUntyped =
 
 -- | 'serialisablePoCReferenceInputValidator' is a serialisable untyped script of
 -- 'mkPoCReferenceInputValidator'
-serialisablePoCReferenceInputValidator :: Script
+serialisablePoCReferenceInputValidator ::
+  PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ())
 serialisablePoCReferenceInputValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])
+  $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])

@@ -55,8 +55,9 @@ import GetOpts (
  )
 import Plutus.V1.Ledger.Bytes qualified as Plutus
 import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V2 (
   ToData (toBuiltinData),
-  ValidatorHash (ValidatorHash),
+  ScriptHash (..),
  )
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
@@ -204,8 +205,13 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                     )
                     uchcNewCommitteePubKeys
                 serialisedValidatorHash =
+<<<<<<< HEAD
                   let ValidatorHash bs = uchcValidatorHash
                    in encodeHexBuiltinBS bs
+=======
+                  let ScriptHash bs = uchcValidatorHash
+                   in showBuiltinBS bs
+>>>>>>> 2ad5700f (ghc9.6 upgrade)
              in ["nix run .#sidechain-main-cli -- committee-hash"] :
                 sidechainParamFlags
                   <> currentCommitteePubKeysAndSigsFlags

@@ -1,3 +1,4 @@
+{-#LANGUAGE UndecidableInstances  #-}
 module Test.TrustlessSidechain.MultiSig (test) where
 
 import Control.Applicative ((<|>))
@@ -8,7 +9,7 @@ import Data.String qualified as HString
 import Data.Word (Word8)
 import GHC.Exts (fromListN)
 import GHC.Real (fromRational)
-import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
+import PlutusLedgerApi.V2 (LedgerBytes (LedgerBytes))
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Property,
@@ -26,6 +27,8 @@ import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+
+import Prelude (undefined) -- todo remove when liftG is removded
 
 test :: TestTree
 test =
@@ -86,7 +89,7 @@ propertyTests =
 
 sufficientVerification :: Property
 sufficientVerification =
-  forAllShrinkShow arbitrary shrink showSufficientVerification $
+  forAllShrinkShow arbitrary shrink showSufficientVerification $ 
     \(SufficientVerification pubKeys enough message signatures) ->
       let sigLen = TSPrelude.length signatures
           densityRatio :: TSPrelude.Double =
@@ -109,7 +112,7 @@ insufficientVerification =
 -- Helpers
 
 data SufficientVerification
-  = SufficientVerification
+  =  SufficientVerification
       [LedgerBytes]
       Integer
       LedgerBytes
@@ -118,19 +121,22 @@ data SufficientVerification
 instance Arbitrary SufficientVerification where
   arbitrary = do
     privKeys <- Gen.listOf1 $ QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
-    let pubKeys = TSPrelude.fmap SECP.derivePubKey privKeys
+    -- need a function that lifts IO Ctx to
+    ctx <- genCtx
+    let pubKeys = TSPrelude.fmap (SECP.derivePubKey ctx) privKeys
     (message, messageBS) <- QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
       let bs = fromListN 32 bytes
       msg <- SECP.msg bs
       TSPrelude.pure (msg, bs)
+    let f= signWithKey ctx
     signatures <-
-      TSPrelude.fmap (TSPrelude.fmap (`signWithKey` message))
+      TSPrelude.fmap (TSPrelude.fmap (`f` message))
         . QCExtra.suchThatMap (QCExtra.sublistOf privKeys)
         $ \pkSubs -> do
           guard (TSPrelude.not . List.null $ pkSubs)
           TSPrelude.pure pkSubs
     enough <- TSPrelude.fmap TSPrelude.fromIntegral . Gen.chooseInt $ (1, TSPrelude.length signatures)
-    let pubKeyBytes = TSPrelude.fmap (LedgerBytes . toBuiltin . SECP.exportPubKey True) pubKeys
+    let pubKeyBytes = TSPrelude.fmap (LedgerBytes . toBuiltin . SECP.exportPubKey ctx True) pubKeys
     let messageBBS = LedgerBytes $ toBuiltin messageBS
     TSPrelude.pure . SufficientVerification pubKeyBytes enough messageBBS $ signatures
   shrink (SufficientVerification pks enough msg sigs) = do
@@ -218,10 +224,18 @@ showInsufficientVerification (InsufficientVerification pks enough msg sigs) =
 mkPrivKey :: [Word8] -> Maybe SECP.SecKey
 mkPrivKey = SECP.secKey . fromListN 32
 
-signWithKey :: SECP.SecKey -> SECP.Msg -> LedgerBytes
-signWithKey sk =
+signWithKey :: SECP.Ctx -> SECP.SecKey -> SECP.Msg -> LedgerBytes
+signWithKey ctx sk =
   LedgerBytes
     . toBuiltin
-    . SECP.getCompactSig
-    . SECP.exportCompactSig
-    . SECP.signMsg sk
+    . SECP.exportSig ctx
+    . SECP.signMsg ctx sk
+
+-- TODO remove this oncde we find `lift` like function
+genCtx :: Gen  SECP.Ctx
+genCtx  = undefined
+
+
+-- genCtx' :: MonadIO m => m (Gen SECP.Ctx)
+-- genCtx' =
+--   liftIO createContext >>= return . return

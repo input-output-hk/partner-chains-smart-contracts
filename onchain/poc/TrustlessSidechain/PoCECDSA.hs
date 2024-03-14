@@ -5,8 +5,7 @@ module TrustlessSidechain.PoCECDSA (
   serialisableValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
-import Plutus.V2.Ledger.Contexts (ScriptContext)
+import PlutusLedgerApi.V2 (ScriptContext)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
@@ -34,6 +33,7 @@ mkValidator _ (ECDSARed msg' sig' pk') _ =
 untypedValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 untypedValidator = mkUntypedValidator mkValidator
 
-serialisableValidator :: Script
+serialisableValidator ::
+  PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ())
 serialisableValidator =
-  fromCompiledCode $$(PlutusTx.compile [||untypedValidator||])
+  $$(PlutusTx.compile [||untypedValidator||])

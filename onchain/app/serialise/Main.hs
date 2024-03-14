@@ -1,8 +1,9 @@
--- Functions to serialise plutus scripts into a purescript readable TextEnvelope.textEnvelope
+-- Functions to serialise plutus scripts into a paurescript readable TextEnvelope.textEnvelope
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
 
 import Cardano.Api (PlutusScriptV2, serialiseToTextEnvelope, writeFileTextEnvelope)
+import Cardano.Api (File (..))
 import Cardano.Api.Shelley (PlutusScript)
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
@@ -10,7 +11,8 @@ import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.String qualified as HString
-import Plutus.V2.Ledger.Api (Script)
+import PlutusTx (CompiledCode)
+import PlutusTx.Prelude (BuiltinData)
 import System.Console.GetOpt (
   ArgDescr (NoArg, OptArg, ReqArg),
   ArgOrder (RequireOrder),
@@ -130,14 +132,14 @@ getOpts =
 
 -- Note: CTL uses the usual TextEnvelope format now.
 
-serialiseScript :: FilePath -> FilePath -> Script -> IO ()
+serialiseScript :: FilePath -> FilePath -> CompiledCode a -> IO ()
 serialiseScript outputDir name script =
   let out :: PlutusScript PlutusScriptV2
       out = scriptToPlutusScript script
       file = outputDir FilePath.</> name
    in do
         IO.putStrLn $ "serialising " <> file
-        writeFileTextEnvelope file Nothing out >>= either print pure
+        writeFileTextEnvelope ( file) Nothing out >>= either print pure
 
 serialiseScriptsToPurescript ::
   -- | Purescript module name
@@ -235,7 +237,7 @@ serialisePoCScriptsToPurescript ::
   -- | Name of the script, and the associated script
   -- Entries should be unique w.r.t the name; and the name should be
   -- characters for a valid purescript identifier
-  [(HString.String, Script)] ->
+  [(HString.String, CompiledCode a)] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.

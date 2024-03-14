@@ -27,7 +27,11 @@ common common-lang
     -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fexpose-all-unfoldings
 
+<<<<<<< HEAD
   build-depends:      base ^>=4.14
+=======
+  build-depends:     base >=4.8 && <5
+>>>>>>> 2ad5700f (ghc9.6 upgrade)
   default-extensions:
     NoStarIsType
     BangPatterns
@@ -69,7 +73,6 @@ common common-script-lang
   ghc-options:
     -fobject-code -fno-ignore-interface-pragmas
     -fno-omit-interface-pragmas -fplugin-opt
-    PlutusTx.Plugin:defer-errors
 
 common common-optimized
   ghc-options: -O2
@@ -175,6 +178,10 @@ library onchain-poc
     , trustless-sidechain
     , trustless-sidechain-prelude
 
+<<<<<<< HEAD
+=======
+   -- , plutonomy
+>>>>>>> 2ad5700f (ghc9.6 upgrade)
   hs-source-dirs:  poc
 
 library trustless-sidechain-prelude
@@ -257,7 +264,11 @@ executable trustless-sidechain-serialise
     , onchain-poc
     , plutonomy
     , plutus-ledger-api
+<<<<<<< HEAD
     , text
+=======
+    , plutus-tx
+>>>>>>> 2ad5700f (ghc9.6 upgrade)
     , trustless-sidechain
     , trustless-sidechain-prelude
 
@@ -302,6 +313,7 @@ test-suite trustless-sidechain-test
     , plutus-tx-plugin
     , QuickCheck
     , quickcheck-extra
+    , QuickCheck-GenT
     , secp256k1-haskell
     , tasty
     , tasty-golden
@@ -313,7 +325,8 @@ test-suite trustless-sidechain-test
 
   hs-source-dirs: test
 
-test-suite script-size
+-- TODO build fails here
+test-suite script-size 
   import:
     common-lang , common-optimized-parallel , common-script-lang
 
@@ -327,7 +340,11 @@ test-suite script-size
     Sizer
 
   build-depends:
+<<<<<<< HEAD
     , plutonomy
+=======
+    , cardano-api
+>>>>>>> 2ad5700f (ghc9.6 upgrade)
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude

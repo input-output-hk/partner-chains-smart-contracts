@@ -18,7 +18,7 @@
 
     src = lib.cleanSource ../onchain;
 
-    compiler-nix-name = "ghc8107";
+    compiler-nix-name = "ghc96";
 
     flake.variants.profiled.modules = [
       {
@@ -30,7 +30,7 @@
     shell.withHoogle = false;
 
     inputMap = {
-      "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
+      "https://chap.intersectmbo.org/" = inputs.CHaP;
     };
 
     modules = [
@@ -59,4 +59,4 @@
     shellArgs = repoRoot.nix.shell;
   };
 in
-  project
+project
