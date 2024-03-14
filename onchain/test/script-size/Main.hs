@@ -55,7 +55,7 @@ main =
         [ scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            3_234
+            2_660
         , scriptFitsInto
             "mkBurningPolicy (FUEL) serialized"
             FUEL.serialisableBurningPolicy

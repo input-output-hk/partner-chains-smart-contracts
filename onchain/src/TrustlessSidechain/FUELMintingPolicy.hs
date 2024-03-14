@@ -17,16 +17,10 @@ import Plutus.V2.Ledger.Api (
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
   Script,
-  ScriptContext (ScriptContext, scriptContextTxInfo),
-  ScriptPurpose (Minting),
   TokenName (TokenName, unTokenName),
-  TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
-  TxOut (txOutValue),
   Value (getValue),
   fromCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
@@ -37,14 +31,13 @@ import TrustlessSidechain.MerkleTree qualified as MerkleTree
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
-  SidechainParams,
  )
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
   dsKeyPolicyId,
-  getVersionedCurrencySymbol,
+  getVersionedCurrencySymbolUnsafe,
   merkleRootTokenPolicyId,
  )
 
@@ -96,16 +89,17 @@ fuelTokenName = TokenName "FUEL"
 --
 --  ERROR-FUEL-MINTING-POLICY-08: illegal FUEL minting
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> ScriptContext -> Bool
-mkMintingPolicy _ _ FUELBurningRedeemer (ScriptContext txInfo (Minting currSymbol)) =
-  traceIfFalse "ERROR-FUEL-MINTING-POLICY-01" noTokensMinted
-  where
-    noTokensMinted :: Bool
-    noTokensMinted =
-      case AssocMap.lookup currSymbol $
-        Value.getValue (txInfoMint txInfo) of
-        Just tns -> AssocMap.all (< 0) tns
-        _ -> traceError "ERROR-FUEL-MINTING-POLICY-01"
+mkMintingPolicy :: BuiltinData -> VersionOracleConfig -> FUELMintingRedeemer -> Unsafe.ScriptContext -> Bool
+mkMintingPolicy _sp _versioningConfig FUELBurningRedeemer ctx
+  | Just currSym <-
+      Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
+    let noTokensMinted :: Bool
+        noTokensMinted =
+          case AssocMap.lookup currSym $
+            Value.getValue (Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx) of
+            Just tns -> AssocMap.all (< 0) tns
+            _ -> traceError "ERROR-FUEL-MINTING-POLICY-01"
+     in traceIfFalse "ERROR-FUEL-MINTING-POLICY-01" noTokensMinted
 mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
   let cborMte :: BuiltinByteString
       cborMte = MerkleRootTokenMintingPolicy.serialiseMte mte
@@ -120,10 +114,10 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
 
       merkleRoot :: RootHash
       merkleRoot =
-        let go :: [TxInInfo] -> TokenName
+        let go :: [Unsafe.TxInInfo] -> TokenName
             go (t : ts)
-              | o <- txInInfoResolved t
-                , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
+              | o <- Unsafe.txInInfoResolved t
+                , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ Unsafe.decode $ Unsafe.txOutValue o
                 , [(tn, _amt)] <- AssocMap.toList tns =
                 tn
               -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
@@ -141,33 +135,33 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
               -- it.
               | otherwise = go ts
             go [] = traceError "ERROR-FUEL-MINTING-POLICY-03"
-         in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
+         in RootHash $ LedgerBytes $ unTokenName $ go $ Unsafe.txInfoReferenceInputs info
    in traceIfFalse
         "ERROR-FUEL-MINTING-POLICY-04"
-        (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
+        (maybe False (Unsafe.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-05" (fuelAmount == get @"amount" mte)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-06" (MerkleTree.memberMp cborMte mp merkleRoot)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-07" (dsInserted == cborMteHashed)
   where
     -- Aliases:
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    info :: Unsafe.TxInfo
+    info = Unsafe.scriptContextTxInfo ctx
     ownCurrencySymbol :: CurrencySymbol
-    ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+    ownCurrencySymbol = Unsafe.ownCurrencySymbol ctx
     merkleRootTnCurrencySymbol :: CurrencySymbol
     merkleRootTnCurrencySymbol =
-      getVersionedCurrencySymbol
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
         ctx
     dsKeyCurrencySymbol :: CurrencySymbol
     dsKeyCurrencySymbol =
-      getVersionedCurrencySymbol
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = dsKeyPolicyId})
         ctx
     minted :: Value
-    minted = txInfoMint info
+    minted = Unsafe.decode $ Unsafe.txInfoMint info
     fuelAmount :: Integer
     fuelAmount
       | Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue minted
@@ -181,7 +175,13 @@ mkMintingPolicy _ _ _ _ = False
 -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts
 {-# INLINEABLE mkMintingPolicyUntyped #-}
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped sp versioningConfig = mkUntypedMintingPolicy $ mkMintingPolicy (unsafeFromBuiltinData sp) (unsafeFromBuiltinData versioningConfig)
+mkMintingPolicyUntyped sp versioningConfig redeemer ctx =
+  check $
+    mkMintingPolicy
+      (unsafeFromBuiltinData sp)
+      (unsafeFromBuiltinData versioningConfig)
+      (unsafeFromBuiltinData redeemer)
+      (Unsafe.wrap ctx)
 
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
@@ -192,12 +192,12 @@ serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPol
 -- to check, wether user has FUEL Proxy tokens or not, because cardano itself
 -- won't allow for burning tokens, that the user doesn't have.
 {-# INLINEABLE mkBurningPolicy #-}
-mkBurningPolicy :: () -> () -> () -> Bool
+mkBurningPolicy :: BuiltinData -> BuiltinData -> BuiltinData -> Bool
 mkBurningPolicy _ _ _ = True
 
 {-# INLINEABLE mkBurningPolicyUntyped #-}
 mkBurningPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkBurningPolicyUntyped _ _ _ = check $ mkBurningPolicy () () ()
+mkBurningPolicyUntyped a b c = check $ mkBurningPolicy a b c
 
 serialisableBurningPolicy :: Script
 serialisableBurningPolicy = fromCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])
