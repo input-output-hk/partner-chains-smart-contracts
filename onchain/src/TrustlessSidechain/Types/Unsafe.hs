@@ -1,3 +1,4 @@
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 -- Needed for Arbitrary instances for Plutus types
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -24,13 +25,13 @@ class Packable a where
   wrap :: BuiltinData -> a
   unwrap :: a -> BuiltinData
 
-{-# INLINE decode #-}
-decode :: (Packable unsafeA, UnsafeFromData safeA) => unsafeA -> safeA
-decode = PlutusTx.unsafeFromBuiltinData . unwrap
-
-{-# INLINE encode #-}
-encode :: (Packable unsafeA, ToData safeA) => safeA -> unsafeA
-encode = wrap . PlutusTx.toBuiltinData
+class (Packable unsafe, UnsafeFromData safe, ToData safe) => Codable safe unsafe | unsafe -> safe, safe -> unsafe where
+  {-# INLINE decode #-}
+  decode :: unsafe -> safe
+  decode = PlutusTx.unsafeFromBuiltinData . unwrap
+  {-# INLINE encode #-}
+  encode :: safe -> unsafe
+  encode = wrap . PlutusTx.toBuiltinData
 
 -- helpers
 

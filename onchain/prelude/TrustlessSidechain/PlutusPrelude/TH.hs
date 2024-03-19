@@ -17,8 +17,10 @@ import Prelude
 -- It is intended to be used inside `TrustlessSidechain.Types.Unsafe` only.
 --
 -- Example:
+--   module Safe where
 --   data Foo = Bar | Fizz Integer
---   makeUnsafeNewtypes ''Foo
+--   module Unsafe where
+--   makeUnsafeNewtypes ''Safe.Foo
 -- Generates:
 --   newtype Foo = Foo {unFoo :: BuiltinData}
 --     deriving Eq
@@ -27,6 +29,7 @@ import Prelude
 --     wrap = Foo
 --     {-# INLINE unwrap #-}
 --     unwrap = unFoo
+--   instance Codable Safe.Foo Foo
 
 makeUnsafeNewtypes :: Name -> Q [Dec]
 makeUnsafeNewtypes name = do
@@ -52,17 +55,17 @@ makeUnsafeNewtypes name = do
               ]
           )
           [DerivClause Nothing [ConT $ mkName "Eq"]]
-  let instanceT =
+  let packableInstanceT =
         foldl1
           AppT
           [ ConT $ mkName "Packable"
           , ConT newtypeName
           ]
-  let packInstance =
+  let packableInstance =
         InstanceD
           Nothing
           []
-          instanceT
+          packableInstanceT
           [ PragmaD (InlineP (mkName "wrap") Inline FunLike AllPhases)
           , FunD
               (mkName "wrap")
@@ -72,7 +75,19 @@ makeUnsafeNewtypes name = do
               (mkName "unwrap")
               [Clause [] (NormalB (VarE unNewtypeName)) []]
           ]
-  return [decNewtype, packInstance]
+  let codableInstance =
+        InstanceD
+          Nothing
+          []
+          ( foldl1
+              AppT
+              [ ConT $ mkName "Codable"
+              , ConT name
+              , ConT newtypeName
+              ]
+          )
+          []
+  return [decNewtype, packableInstance, codableInstance]
 
 -- `makeUnsafeGetters` generates getter functions for wrapper types generated
 -- by `makeUnsafeNewtypes`.
