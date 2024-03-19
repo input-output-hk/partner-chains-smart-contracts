@@ -35,6 +35,7 @@ import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
@@ -85,6 +86,11 @@ data EndpointResp
   | CommitteeHandoverResp
       { saveRootTransactionId ∷ ByteArray
       , committeeHashTransactionId ∷ ByteArray
+      }
+  | InitTokensMintResp
+      { transactionId ∷ Maybe ByteArray
+      , sidechainParams ∷ SidechainParams
+      , sidechainAddresses ∷ SidechainAddresses
       }
   | InitResp
       { transactionId ∷ ByteArray
@@ -257,6 +263,38 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "committeeHashTransactionId" /\ J.fromString
             (byteArrayToHex committeeHashTransactionId)
         ]
+    InitTokensMintResp
+      { transactionId
+      , sidechainParams
+      , sidechainAddresses
+      } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitTokensMint"
+          -- NOTE: Nothing encoded to null
+          , "transactionId" /\ CA.encode
+              (CAC.maybe CA.string)
+              (map byteArrayToHex transactionId)
+          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
+          , "addresses" /\ J.fromObject
+              ( Object.fromFoldable
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.addresses
+                  )
+              )
+          , "validatorHashes" /\ J.fromObject
+              ( Object.fromFoldable
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.validatorHashes
+                  )
+              )
+          , "mintingPolicies" /\ J.fromObject
+              ( Object.fromFoldable
+                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                      sidechainAddresses.mintingPolicies
+                  )
+              )
+          ]
     InitResp
       { transactionId
       , initTransactionIds

@@ -13,6 +13,7 @@ import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
 import Data.BigInt as BigInt
+import Data.List as List
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
@@ -46,6 +47,12 @@ import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning
+  ( getExpectedVersionedPoliciesAndValidators
+  ) as Versioning
+import TrustlessSidechain.Versioning.Utils
+  ( versionOracleInitTokenName
+  ) as Versioning
 import Type.Row (type (+))
 
 -- | `tests` aggregates all the tests together in one convenient function
@@ -59,6 +66,9 @@ tests = plutipGroup "Initialising the sidechain" $ do
   testInitTokenStatusEmpty
   testInitTokenStatusOneToken
   testInitTokenStatusMultiTokens
+  -- InitTokensMint endpoint
+  initTokensMintScenario1
+  initTokensMintScenario2
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
@@ -298,9 +308,6 @@ testInitTokenStatusEmpty =
             ]
         )
     $ \(alice /\ bob) → do
-        let
-          failMsg m = "Should have no init tokens but got: " <> show
-            (Plutus.Map.keys m)
 
         -- Alice init as in testScenario1
         sidechainParams ← withUnliftApp (Wallet.withKeyWallet alice) do
@@ -317,7 +324,7 @@ testInitTokenStatusEmpty =
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert (failMsg res) (Plutus.Map.null res)
+            $ assert (failMsg "" res) (Plutus.Map.null res)
 
 -- | Run `initSidechain` without creating "CandidatePermission" tokens,
 -- | and therefore leaving one "CandidatePermission InitToken" unspent.
@@ -346,8 +353,6 @@ testInitTokenStatusOneToken =
           -- The CandidatePermission InitToken is the only one unspent
           -- since we did not use it to create any CandidatePermission tokens.
           let
-            failMsg m = "Expected a single CandidatePermission InitToken but got: "
-              <> show m
             expected = foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
               [ CandidatePermissionToken.candidatePermissionInitTokenName /\ one ]
 
@@ -357,7 +362,8 @@ testInitTokenStatusOneToken =
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert (failMsg res) (res == expected)
+            $ assert (failMsg "Single CandidatePermission InitToken" res)
+                (res == expected)
 
 -- | Directly mint several init tokens but do not spend them.
 -- | Check that you get what you expect.
@@ -390,20 +396,6 @@ testInitTokenStatusMultiTokens =
 
           expected ← mintSeveralInitTokens sidechainParams
 
-          let
-            -- Plutus.Map.Map's Eq instance is derived from the Array Eq instance
-            -- and therefore is sensitive to the order of insertion.
-            unorderedEq m1 m2 =
-              let
-                kvs m = Array.sort $ Array.zip (Plutus.Map.keys m)
-                  (Plutus.Map.elems m)
-              in
-                kvs m1 == kvs m2
-            failMsg exp act = "Expected: "
-              <> show exp
-              <> "\nBut got: "
-              <> show act
-
           { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
             sidechainParams
 
@@ -411,3 +403,185 @@ testInitTokenStatusMultiTokens =
             $ map Just
             $ liftAff
             $ assert (failMsg expected res) (unorderedEq expected res)
+
+-- | Setup the same as `testScenario1`, but in which `initTokensMint`
+-- | is called rather than `initSidechain`. It should succeed, and
+-- | it checks the tokens are indeed minted by calling `getInitTokenStatus`.
+initTokensMintScenario1 ∷ PlutipTest
+initTokensMintScenario1 =
+  Mote.Monad.test "`initTokensMint` returns expected token names and quantities"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice →
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'initTokensMintScenario1'"
+
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+          initGovernanceAuthority ←
+            (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+
+          let
+            version = 1
+            initTokensScParams =
+              { initChainId: BigInt.fromInt 9
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority
+              }
+            sidechainParams = InitSidechain.toSidechainParams initTokensScParams
+
+          -- Command being tested
+          void $ InitSidechain.initTokensMint initTokensScParams version
+
+          -- For computing the number of versionOracle init tokens
+          { versionedPolicies, versionedValidators } ←
+            Versioning.getExpectedVersionedPoliciesAndValidators
+              { atmsKind: initTokensScParams.initATMSKind
+              , sidechainParams
+              }
+              version
+
+          let
+            -- See `Versioning.mintVersionInitTokens` for where this comes from
+            nversion = BigInt.fromInt $ List.length versionedPolicies
+              + List.length versionedValidators
+            expected = expectedInitTokens nversion
+
+          -- Get the tokens just created
+          { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
+            sidechainParams
+
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+            $ map Just
+            $ liftAff
+            $ assert (failMsg expected res)
+                (unorderedEq expected res)
+
+-- | Same as `initTokensMintScenario1`, except this
+-- | attempts to mint the tokens twice. The tokens should
+-- | still be as expected and the return transactionId should
+-- | be `Nothing`.
+initTokensMintScenario2 ∷ PlutipTest
+initTokensMintScenario2 =
+  Mote.Monad.test "`initTokensMint` gives expected results when called twice"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice →
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'initTokensMintScenario2'"
+
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+          initGovernanceAuthority ←
+            (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+
+          let
+            version = 1
+            initTokensScParams =
+              { initChainId: BigInt.fromInt 9
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority
+              }
+            sidechainParams = InitSidechain.toSidechainParams initTokensScParams
+
+          -- Mint them once
+          void $ InitSidechain.initTokensMint initTokensScParams version
+
+          -- Then do it again.
+          { transactionId } ← InitSidechain.initTokensMint initTokensScParams
+            version
+
+          -- For computing the number of versionOracle init tokens
+          { versionedPolicies, versionedValidators } ←
+            Versioning.getExpectedVersionedPoliciesAndValidators
+              { atmsKind: initTokensScParams.initATMSKind
+              , sidechainParams
+              }
+              version
+
+          let
+            -- See `Versioning.mintVersionInitTokens` for where this comes from
+            nversion = BigInt.fromInt $ List.length versionedPolicies
+              + List.length versionedValidators
+            expected = expectedInitTokens nversion
+
+          -- Get the tokens just created
+          { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
+            sidechainParams
+
+          -- Resulting tokens are as expected
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+            $ map Just
+            $ liftAff
+            $ assert (failMsg expected res)
+                (unorderedEq expected res)
+
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+            $ map Just
+            $ liftAff
+            $ assert (failMsg "Nothing" transactionId) (isNothing transactionId)
+
+-- | Testing utility to check ordered equality of
+-- | Plutus.Map.Map, whose Eq instance is derived from the Array Eq instance
+-- | and therefore is sensitive to the order of insertion.
+-- | Note this is not *set* equality, since there is no deduplication.
+unorderedEq ∷
+  ∀ k v.
+  Ord k ⇒
+  Ord v ⇒
+  Plutus.Map.Map k v →
+  Plutus.Map.Map k v →
+  Boolean
+unorderedEq m1 m2 =
+  let
+    kvs m = Array.sort $ Array.zip (Plutus.Map.keys m)
+      (Plutus.Map.elems m)
+  in
+    kvs m1 == kvs m2
+
+-- | Testing utility for showing expected/actual
+failMsg ∷ ∀ a b. Show a ⇒ Show b ⇒ a → b → String
+failMsg exp act = "Expected: "
+  <> show exp
+  <> "\nBut got: "
+  <> show act
+
+-- | Collection of init tokens expected to be minted by
+-- | `initTokensMint`. It does not care about
+-- | ATMSKinds or the particular version, just the token name
+-- | and quantity. Requires the number of version oracle init tokens
+-- | to be passed.
+expectedInitTokens ∷
+  BigInt.BigInt →
+  Plutus.Map.Map Value.TokenName BigInt.BigInt
+expectedInitTokens nversion =
+  foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
+    $ Array.(:) (Versioning.versionOracleInitTokenName /\ nversion)
+    $
+      map
+        (_ /\ one)
+        [ Checkpoint.checkpointInitTokenName
+        , DistributedSet.dsInitTokenName
+        , CommitteeOraclePolicy.committeeOracleInitTokenName
+        , CandidatePermissionToken.candidatePermissionInitTokenName
+        ]

@@ -19,6 +19,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     https://github.com/input-output-hk/trustless-sidechain/pull/723
   * Added CLI versioning and commit hash to sidechain-main-cli with the
     subcommand `cli-version`
+  * Added CLI endpoint `init-tokens-mint` to mint all init tokens by
+    spending the genesis UTxO.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo
