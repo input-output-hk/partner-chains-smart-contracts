@@ -5,11 +5,12 @@ module TrustlessSidechain.Effects.Log
   , handleLogWith
   , logInfo'
   , logWarn'
+  , logDebug'
   ) where
 
 import Contract.Prelude
 
-import Contract.Log (logInfo', logWarn') as Contract
+import Contract.Log (logDebug', logInfo', logWarn') as Contract
 import Effect.Aff (Error)
 import Run (Run, interpret, on, send)
 import Run as Run
@@ -30,6 +31,7 @@ import Type.Row (type (+))
 data LogF a
   = LogInfo' String a
   | LogWarn' String a
+  | LogDebug' String a
 
 derive instance functorLogF ∷ Functor LogF
 
@@ -52,6 +54,11 @@ logWarn' ∷
 logWarn' msg = Run.lift _log
   (LogWarn' msg unit)
 
+logDebug' ∷
+  ∀ r. String → Run (LOG + r) Unit
+logDebug' msg = Run.lift _log
+  (LogDebug' msg unit)
+
 handleLogLive ∷
   ∀ r. LogF ~> Run (EXCEPT OffchainError + CONTRACT + r)
 handleLogLive =
@@ -62,6 +69,9 @@ handleLogLive =
     LogWarn' msg x → const x <$> withTry
       (fromError "logWarn': ")
       (Contract.logWarn' msg)
+    LogDebug' msg x → const x <$> withTry
+      (fromError "logDebug': ")
+      (Contract.logDebug' msg)
   where
   fromError ∷ String → Error → OffchainError
   fromError ctx =

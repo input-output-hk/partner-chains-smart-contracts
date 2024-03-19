@@ -106,6 +106,7 @@ import TrustlessSidechain.Options.Types
       , GetAddrs
       , CandidiatePermissionTokenAct
       , Init
+      , InitTokensMint
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -156,6 +157,10 @@ optSpec maybeConfig =
     [ command "init"
         ( info (withCommonOpts maybeConfig initSpec)
             (progDesc "Initialise sidechain")
+        )
+    , command "init-tokens-mint"
+        ( info (withCommonOpts maybeConfig initTokensMintSpec)
+            (progDesc "Mint all sidechain initialisation tokens")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1013,6 +1018,17 @@ initSpec = ado
       , initSidechainEpoch
       , initCandidatePermissionTokenMintInfo
       , genesisHash
+      , version
+      }
+
+--| Parser for the `init-tokens-mint` endpoint.
+initTokensMintSpec ∷ Parser TxEndpoint
+initTokensMintSpec = ado
+  genesisHash ← parseGenesisHash
+  version ← parseVersion
+  in
+    InitTokensMint
+      { genesisHash
       , version
       }
 

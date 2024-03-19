@@ -38,6 +38,7 @@ import TrustlessSidechain.EndpointResp
       , CommitteeHashResp
       , SaveRootResp
       , InitResp
+      , InitTokensMintResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -74,6 +75,7 @@ import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( getInitTokenStatus
   , initSidechain
+  , initTokensMint
   )
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -98,6 +100,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeHash
       , SaveRoot
       , Init
+      , InitTokensMint
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion
@@ -410,6 +413,35 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , initTransactionIds: map unwrap initTransactionIds
           }
 
+      InitTokensMint
+        { genesisHash, version } →
+        do
+          let
+            sc = unwrap scParams
+            isc =
+              { initChainId: sc.chainId
+              , initGenesisHash: genesisHash
+              , initUtxo: sc.genesisUtxo
+              , initThresholdNumerator: sc.thresholdNumerator
+              , initThresholdDenominator: sc.thresholdDenominator
+              , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+              -- NOTE: This field is used to configure minting the candidate
+              -- permission tokens themselves, not the candidate permission
+              -- init tokens.
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: sc.governanceAuthority
+              }
+          { transactionId
+          , sidechainParams
+          , sidechainAddresses
+          } ←
+            initTokensMint isc version
+
+          pure $ InitTokensMintResp
+            { transactionId: map unwrap transactionId
+            , sidechainParams
+            , sidechainAddresses
+            }
       CommitteeHandover
         { merkleRoot
         , previousMerkleRoot

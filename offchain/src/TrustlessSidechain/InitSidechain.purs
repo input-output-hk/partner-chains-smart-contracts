@@ -16,6 +16,7 @@
 module TrustlessSidechain.InitSidechain
   ( initSidechain
   , initSpendGenesisUtxo
+  , initTokensMint
   , InitSidechainParams(InitSidechainParams)
   , InitSidechainParams'
   , InitTokensParams
@@ -75,6 +76,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -470,6 +472,77 @@ initSpendGenesisUtxo sidechainParams = do
         )
     }
 
+-- | Internal function for minting all init tokens in `initTokensMint`
+-- | and `initSidechain`.
+mintAllTokens ∷
+  ∀ r.
+  SidechainParams →
+  ATMSKinds →
+  Int →
+  Run (APP r) { transactionId ∷ TransactionHash }
+mintAllTokens sidechainParams initATMSKind version = do
+  { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
+    mempty
+    [ Checkpoint.mintOneCheckpointInitToken
+    , DistributedSet.mintOneDsInitToken
+    , CandidatePermissionToken.mintOneCandidatePermissionInitToken
+    , CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
+    , initSpendGenesisUtxo
+    , \sps → Versioning.mintVersionInitTokens
+        { atmsKind: initATMSKind
+        , sidechainParams: sps
+        }
+        version
+    ]
+  map { transactionId: _ } $ balanceSignAndSubmit
+    "Mint sidechain initialization tokens"
+    { lookups, constraints }
+
+-- | Mint all init tokens if the genesis UTxO has not already been spent.
+-- | If tokens are minted, this returns `Just` the minting transaction hash.
+-- | If the genesis UTxO already has been spent, this function returns `Nothing`
+-- | in the `transactionId` field and logs the fact at the info level.
+initTokensMint ∷
+  ∀ r.
+  InitTokensParams () →
+  Int →
+  Run (APP r)
+    { transactionId ∷ Maybe TransactionHash
+    , sidechainParams ∷ SidechainParams
+    , sidechainAddresses ∷ SidechainAddresses
+    }
+initTokensMint isp version = do
+  let sidechainParams = toSidechainParams isp
+  let txIn = (unwrap sidechainParams).genesisUtxo
+
+  logDebug' $ "Querying genesisUtxo from TxIn: " <> show txIn
+  txOut ← Effect.getUtxo txIn
+
+  txId ← case txOut of
+    Nothing → do
+      logInfo' "Genesis UTxO already spent or does not exist"
+      pure Nothing
+    Just _ → do
+      logInfo' "Minting sidechain initialization tokens"
+      map (Just <<< _.transactionId) $ mintAllTokens sidechainParams
+        isp.initATMSKind
+        version
+
+  sidechainAddresses ←
+    GetSidechainAddresses.getSidechainAddresses $
+      SidechainAddressesEndpointParams
+        { sidechainParams
+        , atmsKind: isp.initATMSKind
+        , usePermissionToken: isJust isp.initCandidatePermissionTokenMintInfo
+        , version
+        }
+
+  pure
+    { transactionId: txId
+    , sidechainParams
+    , sidechainAddresses
+    }
+
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
 -- | this will do the following:
@@ -510,22 +583,8 @@ initSidechain (InitSidechainParams isp) version = do
   ----------------------------------------
   -- TODO: lookups and constraints should be constructed depending on the
   -- version argument.  See Issue #10
-
-  { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
-    mempty
-    [ Checkpoint.mintOneCheckpointInitToken
-    , DistributedSet.mintOneDsInitToken
-    , CandidatePermissionToken.mintOneCandidatePermissionInitToken
-    , CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
-    , initSpendGenesisUtxo
-    , \sps → Versioning.mintVersionInitTokens
-        { atmsKind: isp.initATMSKind
-        , sidechainParams: sps
-        }
-        version
-    ]
-
-  txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
+  { transactionId: txId } ← mintAllTokens sidechainParams isp.initATMSKind
+    version
 
   -- Mint and pay versioning tokens to versioning script.
   ----------------------------------------
