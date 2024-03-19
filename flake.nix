@@ -125,18 +125,13 @@
           tools.haskell-language-server = {};
         };
       };
-
-    psProjectFor = system: let
-      projectName = "trustless-sidechain-ctl";
-      pkgs = nixpkgsFor system;
-      src = builtins.path {
-        path = ./offchain;
-        name = "${projectName}-src";
-        # TODO: Add more filters
-        filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
-      };
-    in
-      pkgs.purescriptProject {
+    buildProject = {
+      src,
+      pkgs,
+      projectName,
+      ...
+    }: let
+      project = pkgs.purescriptProject {
         inherit src pkgs projectName;
         packageJson = ./offchain/package.json;
         packageLock = ./offchain/package-lock.json;
@@ -156,6 +151,43 @@
           docker
         ];
       };
+      overrideBuilder = project.compiled.overrideAttrs (old: {
+        # Add a patchPhase for patching in the CLI version from a script
+        patchPhase = let
+          rev =
+            if builtins.hasAttr "rev" self
+            then self.rev
+            else self.dirtyRev;
+        in ''
+          srcDir=$(echo "$src" | sed 's|/nix/store/||')
+          chmod -R +w $srcDir/
+          substituteInPlace $srcDir/set_version.sh \
+            --replace 'jq' '${pkgs.jq}/bin/jq'
+          sed -i 's/gitHash=".*"/gitHash="${rev}"/' $srcDir/set_version.sh
+          pushd $srcDir
+          ${pkgs.bash}/bin/bash set_version.sh
+          popd
+        '';
+      });
+      projectPatched =
+        project
+        // {
+          compiled = overrideBuilder;
+        };
+    in
+      projectPatched;
+    psProjectFor = system: let
+      projectName = "trustless-sidechain-ctl";
+      pkgs = nixpkgsFor system;
+      src = builtins.path {
+        path = ./offchain;
+        name = "${projectName}-src";
+        # TODO: Add more filters
+        filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
+      };
+      project = buildProject {inherit src pkgs projectName;};
+    in
+      project;
 
     formatCheckFor = system: let
       pkgs = nixpkgsFor system;
@@ -232,32 +264,12 @@
 
         touch $out
       '';
-    overrideBuilder = compiled: pkgs:
-      compiled.overrideAttrs (old: {
-        # Add a patchPhase for patching in the CLI version from a script
-        patchPhase = let
-          rev =
-            if builtins.hasAttr "rev" self
-            then self.rev
-            else self.dirtyRev;
-        in ''
-          srcDir=$(echo "$src" | sed 's|/nix/store/||')
-          chmod -R +w $srcDir/
-          substituteInPlace $srcDir/set_version.sh \
-            --replace 'jq' '${pkgs.jq}/bin/jq'
-          sed -i 's/gitHash=".*"/gitHash="${rev}"/' $srcDir/set_version.sh
-          pushd $srcDir
-          ${pkgs.bash}/bin/bash set_version.sh
-          popd
-        '';
-      });
     # CTL's `runPursTest` won't pass command-line arugments to the `node`
     # invocation, so we can essentially recreate `runPursTest` here with and
     # pass the arguments
     ctlMainFor = system: let
       pkgs = nixpkgsFor system;
       project = psProjectFor system;
-      output = overrideBuilder project.compiled pkgs;
     in
       pkgs.writeShellApplication {
         name = "sidechain-main-cli";
@@ -267,12 +279,12 @@
         # `"$@"`
         text = ''
           export NODE_PATH="${project.nodeModules}/lib/node_modules"
-          node --enable-source-maps -e 'require("${output}/output/Main").main()' sidechain-main-cli "$@"
+          node --enable-source-maps -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
         '';
       };
 
     ctlBundleCliFor = system: let
-      name = "trustless-sidechain-cli";
+      projectName = "trustless-sidechain-cli";
       version = "5.0.0";
       src = ./offchain;
       pkgs = import nixpkgs {
@@ -281,20 +293,19 @@
           cardano-transaction-lib.overlays.purescript
         ];
       };
-      project = pkgs.purescriptProject {
-        inherit src pkgs;
-        projectName = name;
+      project = buildProject {
+        inherit src pkgs projectName;
         withRuntime = false;
       };
     in
       pkgs.stdenv.mkDerivation rec {
-        inherit name src version;
+        inherit projectName src version;
         buildInputs = [
           project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
         ];
         runtimeInputs = [project.nodejs];
         unpackPhase = ''
-          ln -s ${overrideBuilder project.compiled pkgs}/* .
+          ln -s ${project.compiled}/* .
           ln -s ${project.nodeModules}/lib/node_modules node_modules
         '';
         buildPhase = ''
@@ -302,7 +313,7 @@
         '';
         installPhase = ''
           mkdir -p $out
-          tar chf $out/${name}-${version}.tar main.js node_modules
+          tar chf $out/${projectName}-${version}.tar main.js node_modules
         '';
       };
     ociImageFor = system: let
