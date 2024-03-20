@@ -4,9 +4,10 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy, Validator)
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointParameter(CheckpointParameter)
@@ -18,6 +19,8 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -39,12 +42,14 @@ import TrustlessSidechain.Versioning.Types
       )
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 getVersionedPoliciesAndValidators ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ Map.Map ScriptId MintingPolicy
     , versionedValidators ∷ Map.Map ScriptId Validator
     }

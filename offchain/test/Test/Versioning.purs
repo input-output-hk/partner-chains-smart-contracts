@@ -10,25 +10,20 @@ import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils
-  ( WrappedTests
-  , getOwnTransactionInput
-  , plutipGroup
-  )
+import Test.Utils (WrappedTests, getOwnTransactionInput, plutipGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain
   )
-import TrustlessSidechain.MerkleRoot
-  ( merkleRootCurrencyInfo
-  )
+import TrustlessSidechain.MerkleRoot (merkleRootCurrencyInfo)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
@@ -55,12 +50,13 @@ testScenarioSuccess =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams

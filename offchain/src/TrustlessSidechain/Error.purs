@@ -18,6 +18,8 @@ data OffchainError
   | NotFoundOwnPubKeyHash
   -- | Own address cannot be found
   | NotFoundOwnAddress
+  -- | Tx output script cannot be found
+  | NotFoundTxOutputScript String
   -- | Invalid script address
   | InvalidAddress String Address
   -- | ScriptId not found in rawScriptsMap
@@ -51,6 +53,11 @@ data OffchainError
   -- | Anything that involves complicated internal logic, happens only once or
   -- | twice in the code, and isn't worth having a dedicated constructor
   | GenericInternalError String
+  -- | A temporary error type which will be expanded upon later
+  | InterpretedContractError String
+  -- | Represents a contract error that can't be interpreted.
+  -- | To be renamed to `ContractError` or similar later
+  | UnknownContractError String
 
   -- Below are the impossible errors, i.e. things that should never happen, but
   -- CTL forces us to handle these cases anyway.

@@ -4,7 +4,6 @@ module TrustlessSidechain.PermissionedCandidates
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
@@ -24,7 +23,6 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
 import Data.Array (nub, sort, (\\))
@@ -33,6 +31,12 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT, throw)
+import Run.Except as Run
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, InvalidCLIParams)
   )
@@ -50,6 +54,7 @@ import TrustlessSidechain.PermissionedCandidates.Types
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import Type.Row (type (+))
 
 permissionedCandidatesTokenName ∷ TokenName
 permissionedCandidatesTokenName =
@@ -58,6 +63,7 @@ permissionedCandidatesTokenName =
     =<< byteArrayFromAscii ""
 
 mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   { permissionedCandidatesToAdd ∷
       Array
@@ -74,7 +80,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
             }
         )
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -111,11 +117,12 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
               )
         )
         <<< Map.toUnfoldable
-    ) <$> utxosAt permissionedCandidatesValidatorAddress
+    ) <$> Effect.utxosAt permissionedCandidatesValidatorAddress
 
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
+  let
+    { lookups: governanceLookups, constraints: governanceConstraints } =
+      Governance.governanceAuthorityLookupsAndConstraints
+        (unwrap sidechainParams).governanceAuthority
 
   oldCandidates ← case maybePermissionedCandidatesUTxO of
     Nothing → pure []
@@ -123,16 +130,16 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       ( _ /\ TransactionOutputWithRefScript
           { output: TransactionOutput { datum: outputDatum } }
       ) →
-      maybe
-        ( throwContractError $ show $ InvalidData
+      Run.note
+        ( InvalidData
             "could not decode PermissionedCandidatesValidatorDatum"
         )
-        pure $ do
-        d ← case outputDatum of
-          OutputDatum (Datum d) → pure d
-          _ → Nothing
-        PermissionedCandidatesValidatorDatum { candidates } ← fromData d
-        pure candidates
+        $ do
+            d ← case outputDatum of
+              OutputDatum (Datum d) → pure d
+              _ → Nothing
+            PermissionedCandidatesValidatorDatum { candidates } ← fromData d
+            pure candidates
 
   let
     filteredCandidates ∷ Array PermissionedCandidateKeys
@@ -148,11 +155,10 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       )
 
   when (sort newCandidates == sort oldCandidates)
-    $ throwContractError
-    $
-      ( InvalidCLIParams
-          "New candidates list is the same as the currently stored list."
-      )
+    $ throw
+        ( InvalidCLIParams
+            "New candidates list is the same as the currently stored list."
+        )
 
   let
     value ∷ Value

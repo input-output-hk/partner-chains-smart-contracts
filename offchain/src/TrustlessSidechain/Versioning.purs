@@ -9,7 +9,6 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, throwContractError)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -24,7 +23,12 @@ import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenRedeemer(MintInitToken)
   )
@@ -40,15 +44,17 @@ import TrustlessSidechain.Versioning.Utils
 import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
 import TrustlessSidechain.Versioning.V2 as V2
+import Type.Row (type (+))
 
 -- | Mint multiple version oracle init tokens.  Exact amount minted depends on
 -- | protocol version.
 mintVersionInitTokens ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -71,11 +77,13 @@ mintVersionInitTokens { sidechainParams, atmsKind } version = do
     }
 
 initializeVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r)
+    (Array TransactionHash)
 initializeVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
     { sidechainParams, atmsKind }
@@ -96,11 +104,13 @@ initializeVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 insertVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r)
+    (Array TransactionHash)
 insertVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
     { sidechainParams, atmsKind }
@@ -121,11 +131,12 @@ insertVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 invalidateVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r) (Array TransactionHash)
 invalidateVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ← getVersionedPoliciesAndValidators
     { sidechainParams, atmsKind }
@@ -149,12 +160,13 @@ invalidateVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 updateVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int → -- old version
   Int → -- new version
-  Contract (Array TransactionHash)
+  Run (APP + r) (Array TransactionHash)
 updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
@@ -203,11 +215,12 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
     <> oldPoliciesTxIds
 
 getVersionedPoliciesAndValidators ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ Map.Map Types.ScriptId MintingPolicy
     , versionedValidators ∷ Map.Map Types.ScriptId Validator
     }
@@ -215,4 +228,4 @@ getVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
   case version of
     1 → V1.getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     2 → V2.getVersionedPoliciesAndValidators sidechainParams
-    _ → throwContractError ("Invalid version: " <> show version)
+    _ → throw $ GenericInternalError ("Invalid version: " <> show version)

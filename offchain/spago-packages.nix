@@ -1321,6 +1321,18 @@
       installPhase = "ln -s $src $out";
     };
 
+    "run" = pkgs.stdenv.mkDerivation {
+      name = "run";
+      version = "v4.0.0";
+      src = pkgs.fetchgit {
+        url = "https://github.com/natefaubion/purescript-run.git";
+        rev = "da336dbe4fdbc63f112020ff24884841cf84a6aa";
+        sha256 = "0m45in40a6lca6nvjrw4bb915lyadgjxn7rw9gb6c2jjw1dq5ixz";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
     "safe-coerce" = pkgs.stdenv.mkDerivation {
       name = "safe-coerce";
       version = "v1.0.0";

@@ -5,7 +5,6 @@ module TrustlessSidechain.DParameter
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM, throwContractError)
 import Contract.PlutusData
   ( Datum(Datum)
   , fromData
@@ -25,7 +24,6 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
 import Data.Array as Array
@@ -34,16 +32,23 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT, throw)
+import Run.Except as Run
 import TrustlessSidechain.DParameter.Types
   ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
 import TrustlessSidechain.DParameter.Utils as DParameter
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundUtxo, InvalidCLIParams)
+  ( OffchainError(NotFoundUtxo, InvalidCLIParams, GenericInternalError)
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import Type.Row (type (+))
 
 dParameterTokenName ∷ TokenName
 dParameterTokenName =
@@ -52,11 +57,12 @@ dParameterTokenName =
     =<< byteArrayFromAscii ""
 
 mkInsertDParameterLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   { permissionedCandidatesCount ∷ BigInt
   , registeredCandidatesCount ∷ BigInt
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -75,9 +81,10 @@ mkInsertDParameterLookupsAndConstraints
 
   dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
 
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
+  let
+    { lookups: governanceLookups, constraints: governanceConstraints } =
+      Governance.governanceAuthorityLookupsAndConstraints
+        (unwrap sidechainParams).governanceAuthority
 
   let
     value ∷ Value
@@ -108,11 +115,12 @@ mkInsertDParameterLookupsAndConstraints
   pure { lookups, constraints }
 
 mkUpdateDParameterLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   { permissionedCandidatesCount ∷ BigInt
   , registeredCandidatesCount ∷ BigInt
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -140,12 +148,10 @@ mkUpdateDParameterLookupsAndConstraints
                 BigInt.fromInt 0
           )
     )
-      <$> utxosAt dParameterValidatorAddress
+      <$> Effect.utxosAt dParameterValidatorAddress
 
-  (oldDParameterInput /\ oldDParameterOutput) ← liftContractM
-    ( show
-        (NotFoundUtxo "Old D parameter not found")
-    )
+  (oldDParameterInput /\ oldDParameterOutput) ← Run.note
+    (NotFoundUtxo "Old D parameter not found")
     mOldDParameter
 
   -- check how much DParameterToken is stored in UTxOs that we're trying to
@@ -164,22 +170,22 @@ mkUpdateDParameterLookupsAndConstraints
       Just (DParameterValidatorDatum dParameter)
         | dParameter.permissionedCandidatesCount == permissionedCandidatesCount
             && dParameter.registeredCandidatesCount
-            == registeredCandidatesCount → throwContractError
-            ( show
-                ( InvalidCLIParams
-                    "Provided values have already been set. Please check."
-                )
+            == registeredCandidatesCount → throw
+            ( InvalidCLIParams
+                "Provided values have already been set. Please check."
             )
       _ → pure unit
     _ → pure unit
 
-  when (dParameterTokenAmount <= BigInt.fromInt 0) $
-    throwContractError
-      "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
+  when (dParameterTokenAmount <= BigInt.fromInt 0)
+    $ throw
+    $ GenericInternalError
+        "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
 
-  { lookups: governanceLookups, constraints: governanceConstraints } ←
-    Governance.governanceAuthorityLookupsAndConstraints
-      (unwrap sidechainParams).governanceAuthority
+  let
+    { lookups: governanceLookups, constraints: governanceConstraints } =
+      Governance.governanceAuthorityLookupsAndConstraints
+        (unwrap sidechainParams).governanceAuthority
 
   let
     value ∷ Value

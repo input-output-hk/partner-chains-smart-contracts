@@ -11,13 +11,17 @@ import Contract.Prelude
 import Contract.Address (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Log as Log
-import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run (Run)
+import Run (liftEffect) as Run
+import Run.Except (EXCEPT)
+import Run.Except (note, rethrow) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -26,6 +30,12 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -47,6 +57,7 @@ import TrustlessSidechain.Utils.Address
   )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
+import Type.Row (type (+))
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
 tests ∷ WrappedTests
@@ -67,6 +78,7 @@ paymentPubKeyHashToBech32Bytes pubKeyHash =
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
 -- | It returns the saved merkle root.
 saveRoot ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , -- merkle tree entries used to build the new merkle root
     merkleTreeEntries ∷ Array MerkleTreeEntry
@@ -75,7 +87,7 @@ saveRoot ∷
   , -- the merkle root that was just saved
     previousMerkleRoot ∷ Maybe RootHash
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r)
     { -- merkle root that was just saved
       merkleRoot ∷ RootHash
     , -- merkle tree corresponding to the merkle root
@@ -93,14 +105,18 @@ saveRoot
   let
     serialisedEntries = map (PlutusData.serializeData >>> unwrap)
       merkleTreeEntries
-  merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
+  merkleTree ← Run.rethrow <<< lmap GenericInternalError $ MerkleTree.fromArray
+    serialisedEntries
 
   let
     merkleRoot = MerkleTree.rootHash merkleTree
 
   -- TODO: this has bad time complexity -- in the order of n^2.
   combinedMerkleProofs ←
-    liftContractM "error 'Test.MerkleRoot.saveRoot': Impossible merkle proof"
+    Run.note
+      ( GenericInternalError
+          "error 'Test.MerkleRoot.testScenario': failed to create merkle root insertion message"
+      )
       $ flip traverse merkleTreeEntries
       $ \entry → do
           let serialisedEntry = unwrap $ PlutusData.serializeData entry
@@ -110,8 +126,10 @@ saveRoot
             , merkleProof
             }
   merkleRootInsertionMessage ←
-    liftContractM
-      "error 'Test.MerkleRoot.testScenario': failed to create merkle root insertion message"
+    Run.note
+      ( GenericInternalError
+          "error 'Test.MerkleRoot.testScenario': failed to create merkle root insertion message"
+      )
       $ MerkleRoot.serialiseMrimHash
       $ MerkleRootInsertionMessage
           { sidechainParams
@@ -153,8 +171,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       , BigInt.fromInt 50_000_000
       , BigInt.fromInt 40_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
-      Log.logInfo' "MerkleRoot testScenario1"
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      liftContract $ Log.logInfo' "MerkleRoot testScenario1"
 
       -- 1. Setting up the sidechain
       ---------------------------
@@ -163,7 +181,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
+      initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+        committeeSize
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
@@ -187,8 +206,10 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
-        paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      ownRecipient ←
+        Run.note
+          (GenericInternalError "Could not convert address to bech 32 bytes") $
+          paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
       let
         serialisedEntries = map (PlutusData.serializeData >>> unwrap) $
           [ MerkleTreeEntry
@@ -198,14 +219,17 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
               , recipient: ownRecipient
               }
           ]
-      merkleTree ← liftContractE $ MerkleTree.fromArray serialisedEntries
+      merkleTree ← Run.rethrow <<< lmap GenericInternalError $
+        MerkleTree.fromArray serialisedEntries
 
       let
         merkleRoot = MerkleTree.rootHash merkleTree
 
       merkleRootInsertionMessage ←
-        liftContractM
-          "error 'Test.MerkleRoot.testScenario1': failed to create merkle root insertion message"
+        Run.note
+          ( GenericInternalError
+              "error 'Test.MerkleRoot.testScenario1': failed to create merkle root insertion message"
+          )
           $ MerkleRoot.serialiseMrimHash
           $ MerkleRootInsertionMessage
               { sidechainParams: sidechainParams
@@ -259,8 +283,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
       , BigInt.fromInt 50_000_000
       , BigInt.fromInt 40_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
-      Log.logInfo' "MerkleRoot testScenario2"
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      liftContract $ Log.logInfo' "MerkleRoot testScenario2"
 
       -- 1. Setting up the sidechain
       ---------------------------
@@ -273,7 +297,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      initCommitteePrvKeys ← sequence $ Array.replicate committeeSize
+      initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+        committeeSize
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
@@ -297,8 +322,10 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownRecipient ← liftContractM "Could not convert address to bech 32 bytes" $
-        paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      ownRecipient ←
+        Run.note
+          (GenericInternalError "Could not convert address to bech 32 bytes") $
+          paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
       { merkleRoot: merkleRoot1 } ←
         saveRoot
@@ -351,8 +378,8 @@ testScenario3 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        Log.logInfo' "MerkleRoot testScenario2"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ Log.logInfo' "MerkleRoot testScenario2"
 
         -- 1. Setting up the sidechain
         ---------------------------
@@ -362,10 +389,11 @@ testScenario3 =
         pkh ← getOwnPaymentPubKeyHash
 
         -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
-        duplicated1PrvKey ← Crypto.generatePrivKey
-        duplicated2PrvKey ← Crypto.generatePrivKey
+        duplicated1PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
+        duplicated2PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
 
-        everyoneElsePrvKeys ← sequence $ Array.replicate (committeeSize - 20)
+        everyoneElsePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          (committeeSize - 20)
           Crypto.generatePrivKey
         let
           initCommitteePrvKeys = Array.replicate 5 duplicated1PrvKey
@@ -393,8 +421,10 @@ testScenario3 =
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------
 
-        ownRecipient ← liftContractM "Could not convert address to bech 32 bytes"
-          $ paymentPubKeyHashToBech32Bytes pkh
+        ownRecipient ←
+          Run.note
+            (GenericInternalError "Could not convert address to bech 32 bytes")
+            $ paymentPubKeyHashToBech32Bytes pkh
 
         { merkleRoot: merkleRoot1 } ←
           saveRoot

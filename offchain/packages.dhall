@@ -108,7 +108,6 @@ let additions =
           , "exceptions"
           , "foldable-traversable"
           , "foreign-object"
-          , "free"
           , "integers"
           , "lists"
           , "maybe"

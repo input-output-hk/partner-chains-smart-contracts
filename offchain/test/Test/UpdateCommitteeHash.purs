@@ -29,6 +29,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -94,7 +96,7 @@ generateUchmSignatures
   -- committee oracle back to the same address)
   ---------------------------
   { validatorHash: updateCommitteeHashValidatorHash } ←
-    getUpdateCommitteeHashValidator sidechainParams
+    unliftApp $ getUpdateCommitteeHashValidator sidechainParams
 
   -- Building the message to sign
   ---------------------------
@@ -178,7 +180,7 @@ updateCommitteeHashWith params f = void do
 
   uchp' ← f uchp
 
-  UpdateCommitteeHash.updateCommitteeHash uchp'
+  unliftApp $ UpdateCommitteeHash.updateCommitteeHash uchp'
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
@@ -199,14 +201,15 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
       , BigInt.fromInt 40_000_000
       , BigInt.fromInt 40_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
-      logInfo' "UpdateCommitteeHash 'testScenario1'"
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      liftContract $ logInfo' "UpdateCommitteeHash 'testScenario1'"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       pkh ← getOwnPaymentPubKeyHash
       let
         keyCount = 40
-      initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+      initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+        generatePrivKey
       let
         initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
         initScParams = InitSidechainParams
@@ -224,9 +227,10 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           }
 
       { sidechainParams } ← initSidechain initScParams 1
-      nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+      nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+        generatePrivKey
 
-      updateCommitteeHash
+      liftContract $ updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: initCommitteePrvKeys
         , newCommitteePrvKeys: nextCommitteePrvKeys
@@ -250,8 +254,8 @@ testScenario2 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "UpdateCommitteeHash 'testScenario2'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
+        liftContract $ logInfo' "UpdateCommitteeHash 'testScenario2'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
         pkh ← getOwnPaymentPubKeyHash
@@ -259,7 +263,8 @@ testScenario2 =
           keyCount = 2
         -- woohoo!! smaller committee size so it's easy to remove the majority
         -- sign below, and make this test case fail...
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -280,9 +285,10 @@ testScenario2 =
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams 1
-        nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
 
-        Test.Utils.fails
+        liftContract $ Test.Utils.fails
           $ updateCommitteeHashWith
               { sidechainParams: scParams
               , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -319,14 +325,15 @@ testScenario3 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "UpdateCommitteeHash 'testScenario3'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "UpdateCommitteeHash 'testScenario3'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 80
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = Array.sort
             (map toPubKeyUnsafe initCommitteePrvKeys)
@@ -353,8 +360,10 @@ testScenario3 =
             }
 
         { sidechainParams } ← initSidechain initScParams 1
-        nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
-        nextNextCommitteePrvKeys ← sequence $ Array.replicate keyCount
+        nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
+        nextNextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate
+          keyCount
           generatePrivKey
 
         let
@@ -374,7 +383,7 @@ testScenario3 =
               )
 
         -- the first update
-        updateCommitteeHashWith
+        liftContract $ updateCommitteeHashWith
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , newCommitteePrvKeys: nextCommitteePrvKeys
@@ -384,7 +393,7 @@ testScenario3 =
           (pure <<< reverseSignaturesAndNewCommittee)
 
         -- the second update
-        updateCommitteeHash
+        liftContract $ updateCommitteeHash
           { sidechainParams
           , currentCommitteePrvKeys: nextCommitteePrvKeys
           , newCommitteePrvKeys: nextNextCommitteePrvKeys
@@ -408,8 +417,8 @@ testScenario4 =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "UpdateCommitteeHash 'testScenario3'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
+        liftContract $ logInfo' "UpdateCommitteeHash 'testScenario3'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
         pkh ← getOwnPaymentPubKeyHash
@@ -459,7 +468,7 @@ testScenario4 =
 
         { sidechainParams } ← initSidechain initScParams 1
 
-        updateCommitteeHashWith
+        liftContract $ updateCommitteeHashWith
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , newCommitteePrvKeys: nextCommitteePrvKeys
@@ -499,14 +508,16 @@ testScenario5 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "UpdateCommitteeHash 'testScenario2'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
+        liftContract $ logInfo' "UpdateCommitteeHash 'testScenario2'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
         ownPkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 4
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect
+          $ sequence
+          $ Array.replicate keyCount generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -526,15 +537,18 @@ testScenario5 =
             }
 
         { sidechainParams: scParams } ← initSidechain initScParams 1
-        nextCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        nextCommitteePrvKeys ← liftEffect
+          $ sequence
+          $ Array.replicate keyCount generatePrivKey
 
-        updateCommitteeHashWith
-          { sidechainParams: scParams
-          , currentCommitteePrvKeys: initCommitteePrvKeys
-          , newCommitteePrvKeys: nextCommitteePrvKeys
-          , previousMerkleRoot: Nothing
-          , sidechainEpoch: BigInt.fromInt 1
-          }
+        liftContract
+          $ updateCommitteeHashWith
+              { sidechainParams: scParams
+              , currentCommitteePrvKeys: initCommitteePrvKeys
+              , newCommitteePrvKeys: nextCommitteePrvKeys
+              , previousMerkleRoot: Nothing
+              , sidechainEpoch: BigInt.fromInt 1
+              }
           $ \(UpdateCommitteeHashParams params) →
               pure
                 $ UpdateCommitteeHashParams

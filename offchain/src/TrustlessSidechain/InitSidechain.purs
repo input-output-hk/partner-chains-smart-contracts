@@ -24,11 +24,9 @@ module TrustlessSidechain.InitSidechain
   , getInitTokenStatus
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (note)
 
 import Contract.AssocMap as Plutus.Map
-import Contract.Monad (Contract, liftedM, throwContractError)
-import Contract.Monad as Monad
 import Contract.PlutusData
   ( Datum(Datum)
   , PlutusData
@@ -46,15 +44,15 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (getUtxo)
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
-import Contract.Wallet (getWalletUtxos)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
+import Run (Run)
+import Run.Except (EXCEPT, note, throw)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenMintInfo
   )
@@ -76,6 +74,12 @@ import TrustlessSidechain.DistributedSet
   , DsKeyMint(DsKeyMint)
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
+import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
 import TrustlessSidechain.Error
   ( OffchainError(ConversionError, NoGenesisUTxO)
   )
@@ -103,6 +107,7 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
+import Type.Row (type (+))
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -162,9 +167,9 @@ toSidechainParams isp = SidechainParams
 -- |      - Mints the candidiate permission tokens if
 -- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
 initCandidatePermissionTokenLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type).
+  ∀ (r ∷ Row Type) r'.
   InitTokensParams r →
-  Contract
+  Run (EXCEPT OffchainError + r')
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -182,9 +187,9 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the
 -- | checkpoint.
 initCheckpointLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type).
+  ∀ (r ∷ Row Type) r'.
   InitTokensParams r →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r')
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -249,8 +254,9 @@ initCheckpointLookupsAndConstraints inp = do
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
 -- | validator script for the update committee hash.
 initCommitteeHashLookupsAndConstraints ∷
+  ∀ r.
   InitSidechainParams' →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -333,8 +339,9 @@ initCommitteeHashLookupsAndConstraints isp = do
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
 initDistributedSetLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -363,8 +370,8 @@ initDistributedSetLookupsAndConstraints sidechainParams = do
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
   dsKeyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsKeyPolicy
   dsKeyPolicyTokenName ←
-    Monad.liftContractM
-      ( show $ ConversionError
+    note
+      ( ConversionError
           "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
       )
       $ Value.mkTokenName
@@ -429,21 +436,22 @@ initDistributedSetLookupsAndConstraints sidechainParams = do
 -- | re-exported from the module for the purposes of testing, so that we can
 -- | mint init tokens in tests when needed.
 initSpendGenesisUtxo ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
 initSpendGenesisUtxo sidechainParams = do
   let txIn = (unwrap sidechainParams).genesisUtxo
-  txOut ← liftedM
-    ( show $ NoGenesisUTxO
+  txOut ← Effect.fromMaybeThrow
+    ( NoGenesisUTxO
         "Provided genesis utxo does not exist or was already spent."
     )
-    (getUtxo txIn)
-  ownAvailableInputs ← (Map.keys <<< fromMaybe Map.empty) <$> getWalletUtxos
-  when (not $ elem txIn ownAvailableInputs) $ throwContractError
-    $ show
+    (Effect.getUtxo txIn)
+  ownAvailableInputs ← (Map.keys <<< fromMaybe Map.empty) <$>
+    Effect.getWalletUtxos
+  when (not $ elem txIn ownAvailableInputs) $ throw
     $ NoGenesisUTxO
         ( "The genesis UTxO is not present in the wallet. Perhaps you've used a "
             <>
@@ -483,9 +491,10 @@ initSpendGenesisUtxo sidechainParams = do
 -- |
 -- | For details, see `initSidechainTokens` and `paySidechainTokens`.
 initSidechain ∷
+  ∀ r.
   InitSidechainParams →
   Int →
-  Contract
+  Run (APP + r)
     { transactionId ∷ TransactionHash
     , initTransactionIds ∷ Array TransactionHash
     , sidechainParams ∷ SidechainParams
@@ -501,18 +510,20 @@ initSidechain (InitSidechainParams isp) version = do
   ----------------------------------------
   -- TODO: lookups and constraints should be constructed depending on the
   -- version argument.  See Issue #10
-  { constraints, lookups } ←
-    ( Checkpoint.mintOneCheckpointInitToken
-        <> DistributedSet.mintOneDsInitToken
-        <> CandidatePermissionToken.mintOneCandidatePermissionInitToken
-        <> CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
-        <> initSpendGenesisUtxo
-    ) sidechainParams <>
-      Versioning.mintVersionInitTokens
+
+  { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
+    mempty
+    [ Checkpoint.mintOneCheckpointInitToken
+    , DistributedSet.mintOneDsInitToken
+    , CandidatePermissionToken.mintOneCandidatePermissionInitToken
+    , CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
+    , initSpendGenesisUtxo
+    , \sps → Versioning.mintVersionInitTokens
         { atmsKind: isp.initATMSKind
-        , sidechainParams
+        , sidechainParams: sps
         }
         version
+    ]
 
   txId ← balanceSignAndSubmit "Initialise Sidechain" { lookups, constraints }
 
@@ -569,8 +580,10 @@ initTokenStatus sym =
 
 -- | Get the init token data for the own wallet. Used in InitTokenStatus endpoint.
 getInitTokenStatus ∷
+  ∀ r.
   SidechainParams →
-  Contract { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
 getInitTokenStatus scParams = do
   { currencySymbol } ← initTokenCurrencyInfo scParams
 

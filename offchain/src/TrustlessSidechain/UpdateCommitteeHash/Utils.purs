@@ -22,7 +22,6 @@ import Contract.Prelude
 import Contract.Address (Address)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
 import Contract.PlutusData (class ToData, serializeData, toData)
 import Contract.Scripts
   ( Validator
@@ -32,7 +31,12 @@ import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value as Value
 import Data.BigInt as BigInt
+import Run (Run)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHashMessage
@@ -53,9 +57,13 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracleConfig
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 updateCommitteeHashValidator ∷
-  SidechainParams → VersionOracleConfig → Contract Validator
+  ∀ r.
+  SidechainParams →
+  VersionOracleConfig →
+  Run (EXCEPT OffchainError + r) Validator
 updateCommitteeHashValidator sp versionOracleConfig =
   mkValidatorWithParams CommitteeHashValidator
     [ toData sp, toData versionOracleConfig ]
@@ -63,8 +71,9 @@ updateCommitteeHashValidator sp versionOracleConfig =
 -- | `getUpdateCommitteeHashValidator` wraps `updateCommitteeHashValidator` but
 -- | also returns the hash and address
 getUpdateCommitteeHashValidator ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { validator ∷ Validator
     , validatorHash ∷ ValidatorHash
     , address ∷ Address
@@ -97,8 +106,9 @@ serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
 -- Time complexity: bad, it looks at all utxos at the update committee hash
 -- validator, then linearly scans through each utxo to determine which has token
 findUpdateCommitteeHashUtxo ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUpdateCommitteeHashUtxo sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
