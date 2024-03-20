@@ -16,6 +16,13 @@ module TrustlessSidechain.Types.Unsafe (
   stakeOwnership,
   Signature (..),
   StakeOwnership (..),
+  GovernanceAuthority (..),
+  SidechainParams (..),
+  chainId,
+  genesisUtxo,
+  governanceAuthority,
+  thresholdDenominator,
+  thresholdNumerator,
   Address (..),
   CurrencySymbol (..),
   DCert (..),
@@ -75,7 +82,8 @@ module TrustlessSidechain.Types.Unsafe (
 import Plutus.V2.Ledger.Api qualified as V2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
-import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.PlutusPrelude hiding (Integer)
+import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types qualified as Types
 
 class Packable a where
@@ -93,22 +101,24 @@ class (Packable unsafe, UnsafeFromData safe, ToData safe) => Codable safe unsafe
 -- helpers
 
 {-# INLINEABLE nthFieldOf #-}
-nthFieldOf :: Integer -> BuiltinData -> BuiltinData
+nthFieldOf :: PTPrelude.Integer -> BuiltinData -> BuiltinData
 n `nthFieldOf` bd = snd (Builtins.unsafeDataAsConstr bd) !! n
 
 {-# INLINEABLE nthCtorOf #-}
-nthCtorOf :: Integer -> BuiltinData -> Maybe BuiltinData
+nthCtorOf :: PTPrelude.Integer -> BuiltinData -> Maybe BuiltinData
 n `nthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
   (ix, [x]) | n == ix -> Just x
   _ -> Nothing
 
 {-# INLINEABLE isNthCtorOf #-}
-isNthCtorOf :: Integer -> BuiltinData -> Bool
+isNthCtorOf :: PTPrelude.Integer -> BuiltinData -> Bool
 n `isNthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
   (ix, _) | n == ix -> True
   _ -> False
 
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
+makeUnsafeNewtypes ''Types.SidechainParams
+makeUnsafeNewtypes ''Types.GovernanceAuthority
 makeUnsafeNewtypes ''Types.Signature
 makeUnsafeNewtypes ''Types.StakeOwnership
 makeUnsafeNewtypes ''V2.Address
@@ -128,8 +138,10 @@ makeUnsafeNewtypes ''V2.TxInInfo
 makeUnsafeNewtypes ''V2.TxOut
 makeUnsafeNewtypes ''V2.TxOutRef
 makeUnsafeNewtypes ''V2.Value
+makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration
+makeUnsafeGetters ''Types.SidechainParams
 makeUnsafeGetters ''V2.ScriptContext
 makeUnsafeGetters ''V2.ScriptPurpose
 makeUnsafeGetters ''V2.TxInfo
