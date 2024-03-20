@@ -18,6 +18,7 @@ module TrustlessSidechain.Types (
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
+  GovernanceAuthority (GovernanceAuthority),
   InitTokenAssetClass (..),
   InitTokenRedeemer (..),
   MerkleRootInsertionMessage (..),
@@ -48,7 +49,6 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import TrustlessSidechain.Governance qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof)
 import TrustlessSidechain.PlutusPrelude
@@ -65,6 +65,11 @@ import TrustlessSidechain.PlutusPrelude
 -- trustless-sidechain.
 
 -- * Sidechain Parametrization and general data
+
+newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
+  deriving newtype (TSPrelude.Eq, TSPrelude.Ord, TSPrelude.Show, ToData, FromData, UnsafeFromData)
+
+PlutusTx.makeLift ''GovernanceAuthority
 
 -- | Parameters uniquely identifying a sidechain
 --
@@ -87,7 +92,7 @@ data SidechainParams = SidechainParams
     -- key, whose owner is allowed to make any decisions about script versions.
     --
     -- @since v5.0.0
-    governanceAuthority :: Governance.GovernanceAuthority
+    governanceAuthority :: GovernanceAuthority
   }
   deriving stock
     ( -- | @since v4.0.0
