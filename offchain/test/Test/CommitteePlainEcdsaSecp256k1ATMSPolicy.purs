@@ -15,6 +15,7 @@ import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
+import Run as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -24,6 +25,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -86,12 +89,13 @@ testScenario1 =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         let
           keyCount = 80
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
           Utils.Crypto.generatePrivKey
         let
           initCommitteePubKeys = map Utils.Crypto.toPubKeyUnsafe
@@ -115,9 +119,10 @@ testScenario1 =
 
         -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
-        committeePlainEcdsaSecp256k1ATMSMint ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
-            sidechainParams
+        let
+          committeePlainEcdsaSecp256k1ATMSMint =
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+              sidechainParams
 
         { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
@@ -127,7 +132,7 @@ testScenario1 =
 
         -- Running the tests
         -------------------------
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee"
         void do
           let
@@ -174,7 +179,7 @@ testScenario1 =
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
         void do
           let
@@ -223,7 +228,7 @@ testScenario1 =
             committeePlainEcdsaSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
         void do
           let
@@ -267,7 +272,7 @@ testScenario1 =
             committeePlainEcdsaSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
         void do
           let
@@ -305,12 +310,12 @@ testScenario1 =
                     , message: sidechainMessageTokenName
                     }
             )
-            # Test.Utils.fails
+            # withUnliftApp Test.Utils.fails
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
         void do
-          wrongCommittee ← sequence $ Array.replicate keyCount
+          wrongCommittee ← Run.liftEffect $ sequence $ Array.replicate keyCount
             Utils.Crypto.generatePrivKey
           let
             sidechainMessageByteArray =
@@ -346,6 +351,6 @@ testScenario1 =
                     , message: sidechainMessageTokenName
                     }
             )
-            # Test.Utils.fails
+            # withUnliftApp Test.Utils.fails
 
         pure unit

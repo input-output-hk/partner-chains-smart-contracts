@@ -5,13 +5,14 @@ module Test.MerkleRootChaining (tests) where
 import Contract.Prelude
 
 import Contract.Log as Log
-import Contract.Monad (liftContractM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run (liftEffect) as Run
+import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -22,6 +23,9 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
   )
@@ -60,21 +64,23 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       , BigInt.fromInt 100_000_000
       , BigInt.fromInt 100_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
       ownRecipient ←
-        liftContractM "Could not convert pub key hash to bech 32 bytes" $
-          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-            ownPaymentPubKeyHash
+        Run.note
+          (GenericInternalError "Could not convert pub key hash to bech 32 bytes")
+          $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+              ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       let keyCount = 70
-      committee1PrvKeys ← sequence $ Array.replicate keyCount
+      committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
         isp =
@@ -99,7 +105,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 2. Saving a merkle root.
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 2. saving a merkle root"
       { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
@@ -117,11 +123,11 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 3. Updating the committee hash
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 3. updating the committee hash"
-      committee3PrvKeys ← sequence $ Array.replicate keyCount
+      committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-      Test.UpdateCommitteeHash.updateCommitteeHash
+      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: committee1PrvKeys
         , newCommitteePrvKeys: committee3PrvKeys
@@ -131,11 +137,11 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 4. Updating the committee hash
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 4. updating the committee hash"
-      committee4PrvKeys ← sequence $ Array.replicate keyCount
+      committee4PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-      Test.UpdateCommitteeHash.updateCommitteeHash
+      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: committee3PrvKeys
         , newCommitteePrvKeys: committee4PrvKeys
@@ -146,7 +152,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 5. Saving a merkle root
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 5. saving the merkle root"
       { merkleRoot: merkleRoot5 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
@@ -166,7 +172,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 6. Saving a merkle root
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 6. saving the merkle root"
       { merkleRoot: merkleRoot6 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
@@ -187,11 +193,11 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 
       -- 7. Updating the committee hash
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario1': 7. updating the committee hash"
-      committee7PrvKeys ← sequence $ Array.replicate keyCount
+      committee7PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-      Test.UpdateCommitteeHash.updateCommitteeHash
+      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: committee4PrvKeys
         , newCommitteePrvKeys: committee7PrvKeys
@@ -214,21 +220,23 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       , BigInt.fromInt 100_000_000
       , BigInt.fromInt 100_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
       ownRecipient ←
-        liftContractM "Could not convert pub key hash to bech 32 bytes" $
-          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-            ownPaymentPubKeyHash
+        Run.note
+          (GenericInternalError "Could not convert pub key hash to bech 32 bytes")
+          $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+              ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario2': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
       let keyCount = 80
-      committee1PrvKeys ← sequence $ Array.replicate keyCount
+      committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
         isp =
@@ -253,7 +261,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
 
       -- 2. Saving a merkle root
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario2': 2. saving the merkle root"
       { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
         { sidechainParams
@@ -271,10 +279,10 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
 
       -- 3. Updating the committee hash with the wrong merkle root.
       -------------------------------
-      Log.logInfo'
+      liftContract $ Log.logInfo'
         "'Test.MerkleRootChaining.testScenario2': 3. updating the committee hash incorrectly"
       -- create a new committee
-      committee3PrvKeys ← sequence $ Array.replicate keyCount
+      committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
         committee1PubKeys = map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
@@ -286,8 +294,10 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
 
       -- finally, build the message
       committee1Message ←
-        liftContractM
-          "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
+        Run.note
+          ( GenericInternalError
+              "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
+          )
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage
               { sidechainParams: sidechainParams
@@ -302,7 +312,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
               , validatorHash: updateCommitteeHashValidatorHash
               }
 
-      Test.Utils.fails
+      withUnliftApp Test.Utils.fails
         $ void
         $ UpdateCommitteeHash.updateCommitteeHash
         $

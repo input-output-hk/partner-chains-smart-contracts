@@ -3,7 +3,6 @@ module Test.FUELProxyPolicy (tests) where
 import Contract.Prelude
 
 import Contract.Address (pubKeyHashAddress)
-import Contract.Monad (liftContractM)
 import Contract.PlutusData (serializeData) as PlutusData
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
@@ -12,18 +11,17 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
+import Run (liftEffect) as Run
+import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils
-  ( WrappedTests
-  , fails
-  , getOwnTransactionInput
-  , plutipGroup
-  )
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
@@ -69,16 +67,21 @@ testScenarioSuccess =
   Mote.Monad.test "Multiple minting and burning, updating policies in between"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
-          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Run.note
+            ( GenericInternalError
+                "Could not convert pub key hash to bech 32 bytes"
+            ) $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -187,16 +190,21 @@ testScenarioSuccess2 =
   Mote.Monad.test "Minting FUELProxy, and then minting again"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
-          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Run.note
+            ( GenericInternalError
+                "Could not convert pub key hash to bech 32 bytes"
+            ) $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -301,16 +309,20 @@ testScenarioFailure =
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
     $ \alice →
-        Wallet.withKeyWallet alice do
+        withUnliftApp (Wallet.withKeyWallet alice) do
 
           pkh ← getOwnPaymentPubKeyHash
           ownRecipient ←
-            liftContractM "Could not convert pub key hash to bech 32 bytes" $
+            Run.note
+              ( GenericInternalError
+                  "Could not convert pub key hash to bech 32 bytes"
+              ) $
               Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
           genesisUtxo ← getOwnTransactionInput
           let
             keyCount = 25
-          initCommitteePrvKeys ← sequence $ Array.replicate keyCount
+          initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            keyCount
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
@@ -397,4 +409,4 @@ testScenarioFailure =
                 }
             >>=
               balanceSignAndSubmit "Test: burn fuel via v1 proxy"
-          # fails
+          # withUnliftApp fails

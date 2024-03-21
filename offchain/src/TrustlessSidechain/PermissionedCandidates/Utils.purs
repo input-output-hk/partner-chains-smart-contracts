@@ -8,7 +8,6 @@ import Contract.Prelude
 import Contract.Address
   ( Address
   )
-import Contract.Monad (Contract)
 import Contract.PlutusData
   ( toData
   )
@@ -18,6 +17,10 @@ import Contract.Scripts
   , validatorHash
   )
 import Contract.Value (CurrencySymbol)
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
 import TrustlessSidechain.Utils.Scripts
@@ -30,25 +33,32 @@ import TrustlessSidechain.Versioning.ScriptId
       , PermissionedCandidatesPolicy
       )
   )
+import Type.Row (type (+))
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodePermissionedCandidatesMintingPolicy ∷
-  SidechainParams → Contract MintingPolicy
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   { permissionedCandidatesValidatorAddress } ←
     getPermissionedCandidatesValidatorAndAddress sidechainParams
   mkMintingPolicyWithParams PermissionedCandidatesPolicy
     [ toData sidechainParams, toData permissionedCandidatesValidatorAddress ]
 
-decodePermissionedCandidatesValidator ∷ SidechainParams → Contract Validator
+decodePermissionedCandidatesValidator ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r) Validator
 decodePermissionedCandidatesValidator sidechainParams = do
   mkValidatorWithParams PermissionedCandidatesValidator
     [ toData sidechainParams ]
 
 getPermissionedCandidatesValidatorAndAddress ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { permissionedCandidatesValidator ∷ Validator
     , permissionedCandidatesValidatorAddress ∷ Address
     }
@@ -62,8 +72,9 @@ getPermissionedCandidatesValidatorAndAddress sidechainParams = do
     { permissionedCandidatesValidator, permissionedCandidatesValidatorAddress }
 
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { permissionedCandidatesMintingPolicy ∷ MintingPolicy
     , permissionedCandidatesCurrencySymbol ∷ CurrencySymbol
     }

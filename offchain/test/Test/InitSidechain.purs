@@ -6,7 +6,6 @@ import Contract.Prelude
 
 import Contract.AssocMap as Plutus.Map
 import Contract.Log as Log
-import Contract.Monad as Monad
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
@@ -16,8 +15,11 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
-import Effect.Exception as Exception
 import Mote.Monad as Mote.Monad
+import Run (Run)
+import Run (liftEffect) as Run
+import Run.Except (note) as Run
+import Run.Except (throw)
 import Test.CandidatePermissionToken as Test.CandidatePermissionToken
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -31,6 +33,12 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.App (APP, BASE)
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -38,6 +46,7 @@ import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import Type.Row (type (+))
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
@@ -62,12 +71,13 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
       , BigInt.fromInt 50_000_000
       ]
   $ \alice →
-      Wallet.withKeyWallet alice do
-        Log.logInfo' "InitSidechain 'testScenario1'"
+      withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ Log.logInfo' "InitSidechain 'testScenario1'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         -- generate an initialize committee of `committeeSize` committee members
         let committeeSize = 25
-        committeePrvKeys ← sequence $ Array.replicate committeeSize
+        committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          committeeSize
           Crypto.generatePrivKey
 
         initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
@@ -110,18 +120,21 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
           ]
       )
   $ \(alice /\ bob) → do
-      aliceUtxos ← Wallet.withKeyWallet alice $ Monad.liftedM
-        "Failed to query wallet utxos"
-        Wallet.getWalletUtxos
+      aliceUtxos ← withUnliftApp (Wallet.withKeyWallet alice) $
+        Effect.fromMaybeThrow
+          (GenericInternalError "Failed to query wallet utxos")
+          (liftContract Wallet.getWalletUtxos)
 
-      genesisUtxo ← Monad.liftContractM "No utxo found in wallet"
-        $ Set.findMin
-        $ Map.keys aliceUtxos
+      genesisUtxo ←
+        Run.note (GenericInternalError "No utxo found in wallet")
+          $ Set.findMin
+          $ Map.keys aliceUtxos
 
-      result ← MonadError.try $ Wallet.withKeyWallet bob do
+      result ← withUnliftApp (MonadError.try <<< Wallet.withKeyWallet bob) do
         -- generate an initialize committee of `committeeSize` committee members
         let committeeSize = 1000
-        committeePrvKeys ← sequence $ Array.replicate committeeSize
+        committeePrvKeys ← liftEffect $ sequence $ Array.replicate
+          committeeSize
           Crypto.generatePrivKey
         initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
           <$> getOwnPaymentPubKeyHash
@@ -144,7 +157,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
         void $ InitSidechain.initSidechain initScParams 1
       case result of
         Right _ →
-          Monad.throwContractError $ Exception.error
+          throw $ GenericInternalError
             "Contract should have failed but it didn't."
         Left _err → pure unit
 
@@ -166,12 +179,13 @@ testScenario3 =
         , BigInt.fromInt 50_000_000
         ]
     $ \alice →
-        Wallet.withKeyWallet alice do
-          Log.logInfo' "InitSidechain 'testScenario3'"
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'testScenario3'"
           genesisUtxo ← Test.Utils.getOwnTransactionInput
           -- generate an initialize committee of `committeeSize` committee members
           let committeeSize = 25
-          committeePrvKeys ← sequence $ Array.replicate committeeSize
+          committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            committeeSize
             Crypto.generatePrivKey
           initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
             <$> getOwnPaymentPubKeyHash
@@ -204,13 +218,14 @@ testScenario3 =
 -- | `initCandidatePermissionTokenLookupsAndConstraints` does not spend that
 -- | token in `initSidechain`. Otherwise, no init tokens should remain.
 initSimpleSidechain ∷
+  ∀ r.
   Maybe { candidatePermissionTokenAmount ∷ BigInt.BigInt } →
-  Monad.Contract SidechainParams.SidechainParams
+  Run (APP + BASE + r) SidechainParams.SidechainParams
 initSimpleSidechain amt = do
   genesisUtxo ← Test.Utils.getOwnTransactionInput
   -- generate an initialize committee of `committeeSize` committee members
   let committeeSize = 25
-  committeePrvKeys ← sequence $ Array.replicate committeeSize
+  committeePrvKeys ← liftEffect $ sequence $ Array.replicate committeeSize
     Crypto.generatePrivKey
 
   initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
@@ -240,16 +255,21 @@ initSimpleSidechain amt = do
 -- | Note `balanceSignAndSubmit` blocks until the transactions are
 -- | confirmed.
 mintSeveralInitTokens ∷
+  ∀ r.
   SidechainParams →
-  Monad.Contract (Plutus.Map.Map Value.TokenName BigInt.BigInt)
+  Run (APP + r) (Plutus.Map.Map Value.TokenName BigInt.BigInt)
 mintSeveralInitTokens sidechainParams = do
   _ ←
-    ( Checkpoint.mintOneCheckpointInitToken
-        <> DistributedSet.mintOneDsInitToken
-        <> CandidatePermissionToken.mintOneCandidatePermissionInitToken
-        <> CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
-        <> InitSidechain.initSpendGenesisUtxo
-    ) sidechainParams >>= balanceSignAndSubmit "mintSeveralInitTokens"
+    foldM
+      (\acc f → (append acc) <$> f sidechainParams)
+      mempty
+      [ Checkpoint.mintOneCheckpointInitToken
+      , DistributedSet.mintOneDsInitToken
+      , CandidatePermissionToken.mintOneCandidatePermissionInitToken
+      , CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
+      , InitSidechain.initSpendGenesisUtxo
+      ]
+      >>= balanceSignAndSubmit "mintSeveralInitTokens"
 
   pure
     $ foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
@@ -283,19 +303,20 @@ testInitTokenStatusEmpty =
             (Plutus.Map.keys m)
 
         -- Alice init as in testScenario1
-        sidechainParams ← Wallet.withKeyWallet alice do
-          Log.logInfo' "InitSidechain 'testInitTokenStatusEmpty'"
+        sidechainParams ← withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'testInitTokenStatusEmpty'"
 
           -- Initialize with no CandidatePermission tokens
           initSimpleSidechain Nothing
 
         -- Bob should have no init tokens
-        Wallet.withKeyWallet bob do
+        withUnliftApp (Wallet.withKeyWallet bob) do
           { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
             sidechainParams
 
-          Monad.liftContractAffM "Uncreachable"
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
+            $ liftAff
             $ assert (failMsg res) (Plutus.Map.null res)
 
 -- | Run `initSidechain` without creating "CandidatePermission" tokens,
@@ -316,8 +337,8 @@ testInitTokenStatusOneToken =
         , BigInt.fromInt 50_000_000
         ]
     $ \alice → do
-        Wallet.withKeyWallet alice do
-          Log.logInfo' "InitSidechain 'testInitTokenStatusOneToken'"
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'testInitTokenStatusOneToken'"
 
           -- Initialize with no CandidatePermission tokens
           sidechainParams ← initSimpleSidechain Nothing
@@ -333,8 +354,9 @@ testInitTokenStatusOneToken =
           { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
             sidechainParams
 
-          Monad.liftContractAffM "Uncreachable"
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
+            $ liftAff
             $ assert (failMsg res) (res == expected)
 
 -- | Directly mint several init tokens but do not spend them.
@@ -355,8 +377,8 @@ testInitTokenStatusMultiTokens =
         , BigInt.fromInt 50_000_000
         ]
     $ \alice → do
-        Wallet.withKeyWallet alice do
-          Log.logInfo' "InitSidechain 'testInitTokenStatusMultiTokens'"
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'testInitTokenStatusMultiTokens'"
 
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
@@ -385,6 +407,7 @@ testInitTokenStatusMultiTokens =
           { initTokenStatusData: res } ← InitSidechain.getInitTokenStatus
             sidechainParams
 
-          Monad.liftContractAffM "Uncreachable"
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
+            $ liftAff
             $ assert (failMsg expected res) (unorderedEq expected res)

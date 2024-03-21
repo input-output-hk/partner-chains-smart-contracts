@@ -16,13 +16,8 @@ module Test.PoCSchnorrSecp256k1 (tests) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData
-  ( class ToData
-  , PlutusData(Constr)
-  )
+import Contract.PlutusData (class ToData, PlutusData(Constr))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
@@ -37,15 +32,21 @@ import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Data.Semiring as Semiring
 import Data.String as String
-import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
+import Run (Run)
+import Run (liftEffect) as Run
+import Run.Except (EXCEPT)
+import Run.Except (note, throw) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
+import Type.Row (type (+))
 
 -- | `SchnorrSecp256k1Redeemer` corresponds to the onchain type.
 newtype SchnorrSecp256k1Redeemer = SchnorrSecp256k1Redeemer
@@ -65,20 +66,24 @@ instance ToData SchnorrSecp256k1Redeemer where
 -- | Grabs the minting policy / currency symbol of the schnorr proof of concept
 -- | test minting policy.
 getPoCSchnorrSecp256k1MintingPolicy ∷
-  Contract { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
+  ∀ r.
+  Run (EXCEPT OffchainError + r)
+    { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
 getPoCSchnorrSecp256k1MintingPolicy = do
   mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams'
     RawScripts.rawPoCSchnorr
     (mempty ∷ Array PlutusData)
-  currencySymbol ← Monad.liftContractM "minting policy to currency symbol failed"
-    $ Value.scriptCurrencySymbol mintingPolicy
+  currencySymbol ←
+    Run.note (GenericInternalError "minting policy to currency symbol failed")
+      $ Value.scriptCurrencySymbol mintingPolicy
   pure { mintingPolicy, currencySymbol }
 
 -- | `mustMintPocSchnorrSecp256k1` provides the lookups + constraints for minting the
 -- | `TrustlessSidechain.RawScripts.rawPoCSchnorrSecp256k1` minting policy.
 mustMintPocSchnorrSecp256k1 ∷
+  ∀ r.
   SchnorrSecp256k1Redeemer →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -111,8 +116,8 @@ testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
-      privateKey ← Effect.Class.liftEffect $
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      privateKey ← Run.liftEffect $
         Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
       let
@@ -134,8 +139,8 @@ testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
-      privateKey ← Effect.Class.liftEffect $
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      privateKey ← Run.liftEffect $
         Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
       let
@@ -152,8 +157,10 @@ testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
           , publicKey: unwrap publicKey
           }
 
-      Test.Utils.fails $ void $ mustMintPocSchnorrSecp256k1 redeemer >>=
-        Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
+      withUnliftApp Test.Utils.fails $ void
+        $ mustMintPocSchnorrSecp256k1 redeemer
+        >>=
+          Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
       pure unit
 
 testScenario3 ∷ PlutipTest
@@ -162,8 +169,8 @@ testScenario3 =
     "PoCSchnorrSecp256k1: valid test scenario which includes parsing / serialization of keys"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-    $ \alice → Wallet.withKeyWallet alice do
-        privateKey ← Effect.Class.liftEffect $
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        privateKey ← Run.liftEffect $
           Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
         let
@@ -182,19 +189,23 @@ testScenario3 =
         -- Verify length assumptions
         ----------------------------
         unless (String.length serializedPublicKey == 32 * 2)
-          $ Monad.throwContractError
-              "serialized public keys should be 32 bytes (32 * 2 = 64 hex characters)"
+          $ Run.throw
+              ( GenericInternalError
+                  "serialized public keys should be 32 bytes (32 * 2 = 64 hex characters)"
+              )
 
         unless (String.length serializedSignature == 64 * 2)
-          $ Monad.throwContractError
-              "serialized public keys should be 64 bytes (64 * 2 = 64 hex characters)"
+          $ Run.throw
+              ( GenericInternalError
+                  "serialized public keys should be 64 bytes (64 * 2 = 64 hex characters)"
+              )
 
         -- Reparse the signatures
         ----------------------------
-        parsedPublicKey ← Monad.liftContractM "bad public key parse"
+        parsedPublicKey ← Run.note (GenericInternalError "bad public key parse")
           $ Utils.SchnorrSecp256k1.parsePublicKey
           $ ByteArray.hexToByteArrayUnsafe serializedPublicKey
-        parsedSignature ← Monad.liftContractM "bad signature parse"
+        parsedSignature ← Run.note (GenericInternalError "bad signature parse")
           $ Utils.SchnorrSecp256k1.parseSignature
           $ ByteArray.hexToByteArrayUnsafe serializedSignature
 

@@ -23,8 +23,6 @@ import Contract.Credential
   , StakingCredential(StakingHash)
   )
 import Contract.Hashing (blake2b256Hash)
-import Contract.Log (logWarn')
-import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -65,7 +63,15 @@ import Data.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logWarn') as Effect
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError
       ( InvalidData
@@ -103,6 +109,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 fuelTokenName ∷ TokenName
 fuelTokenName =
@@ -244,7 +251,10 @@ instance FromData FUELMintingRedeemer where
 
 -- | Gets the FUELMintingPolicy by applying `FUELMint` to the FUEL minting
 -- | policy
-decodeFuelMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelMintingPolicy ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
 decodeFuelMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams FUELMintingPolicy
@@ -255,8 +265,9 @@ decodeFuelMintingPolicy sidechainParams = do
 -- | `SidechainParams`, and calls `fuelMintingPolicy` to give us the minting
 -- | policy
 getFuelMintingPolicy ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
@@ -280,9 +291,10 @@ data FuelMintParams = FuelMintParams
 -- | Mint FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
 mkMintFuelLookupAndConstraints ∷
+  ∀ r.
   SidechainParams →
   FuelMintParams →
-  Contract
+  Run (APP + r)
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mkMintFuelLookupAndConstraints
   sp
@@ -304,8 +316,8 @@ mkMintFuelLookupAndConstraints
     ds ← DistributedSet.getDs sidechainParams
 
     bech32BytesRecipient ←
-      liftContractM
-        ( show $ InvalidAddress "Cannot convert address to bech 32 bytes"
+      Run.note
+        ( InvalidAddress "Cannot convert address to bech 32 bytes"
             recipient
         )
         $ bech32BytesFromAddress recipient
@@ -324,19 +336,18 @@ mkMintFuelLookupAndConstraints
       rootHash = rootMp entryBytes merkleProof
 
     cborMteHashedTn ←
-      liftContractM
-        (show $ InvalidData "Token name exceeds size limit")
+      Run.note
+        (InvalidData "Token name exceeds size limit")
         $ mkTokenName
         $ cborMteHashed
 
     { index: mptUtxo, value: mptTxOut } ←
-      liftContractM
-        ( show
-            ( NotFoundUtxo
-                "Couldn't find the parent Merkle tree root hash of the transaction"
-            )
+      Effect.fromMaybeThrow
+        ( NotFoundUtxo
+            "Couldn't find the parent Merkle tree root hash of the transaction"
+
         )
-        =<< findMerkleRootTokenUtxoByRootHash sidechainParams rootHash
+        $ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash
 
     { inUtxo:
         { nodeRef
@@ -347,8 +358,8 @@ mkMintFuelLookupAndConstraints
     , nodes: DistributedSet.Ib { unIb: nodeA /\ nodeB }
     } ← case dsUtxo of
       Nothing →
-        liftedM
-          (show $ NotFoundUtxo "Couldn't find distributed set nodes")
+        Effect.fromMaybeThrow
+          (NotFoundUtxo "Couldn't find distributed set nodes")
           $ DistributedSet.slowFindDsOutput ds cborMteHashedTn
       Just dsTxInput → DistributedSet.findDsOutput ds cborMteHashedTn dsTxInput
 
@@ -360,8 +371,8 @@ mkMintFuelLookupAndConstraints
     { mintingPolicy, currencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
     recipientPkh ←
-      liftContractM
-        ( show $ InvalidAddress "Couldn't convert recipient to public key hash: "
+      Run.note
+        ( InvalidAddress "Couldn't convert recipient to public key hash: "
             recipient
         )
         $ PaymentPubKeyHash
@@ -370,7 +381,7 @@ mkMintFuelLookupAndConstraints
     let recipientSt = toStakePubKeyHash recipient
 
     when (isNothing recipientSt) $
-      logWarn' "Recipient address does not contain staking key."
+      Effect.logWarn' "Recipient address does not contain staking key."
 
     let
       node = DistributedSet.mkNode (getTokenName tnNode) datNode
@@ -401,8 +412,8 @@ mkMintFuelLookupAndConstraints
     let
       mkNodeConstraints n = do
         nTn ←
-          liftContractM
-            ( show $ GenericInternalError $ "Couldn't convert node key to token "
+          Run.note
+            ( GenericInternalError $ "Couldn't convert node key to token "
                 <> "name.  The key is "
                 <> show (unwrap n).nKey
             )
@@ -474,14 +485,15 @@ mkMintFuelLookupAndConstraints
 -- | as given by the `RootHash`
 -- TODO: refactor to utility module
 findMerkleRootTokenUtxoByRootHash ∷
+  ∀ r.
   SidechainParams →
   RootHash →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   merkleRootTokenName ←
-    liftContractM
-      ( show $ InvalidData
+    Run.note
+      ( InvalidData
           "Invalid Merkle root TokenName for MerkleRootTokenMintingPolicy"
       )
       $ Value.mkTokenName

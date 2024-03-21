@@ -2,7 +2,6 @@ module Test.Versioning (tests) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
@@ -10,21 +9,22 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Mote.Monad as Mote.Monad
+import Run (AFF, EFFECT, Run)
+import Run.Except (EXCEPT)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
-import Test.Utils
-  ( WrappedTests
-  , fails
-  , getOwnTransactionInput
-  , plutipGroup
-  )
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
@@ -32,9 +32,7 @@ import TrustlessSidechain.InitSidechain
   , initSidechain
   , toSidechainParams
   )
-import TrustlessSidechain.MerkleRoot
-  ( merkleRootCurrencyInfo
-  )
+import TrustlessSidechain.MerkleRoot (merkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
@@ -49,6 +47,7 @@ import TrustlessSidechain.Versioning.Utils
   ( insertVersionLookupsAndConstraints
   , invalidateVersionLookupsAndConstraints
   ) as Versioning
+import Type.Row (type (+))
 
 -- | `tests` aggregate all the Versioning tests in one convenient function
 tests ∷ WrappedTests
@@ -71,12 +70,13 @@ testInsertAndInvalidateSuccessScenario =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initATMSKind = ATMSPlainEcdsaSecp256k1
@@ -145,12 +145,13 @@ testInsertSameScriptTwiceSuccessScenario =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initATMSKind = ATMSPlainEcdsaSecp256k1
@@ -223,12 +224,13 @@ testInsertUnversionedScriptSuccessScenario =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initATMSKind = ATMSPlainEcdsaSecp256k1
@@ -285,12 +287,13 @@ testRemovingTwiceSameScriptFailScenario =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initATMSKind = ATMSPlainEcdsaSecp256k1
@@ -331,7 +334,7 @@ testRemovingTwiceSameScriptFailScenario =
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- We already invalidated that script. Re-invalidating it should fail.
-        fails $ do
+        withUnliftApp fails $ do
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
                 sidechainParams
@@ -353,12 +356,13 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
         , BigInt.fromInt 40_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initATMSKind = ATMSPlainEcdsaSecp256k1
@@ -423,6 +427,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
 assertNumberOfActualVersionedScripts ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams, atmsKind ∷ ATMSKinds } →
   -- | Version number
   Int →
@@ -430,7 +435,7 @@ assertNumberOfActualVersionedScripts ∷
   Int →
   -- | Number of expected versionned validator scripts
   Int →
-  Contract Unit
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + AFF + EFFECT + r) Unit
 assertNumberOfActualVersionedScripts
   sidechainParamsWithATMSKind
   version

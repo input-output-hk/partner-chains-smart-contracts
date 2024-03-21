@@ -7,10 +7,6 @@ module TrustlessSidechain.UpdateCommitteeHash
 
 import Contract.Prelude
 
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  )
 import Contract.PlutusData
   ( class ToData
   , Datum(Datum)
@@ -36,6 +32,9 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures
@@ -43,6 +42,9 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(ConversionError, NotFoundUtxo)
   )
@@ -79,6 +81,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -99,10 +102,10 @@ derive instance Newtype (UpdateCommitteeHashParams newAggregatePubKeys) _
 -- | `updateCommitteeHash` is the endpoint to submit the transaction to update
 -- | the committee hash.
 updateCommitteeHash ∷
-  ∀ newAggregatePubKeys.
+  ∀ newAggregatePubKeys r.
   ToData newAggregatePubKeys ⇒
   UpdateCommitteeHashParams newAggregatePubKeys →
-  Contract TransactionHash
+  Run (APP + r) TransactionHash
 updateCommitteeHash
   ( UpdateCommitteeHashParams
       { sidechainParams
@@ -146,8 +149,8 @@ updateCommitteeHash
   ------------------------------------
 
   scMsg ←
-    liftContractM
-      ( show $ ConversionError
+    Run.note
+      ( ConversionError
           "bad UpdateCommitteeHashMessage serialization"
       )
       $ serialiseUchmHash
@@ -180,7 +183,7 @@ updateCommitteeHash
 -- |    committee hash validator
 -- |    - referencing the merkle root UTxO (if it exists)
 updateCommitteeHashLookupsAndConstraints ∷
-  ∀ newAggregatePubKeys.
+  ∀ newAggregatePubKeys r.
   ToData newAggregatePubKeys ⇒
   { sidechainParams ∷ SidechainParams
   , previousMerkleRoot ∷ Maybe RootHash
@@ -189,7 +192,7 @@ updateCommitteeHashLookupsAndConstraints ∷
   , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
         { constraints ∷ TxConstraints Void Void
         , lookups ∷ ScriptLookups Void
@@ -227,8 +230,8 @@ updateCommitteeHashLookupsAndConstraints
     , value:
         committeeOracleTxOut
     } ←
-    liftContractM
-      (show $ NotFoundUtxo "Failed to find committee UTxO") $ lkup
+    Run.note
+      (NotFoundUtxo "Failed to find committee UTxO") $ lkup
 
   -- Grabbing the last merkle root reference
   -------------------------------------------------------------

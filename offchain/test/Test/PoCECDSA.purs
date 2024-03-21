@@ -4,11 +4,7 @@ import Contract.Prelude
 
 import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
 import Contract.Log (logInfo')
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , liftedE
-  )
+import Contract.Monad (Contract, liftContractM, liftedE)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
@@ -19,14 +15,8 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( Validator(Validator)
-  , validatorHash
-  )
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.Scripts (Validator(Validator), validatorHash)
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
@@ -45,6 +35,7 @@ import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts (rawPoCECDSA)
+import TrustlessSidechain.Effects.Contract (liftContract)
 
 getValidator ∷ Contract Validator
 getValidator = do
@@ -131,7 +122,7 @@ testScenario ∷ PlutipTest
 testScenario = Mote.Monad.test "PoCECDSA: testScenario"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → liftContract $ Wallet.withKeyWallet alice do
       txId ← prepTest
       awaitTxConfirmed txId
       void $ testVerification $

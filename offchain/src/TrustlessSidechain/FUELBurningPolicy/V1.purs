@@ -7,7 +7,6 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -31,6 +30,11 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts (mkMintingPolicyWithParams)
@@ -39,6 +43,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 fuelTokenName ∷ TokenName
 fuelTokenName =
@@ -48,13 +53,17 @@ fuelTokenName =
 
 -- | Gets the FUELBurningPolicy by applying `SidechainParams` to the FUEL
 -- | burning policy
-decodeFuelBurningPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelBurningPolicy ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r) MintingPolicy
 decodeFuelBurningPolicy sidechainParams =
   mkMintingPolicyWithParams FUELBurningPolicy [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { fuelBurningPolicy ∷ MintingPolicy
     , fuelBurningCurrencySymbol ∷ CurrencySymbol
     }
@@ -73,8 +82,9 @@ data FuelBurnParams = FuelBurnParams
 -- | Burn FUEL tokens using the Active Bridge configuration, verifying the
 -- | Merkle proof
 mkBurnFuelLookupAndConstraints ∷
+  ∀ r.
   FuelBurnParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo

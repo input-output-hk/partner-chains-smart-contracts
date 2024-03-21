@@ -20,6 +20,7 @@ import Data.UInt as UInt
 import Effect.Exception as Exception
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readTextFile)
+import Run (EFFECT, Run)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
@@ -32,6 +33,7 @@ import TrustlessSidechain.Options.Types
   ( Config
   , InputArgOrFile(InputFromArg, InputFromFile)
   )
+import Type.Row (type (+))
 
 optExample ∷ Config
 optExample =
@@ -56,17 +58,20 @@ optExample =
 
 --- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
 getCommittee ∷
+  ∀ r.
   InputArgOrFile (List ByteArray) →
-  Effect (List ByteArray)
+  Run (EFFECT + r) (List ByteArray)
 getCommittee =
-  getInputArgOrFile "committee" committeeCodec
+  liftEffect <<< getInputArgOrFile "committee" committeeCodec
 
 --- | `getCommitteeSignatures` grabs the committee signatures from CLI argument or a JSON file
 getCommitteeSignatures ∷
+  ∀ r.
   InputArgOrFile (List (ByteArray /\ Maybe ByteArray)) →
-  Effect (List (ByteArray /\ Maybe ByteArray))
+  Run (EFFECT + r) (List (ByteArray /\ Maybe ByteArray))
 getCommitteeSignatures =
-  getInputArgOrFile "committee signatures" committeeSignaturesCodec
+  liftEffect <<< getInputArgOrFile "committee signatures"
+    committeeSignaturesCodec
 
 -- | `getInputArgOrFile` grabs the input from the CLI argument or parses the
 -- | JSON file at the given path

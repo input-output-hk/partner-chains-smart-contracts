@@ -19,8 +19,6 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -47,10 +45,17 @@ import Contract.Value (flattenValue, getTokenName)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT, throw)
+import Run.Except as Run
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, NotFoundUtxo, VerificationError)
   )
@@ -77,6 +82,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `ATMSPlainSchnorrSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainSchnorrSecp256k1Multisignature =
@@ -138,10 +144,11 @@ instance FromData ATMSRedeemer where
 -- | `committeePlainSchnorrSecp256k1ATMS` grabs the minting policy for the committee plainSchnorrSecp256k1 ATMS
 -- | policy
 committeePlainSchnorrSecp256k1ATMSCurrencyInfo ∷
+  ∀ r.
   { committeeCertificateMint ∷ CommitteeCertificateMint
   , sidechainParams ∷ SidechainParams
   } →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + WALLET + r) CurrencyInfo
 committeePlainSchnorrSecp256k1ATMSCurrencyInfo
   { committeeCertificateMint, sidechainParams } =
   do
@@ -152,9 +159,9 @@ committeePlainSchnorrSecp256k1ATMSCurrencyInfo
 -- | `committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams` grabs the `CommitteePlainSchnorrSecp256k1ATMSPolicy`
 -- | parameter that corresponds to the given `SidechainParams`
 committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams ∷
-  SidechainParams → Contract CommitteeCertificateMint
+  SidechainParams → CommitteeCertificateMint
 committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams sidechainParams = do
-  pure $ CommitteeCertificateMint
+  CommitteeCertificateMint
     { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
     , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
     }
@@ -165,12 +172,13 @@ committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams sidechainParams = do
 -- | which contains the current committee, so you MUST provide this yourself
 -- | afterwards.
 mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , committeeATMSParams ∷
       CommitteeATMSParams
         (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   { committeeATMSParams:
@@ -217,21 +225,20 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     } = currentCommitteeUtxo
 
   comitteeHashDatum ←
-    Monad.liftContractM
-      ( show $ InvalidData
+    Run.note
+      ( InvalidData
           "Update committee UTxO is missing inline datum"
       )
       $ outputDatumDatum tOut.datum
-  UpdateCommitteeDatum datum ← Monad.liftContractM
-    ( show $ InvalidData
+  UpdateCommitteeDatum datum ← Run.note
+    ( InvalidData
         "Datum at update committee UTxO fromData failed"
     )
     (fromData $ unwrap comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
   when (datum.aggregatePubKeys /= curCommitteeHash)
-    $ Monad.throwContractError
-    $ show
+    $ throw
     $ VerificationError "Incorrect committee provided"
 
   unless
@@ -243,8 +250,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         messageByteArray
         curCommitteeSignatures
     )
-    $ Monad.throwContractError
-    $ show
+    $ throw
     $ VerificationError
         "Invalid committee signatures for the sidechain message"
 
@@ -357,12 +363,13 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
 -- | Note: this assumes that the current committee should be given as reference
 -- | input (instead of spending it) to make testing a bit more terse.
 runCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , committeeATMSParams ∷
       CommitteeATMSParams
         (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
   } →
-  Contract TransactionHash
+  Run (APP + r) TransactionHash
 runCommitteePlainSchnorrSecp256k1ATMSPolicy params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
     mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy params
@@ -385,12 +392,14 @@ runCommitteePlainSchnorrSecp256k1ATMSPolicy params = do
 -- | `findUpdateCommitteeHashUtxo` (and is indeed a small wrapper over it), but
 -- | does the tricky work of grabbing the required currency symbols for you.
 findUpdateCommitteeHashUtxoFromSidechainParams ∷
+  ∀ r.
   SidechainParams →
-  Contract { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Finding the current committee
   -------------------------------------------------------------
-  lkup ← Monad.liftedM
-    (show $ NotFoundUtxo "current committee not found")
+  lkup ← Effect.fromMaybeThrow
+    (NotFoundUtxo "current committee not found")
     (UpdateCommitteeHash.Utils.findUpdateCommitteeHashUtxo sidechainParams)
   pure lkup

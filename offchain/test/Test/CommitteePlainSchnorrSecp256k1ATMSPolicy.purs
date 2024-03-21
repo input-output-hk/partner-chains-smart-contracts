@@ -28,6 +28,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -91,7 +93,7 @@ testScenario1 =
         , BigInt.fromInt 100_000_000
         , BigInt.fromInt 100_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         let
@@ -121,9 +123,10 @@ testScenario1 =
 
         -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------
-        committeePlainSchnorrSecp256k1ATMSMint ←
-          CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
-            sidechainParams
+        let
+          committeePlainSchnorrSecp256k1ATMSMint =
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
+              sidechainParams
 
         { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
@@ -133,7 +136,7 @@ testScenario1 =
 
         -- Running the tests
         -------------------------
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee"
         void do
           let
@@ -182,7 +185,7 @@ testScenario1 =
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
         void do
           let
@@ -234,7 +237,7 @@ testScenario1 =
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
         void do
           let
@@ -281,7 +284,7 @@ testScenario1 =
             committeePlainSchnorrSecp256k1ATMSCurrencySymbol
             sidechainMessageTokenName
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
         void do
           let
@@ -323,9 +326,9 @@ testScenario1 =
                   , sidechainParams
                   }
             )
-            # Test.Utils.fails
+            # withUnliftApp Test.Utils.fails
 
-        logInfo'
+        liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
         void do
           wrongCommittee ← sequence $ Array.replicate keyCount
@@ -368,6 +371,6 @@ testScenario1 =
                   , sidechainParams
                   }
             )
-            # Test.Utils.fails
+            # withUnliftApp Test.Utils.fails
 
         pure unit

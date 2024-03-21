@@ -6,7 +6,6 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM, liftedM)
 import Contract.PlutusData (Datum(Datum), toData, unitRedeemer)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
@@ -18,6 +17,9 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointDatum(CheckpointDatum)
   , CheckpointEndpointParam(CheckpointEndpointParam)
@@ -49,6 +51,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, ConversionError)
   )
@@ -58,8 +64,12 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
-saveCheckpoint ∷ CheckpointEndpointParam → Contract TransactionHash
+saveCheckpoint ∷
+  ∀ r.
+  CheckpointEndpointParam →
+  Run (APP + r) TransactionHash
 saveCheckpoint
   ( CheckpointEndpointParam
       { sidechainParams
@@ -83,8 +93,8 @@ saveCheckpoint
       aggregateSignature
 
   currentCommitteeUtxo ←
-    liftedM
-      ( show $ NotFoundUtxo "failed to find current committee UTxO"
+    Effect.fromMaybeThrow
+      ( NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
           sidechainParams
@@ -105,8 +115,8 @@ saveCheckpoint
   -- verification
   ------------------------------------
   scMsg ←
-    liftContractM
-      ( show $ ConversionError "failed serializing the MerkleRootInsertionMessage"
+    Run.note
+      ( ConversionError "failed serializing the MerkleRootInsertionMessage"
       )
       $ serialiseCheckpointMessage checkpointMessage
 
@@ -138,13 +148,14 @@ saveCheckpoint
   balanceSignAndSubmit "Save Checkpoint" { lookups, constraints }
 
 saveCheckpointLookupsAndConstraints ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt
   , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
         { constraints ∷ TxConstraints Void Void
         , lookups ∷ ScriptLookups Void
@@ -169,7 +180,8 @@ saveCheckpointLookupsAndConstraints
 
   -- Getting the associated plutus scripts / UTXOs for checkpointing
   -------------------------------------------------------------
-  checkpointAssetClass ← checkpointAssetClass sidechainParams
+  checkpointAssetClass ← checkpointAssetClass
+    sidechainParams
 
   -- Getting checkpoint validator
   let
@@ -186,8 +198,8 @@ saveCheckpointLookupsAndConstraints
   { index: checkpointOref
   , value: checkpointTxOut
   } ←
-    liftContractM
-      (show $ NotFoundUtxo "Failed to find checkpoint UTxO")
+    Run.note
+      (NotFoundUtxo "Failed to find checkpoint UTxO")
       checkpointUtxoLookup
 
   -- Building / submitting the transaction.

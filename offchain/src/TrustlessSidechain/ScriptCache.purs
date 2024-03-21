@@ -14,9 +14,7 @@ import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM, liftedE)
-import Contract.PlutusData (PlutusData, toData, unitDatum)
+import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts
   ( MintingPolicy(PlutusMintingPolicy, NativeMintingPolicy)
@@ -27,21 +25,29 @@ import Contract.Transaction
   ( ScriptRef(PlutusScriptRef, NativeScriptRef)
   , TransactionInput(TransactionInput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , awaitTxConfirmed
-  , balanceTxWithConstraints
-  , signTransaction
-  , submit
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value as Value
-import Data.Bifunctor (lmap)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
+import TrustlessSidechain.Effects.Transaction
+  ( awaitTxConfirmed
+  , balanceTxWithConstraints
+  , mkUnbalancedTx
+  , signTransaction
+  , submit
+  , utxosAt
+  ) as Effect
+import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
   ( OffchainError(GenericInternalError, BuildTxError, BalanceTxError)
   )
@@ -56,22 +62,27 @@ import TrustlessSidechain.Utils.Scripts
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(ScriptCache)
   )
+import Type.Row (type (+))
 
-getScriptCacheValidator ∷ PaymentPubKeyHash → Contract Validator
+getScriptCacheValidator ∷
+  ∀ r.
+  PaymentPubKeyHash →
+  Run (EXCEPT OffchainError + r) Validator
 getScriptCacheValidator (PaymentPubKeyHash pkh) =
   mkValidatorWithParams ScriptCache [ toData pkh ]
 
 getScriptRefUtxo ∷
+  ∀ r.
   SidechainParams →
   ScriptRef →
-  Contract (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
 getScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
   scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
 
   valAddr ← toAddress scriptCacheValidatorHash
 
-  scriptCacheUtxos ← utxosAt valAddr
+  scriptCacheUtxos ← Effect.utxosAt valAddr
 
   let
     correctOutput
@@ -85,15 +96,16 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
     Nothing → createScriptRefUtxo (SidechainParams sp) scriptRef
 
 createScriptRefUtxo ∷
+  ∀ r.
   SidechainParams →
   ScriptRef →
-  Contract (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
 createScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
   scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
 
   let
-    constraints ∷ TxConstraints Unit Unit
+    constraints ∷ TxConstraints Void Void
     constraints = Constraints.mustPayToScriptWithScriptRef
       scriptCacheValidatorHash
       unitDatum
@@ -101,28 +113,25 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
       scriptRef
       (Value.lovelaceValueOf $ BigInt.fromInt 1) -- minimum possible ada
 
-    lookups ∷ Lookups.ScriptLookups PlutusData
+    lookups ∷ Lookups.ScriptLookups Void
     lookups = mempty
 
     balanceTxConstraints ∷ BalanceTxConstraints.BalanceTxConstraintsBuilder
     balanceTxConstraints =
       BalanceTxConstraints.mustNotSpendUtxoWithOutRef sp.genesisUtxo
 
-  ubTx ← liftedE
-    ( lmap BuildTxError <$>
-        Lookups.mkUnbalancedTx lookups constraints
-    )
-  bsTx ← liftedE
-    (lmap BalanceTxError <$> balanceTxWithConstraints ubTx balanceTxConstraints)
-  signedTx ← signTransaction bsTx
-  versioningScriptRefUtxoTxId ← submit signedTx
-  logInfo' $ "Submitted create script ref utxo: "
+  ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  bsTx ← mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx
+    balanceTxConstraints
+  signedTx ← Effect.signTransaction bsTx
+  versioningScriptRefUtxoTxId ← Effect.submit signedTx
+  Effect.logInfo' $ "Submitted create script ref utxo: "
     <> show versioningScriptRefUtxoTxId
-  awaitTxConfirmed versioningScriptRefUtxoTxId
+  Effect.awaitTxConfirmed versioningScriptRefUtxoTxId
 
   valAddr ← toAddress scriptCacheValidatorHash
 
-  scriptCacheUtxos ← utxosAt valAddr
+  scriptCacheUtxos ← Effect.utxosAt valAddr
 
   let
     correctOutput
@@ -135,8 +144,8 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
     correctOutput _ = false
 
   txInput /\ txOutput ←
-    liftContractM
-      ( show $ GenericInternalError
+    Run.note
+      ( GenericInternalError
           $ "Could not find unspent output with correct "
           <> "script ref locked at script cache address"
       )
@@ -145,16 +154,18 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
   pure (txInput /\ txOutput)
 
 getValidatorScriptRefUtxo ∷
+  ∀ r.
   SidechainParams →
   Validator →
-  Contract (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
 getValidatorScriptRefUtxo sp (Validator script) = getScriptRefUtxo sp
   (PlutusScriptRef script)
 
 getPolicyScriptRefUtxo ∷
+  ∀ r.
   SidechainParams →
   MintingPolicy →
-  Contract (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
 getPolicyScriptRefUtxo sp (PlutusMintingPolicy script) = getScriptRefUtxo sp
   (PlutusScriptRef script)
 getPolicyScriptRefUtxo sp (NativeMintingPolicy script) = getScriptRefUtxo sp

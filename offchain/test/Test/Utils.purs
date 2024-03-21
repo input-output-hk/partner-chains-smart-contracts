@@ -21,7 +21,7 @@ import Contract.Prelude
 
 import Contract.Address (Address, PaymentPubKeyHash)
 import Contract.Log as Log
-import Contract.Monad (Contract, throwContractError)
+import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData (PlutusData(..), fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
@@ -52,10 +52,17 @@ import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT, throw)
 import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
+import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow)
+import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import Type.Row (type (+))
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
@@ -95,9 +102,11 @@ paymentPubKeyHashToByteArray =
 -- | This throws an error if such a utxo does not exist.
 -- | This is useful for e.g. initializing the sidechain because we need to mint
 -- | an NFT for the initial committee
-getOwnTransactionInput ∷ Contract TransactionInput
+getOwnTransactionInput ∷
+  ∀ r. Run (EXCEPT OffchainError + CONTRACT + r) TransactionInput
 getOwnTransactionInput = do
-  ownUtxos ← Monad.liftedM "Failed to query wallet utxos" getWalletUtxos
+  ownUtxos ← fromMaybeThrow (GenericInternalError "Failed to query wallet utxos")
+    (liftContract getWalletUtxos)
 
   case
     List.sortBy
@@ -112,7 +121,7 @@ getOwnTransactionInput = do
       (Map.toUnfoldable ownUtxos)
     of
     (Tuple k _) : _ → pure k
-    _ → throwContractError "No utxo found in wallet"
+    _ → throw (GenericInternalError "No utxo found in wallet")
 
 -- | `fails contract` executes `contract`, and
 -- |
@@ -133,6 +142,17 @@ fails contract = do
       "Contract should have failed but it didn't."
     Left e →
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
+
+-- fails ∷
+--   ∀ r. Run (EXCEPT OffchainError + r) Unit → Run (EXCEPT OffchainError + r) Unit
+-- fails contract = do
+--   result ← lift _except $ runExcept contract
+--   case result of
+--     Right _ → throw $ GenericInternalError
+--       "Contract should have failed but it didn't."
+--     Left e →
+--       liftContract $ Log.logInfo'
+--         ("Expected failure (and got failure): " <> show e)
 
 -- | Unsafely converts a String to a BigInt
 unsafeBigIntFromString ∷ String → BigInt
@@ -204,10 +224,15 @@ pureGroup label tests =
 
 -- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
 -- | exists a UTxO with at least one of the given asset.
-assertIHaveOutputWithAsset ∷ CurrencySymbol → TokenName → Contract Unit
+assertIHaveOutputWithAsset ∷
+  ∀ r.
+  CurrencySymbol →
+  TokenName →
+  Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertIHaveOutputWithAsset cs tn = do
-  ownUtxos ← map (Map.values) $ Monad.liftedM "Failed to query wallet utxos"
-    getWalletUtxos
+  ownUtxos ← map (Map.values) $ Effect.fromMaybeThrow
+    (GenericInternalError "Failed to query wallet utxos")
+    (liftContract getWalletUtxos)
   let
     iHaveCurrencySymbolAndTokenName =
       let
@@ -223,8 +248,9 @@ assertIHaveOutputWithAsset cs tn = do
       in
         go ownUtxos
 
-  unless iHaveCurrencySymbolAndTokenName $ throwContractError
-    ( "Expected me to have at least one asset with currency symbol `"
+  unless iHaveCurrencySymbolAndTokenName $ throw
+    ( GenericInternalError
+        $ "Expected me to have at least one asset with currency symbol `"
         <> show cs
         <> "` and token name `"
         <> show tn
@@ -234,13 +260,18 @@ assertIHaveOutputWithAsset cs tn = do
 -- | Verifies that a certain script output contains at least one of the given
 -- | asset.
 assertHasOutputWithAsset ∷
-  TransactionHash → Address → CurrencySymbol → TokenName → Contract Unit
+  ∀ r.
+  TransactionHash →
+  Address →
+  CurrencySymbol →
+  TokenName →
+  Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertHasOutputWithAsset txId addr cs tn = do
   utxos ∷ Array (TransactionInput /\ TransactionOutputWithRefScript) ←
-    Map.toUnfoldable <$> utxosAt addr
+    liftContract $ Map.toUnfoldable <$> utxosAt addr
 
-  unless (any hasAsset utxos) $ throwContractError
-    ( "Expected txId `"
+  unless (any hasAsset utxos) $ throw
+    ( GenericInternalError $ "Expected txId `"
         <> show txId
         <> "` to have an address `"
         <> show addr

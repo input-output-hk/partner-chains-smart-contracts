@@ -7,7 +7,6 @@ module TrustlessSidechain.FUELProxyPolicy
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
@@ -29,6 +28,12 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as Burn.V1
 import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
@@ -42,6 +47,7 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(FUELProxyPolicy)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
 -- | burned, and which version of the fuel script to use.  Burn case also
@@ -70,7 +76,10 @@ fuelProxyTokenName =
     =<< byteArrayFromAscii "FUEL"
 
 -- | Deserialize minting policy script, applying it to all required parameters.
-decodeFuelProxyPolicy ∷ SidechainParams → Contract MintingPolicy
+decodeFuelProxyPolicy ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
 decodeFuelProxyPolicy sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   mkMintingPolicyWithParams FUELProxyPolicy
@@ -78,8 +87,9 @@ decodeFuelProxyPolicy sp = do
 
 -- | Return proxy fuel minting policy and its corresponding currency symbol.
 getFuelProxyMintingPolicy ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { fuelProxyPolicy ∷ MintingPolicy
     , fuelProxyCurrencySymbol ∷ CurrencySymbol
     }
@@ -95,9 +105,10 @@ data FuelMintParams
 -- | Build lookups and constraints for minting a given amount of proxy fuel.
 -- | This includes building constraints for a versioned minting policy.
 mkFuelProxyMintLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   FuelMintParams →
-  Contract
+  Run (APP + r)
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
   -- Delegate building of lookups and constraints to a versioned minting policy.
@@ -135,12 +146,13 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
 -- | Build lookups and constraints for minting a given amount of proxy fuel.
 -- | This includes building constraints for a versioned minting policy.
 mkFuelProxyBurnLookupsAndConstraints ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , amount ∷ BigInt
   , recipient ∷ ByteArray
   , version ∷ BigInt
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
 mkFuelProxyBurnLookupsAndConstraints
   { sidechainParams, amount, recipient, version } = do

@@ -6,11 +6,13 @@ module TrustlessSidechain.InitSidechain.Utils
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
 import Contract.Value (TokenName)
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenRedeemer(MintInitToken, BurnInitToken)
   )
@@ -26,21 +28,24 @@ import TrustlessSidechain.Utils.LookupsAndConstraints
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(InitTokenPolicy)
   )
+import Type.Row (type (+))
 
 -- | `initTokenCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `InitTokenPolicy`.
 initTokenCurrencyInfo ∷
+  ∀ r.
   SidechainParams →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + r) CurrencyInfo
 initTokenCurrencyInfo sp =
   getCurrencyInfo InitTokenPolicy [ toData sp ]
 
 -- | Build lookups and constraints to mint one initialisation token of a
 -- | specified name.
 mintOneInitToken ∷
+  ∀ r.
   SidechainParams →
   TokenName →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -50,9 +55,10 @@ mintOneInitToken sp tn =
 -- | Build lookups and constraints to burn one initialisation token of a
 -- | specified name.
 burnOneInitToken ∷
+  ∀ r.
   SidechainParams →
   TokenName →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }

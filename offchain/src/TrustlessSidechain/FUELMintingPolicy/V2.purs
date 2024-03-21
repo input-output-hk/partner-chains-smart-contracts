@@ -7,7 +7,6 @@ module TrustlessSidechain.FUELMintingPolicy.V2
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -33,7 +32,12 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
+import Run (Run)
+import Run.Except (EXCEPT)
 import Test.PoCRawScripts (rawPoCMintingPolicy)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
@@ -44,6 +48,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `FuelMintParams` is the data for the FUEL mint endpoint.
 data FuelMintParams = FuelMintParams
@@ -58,14 +63,16 @@ dummyTokenName =
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodePoCMintingPolicy ∷ SidechainParams → Contract MintingPolicy
+decodePoCMintingPolicy ∷
+  ∀ r. SidechainParams → Run (EXCEPT OffchainError + r) MintingPolicy
 decodePoCMintingPolicy sidechainParams = do
   mkMintingPolicyWithParams' rawPoCMintingPolicy
     [ toData sidechainParams ]
 
 getFuelMintingPolicy ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { fuelMintingPolicy ∷ MintingPolicy
     , fuelMintingCurrencySymbol ∷ CurrencySymbol
     }
@@ -76,9 +83,10 @@ getFuelMintingPolicy sidechainParams = do
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
 mkMintFuelLookupAndConstraints ∷
+  ∀ r.
   SidechainParams →
   FuelMintParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }

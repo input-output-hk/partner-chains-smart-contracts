@@ -7,7 +7,6 @@ module TrustlessSidechain.Governance
 import Contract.Prelude
 
 import Contract.Address (PubKeyHash)
-import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints as Constraints
@@ -29,12 +28,12 @@ mkGovernanceAuthority = GovernanceAuthority
 
 governanceAuthorityLookupsAndConstraints ∷
   GovernanceAuthority →
-  Contract
-    { lookups ∷ Lookups.ScriptLookups Void
-    , constraints ∷ Constraints.TxConstraints Void Void
-    }
+
+  { lookups ∷ Lookups.ScriptLookups Void
+  , constraints ∷ Constraints.TxConstraints Void Void
+  }
 governanceAuthorityLookupsAndConstraints (GovernanceAuthority pkh) = do
   let
     lookups = Lookups.ownPaymentPubKeyHash (wrap pkh)
     constraints = Constraints.mustBeSignedBy (wrap pkh)
-  pure { lookups, constraints }
+  { lookups, constraints }

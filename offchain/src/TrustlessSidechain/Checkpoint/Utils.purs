@@ -14,7 +14,6 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
@@ -31,10 +30,15 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
+import Run (Run)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
   )
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -55,6 +59,7 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Types (VersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | A name for the checkpoint initialization token.  Must be unique among
 -- | initialization tokens.
@@ -65,8 +70,9 @@ checkpointInitTokenName =
 
 -- | Build lookups and constraints to mint checkpoint initialization token.
 mintOneCheckpointInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -75,8 +81,9 @@ mintOneCheckpointInitToken sp =
 
 -- | Build lookups and constraints to burn checkpoint initialization token.
 burnOneCheckpointInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -85,8 +92,9 @@ burnOneCheckpointInitToken sp =
 
 -- | Wrapper around `checkpointPolicy` that accepts `SidechainParams`.
 checkpointCurrencyInfo ∷
+  ∀ r.
   SidechainParams →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + r) CurrencyInfo
 checkpointCurrencyInfo sp = do
   { currencySymbol } ← initTokenCurrencyInfo sp
   let
@@ -97,14 +105,18 @@ checkpointCurrencyInfo sp = do
   getCurrencyInfo CheckpointPolicy [ toData itac ]
 
 checkpointAssetClass ∷
+  ∀ r.
   SidechainParams →
-  Contract AssetClass
+  Run (EXCEPT OffchainError + r) AssetClass
 checkpointAssetClass sp = do
   { currencySymbol } ← checkpointCurrencyInfo sp
   pure $ assetClass currencySymbol checkpointNftTn
 
 checkpointValidator ∷
-  CheckpointParameter → VersionOracleConfig → Contract Validator
+  ∀ r.
+  CheckpointParameter →
+  VersionOracleConfig →
+  Run (EXCEPT OffchainError + r) Validator
 checkpointValidator cp voc =
   mkValidatorWithParams CheckpointValidator [ toData cp, toData voc ]
 
@@ -129,8 +141,9 @@ serialiseCheckpointMessage = Utils.Crypto.ecdsaSecp256k1Message
   <<< serializeData
 
 findCheckpointUtxo ∷
+  ∀ r.
   CheckpointParameter →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findCheckpointUtxo checkpointParameter = do
   versionOracleConfig ← Versioning.getVersionOracleConfig $

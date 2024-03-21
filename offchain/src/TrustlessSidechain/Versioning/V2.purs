@@ -4,28 +4,32 @@ module TrustlessSidechain.Versioning.V2
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.Scripts (MintingPolicy, Validator)
 import Data.List (List)
 import Data.List as List
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V2 as FUELBurningPolicy.V2
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
+import Type.Row (type (+))
 
 -- | Validators to store in the versioning system.
 getVersionedValidators ∷
   SidechainParams →
-  Contract (List (Tuple Types.ScriptId Validator))
+  List (Tuple Types.ScriptId Validator)
 getVersionedValidators _sp = do
   -- Getting validators to version
   -----------------------------------
-  pure $ List.fromFoldable []
+  List.fromFoldable []
 
 -- | Minting policies to store in the versioning system.
 getVersionedPolicies ∷
+  ∀ r.
   SidechainParams →
-  Contract (List (Tuple Types.ScriptId MintingPolicy))
+  Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId MintingPolicy))
 getVersionedPolicies sp = do
   -- Getting policies to version
   -----------------------------------
@@ -38,12 +42,13 @@ getVersionedPolicies sp = do
 
 -- | Validators and policies to store in the versioning system.
 getVersionedPoliciesAndValidators ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
     , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
     }
 getVersionedPoliciesAndValidators sp = do
   versionedPolicies ← getVersionedPolicies sp
-  versionedValidators ← getVersionedValidators sp
+  let versionedValidators = getVersionedValidators sp
   pure $ { versionedPolicies, versionedValidators }

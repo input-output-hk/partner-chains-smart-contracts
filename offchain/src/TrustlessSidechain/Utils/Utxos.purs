@@ -8,20 +8,25 @@ module TrustlessSidechain.Utils.Utxos
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.Monad (Contract)
 import Contract.Transaction
   ( TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.Utxos (UtxoMap)
-import Contract.Utxos as Utxos
 import Contract.Value (Value)
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   )
+import Type.Row (type (+))
 
 -- | `findUtxoAtByValue addr p` finds all utxos at the validator address `addr`
 -- | using `Contract.Utxos.utxosAt`, then looks for the first utxo which satisfies
@@ -29,17 +34,19 @@ import TrustlessSidechain.Utils.Address
 -- |
 -- | Note: this does a linear scan over all utxos at the given address `addr`
 findUtxoByValueAt ∷
+  ∀ r.
   Address →
   (Value → Boolean) →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findUtxoByValueAt addr p = do
-  scriptUtxos ← Utxos.utxosAt addr
+  scriptUtxos ← Effect.utxosAt addr
   let
     go _txIn txOut = p (unwrap (unwrap txOut).output).amount
   pure $ FoldableWithIndex.findWithIndex go scriptUtxos
 
-getOwnUTxOsTotalValue ∷ Contract Value
+getOwnUTxOsTotalValue ∷
+  ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Value
 getOwnUTxOsTotalValue = do
   ownUtxos ← getOwnUTxOs
   pure
@@ -50,7 +57,7 @@ getOwnUTxOsTotalValue = do
         )
     $ Map.values ownUtxos
 
-getOwnUTxOs ∷ Contract UtxoMap
+getOwnUTxOs ∷ ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) UtxoMap
 getOwnUTxOs = do
   ownAddr ← getOwnWalletAddress
-  Utxos.utxosAt ownAddr
+  Effect.utxosAt ownAddr

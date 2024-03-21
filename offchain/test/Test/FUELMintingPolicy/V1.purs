@@ -4,7 +4,6 @@ import Contract.Prelude
 
 import Contract.Address (pubKeyHashAddress)
 import Contract.Hashing (blake2b256Hash)
-import Contract.Monad (liftContractM, liftedE, liftedM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Value as Value
@@ -13,6 +12,8 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
+import Run (liftEffect) as Run
+import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -27,6 +28,10 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Util (mapError)
+import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( FuelMintParams(FuelMintParams)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -72,16 +77,19 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
       , BigInt.fromInt 100_000_000
       , BigInt.fromInt 100_000_000
       ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
       pkh ← getOwnPaymentPubKeyHash
       ownRecipient ←
-        liftContractM "Could not convert pub key hash to bech 32 bytes" $
-          Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        Run.note
+          (GenericInternalError "Could not convert pub key hash to bech 32 bytes")
+          $
+            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
       genesisUtxo ← getOwnTransactionInput
       let
         keyCount = 25
-      initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+      initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+        generatePrivKey
       let
         initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
         initScParams = InitSidechainParams
@@ -153,16 +161,21 @@ testScenarioSuccess2 =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
-          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Run.note
+            ( GenericInternalError
+                "Could not convert pub key hash to bech 32 bytes"
+            ) $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -219,8 +232,10 @@ testScenarioSuccess2 =
 
           -- we first grab the distributed set UTxO (the slow way as we have no
           -- other mechanism for doing this with ctl)
-          { inUtxo: { nodeRef } } ← liftedM "error no distributed set node found"
-            $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
+          { inUtxo: { nodeRef } } ←
+            Effect.fromMaybeThrow
+              (GenericInternalError "error no distributed set node found")
+              $ DistributedSet.slowFindDsOutput ds ownEntryHashTn
 
           void
             $
@@ -248,7 +263,7 @@ testScenarioFailure =
         , BigInt.fromInt 40_000_000
         ]
     $ \alice →
-        Wallet.withKeyWallet alice do
+        withUnliftApp (Wallet.withKeyWallet alice) do
 
           pkh ← getOwnPaymentPubKeyHash
           let
@@ -256,8 +271,12 @@ testScenarioFailure =
 
           -- This is not how you create a working merkleproof that passes onchain validator.
           let mp' = unwrap $ PlutusData.serializeData (MerkleProof [])
-          mt ← liftedE $ pure (fromList (pure mp'))
-          mp ← liftedM "couldn't lookup merkleproof" $ pure (lookupMp mp' mt)
+          mt ← mapError GenericInternalError $ Effect.fromEitherThrow $ pure
+            (fromList (pure mp'))
+          mp ←
+            Effect.fromMaybeThrow
+              (GenericInternalError "couldn't lookup merkleproof") $
+              pure (lookupMp mp' mt)
 
           void
             $ mkMintFuelLookupAndConstraints dummySidechainParams
@@ -272,7 +291,7 @@ testScenarioFailure =
                     }
                 )
             >>= balanceSignAndSubmit "Test: mint v1 fuel"
-          # fails
+          # withUnliftApp fails
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
 -- | fail!)
@@ -285,17 +304,21 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
       , BigInt.fromInt 40_000_000
       ]
   $ \alice →
-      Wallet.withKeyWallet alice do
+      withUnliftApp (Wallet.withKeyWallet alice) do
         -- start of mostly duplicated code from `testScenarioSuccess2`
 
         pkh ← getOwnPaymentPubKeyHash
         ownRecipient ←
-          liftContractM "Could not convert pub key hash to bech 32 bytes" $
+          Run.note
+            ( GenericInternalError
+                "Could not convert pub key hash to bech 32 bytes"
+            ) $
             Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -342,14 +365,15 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
         -- end of mostly duplicated code from `testScenarioSuccess2`
 
         (combinedMerkleProof0 /\ _combinedMerkleProof1) ←
-          liftContractM "bad test case for `testScenarioSuccess2`"
+          Run.note
+            (GenericInternalError "bad test case for `testScenarioSuccess2`")
             $ case combinedMerkleProofs of
                 [ combinedMerkleProof0, combinedMerkleProof1 ] → pure
                   $ combinedMerkleProof0
                   /\ combinedMerkleProof1
                 _ → Nothing
 
-        fp0 ← liftContractM "Could not build FuelParams" $
+        fp0 ← Run.note (GenericInternalError "Could not build FuelParams") $
           combinedMerkleProofToFuelParams
             { sidechainParams
             , combinedMerkleProof: combinedMerkleProof0
@@ -362,4 +386,4 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
           balanceSignAndSubmit "Test: mint v1 fuel again"
 
         pure unit
-        # fails
+        # withUnliftApp fails

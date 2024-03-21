@@ -14,10 +14,6 @@ import Contract.Prelude
 import Contract.Address
   ( PaymentPubKeyHash
   )
-import Contract.Monad
-  ( Contract
-  , throwContractError
-  )
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -39,14 +35,17 @@ import Contract.Transaction
   , outputDatumDatum
   )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (UtxoMap, utxosAt)
+import Contract.Utxos (UtxoMap)
 import Contract.Value as Value
 import Control.Alternative (guard)
-import Control.Parallel (parTraverse)
 import Data.Array (catMaybes)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Error
   ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
   )
@@ -64,6 +63,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeCandidateValidator)
   )
+import Type.Row (type (+))
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -81,7 +81,10 @@ newtype DeregisterParams = DeregisterParams
   , spoPubKey ∷ Maybe PubKey
   }
 
-getCommitteeCandidateValidator ∷ SidechainParams → Contract Validator
+getCommitteeCandidateValidator ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r) Validator
 getCommitteeCandidateValidator sp = do
   mkValidatorWithParams CommitteeCandidateValidator [ toData sp ]
 
@@ -222,7 +225,10 @@ instance FromData BlockProducerRegistrationMsg where
         }
     _ → Nothing
 
-register ∷ RegisterParams → Contract TransactionHash
+register ∷
+  ∀ r.
+  RegisterParams →
+  Run (APP + r) TransactionHash
 register
   ( RegisterParams
       { sidechainParams
@@ -242,8 +248,8 @@ register
   let valHash = validatorHash validator
   valAddr ← toAddress valHash
 
-  ownUtxos ← utxosAt ownAddr
-  valUtxos ← utxosAt valAddr
+  ownUtxos ← Effect.utxosAt ownAddr
+  valUtxos ← Effect.utxosAt valAddr
 
   { ownRegistrationUtxos, ownRegistrationDatums } ← findOwnRegistrations ownPkh
     (getSPOPubKey stakeOwnership)
@@ -270,7 +276,7 @@ register
         == r2.grandpaKey
 
   when (any (matchingKeys datum) ownRegistrationDatums) $
-    throwContractError
+    throw
       ( InvalidCLIParams
           "BlockProducer with given set of keys is already registered"
       )
@@ -312,19 +318,22 @@ register
 
   balanceSignAndSubmit "Register Committee Candidate" { lookups, constraints }
 
-deregister ∷ DeregisterParams → Contract TransactionHash
+deregister ∷
+  ∀ r.
+  DeregisterParams →
+  Run (APP + r) TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
   validator ← getCommitteeCandidateValidator sidechainParams
   valAddr ← toAddress (validatorHash validator)
-  ownUtxos ← utxosAt ownAddr
-  valUtxos ← utxosAt valAddr
+  ownUtxos ← Effect.utxosAt ownAddr
+  valUtxos ← Effect.utxosAt valAddr
 
   { ownRegistrationUtxos } ← findOwnRegistrations ownPkh spoPubKey valUtxos
 
   when (null ownRegistrationUtxos)
-    $ throwContractError
+    $ throw
         (NotFoundInputUtxo "Couldn't find registration UTxO")
 
   let
@@ -345,16 +354,17 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate
 findOwnRegistrations ∷
+  ∀ r.
   PaymentPubKeyHash →
   Maybe PubKey →
   UtxoMap →
-  Contract
+  Run r
     { ownRegistrationUtxos ∷ Array TransactionInput
     , ownRegistrationDatums ∷ Array BlockProducerRegistration
     }
 findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
   mayTxInsAndBlockProducerRegistrations ← Map.toUnfoldable validatorUtxos #
-    parTraverse
+    traverse
       \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
         pure do
           Datum d ← outputDatumDatum out.datum

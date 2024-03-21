@@ -7,11 +7,6 @@ module TrustlessSidechain.MerkleRoot
 
 import Contract.Prelude
 
-import Contract.Monad
-  ( Contract
-  , liftContractM
-  , liftedM
-  )
 import Contract.PlutusData
   ( toData
   , unitDatum
@@ -31,11 +26,18 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
 import TrustlessSidechain.CommitteeATMSSchemes
   ( CommitteeATMSParams(CommitteeATMSParams)
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, NotFoundUtxo)
   )
@@ -75,9 +77,13 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `saveRoot` is the endpoint.
-saveRoot ∷ SaveRootParams → Contract TransactionHash
+saveRoot ∷
+  ∀ r.
+  SaveRootParams →
+  Run (APP + r) TransactionHash
 saveRoot
   ( SaveRootParams
       { sidechainParams
@@ -101,8 +107,8 @@ saveRoot
   -- Find the UTxO with the current committee.
   ------------------------------------
   currentCommitteeUtxo ←
-    liftedM
-      ( show $ NotFoundUtxo "failed to find current committee UTxO"
+    Effect.fromMaybeThrow
+      ( NotFoundUtxo "failed to find current committee UTxO"
       )
       $ UpdateCommitteeHash.findUpdateCommitteeHashUtxo
           sidechainParams
@@ -121,8 +127,8 @@ saveRoot
   -- verification
   ------------------------------------
   scMsg ←
-    liftContractM
-      (show $ InvalidData "failed serializing the MerkleRootInsertionMessage")
+    Run.note
+      (InvalidData "failed serializing the MerkleRootInsertionMessage")
       $
         serialiseMrimHash merkleRootInsertionMessage
 
@@ -157,11 +163,12 @@ saveRoot
 -- | `saveRootLookupsAndConstraints` creates the lookups and constraints (and
 -- | the message to be signed) for saving a Merkle root
 saveRootLookupsAndConstraints ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , merkleRoot ∷ RootHash
   , previousMerkleRoot ∷ Maybe RootHash
   } →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
         { constraints ∷ TxConstraints Void Void
         , lookups ∷ ScriptLookups Void
@@ -181,11 +188,10 @@ saveRootLookupsAndConstraints
   } ← merkleRootCurrencyInfo sidechainParams
   rootTokenVal ← merkleRootTokenValidator sidechainParams
   merkleRootTokenName ←
-    liftContractM
-      ( show
-          ( InvalidData
-              "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
-          )
+    Run.note
+      ( InvalidData
+          "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
+
       )
       $ Value.mkTokenName
       $ MerkleTree.unRootHash merkleRoot

@@ -17,13 +17,13 @@ module TrustlessSidechain.CommitteeATMSSchemes
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
-import Contract.Monad as Monad
 import Contract.PlutusData (PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
+import Run (Run)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures
       ( Multisignature
@@ -61,6 +61,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError
       ( VerificationError
@@ -71,13 +73,15 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
+import Type.Row (type (+))
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
 atmsSchemeLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   CommitteeATMSParams ATMSAggregateSignatures →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { constraints ∷ TxConstraints Void Void
     , lookups ∷ ScriptLookups Void
     }
@@ -96,19 +100,20 @@ atmsSchemeLookupsAndConstraints sidechainParams atmsParams = do
               ((unwrap atmsParams) { aggregateSignature = param })
         }
     -- TODO: fill these in later :^)
-    Dummy → Monad.throwContractError "ATMS dummy not implemented yet"
-    PoK → Monad.throwContractError "ATMS PoK not implemented yet"
-    Multisignature → Monad.throwContractError
+    Dummy → throw $ NotImplemented "ATMS dummy not implemented yet"
+    PoK → throw $ NotImplemented "ATMS PoK not implemented yet"
+    Multisignature → throw $ NotImplemented
       "ATMS multisignature not implemented yet"
 
 -- | `atmsCommitteeCertificateVerificationMintingPolicy` grabs
 -- | the currency symbol / minting policy associated with the aggregate signature.
 atmsCommitteeCertificateVerificationMintingPolicy ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSAggregateSignatures →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + WALLET + r) CurrencyInfo
 atmsCommitteeCertificateVerificationMintingPolicy params sig =
   atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params $
     case sig of
@@ -122,11 +127,12 @@ atmsCommitteeCertificateVerificationMintingPolicy params sig =
 -- | essentially `atmsCommitteeCertificateVerificationMintingPolicy` but with
 -- | `ATMSKinds`.
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , committeeCertificateMint ∷ CommitteeCertificateMint
   } →
   ATMSKinds →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + WALLET + r) CurrencyInfo
 atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
   ATMSPlainEcdsaSecp256k1 →
     CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
@@ -134,9 +140,9 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
   ATMSPlainSchnorrSecp256k1 →
     CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
       params
-  ATMSDummy → Monad.throwContractError "ATMS dummy not implemented yet"
-  ATMSPoK → Monad.throwContractError "ATMS PoK not implemented yet"
-  ATMSMultisignature → Monad.throwContractError
+  ATMSDummy → throw $ NotImplemented "ATMS dummy not implemented yet"
+  ATMSPoK → throw $ NotImplemented "ATMS PoK not implemented yet"
+  ATMSMultisignature → throw $ NotImplemented
     "ATMS multisignature not implemented yet"
 
 -- | `toATMSAggregateSignatures` takes
@@ -150,12 +156,13 @@ atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind params = case _ of
 -- | or successfully returns the `ATMSAggregateSignatures` that is suitable for
 -- | `atmsSchemeLookupsAndConstraints`
 toATMSAggregateSignatures ∷
+  ∀ r.
   { -- the atms kind
     atmsKind ∷ ATMSKinds
   , -- the committee's public keys and signature (if the signature is given)
     committeePubKeyAndSigs ∷ Array (ByteArray /\ Maybe ByteArray)
   } →
-  Either String ATMSAggregateSignatures
+  Run (EXCEPT OffchainError + r) ATMSAggregateSignatures
 toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 → map PlainEcdsaSecp256k1
@@ -163,21 +170,21 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
       $
         \(pk /\ mSig) → do
           pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
-            Nothing → Left
-              ( show $ VerificationError $ "invalid ECDSA SECP256k1 public key: "
+            Nothing → throw
+              ( VerificationError $ "invalid ECDSA SECP256k1 public key: "
                   <> show pk
               )
-            Just pk' → Right pk'
+            Just pk' → pure pk'
 
           sig' ← case mSig of
-            Nothing → Right Nothing
+            Nothing → pure Nothing
             Just sig → case Utils.Crypto.ecdsaSecp256k1Signature sig of
-              Nothing → Left
-                ( show $ VerificationError
+              Nothing → throw
+                ( VerificationError
                     $ "invalid ECDSA SECP256k1 signature: "
                     <> show sig
                 )
-              Just sig' → Right $ Just sig'
+              Just sig' → pure $ Just sig'
 
           pure $ pk' /\ sig'
 
@@ -186,38 +193,39 @@ toATMSAggregateSignatures { atmsKind, committeePubKeyAndSigs } =
       $
         \(pk /\ mSig) → do
           pk' ← case SchnorrSecp256k1.parsePublicKey pk of
-            Nothing → Left
-              ( show $ VerificationError
+            Nothing → throw
+              ( VerificationError
                   $ "invalid Schnorr SECP256k1 public key: "
                   <> show pk
               )
-            Just pk' → Right pk'
+            Just pk' → pure pk'
 
           sig' ← case mSig of
-            Nothing → Right Nothing
+            Nothing → pure Nothing
             Just sig → case SchnorrSecp256k1.parseSignature sig of
-              Nothing → Left
-                ( show $ VerificationError
+              Nothing → throw
+                ( VerificationError
                     $ "invalid Schnorr SECP256k1 signature: "
                     <> show sig
                 )
-              Just sig' → Right $ Just sig'
+              Just sig' → pure $ Just sig'
 
           pure $ pk' /\ sig'
 
-    ATMSDummy → Left (show $ NotImplemented "ATMS dummy")
-    ATMSPoK → Left (show $ NotImplemented "ATMS PoK")
-    ATMSMultisignature → Left (show $ NotImplemented "ATMS multisignature")
+    ATMSDummy → throw (NotImplemented "ATMS dummy")
+    ATMSPoK → throw (NotImplemented "ATMS PoK")
+    ATMSMultisignature → throw (NotImplemented "ATMS multisignature")
 
 -- | `aggregateATMSPublicKeys` aggregates the public keys of an ATMS key for
 -- | the given `ATMSKind`
 aggregateATMSPublicKeys ∷
+  ∀ r.
   { -- the atms kind
     atmsKind ∷ ATMSKinds
   , -- the committee's public keys and signature (if the signature is given)
     committeePubKeys ∷ Array ByteArray
   } →
-  Either String PlutusData
+  Run (EXCEPT OffchainError + r) PlutusData
 aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 →
@@ -226,12 +234,12 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
         $
           \pk → do
             pk' ← case Utils.Crypto.ecdsaSecp256k1PubKey pk of
-              Nothing → Left
-                ( show $ VerificationError
+              Nothing → throw
+                ( VerificationError
                     $ "invalid ECDSA SECP256k1 public key: "
                     <> show pk
                 )
-              Just pk' → Right pk'
+              Just pk' → pure pk'
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
       map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
@@ -239,13 +247,13 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
         $
           \pk → do
             pk' ← case SchnorrSecp256k1.parsePublicKey pk of
-              Nothing → Left
-                ( show $ VerificationError
+              Nothing → throw
+                ( VerificationError
                     $ "invalid Schnorr SECP256k1 public key: "
                     <> show pk
                 )
-              Just pk' → Right pk'
+              Just pk' → pure pk'
             pure $ pk'
-    ATMSDummy → Left (show $ NotImplemented "ATMS dummy")
-    ATMSPoK → Left (show $ NotImplemented "ATMS PoK")
-    ATMSMultisignature → Left (show $ NotImplemented "ATMS multisignature")
+    ATMSDummy → throw (NotImplemented "ATMS dummy")
+    ATMSPoK → throw (NotImplemented "ATMS PoK")
+    ATMSMultisignature → throw (NotImplemented "ATMS multisignature")

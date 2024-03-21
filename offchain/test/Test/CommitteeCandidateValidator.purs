@@ -6,7 +6,6 @@ module Test.CommitteeCandidateValidator
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, liftContractM)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayFromIntArrayUnsafe
@@ -20,9 +19,12 @@ import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
 import Data.Map as Map
 import Data.Set as Set
-import Effect.Class (liftEffect)
 import Effect.Random (randomInt)
 import Mote.Monad as Mote.Monad
+import Run (EFFECT, Run)
+import Run (liftEffect) as Run
+import Run.Except (EXCEPT)
+import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, dummySidechainParams, fails, plutipGroup)
@@ -33,8 +35,15 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , deregister
   , register
   )
+import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
+import Type.Row (type (+))
 
 mockSpoPubKey ∷ ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
@@ -51,26 +60,37 @@ tests = plutipGroup "Committe candidate registration/deregistration" $ do
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
-runRegister ∷ SidechainParams → Contract TransactionHash
+runRegister ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+    TransactionHash
 runRegister = runRegisterWithCandidatePermissionInfo false
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
-runRegisterWithFixedKeys ∷ SidechainParams → Contract TransactionHash
+runRegisterWithFixedKeys ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+    TransactionHash
 runRegisterWithFixedKeys =
   runRegisterWithCandidatePermissionInfoWithFixedKeys false
 
 runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
+  ∀ r.
   Boolean →
   SidechainParams →
-  Contract TransactionHash
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+    TransactionHash
 runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
   do
     ownAddr ← getOwnWalletAddress
-    ownUtxos ← utxosAt ownAddr
-    registrationUtxo ← liftContractM "No UTxOs found at key wallet"
-      $ Set.findMin
-      $ Map.keys ownUtxos
+    ownUtxos ← liftContract $ utxosAt ownAddr
+    registrationUtxo ←
+      Run.note (GenericInternalError "No UTxOs found at key wallet")
+        $ Set.findMin
+        $ Map.keys ownUtxos
     register $ RegisterParams
       { sidechainParams: scParams
       , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
@@ -87,24 +107,27 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams 
       }
 
 runRegisterWithCandidatePermissionInfo ∷
+  ∀ r.
   Boolean →
   SidechainParams →
-  Contract TransactionHash
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+    TransactionHash
 runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   let
     generateKey = byteArrayFromIntArrayUnsafe <$>
       (sequence $ Array.replicate 32 (randomInt 0 255))
   ownAddr ← getOwnWalletAddress
-  ownUtxos ← utxosAt ownAddr
-  registrationUtxo ← liftContractM "No UTxOs found at key wallet"
-    $ Set.findMin
-    $ Map.keys ownUtxos
+  ownUtxos ← liftContract $ utxosAt ownAddr
+  registrationUtxo ←
+    Run.note (GenericInternalError "No UTxOs found at key wallet")
+      $ Set.findMin
+      $ Map.keys ownUtxos
 
   -- we generate only aura and grandpa keys. This will be enough to mark this
   -- candidate as a new one, and at the same time it doesn't require us to
   -- generate correct sidechainSig
-  auraKey ← liftEffect generateKey
-  grandpaKey ← liftEffect generateKey
+  auraKey ← Run.liftEffect generateKey
+  grandpaKey ← Run.liftEffect generateKey
 
   register $ RegisterParams
     { sidechainParams: scParams
@@ -119,7 +142,10 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
     , grandpaKey
     }
 
-runDeregister ∷ SidechainParams → Contract Unit
+runDeregister ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
@@ -129,7 +155,7 @@ testScenarioSuccess1 ∷ PlutipTest
 testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       void $ runRegister dummySidechainParams
       runDeregister dummySidechainParams
 
@@ -143,7 +169,7 @@ testScenarioSuccess2 =
         , BigInt.fromInt 5_000_000
         , BigInt.fromInt 5_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
         runDeregister dummySidechainParams
 
@@ -152,8 +178,8 @@ testScenarioFailure1 ∷ PlutipTest
 testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
-      runDeregister dummySidechainParams # fails
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      runDeregister dummySidechainParams # withUnliftApp fails
 
 -- alice registers, bob deregisters. not allowed & should fail
 testScenarioFailure2 ∷ PlutipTest
@@ -166,9 +192,11 @@ testScenarioFailure2 =
         )
     $ \(alice /\ bob) →
         do
-          Wallet.withKeyWallet alice $ void $ runRegister dummySidechainParams
-          Wallet.withKeyWallet bob $ runDeregister dummySidechainParams
-          # fails
+          withUnliftApp (Wallet.withKeyWallet alice) $ void $ runRegister
+            dummySidechainParams
+          withUnliftApp (Wallet.withKeyWallet bob) $ runDeregister
+            dummySidechainParams
+          # withUnliftApp fails
 
 -- alice registers, then tries to register again with the same set of keys. not allowed & should fail
 testScenarioFailure3 ∷ PlutipTest
@@ -178,7 +206,7 @@ testScenarioFailure3 =
     $ Test.PlutipTest.mkPlutipConfigTest
         ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
         )
-    $ \alice → Wallet.withKeyWallet alice $ do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         void $ runRegisterWithFixedKeys dummySidechainParams
         (void $ runRegisterWithFixedKeys dummySidechainParams)
-          # fails
+          # withUnliftApp fails

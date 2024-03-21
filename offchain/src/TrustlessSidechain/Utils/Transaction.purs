@@ -6,83 +6,70 @@ module TrustlessSidechain.Utils.Transaction
 import Contract.Prelude
 
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
-import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftedE)
-import Contract.PlutusData (class IsData)
-import Contract.ScriptLookups (ScriptLookups, mkUnbalancedTx)
-import Contract.Scripts (class ValidatorTypes)
-import Contract.Transaction
-  ( TransactionHash
-  , TransactionInput
-  , awaitTxConfirmed
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.Transaction (TransactionHash, TransactionInput)
+import Contract.TxConstraints (TxConstraints)
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction
+  ( awaitTxConfirmed
   , balanceTx
   , balanceTxWithConstraints
+  , mkUnbalancedTx
   , signTransaction
   , submit
-  )
-import Contract.TxConstraints (TxConstraints)
-import Data.Bifunctor (lmap)
+  ) as Effect
+import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
   ( OffchainError(BalanceTxError, BuildTxError)
   )
+import Type.Row (type (+))
 
 -- | Build a transaction from lookups and constraints, balance, sign and submit it to the network
 -- | The function will block until the transaction is confirmed. Returns the transaction id.
 -- | Please give the transaction a name as the first argument, for logging purposes.
 balanceSignAndSubmit ∷
-  ∀ (validator ∷ Type) (datum ∷ Type) (redeemer ∷ Type).
-  ValidatorTypes validator datum redeemer ⇒
-  IsData datum ⇒
-  IsData redeemer ⇒
+  ∀ r.
   String →
-  { lookups ∷ ScriptLookups validator
-  , constraints ∷ TxConstraints redeemer datum
+  { lookups ∷ ScriptLookups Void
+  , constraints ∷ TxConstraints Void Void
   } →
-  Contract TransactionHash
+  Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
-  ubTx ← liftedE
-    ( lmap BuildTxError <$>
-        mkUnbalancedTx lookups constraints
-    )
-  bsTx ← liftedE
-    (lmap BalanceTxError <$> balanceTx ubTx)
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
-  awaitTxConfirmed txId
-  logInfo' $ txName <> " Tx confirmed!"
+  ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  bsTx ← mapError BalanceTxError $ Effect.balanceTx ubTx
+  signedTx ← Effect.signTransaction bsTx
+  txId ← Effect.submit signedTx
+  Effect.logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
+  Effect.awaitTxConfirmed txId
+  Effect.logInfo' $ txName <> " Tx confirmed!"
 
   pure txId
 
 balanceSignAndSubmitWithoutSpendingUtxo ∷
-  ∀ (validator ∷ Type) (datum ∷ Type) (redeemer ∷ Type).
-  ValidatorTypes validator datum redeemer ⇒
-  IsData datum ⇒
-  IsData redeemer ⇒
+  ∀ r.
   TransactionInput →
   String →
-  { lookups ∷ ScriptLookups validator
-  , constraints ∷ TxConstraints redeemer datum
+  { lookups ∷ ScriptLookups Void
+  , constraints ∷ TxConstraints Void Void
   } →
-  Contract TransactionHash
+  Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmitWithoutSpendingUtxo
   forbiddenUtxo
   txName
   { lookups, constraints } = do
-  ubTx ← liftedE
-    ( lmap BuildTxError <$>
-        mkUnbalancedTx lookups constraints
-    )
+  ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
   let balanceTxConstraints = mustNotSpendUtxoWithOutRef forbiddenUtxo
 
-  bsTx ← liftedE
-    ( lmap BalanceTxError <$>
-        balanceTxWithConstraints ubTx balanceTxConstraints
-    )
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
-  awaitTxConfirmed txId
-  logInfo' $ txName <> " Tx confirmed!"
+  bsTx ← mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx
+    balanceTxConstraints
+  signedTx ← Effect.signTransaction bsTx
+  txId ← Effect.submit signedTx
+  Effect.logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
+  Effect.awaitTxConfirmed txId
+  Effect.logInfo' $ txName <> " Tx confirmed!"
 
   pure txId

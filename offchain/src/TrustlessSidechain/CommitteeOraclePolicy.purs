@@ -8,13 +8,15 @@ module TrustlessSidechain.CommitteeOraclePolicy
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -29,8 +31,12 @@ import TrustlessSidechain.Utils.Address (getCurrencyInfo)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeOraclePolicy)
   )
+import Type.Row (type (+))
 
-committeeOracleCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+committeeOracleCurrencyInfo ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r) CurrencyInfo
 committeeOracleCurrencyInfo sp = do
   { currencySymbol } ← initTokenCurrencyInfo sp
   let
@@ -57,8 +63,9 @@ committeeOracleTn =
 -- | Build lookups and constraints to mint committee oracle initialization
 -- | token.
 mintOneCommitteeOracleInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -68,8 +75,9 @@ mintOneCommitteeOracleInitToken sp =
 -- | Build lookups and constraints to burn committee oracle initialization
 -- | token.
 burnOneCommitteeOracleInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }

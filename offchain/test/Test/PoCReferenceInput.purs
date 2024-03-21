@@ -12,10 +12,7 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope
-  ( decodeTextEnvelope
-  , plutusScriptV2FromEnvelope
-  )
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Contract.Transaction as Transaction
 import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
@@ -28,6 +25,7 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
+import TrustlessSidechain.Effects.Contract (liftContract)
 
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
 tests ∷ PlutipTest
@@ -50,7 +48,7 @@ testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → liftContract $ Wallet.withKeyWallet alice do
       -- 1.
       let
         toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceInput
@@ -163,7 +161,7 @@ testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
   $ Test.PlutipTest.mkPlutipConfigTest
       [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → Wallet.withKeyWallet alice do
+  $ \alice → liftContract $ Wallet.withKeyWallet alice do
       -- START of duplicated code from `testScenario1`.
       -- 1.
       let
