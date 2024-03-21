@@ -46,6 +46,7 @@ data ScriptId
   | CheckpointValidator
   | CheckpointPolicy
   | FUELBurningPolicy
+  -- TODO Is it because they can't be versioned given our current update strategies?
   | VersionOraclePolicy -- not versioned
   | VersionOracleValidator -- not versioned
   | FUELProxyPolicy -- not versioned

@@ -1,9 +1,10 @@
 # Update strategy
 
-In this specification we describe the mechanisms of the Cardano mainchain part of the trustless
+In this specification, we describe the mechanisms of the Cardano mainchain part of the trustless
 sidechain protocol update. To allow the protocol to evolve with time, we need to migrate from old
 validators to new ones, deprecate old tokens to new ones.
 
+TODO So this update strategy is specific to the scripts inside the oracle validator. Do we have a strategy for when we want to change the oracle validator itself? For example, we want to upgrade to a new Plutus version which would result in a new policyid.
 We achieve the update by using an oracle validator. This validator address will be the single
 source of truth, to find the validators and minting policies for the protocol.
 
@@ -13,25 +14,32 @@ source of truth, to find the validators and minting policies for the protocol.
 
 ## 2. Strategies
 
-We considered the following strategies, but these can also be used in combination:
+We propose that each Plutus validator and minting policy use one of those (or a
+combination of) update strategies:
 
+TODO "On an update event, all assets have to be migrated to the new protocol". How do we support this exactly at the moment?
+TODO "the migration cost of a long-living chain can be tremendously costly". What does that mean?
 - _migration strategy_: at any given point in time, there's only one valid version of a
   validator or minting policy. On an update event, all assets have to be migrated to the new
   protocol. The benefit of this approach is the simplicity, however the migration cost of a
   long-living chain can be tremendously costly.
 - _versioned update_: in this strategy, we would maintain references to old validators and minting
   policies, giving time for the protocol users to migrate their assets as they like. With this
+TODO full migration? What is that exactly?
   strategy it is important to allow full migration, in case a version has to be abandoned due to
   a security issue. The update method must be flexible enough to allow addition and removal of
   certain validators/minting policies.
+TODO Not clear here. IIUC, the version oracle validator can have one or more UTXOs with it's hash as the address. Each of these UTXOs contain the versioned scripts as reference scripts, and the version of the script (protocolVersion, versionedScriptId) as the datum. Am I correct? What does the redeemer have to do here?
   For versioned validators, the version used must be specified by the datum or redeemer of the
   transaction.
-- _partial versioned update_: this is in-between migration and the versioned solution, where the
-  UTxOs in the old validator are considered valid after the update, but new insertions are not
-  allowed. For partially verioned validators, always the latest version is used by default.
-  In practice these validators are set up the same way as the ones with migration strategy, but
-  without having the old tokens and datums migrated to the new version of the validator.
-- _transaction token pattern_: we could introduce a light-weight validator/minting policy in place
+- _partial versioned update_: this is in-between migration and the versioned
+  solution, where the UTxOs in the old validator are considered valid after the
+  update, but the insertion of new versioned scripts are not allowed. For
+  partially verioned validators, always the latest version is used by default.
+  In practice these validators are set up the same way as the ones with
+  migration strategy, but without having the old tokens and datums migrated to
+  the new version of the validator.
+- _transaction token pattern_: we could introduce a lightweight validator/minting policy in place
   of our current minting policies and validators, and move all actual logic to
   [Transaction Token Minting Policies (TxTMP)](https://plutonomicon.github.io/plutonomicon/transaction-token-pattern).
   The validators and minting policies could then use an oracle to reference the current version(s)
@@ -45,20 +53,24 @@ We considered the following strategies, but these can also be used in combinatio
 
 These strategies can be used in combination for optimal migration cost/complexity.
 
-In case of our sidechain protocol, I propose the following strategies for our validators and minting policies:
+TODO What is the rationale of choosing those strategies for each script? Is this up-to-date on how it's currently implemented?
+In case of our sidechain protocol, we propose the following strategies for our validators and minting policies:
 
+TODO Is it FUELProxyPolicy instead?
 - `FUELMintingPolicy`: Transaction Token Pattern
 - `CommitteeCandidateValidator`: migration
 - `MPTRootTokenMintingPolicy`: partial versioned update
 - `MPTRootTokenValidator`: partial versioned update
 - `CommitteeHashPolicy`: partial versioned update
 - `CommitteeHashValidator`: partial versioned update
+TODO "it's role is taken over by `VersionOracleValidator`" What does that entail exactly?
 - `DsConfValidator`: it's role is taken over by `VersionOracleValidator`
 - `DsConfPolicy`: it's role is taken over by `VersionOraclePolicy`
 - `DsInsertValidator`: versioned update
 - `DsKeyPolicy`: versioned update
 
 ## 3. `FUELMintingPolicy` Transaction Token Pattern Implementation
+TODO Reading the code, it seems like this wasn't implemented?
 This section discusses in more detail how to apply the transaction token
 pattern to `FUELMintingPolicy`.
 In the development of these ideas, we will introduce a new minting policy,
@@ -584,6 +596,7 @@ end-users would have the freedom, to choose from them.
 
 ### 4.1 Implementation
 
+TODO I don't understand the relationship between this versioning implementation and the TxT pattern (haven't fully understood how the TxT pattern works). Am I understanding correctly that validators using the TxT pattern can't be used with the versioned validator?
 We implement a new validator and a new minting policy:
 
 - `VersionOracleValidator`: validator address holding the references to all the above mentioned
@@ -595,8 +608,10 @@ Both of the above are parameterised by the `GenesisUtxo`.
 Also, we will modify `FUELMintingPolicy` and `MPTRootTokenMintingPolicy` to include the current
 protocol version in their signed message and only allow minting with the actual version.
 
-Furthermore, all scripts depenedending on some other script must use the VersionOracle to
+TODO What `VersionOracle` are we referring to here? Is it `VersionOracleValidator`?
+Furthermore, all scripts depending on some other script must use the VersionOracle to
 get their dependencies (currency symbols or validator hashes) instead of a script parameter
+TODO So the validator/mps simply fails (returns false) if different versions are used?
 or any other method to ensure that we get the above mentioned benefits. All script must use
 the same version, to avoid unforeseable incompatibilities between script. To achieve this
 all scripts must match their own version with the scripts of their dependencies.
@@ -639,7 +654,7 @@ For each validator or minting policy, a separate UTxO with the following datum w
 be created at the `VersionOracleValidator`. A `VersionOraclePolicy` token must be present with the
 UTxO to prove its validity. Furthermore, each UTxO will also include a reference script
 (see [CIP33](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0033)), holding the actual validator or minting policy script.
-This design allows multiple versions of the same validator.
+This design allows multiple versions of the same validator/minting policy.
 
 **Datum:**
 
@@ -652,9 +667,11 @@ data VersionOracle = VersionOracle
   }
 ```
 
+TODO Change this to the following? "Spending a UTXO which has the version oracle address and which references a versioned Plutus script verifies:"
 Spending from the validator verifies:
  - a token was burnt (invalidation)
 
+TODO Should it be "AND" instead? At the very least, reading `mkVersionOracleValidator` makes it seem that way (even thought the `SignedVersionOracle`) doesn't exist.
 OR
 
  - exactly one VersionOracleToken exists in the transaction inputs

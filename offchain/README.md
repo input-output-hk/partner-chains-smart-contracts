@@ -10,9 +10,9 @@ consult the notes on [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 In order to execute off-chain commands with the CLI, you need to setup the
 runtime dependencies:
 
-- cardano-node
-- ogmios
-- kupo
+- [cardano-node](https://github.com/IntersectMBO/cardano-node)
+- [Ogmios](https://github.com/CardanoSolutions/ogmios)
+- [Kupo](https://github.com/CardanoSolutions/kupo)
 
 Luckily, we have a dockerised setup, that spins up all these easily with a
 preset Preview or Preprod. Just run:
@@ -41,20 +41,20 @@ https://github.com/szg251/cardano-dev-shell
 
 ### 2.1. Configuring hosted runtime dependencies
 
-In case you are running the runtime dependencies (ogmios and kupo) on a hosted
+In case you are running the runtime dependencies (Ogmios and Kupo) on a hosted
 environment, or anything else than the default settings, you can either configure
 it via CLI arguments, or set these in the configuration.
 
 The arguments for each service are using the following scheme:
 
 ```
-  --ogmios-host localhost  Address host of ogmios (default: "localhost")
-  --ogmios-path some/path  Address path of ogmios
-  --ogmios-port 1234       Port of ogmios (default: 1337u)
-  --ogmios-secure          Whether ogmios is using an HTTPS connection
+  --ogmios-host localhost  Address host of Ogmios (default: "localhost")
+  --ogmios-path some/path  Address path of Ogmios
+  --ogmios-port 1234       Port of Ogmios (default: 1337u)
+  --ogmios-secure          Whether Ogmios is using an HTTPS connection
 ```
 
-So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`,
+So in case you want to use a remote Ogmios service on `https://1.2.3.4:5678`,
 you want to use the following arguments:
 
 ```
@@ -65,18 +65,19 @@ For more information about the arguments, please refer to
 `nix run .#sidechain-main-cli -- burn-v1 --help`
 
 To use a configuration file instead, see
-[3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
+[3.2. Configuring hosted runtime dependencies](#32-configuring-hosted-runtime-dependencies)
 
 ## 3. Running the CLI
 
-You can call the contract endpoints with the following CLI command
-(you need to add `--` before the arguments):
+You can call the contract endpoints with the following CLI command:
 
 **Running with nix:**
 
 ```
 nix run .#sidechain-main-cli -- --help
 ```
+
+> you need to add `--` before the arguments
 
 **Bundle to a JavaScript file and run using node:**
 
