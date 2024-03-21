@@ -37,7 +37,6 @@ module TrustlessSidechain.Utils.Crypto
 import Contract.Prelude
 
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract)
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
@@ -250,9 +249,9 @@ serialiseEcdsaSecp256k1SignatureToDer ∷ EcdsaSecp256k1Signature → String
 serialiseEcdsaSecp256k1SignatureToDer = ByteArray.byteArrayToHex <<<
   signatureExport
 
-generatePrivKey ∷ Contract EcdsaSecp256k1PrivateKey
+generatePrivKey ∷ Effect EcdsaSecp256k1PrivateKey
 generatePrivKey =
-  liftEffect generateRandomPrivateKey
+  generateRandomPrivateKey
 
 multiSign ∷
   Array EcdsaSecp256k1PrivateKey →

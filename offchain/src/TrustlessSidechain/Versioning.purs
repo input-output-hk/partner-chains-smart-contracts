@@ -10,19 +10,10 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
-import Contract.Monad (Contract, throwContractError)
-import Contract.PlutusData
-  ( Redeemer(Redeemer)
-  , toData
-  )
+import Contract.PlutusData (Redeemer(Redeemer), toData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  , validatorHash
-  )
+import Contract.Scripts (MintingPolicy, ScriptHash, Validator, validatorHash)
 import Contract.Transaction
   ( TransactionHash
   , TransactionOutput(..)
@@ -30,20 +21,22 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Data.Array (fromFoldable) as Array
 import Data.BigInt as BigInt
 import Data.List (List)
 import Data.List as List
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
-import TrustlessSidechain.InitSidechain.Types
-  ( InitTokenRedeemer(MintInitToken)
-  )
-import TrustlessSidechain.InitSidechain.Utils
-  ( initTokenCurrencyInfo
-  )
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction as Effect
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.InitSidechain.Types (InitTokenRedeemer(MintInitToken))
+import TrustlessSidechain.InitSidechain.Utils (initTokenCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
@@ -56,15 +49,17 @@ import TrustlessSidechain.Versioning.Utils
 import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
 import TrustlessSidechain.Versioning.V2 as V2
+import Type.Row (type (+))
 
 -- | Mint multiple version oracle init tokens.  Exact amount minted depends on
 -- | protocol version.
 mintVersionInitTokens ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -88,11 +83,13 @@ mintVersionInitTokens { sidechainParams, atmsKind } version = do
     }
 
 initializeVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r)
+    (Array TransactionHash)
 initializeVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
     getExpectedVersionedPoliciesAndValidators
@@ -114,11 +111,13 @@ initializeVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 insertVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r)
+    (Array TransactionHash)
 insertVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
     getExpectedVersionedPoliciesAndValidators
@@ -140,11 +139,12 @@ insertVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 invalidateVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract (Array TransactionHash)
+  Run (APP + r) (Array TransactionHash)
 invalidateVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
     getExpectedVersionedPoliciesAndValidators
@@ -171,12 +171,13 @@ invalidateVersion { sidechainParams, atmsKind } version = do
   pure (validatorsTxIds <> policiesTxIds)
 
 updateVersion ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int → -- old version
   Int → -- new version
-  Contract (Array TransactionHash)
+  Run (APP + r) (Array TransactionHash)
 updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
@@ -230,11 +231,12 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
 --
 -- See Note [Expected vs actual versioned policies and validators]
 getExpectedVersionedPoliciesAndValidators ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
@@ -242,7 +244,7 @@ getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version 
   case version of
     1 → V1.getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     2 → V2.getVersionedPoliciesAndValidators sidechainParams
-    _ → throwContractError ("Invalid version: " <> show version)
+    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.
 --
@@ -250,11 +252,12 @@ getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version 
 --
 -- Used in the 'ListVersionedScripts' endpoint.
 getActualVersionedPoliciesAndValidators ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Contract
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
@@ -265,7 +268,7 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
 
     -- Get UTxOs located at the version oracle validator script address
     versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
-    scriptUtxos ← utxosAt versionOracleValidatorAddr
+    scriptUtxos ← Effect.utxosAt versionOracleValidatorAddr
 
     -- Get scripts that should be versioned
     { versionedPolicies, versionedValidators } ←

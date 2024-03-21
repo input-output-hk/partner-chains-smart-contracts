@@ -7,11 +7,12 @@ module Test.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.Scripts as Scripts
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run (Run)
+import Run.Except (EXCEPT)
 import Test.CommitteeCandidateValidator as Test.CommitteeCandidateValidator
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -19,10 +20,14 @@ import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
+import TrustlessSidechain.Effects.Contract (CONTRACT)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain (initSpendGenesisUtxo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address as Utils
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import Type.Row (type (+))
 
 -- | `tests` wraps up all the tests conveniently
 tests ∷ WrappedTests
@@ -44,7 +49,7 @@ testScenarioSuccess1 =
         , BigInt.fromInt 5_000_000
         , BigInt.fromInt 5_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         -- Generate genesis UTxO
         genesisUtxo ← Test.Utils.getOwnTransactionInput
@@ -61,7 +66,7 @@ testScenarioSuccess1 =
         -- candidate permission token
         -----------------------------
         _ ←
-          ( initSpendGenesisUtxo sidechainParams <>
+          ( (<>) <$> initSpendGenesisUtxo sidechainParams <*>
               CandidatePermissionToken.mintOneCandidatePermissionInitToken
                 sidechainParams
           ) >>=
@@ -110,7 +115,9 @@ testScenarioSuccess1 =
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
 assertIHaveCandidatePermissionToken ∷
-  SidechainParams → Contract Unit
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertIHaveCandidatePermissionToken sidechainParams = do
   candidatePermissionInfo ←
     CandidatePermissionToken.candidatePermissionCurrencyInfo
@@ -134,7 +141,7 @@ testScenarioFailure1 =
         , BigInt.fromInt 5_000_000
         , BigInt.fromInt 5_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         let
           sidechainParams = Test.Utils.dummySidechainParams
@@ -163,6 +170,6 @@ testScenarioFailure1 =
         Test.Utils.assertHasOutputWithAsset txId committeeCandidiateValidatorAddr
           candidatePermissionInfo.currencySymbol
           CandidatePermissionToken.candidatePermissionTokenName
-          # Test.Utils.fails
+          # withUnliftApp Test.Utils.fails
 
         pure unit

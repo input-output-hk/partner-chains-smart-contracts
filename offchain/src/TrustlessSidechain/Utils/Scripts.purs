@@ -5,9 +5,8 @@ module TrustlessSidechain.Utils.Scripts
   , mkMintingPolicyWithParams'
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (note)
 
-import Contract.Monad (Contract, liftContractE, liftContractM)
 import Contract.PlutusData (PlutusData)
 import Contract.Scripts
   ( MintingPolicy(PlutusMintingPolicy)
@@ -18,6 +17,8 @@ import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Map as Map
+import Run (Run)
+import Run.Except (EXCEPT, note, rethrow)
 import TrustlessSidechain.Error
   ( OffchainError
       ( InvalidScript
@@ -27,59 +28,63 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.RawScripts (rawScripts)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
+import Type.Row (type (+))
 
 -- | `mkValidatorWithParams scriptId params` returns the `Validator` of
 -- | `scriptId` with the script applied to `params`.
 mkValidatorWithParams ∷
+  ∀ r.
   ScriptId →
   Array PlutusData →
-  Contract Validator
+  Run (EXCEPT OffchainError + r) Validator
 mkValidatorWithParams scriptId params = do
-  hexScript ← liftContractM (show $ InvalidScriptId scriptId)
+  hexScript ← note (InvalidScriptId scriptId)
     (Map.lookup scriptId rawScripts)
   mkValidatorWithParams' hexScript params
 
 -- | `mkValidatorWithParams' hexScript params` returns the `Validator` of
 -- | `hexScript` with the script applied to `params`.
 mkValidatorWithParams' ∷
+  ∀ r.
   String →
   Array PlutusData →
-  Contract Validator
+  Run (EXCEPT OffchainError + r) Validator
 mkValidatorWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
 
-  unapplied ← liftContractM (show $ InvalidScript hexScript) script
+  unapplied ← note (InvalidScript hexScript) script
   applied ←
-    if Array.null params then pure unapplied
-    else liftContractE $
-      (show <<< InvalidScriptArgs) `lmap` Scripts.applyArgs unapplied params
+    rethrow $
+      if Array.null params then pure unapplied
+      else
+        InvalidScriptArgs `lmap` Scripts.applyArgs unapplied params
   pure $ Validator applied
 
 -- | `mkMintingPolicyWithParams scriptId params` returns the `MintingPolicy` of
 -- | `scriptId` with the script applied to `params`.
 mkMintingPolicyWithParams ∷
+  ∀ r.
   ScriptId →
   Array PlutusData →
-  Contract MintingPolicy
+  Run (EXCEPT OffchainError + r) MintingPolicy
 mkMintingPolicyWithParams scriptId params = do
-  hexScript ← liftContractM (show $ InvalidScriptId scriptId)
+  hexScript ← note (InvalidScriptId scriptId)
     (Map.lookup scriptId rawScripts)
   mkMintingPolicyWithParams' hexScript params
 
 -- | `mkMintingPolicyWithParams' hexScript params` returns the `MintingPolicy`
 -- | of `hexScript` with the script applied to `params`.
 mkMintingPolicyWithParams' ∷
+  ∀ r.
   String →
   Array PlutusData →
-  Contract MintingPolicy
+  Run (EXCEPT OffchainError + r) MintingPolicy
 mkMintingPolicyWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM (show $ InvalidScript hexScript) script
-  applied ←
+  unapplied ← note (InvalidScript hexScript) script
+  applied ← rethrow $
     if Array.null params then pure unapplied
-    else liftContractE $
-      (show <<< InvalidScriptArgs) `lmap` Scripts.applyArgs unapplied params
+    else (InvalidScriptArgs) `lmap` Scripts.applyArgs unapplied params
   pure $ PlutusMintingPolicy applied

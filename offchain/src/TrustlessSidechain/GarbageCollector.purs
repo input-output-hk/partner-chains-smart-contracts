@@ -9,7 +9,6 @@ module TrustlessSidechain.GarbageCollector
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData
   ( Redeemer(Redeemer)
   , toData
@@ -28,8 +27,13 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value (flattenValue)
 import Data.Array (filter)
 import Data.BigInt as BigInt
+import Run (Run)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as SchnorrATMSPolicy
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELMintingPolicy.V1 as MintingV1
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -43,20 +47,22 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `burnNFTsLookupsAndConstraints` burns all waste NFTs found on users wallet address
 mkBurnNFTsLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
 mkBurnNFTsLookupsAndConstraints sidechainParams = do
-
   ownValue ← getOwnUTxOsTotalValue
-  committeeCertificateMint ←
-    EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
-      sidechainParams
+  let
+    committeeCertificateMint =
+      EcdsaATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+        sidechainParams
 
   { mintingPolicy: committeePlainEcdsaSecp256k1ATMSCurrencyInfo
   , currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol

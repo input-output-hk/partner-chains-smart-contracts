@@ -11,7 +11,6 @@ module Test.Checkpoint
 import Contract.Prelude
 
 import Contract.Log (logInfo')
-import Contract.Monad (liftContractM)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
@@ -20,6 +19,8 @@ import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run (liftEffect) as Run
+import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash (updateCommitteeHash)
@@ -30,6 +31,9 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -104,13 +108,15 @@ saveCheckpointTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'saveCheckpointTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'saveCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -144,8 +150,10 @@ saveCheckpointTest =
             }
 
         committeeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let
@@ -171,13 +179,15 @@ notEnoughSignaturesTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'notEnoughSignaturesTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'notEnoughSignaturesTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -211,8 +221,10 @@ notEnoughSignaturesTest =
             }
 
         committeeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let
@@ -234,7 +246,8 @@ notEnoughSignaturesTest =
             , sidechainEpoch
             }
 
-        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
+        withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
+          saveCheckpointInput
 
 outOfOrderCheckpointTest ∷ PlutipTest
 outOfOrderCheckpointTest =
@@ -246,13 +259,15 @@ outOfOrderCheckpointTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'outOfOrderCheckpointTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'outOfOrderCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -287,8 +302,10 @@ outOfOrderCheckpointTest =
             }
 
         committeeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let
@@ -302,7 +319,8 @@ outOfOrderCheckpointTest =
             , sidechainEpoch
             }
 
-        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
+        withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
+          saveCheckpointInput
 
 invalidCheckpointBlockHashTest ∷ PlutipTest
 invalidCheckpointBlockHashTest =
@@ -314,13 +332,15 @@ invalidCheckpointBlockHashTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'invalidCheckpointBlockHashTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'invalidCheckpointBlockHashTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -355,8 +375,10 @@ invalidCheckpointBlockHashTest =
             }
 
         committeeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let
@@ -370,7 +392,8 @@ invalidCheckpointBlockHashTest =
             , sidechainEpoch
             }
 
-        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
+        withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
+          saveCheckpointInput
 
 -- | Typical scenario -- a checkpoint is provided by a committee
 -- | that doesn't have its committee hash stored on chain
@@ -384,14 +407,16 @@ signedByUnknownCommitteeTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'signedByUnknownCommitteeTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'signedByUnknownCommitteeTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
 
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -412,7 +437,8 @@ signedByUnknownCommitteeTest =
 
         { sidechainParams } ← initSidechain initScParams 1
 
-        newCommitteeKeys ← sequence $ Array.replicate 5 generatePrivKey
+        newCommitteeKeys ← Run.liftEffect $ sequence $ Array.replicate 5
+          generatePrivKey
 
         let
           newCheckpointBlockHash = hexToByteArrayUnsafe "aabbccdd"
@@ -427,8 +453,10 @@ signedByUnknownCommitteeTest =
             }
 
         unknownCommitteeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let
@@ -442,7 +470,8 @@ signedByUnknownCommitteeTest =
             , sidechainEpoch
             }
 
-        Test.Utils.fails $ void $ Checkpoint.saveCheckpoint saveCheckpointInput
+        withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
+          saveCheckpointInput
 
 -- | 1. Init sidechain checkpoints the genesis
 -- | 2. UpdateCommitee changes the committee
@@ -457,13 +486,15 @@ committeeChangeCheckpointTest =
         , BigInt.fromInt 50_000_000
         , BigInt.fromInt 40_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
-        logInfo' "Checkpoint 'committeeChangeCheckpointTest'"
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        liftContract $ logInfo' "Checkpoint 'committeeChangeCheckpointTest'"
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
         let
           keyCount = 5
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -484,9 +515,10 @@ committeeChangeCheckpointTest =
 
         { sidechainParams } ← initSidechain initScParams 1
 
-        newCommitteeKeys ← sequence $ Array.replicate 5 generatePrivKey
+        newCommitteeKeys ← Run.liftEffect $ sequence $ Array.replicate 5
+          generatePrivKey
 
-        updateCommitteeHash
+        liftContract $ updateCommitteeHash
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , newCommitteePrvKeys: newCommitteeKeys
@@ -507,8 +539,10 @@ committeeChangeCheckpointTest =
             }
 
         committeeSignatures ←
-          liftContractM
-            "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+          Run.note
+            ( GenericInternalError
+                "error 'Test.Checkpoint.saveCheckpoint': failed to generate the committee signatures for the checkpoint message"
+            )
             $ generateCheckpointSignatures toSign
 
         let

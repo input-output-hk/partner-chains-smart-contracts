@@ -9,8 +9,10 @@ module TrustlessSidechain.GetSidechainAddresses
 
 import Contract.Prelude
 
-import Contract.Address as Address
-import Contract.Monad (Contract)
+import Contract.Address
+  ( AddressWithNetworkTag(AddressWithNetworkTag)
+  , addressWithNetworkTagToBech32
+  )
 import Contract.Scripts
   ( Validator
   , validatorHash
@@ -18,6 +20,10 @@ import Contract.Scripts
 import Data.Array as Array
 import Data.Functor (map)
 import Data.List as List
+import Data.Map as Map
+import Data.TraversableWithIndex (traverseWithIndex)
+import Run (Run)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
@@ -34,6 +40,9 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Wallet (getNetworkId) as Effect
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
@@ -69,6 +78,7 @@ import TrustlessSidechain.Versioning.Utils
   ( getVersionOraclePolicy
   , versionOracleValidator
   )
+import Type.Row (type (+))
 
 -- | `SidechainAddresses` is an record of `Array`s which uniquely associates a `String`
 -- | identifier with a hex encoded validator address / currency symbol of a
@@ -110,7 +120,9 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
 -- | of the candidate permission token provided the `permissionTokenUtxo` is
 -- | given.
 getSidechainAddresses ∷
-  SidechainAddressesEndpointParams → Contract SidechainAddresses
+  ∀ r.
+  SidechainAddressesEndpointParams →
+  Run (EXCEPT OffchainError + WALLET + r) SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
       { sidechainParams
@@ -259,8 +271,9 @@ getSidechainAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
-getAddr ∷ Validator → Contract String
+getAddr ∷ ∀ r. Validator → Run (EXCEPT OffchainError + WALLET + r) String
 getAddr v = do
   addr ← toAddress (validatorHash v)
-  serialised ← Address.addressToBech32 addr
-  pure serialised
+  networkId ← Effect.getNetworkId
+  pure $ addressWithNetworkTagToBech32
+    (AddressWithNetworkTag { address: addr, networkId })

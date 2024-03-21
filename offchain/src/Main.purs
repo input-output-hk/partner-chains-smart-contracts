@@ -4,7 +4,7 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract, launchAff_, liftContractE, runContract)
+import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
@@ -15,12 +15,15 @@ import Data.List.Types as Data.List.Types
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
+import Run (EFFECT, Run)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Run (runAppLive)
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( ClaimActRespV1
@@ -131,6 +134,7 @@ import TrustlessSidechain.Utils.Transaction
   , balanceSignAndSubmitWithoutSpendingUtxo
   )
 import TrustlessSidechain.Versioning as Versioning
+import Type.Row (type (+))
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -162,9 +166,15 @@ main = do
 
       -- Running the program
       -----------------------
-      launchAff_ $ runContract opts.contractParams do
-        endpointResp ← runTxEndpoint opts.sidechainEndpointParams opts.endpoint
-        liftEffect $ printEndpointResp endpointResp
+      launchAff_ $ do
+        endpointResp ← runAppLive opts.contractParams
+          $ runTxEndpoint
+              opts.sidechainEndpointParams
+              opts.endpoint
+
+        case endpointResp of
+          Right resp → liftEffect $ printEndpointResp resp
+          Left e → log (show e)
 
     UtilsOptions opts → do
       endpointResp ← runUtilsEndpoint opts.utilsOptions
@@ -178,7 +188,8 @@ getOptions = do
   execParser (options config)
 
 -- | Executes an transaction endpoint and returns a response object
-runTxEndpoint ∷ SidechainEndpointParams → TxEndpoint → Contract EndpointResp
+runTxEndpoint ∷
+  ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
 runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
@@ -303,18 +314,17 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainEpoch
         , mNewCommitteeValidatorHash
         } → do
-        committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        committeeSignatures ← ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
-        aggregateSignature ← liftContractE $
+        aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
             , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
             }
 
-        rawNewCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
-          newCommitteePubKeysInput
+        rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
 
-        newAggregatePubKeys ← liftContractE $
+        newAggregatePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
             , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
@@ -334,9 +344,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> CommitteeHashResp
 
       SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput } → do
-        committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        committeeSignatures ← ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
-        aggregateSignature ← liftContractE $
+        aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
             , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
@@ -360,10 +370,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , genesisHash
         , version
         } → do
-        rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
-          committeePubKeysInput
+        rawCommitteePubKeys ← ConfigFile.getCommittee committeePubKeysInput
 
-        committeePubKeys ← liftContractE $
+        committeePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
             , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
@@ -407,26 +416,25 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , mNewCommitteeValidatorHash
         } → do
 
-        newCommitteeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        newCommitteeSignatures ← ConfigFile.getCommitteeSignatures
           newCommitteeSignaturesInput
-        newCommitteeAggregateSignature ← liftContractE $
+        newCommitteeAggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
             , committeePubKeyAndSigs: List.toUnfoldable newCommitteeSignatures
             }
 
-        newMerkleRootSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        newMerkleRootSignatures ← ConfigFile.getCommitteeSignatures
           newMerkleRootSignaturesInput
-        newMerkleRootAggregateSignature ← liftContractE $
+        newMerkleRootAggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
             , committeePubKeyAndSigs: List.toUnfoldable newMerkleRootSignatures
             }
 
-        rawNewCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
-          newCommitteePubKeysInput
+        rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
 
-        newAggregatePubKeys ← liftContractE $
+        newAggregatePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
             , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
@@ -462,9 +470,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainEpoch
         } → do
 
-        committeeSignatures ← liftEffect $ ConfigFile.getCommitteeSignatures
+        committeeSignatures ← ConfigFile.getCommitteeSignatures
           committeeSignaturesInput
-        aggregateSignature ← liftContractE $
+        aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
             , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures

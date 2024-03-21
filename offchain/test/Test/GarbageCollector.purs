@@ -4,7 +4,6 @@ import Contract.Prelude
 
 import Contract.Address (pubKeyHashAddress)
 import Contract.Log (logInfo')
-import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
@@ -17,22 +16,27 @@ import Data.Maybe as Maybe
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
+import Run (EFFECT, Run)
+import Run (liftEffect) as Run
+import Run.Except (EXCEPT)
+import Run.Except (note) as Run
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy (generateSignatures)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils
-  ( WrappedTests
-  , fails
-  , getOwnTransactionInput
-  , plutipGroup
-  )
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   , CommitteeATMSParams(CommitteeATMSParams)
   )
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
+import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELBurningPolicy.V2 as BurningV2
 import TrustlessSidechain.FUELMintingPolicy.V1
@@ -58,6 +62,7 @@ import TrustlessSidechain.Utils.Crypto
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning as Versioning
+import Type.Row (type (+))
 
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
@@ -71,7 +76,7 @@ testScenarioSuccess =
   Mote.Monad.test "Mint atms, fuel mint and fuel burn tokens, then burn them all"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         { sidechainParams, initCommitteePrvKeys } ← initializeSidechain
         atmsTokenName ← mintATMSTokens { sidechainParams, initCommitteePrvKeys }
         mintFuelMintingAndFuelBurningTokens
@@ -81,9 +86,10 @@ testScenarioSuccess =
           $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
           >>= balanceSignAndSubmit "Test: burn NFTs"
 
-        committeePlainEcdsaSecp256k1ATMSMint ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
-            sidechainParams
+        let
+          committeePlainEcdsaSecp256k1ATMSMint =
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+              sidechainParams
 
         { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
           CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
@@ -99,20 +105,21 @@ testScenarioSuccess =
         Test.Utils.assertIHaveOutputWithAsset
           fuelMintingCurrencySymbol
           MintingV1.fuelTokenName
-          # fails
+          # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
           fuelBurningCurrencySymbol
           BurningV1.fuelTokenName
-          # fails
+          # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
           committeePlainEcdsaSecp256k1ATMSCurrencySymbol
           atmsTokenName
-          # fails
+          # withUnliftApp fails
 
 initializeSidechain ∷
-  Contract
+  ∀ r.
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
     { sidechainParams ∷ SidechainParams
     , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
     }
@@ -121,7 +128,8 @@ initializeSidechain = do
   genesisUtxo ← getOwnTransactionInput
   let
     keyCount = 25
-  initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+  initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+    generatePrivKey
   let
     initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
     initScParams = InitSidechainParams
@@ -148,16 +156,19 @@ initializeSidechain = do
   pure { sidechainParams, initCommitteePrvKeys }
 
 mintATMSTokens ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Contract TokenName
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+    TokenName
 mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
   -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
   -------------------------
-  committeePlainEcdsaSecp256k1ATMSMint ←
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
-      sidechainParams
+  let
+    committeePlainEcdsaSecp256k1ATMSMint =
+      CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+        sidechainParams
 
   { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
@@ -167,7 +178,7 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
 
   -- Running the tests
   -------------------------
-  logInfo'
+  liftContract $ logInfo'
     "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee"
   let
     sidechainMessageByteArray =
@@ -208,15 +219,17 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
   pure sidechainMessageTokenName
 
 mintFuelMintingAndFuelBurningTokens ∷
+  ∀ r.
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Contract Unit
+  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r) Unit
 mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
   do
     pkh ← getOwnPaymentPubKeyHash
     ownRecipient ←
-      liftContractM "Could not convert pub key hash to bech 32 bytes" $
+      Run.note
+        (GenericInternalError "Could not convert pub key hash to bech 32 bytes") $
         Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
     let
       amount = BigInt.fromInt 5

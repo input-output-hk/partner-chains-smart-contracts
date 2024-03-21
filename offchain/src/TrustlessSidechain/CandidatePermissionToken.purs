@@ -10,7 +10,6 @@ module TrustlessSidechain.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.PlutusData
   ( toData
   , unitRedeemer
@@ -28,6 +27,11 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
+import Run (Run)
+import Run.Except (EXCEPT)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -43,6 +47,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CandidatePermissionPolicy)
   )
+import Type.Row (type (+))
 
 --------------------------------
 -- Working with the onchain code
@@ -63,8 +68,9 @@ candidatePermissionTokenName =
 -- | `candidatePermissionCurrencyInfo` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.
 candidatePermissionCurrencyInfo ∷
+  ∀ r.
   SidechainParams →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + r) CurrencyInfo
 candidatePermissionCurrencyInfo sp = do
   { currencySymbol } ← initTokenCurrencyInfo sp
   let
@@ -77,8 +83,9 @@ candidatePermissionCurrencyInfo sp = do
 -- | Build lookups and constraints to mint candidate permission initialization
 -- | token.
 mintOneCandidatePermissionInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -88,8 +95,9 @@ mintOneCandidatePermissionInitToken sp =
 -- | Build lookups and constraints to burn candidate permission initialization
 -- | token.
 burnOneCandidatePermissionInitToken ∷
+  ∀ r.
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -109,9 +117,10 @@ type CandidatePermissionTokenMintInfo =
 -- | `candidatePermissionTokenLookupsAndConstraints` creates the required
 -- | lookups and constraints to build the transaction to mint the tokens.
 candidatePermissionTokenLookupsAndConstraints ∷
+  ∀ r.
   SidechainParams →
   BigInt →
-  Contract
+  Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
@@ -142,9 +151,10 @@ candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
 -- | `runCandidatePermissionToken` is the endpoint for minting candidate
 -- | permission tokens.
 runCandidatePermissionToken ∷
+  ∀ r.
   SidechainParams →
   BigInt →
-  Contract
+  Run (EXCEPT OffchainError + TRANSACTION + LOG + r)
     { transactionId ∷ TransactionHash
     , candidatePermissionCurrencySymbol ∷ CurrencySymbol
     }

@@ -18,17 +18,14 @@ module TrustlessSidechain.Utils.Address
   , currencySymbolToHex
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (note)
 
 import Contract.Address
   ( Address
   , PaymentPubKeyHash
-  , getNetworkId
   , validatorHashEnterpriseAddress
   )
 import Contract.Address as Address
-import Contract.Monad (Contract, liftContractM, liftedM)
-import Contract.Monad as Monad
 import Contract.PlutusData (class FromData, class ToData, PlutusData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
 import Contract.Prim.ByteArray as ByteArray
@@ -40,10 +37,6 @@ import Contract.Scripts
   )
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
-import Contract.Wallet
-  ( getWalletAddresses
-  , ownPaymentPubKeyHashes
-  )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
 import Ctl.Internal.Serialization.Address
@@ -67,14 +60,22 @@ import Ctl.Internal.Serialization.Address
   )
 import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
 import Data.Array as Array
+import Run (Run)
+import Run.Except (EXCEPT, note)
+import Run.Except as Run
+import TrustlessSidechain.Effects.Wallet
+  ( WALLET
+  , getNetworkId
+  , getWalletAddresses
+  )
+import TrustlessSidechain.Effects.Wallet as Effect
 import TrustlessSidechain.Error
   ( OffchainError
       ( NotFoundOwnPubKeyHash
+      , InvalidAddress
       , ConversionError
-      , NotFoundOwnAddress
       , InvalidCurrencySymbol
       , InvalidScript
-      , InvalidAddress
       )
   )
 import TrustlessSidechain.Types (CurrencyInfo)
@@ -82,6 +83,7 @@ import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
 import TrustlessSidechain.Versioning.Types (ScriptId)
+import Type.Row (type (+))
 
 -- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
 -- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
@@ -146,33 +148,35 @@ addressFromBech32Bytes bechBytes = do
 
 -- | Return a single own payment pub key hash without generating warnings.
 getOwnPaymentPubKeyHash ∷
-  Contract PaymentPubKeyHash
-getOwnPaymentPubKeyHash =
-  liftedM (show NotFoundOwnPubKeyHash)
-    (ownPaymentPubKeyHashes >>= pure <<< Array.head)
+  ∀ r.
+  Run (EXCEPT OffchainError + WALLET + r) PaymentPubKeyHash
+getOwnPaymentPubKeyHash = do
+  pubKeyHashes ← Effect.ownPaymentPubKeyHashes
+  Run.note NotFoundOwnPubKeyHash $ Array.head pubKeyHashes
 
 -- | Return a single own wallet address without generating warnings.
 getOwnWalletAddress ∷
-  Contract Address
-getOwnWalletAddress =
-  liftedM (show NotFoundOwnAddress)
-    (getWalletAddresses >>= pure <<< Array.head)
+  ∀ r.
+  Run (EXCEPT OffchainError + WALLET + r) Address
+getOwnWalletAddress = do
+  addresses ← getWalletAddresses
+  Run.note NotFoundOwnPubKeyHash $ Array.head addresses
 
 -- | Convert Address to ValidatorHash, raising an error if an address does not
 -- | represent a script.
-toValidatorHash ∷ Address → Contract ValidatorHash
+toValidatorHash ∷ ∀ r. Address → Run (EXCEPT OffchainError + r) ValidatorHash
 toValidatorHash addr =
-  liftContractM
-    (show $ InvalidAddress "Cannot convert Address to ValidatorHash" addr)
+  note
+    (InvalidAddress "Cannot convert Address to ValidatorHash" addr)
     (Address.toValidatorHash addr)
 
 -- | Convert ValidatorHash to Address in the current network, raising an error
 -- | if the hash is not valid.
-toAddress ∷ ValidatorHash → Contract Address
+toAddress ∷ ∀ r. ValidatorHash → Run (EXCEPT OffchainError + WALLET + r) Address
 toAddress vh = do
   netId ← getNetworkId
-  liftContractM
-    ( show $ ConversionError $ "Cannot convert validator hash " <> show vh
+  Run.note
+    ( ConversionError $ "Cannot convert validator hash " <> show vh
         <> " to an enterprise address"
     )
     (validatorHashEnterpriseAddress netId vh)
@@ -180,9 +184,10 @@ toAddress vh = do
 -- | `getCurrencyInfo` returns minting policy and currency symbol of a given
 -- | script.  Requires providing parameters of that script.
 getCurrencyInfo ∷
+  ∀ r.
   ScriptId →
   Array PlutusData →
-  Contract CurrencyInfo
+  Run (EXCEPT OffchainError + r) CurrencyInfo
 getCurrencyInfo scriptId params = do
   mintingPolicy ← mkMintingPolicyWithParams scriptId params
   currencySymbol ← getCurrencySymbol scriptId mintingPolicy
@@ -190,21 +195,30 @@ getCurrencyInfo scriptId params = do
 
 -- | `getCurrencySymbol` converts a minting policy with known script ID to its
 -- | currency symbol
-getCurrencySymbol ∷ ScriptId → MintingPolicy → Contract CurrencySymbol
+getCurrencySymbol ∷
+  ∀ r.
+  ScriptId →
+  MintingPolicy →
+  Run (EXCEPT OffchainError + r) CurrencySymbol
 getCurrencySymbol scriptId mp = do
-  Monad.liftContractM (show $ InvalidCurrencySymbol scriptId mp) $
+  note (InvalidCurrencySymbol scriptId mp) $
     Value.scriptCurrencySymbol mp
 
 -- | `toCurrencySymbol` converts a minting policy with unknown script ID to its
 -- | currency symbol
-toCurrencySymbol ∷ MintingPolicy → Contract CurrencySymbol
+toCurrencySymbol ∷
+  ∀ r. MintingPolicy → Run (EXCEPT OffchainError + r) CurrencySymbol
 toCurrencySymbol mp = do
-  Monad.liftContractM (show $ InvalidScript (show mp)) $
+  note (InvalidScript (show mp)) $
     Value.scriptCurrencySymbol mp
 
 -- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
 -- | currency symbol
-getCurrencySymbolHex ∷ ScriptId → MintingPolicy → Contract String
+getCurrencySymbolHex ∷
+  ∀ r.
+  ScriptId →
+  MintingPolicy →
+  Run (EXCEPT OffchainError + r) String
 getCurrencySymbolHex name mp =
   currencySymbolToHex <$> getCurrencySymbol name mp
 

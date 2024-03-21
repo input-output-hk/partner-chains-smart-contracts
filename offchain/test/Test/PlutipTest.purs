@@ -9,16 +9,15 @@
 -- In a future version of ctl, I believe that there are systems in place that
 -- implement the same functionality.
 module Test.PlutipTest
-  ( mkPlutipConfigTest
-  , runPlutipConfigTest
+  ( PlutipConfigTest
   , PlutipTest
-  , PlutipConfigTest
   , interpretPlutipTest
+  , mkPlutipConfigTest
+  , runPlutipConfigTest
   ) where
 
 import Contract.Prelude
 
-import Contract.Monad (Contract)
 import Contract.Test.Plutip
   ( class UtxoDistribution
   , PlutipConfig
@@ -28,9 +27,18 @@ import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
+import Run (AFF, EFFECT, Run)
+import Run.Except (EXCEPT)
 import Test.Config as Test.Config
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
+import TrustlessSidechain.Effects.Contract (CONTRACT)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Run (unliftApp)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Error (OffchainError)
+import Type.Row (type (+))
 
 -- | `PlutipTest` is a convenient alias for a `Mote` type of
 -- | `PlutipConfigTest`s which require no bracketting (i.e., setup)
@@ -60,9 +68,17 @@ mkPlutipConfigTest ∷
   ∀ (distr ∷ Type) (wallets ∷ Type).
   UtxoDistribution distr wallets ⇒
   distr →
-  (wallets → Contract Unit) →
+  ( wallets →
+    Run
+      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + AFF + EFFECT
+          + CONTRACT
+          + ()
+      )
+      Unit
+  ) →
   PlutipConfigTest
-mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d t
+mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d
+  (unliftApp <<< t)
 
 -- | `runPlutipConfigTest` provides a mechanism to turn a `PlutipConfigTest` into a `Test`
 runPlutipConfigTest ∷

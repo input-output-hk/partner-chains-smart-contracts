@@ -8,17 +8,14 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
-import Test.Utils
-  ( WrappedTests
-  , fails
-  , getOwnTransactionInput
-  , plutipGroup
-  )
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -53,13 +50,15 @@ testScenarioSuccess =
         , BigInt.fromInt 150_000_000
         , BigInt.fromInt 150_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -150,13 +149,15 @@ testScenarioFailure =
         , BigInt.fromInt 150_000_000
         , BigInt.fromInt 150_000_000
         ]
-    $ \alice → Wallet.withKeyWallet alice do
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount generatePrivKey
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          keyCount
+          generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
           initScParams = InitSidechainParams
@@ -218,6 +219,6 @@ testScenarioFailure =
                     (unwrap sidechainParams).genesisUtxo
                     "Test: insert permissioned candidates"
             )
-        ) # fails
+        ) # withUnliftApp fails
 
         pure unit

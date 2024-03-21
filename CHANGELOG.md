@@ -14,6 +14,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     associated with the user's wallet.
   * `getSidechainAddresses` now also returns the `InitTokenPolicy`. That
     affects both the `init` and `addresses` CLI endpoints.
+  * Effect system over the `Contract` monad from the CTL library, plus a mechanism to intercept and
+    re-interpret errors from the `Contract` monad.
+    https://github.com/input-output-hk/trustless-sidechain/pull/723
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo

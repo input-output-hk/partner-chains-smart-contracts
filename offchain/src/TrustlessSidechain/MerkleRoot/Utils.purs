@@ -20,13 +20,17 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.Monad (Contract, liftContractM)
 import Contract.PlutusData (serializeData, toData)
 import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
 import Contract.Value as Value
+import Run (Run)
+import Run.Except (EXCEPT)
+import Run.Except as Run
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidData))
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
@@ -49,10 +53,14 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Type.Row (type (+))
 
 -- | `merkleRootCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `MerkleRootTokenPolicy`
-merkleRootCurrencyInfo ∷ SidechainParams → Contract CurrencyInfo
+merkleRootCurrencyInfo ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r) CurrencyInfo
 merkleRootCurrencyInfo sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   getCurrencyInfo MerkleRootTokenPolicy
@@ -60,7 +68,10 @@ merkleRootCurrencyInfo sidechainParams = do
 
 -- | `merkleRootTokenValidator` gets the validator corresponding to
 -- | 'MerkleRootTokenValidator' paramaterized by `SidechainParams`.
-merkleRootTokenValidator ∷ SidechainParams → Contract Validator
+merkleRootTokenValidator ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r) Validator
 merkleRootTokenValidator sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams MerkleRootTokenValidator
@@ -77,9 +88,10 @@ merkleRootTokenValidator sidechainParams = do
 -- | Note: in the case that there is more than such utxo, this returns the first
 -- | such utxo it finds that satisifies the aforementioned properties.
 findMerkleRootTokenUtxo ∷
+  ∀ r.
   TokenName →
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findMerkleRootTokenUtxo merkleRoot sp = do
   validator ← merkleRootTokenValidator sp
@@ -99,21 +111,22 @@ findMerkleRootTokenUtxo merkleRoot sp = do
 -- | finding the utxo... rather it reflects the `Maybe` in the last merkle root
 -- | of whether it exists or not.
 findPreviousMerkleRootTokenUtxo ∷
+  ∀ r.
   Maybe RootHash →
   SidechainParams →
-  Contract
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
 findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
   case maybeLastMerkleRoot of
     Nothing → pure Nothing
     Just lastMerkleRoot' → do
-      lastMerkleRootTokenName ← liftContractM
-        (show $ InvalidData "Invalid lastMerkleRoot token name")
+      lastMerkleRootTokenName ← Run.note
+        (InvalidData "Invalid lastMerkleRoot token name")
         (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
       lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName sp
       lkup' ←
-        liftContractM
-          (show $ InvalidData "failed to find last merkle root")
+        Run.note
+          (InvalidData "failed to find last merkle root")
           lkup
       pure $ Just lkup'
 
