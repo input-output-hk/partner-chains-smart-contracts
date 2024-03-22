@@ -20,6 +20,8 @@ module TrustlessSidechain.InitSidechain
   , getInitTokenStatus
   , getScriptsToInsert
   , init
+  , initTokensMint
+  , initCheckpoint
   , initSidechain
   , initSpendGenesisUtxo
   , initTokensMint
@@ -173,13 +175,13 @@ toSidechainParams isp = SidechainParams
 -- |
 -- |      - Mints the candidiate permission tokens if
 -- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
-initCandidatePermissionTokenLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type) r'.
-  InitTokensParams r →
-  Run (EXCEPT OffchainError + r')
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
+initCandidatePermissionTokenLookupsAndConstraints
+  ∷ ∀ (r ∷ Row Type) r'
+  . InitTokensParams r
+  → Run (EXCEPT OffchainError + r')
+      { lookups ∷ ScriptLookups Void
+      , constraints ∷ TxConstraints Void Void
+      }
 initCandidatePermissionTokenLookupsAndConstraints isp =
   case isp.initCandidatePermissionTokenMintInfo of
     Nothing → pure mempty
@@ -193,13 +195,13 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
 -- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the
 -- | checkpoint.
-initCheckpointLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type) r'.
-  InitTokensParams r →
-  Run (EXCEPT OffchainError + WALLET + r')
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
+initCheckpointLookupsAndConstraints
+  ∷ ∀ (r ∷ Row Type) r'
+  . InitTokensParams r
+  → Run (EXCEPT OffchainError + WALLET + r')
+      { lookups ∷ ScriptLookups Void
+      , constraints ∷ TxConstraints Void Void
+      }
 initCheckpointLookupsAndConstraints inp = do
 
   -- Get checkpoint / associated values
@@ -260,15 +262,15 @@ initCheckpointLookupsAndConstraints inp = do
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
 -- | validator script for the update committee hash.
-initCommitteeHashLookupsAndConstraints ∷
-  ∀ r.
-  BigInt →
-  PlutusData →
-  SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
+initCommitteeHashLookupsAndConstraints
+  ∷ ∀ r
+  . BigInt
+  → PlutusData
+  → SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + r)
+      { lookups ∷ ScriptLookups Void
+      , constraints ∷ TxConstraints Void Void
+      }
 initCommitteeHashLookupsAndConstraints
   initSidechainEpoch
   initAggregatedCommittee
@@ -348,13 +350,13 @@ initCommitteeHashLookupsAndConstraints
 -- | Note: this does NOT include a lookup or constraint to spend the distinguished
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
-initDistributedSetLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
+initDistributedSetLookupsAndConstraints
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + r)
+      { lookups ∷ ScriptLookups Void
+      , constraints ∷ TxConstraints Void Void
+      }
 initDistributedSetLookupsAndConstraints sidechainParams = do
   -- Build lookups and constraints to burn distributed set init token
   burnDsInitToken ←
@@ -445,13 +447,13 @@ initDistributedSetLookupsAndConstraints sidechainParams = do
 -- | Build lookups and constraints to spend the genesis UTxO.  This is
 -- | re-exported from the module for the purposes of testing, so that we can
 -- | mint init tokens in tests when needed.
-initSpendGenesisUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
+initSpendGenesisUtxo
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+      { lookups ∷ ScriptLookups Void
+      , constraints ∷ TxConstraints Void Void
+      }
 initSpendGenesisUtxo sidechainParams = do
   let txIn = (unwrap sidechainParams).genesisUtxo
   txOut ← Effect.fromMaybeThrow
@@ -482,12 +484,12 @@ initSpendGenesisUtxo sidechainParams = do
 
 -- | Internal function for minting all init tokens in `initTokensMint`
 -- | and `initSidechain`.
-mintAllTokens ∷
-  ∀ r.
-  SidechainParams →
-  ATMSKinds →
-  Int →
-  Run (APP r) { transactionId ∷ TransactionHash }
+mintAllTokens
+  ∷ ∀ r
+  . SidechainParams
+  → ATMSKinds
+  → Int
+  → Run (APP r) { transactionId ∷ TransactionHash }
 mintAllTokens sidechainParams initATMSKind version = do
   { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
     mempty
@@ -510,16 +512,16 @@ mintAllTokens sidechainParams initATMSKind version = do
 -- | If tokens are minted, this returns `Just` the minting transaction hash.
 -- | If the genesis UTxO already has been spent, this function returns `Nothing`
 -- | in the `transactionId` field and logs the fact at the info level.
-initTokensMint ∷
-  ∀ r.
-  SidechainParams →
-  ATMSKinds →
-  Int →
-  Run (APP r)
-    { transactionId ∷ Maybe TransactionHash
-    , sidechainParams ∷ SidechainParams
-    , sidechainAddresses ∷ SidechainAddresses
-    }
+initTokensMint
+  ∷ ∀ r
+  . SidechainParams
+  → ATMSKinds
+  → Int
+  → Run (APP r)
+      { transactionId ∷ Maybe TransactionHash
+      , sidechainParams ∷ SidechainParams
+      , sidechainAddresses ∷ SidechainAddresses
+      }
 initTokensMint sidechainParams initATMSKind version = do
   let txIn = (unwrap sidechainParams).genesisUtxo
 
@@ -574,16 +576,16 @@ initTokensMint sidechainParams initATMSKind version = do
 -- |     - Optionally, mints candidate permission tokens
 -- |
 -- | For details, see `initSidechainTokens` and `paySidechainTokens`.
-initSidechain ∷
-  ∀ r.
-  InitSidechainParams →
-  Int →
-  Run (APP + r)
-    { transactionId ∷ TransactionHash
-    , initTransactionIds ∷ Array TransactionHash
-    , sidechainParams ∷ SidechainParams
-    , sidechainAddresses ∷ SidechainAddresses
-    }
+initSidechain
+  ∷ ∀ r
+  . InitSidechainParams
+  → Int
+  → Run (APP + r)
+      { transactionId ∷ TransactionHash
+      , initTransactionIds ∷ Array TransactionHash
+      , sidechainParams ∷ SidechainParams
+      , sidechainAddresses ∷ SidechainAddresses
+      }
 initSidechain (InitSidechainParams isp) version = do
   let sidechainParams = toSidechainParams isp
 
@@ -639,27 +641,27 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainAddresses
     }
 
-insertScriptsIdempotent ∷
-  ∀ r.
-  ( SidechainParams →
-    Int →
-    Run (APP + r)
-      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple ScriptId Validator)
-      }
-  ) →
-  SidechainParams →
-  ATMSKinds →
-  Int →
-  Run (APP + r)
-    (Array TransactionHash)
+insertScriptsIdempotent
+  ∷ ∀ r
+  . ( SidechainParams
+      → Int
+      → Run (APP + r)
+          { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+          , versionedValidators ∷ List (Tuple ScriptId Validator)
+          }
+    )
+  → SidechainParams
+  → ATMSKinds
+  → Int
+  → Run (APP + r)
+      (Array TransactionHash)
 insertScriptsIdempotent f sidechainParams initATMSKind version = do
   scripts ← f sidechainParams version
 
-  toInsert ∷
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
-    } ← getScriptsToInsert sidechainParams initATMSKind scripts version
+  toInsert
+    ∷ { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+      } ← getScriptsToInsert sidechainParams initATMSKind scripts version
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
@@ -676,18 +678,18 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
 
   pure $ policiesTxIds <> validatorsTxIds
 
-getScriptsToInsert ∷
-  ∀ r.
-  SidechainParams →
-  ATMSKinds →
-  { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-  , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
-  } →
-  Int →
-  Run (APP + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+getScriptsToInsert
+  ∷ ∀ r
+  . SidechainParams
+  → ATMSKinds
+  → { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
+  → Int
+  → Run (APP + r)
+      { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+      }
 getScriptsToInsert
   sidechainParams
   initATMSKind
@@ -713,13 +715,13 @@ getScriptsToInsert
 -- | Perform a token initialization action, if the corresponding
 -- | init token exists. If it doesn't, throw an `InvalidInitState`
 -- | error.
-init ∷
-  ∀ r.
-  (String → SidechainParams → Run (APP + r) TransactionHash) →
-  String →
-  TokenName →
-  SidechainParams →
-  Run (APP + r) TransactionHash
+init
+  ∷ ∀ r
+  . (String → SidechainParams → Run (APP + r) TransactionHash)
+  → String
+  → TokenName
+  → SidechainParams
+  → Run (APP + r) TransactionHash
 init f op nm sp = do
   tokenExists ← map (Plutus.Map.member nm <<< _.initTokenStatusData)
     (getInitTokenStatus sp)
@@ -734,21 +736,21 @@ init f op nm sp = do
   f op sp
 
 -- | Idempotently initialise the committee selection mechanism, consuming the committee oracle init token
-initCommitteeSelection ∷
-  ∀ r.
-  SidechainParams →
-  Maybe CandidatePermissionTokenMintInfo →
-  BigInt →
-  PlutusData →
-  ATMSKinds →
-  Int →
-  Run (APP + r)
-    ( Maybe
-        { initTransactionIds ∷ Array TransactionHash
-        , sidechainParams ∷ SidechainParams
-        , sidechainAddresses ∷ SidechainAddresses
-        }
-    )
+initCommitteeSelection
+  ∷ ∀ r
+  . SidechainParams
+  → Maybe CandidatePermissionTokenMintInfo
+  → BigInt
+  → PlutusData
+  → ATMSKinds
+  → Int
+  → Run (APP + r)
+      ( Maybe
+          { initTransactionIds ∷ Array TransactionHash
+          , sidechainParams ∷ SidechainParams
+          , sidechainAddresses ∷ SidechainAddresses
+          }
+      )
 initCommitteeSelection
   sidechainParams
   initCandidatePermissionTokenMintInfo
@@ -791,12 +793,20 @@ initCommitteeSelection
       )
   else pure Nothing
 
+initCheckpoint
+  ∷ InitSidechainParams
+  → Contract TransactionHash
+initCheckpoint =
+  balanceSignAndSubmit "Checkpoint init"
+    <=< initCheckpointLookupsAndConstraints
+    <<< unwrap
+
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
-initTokenStatus ∷
-  CurrencySymbol →
-  Value →
-  { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+initTokenStatus
+  ∷ CurrencySymbol
+  → Value
+  → { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
 initTokenStatus sym =
   Value.getValue
     >>> Plutus.Map.lookup sym
@@ -804,11 +814,11 @@ initTokenStatus sym =
     >>> { initTokenStatusData: _ }
 
 -- | Get the init token data for the own wallet. Used in InitTokenStatus endpoint.
-getInitTokenStatus ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+getInitTokenStatus
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+      { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
 getInitTokenStatus scParams = do
   { currencySymbol } ← initTokenCurrencyInfo scParams
 

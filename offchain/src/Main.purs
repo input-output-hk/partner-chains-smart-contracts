@@ -37,6 +37,7 @@ import TrustlessSidechain.EndpointResp
       , GetAddrsResp
       , CommitteeHashResp
       , SaveRootResp
+      , InitCheckpointResp
       , InitResp
       , InitTokensMintResp
       , InitCommitteeSelectionResp
@@ -76,6 +77,7 @@ import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( getInitTokenStatus
   , initCommitteeSelection
+  , initCheckpoint
   , initSidechain
   , initTokensMint
   , toSidechainParams
@@ -102,6 +104,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeCandidateDereg
       , CommitteeHash
       , SaveRoot
+      , InitCheckpoint
       , Init
       , InitCommitteeSelection
       , InitTokensMint
@@ -199,8 +202,8 @@ getOptions = do
   execParser (options config)
 
 -- | Executes an transaction endpoint and returns a response object
-runTxEndpoint ∷
-  ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
+runTxEndpoint
+  ∷ ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
 runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
@@ -373,7 +376,37 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> SaveRootResp
+      InitCheckpoint
+        { committeePubKeysInput
+        , initSidechainEpoch
+        , initCandidatePermissionTokenMintInfo
+        , genesisHash
+        } → do
+        rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+          committeePubKeysInput
 
+        committeePubKeys ← liftContractE $
+          CommitteeATMSSchemes.aggregateATMSPublicKeys
+            { atmsKind
+            , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+            }
+        let
+          sc = unwrap scParams
+          isc =
+            { initChainId: sc.chainId
+            , initGenesisHash: genesisHash
+            , initUtxo: sc.genesisUtxo
+            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+            , initAggregatedCommittee: committeePubKeys
+            , initCandidatePermissionTokenMintInfo
+            , initSidechainEpoch
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
+            , initGovernanceAuthority: sc.governanceAuthority
+            }
+
+        txId ← initCheckpoint (wrap isc)
+        pure $ InitCheckpointResp { transactionId: unwrap txId }
       Init
         { committeePubKeysInput
         , initSidechainEpoch
@@ -558,6 +591,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       -- TODO: sanitize version arguments here, making sure they are not negative
       -- (or perhaps come from a known range of versions?).  See Issue #9
+
+      -- TODO WG Should I do this todo as a part of the ticket?
       InsertVersion
         { version
         } → do

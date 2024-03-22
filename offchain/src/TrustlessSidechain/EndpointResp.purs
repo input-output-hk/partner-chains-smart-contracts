@@ -105,6 +105,7 @@ data EndpointResp
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
+  | InitCheckpointResp { transactionId ∷ ByteArray }
   | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -301,6 +302,12 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                       sidechainAddresses.mintingPolicies
                   )
               )
+          ]
+    InitCheckpointResp { transactionId } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitCheckpoint"
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
           ]
     InitResp
       { transactionId
