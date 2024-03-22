@@ -382,14 +382,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , initCandidatePermissionTokenMintInfo
         , genesisHash
         } → do
-        rawCommitteePubKeys ← liftEffect $ ConfigFile.getCommittee
+        rawCommitteePubKeys ← ConfigFile.getCommittee
           committeePubKeysInput
 
-        committeePubKeys ← liftContractE $
-          CommitteeATMSSchemes.aggregateATMSPublicKeys
-            { atmsKind
-            , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
-            }
+        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
+          { atmsKind
+          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          }
         let
           sc = unwrap scParams
           isc =
