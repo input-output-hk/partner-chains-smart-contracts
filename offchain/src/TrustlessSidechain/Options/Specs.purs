@@ -108,6 +108,7 @@ import TrustlessSidechain.Options.Types
       , Init
       , InitTokensMint
       , InitCommitteeSelection
+      , InitCheckpoint
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -167,6 +168,10 @@ optSpec maybeConfig =
         "init-committee-selection"
         ( info (withCommonOpts maybeConfig initCommitteeSelectionSpec)
             (progDesc "Initialise commitee selection")
+        )
+    , command "init-checkpoint"
+        ( info (withCommonOpts maybeConfig initCheckpointSpec)
+            (progDesc "Initialise checkpoint")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1027,7 +1032,7 @@ initSpec = ado
       , version
       }
 
---| Parser for the `init-tokens-mint` endpoint.
+-- | Parser for the `init-tokens-mint` endpoint.
 initTokensMintSpec ∷ Parser TxEndpoint
 initTokensMintSpec = ado
   version ← parseVersion
@@ -1042,7 +1047,6 @@ initCommitteeSelectionSpec = ado
     "committee-pub-key-file-path"
     "Filepath of a JSON file containing public keys of the new committee\
     \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
-
   initSidechainEpoch ← parseSidechainEpoch
   initCandidatePermissionTokenMintInfo ←
     optional initCandidatePermissionTokenMintHelper
@@ -1050,6 +1054,31 @@ initCommitteeSelectionSpec = ado
   version ← parseVersion
   in
     InitCommitteeSelection
+      { committeePubKeysInput
+      , initSidechainEpoch
+      , initCandidatePermissionTokenMintInfo
+      , genesisHash
+      , version
+      }
+
+-- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint
+-- candidate permission tokens), and parsers for the initial committee
+initCheckpointSpec ∷ Parser TxEndpoint
+initCheckpointSpec = ado
+  committeePubKeysInput ← parseCommittee
+    "committee-pub-key"
+    "Public key for a committee member at sidechain initialisation"
+    "committee-pub-key-file-path"
+    "Filepath of a JSON file containing public keys of the new committee\
+    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+
+  initSidechainEpoch ← parseSidechainEpoch
+  initCandidatePermissionTokenMintInfo ←
+    optional initCandidatePermissionTokenMintHelper
+  genesisHash ← parseGenesisHash
+  version ← parseVersion
+  in
+    InitCheckpoint
       { committeePubKeysInput
       , initSidechainEpoch
       , initCandidatePermissionTokenMintInfo

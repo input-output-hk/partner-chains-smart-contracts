@@ -37,6 +37,7 @@ import TrustlessSidechain.EndpointResp
       , GetAddrsResp
       , CommitteeHashResp
       , SaveRootResp
+      , InitCheckpointResp
       , InitResp
       , InitTokensMintResp
       , InitCommitteeSelectionResp
@@ -76,6 +77,7 @@ import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( getInitTokenStatus
   , initCommitteeSelection
+  , initCheckpoint
   , initSidechain
   , initTokensMint
   , toSidechainParams
@@ -85,11 +87,7 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options
-      ( TxOptions
-      , UtilsOptions
-      , CLIVersion
-      )
+  ( Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams
   , TxEndpoint
       ( BurnActV1
@@ -102,6 +100,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeCandidateDereg
       , CommitteeHash
       , SaveRoot
+      , InitCheckpoint
       , Init
       , InitCommitteeSelection
       , InitTokensMint
@@ -373,7 +372,43 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> SaveRootResp
+      InitCheckpoint
+        { committeePubKeysInput
+        , initSidechainEpoch
+        , initCandidatePermissionTokenMintInfo
+        , genesisHash
+        , version
+        } → do
+        rawCommitteePubKeys ← ConfigFile.getCommittee
+          committeePubKeysInput
 
+        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
+          { atmsKind
+          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          }
+        let
+          sc = unwrap scParams
+          isc =
+            { initChainId: sc.chainId
+            , initGenesisHash: genesisHash
+            , initUtxo: sc.genesisUtxo
+            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+            , initAggregatedCommittee: committeePubKeys
+            , initCandidatePermissionTokenMintInfo
+            , initSidechainEpoch
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
+            , initGovernanceAuthority: sc.governanceAuthority
+            }
+
+        resp ← initCheckpoint (toSidechainParams isc)
+          isc.initCandidatePermissionTokenMintInfo
+          isc.initGenesisHash
+          isc.initATMSKind
+          version
+        pure $ InitCheckpointResp $ map
+          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
+          resp
       Init
         { committeePubKeysInput
         , initSidechainEpoch
