@@ -24,7 +24,7 @@ module TrustlessSidechain.InitSidechain
   , initCheckpoint
   , initSidechain
   , initSpendGenesisUtxo
-  , initTokensMint
+  , initTokenStatus
   , insertScriptsIdempotent
   , initCommitteeSelection
   , toSidechainParams
@@ -79,7 +79,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Log (logDebug', logInfo')
+import TrustlessSidechain.Effects.Log (LOG, logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -796,6 +796,11 @@ initCommitteeSelection
 initCheckpoint
   ∷ InitSidechainParams
   → Contract TransactionHash
+
+initCheckpoint
+  ∷ ∀ r
+  . InitSidechainParams
+  → Run (EXCEPT OffchainError + TRANSACTION + LOG + WALLET + r) TransactionHash
 initCheckpoint =
   balanceSignAndSubmit "Checkpoint init"
     <=< initCheckpointLookupsAndConstraints
