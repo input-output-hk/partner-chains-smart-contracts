@@ -1,5 +1,6 @@
 module TrustlessSidechain.Versioning.V1
   ( getCommitteeSelectionPoliciesAndValidators
+  , getCheckpointPoliciesAndValidators
   , getVersionedPoliciesAndValidators
   ) where
 
@@ -50,15 +51,15 @@ import TrustlessSidechain.Versioning.Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-getVersionedPoliciesAndValidators ∷
-  ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+getVersionedPoliciesAndValidators
+  ∷ ∀ r
+  . { sidechainParams ∷ SidechainParams
+    , atmsKind ∷ ATMSKinds
     }
+  → Run (EXCEPT OffchainError + WALLET + r)
+      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
@@ -130,14 +131,14 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   pure $ { versionedPolicies, versionedValidators }
 
-getCommitteeSelectionPoliciesAndValidators ∷
-  ∀ r.
-  ATMSKinds →
-  SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
-    }
+getCommitteeSelectionPoliciesAndValidators
+  ∷ ∀ r
+  . ATMSKinds
+  → SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + r)
+      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      }
 getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
     -- Getting policies to version
@@ -181,3 +182,29 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
         ]
 
     pure $ { versionedPolicies, versionedValidators }
+
+getCheckpointPoliciesAndValidators
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + WALLET + r)
+      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      }
+getCheckpointPoliciesAndValidators sp = do
+  checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
+
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  checkpointValidator ← do
+    let
+      checkpointParam = CheckpointParameter
+        { sidechainParams: sp
+        , checkpointAssetClass
+        }
+    Checkpoint.checkpointValidator checkpointParam versionOracleConfig
+
+  let
+    versionedValidators = List.fromFoldable
+      [ CheckpointValidator /\ checkpointValidator
+      ]
+
+  pure $ { versionedPolicies: mempty, versionedValidators }
