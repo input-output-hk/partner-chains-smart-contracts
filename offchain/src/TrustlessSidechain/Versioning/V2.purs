@@ -1,5 +1,6 @@
 module TrustlessSidechain.Versioning.V2
   ( getCommitteeSelectionPoliciesAndValidators
+  , getCheckpointPoliciesAndValidators
   , getVersionedPoliciesAndValidators
   ) where
 
@@ -18,19 +19,19 @@ import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
 -- | Validators to store in the versioning system.
-getVersionedValidators ∷
-  SidechainParams →
-  List (Tuple Types.ScriptId Validator)
+getVersionedValidators
+  ∷ SidechainParams
+  → List (Tuple Types.ScriptId Validator)
 getVersionedValidators _sp = do
   -- Getting validators to version
   -----------------------------------
   List.fromFoldable []
 
 -- | Minting policies to store in the versioning system.
-getVersionedPolicies ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId MintingPolicy))
+getVersionedPolicies
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId MintingPolicy))
 getVersionedPolicies sp = do
   -- Getting policies to version
   -----------------------------------
@@ -42,26 +43,40 @@ getVersionedPolicies sp = do
     ]
 
 -- | Validators and policies to store in the versioning system.
-getVersionedPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
-    }
+getVersionedPoliciesAndValidators
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + r)
+      { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
+      , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+      }
 getVersionedPoliciesAndValidators sp = do
   versionedPolicies ← getVersionedPolicies sp
   let versionedValidators = getVersionedValidators sp
   pure $ { versionedPolicies, versionedValidators }
 
-getCommitteeSelectionPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
-    }
+getCommitteeSelectionPoliciesAndValidators
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + r)
+      { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
+      , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+      }
 getCommitteeSelectionPoliciesAndValidators _ =
+  let
+    versionedPolicies = List.fromFoldable []
+    versionedValidators = List.fromFoldable []
+  in
+    pure $ { versionedPolicies, versionedValidators }
+
+getCheckpointPoliciesAndValidators
+  ∷ ∀ r
+  . SidechainParams
+  → Run (EXCEPT OffchainError + r)
+      { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
+      , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+      }
+getCheckpointPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []

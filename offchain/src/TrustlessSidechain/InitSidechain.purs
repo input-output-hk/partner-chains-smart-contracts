@@ -20,8 +20,10 @@ module TrustlessSidechain.InitSidechain
   , getInitTokenStatus
   , getScriptsToInsert
   , init
+  , initCheckpoint
   , initSidechain
   , initSpendGenesisUtxo
+  , initTokenStatus
   , initTokensMint
   , insertScriptsIdempotent
   , initCommitteeSelection
@@ -65,8 +67,15 @@ import TrustlessSidechain.Checkpoint
   ( CheckpointDatum(CheckpointDatum)
   , checkpointNftTn
   )
-import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
+import TrustlessSidechain.Checkpoint.Utils
+  ( burnOneCheckpointInitToken
+  , checkpointAssetClass
+  , checkpointCurrencyInfo
+  , checkpointInitTokenName
+  , checkpointValidator
+  , mintOneCheckpointInitToken
+  ) as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
@@ -105,12 +114,11 @@ import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
+  , getCheckpointPoliciesAndValidators
   , getCommitteeSelectionPoliciesAndValidators
   )
 import TrustlessSidechain.Versioning as Versioning
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
-  )
+import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Utils
@@ -195,18 +203,16 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
 -- | checkpoint.
 initCheckpointLookupsAndConstraints ∷
   ∀ (r ∷ Row Type) r'.
-  InitTokensParams r →
+  ByteArray →
+  SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r')
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initCheckpointLookupsAndConstraints inp = do
+initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
 
   -- Get checkpoint / associated values
   -----------------------------------
-  let
-    sidechainParams = toSidechainParams inp
-
   -- Build lookups and constraints to burn checkpoint init token
   burnCheckpointInitToken ←
     Checkpoint.burnOneCheckpointInitToken sidechainParams
@@ -235,7 +241,7 @@ initCheckpointLookupsAndConstraints inp = do
     checkpointDatum = Datum
       $ PlutusData.toData
       $ CheckpointDatum
-          { blockHash: inp.initGenesisHash
+          { blockHash: initGenesisHash
           , blockNumber: BigInt.fromInt 0
           }
 
@@ -603,8 +609,9 @@ initSidechain (InitSidechainParams isp) version = do
     { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
-  checkpointInitTxId ← initCheckpointLookupsAndConstraints isp
-    >>= balanceSignAndSubmit "Checkpoint init"
+  checkpointInitTxId ←
+    initCheckpointLookupsAndConstraints isp.initGenesisHash sidechainParams
+      >>= balanceSignAndSubmit "Checkpoint init"
   dsInitTxId ← initDistributedSetLookupsAndConstraints sidechainParams
     >>= balanceSignAndSubmit "Distributed set init"
   permissionTokensInitTxId ←
@@ -785,6 +792,61 @@ initCommitteeSelection
     pure
       ( Just
           { initTransactionIds: committeeSelectionInitTxId : scriptsInitTxId
+          , sidechainParams
+          , sidechainAddresses
+          }
+      )
+  else pure Nothing
+
+-- | Idempotently initialise the checkpointing mechanism, consuming the minted
+-- | checkpoint init token
+initCheckpoint ∷
+  ∀ r.
+  SidechainParams →
+  Maybe CandidatePermissionTokenMintInfo →
+  ByteArray →
+  ATMSKinds →
+  Int →
+  Run (APP + r)
+    ( Maybe
+        { initTransactionIds ∷ Array TransactionHash
+        , sidechainParams ∷ SidechainParams
+        , sidechainAddresses ∷ SidechainAddresses
+        }
+    )
+initCheckpoint
+  sidechainParams
+  initCandidatePermissionTokenMintInfo
+  initGenesisHash
+  initATMSKind
+  version = do
+  let
+    run = init
+      ( \op → balanceSignAndSubmit op
+          <=< initCheckpointLookupsAndConstraints initGenesisHash
+      )
+      "Checkpoint init"
+      Checkpoint.checkpointInitTokenName
+
+  scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
+    sidechainParams
+    initATMSKind
+    version
+
+  if not $ null scriptsInitTxId then do
+    sidechainAddresses ←
+      GetSidechainAddresses.getSidechainAddresses $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: initATMSKind
+          , usePermissionToken: isJust
+              initCandidatePermissionTokenMintInfo
+          , version
+          }
+    checkpointInitTxId ← run sidechainParams
+    pure
+      ( Just
+          { initTransactionIds: checkpointInitTxId : scriptsInitTxId
           , sidechainParams
           , sidechainAddresses
           }

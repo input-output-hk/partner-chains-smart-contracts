@@ -199,6 +199,14 @@ data TxEndpoint
       SidechainAddressesExtra
   | InitTokensMint
       { version ∷ Int }
+  | InitCheckpoint
+      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      , initSidechainEpoch ∷ BigInt
+      , initCandidatePermissionTokenMintInfo ∷
+          Maybe CandidatePermissionTokenMintInit
+      , genesisHash ∷ ByteArray
+      , version ∷ Int
+      }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt
