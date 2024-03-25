@@ -546,7 +546,7 @@ getVersionedCurrencySymbolUnsafe ::
   Unsafe.ScriptContext ->
   CurrencySymbol
 getVersionedCurrencySymbolUnsafe voConfig vo sc =
-  CurrencySymbol (getVersionedScriptHashRaw voConfig vo sc)
+  CurrencySymbol (getVersionedScriptHashUnsafe voConfig vo sc)
 
 -- | Searches script context for a reference input containing specified script
 -- as a reference input.  Said reference input must come from
@@ -584,13 +584,13 @@ getVersionedScriptHash
       valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
       ]
 
-{-# INLINEABLE getVersionedScriptHashRaw #-}
-getVersionedScriptHashRaw ::
+{-# INLINEABLE getVersionedScriptHashUnsafe #-}
+getVersionedScriptHashUnsafe ::
   VersionOracleConfig ->
   VersionOracle ->
   Unsafe.ScriptContext ->
   BuiltinByteString
-getVersionedScriptHashRaw
+getVersionedScriptHashUnsafe
   (VersionOracleConfig {..})
   versionOracle
   sc =

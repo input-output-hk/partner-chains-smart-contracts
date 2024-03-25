@@ -79,7 +79,7 @@ makeUnsafeGetters ''V2.TxInfo
 makeUnsafeGetters ''V2.TxInInfo
 makeUnsafeGetters ''V2.TxOut
 
--- Raw versions of plutus-ledger-api functions
+-- Unsafe versions of plutus-ledger-api functions
 
 -- | The 'CurrencySymbol' of the current validator script.
 --   Adapted from Plutus.V2.Ledger.Contexts.ownCurrencySymbol

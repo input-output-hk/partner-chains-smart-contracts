@@ -8,8 +8,8 @@ module TrustlessSidechain.Utils (
   mkUntypedValidator,
   mkUntypedMintingPolicy,
   scriptToPlutusScript,
-  oneTokenMintedRaw,
-  oneTokenBurnedRaw,
+  oneTokenMintedUnsafe,
+  oneTokenBurnedUnsafe,
 ) where
 
 import TrustlessSidechain.PlutusPrelude
@@ -52,10 +52,10 @@ oneTokenMinted :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenMinted txInfoMint cs tn =
   valueOf txInfoMint cs tn == 1
 
-{-# INLINEABLE oneTokenMintedRaw #-}
-oneTokenMintedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
-oneTokenMintedRaw txInfoRaw cs tn =
-  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfoRaw) cs tn == 1
+{-# INLINEABLE oneTokenMintedUnsafe #-}
+oneTokenMintedUnsafe :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenMintedUnsafe txInfo cs tn =
+  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) cs tn == 1
 
 -- | Check that exactly one specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
@@ -67,10 +67,10 @@ oneTokenBurned :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurned txInfoMint cs tn =
   valueOf txInfoMint cs tn == -1
 
-{-# INLINEABLE oneTokenBurnedRaw #-}
-oneTokenBurnedRaw :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
-oneTokenBurnedRaw txInfoRaw cs tn =
-  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfoRaw) cs tn == -1
+{-# INLINEABLE oneTokenBurnedUnsafe #-}
+oneTokenBurnedUnsafe :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
+oneTokenBurnedUnsafe txInfo cs tn =
+  valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) cs tn == -1
 
 -- | Convert a validator to untyped
 -- The output will accept BuiltinData instead of concrete types
