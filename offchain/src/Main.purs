@@ -12,7 +12,6 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Data.List.Types as Data.List.Types
-import Debug (trace)
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
@@ -591,8 +590,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       -- TODO: sanitize version arguments here, making sure they are not negative
       -- (or perhaps come from a known range of versions?).  See Issue #9
-
-      -- TODO WG Should I do this todo as a part of the ticket?
       InsertVersion
         { version
         } → do

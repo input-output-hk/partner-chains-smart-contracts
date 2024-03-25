@@ -207,7 +207,6 @@ data TxEndpoint
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
       , genesisHash ∷ ByteArray
-      , version ∷ Int
       }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)

@@ -794,17 +794,23 @@ initCommitteeSelection
   else pure Nothing
 
 initCheckpoint
-  ∷ InitSidechainParams
-  → Contract TransactionHash
-
-initCheckpoint
   ∷ ∀ r
   . InitSidechainParams
   → Run (EXCEPT OffchainError + TRANSACTION + LOG + WALLET + r) TransactionHash
-initCheckpoint =
+initCheckpoint (InitSidechainParams isp) = do
+  { currencySymbol } ← initTokenCurrencyInfo (toSidechainParams isp)
+  unlessM
+    ( map
+        ( not <<< null <<< _.initTokenStatusData <<< initTokenStatus
+            currencySymbol
+        )
+        getOwnUTxOsTotalValue
+    )
+    ( throw $ InvalidInitState
+        "Init token does not exist when attempting to init checkpoint."
+    )
   balanceSignAndSubmit "Checkpoint init"
-    <=< initCheckpointLookupsAndConstraints
-    <<< unwrap
+    =<< initCheckpointLookupsAndConstraints isp
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
