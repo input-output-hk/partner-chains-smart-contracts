@@ -39,7 +39,7 @@ time of adoption. These tokens will have the same currency symbol, but each of
 them will have a unique token name, pointing to their corresponding component,
 to prevent misuse (or intentional abuse).
 
-InitTokens can only be minted when the genesis UTxO is spent (or when a valid
+`InitToken`s can only be minted when the genesis UTxO is spent (or when a valid
 update certificate was submitted). For the components themselves, we will
 require the `InitToken` with a matching token name to be burnt.
 
@@ -49,6 +49,8 @@ activation action into granular steps. This could have the added benefit of not
 committing too much to a sidechain in the early phase, by only
 submitting/initialising the bare minimum features at adoption, and being able
 to activate features one-by-one.
+
+TODO Do you think there will be any significant impact in the fees for initialising vs doing it in one go?
 
 ## Implementation
 The implementation will include the addition of `InitToken`, and modification
@@ -71,7 +73,7 @@ data InitTokenMode
     | Update UpdateCertificate
     | Use
 ```
-The policy verification differs based on the InitTokenMode:
+The policy verification differs based on the `InitTokenMode`:
 
 `Genesis`:
 - mint amount must be positive
@@ -84,6 +86,8 @@ The policy verification differs based on the InitTokenMode:
 `Use`:
 - mint amount is negative
 
+TODO Why did we go with no verifcation on the on-chain?
+TODO So it says that we assume that the sidechain initialiser is an honest player. What are the consequences of a non-honest player?
 Note, there are no verifications wrt. the exact amount of the minted tokens, or
 the proper naming of the token names. These are taken care of by the off-chain
 part of our code. However, this is based on the assumption, that the sidechain
