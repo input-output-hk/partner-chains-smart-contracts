@@ -20,8 +20,6 @@ import Contract.Scripts
 import Data.Array as Array
 import Data.Functor (map)
 import Data.List as List
-import Data.Map as Map
-import Data.TraversableWithIndex (traverseWithIndex)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
