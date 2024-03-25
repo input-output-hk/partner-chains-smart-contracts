@@ -12,6 +12,7 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Data.List.Types as Data.List.Types
+import Debug (trace)
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Options.Applicative (execParser)
