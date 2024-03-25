@@ -12,7 +12,7 @@ repository cardano-haskell-packages
 index-state: 2022-09-27T00:00:00Z
 index-state: cardano-haskell-packages 2022-10-25T20:00:00Z
 
-packages: ./.
+packages: ./onchain
 
 tests: true
 benchmarks: true
@@ -35,6 +35,9 @@ constraints:
 
   -- cardano-ledger-core-0.1.0.0 needs
   , cardano-crypto-class <2.0.0.1
+  , cardano-crypto-api ==1.35.4
+  , cardano-crypto-cli ==1.35.4
+  , cardano-crypto-node ==1.35.4
 
   -- cardano-crypto-class-2.0.0.0.1 needs
   , cardano-prelude <0.1.0.1
@@ -74,36 +77,6 @@ source-repository-package
       command-line
       core
 
-source-repository-package
-   type: git
-   location: https://github.com/input-output-hk/cardano-node
-   tag: 1.35.4
-   --sha256: 1j01m2cp2vdcl26zx9xmipr551v3b2rz9kfn9ik8byfwj1z7652r
-   subdir:
-     cardano-api
-     cardano-cli
-     cardano-client-demo
-     cardano-git-rev
-     cardano-node
-     cardano-node-capi
-     cardano-node-chairman
-     cardano-submit-api
-     cardano-testnet
-     cardano-tracer
-     bench/cardano-topology
-     bench/locli
-     bench/tx-generator
-     trace-dispatcher
-     trace-resources
-     trace-forward
-
-source-repository-package
-  type: git
-  location: https://github.com/denisshevchenko/threepenny-gui
-  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
-  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
-
--- Direct dependencies of plutus-apps
 
 source-repository-package
   type: git
@@ -117,43 +90,6 @@ source-repository-package
   tag: 47a1f11825a0f9445e0f98792f79172efef66c00
   --sha256: 0da1vn2l6iyfxcjk58qal1l4755v92zi6yppmjmqvxf1gacyf9px
 
-source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/quickcheck-dynamic
-    tag: c272906361471d684440f76c297e29ab760f6a1e
-    --sha256: 1b9ppgavqad78a2z1zxv7v4jasjz6zz0mxkr0zx0bbcd0i00jajf
-
--- This is needed because we rely on an unreleased feature
--- https://github.com/input-output-hk/cardano-ledger/pull/3111
-source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/cardano-ledger
-    tag: da3e9ae10cf9ef0b805a046c84745f06643583c2
-    --sha256: 1jg1h05gcms119mw7fz798xpj3hr5h426ga934vixmgf88m1jmfx
-    subdir:
-      eras/alonzo/impl
-      eras/alonzo/test-suite
-      eras/babbage/impl
-      eras/babbage/test-suite
-      eras/byron/chain/executable-spec
-      eras/byron/crypto
-      eras/byron/crypto/test
-      eras/byron/ledger/executable-spec
-      eras/byron/ledger/impl
-      eras/byron/ledger/impl/test
-      eras/shelley/impl
-      eras/shelley/test-suite
-      eras/shelley-ma/impl
-      eras/shelley-ma/test-suite
-      libs/cardano-ledger-core
-      libs/cardano-ledger-pretty
-      libs/cardano-protocol-tpraos
-      libs/cardano-data
-      libs/vector-map
-      libs/set-algebra
-      libs/small-steps
-      libs/small-steps-test
-      libs/non-integral
 
 source-repository-package
   type: git
@@ -163,4 +99,4 @@ source-repository-package
 
 -- Configure plutonomy to use the closest plutus version to ours
 -- In the future, we might need to change to +chap
-flags: +plutus-f680ac697
+flags: +CHaP
