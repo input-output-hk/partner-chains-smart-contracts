@@ -17,6 +17,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Effect system over the `Contract` monad from the CTL library, plus a mechanism to intercept and
     re-interpret errors from the `Contract` monad.
     https://github.com/input-output-hk/trustless-sidechain/pull/723
+  * Added CLI versioning and commit hash to sidechain-main-cli with the
+    subcommand `cli-version`
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo
