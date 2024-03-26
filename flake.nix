@@ -16,7 +16,6 @@
 
   inputs = {
     cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
-
     plutip.follows = "cardano-transaction-lib/plutip";
     haskell-nix.url = "github:input-output-hk/haskell.nix/9af167fb4343539ca99465057262f289b44f55da";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
@@ -284,7 +283,7 @@
       };
 
     ctlBundleCliFor = system: let
-      projectName = "trustless-sidechain-cli";
+      name = "trustless-sidechain-cli";
       version = "5.0.0";
       src = ./offchain;
       pkgs = import nixpkgs {
@@ -294,12 +293,13 @@
         ];
       };
       project = buildProject {
-        inherit src pkgs projectName;
+        inherit src pkgs;
+        projectName = name;
         withRuntime = false;
       };
     in
       pkgs.stdenv.mkDerivation rec {
-        inherit projectName src version;
+        inherit name src version;
         buildInputs = [
           project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
         ];
@@ -313,7 +313,7 @@
         '';
         installPhase = ''
           mkdir -p $out
-          tar chf $out/${projectName}-${version}.tar main.js node_modules
+          tar chf $out/${name}-${version}.tar main.js node_modules
         '';
       };
     ociImageFor = system: let
@@ -384,9 +384,53 @@
       // {
         formatCheck = formatCheckFor system;
         upToDatePlutusScriptCheck = upToDatePlutusScriptCheckFor system;
-        trustless-sidechain-ctl = (psProjectFor system).runPlutipTest {
-          testMain = "Test.Main";
-        };
+        trustless-sidechain-ctl = let
+          # This is almost a direct copy of the function from the CTL library
+          # Unfortunately the original did not accept a modified project
+          runPursTest = {
+            project,
+            pkgs ? nixpkgsFor system,
+            testMain ? "Test.Main",
+            name ? "trustless-sidechain-ctl-check",
+            nodeModules ? project.nodeModules,
+            env ? {},
+            buildInputs ? [],
+            ...
+          }:
+            pkgs.runCommand "${name}"
+            (
+              {
+                buildInputs = [project.compiled nodeModules] ++ buildInputs;
+                NODE_PATH = "${nodeModules}/lib/node_modules";
+              }
+              // env
+            )
+            ''
+              cd ${project.compiled}
+              ${pkgs.nodejs}/bin/node --enable-source-maps -e 'require("./output/${testMain}").main()'
+              touch $out
+            '';
+          runPlutipTest = args:
+            runPursTest (
+              args
+              // {
+                buildInputs = let
+                  pkgs = nixpkgsFor system;
+                in
+                  with pkgs;
+                    [
+                      ogmios
+                      plutip-server
+                      kupo
+                    ]
+                    ++ (args.buildInputs or []);
+              }
+            );
+        in
+          runPlutipTest {
+            project = psProjectFor system;
+            testMain = "Test.Main";
+          };
       });
 
     devShells = perSystem (system: rec {
