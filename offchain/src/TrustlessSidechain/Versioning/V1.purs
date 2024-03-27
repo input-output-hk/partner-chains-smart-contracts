@@ -1,5 +1,6 @@
 module TrustlessSidechain.Versioning.V1
-  ( getVersionedPoliciesAndValidators
+  ( getCommitteeSelectionPoliciesAndValidators
+  , getVersionedPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -128,3 +129,55 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       ]
 
   pure $ { versionedPolicies, versionedValidators }
+
+getCommitteeSelectionPoliciesAndValidators ∷
+  ∀ r.
+  ATMSKinds →
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getCommitteeSelectionPoliciesAndValidators atmsKind sp =
+  do
+    -- Getting policies to version
+    -----------------------------------
+    -- some awkwardness that we need the committee hash policy first.
+    { mintingPolicy: committeeOraclePolicy
+    } ←
+      CommitteeOraclePolicy.committeeOracleCurrencyInfo sp
+
+    let
+      committeeCertificateMint =
+        CommitteeCertificateMint
+          { thresholdNumerator: (unwrap sp).thresholdNumerator
+          , thresholdDenominator: (unwrap sp).thresholdDenominator
+          }
+
+    { mintingPolicy: committeeCertificateVerificationMintingPolicy } ←
+      CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
+        { committeeCertificateMint, sidechainParams: sp }
+        atmsKind
+
+    -- TODO WG: are these the right scripts?
+    let
+      versionedPolicies = List.fromFoldable
+        [ CommitteeCertificateVerificationPolicy /\
+            committeeCertificateVerificationMintingPolicy
+        , CommitteeOraclePolicy /\ committeeOraclePolicy
+        ]
+
+    -- Getting validators to version
+    -----------------------------------
+    { validator: committeeHashValidator } ←
+      do
+        getUpdateCommitteeHashValidator sp
+    committeeCandidateValidator ← getCommitteeCandidateValidator sp
+
+    let
+      versionedValidators = List.fromFoldable
+        [ CommitteeHashValidator /\ committeeHashValidator
+        , CommitteeCandidateValidator /\ committeeCandidateValidator
+        ]
+
+    pure $ { versionedPolicies, versionedValidators }

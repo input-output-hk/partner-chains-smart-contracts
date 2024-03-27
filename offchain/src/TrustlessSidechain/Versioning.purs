@@ -1,11 +1,12 @@
 module TrustlessSidechain.Versioning
-  ( initializeVersion
-  , insertVersion
-  , updateVersion
-  , invalidateVersion
+  ( getActualVersionedPoliciesAndValidators
+  , getCommitteeSelectionPoliciesAndValidators
   , getExpectedVersionedPoliciesAndValidators
-  , getActualVersionedPoliciesAndValidators
+  , initializeVersion
+  , insertVersion
+  , invalidateVersion
   , mintVersionInitTokens
+  , updateVersion
   ) where
 
 import Contract.Prelude
@@ -245,6 +246,22 @@ getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version 
     1 → V1.getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     2 → V2.getVersionedPoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
+
+getCommitteeSelectionPoliciesAndValidators ∷
+  ∀ r.
+  ATMSKinds →
+  SidechainParams →
+  Int →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    }
+getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams version =
+  do
+    case version of
+      1 → V1.getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams
+      2 → V2.getCommitteeSelectionPoliciesAndValidators sidechainParams
+      _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.
 --
