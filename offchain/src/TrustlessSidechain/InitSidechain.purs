@@ -628,6 +628,28 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainAddresses
     }
 
+init ∷
+  ∀ r.
+  (String → InitSidechainParams' → Run (APP + r) TransactionHash) →
+  String →
+  InitSidechainParams →
+  Run (APP + r) TransactionHash
+init f op (InitSidechainParams isp) = do
+  { currencySymbol } ← initTokenCurrencyInfo (toSidechainParams isp)
+  unlessM
+    ( map
+        ( not <<< null <<< _.initTokenStatusData <<< initTokenStatus
+            currencySymbol
+        )
+        getOwnUTxOsTotalValue
+    )
+    ( throw
+        $ InvalidInitState
+        $ "Init token does not exist when attempting to run "
+        <> op
+    )
+  f op isp
+
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
 initTokenStatus ∷
