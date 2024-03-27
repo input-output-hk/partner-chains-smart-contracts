@@ -22,6 +22,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Added CLI endpoint `init-tokens-mint` to mint all init tokens by
     spending the genesis UTxO.
   * Added a `MinotaurStakeValidator` script.
+  * Added CLI endpoint `init-committee-selection` to initialise the
+    committee selection mechanism.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo
