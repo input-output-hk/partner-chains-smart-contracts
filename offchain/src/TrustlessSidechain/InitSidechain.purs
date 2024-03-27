@@ -24,6 +24,7 @@ module TrustlessSidechain.InitSidechain
   , initSpendGenesisUtxo
   , initTokenStatus
   , initTokensMint
+  , insertScriptsIdempotent
   , toSidechainParams
   ) where
 
@@ -49,6 +50,7 @@ import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List, filter)
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
@@ -96,6 +98,7 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
 import TrustlessSidechain.Versioning as Versioning
@@ -104,6 +107,7 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
+import TrustlessSidechain.Versioning.Utils as Utils
 import Type.Row (type (+))
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
@@ -622,6 +626,45 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainParams
     , sidechainAddresses
     }
+
+insertScriptsIdempotent ∷
+  ∀ r.
+  ( { sidechainParams ∷ SidechainParams
+    , atmsKind ∷ ATMSKinds
+    } →
+    Run (APP + r)
+      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      }
+  ) →
+  InitSidechainParams →
+  Int →
+  Run (APP + r)
+    (Array TransactionHash)
+insertScriptsIdempotent f isp version = do
+  let sidechainParams = toSidechainParams $ unwrap isp
+
+  scripts ← f { atmsKind: (unwrap isp).initATMSKind, sidechainParams }
+
+  toInsert ∷
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    } ← getScriptsToInsert isp scripts version
+
+  validatorsTxIds ←
+    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams 1 >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned validators"
+      )
+      $ List.toUnfoldable (toInsert.versionedValidators)
+  policiesTxIds ←
+    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
+      )
+      $ List.toUnfoldable (toInsert.versionedPolicies)
+
+  pure $ policiesTxIds <> validatorsTxIds
 
 getScriptsToInsert ∷
   ∀ r.
