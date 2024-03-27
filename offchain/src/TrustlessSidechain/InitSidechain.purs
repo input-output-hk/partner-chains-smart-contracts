@@ -14,29 +14,28 @@
 -- |          token for the committee hash (assuming you have it in your wallet)
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
-  ( initSidechain
-  , initSpendGenesisUtxo
-  , initTokensMint
+  ( InitSidechainParams'
   , InitSidechainParams(InitSidechainParams)
-  , InitSidechainParams'
   , InitTokensParams
-  , toSidechainParams
-  , initTokenStatus
   , getInitTokenStatus
+  , getScriptsToInsert
+  , init
+  , initSidechain
+  , initSpendGenesisUtxo
+  , initTokenStatus
+  , initTokensMint
+  , toSidechainParams
   ) where
 
 import Contract.Prelude hiding (note)
 
 import Contract.AssocMap as Plutus.Map
-import Contract.PlutusData
-  ( Datum(Datum)
-  , PlutusData
-  )
+import Contract.PlutusData (Datum(Datum), PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (validatorHash)
+import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -49,6 +48,7 @@ import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.List (List, filter)
 import Data.Map as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
@@ -64,9 +64,7 @@ import TrustlessSidechain.Checkpoint
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
-  )
+import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -82,9 +80,7 @@ import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
-import TrustlessSidechain.Error
-  ( OffchainError(ConversionError, NoGenesisUTxO)
-  )
+import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
@@ -101,13 +97,12 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
+import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( FUELMintingPolicy
-      , DsKeyPolicy
-      )
+  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
   )
+import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import Type.Row (type (+))
 
@@ -626,6 +621,39 @@ initSidechain (InitSidechainParams isp) version = do
         ]
     , sidechainParams
     , sidechainAddresses
+    }
+
+getScriptsToInsert ∷
+  ∀ r.
+  InitSidechainParams →
+  { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+  , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+  } →
+  Int →
+  Run (APP + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    }
+getScriptsToInsert
+  isp
+  toFilterScripts
+  version = do
+  let sidechainParams = toSidechainParams $ unwrap isp
+
+  comparisonScripts ←
+    getActualVersionedPoliciesAndValidators
+      { atmsKind: (unwrap isp).initATMSKind, sidechainParams }
+      version
+
+  let
+    filterScripts ∷ ∀ a. Eq a ⇒ List a → List a → List a
+    filterScripts sublist list = filter (not <<< flip elem list) sublist
+
+  pure
+    { versionedPolicies: filterScripts toFilterScripts.versionedPolicies
+        comparisonScripts.versionedPolicies
+    , versionedValidators: filterScripts toFilterScripts.versionedValidators
+        comparisonScripts.versionedValidators
     }
 
 init ∷
