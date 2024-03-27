@@ -60,6 +60,8 @@ data OffchainError
   -- | Represents a contract error that can't be interpreted.
   -- | To be renamed to `ContractError` or similar later
   | UnknownContractError String
+  -- | An error for when required state has not been set during an init function
+  | InvalidInitState String
 
   -- Below are the impossible errors, i.e. things that should never happen, but
   -- CTL forces us to handle these cases anyway.

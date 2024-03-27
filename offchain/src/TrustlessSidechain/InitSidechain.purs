@@ -14,29 +14,29 @@
 -- |          token for the committee hash (assuming you have it in your wallet)
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
-  ( initSidechain
+  ( InitSidechainParams'
+  , InitSidechainParams(InitSidechainParams)
+  , InitTokensParams
+  , getInitTokenStatus
+  , getScriptsToInsert
+  , init
+  , initSidechain
   , initSpendGenesisUtxo
   , initTokensMint
-  , InitSidechainParams(InitSidechainParams)
-  , InitSidechainParams'
-  , InitTokensParams
+  , insertScriptsIdempotent
+  , initCommitteeSelection
   , toSidechainParams
-  , initTokenStatus
-  , getInitTokenStatus
   ) where
 
 import Contract.Prelude hiding (note)
 
 import Contract.AssocMap as Plutus.Map
-import Contract.PlutusData
-  ( Datum(Datum)
-  , PlutusData
-  )
+import Contract.PlutusData (Datum(Datum), PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (validatorHash)
+import Contract.Scripts (MintingPolicy, Validator, validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
@@ -47,8 +47,11 @@ import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
+import Data.Array ((:))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
+import Data.List (List, filter)
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
@@ -64,9 +67,7 @@ import TrustlessSidechain.Checkpoint
   )
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
-  )
+import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
@@ -83,7 +84,7 @@ import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
 import TrustlessSidechain.Error
-  ( OffchainError(ConversionError, NoGenesisUTxO)
+  ( OffchainError(InvalidInitState, NoGenesisUTxO, ConversionError)
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
@@ -100,15 +101,19 @@ import TrustlessSidechain.UpdateCommitteeHash
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
+import TrustlessSidechain.Versioning
+  ( getActualVersionedPoliciesAndValidators
+  , getCommitteeSelectionPoliciesAndValidators
+  )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( FUELMintingPolicy
-      , DsKeyPolicy
-      )
+  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
   )
+import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
+import TrustlessSidechain.Versioning.Utils as Utils
 import Type.Row (type (+))
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
@@ -257,72 +262,75 @@ initCheckpointLookupsAndConstraints inp = do
 -- | validator script for the update committee hash.
 initCommitteeHashLookupsAndConstraints ∷
   ∀ r.
-  InitSidechainParams' →
+  BigInt →
+  PlutusData →
+  SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initCommitteeHashLookupsAndConstraints isp = do
-  -- Sidechain parameters
-  -----------------------------------
-  let sidechainParams = toSidechainParams isp
+initCommitteeHashLookupsAndConstraints
+  initSidechainEpoch
+  initAggregatedCommittee
+  sidechainParams =
+  do
 
-  -- Build lookups and constraints to burn committee oracle init token
-  burnCommitteeOracleInitToken ←
-    CommitteeOraclePolicy.burnOneCommitteeOracleInitToken sidechainParams
+    -- Build lookups and constraints to burn committee oracle init token
+    burnCommitteeOracleInitToken ←
+      CommitteeOraclePolicy.burnOneCommitteeOracleInitToken sidechainParams
 
-  -- Build lookups and constraints to mint committee oracle NFT
-  -----------------------------------
-  committeeNft ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
+    -- Build lookups and constraints to mint committee oracle NFT
+    -----------------------------------
+    committeeNft ←
+      CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
 
-  let
-    committeeNftValue =
-      Value.singleton
-        committeeNft.currencySymbol
-        CommitteeOraclePolicy.committeeOracleTn
-        one
+    let
+      committeeNftValue =
+        Value.singleton
+          committeeNft.currencySymbol
+          CommitteeOraclePolicy.committeeOracleTn
+          one
 
-    mintCommitteeNft =
-      { lookups: Lookups.mintingPolicy committeeNft.mintingPolicy
-      , constraints: Constraints.mustMintValue committeeNftValue
-      }
+      mintCommitteeNft =
+        { lookups: Lookups.mintingPolicy committeeNft.mintingPolicy
+        , constraints: Constraints.mustMintValue committeeNftValue
+        }
 
-  -- Setting up the update committee hash validator
-  -----------------------------------
-  let
-    aggregatedKeys = isp.initAggregatedCommittee
-    committeeHashDatum = Datum
-      $ PlutusData.toData
-      $ UpdateCommitteeDatum
-          { aggregatePubKeys: aggregatedKeys
-          , sidechainEpoch: isp.initSidechainEpoch
-          }
+    -- Setting up the update committee hash validator
+    -----------------------------------
+    let
+      aggregatedKeys = initAggregatedCommittee
+      committeeHashDatum = Datum
+        $ PlutusData.toData
+        $ UpdateCommitteeDatum
+            { aggregatePubKeys: aggregatedKeys
+            , sidechainEpoch: initSidechainEpoch
+            }
 
-  versionOracleConfig ← getVersionOracleConfig sidechainParams
+    versionOracleConfig ← getVersionOracleConfig sidechainParams
 
-  committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
-    sidechainParams
-    versionOracleConfig
+    committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
+      sidechainParams
+      versionOracleConfig
 
-  let
-    committeeHashValidatorHash = validatorHash committeeHashValidator
+    let
+      committeeHashValidatorHash = validatorHash committeeHashValidator
 
-  -- Building the transaction
-  -----------------------------------
-  let
-    lookups ∷ ScriptLookups Void
-    lookups =
-      Lookups.validator committeeHashValidator
+    -- Building the transaction
+    -----------------------------------
+    let
+      lookups ∷ ScriptLookups Void
+      lookups =
+        Lookups.validator committeeHashValidator
 
-    constraints ∷ TxConstraints Void Void
-    constraints = Constraints.mustPayToScript committeeHashValidatorHash
-      committeeHashDatum
-      DatumInline
-      committeeNftValue
+      constraints ∷ TxConstraints Void Void
+      constraints = Constraints.mustPayToScript committeeHashValidatorHash
+        committeeHashDatum
+        DatumInline
+        committeeNftValue
 
-  pure $ burnCommitteeOracleInitToken <> mintCommitteeNft <>
-    { constraints, lookups }
+    pure $ burnCommitteeOracleInitToken <> mintCommitteeNft <>
+      { constraints, lookups }
 
 -- | `initDistributedSetLookupsAndContraints` creates the lookups and
 -- | constraints required when initalizing the distributed set (this does NOT
@@ -602,8 +610,11 @@ initSidechain (InitSidechainParams isp) version = do
   permissionTokensInitTxId ←
     initCandidatePermissionTokenLookupsAndConstraints isp
       >>= balanceSignAndSubmit "Candidate permission tokens init"
-  committeeInitTxId ← initCommitteeHashLookupsAndConstraints isp
-    >>= balanceSignAndSubmit "Committee init"
+  committeeInitTxId ←
+    initCommitteeHashLookupsAndConstraints isp.initSidechainEpoch
+      isp.initAggregatedCommittee
+      sidechainParams
+      >>= balanceSignAndSubmit "Committee init"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies as in issue #224
@@ -627,6 +638,158 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainParams
     , sidechainAddresses
     }
+
+insertScriptsIdempotent ∷
+  ∀ r.
+  ( SidechainParams →
+    Int →
+    Run (APP + r)
+      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      }
+  ) →
+  SidechainParams →
+  ATMSKinds →
+  Int →
+  Run (APP + r)
+    (Array TransactionHash)
+insertScriptsIdempotent f sidechainParams initATMSKind version = do
+  scripts ← f sidechainParams version
+
+  toInsert ∷
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    } ← getScriptsToInsert sidechainParams initATMSKind scripts version
+
+  validatorsTxIds ←
+    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned validators"
+      )
+      $ List.toUnfoldable (toInsert.versionedValidators)
+  policiesTxIds ←
+    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
+      )
+      $ List.toUnfoldable (toInsert.versionedPolicies)
+
+  pure $ policiesTxIds <> validatorsTxIds
+
+getScriptsToInsert ∷
+  ∀ r.
+  SidechainParams →
+  ATMSKinds →
+  { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+  , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+  } →
+  Int →
+  Run (APP + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    }
+getScriptsToInsert
+  sidechainParams
+  initATMSKind
+  toFilterScripts
+  version = do
+
+  comparisonScripts ←
+    getActualVersionedPoliciesAndValidators
+      { atmsKind: initATMSKind, sidechainParams }
+      version
+
+  let
+    filterScripts ∷ ∀ a. Eq a ⇒ List a → List a → List a
+    filterScripts sublist list = filter (not <<< flip elem list) sublist
+
+  pure
+    { versionedPolicies: filterScripts toFilterScripts.versionedPolicies
+        comparisonScripts.versionedPolicies
+    , versionedValidators: filterScripts toFilterScripts.versionedValidators
+        comparisonScripts.versionedValidators
+    }
+
+-- | Perform a token initialization action, if the corresponding
+-- | init token exists. If it doesn't, throw an `InvalidInitState`
+-- | error.
+init ∷
+  ∀ r.
+  (String → SidechainParams → Run (APP + r) TransactionHash) →
+  String →
+  TokenName →
+  SidechainParams →
+  Run (APP + r) TransactionHash
+init f op nm sp = do
+  tokenExists ← map (Plutus.Map.member nm <<< _.initTokenStatusData)
+    (getInitTokenStatus sp)
+
+  unless tokenExists
+    ( throw
+        $ InvalidInitState
+        $ "Init token does not exist when attempting to run "
+        <> op
+    )
+
+  f op sp
+
+-- | Idempotently initialise the committee selection mechanism, consuming the committee oracle init token
+initCommitteeSelection ∷
+  ∀ r.
+  SidechainParams →
+  Maybe CandidatePermissionTokenMintInfo →
+  BigInt →
+  PlutusData →
+  ATMSKinds →
+  Int →
+  Run (APP + r)
+    ( Maybe
+        { initTransactionIds ∷ Array TransactionHash
+        , sidechainParams ∷ SidechainParams
+        , sidechainAddresses ∷ SidechainAddresses
+        }
+    )
+initCommitteeSelection
+  sidechainParams
+  initCandidatePermissionTokenMintInfo
+  initSidechainEpoch
+  initAggregatedCommittee
+  initATMSKind
+  version = do
+  let
+    run = init
+      ( \op → balanceSignAndSubmit op
+          <=< initCommitteeHashLookupsAndConstraints
+            initSidechainEpoch
+            initAggregatedCommittee
+      )
+      "Committee init"
+      CommitteeOraclePolicy.committeeOracleInitTokenName
+
+  scriptsInitTxId ← insertScriptsIdempotent
+    (getCommitteeSelectionPoliciesAndValidators initATMSKind)
+    sidechainParams
+    initATMSKind
+    version
+
+  if not $ null scriptsInitTxId then do
+    sidechainAddresses ←
+      GetSidechainAddresses.getSidechainAddresses $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: initATMSKind
+          , usePermissionToken: isJust initCandidatePermissionTokenMintInfo
+          , version
+          }
+    committeeSelectionInitTxId ← run sidechainParams
+    pure
+      ( Just
+          { initTransactionIds: committeeSelectionInitTxId : scriptsInitTxId
+          , sidechainParams
+          , sidechainAddresses
+          }
+      )
+  else pure Nothing
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
