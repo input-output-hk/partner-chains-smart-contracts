@@ -403,12 +403,12 @@ withCommonOpts maybeConfig endpointParser = ado
       }
   where
   -- the default server config upstream is different than Kupo's defaults
-  defaultKupoServerConfig
-    ∷ { host ∷ String
-      , path ∷ Maybe String
-      , port ∷ UInt
-      , secure ∷ Boolean
-      }
+  defaultKupoServerConfig ∷
+    { host ∷ String
+    , path ∷ Maybe String
+    , port ∷ UInt
+    , secure ∷ Boolean
+    }
   defaultKupoServerConfig =
     { port: UInt.fromInt 1442
     , host: "localhost"
@@ -839,12 +839,12 @@ saveCheckpointSpec = ado
 
 -- `parseCommittee` parses the committee public keys and takes the long
 -- flag / help message as parameters
-parseCommittee
-  ∷ String
-  → String
-  → String
-  → String
-  → Parser (InputArgOrFile (List ByteArray))
+parseCommittee ∷
+  String →
+  String →
+  String →
+  String →
+  Parser (InputArgOrFile (List ByteArray))
 parseCommittee longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
@@ -882,12 +882,12 @@ parseNewCommitteePubKeys =
 -- `parseCommitteeSignatures` gives the options for parsing the current
 -- committees' signatures. This is used in both `saveRootSpec` and
 -- `committeeHashSpec`.
-parseCommitteeSignatures
-  ∷ String
-  → String
-  → String
-  → String
-  → Parser (InputArgOrFile (List (ByteArray /\ Maybe ByteArray)))
+parseCommitteeSignatures ∷
+  String →
+  String →
+  String →
+  String →
+  Parser (InputArgOrFile (List (ByteArray /\ Maybe ByteArray)))
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
     ( many
@@ -986,8 +986,8 @@ parseGenesisHash =
 
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
-initCandidatePermissionTokenMintHelper
-  ∷ Parser CandidatePermissionTokenMintInit
+initCandidatePermissionTokenMintHelper ∷
+  Parser CandidatePermissionTokenMintInit
 initCandidatePermissionTokenMintHelper = ado
   candidatePermissionTokenAmount ← option bigInt $ fold
     [ long "candidate-permission-token-amount"
@@ -1167,12 +1167,12 @@ updateDParameterSpec = ado
   registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
   in UpdateDParameter { permissionedCandidatesCount, registeredCandidatesCount }
 
-parseRegistrationSidechainKeys
-  ∷ Parser
-      { sidechainKey ∷ ByteArray
-      , auraKey ∷ ByteArray
-      , grandpaKey ∷ ByteArray
-      }
+parseRegistrationSidechainKeys ∷
+  Parser
+    { sidechainKey ∷ ByteArray
+    , auraKey ∷ ByteArray
+    , grandpaKey ∷ ByteArray
+    }
 parseRegistrationSidechainKeys =
   option registrationSidechainKeys
     ( fold
@@ -1182,14 +1182,14 @@ parseRegistrationSidechainKeys =
         ]
     )
 
-parseAddPermissionedCandidates
-  ∷ Parser
-      ( List
-          { sidechainKey ∷ ByteArray
-          , auraKey ∷ ByteArray
-          , grandpaKey ∷ ByteArray
-          }
-      )
+parseAddPermissionedCandidates ∷
+  Parser
+    ( List
+        { sidechainKey ∷ ByteArray
+        , auraKey ∷ ByteArray
+        , grandpaKey ∷ ByteArray
+        }
+    )
 parseAddPermissionedCandidates =
   ( many
       ( option permissionedCandidateKeys
@@ -1204,16 +1204,16 @@ parseAddPermissionedCandidates =
       )
   )
 
-parseRemovePermissionedCandidates
-  ∷ Parser
-      ( Maybe
-          ( List
-              { sidechainKey ∷ ByteArray
-              , auraKey ∷ ByteArray
-              , grandpaKey ∷ ByteArray
-              }
-          )
-      )
+parseRemovePermissionedCandidates ∷
+  Parser
+    ( Maybe
+        ( List
+            { sidechainKey ∷ ByteArray
+            , auraKey ∷ ByteArray
+            , grandpaKey ∷ ByteArray
+            }
+        )
+    )
 parseRemovePermissionedCandidates = Just <$>
   ( many
       ( option permissionedCandidateKeys

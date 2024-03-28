@@ -87,11 +87,7 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options
-      ( TxOptions
-      , UtilsOptions
-      , CLIVersion
-      )
+  ( Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams
   , TxEndpoint
       ( BurnActV1
@@ -202,8 +198,8 @@ getOptions = do
   execParser (options config)
 
 -- | Executes an transaction endpoint and returns a response object
-runTxEndpoint
-  ∷ ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
+runTxEndpoint ∷
+  ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
 runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
@@ -381,6 +377,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , initSidechainEpoch
         , initCandidatePermissionTokenMintInfo
         , genesisHash
+        , version
         } → do
         rawCommitteePubKeys ← ConfigFile.getCommittee
           committeePubKeysInput
@@ -404,7 +401,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        txId ← initCheckpoint (wrap isc)
+        txId ← initCheckpoint (wrap isc) version
         pure $ InitCheckpointResp { transactionId: unwrap txId }
       Init
         { committeePubKeysInput
