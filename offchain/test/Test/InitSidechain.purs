@@ -76,6 +76,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
   testInitCommitteeSelectionIdempotent
   -- InitCheckpoint endpoint
   testInitCheckpointUninitialised
+  testInitCheckpoint
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
@@ -817,7 +818,7 @@ testInitCheckpointUninitialised =
                 , initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initCheckpoint initScParams
+            void $ InitSidechain.initCheckpoint initScParams 1
         case result of
           Right _ →
             throw $ GenericInternalError

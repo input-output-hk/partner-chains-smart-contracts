@@ -15,12 +15,11 @@
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
   ( InitSidechainParams'
-  , InitSidechainParams(InitSidechainParams)
+  , InitSidechainParams(..)
   , InitTokensParams
   , getInitTokenStatus
   , getScriptsToInsert
   , init
-  , initTokensMint
   , initCheckpoint
   , initSidechain
   , initSpendGenesisUtxo
@@ -79,7 +78,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Log (LOG, logDebug', logInfo')
+import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -108,6 +107,7 @@ import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
 import TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
   , getCommitteeSelectionPoliciesAndValidators
+  , getCheckpointPoliciesAndValidators
   )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
@@ -640,6 +640,21 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainParams
     , sidechainAddresses
     }
+
+initCheckpoint
+  ∷ ∀ r
+  . InitSidechainParams
+  → Int
+  → Run (APP + r) TransactionHash
+initCheckpoint isp version = do
+  _ ← insertScriptsIdempotent getCheckpointPoliciesAndValidators isp version
+  run isp
+  where
+  run = init
+    ( \op → balanceSignAndSubmit op
+        <=< initCheckpointLookupsAndConstraints
+    )
+    "Checkpoint init"
 
 insertScriptsIdempotent
   ∷ ∀ r
