@@ -209,6 +209,13 @@ data TxEndpoint
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
+  | InitCommitteeSelection
+      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      , initSidechainEpoch ∷ BigInt
+      , initCandidatePermissionTokenMintInfo ∷
+          Maybe CandidatePermissionTokenMintInit
+      , genesisHash ∷ ByteArray
+      }
   | SaveCheckpoint
       { committeeSignaturesInput ∷
           InputArgOrFile (List (ByteArray /\ Maybe ByteArray))

@@ -98,6 +98,7 @@ data EndpointResp
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
+  | InitCommitteeSelectionResp { transactionId ∷ ByteArray }
   | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -326,6 +327,12 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                       sidechainAddresses.mintingPolicies
                   )
               )
+          ]
+    InitCommitteeSelectionResp { transactionId } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitCommitteeSelection"
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
           ]
     SaveCheckpointResp { transactionId } →
       J.fromObject $ Object.fromFoldable

@@ -25,6 +25,7 @@ module TrustlessSidechain.InitSidechain
   , initTokenStatus
   , initTokensMint
   , insertScriptsIdempotent
+  , initCommitteeSelection
   , toSidechainParams
   ) where
 
@@ -82,7 +83,9 @@ import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error
+  ( OffchainError(InvalidInitState, NoGenesisUTxO, ConversionError)
+  )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
@@ -720,6 +723,27 @@ init f op nm sp = do
     )
 
   f op sp
+
+initCommitteeSelection ∷
+  ∀ r.
+  InitSidechainParams →
+  Run (APP + r) TransactionHash
+initCommitteeSelection (InitSidechainParams isp) =
+  do
+    { currencySymbol } ← initTokenCurrencyInfo (toSidechainParams isp)
+    unlessM
+      ( map
+          ( not <<< null <<< _.initTokenStatusData <<< initTokenStatus
+              currencySymbol
+          )
+          getOwnUTxOsTotalValue
+      )
+      ( throw $ InvalidInitState
+          "Init token does not exist when attempting to init committee selection."
+      )
+    balanceSignAndSubmit
+      "Committee init"
+      =<< initCommitteeHashLookupsAndConstraints isp
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
