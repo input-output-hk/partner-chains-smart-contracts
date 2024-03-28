@@ -1051,12 +1051,14 @@ initCommitteeSelectionSpec = ado
   initCandidatePermissionTokenMintInfo ←
     optional initCandidatePermissionTokenMintHelper
   genesisHash ← parseGenesisHash
+  version ← parseVersion
   in
     InitCommitteeSelection
       { committeePubKeysInput
       , initSidechainEpoch
       , initCandidatePermissionTokenMintInfo
       , genesisHash
+      , version
       }
 
 insertVersionSpec ∷ Parser TxEndpoint

@@ -215,6 +215,7 @@ data TxEndpoint
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
       , genesisHash ∷ ByteArray
+      , version ∷ Int
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷

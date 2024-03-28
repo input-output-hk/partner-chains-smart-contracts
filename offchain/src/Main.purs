@@ -84,38 +84,9 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options
-      ( TxOptions
-      , UtilsOptions
-      , CLIVersion
-      )
+  ( Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams
-  , TxEndpoint
-      ( BurnActV1
-      , BurnActV2
-      , ClaimActV1
-      , ClaimActV2
-      , GetAddrs
-      , CommitteeCandidateReg
-      , CandidiatePermissionTokenAct
-      , CommitteeCandidateDereg
-      , CommitteeHash
-      , SaveRoot
-      , Init
-      , InitTokensMint
-      , InitCommitteeSelection
-      , CommitteeHandover
-      , SaveCheckpoint
-      , InsertVersion
-      , UpdateVersion
-      , InvalidateVersion
-      , InsertDParameter
-      , UpdateDParameter
-      , UpdatePermissionedCandidates
-      , BurnNFTs
-      , InitTokenStatus
-      , ListVersionedScripts
-      )
+  , TxEndpoint(..)
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
       , SchnorrSecp256k1KeyGenAct
@@ -437,9 +408,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , initSidechainEpoch
         , initCandidatePermissionTokenMintInfo
         , genesisHash
+        , version
         } → do
         rawCommitteePubKeys ← ConfigFile.getCommittee
           committeePubKeysInput
+
         committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
           { atmsKind
           , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
@@ -459,8 +432,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        txId ← initCommitteeSelection (wrap isc)
-        pure $ InitCommitteeSelectionResp { transactionId: unwrap txId }
+        resp ← initCommitteeSelection (wrap isc) version
+        pure $ InitCommitteeSelectionResp $ map
+          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
+          resp
       CommitteeHandover
         { merkleRoot
         , previousMerkleRoot
