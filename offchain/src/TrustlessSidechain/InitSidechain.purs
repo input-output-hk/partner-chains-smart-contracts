@@ -15,7 +15,7 @@
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
   ( InitSidechainParams'
-  , InitSidechainParams(..)
+  , InitSidechainParams(InitSidechainParams)
   , InitTokensParams
   , getInitTokenStatus
   , getScriptsToInsert
