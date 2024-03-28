@@ -16,6 +16,7 @@ import Data.Array as Array
 import Data.BigInt (fromInt)
 import Data.BigInt as BigInt
 import Data.List (List)
+import Data.List (head)
 import Data.List as List
 import Data.Map as Map
 import Data.Set as Set
@@ -77,6 +78,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
   -- InitCheckpoint endpoint
   testInitCheckpointUninitialised
   testInitCheckpoint
+  testInitCheckpointIdempotent
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)

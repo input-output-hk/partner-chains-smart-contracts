@@ -110,9 +110,7 @@ import TrustlessSidechain.Versioning
   , getCheckpointPoliciesAndValidators
   )
 import TrustlessSidechain.Versioning as Versioning
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
-  )
+import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Utils
@@ -645,16 +643,45 @@ initCheckpoint
   ∷ ∀ r
   . InitSidechainParams
   → Int
-  → Run (APP + r) TransactionHash
+  → Run (APP + r)
+      ( Maybe
+          { initTransactionIds ∷ Array TransactionHash
+          , sidechainParams ∷ SidechainParams
+          , sidechainAddresses ∷ SidechainAddresses
+          }
+      )
 initCheckpoint isp version = do
-  _ ← insertScriptsIdempotent getCheckpointPoliciesAndValidators isp version
-  run isp
-  where
-  run = init
-    ( \op → balanceSignAndSubmit op
-        <=< initCheckpointLookupsAndConstraints
-    )
-    "Checkpoint init"
+  let
+    sidechainParams = toSidechainParams $ unwrap isp
+    run = init
+      ( \op → balanceSignAndSubmit op
+          <=< initCheckpointLookupsAndConstraints
+      )
+      "Checkpoint init"
+
+  scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
+    isp
+    version
+
+  if not $ null scriptsInitTxId then do
+    sidechainAddresses ←
+      GetSidechainAddresses.getSidechainAddresses $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: (unwrap isp).initATMSKind
+          , usePermissionToken: isJust
+              (unwrap isp).initCandidatePermissionTokenMintInfo
+          , version
+          }
+    checkpointInitTxId ← run isp
+    pure
+      ( Just
+          { initTransactionIds: checkpointInitTxId : scriptsInitTxId
+          , sidechainParams
+          , sidechainAddresses
+          }
+      )
+  else pure Nothing
 
 insertScriptsIdempotent
   ∷ ∀ r
@@ -677,6 +704,15 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
     ∷ { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
       } ← getScriptsToInsert sidechainParams initATMSKind scripts version
+insertScriptsIdempotent f isp version = do
+  let sidechainParams = toSidechainParams isp
+
+  scripts ← f sidechainParams version
+
+  toInsert
+    ∷ { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+      } ← getScriptsToInsert isp scripts version
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
