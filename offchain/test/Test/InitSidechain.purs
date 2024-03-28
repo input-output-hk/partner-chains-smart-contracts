@@ -11,8 +11,11 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
+import Data.Array (toUnfoldable)
 import Data.Array as Array
+import Data.BigInt (fromInt)
 import Data.BigInt as BigInt
+import Data.List (List)
 import Data.List as List
 import Data.Map as Map
 import Data.Set as Set
@@ -47,12 +50,10 @@ import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning
-  ( getExpectedVersionedPoliciesAndValidators
-  ) as Versioning
-import TrustlessSidechain.Versioning.Utils
-  ( versionOracleInitTokenName
-  ) as Versioning
+import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
+import TrustlessSidechain.Versioning (getExpectedVersionedPoliciesAndValidators) as Versioning
+import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.Utils (versionOracleInitTokenName) as Versioning
 import Type.Row (type (+))
 
 -- | `tests` aggregates all the tests together in one convenient function
@@ -72,6 +73,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
   -- InitCommitteeSelection endpoint
   testInitCommitteeSelection
   testInitCommitteeSelectionUninitialised
+  testInitCommitteeSelectionIdempotent
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
@@ -588,7 +590,7 @@ expectedInitTokens nversion =
 
 testInitCommitteeSelection ∷ PlutipTest
 testInitCommitteeSelection =
-  Mote.Monad.test "Calling `InitCommitteeSelection` with no init token"
+  Mote.Monad.test "Calling `InitCommitteeSelection`"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
@@ -599,7 +601,7 @@ testInitCommitteeSelection =
         withUnliftApp (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
-              "InitSidechain 'testInitCommitteeSelectionUninitialised'"
+              "InitSidechain 'testInitCommitteeSelection'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
             -- generate an initialize committee of `committeeSize` committee members
             let committeeSize = 25
@@ -610,9 +612,21 @@ testInitCommitteeSelection =
             initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
               <$> getOwnPaymentPubKeyHash
             let
+              version = 1
               initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+              sidechainParams = InitSidechain.toSidechainParams initTokensScParams
+              initTokensScParams =
+                { initChainId: BigInt.fromInt 9
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initCandidatePermissionTokenMintInfo: Nothing
+                , initGovernanceAuthority
+                }
               initScParams = InitSidechain.InitSidechainParams
-                { initChainId: BigInt.fromInt 69
+                { initChainId: BigInt.fromInt 9
                 , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
                 , initUtxo: genesisUtxo
                 , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
@@ -626,8 +640,77 @@ testInitCommitteeSelection =
                 , initGovernanceAuthority
                 }
 
-            -- TODO mint tokens here
-            void $ InitSidechain.initCommitteeSelection initScParams
+            void $ InitSidechain.initTokensMint initTokensScParams version
+            void $ InitSidechain.initCommitteeSelection initScParams version
+
+            -- For computing the number of versionOracle init tokens
+            { versionedPolicies, versionedValidators } ←
+              Versioning.getExpectedVersionedPoliciesAndValidators
+                { atmsKind: initTokensScParams.initATMSKind
+                , sidechainParams
+                }
+                version
+
+            let
+              -- See `Versioning.mintVersionInitTokens` for where this comes from
+              nversion = BigInt.fromInt $ List.length versionedPolicies
+                + List.length versionedValidators
+              expectedTokens =
+                foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
+                  $ Array.(:)
+                      ( Versioning.versionOracleInitTokenName /\
+                          (nversion - fromInt 4)
+                      )
+                  $
+                    map
+                      (_ /\ one)
+                      [ DistributedSet.dsInitTokenName
+                      , Checkpoint.checkpointInitTokenName
+                      , CandidatePermissionToken.candidatePermissionInitTokenName
+                      ]
+
+            -- Get the tokens just created
+            { initTokenStatusData: resTokens } ← InitSidechain.getInitTokenStatus
+              sidechainParams
+
+            { versionedValidators: validatorsRes
+            , versionedPolicies: policiesRes
+            } ←
+              getActualVersionedPoliciesAndValidators
+                { atmsKind: initTokensScParams.initATMSKind
+                , sidechainParams
+                }
+                version
+
+            let
+              expectedExistingValidators =
+                [ CommitteeHashValidator
+                , CommitteeCandidateValidator
+                ]
+              expectedExistingPolicies =
+                [ CommitteeCertificateVerificationPolicy, CommitteeOraclePolicy ]
+              actualExistingValidators = map fst validatorsRes
+              actualExistingPolicies = map fst policiesRes
+
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg expectedTokens resTokens)
+                  (unorderedEq expectedTokens resTokens)
+              <* assert
+                ( failMsg expectedExistingValidators
+                    actualExistingValidators
+                )
+                ( actualExistingValidators `sublist` toUnfoldable
+                    expectedExistingValidators
+                )
+              <* assert
+                ( failMsg expectedExistingPolicies
+                    actualExistingPolicies
+                )
+                ( actualExistingPolicies `sublist` toUnfoldable
+                    expectedExistingPolicies
+                )
 
 testInitCommitteeSelectionUninitialised ∷ PlutipTest
 testInitCommitteeSelectionUninitialised =
@@ -655,7 +738,7 @@ testInitCommitteeSelectionUninitialised =
             let
               initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
               initScParams = InitSidechain.InitSidechainParams
-                { initChainId: BigInt.fromInt 69
+                { initChainId: BigInt.fromInt 9
                 , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
                 , initUtxo: genesisUtxo
                 , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
@@ -669,9 +752,138 @@ testInitCommitteeSelectionUninitialised =
                 , initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initCommitteeSelection initScParams
+            void $ InitSidechain.initCommitteeSelection initScParams 1
         case result of
           Right _ →
             throw $ GenericInternalError
               "Contract should have failed but it didn't."
           Left _err → pure unit
+
+testInitCommitteeSelectionIdempotent ∷ PlutipTest
+testInitCommitteeSelectionIdempotent =
+  Mote.Monad.test "Calling `InitCommitteeSelection` twice, expecting idempotency"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice → do
+        withUnliftApp (Wallet.withKeyWallet alice)
+          do
+            liftContract $ Log.logInfo'
+              "InitSidechain 'testInitCommitteeSelectionIdempotent'"
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
+            -- generate an initialize committee of `committeeSize` committee members
+            let committeeSize = 25
+            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+              committeeSize
+              Crypto.generatePrivKey
+
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+            let
+              version = 1
+              initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+              sidechainParams = InitSidechain.toSidechainParams initTokensScParams
+              initTokensScParams =
+                { initChainId: BigInt.fromInt 9
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initCandidatePermissionTokenMintInfo: Nothing
+                , initGovernanceAuthority
+                }
+              initScParams = InitSidechain.InitSidechainParams
+                { initChainId: BigInt.fromInt 9
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
+                    unwrap
+                    initCommittee
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initSidechainEpoch: zero
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initCandidatePermissionTokenMintInfo: Nothing
+                , initGovernanceAuthority
+                }
+
+            void $ InitSidechain.initTokensMint initTokensScParams version
+            void $ InitSidechain.initCommitteeSelection initScParams version
+            res ← InitSidechain.initCommitteeSelection initScParams version
+
+            -- For computing the number of versionOracle init tokens
+            { versionedPolicies, versionedValidators } ←
+              Versioning.getExpectedVersionedPoliciesAndValidators
+                { atmsKind: initTokensScParams.initATMSKind
+                , sidechainParams
+                }
+                version
+
+            let
+              -- See `Versioning.mintVersionInitTokens` for where this comes from
+              nversion = BigInt.fromInt $ List.length versionedPolicies
+                + List.length versionedValidators
+              expectedTokens =
+                foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
+                  $ Array.(:)
+                      ( Versioning.versionOracleInitTokenName /\
+                          (nversion - fromInt 4)
+                      )
+                  $
+                    map
+                      (_ /\ one)
+                      [ DistributedSet.dsInitTokenName
+                      , Checkpoint.checkpointInitTokenName
+                      , CandidatePermissionToken.candidatePermissionInitTokenName
+                      ]
+
+            -- Get the tokens just created
+            { initTokenStatusData: resTokens } ← InitSidechain.getInitTokenStatus
+              sidechainParams
+
+            { versionedValidators: validatorsRes, versionedPolicies: policiesRes } ←
+              getActualVersionedPoliciesAndValidators
+                { atmsKind: initTokensScParams.initATMSKind
+                , sidechainParams
+                }
+                version
+
+            let
+              expectedExistingValidators =
+                [ CommitteeHashValidator
+                , CommitteeCandidateValidator
+                ]
+              expectedExistingPolicies =
+                [ CommitteeCertificateVerificationPolicy
+                , CommitteeOraclePolicy
+                ]
+              actualExistingValidators = map fst validatorsRes
+              actualExistingPolicies = map fst policiesRes
+
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg expectedTokens resTokens)
+                  (unorderedEq expectedTokens resTokens)
+              <* assert (failMsg "Nothing" res) (isNothing res)
+              <* assert
+                ( failMsg expectedExistingValidators
+                    actualExistingValidators
+                )
+                ( actualExistingValidators `sublist`
+                    toUnfoldable expectedExistingValidators
+                )
+              <* assert
+                ( failMsg expectedExistingPolicies
+                    actualExistingPolicies
+                )
+                ( actualExistingPolicies `sublist` toUnfoldable
+                    expectedExistingPolicies
+                )
+
+sublist ∷ ∀ a. Eq a ⇒ List a → List a → Boolean
+sublist listA listB = all (\b → b `elem` listA) listB

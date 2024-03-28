@@ -47,6 +47,7 @@ import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
+import Data.Array ((:))
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List, filter)
@@ -102,7 +103,10 @@ import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
-import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
+import TrustlessSidechain.Versioning
+  ( getActualVersionedPoliciesAndValidators
+  , getCommitteeSelectionPoliciesAndValidators
+  )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
@@ -726,13 +730,47 @@ init f op nm sp = do
 initCommitteeSelection
   ∷ ∀ r
   . InitSidechainParams
-  → Run (APP + r) TransactionHash
-initCommitteeSelection =
-  init
-    ( \op → balanceSignAndSubmit op
-        <=< initCommitteeHashLookupsAndConstraints
-    )
-    "Committee init"
+  → Int
+  → Run (APP + r)
+      ( Maybe
+          { initTransactionIds ∷ Array TransactionHash
+          , sidechainParams ∷ SidechainParams
+          , sidechainAddresses ∷ SidechainAddresses
+          }
+      )
+initCommitteeSelection isp version = do
+  let
+    sidechainParams = toSidechainParams $ unwrap isp
+    run = init
+      ( \op → balanceSignAndSubmit op
+          <=< initCommitteeHashLookupsAndConstraints
+      )
+      "Committee init"
+
+  scriptsInitTxId ← insertScriptsIdempotent
+    getCommitteeSelectionPoliciesAndValidators
+    isp
+    version
+
+  if not $ null scriptsInitTxId then do
+    sidechainAddresses ←
+      GetSidechainAddresses.getSidechainAddresses $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: (unwrap isp).initATMSKind
+          , usePermissionToken: isJust
+              (unwrap isp).initCandidatePermissionTokenMintInfo
+          , version
+          }
+    committeeSelectionInitTxId ← run isp
+    pure
+      ( Just
+          { initTransactionIds: committeeSelectionInitTxId : scriptsInitTxId
+          , sidechainParams
+          , sidechainAddresses
+          }
+      )
+  else pure Nothing
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
