@@ -69,6 +69,9 @@ tests = plutipGroup "Initialising the sidechain" $ do
   -- InitTokensMint endpoint
   initTokensMintScenario1
   initTokensMintScenario2
+  -- InitCommitteeSelection endpoint
+  testInitCommitteeSelection
+  testInitCommitteeSelectionUninitialised
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
@@ -582,3 +585,93 @@ expectedInitTokens nversion =
         , CommitteeOraclePolicy.committeeOracleInitTokenName
         , CandidatePermissionToken.candidatePermissionInitTokenName
         ]
+
+testInitCommitteeSelection ∷ PlutipTest
+testInitCommitteeSelection =
+  Mote.Monad.test "Calling `InitCommitteeSelection` with no init token"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice → do
+        withUnliftApp (Wallet.withKeyWallet alice)
+          do
+            liftContract $ Log.logInfo'
+              "InitSidechain 'testInitCommitteeSelectionUninitialised'"
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
+            -- generate an initialize committee of `committeeSize` committee members
+            let committeeSize = 25
+            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+              committeeSize
+              Crypto.generatePrivKey
+
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+            let
+              initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+              initScParams = InitSidechain.InitSidechainParams
+                { initChainId: BigInt.fromInt 69
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
+                    unwrap
+                    initCommittee
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initSidechainEpoch: zero
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initCandidatePermissionTokenMintInfo: Nothing
+                , initGovernanceAuthority
+                }
+
+            -- TODO mint tokens here
+            void $ InitSidechain.initCommitteeSelection initScParams
+
+testInitCommitteeSelectionUninitialised ∷ PlutipTest
+testInitCommitteeSelectionUninitialised =
+  Mote.Monad.test "Calling `InitCommitteeSelection` with no init token"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice → do
+        result ← withUnliftApp (MonadError.try <<< Wallet.withKeyWallet alice)
+          do
+            liftContract $ Log.logInfo'
+              "InitSidechain 'testInitCommitteeSelectionUninitialised'"
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
+            -- generate an initialize committee of `committeeSize` committee members
+            let committeeSize = 25
+            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+              committeeSize
+              Crypto.generatePrivKey
+
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+            let
+              initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+              initScParams = InitSidechain.InitSidechainParams
+                { initChainId: BigInt.fromInt 69
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
+                    unwrap
+                    initCommittee
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initSidechainEpoch: zero
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initCandidatePermissionTokenMintInfo: Nothing
+                , initGovernanceAuthority
+                }
+
+            void $ InitSidechain.initCommitteeSelection initScParams
+        case result of
+          Right _ →
+            throw $ GenericInternalError
+              "Contract should have failed but it didn't."
+          Left _err → pure unit

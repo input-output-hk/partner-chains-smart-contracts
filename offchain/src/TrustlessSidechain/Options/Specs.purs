@@ -107,6 +107,7 @@ import TrustlessSidechain.Options.Types
       , CandidiatePermissionTokenAct
       , Init
       , InitTokensMint
+      , InitCommitteeSelection
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -161,6 +162,11 @@ optSpec maybeConfig =
     , command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensMintSpec)
             (progDesc "Mint all sidechain initialisation tokens")
+        )
+    , command
+        "init-committee-selection"
+        ( info (withCommonOpts maybeConfig initCommitteeSelectionSpec)
+            (progDesc "Initialise commitee selection")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1021,7 +1027,7 @@ initSpec = ado
       , version
       }
 
---| Parser for the `init-tokens-mint` endpoint.
+-- | Parser for the `init-tokens-mint` endpoint.
 initTokensMintSpec ∷ Parser TxEndpoint
 initTokensMintSpec = ado
   genesisHash ← parseGenesisHash
@@ -1030,6 +1036,27 @@ initTokensMintSpec = ado
     InitTokensMint
       { genesisHash
       , version
+      }
+
+initCommitteeSelectionSpec ∷ Parser TxEndpoint
+initCommitteeSelectionSpec = ado
+  committeePubKeysInput ← parseCommittee
+    "committee-pub-key"
+    "Public key for a committee member at sidechain initialisation"
+    "committee-pub-key-file-path"
+    "Filepath of a JSON file containing public keys of the new committee\
+    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+
+  initSidechainEpoch ← parseSidechainEpoch
+  initCandidatePermissionTokenMintInfo ←
+    optional initCandidatePermissionTokenMintHelper
+  genesisHash ← parseGenesisHash
+  in
+    InitCommitteeSelection
+      { committeePubKeysInput
+      , initSidechainEpoch
+      , initCandidatePermissionTokenMintInfo
+      , genesisHash
       }
 
 insertVersionSpec ∷ Parser TxEndpoint

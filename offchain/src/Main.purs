@@ -39,6 +39,7 @@ import TrustlessSidechain.EndpointResp
       , SaveRootResp
       , InitResp
       , InitTokensMintResp
+      , InitCommitteeSelectionResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -74,6 +75,7 @@ import TrustlessSidechain.GetSidechainAddresses
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain
   ( getInitTokenStatus
+  , initCommitteeSelection
   , initSidechain
   , initTokensMint
   )
@@ -101,6 +103,7 @@ import TrustlessSidechain.Options.Types
       , SaveRoot
       , Init
       , InitTokensMint
+      , InitCommitteeSelection
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion
@@ -412,7 +415,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainAddresses
           , initTransactionIds: map unwrap initTransactionIds
           }
-
       InitTokensMint
         { version } →
         do
@@ -430,6 +432,35 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainParams
             , sidechainAddresses
             }
+      InitCommitteeSelection
+        { committeePubKeysInput
+        , initSidechainEpoch
+        , initCandidatePermissionTokenMintInfo
+        , genesisHash
+        } → do
+        rawCommitteePubKeys ← ConfigFile.getCommittee
+          committeePubKeysInput
+        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
+          { atmsKind
+          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          }
+        let
+          sc = unwrap scParams
+          isc =
+            { initChainId: sc.chainId
+            , initGenesisHash: genesisHash
+            , initUtxo: sc.genesisUtxo
+            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+            , initAggregatedCommittee: committeePubKeys
+            , initCandidatePermissionTokenMintInfo
+            , initSidechainEpoch
+            , initThresholdNumerator: sc.thresholdNumerator
+            , initThresholdDenominator: sc.thresholdDenominator
+            , initGovernanceAuthority: sc.governanceAuthority
+            }
+
+        txId ← initCommitteeSelection (wrap isc)
+        pure $ InitCommitteeSelectionResp { transactionId: unwrap txId }
       CommitteeHandover
         { merkleRoot
         , previousMerkleRoot
