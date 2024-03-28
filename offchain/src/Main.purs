@@ -401,8 +401,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        txId ← initCheckpoint (wrap isc) version
-        pure $ InitCheckpointResp { transactionId: unwrap txId }
+        resp ← initCheckpoint (wrap isc) version
+        pure $ InitCheckpointResp $ map
+          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
+          resp
       Init
         { committeePubKeysInput
         , initSidechainEpoch
