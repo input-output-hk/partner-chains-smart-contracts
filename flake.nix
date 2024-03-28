@@ -434,7 +434,22 @@
       });
 
     devShells = perSystem (system: rec {
-      ps = (psProjectFor system).devShell;
+      ps = let
+        shell = (psProjectFor system).devShell;
+        pkgs = nixpkgsFor system;
+      in
+        pkgs.mkShell {
+          inputsFrom = [shell];
+          packages = [pkgs.nodejs];
+          shellHook = ''
+            ${shell.shellHook}
+            if [ ! -e "offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
+              pushd offchain
+              make version
+              popd
+            fi
+          '';
+        };
       hs = self.flake.${system}.devShell;
       default = (nixpkgsFor system).mkShell {
         inputsFrom = [ps hs];

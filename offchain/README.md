@@ -202,7 +202,7 @@ Available commands:
 
 ```
   init                     Initialise sidechain
-  list-versioned-scripts   List currently versioned scripts
+  init-tokens-mint         Mint all sidechain initialisation tokens
   addresses                Get the script addresses for a given sidechain
   claim-v1                 Claim a FUEL tokens from a proof
   burn-v1                  Burn a certain amount of FUEL tokens
@@ -220,6 +220,8 @@ Available commands:
   insert-version           Initialize a new protocol version
   update-version           Update an existing protocol version
   invalidate-version       Invalidate a protocol version
+  list-versioned-scripts   Get scripts (validators and minting policies) that
+                           are currently being versioned
   utils                    Utility functions for cryptographic primitives and
                            messages.
   insert-d-parameter       Insert new D parameter
@@ -227,6 +229,9 @@ Available commands:
   update-permissioned-candidates
                            Update a Permissioned Candidates list
   collect-garbage          Burn unneccessary NFTs
+  init-token-status        List the number of each init token the wallet still
+                           holds
+  cli-version              Display semantic version of the CLI and its git hash
 ```
 
 #### 3.3.1. Initialising the sidechain
