@@ -69,7 +69,7 @@ tests = plutipGroup "Initialising the sidechain" $ do
   testInitTokenStatusMultiTokens
   -- InitTokensMint endpoint
   initTokensMintScenario1
-  initTokensMintScenario2
+  initTokensMintIdempotent
   -- InitCommitteeSelection endpoint
   testInitCommitteeSelection
   testInitCommitteeSelectionUninitialised
@@ -78,6 +78,9 @@ tests = plutipGroup "Initialising the sidechain" $ do
   testInitCheckpointUninitialised
   testInitCheckpoint
   testInitCheckpointIdempotent
+  -- InitFuel endpoint
+  initFuelSucceeds
+  initFuelIdempotent
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
@@ -477,8 +480,8 @@ initTokensMintScenario1 =
 -- | attempts to mint the tokens twice. The tokens should
 -- | still be as expected and the return transactionId should
 -- | be `Nothing`.
-initTokensMintScenario2 ∷ PlutipTest
-initTokensMintScenario2 =
+initTokensMintIdempotent ∷ PlutipTest
+initTokensMintIdempotent =
   Mote.Monad.test "`initTokensMint` gives expected results when called twice"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
@@ -488,7 +491,7 @@ initTokensMintScenario2 =
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initTokensMintScenario2'"
+          Effect.logInfo' "InitSidechain 'initTokensMintIdempotent'"
 
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
@@ -546,6 +549,108 @@ initTokensMintScenario2 =
             $ map Just
             $ liftAff
             $ assert (failMsg "Nothing" transactionId) (isNothing transactionId)
+
+-- | Setup the same as `testScenario1`, but in which `initTokensMint`
+-- | is called followed by `initFuel`.
+initFuelSucceeds ∷ PlutipTest
+initFuelSucceeds =
+  Mote.Monad.test "`initFuel` succeeds"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice →
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'initFuelScenario1'"
+
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+          initGovernanceAuthority ←
+            (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+
+          let
+            version = 1
+            initATMSKind = ATMSPlainEcdsaSecp256k1
+            sidechainParams = SidechainParams.SidechainParams
+              { chainId: BigInt.fromInt 9
+              , genesisUtxo: genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: initGovernanceAuthority
+              }
+
+          -- First create init tokens
+          void $ InitSidechain.initTokensMint sidechainParams initATMSKind version
+
+          fuelRes ← InitSidechain.initFuel sidechainParams initATMSKind version
+
+          -- Was the DsInitToken burned?
+          { initTokenStatusData: tokenStatus } ← InitSidechain.getInitTokenStatus
+            sidechainParams
+
+          let
+            expected = true
+            dsSpent = not $
+              Plutus.Map.member
+                DistributedSet.dsInitTokenName
+                tokenStatus
+            res = isJust fuelRes && dsSpent
+
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+            $ map Just
+            $ liftAff
+            $ assert (failMsg expected res) res
+
+-- | Second call to `initFuel` should return `Nothing`.
+initFuelIdempotent ∷ PlutipTest
+initFuelIdempotent =
+  Mote.Monad.test "`initFuel` called a second time returns Nothing"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        ]
+    $ \alice →
+        withUnliftApp (Wallet.withKeyWallet alice) do
+          Effect.logInfo' "InitSidechain 'initFuelIdempotent'"
+
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+
+          initGovernanceAuthority ←
+            (Governance.mkGovernanceAuthority <<< unwrap)
+              <$> getOwnPaymentPubKeyHash
+
+          let
+            version = 1
+            initATMSKind = ATMSPlainEcdsaSecp256k1
+            sidechainParams = SidechainParams.SidechainParams
+              { chainId: BigInt.fromInt 9
+              , genesisUtxo: genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: initGovernanceAuthority
+              }
+
+          -- First create init tokens
+          void $ InitSidechain.initTokensMint sidechainParams initATMSKind version
+
+          void $ InitSidechain.initFuel sidechainParams initATMSKind version
+
+          -- Second call should do nothing.
+          fuelRes ← InitSidechain.initFuel sidechainParams initATMSKind version
+
+          let
+            expected = true
+            res = isNothing fuelRes
+
+          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+            $ map Just
+            $ liftAff
+            $ assert (failMsg expected res) res
 
 -- | Testing utility to check ordered equality of
 -- | Plutus.Map.Map, whose Eq instance is derived from the Array Eq instance
