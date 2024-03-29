@@ -105,10 +105,11 @@ import TrustlessSidechain.Options.Types
       , BurnActV2
       , GetAddrs
       , CandidiatePermissionTokenAct
-      , Init
       , InitTokensMint
       , InitCommitteeSelection
       , InitCheckpoint
+      , InitFuel
+      , Init
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -172,6 +173,10 @@ optSpec maybeConfig =
     , command "init-checkpoint"
         ( info (withCommonOpts maybeConfig initCheckpointSpec)
             (progDesc "Initialise checkpoint")
+        )
+    , command "init-fuel"
+        ( info (withCommonOpts maybeConfig initFuelSpec)
+            (progDesc "Initialise the FUEL mechanism")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1085,6 +1090,9 @@ initCheckpointSpec = ado
       , genesisHash
       , version
       }
+
+initFuelSpec ∷ Parser TxEndpoint
+initFuelSpec = map (InitFuel <<< { version: _ }) parseVersion
 
 insertVersionSpec ∷ Parser TxEndpoint
 insertVersionSpec = ado

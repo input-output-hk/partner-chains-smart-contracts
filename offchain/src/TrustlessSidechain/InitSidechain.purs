@@ -25,6 +25,7 @@ module TrustlessSidechain.InitSidechain
   , initSpendGenesisUtxo
   , initTokenStatus
   , initTokensMint
+  , initFuel
   , insertScriptsIdempotent
   , initCommitteeSelection
   , toSidechainParams
@@ -93,9 +94,15 @@ import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidInitState, NoGenesisUTxO, ConversionError)
+  ( OffchainError
+      ( InvalidInitState
+      , NoGenesisUTxO
+      , ConversionError
+      , GenericInternalError
+      )
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
+import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
@@ -116,9 +123,13 @@ import TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
   , getCheckpointPoliciesAndValidators
   , getCommitteeSelectionPoliciesAndValidators
+  , getDsPoliciesAndValidators
+  , getFuelPoliciesAndValidators
   )
 import TrustlessSidechain.Versioning as Versioning
-import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
+  )
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Utils
@@ -338,9 +349,10 @@ initCommitteeHashLookupsAndConstraints
     pure $ burnCommitteeOracleInitToken <> mintCommitteeNft <>
       { constraints, lookups }
 
--- | `initDistributedSetLookupsAndContraints` creates the lookups and
--- | constraints required when initalizing the distributed set (this does NOT
--- | submit any transaction). In particular, it includes lookups / constraints
+-- | `initFuelAndDsLookupsAndConstraints` creates the lookups and
+-- | constraints required when initalizing the distributed set used
+-- | for the FUEL mechanism (this does NOT submit any transaction).
+-- | In particular, it includes lookups / constraints
 -- | to do the following:
 -- |
 -- |      - Mints the necessary tokens to run the distributed set i.e., it mints a
@@ -354,14 +366,15 @@ initCommitteeHashLookupsAndConstraints
 -- | Note: this does NOT include a lookup or constraint to spend the distinguished
 -- | `initUtxo` in the `InitSidechainParams`, and this MUST be provided
 -- | seperately.
-initDistributedSetLookupsAndConstraints ∷
+initFuelAndDsLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
+  Int →
   Run (EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-initDistributedSetLookupsAndConstraints sidechainParams = do
+initFuelAndDsLookupsAndConstraints sidechainParams version = do
   -- Build lookups and constraints to burn distributed set init token
   burnDsInitToken ←
     DistributedSet.burnOneDsInitToken sidechainParams
@@ -402,12 +415,16 @@ initDistributedSetLookupsAndConstraints sidechainParams = do
       $ DsDatum
           (unwrap DistributedSet.rootNode).nNext
 
-  -- FUEL minting policy
-  { fuelMintingPolicy } ←
-    FUELMintingPolicy.V1.getFuelMintingPolicy sidechainParams
-
+  -- FUEL Minting policy (versioned)
   fuelMintingPolicyCurrencySymbol ←
-    getCurrencySymbol FUELMintingPolicy fuelMintingPolicy
+    case version of
+      1 → FUELMintingPolicy.V1.getFuelMintingPolicy sidechainParams
+        >>= _.fuelMintingPolicy
+        >>> getCurrencySymbol FUELMintingPolicy
+      2 → FUELMintingPolicy.V2.getFuelMintingPolicy sidechainParams
+        >>= _.fuelMintingPolicy
+        >>> getCurrencySymbol FUELMintingPolicy
+      _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
   -- Validator for the configuration of the distributed set / the associated
   -- datum and tokens that should be paid to this validator.
@@ -560,6 +577,88 @@ initTokensMint sidechainParams initATMSKind version = do
     , sidechainAddresses
     }
 
+-- NOTE: `initFuel` does *not* do everything necessary to
+-- allow the user to mint / burn FUEL. It does not initialize
+-- the committee, nor does it initialize the merkle root
+-- mechanism. See this PR comment for a discussion of the
+-- choice to leave it this way and possibly to alter the functionality
+-- later, to make it such that this command indeed does everything
+-- a user needs to mint / burn FUEL.
+-- https://github.com/input-output-hk/trustless-sidechain/pull/753#discussion_r1551920822
+
+-- | Initialize the distributed set, FUELMintingPolicy and FUELBurningPolicy.
+initFuel ∷
+  ∀ r.
+  SidechainParams →
+  ATMSKinds →
+  Int →
+  Run (APP + r)
+    ( Maybe
+        { initTransactionIds ∷ Array TransactionHash
+        , sidechainParams ∷ SidechainParams
+        , sidechainAddresses ∷ SidechainAddresses
+        }
+    )
+initFuel
+  sidechainParams
+  initATMSKind
+  version = do
+  let
+    msg = "Initialize FUEL and Distributed Set"
+    run = init
+      ( \op sp → initFuelAndDsLookupsAndConstraints sp version >>=
+          balanceSignAndSubmit op
+      )
+      msg
+
+  logDebug' "Attempting to initialize FUEL versioning scripts"
+  scriptsInitTxIdFuel ← insertScriptsIdempotent getFuelPoliciesAndValidators
+    sidechainParams
+    initATMSKind
+    version
+
+  logDebug' "Attempting to initialize Ds versioning scripts"
+  scriptsInitTxIdDs ← insertScriptsIdempotent getDsPoliciesAndValidators
+    sidechainParams
+    initATMSKind
+    version
+
+  let
+    scriptsInitTxId = scriptsInitTxIdFuel <> scriptsInitTxIdDs
+
+  if not $ null scriptsInitTxId then do
+    sidechainAddresses ←
+      GetSidechainAddresses.getSidechainAddresses $
+        SidechainAddressesEndpointParams
+          { sidechainParams
+          , atmsKind: initATMSKind
+          -- NOTE: This field is used to configure minting the candidate
+          -- permission tokens themselves, not the candidate permission
+          -- init tokens. However it does affect the sidechainAddresses
+          -- output. Whether to remove permission tokens is an ongoing
+          -- discussion as of April 4, 2024. --brendanrbrown
+          , usePermissionToken: false
+          , version
+          }
+
+    -- NOTE: We check whether init-fuel is allowed
+    -- by checking whether the DistributedSet.dsInitTokenName
+    -- exists. There is no such init token for FUELMintingPolicy,
+    -- FUELProxyPolicy etc.
+    logInfo' msg
+    fuelInitTxId ← run DistributedSet.dsInitTokenName sidechainParams
+
+    pure
+      ( Just
+          { initTransactionIds: fuelInitTxId : scriptsInitTxId
+          , sidechainParams
+          , sidechainAddresses
+          }
+      )
+  else do
+    logInfo' "Versioning scripts for FUEL and Ds have already been initialized"
+    pure Nothing
+
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
 -- | this will do the following:
@@ -612,7 +711,7 @@ initSidechain (InitSidechainParams isp) version = do
   checkpointInitTxId ←
     initCheckpointLookupsAndConstraints isp.initGenesisHash sidechainParams
       >>= balanceSignAndSubmit "Checkpoint init"
-  dsInitTxId ← initDistributedSetLookupsAndConstraints sidechainParams
+  dsInitTxId ← initFuelAndDsLookupsAndConstraints sidechainParams version
     >>= balanceSignAndSubmit "Distributed set init"
   permissionTokensInitTxId ←
     initCandidatePermissionTokenLookupsAndConstraints isp

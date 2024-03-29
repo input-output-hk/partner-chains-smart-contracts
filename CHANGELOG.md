@@ -18,13 +18,15 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     re-interpret errors from the `Contract` monad.
     https://github.com/input-output-hk/trustless-sidechain/pull/723
   * Added CLI versioning and commit hash to sidechain-main-cli with the
-    subcommand `cli-version`
+    subcommand `cli-version`.
   * Added CLI endpoint `init-tokens-mint` to mint all init tokens by
     spending the genesis UTxO.
   * Added CLI endpoint `init-committee-selection` to initialise the
     committee selection mechanism.
   * Added CLI endpoint `init-checkpoint` to insert scripts and initialise
     checkpointing.
+  * Added CLI endpoint `init-fuel` to initialize the FUEL mechanism,
+    namely the distributed set and FUEL minting / burning versioning.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo

@@ -2,6 +2,8 @@ module TrustlessSidechain.Versioning.V1
   ( getCommitteeSelectionPoliciesAndValidators
   , getCheckpointPoliciesAndValidators
   , getVersionedPoliciesAndValidators
+  , getFuelPoliciesAndValidators
+  , getDsPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -51,15 +53,15 @@ import TrustlessSidechain.Versioning.Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-getVersionedPoliciesAndValidators
-  ∷ ∀ r
-  . { sidechainParams ∷ SidechainParams
-    , atmsKind ∷ ATMSKinds
+getVersionedPoliciesAndValidators ∷
+  ∀ r.
+  { sidechainParams ∷ SidechainParams
+  , atmsKind ∷ ATMSKinds
+  } →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
     }
-  → Run (EXCEPT OffchainError + WALLET + r)
-      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple ScriptId Validator)
-      }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting policies to version
   -----------------------------------
@@ -87,7 +89,6 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   ds ← DistributedSet.getDs sp
   { mintingPolicy: dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
-
   let
     versionedPolicies = List.fromFoldable
       [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
@@ -131,14 +132,14 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   pure $ { versionedPolicies, versionedValidators }
 
-getCommitteeSelectionPoliciesAndValidators
-  ∷ ∀ r
-  . ATMSKinds
-  → SidechainParams
-  → Run (EXCEPT OffchainError + WALLET + r)
-      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple ScriptId Validator)
-      }
+getCommitteeSelectionPoliciesAndValidators ∷
+  ∀ r.
+  ATMSKinds →
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
 getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
     -- Getting policies to version
@@ -183,13 +184,13 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
 
     pure $ { versionedPolicies, versionedValidators }
 
-getCheckpointPoliciesAndValidators
-  ∷ ∀ r
-  . SidechainParams
-  → Run (EXCEPT OffchainError + WALLET + r)
-      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple ScriptId Validator)
-      }
+getCheckpointPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
 getCheckpointPoliciesAndValidators sp = do
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
 
@@ -208,3 +209,44 @@ getCheckpointPoliciesAndValidators sp = do
       ]
 
   pure $ { versionedPolicies: mempty, versionedValidators }
+
+-- | Return policies and validators needed for FUEL minting
+-- | and burning.
+getFuelPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getFuelPoliciesAndValidators sp = do
+  { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
+  { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
+
+  let
+    versionedPolicies = List.fromFoldable
+      [ FUELMintingPolicy /\ fuelMintingPolicy
+      , FUELBurningPolicy /\ fuelBurningPolicy
+      ]
+    versionedValidators = List.fromFoldable []
+
+  pure { versionedPolicies, versionedValidators }
+
+-- | Get V1 policies and validators for the
+-- | Ds* types.
+getDsPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getDsPoliciesAndValidators sp = do
+  ds ← DistributedSet.getDs sp
+  { mintingPolicy: dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
+
+  let
+    versionedPolicies = List.fromFoldable [ DsKeyPolicy /\ dsKeyPolicy ]
+    versionedValidators = List.fromFoldable []
+
+  pure { versionedPolicies, versionedValidators }
