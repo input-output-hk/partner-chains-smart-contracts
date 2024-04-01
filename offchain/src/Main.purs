@@ -414,28 +414,16 @@ runTxEndpoint sidechainEndpointParams endpoint =
           }
 
       InitTokensMint
-        { genesisHash, version } →
+        { version } →
         do
           let
-            sc = unwrap scParams
-            isc =
-              { initChainId: sc.chainId
-              , initGenesisHash: genesisHash
-              , initUtxo: sc.genesisUtxo
-              , initThresholdNumerator: sc.thresholdNumerator
-              , initThresholdDenominator: sc.thresholdDenominator
-              , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-              -- NOTE: This field is used to configure minting the candidate
-              -- permission tokens themselves, not the candidate permission
-              -- init tokens.
-              , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: sc.governanceAuthority
-              }
+            initATMSKind = (unwrap sidechainEndpointParams).atmsKind
+
           { transactionId
           , sidechainParams
           , sidechainAddresses
           } ←
-            initTokensMint isc version
+            initTokensMint scParams initATMSKind version
 
           pure $ InitTokensMintResp
             { transactionId: map unwrap transactionId
