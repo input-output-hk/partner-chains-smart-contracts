@@ -428,25 +428,22 @@ initTokensMintScenario1 =
 
           let
             version = 1
-            initTokensScParams =
-              { initChainId: BigInt.fromInt 9
-              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , initUtxo: genesisUtxo
-              , initATMSKind: ATMSPlainEcdsaSecp256k1
-              , initThresholdNumerator: BigInt.fromInt 2
-              , initThresholdDenominator: BigInt.fromInt 3
-              , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority
+            initATMSKind = ATMSPlainEcdsaSecp256k1
+            sidechainParams = SidechainParams.SidechainParams
+              { chainId: BigInt.fromInt 9
+              , genesisUtxo: genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: initGovernanceAuthority
               }
-            sidechainParams = InitSidechain.toSidechainParams initTokensScParams
 
           -- Command being tested
-          void $ InitSidechain.initTokensMint initTokensScParams version
+          void $ InitSidechain.initTokensMint sidechainParams initATMSKind version
 
           -- For computing the number of versionOracle init tokens
           { versionedPolicies, versionedValidators } ←
             Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initTokensScParams.initATMSKind
+              { atmsKind: initATMSKind
               , sidechainParams
               }
               version
@@ -492,29 +489,29 @@ initTokensMintScenario2 =
 
           let
             version = 1
-            initTokensScParams =
-              { initChainId: BigInt.fromInt 9
-              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , initUtxo: genesisUtxo
-              , initATMSKind: ATMSPlainEcdsaSecp256k1
-              , initThresholdNumerator: BigInt.fromInt 2
-              , initThresholdDenominator: BigInt.fromInt 3
-              , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority
+            initATMSKind = ATMSPlainEcdsaSecp256k1
+            sidechainParams = SidechainParams.SidechainParams
+              { chainId: BigInt.fromInt 9
+              , genesisUtxo: genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: initGovernanceAuthority
               }
-            sidechainParams = InitSidechain.toSidechainParams initTokensScParams
 
           -- Mint them once
-          void $ InitSidechain.initTokensMint initTokensScParams version
+          void $ InitSidechain.initTokensMint sidechainParams
+            initATMSKind
+            version
 
           -- Then do it again.
-          { transactionId } ← InitSidechain.initTokensMint initTokensScParams
+          { transactionId } ← InitSidechain.initTokensMint sidechainParams
+            initATMSKind
             version
 
           -- For computing the number of versionOracle init tokens
           { versionedPolicies, versionedValidators } ←
             Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initTokensScParams.initATMSKind
+              { atmsKind: initATMSKind
               , sidechainParams
               }
               version

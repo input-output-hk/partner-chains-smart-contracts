@@ -504,15 +504,15 @@ mintAllTokens sidechainParams initATMSKind version = do
 -- | in the `transactionId` field and logs the fact at the info level.
 initTokensMint ∷
   ∀ r.
-  InitTokensParams () →
+  SidechainParams →
+  ATMSKinds →
   Int →
   Run (APP r)
     { transactionId ∷ Maybe TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-initTokensMint isp version = do
-  let sidechainParams = toSidechainParams isp
+initTokensMint sidechainParams initATMSKind version = do
   let txIn = (unwrap sidechainParams).genesisUtxo
 
   logDebug' $ "Querying genesisUtxo from TxIn: " <> show txIn
@@ -525,15 +525,18 @@ initTokensMint isp version = do
     Just _ → do
       logInfo' "Minting sidechain initialization tokens"
       map (Just <<< _.transactionId) $ mintAllTokens sidechainParams
-        isp.initATMSKind
+        initATMSKind
         version
 
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams
         { sidechainParams
-        , atmsKind: isp.initATMSKind
-        , usePermissionToken: isJust isp.initCandidatePermissionTokenMintInfo
+        , atmsKind: initATMSKind
+        -- NOTE: This field is used to configure minting the candidate
+        -- permission tokens themselves, not the candidate permission
+        -- init tokens.
+        , usePermissionToken: false
         , version
         }
 
