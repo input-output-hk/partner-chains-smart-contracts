@@ -652,7 +652,7 @@ insertScriptsIdempotent f isp version = do
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
-      ( Utils.initializeVersionLookupsAndConstraints sidechainParams 1 >=>
+      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned validators"
       )
       $ List.toUnfoldable (toInsert.versionedValidators)
