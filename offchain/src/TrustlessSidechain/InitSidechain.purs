@@ -636,19 +636,18 @@ insertScriptsIdempotent ∷
       , versionedValidators ∷ List (Tuple ScriptId Validator)
       }
   ) →
-  InitSidechainParams' →
+  SidechainParams →
+  ATMSKinds →
   Int →
   Run (APP + r)
     (Array TransactionHash)
-insertScriptsIdempotent f isp version = do
-  let sidechainParams = toSidechainParams isp
-
+insertScriptsIdempotent f sidechainParams initATMSKind version = do
   scripts ← f sidechainParams version
 
   toInsert ∷
     { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
-    } ← getScriptsToInsert isp scripts version
+    } ← getScriptsToInsert sidechainParams initATMSKind scripts version
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
@@ -667,7 +666,8 @@ insertScriptsIdempotent f isp version = do
 
 getScriptsToInsert ∷
   ∀ r.
-  InitSidechainParams' →
+  SidechainParams →
+  ATMSKinds →
   { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
   , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
   } →
@@ -677,14 +677,14 @@ getScriptsToInsert ∷
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
 getScriptsToInsert
-  isp
+  sidechainParams
+  initATMSKind
   toFilterScripts
   version = do
-  let sidechainParams = toSidechainParams isp
 
   comparisonScripts ←
     getActualVersionedPoliciesAndValidators
-      { atmsKind: isp.initATMSKind, sidechainParams }
+      { atmsKind: initATMSKind, sidechainParams }
       version
 
   let
@@ -700,12 +700,12 @@ getScriptsToInsert
 
 init ∷
   ∀ r.
-  (String → InitSidechainParams' → Run (APP + r) TransactionHash) →
+  (String → SidechainParams → Run (APP + r) TransactionHash) →
   String →
-  InitSidechainParams' →
+  SidechainParams →
   Run (APP + r) TransactionHash
-init f op isp = do
-  { currencySymbol } ← initTokenCurrencyInfo (toSidechainParams isp)
+init f op sp = do
+  { currencySymbol } ← initTokenCurrencyInfo sp
   unlessM
     ( map
         ( not <<< null <<< _.initTokenStatusData <<< initTokenStatus
@@ -718,7 +718,7 @@ init f op isp = do
         $ "Init token does not exist when attempting to run "
         <> op
     )
-  f op isp
+  f op sp
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
 -- | the InitTokenStatus endpoint.
