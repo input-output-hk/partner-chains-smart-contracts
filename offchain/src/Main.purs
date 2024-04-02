@@ -84,9 +84,37 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options(TxOptions, UtilsOptions, CLIVersion)
+  ( Options
+      ( TxOptions
+      , UtilsOptions
+      , CLIVersion
+      )
   , SidechainEndpointParams
-  , TxEndpoint(..)
+  , TxEndpoint
+      ( BurnActV1
+      , BurnActV2
+      , ClaimActV1
+      , ClaimActV2
+      , GetAddrs
+      , CommitteeCandidateReg
+      , CandidiatePermissionTokenAct
+      , CommitteeCandidateDereg
+      , CommitteeHash
+      , SaveRoot
+      , Init
+      , InitTokensMint
+      , CommitteeHandover
+      , SaveCheckpoint
+      , InsertVersion
+      , UpdateVersion
+      , InvalidateVersion
+      , InsertDParameter
+      , UpdateDParameter
+      , UpdatePermissionedCandidates
+      , BurnNFTs
+      , InitTokenStatus
+      , ListVersionedScripts
+      )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
       , SchnorrSecp256k1KeyGenAct
