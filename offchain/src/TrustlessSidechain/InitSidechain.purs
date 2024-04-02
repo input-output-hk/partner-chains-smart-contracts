@@ -698,26 +698,27 @@ getScriptsToInsert
         comparisonScripts.versionedValidators
     }
 
+-- | Perform a token initialization action, if the corresponding
+-- | init token exists. If it doesn't, throw an `InvalidInitState`
+-- | error.
 init ∷
   ∀ r.
   (String → SidechainParams → Run (APP + r) TransactionHash) →
   String →
+  TokenName →
   SidechainParams →
   Run (APP + r) TransactionHash
-init f op sp = do
-  { currencySymbol } ← initTokenCurrencyInfo sp
-  unlessM
-    ( map
-        ( not <<< null <<< _.initTokenStatusData <<< initTokenStatus
-            currencySymbol
-        )
-        getOwnUTxOsTotalValue
-    )
+init f op nm sp = do
+  tokenExists ← map (Plutus.Map.member nm <<< _.initTokenStatusData)
+    (getInitTokenStatus sp)
+
+  unless tokenExists
     ( throw
         $ InvalidInitState
         $ "Init token does not exist when attempting to run "
         <> op
     )
+
   f op sp
 
 -- | Get the init token data for the given `CurrencySymbol` from a given `Value`. Used in
