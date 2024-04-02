@@ -132,14 +132,13 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  ATMSKinds →
+  SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple ScriptId Validator)
     }
-getCommitteeSelectionPoliciesAndValidators { sidechainParams: sp, atmsKind } =
+getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
     -- Getting policies to version
     -----------------------------------

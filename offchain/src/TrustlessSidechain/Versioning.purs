@@ -249,19 +249,17 @@ getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version 
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  ATMSKinds →
+  SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
-getCommitteeSelectionPoliciesAndValidators { sidechainParams, atmsKind } version =
+getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams version =
   do
     case version of
-      1 → V1.getCommitteeSelectionPoliciesAndValidators
-        { sidechainParams, atmsKind }
+      1 → V1.getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams
       2 → V2.getCommitteeSelectionPoliciesAndValidators sidechainParams
       _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 

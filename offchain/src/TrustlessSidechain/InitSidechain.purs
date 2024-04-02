@@ -738,9 +738,9 @@ initCommitteeSelection
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
-initCommitteeSelection isp version = do
+initCommitteeSelection (InitSidechainParams isp) version = do
   let
-    sidechainParams = toSidechainParams $ unwrap isp
+    sidechainParams = toSidechainParams isp
     run = init
       ( \op → balanceSignAndSubmit op
           <=< initCommitteeHashLookupsAndConstraints
@@ -748,7 +748,7 @@ initCommitteeSelection isp version = do
       "Committee init"
 
   scriptsInitTxId ← insertScriptsIdempotent
-    getCommitteeSelectionPoliciesAndValidators
+    (getCommitteeSelectionPoliciesAndValidators isp.initATMSKind)
     isp
     version
 
@@ -757,9 +757,9 @@ initCommitteeSelection isp version = do
       GetSidechainAddresses.getSidechainAddresses $
         SidechainAddressesEndpointParams
           { sidechainParams
-          , atmsKind: (unwrap isp).initATMSKind
+          , atmsKind: isp.initATMSKind
           , usePermissionToken: isJust
-              (unwrap isp).initCandidatePermissionTokenMintInfo
+              isp.initCandidatePermissionTokenMintInfo
           , version
           }
     committeeSelectionInitTxId ← run isp
