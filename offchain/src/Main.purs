@@ -414,6 +414,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainAddresses
           , initTransactionIds: map unwrap initTransactionIds
           }
+
       InitTokensMint
         { version } →
         do
