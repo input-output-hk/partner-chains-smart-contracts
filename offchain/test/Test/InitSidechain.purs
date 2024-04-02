@@ -640,7 +640,9 @@ testInitCommitteeSelection =
                 , initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initTokensMint initTokensScParams version
+            void $ InitSidechain.initTokensMint sidechainParams
+              initTokensScParams.initATMSKind
+              version
             void $ InitSidechain.initCommitteeSelection initScParams version
 
             -- For computing the number of versionOracle init tokens
@@ -811,7 +813,9 @@ testInitCommitteeSelectionIdempotent =
                 , initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initTokensMint initTokensScParams version
+            void $ InitSidechain.initTokensMint sidechainParams
+              initTokensScParams.initATMSKind
+              version
             void $ InitSidechain.initCommitteeSelection initScParams version
             res ← InitSidechain.initCommitteeSelection initScParams version
 
