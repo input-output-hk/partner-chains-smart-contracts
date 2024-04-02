@@ -629,22 +629,21 @@ initSidechain (InitSidechainParams isp) version = do
 
 insertScriptsIdempotent ∷
   ∀ r.
-  ( { sidechainParams ∷ SidechainParams
-    , atmsKind ∷ ATMSKinds
-    } →
+  ( SidechainParams →
+    Int →
     Run (APP + r)
       { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple ScriptId Validator)
       }
   ) →
-  InitSidechainParams →
+  InitSidechainParams' →
   Int →
   Run (APP + r)
     (Array TransactionHash)
 insertScriptsIdempotent f isp version = do
-  let sidechainParams = toSidechainParams $ unwrap isp
+  let sidechainParams = toSidechainParams isp
 
-  scripts ← f { atmsKind: (unwrap isp).initATMSKind, sidechainParams }
+  scripts ← f sidechainParams version
 
   toInsert ∷
     { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
@@ -668,7 +667,7 @@ insertScriptsIdempotent f isp version = do
 
 getScriptsToInsert ∷
   ∀ r.
-  InitSidechainParams →
+  InitSidechainParams' →
   { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
   , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
   } →
@@ -681,11 +680,11 @@ getScriptsToInsert
   isp
   toFilterScripts
   version = do
-  let sidechainParams = toSidechainParams $ unwrap isp
+  let sidechainParams = toSidechainParams isp
 
   comparisonScripts ←
     getActualVersionedPoliciesAndValidators
-      { atmsKind: (unwrap isp).initATMSKind, sidechainParams }
+      { atmsKind: isp.initATMSKind, sidechainParams }
       version
 
   let
@@ -703,9 +702,9 @@ init ∷
   ∀ r.
   (String → InitSidechainParams' → Run (APP + r) TransactionHash) →
   String →
-  InitSidechainParams →
+  InitSidechainParams' →
   Run (APP + r) TransactionHash
-init f op (InitSidechainParams isp) = do
+init f op isp = do
   { currencySymbol } ← initTokenCurrencyInfo (toSidechainParams isp)
   unlessM
     ( map
