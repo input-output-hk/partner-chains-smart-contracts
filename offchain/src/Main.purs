@@ -102,6 +102,7 @@ import TrustlessSidechain.Options.Types
       , CommitteeHash
       , SaveRoot
       , Init
+      , InitCommitteeSelection
       , InitTokensMint
       , CommitteeHandover
       , SaveCheckpoint
