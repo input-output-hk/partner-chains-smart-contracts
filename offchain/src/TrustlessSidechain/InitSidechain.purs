@@ -650,9 +650,9 @@ initCheckpoint
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
-initCheckpoint isp version = do
+initCheckpoint (InitSidechainParams isp) version = do
   let
-    sidechainParams = toSidechainParams $ unwrap isp
+    sidechainParams = toSidechainParams isp
     run = init
       ( \op → balanceSignAndSubmit op
           <=< initCheckpointLookupsAndConstraints
@@ -668,9 +668,9 @@ initCheckpoint isp version = do
       GetSidechainAddresses.getSidechainAddresses $
         SidechainAddressesEndpointParams
           { sidechainParams
-          , atmsKind: (unwrap isp).initATMSKind
+          , atmsKind: isp.initATMSKind
           , usePermissionToken: isJust
-              (unwrap isp).initCandidatePermissionTokenMintInfo
+              isp.initCandidatePermissionTokenMintInfo
           , version
           }
     checkpointInitTxId ← run isp

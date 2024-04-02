@@ -185,14 +185,12 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
 
 getCheckpointPoliciesAndValidators
   ∷ ∀ r
-  . { sidechainParams ∷ SidechainParams
-    , atmsKind ∷ ATMSKinds
-    }
+  . SidechainParams
   → Run (EXCEPT OffchainError + WALLET + r)
       { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple ScriptId Validator)
       }
-getCheckpointPoliciesAndValidators { sidechainParams: sp } = do
+getCheckpointPoliciesAndValidators sp = do
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
 
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
