@@ -736,7 +736,11 @@ init f op nm sp = do
 -- | Idempotently initialise the committee selection mechanism, consuming the committee oracle init token
 initCommitteeSelection ∷
   ∀ r.
-  InitSidechainParams →
+  SidechainParams →
+  Maybe CandidatePermissionTokenMintInfo →
+  BigInt →
+  PlutusData →
+  ATMSKinds →
   Int →
   Run (APP + r)
     ( Maybe
@@ -745,22 +749,27 @@ initCommitteeSelection ∷
         , sidechainAddresses ∷ SidechainAddresses
         }
     )
-initCommitteeSelection (InitSidechainParams isp) version = do
+initCommitteeSelection
+  sidechainParams
+  initCandidatePermissionTokenMintInfo
+  initSidechainEpoch
+  initAggregatedCommittee
+  initATMSKind
+  version = do
   let
-    sidechainParams = toSidechainParams isp
     run = init
       ( \op → balanceSignAndSubmit op
           <=< initCommitteeHashLookupsAndConstraints
-            isp.initSidechainEpoch
-            isp.initAggregatedCommittee
+            initSidechainEpoch
+            initAggregatedCommittee
       )
       "Committee init"
       CommitteeOraclePolicy.committeeOracleInitTokenName
 
   scriptsInitTxId ← insertScriptsIdempotent
-    (getCommitteeSelectionPoliciesAndValidators isp.initATMSKind)
+    (getCommitteeSelectionPoliciesAndValidators initATMSKind)
     sidechainParams
-    isp.initATMSKind
+    initATMSKind
     version
 
   if not $ null scriptsInitTxId then do
@@ -768,9 +777,8 @@ initCommitteeSelection (InitSidechainParams isp) version = do
       GetSidechainAddresses.getSidechainAddresses $
         SidechainAddressesEndpointParams
           { sidechainParams
-          , atmsKind: isp.initATMSKind
-          , usePermissionToken: isJust
-              isp.initCandidatePermissionTokenMintInfo
+          , atmsKind: initATMSKind
+          , usePermissionToken: isJust initCandidatePermissionTokenMintInfo
           , version
           }
     committeeSelectionInitTxId ← run sidechainParams

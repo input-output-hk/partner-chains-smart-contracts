@@ -614,41 +614,34 @@ testInitCommitteeSelection =
             let
               version = 1
               initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-              sidechainParams = InitSidechain.toSidechainParams initTokensScParams
-              initTokensScParams =
-                { initChainId: BigInt.fromInt 9
-                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-                , initUtxo: genesisUtxo
-                , initATMSKind: ATMSPlainEcdsaSecp256k1
-                , initThresholdNumerator: BigInt.fromInt 2
-                , initThresholdDenominator: BigInt.fromInt 3
-                , initCandidatePermissionTokenMintInfo: Nothing
-                , initGovernanceAuthority
-                }
-              initScParams = InitSidechain.InitSidechainParams
-                { initChainId: BigInt.fromInt 9
-                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-                , initUtxo: genesisUtxo
-                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
-                    unwrap
-                    initCommittee
-                , initATMSKind: ATMSPlainEcdsaSecp256k1
-                , initSidechainEpoch: zero
-                , initThresholdNumerator: BigInt.fromInt 2
-                , initThresholdDenominator: BigInt.fromInt 3
-                , initCandidatePermissionTokenMintInfo: Nothing
-                , initGovernanceAuthority
+              initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+                unwrap
+                initCommittee
+              initCandidatePermissionTokenMintInfo = Nothing
+              initSidechainEpoch = zero
+              initATMSKind = ATMSPlainEcdsaSecp256k1
+              sidechainParams = SidechainParams.SidechainParams
+                { chainId: BigInt.fromInt 9
+                , genesisUtxo: genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: initGovernanceAuthority
                 }
 
             void $ InitSidechain.initTokensMint sidechainParams
-              initTokensScParams.initATMSKind
+              initATMSKind
               version
-            void $ InitSidechain.initCommitteeSelection initScParams version
+            void $ InitSidechain.initCommitteeSelection sidechainParams
+              initCandidatePermissionTokenMintInfo
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              version
 
             -- For computing the number of versionOracle init tokens
             { versionedPolicies, versionedValidators } ←
               Versioning.getExpectedVersionedPoliciesAndValidators
-                { atmsKind: initTokensScParams.initATMSKind
+                { atmsKind: initATMSKind
                 , sidechainParams
                 }
                 version
@@ -679,7 +672,7 @@ testInitCommitteeSelection =
             , versionedPolicies: policiesRes
             } ←
               getActualVersionedPoliciesAndValidators
-                { atmsKind: initTokensScParams.initATMSKind
+                { atmsKind: initATMSKind
                 , sidechainParams
                 }
                 version
@@ -739,22 +732,26 @@ testInitCommitteeSelectionUninitialised =
               <$> getOwnPaymentPubKeyHash
             let
               initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-              initScParams = InitSidechain.InitSidechainParams
-                { initChainId: BigInt.fromInt 9
-                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-                , initUtxo: genesisUtxo
-                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
-                    unwrap
-                    initCommittee
-                , initATMSKind: ATMSPlainEcdsaSecp256k1
-                , initSidechainEpoch: zero
-                , initThresholdNumerator: BigInt.fromInt 2
-                , initThresholdDenominator: BigInt.fromInt 3
-                , initCandidatePermissionTokenMintInfo: Nothing
-                , initGovernanceAuthority
+              initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+                unwrap
+                initCommittee
+              initCandidatePermissionTokenMintInfo = Nothing
+              initSidechainEpoch = zero
+              initATMSKind = ATMSPlainEcdsaSecp256k1
+              sidechainParams = SidechainParams.SidechainParams
+                { chainId: BigInt.fromInt 9
+                , genesisUtxo: genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initCommitteeSelection initScParams 1
+            void $ InitSidechain.initCommitteeSelection sidechainParams
+              initCandidatePermissionTokenMintInfo
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              1
         case result of
           Right _ →
             throw $ GenericInternalError
@@ -787,42 +784,40 @@ testInitCommitteeSelectionIdempotent =
             let
               version = 1
               initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-              sidechainParams = InitSidechain.toSidechainParams initTokensScParams
-              initTokensScParams =
-                { initChainId: BigInt.fromInt 9
-                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-                , initUtxo: genesisUtxo
-                , initATMSKind: ATMSPlainEcdsaSecp256k1
-                , initThresholdNumerator: BigInt.fromInt 2
-                , initThresholdDenominator: BigInt.fromInt 3
-                , initCandidatePermissionTokenMintInfo: Nothing
-                , initGovernanceAuthority
-                }
-              initScParams = InitSidechain.InitSidechainParams
-                { initChainId: BigInt.fromInt 9
-                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-                , initUtxo: genesisUtxo
-                , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
-                    unwrap
-                    initCommittee
-                , initATMSKind: ATMSPlainEcdsaSecp256k1
-                , initSidechainEpoch: zero
-                , initThresholdNumerator: BigInt.fromInt 2
-                , initThresholdDenominator: BigInt.fromInt 3
-                , initCandidatePermissionTokenMintInfo: Nothing
-                , initGovernanceAuthority
+              initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+                unwrap
+                initCommittee
+              initCandidatePermissionTokenMintInfo = Nothing
+              initSidechainEpoch = zero
+              initATMSKind = ATMSPlainEcdsaSecp256k1
+              sidechainParams = SidechainParams.SidechainParams
+                { chainId: BigInt.fromInt 9
+                , genesisUtxo: genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: initGovernanceAuthority
                 }
 
             void $ InitSidechain.initTokensMint sidechainParams
-              initTokensScParams.initATMSKind
+              initATMSKind
               version
-            void $ InitSidechain.initCommitteeSelection initScParams version
-            res ← InitSidechain.initCommitteeSelection initScParams version
+            void $ InitSidechain.initCommitteeSelection sidechainParams
+              initCandidatePermissionTokenMintInfo
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              version
+            res ← InitSidechain.initCommitteeSelection sidechainParams
+              initCandidatePermissionTokenMintInfo
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              version
 
             -- For computing the number of versionOracle init tokens
             { versionedPolicies, versionedValidators } ←
               Versioning.getExpectedVersionedPoliciesAndValidators
-                { atmsKind: initTokensScParams.initATMSKind
+                { atmsKind: initATMSKind
                 , sidechainParams
                 }
                 version
@@ -851,7 +846,7 @@ testInitCommitteeSelectionIdempotent =
 
             { versionedValidators: validatorsRes, versionedPolicies: policiesRes } ←
               getActualVersionedPoliciesAndValidators
-                { atmsKind: initTokensScParams.initATMSKind
+                { atmsKind: initATMSKind
                 , sidechainParams
                 }
                 version
