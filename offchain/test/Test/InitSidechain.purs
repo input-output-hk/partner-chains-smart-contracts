@@ -588,6 +588,8 @@ expectedInitTokens nversion =
         , CandidatePermissionToken.candidatePermissionInitTokenName
         ]
 
+-- | Test `initCommitteeSelection` having run `initTokensMint`, expecting success and for the
+-- | the relevant tokens to be spent
 testInitCommitteeSelection ∷ PlutipTest
 testInitCommitteeSelection =
   Mote.Monad.test "Calling `InitCommitteeSelection`"
@@ -707,6 +709,7 @@ testInitCommitteeSelection =
                     expectedExistingPolicies
                 )
 
+-- | Test `initCommitteeSelection` without having run `initTokensMint`, expecting failure
 testInitCommitteeSelectionUninitialised ∷ PlutipTest
 testInitCommitteeSelectionUninitialised =
   Mote.Monad.test "Calling `InitCommitteeSelection` with no init token"
@@ -758,6 +761,8 @@ testInitCommitteeSelectionUninitialised =
               "Contract should have failed but it didn't."
           Left _err → pure unit
 
+-- | Test running `initCommitteeSelection` twice, having run `initTokensMint`, expecting idempotency
+-- | and for the relevant tokens to be spent
 testInitCommitteeSelectionIdempotent ∷ PlutipTest
 testInitCommitteeSelectionIdempotent =
   Mote.Monad.test "Calling `InitCommitteeSelection` twice, expecting idempotency"
