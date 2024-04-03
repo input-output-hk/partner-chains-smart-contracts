@@ -646,6 +646,7 @@ initSidechain (InitSidechainParams isp) version = do
     , sidechainAddresses
     }
 
+-- | Idempotently initialise the checkpointing mechanism, consuming the minted checkpoint init token
 initCheckpoint
   ∷ ∀ r
   . InitSidechainParams
