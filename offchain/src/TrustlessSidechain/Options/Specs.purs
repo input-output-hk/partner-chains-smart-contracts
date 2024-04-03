@@ -116,7 +116,7 @@ import TrustlessSidechain.Options.Types
       , SaveRoot
       , CommitteeHandover
       , SaveCheckpoint
-      , InsertVersion
+      , InsertVersion2
       , UpdateVersion
       , InvalidateVersion
       , InsertDParameter
@@ -228,9 +228,9 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig saveCheckpointSpec)
             (progDesc "Saving a new checkpoint")
         )
-    , command "insert-version"
+    , command "insert-version-2"
         ( info (withCommonOpts maybeConfig insertVersionSpec)
-            (progDesc "Initialize a new protocol version")
+            (progDesc "Initialize version 2 of a protocol")
         )
     , command "update-version"
         ( info (withCommonOpts maybeConfig updateVersionSpec)
@@ -1095,9 +1095,7 @@ initFuelSpec ∷ Parser TxEndpoint
 initFuelSpec = map (InitFuel <<< { version: _ }) parseVersion
 
 insertVersionSpec ∷ Parser TxEndpoint
-insertVersionSpec = ado
-  version ← parseVersion
-  in InsertVersion { version }
+insertVersionSpec = pure InsertVersion2
 
 parseOldVersion ∷ Parser Int
 parseOldVersion =

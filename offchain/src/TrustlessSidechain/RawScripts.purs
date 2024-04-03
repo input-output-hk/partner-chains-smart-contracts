@@ -37,7 +37,35 @@ module TrustlessSidechain.RawScripts
 import Contract.Prelude
 
 import Data.Map as Map
-import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( FUELBurningPolicy
+      , FUELMintingPolicy
+      , MerkleRootTokenValidator
+      , MerkleRootTokenPolicy
+      , CommitteeCandidateValidator
+      , CandidatePermissionPolicy
+      , CommitteeOraclePolicy
+      , CommitteeHashValidator
+      , CheckpointValidator
+      , CheckpointPolicy
+      , InitTokenPolicy
+      , ScriptCache
+      , VersionOraclePolicy
+      , VersionOracleValidator
+      , FUELProxyPolicy
+      , CommitteePlainEcdsaSecp256k1ATMSPolicy
+      , CommitteePlainSchnorrSecp256k1ATMSPolicy
+      , DsInsertValidator
+      , DsConfPolicy
+      , DsConfValidator
+      , DsKeyPolicy
+      , DParameterPolicy
+      , DParameterValidator
+      , PermissionedCandidatesPolicy
+      , PermissionedCandidatesValidator
+      )
+  )
 
 rawFUELMintingPolicy ∷ Tuple ScriptId String
 rawFUELMintingPolicy =

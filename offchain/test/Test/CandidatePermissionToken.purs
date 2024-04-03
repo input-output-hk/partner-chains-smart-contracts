@@ -23,7 +23,7 @@ import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValid
 import TrustlessSidechain.Effects.Contract (CONTRACT)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.InitSidechain (initSpendGenesisUtxo)
+import TrustlessSidechain.InitSidechain.TokensMint (initSpendGenesisUtxo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address as Utils
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)

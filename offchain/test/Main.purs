@@ -15,6 +15,10 @@ import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
 import Test.GarbageCollector as GarbageCollector
 import Test.InitSidechain as InitSidechain
+import Test.InitSidechain.Checkpoint as InitCheckpoint
+import Test.InitSidechain.CommitteeSelection as InitCommittee
+import Test.InitSidechain.FUEL as InitFUEL
+import Test.InitSidechain.TokensMint as InitMint
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
 import Test.MerkleRootChaining as MerkleRootChaining
@@ -56,6 +60,10 @@ main = do
 
         group "Plutip integration tests" do
           InitSidechain.tests
+          InitMint.tests
+          InitCheckpoint.tests
+          InitCommittee.tests
+          InitFUEL.tests
           CommitteePlainEcdsaSecp256k1ATMSPolicy.tests
           CommitteePlainSchnorrSecp256k1ATMSPolicy.tests
           CommitteeCandidateValidator.tests

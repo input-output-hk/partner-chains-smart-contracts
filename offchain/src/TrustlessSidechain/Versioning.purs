@@ -20,8 +20,8 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (MintingPolicy, ScriptHash, Validator, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(..)
-  , TransactionOutputWithRefScript(..)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
@@ -31,10 +31,12 @@ import Data.BigInt as BigInt
 import Data.List (List)
 import Data.List as List
 import Data.Map as Map
+import Data.Set as Set
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -114,6 +116,36 @@ initializeVersion { sidechainParams, atmsKind } version = do
       $ List.toUnfoldable versionedPolicies
   pure (validatorsTxIds <> policiesTxIds)
 
+-- Note [Supporting version insertion beyond version 2]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- insertVersion is very brittle and only provides
+-- reasonable behavior in the current situation, where only
+-- versions 1 and 2 are supported. Therefore, the only version
+-- argument passed here that will succeed and do what the function
+-- says is 2.
+-- We considered making this more robust as part of ETCM-6883, since
+-- clearly it is the intention to support a greater range of versions
+-- in trustless-sidechain. However, the type and documentation for
+-- version numbers doesn't really convey what is allowed, for example
+-- whether we intend to support version increments of size greater than
+-- 1. For example, should we support a case where scripts A and B are
+-- initialized to version 1, script B is updated to version 2, and
+-- then scripts A and B are updated to version 3?
+-- A fairly flexible solution for supporting such cases is to
+-- call getActualVersionedPoliciesAndValidators repeatedly with version
+-- numbers version - 1, version -2 ... until the function returns empty
+-- lists. Then, scripts will be updated to the target version if they
+-- appear in at least one previous verions, meaning if there is a currently
+-- valid version of the script for at least some previous version.
+-- See also
+-- https://github.com/input-output-hk/trustless-sidechain/pull/756#discussion_r1551342345
+
+-- | Insert scripts for the supplied version, only
+-- | for features already existing and still valid in version - 1.
+-- | This assumes versions increase in increments of 1, so that
+-- | the supplied `version` argument is equal to the latest version plus 1.
+-- | If a script is already present for `version`, do not try to re-insert it.
 insertVersion ∷
   ∀ r.
   { sidechainParams ∷ SidechainParams
@@ -123,10 +155,75 @@ insertVersion ∷
   Run (APP + r)
     (Array TransactionHash)
 insertVersion { sidechainParams, atmsKind } version = do
-  { versionedPolicies, versionedValidators } ←
+  let
+    prevVersion = version - 1
+
+    -- Filter expected, a list of ScriptId /\ a, to the ScriptId
+    -- given by (expected \setdiff actual) \cap prev
+    filterToScriptIds ∷
+      ∀ a.
+      { expected ∷ List (Tuple Types.ScriptId a)
+      , actual ∷ List (Tuple Types.ScriptId a)
+      , prev ∷ List (Tuple Types.ScriptId a)
+      } →
+      List (Tuple Types.ScriptId a)
+    filterToScriptIds { expected, actual, prev } =
+      let
+        expected' = Set.fromFoldable $ map fst expected
+        actual' = Set.fromFoldable $ map fst actual
+        prev' = Set.fromFoldable $ map fst prev
+        ids = Set.intersection prev' (Set.difference expected' actual')
+      in
+        List.filter (\x → Set.member (fst x) ids) expected
+
+  -- Debug log to help out if someone goofs on the version
+  -- number.
+  logDebug'
+    $ "Get existing versioned policies and validators for version"
+    <> show prevVersion
+
+  { versionedPolicies: prevVersionedPolicies
+  , versionedValidators: prevVersionedValidators
+  } ←
+    getActualVersionedPoliciesAndValidators
+      { sidechainParams, atmsKind }
+      prevVersion
+
+  { versionedPolicies: actualVersionedPolicies
+  , versionedValidators: actualVersionedValidators
+  } ←
+    getActualVersionedPoliciesAndValidators
+      { sidechainParams, atmsKind }
+      version
+
+  { versionedPolicies: expectedVersionedPolicies
+  , versionedValidators: expectedVersionedValidators
+  } ←
     getExpectedVersionedPoliciesAndValidators
       { sidechainParams, atmsKind }
       version
+
+  -- Compute sets of policies / validators to insert.
+  -- Should insert ones whose ScriptIds are such that they
+  -- * exist among the scripts of prevVersion
+  -- * have not already been inserted for version
+  let
+    versionedPolicies =
+      filterToScriptIds
+        { expected: expectedVersionedPolicies
+        , actual: actualVersionedPolicies
+        , prev: prevVersionedPolicies
+        }
+    versionedValidators =
+      filterToScriptIds
+        { expected: expectedVersionedValidators
+        , actual: actualVersionedValidators
+        , prev: prevVersionedValidators
+        }
+
+  logInfo'
+    $ "Insert validators for version"
+    <> show version
 
   validatorsTxIds ←
     traverse
@@ -134,12 +231,18 @@ insertVersion { sidechainParams, atmsKind } version = do
           Utils.Transaction.balanceSignAndSubmit "Insert versioned validators"
       )
       $ List.toUnfoldable versionedValidators
+
+  logInfo'
+    $ "Insert policies for version"
+    <> show version
+
   policiesTxIds ←
     traverse
       ( Utils.insertVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Insert versioned policies"
       )
       $ List.toUnfoldable versionedPolicies
+
   pure (validatorsTxIds <> policiesTxIds)
 
 invalidateVersion ∷

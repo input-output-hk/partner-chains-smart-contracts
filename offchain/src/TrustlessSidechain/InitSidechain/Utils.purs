@@ -25,7 +25,7 @@ import TrustlessSidechain.Utils.LookupsAndConstraints
   ( burnOneToken
   , mintOneToken
   )
-import TrustlessSidechain.Versioning.Types
+import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(InitTokenPolicy)
   )
 import Type.Row (type (+))
