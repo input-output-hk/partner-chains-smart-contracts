@@ -41,7 +41,10 @@ import TrustlessSidechain.Utils.Crypto
   , toPubKeyUnsafe
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators) as Versioning
+import TrustlessSidechain.Versioning
+  ( getActualVersionedPoliciesAndValidators
+  , insertVersion
+  ) as Versioning
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils
   ( insertVersionLookupsAndConstraints
@@ -57,6 +60,7 @@ tests = plutipGroup "Minting and burning versioning tokens" $ do
   testInsertUnversionedScriptSuccessScenario
   testRemovingTwiceSameScriptFailScenario
   testRemovingScriptInsertedMultipleTimesSuccessScenario
+  testInsertScriptsPresentInPreviousVersion
 
 -- | We insert a new version of a script, and invalidate the old one.
 testInsertAndInvalidateSuccessScenario ∷ PlutipTest
@@ -425,6 +429,75 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
           >>= balanceSignAndSubmit "Test: invalidate policy version"
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+
+-- | `insertVersion` only inserts a script with `version` for elements with
+-- | `ScriptId` present among policies / validators of `version - 1`.
+testInsertScriptsPresentInPreviousVersion ∷ PlutipTest
+testInsertScriptsPresentInPreviousVersion =
+  Mote.Monad.test "Insert new version of a script only if present in version - 1"
+    $ Test.PlutipTest.mkPlutipConfigTest
+        [ BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 50_000_000
+        , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 40_000_000
+        , BigInt.fromInt 40_000_000
+        ]
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
+        pkh ← getOwnPaymentPubKeyHash
+        genesisUtxo ← getOwnTransactionInput
+        let
+          keyCount = 25
+        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
+          generatePrivKey
+        let
+          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+          initATMSKind = ATMSPlainEcdsaSecp256k1
+          (initScParams@(InitSidechainParams initTokenParams)) =
+            InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+                  pkh
+              , initATMSKind
+              }
+          sidechainParams = toSidechainParams initTokenParams
+          sidechainParamsWithATMSKind =
+            { sidechainParams: toSidechainParams initTokenParams
+            , atmsKind: initATMSKind
+            }
+
+        -- Insert all initial versioned scripts
+        void $ initSidechain initScParams 1
+
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+
+        -- Invalidate FUELMintingPolicy. It should not get updated.
+        void
+          $ Versioning.invalidateVersionLookupsAndConstraints
+              sidechainParams
+              1
+              FUELMintingPolicy
+          >>= balanceSignAndSubmit
+            "Test: invalidate fuel minting policy version 1"
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+
+        -- Update all possible scripts to V2.
+        -- NOTE: V2 currently contains only FuelMintingPolicy and FUELBurningPolicy,
+        -- so without the minting policy this should insert only one V2 script.
+        void $ Versioning.insertVersion sidechainParamsWithATMSKind 2
+
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 1 0
 
 assertNumberOfActualVersionedScripts ∷
   ∀ r.

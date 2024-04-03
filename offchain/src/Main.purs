@@ -109,7 +109,7 @@ import TrustlessSidechain.Options.Types
       , InitFuel
       , CommitteeHandover
       , SaveCheckpoint
-      , InsertVersion
+      , InsertVersion2
       , UpdateVersion
       , InvalidateVersion
       , InsertDParameter
@@ -605,11 +605,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       -- TODO: sanitize version arguments here, making sure they are not negative
       -- (or perhaps come from a known range of versions?).  See Issue #9
-      InsertVersion
-        { version
-        } → do
-        txIds ← Versioning.insertVersion { sidechainParams: scParams, atmsKind }
-          version
+      -- Version hardcoded to 2 here, since that is the only valid choice currently.
+      -- See Note [Supporting version insertion beyond version 2]
+      InsertVersion2 → do
+        txIds ← Versioning.insertVersion { sidechainParams: scParams, atmsKind } 2
         let versioningTransactionIds = map unwrap txIds
         pure $ InsertVersionResp { versioningTransactionIds }
 
