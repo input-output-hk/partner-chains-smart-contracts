@@ -232,9 +232,8 @@ data TxEndpoint
       , sidechainEpoch ∷ BigInt
       }
 
-  | InsertVersion
-      { version ∷ Int
-      }
+  -- See Note [Supporting version insertion beyond version 2]
+  | InsertVersion2
   | UpdateVersion
       { oldVersion ∷ Int
       , newVersion ∷ Int
