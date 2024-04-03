@@ -41,8 +41,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     transactions, not just the ones for the versioning system.
   * NFT token name for Checkpoint and Committee Oracle set to empty string.
     Init token name for Committee Oracle set to `Committee oracle InitToken`.
-    Previuous values were invalid due to using wrong parsing function.
+    Previous values were invalid due to using wrong parsing function.
   * Some `String` types changed to strict `ByteString` where appropriate.
+  * `insert-version` is now called `insert-version-2`. It only updates
+    a protocol from version 1 to version 2 and only attempts to update the
+    version for features already existing in version 1.
 
 ## Removed
 
