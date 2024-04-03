@@ -782,11 +782,6 @@ testInitCheckpointUninitialised =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCheckpointUninitialised'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            -- generate an initialize committee of `committeeSize` committee members
-            let committeeSize = 25
-            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-              committeeSize
-              Crypto.generatePrivKey
 
             initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
               <$> getOwnPaymentPubKeyHash
@@ -820,7 +815,11 @@ testInitCheckpointUninitialised =
                 , initGovernanceAuthority
                 }
 
-            void $ InitSidechain.initCheckpoint initScParams 1
+            void $ InitSidechain.initCheckpoint sidechainParams
+              initCandidatePermissionTokenMintInfo
+              initGenesisHash
+              initATMSKind
+              1
         case result of
           Right _ →
             throw $ GenericInternalError
@@ -844,11 +843,6 @@ testInitCommitteeSelectionIdempotent =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCommitteeSelectionIdempotent'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            -- generate an initialize committee of `committeeSize` committee members
-            let committeeSize = 25
-            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-              committeeSize
-              Crypto.generatePrivKey
 
             initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
               <$> getOwnPaymentPubKeyHash
