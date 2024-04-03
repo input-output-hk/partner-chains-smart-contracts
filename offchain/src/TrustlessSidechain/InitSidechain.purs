@@ -733,6 +733,7 @@ init f op nm sp = do
 
   f op sp
 
+-- | Idempotently initialise the committee selection mechanism, consuming the committee oracle init token
 initCommitteeSelection ∷
   ∀ r.
   InitSidechainParams →
