@@ -87,11 +87,7 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options
-      ( TxOptions
-      , UtilsOptions
-      , CLIVersion
-      )
+  ( Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams
   , TxEndpoint
       ( BurnActV1
@@ -405,7 +401,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        resp ← initCheckpoint (wrap isc) version
+        resp ← initCheckpoint (toSidechainParams isc)
+          isc.initCandidatePermissionTokenMintInfo
+          isc.initGenesisHash
+          isc.initATMSKind
+          version
         pure $ InitCheckpointResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp

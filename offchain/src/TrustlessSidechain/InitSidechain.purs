@@ -649,7 +649,10 @@ initSidechain (InitSidechainParams isp) version = do
 -- | Idempotently initialise the checkpointing mechanism, consuming the minted checkpoint init token
 initCheckpoint
   ∷ ∀ r
-  . InitSidechainParams
+  . SidechainParams
+  → Maybe CandidatePermissionTokenMintInfo
+  → ByteArray
+  → ATMSKinds
   → Int
   → Run (APP + r)
       ( Maybe
@@ -658,19 +661,23 @@ initCheckpoint
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
-initCheckpoint (InitSidechainParams isp) version = do
+initCheckpoint
+  sidechainParams
+  initCandidatePermissionTokenMintInfo
+  initGenesisHash
+  initATMSKind
+  version = do
   let
-    sidechainParams = toSidechainParams isp
     run = init
       ( \op → balanceSignAndSubmit op
-          <=< initCheckpointLookupsAndConstraints isp.initGenesisHash
+          <=< initCheckpointLookupsAndConstraints initGenesisHash
       )
       "Checkpoint init"
       Checkpoint.checkpointInitTokenName
 
   scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
     sidechainParams
-    isp.initATMSKind
+    initATMSKind
     version
 
   if not $ null scriptsInitTxId then do
@@ -678,9 +685,9 @@ initCheckpoint (InitSidechainParams isp) version = do
       GetSidechainAddresses.getSidechainAddresses $
         SidechainAddressesEndpointParams
           { sidechainParams
-          , atmsKind: isp.initATMSKind
+          , atmsKind: initATMSKind
           , usePermissionToken: isJust
-              isp.initCandidatePermissionTokenMintInfo
+              initCandidatePermissionTokenMintInfo
           , version
           }
     checkpointInitTxId ← run sidechainParams
