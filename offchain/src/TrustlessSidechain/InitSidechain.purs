@@ -15,7 +15,7 @@
 -- |          to the required committee hash validator (with the initial committee).
 module TrustlessSidechain.InitSidechain
   ( InitSidechainParams'
-  , InitSidechainParams(InitSidechainParams)
+  , InitSidechainParams(..)
   , InitTokensParams
   , getInitTokenStatus
   , getScriptsToInsert
@@ -24,6 +24,7 @@ module TrustlessSidechain.InitSidechain
   , initSidechain
   , initSpendGenesisUtxo
   , initTokenStatus
+  , initTokensMint
   , insertScriptsIdempotent
   , initCommitteeSelection
   , toSidechainParams
@@ -66,8 +67,15 @@ import TrustlessSidechain.Checkpoint
   ( CheckpointDatum(CheckpointDatum)
   , checkpointNftTn
   )
-import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
+import TrustlessSidechain.Checkpoint.Utils
+  ( burnOneCheckpointInitToken
+  , checkpointAssetClass
+  , checkpointCurrencyInfo
+  , checkpointInitTokenName
+  , checkpointValidator
+  , mintOneCheckpointInitToken
+  ) as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
@@ -195,18 +203,16 @@ initCandidatePermissionTokenLookupsAndConstraints isp =
 -- | checkpoint.
 initCheckpointLookupsAndConstraints
   ∷ ∀ (r ∷ Row Type) r'
-  . InitTokensParams r
+  . ByteArray
+  → SidechainParams
   → Run (EXCEPT OffchainError + WALLET + r')
       { lookups ∷ ScriptLookups Void
       , constraints ∷ TxConstraints Void Void
       }
-initCheckpointLookupsAndConstraints inp = do
+initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
 
   -- Get checkpoint / associated values
   -----------------------------------
-  let
-    sidechainParams = toSidechainParams inp
-
   -- Build lookups and constraints to burn checkpoint init token
   burnCheckpointInitToken ←
     Checkpoint.burnOneCheckpointInitToken sidechainParams
@@ -235,7 +241,7 @@ initCheckpointLookupsAndConstraints inp = do
     checkpointDatum = Datum
       $ PlutusData.toData
       $ CheckpointDatum
-          { blockHash: inp.initGenesisHash
+          { blockHash: initGenesisHash
           , blockNumber: BigInt.fromInt 0
           }
 
@@ -603,8 +609,9 @@ initSidechain (InitSidechainParams isp) version = do
     { atmsKind: isp.initATMSKind, sidechainParams }
     version
 
-  checkpointInitTxId ← initCheckpointLookupsAndConstraints isp
-    >>= balanceSignAndSubmit "Checkpoint init"
+  checkpointInitTxId ←
+    initCheckpointLookupsAndConstraints isp.initGenesisHash sidechainParams
+      >>= balanceSignAndSubmit "Checkpoint init"
   dsInitTxId ← initDistributedSetLookupsAndConstraints sidechainParams
     >>= balanceSignAndSubmit "Distributed set init"
   permissionTokensInitTxId ←
@@ -655,12 +662,14 @@ initCheckpoint (InitSidechainParams isp) version = do
     sidechainParams = toSidechainParams isp
     run = init
       ( \op → balanceSignAndSubmit op
-          <=< initCheckpointLookupsAndConstraints
+          <=< initCheckpointLookupsAndConstraints isp.initGenesisHash
       )
       "Checkpoint init"
+      Checkpoint.checkpointInitTokenName
 
   scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
-    isp
+    sidechainParams
+    isp.initATMSKind
     version
 
   if not $ null scriptsInitTxId then do
@@ -673,7 +682,7 @@ initCheckpoint (InitSidechainParams isp) version = do
               isp.initCandidatePermissionTokenMintInfo
           , version
           }
-    checkpointInitTxId ← run isp
+    checkpointInitTxId ← run sidechainParams
     pure
       ( Just
           { initTransactionIds: checkpointInitTxId : scriptsInitTxId
@@ -704,15 +713,6 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
     ∷ { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
       } ← getScriptsToInsert sidechainParams initATMSKind scripts version
-insertScriptsIdempotent f isp version = do
-  let sidechainParams = toSidechainParams isp
-
-  scripts ← f sidechainParams version
-
-  toInsert
-    ∷ { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
-      } ← getScriptsToInsert isp scripts version
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
