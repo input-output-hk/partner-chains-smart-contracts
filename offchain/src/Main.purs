@@ -85,7 +85,11 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options(TxOptions, UtilsOptions, CLIVersion)
+  ( Options
+      ( TxOptions
+      , UtilsOptions
+      , CLIVersion
+      )
   , SidechainEndpointParams
   , TxEndpoint
       ( BurnActV1
